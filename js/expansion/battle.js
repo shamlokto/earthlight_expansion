@@ -62,8 +62,8 @@ export class ExpansionBattle extends Battle {
     if (!this.boosted.has(t)) this.boosted.set(t, { ...t, evasion: Math.min(GENERAL_EVASION_CAP, t.evasion * 2) });
     return this.boosted.get(t);
   }
-  damage(att, def, w) {
-    const p = super.damage(att, def, w);
+  damage(att, def, w, counter = false) {
+    const p = super.damage(att, def, w, counter);
     return att.general ? p * 2 : p;
   }
   // The info screen shows the general's doubled attack too.

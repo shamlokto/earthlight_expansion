@@ -133,8 +133,16 @@ Class 10 is impassable and is also written as the frame around every map. A
 
 * Attack modes M1/M2/M3 = **B ビーム兵器 Beam / N レールガン Railgun / M ミサイル Missile**.
 * `D082[class*4+mode]` = 射線通過, whether a shot of that mode passes through the terrain.
-* Surrounded: `$06CF` is set when all 6 hexes around the defender are occupied (`$01:A91A`),
-  which halves its evasion.
+* Encirclement (包囲効果): `$06CF` is set (`$01:A8E5–A926`) when all 6 hexes around the
+  defender lie in the attacking army's zone of control: bit `$27` of `$7E:2DD2` (`$80` when
+  `$06B5`, the army whose turn it is, is A; `$40` for B). The zones are rebuilt by `$02:E66C`:
+  every unit slot in use (`$19BD` bit 7 clear), not carried (`$1BE5` = 0) and not a fortress,
+  command centre or dock (`$1B5B` & `$F0` not in `$50–$70`) ORs its army's bit into its own hex
+  and its six neighbours (`$02:E6CD`; army from `$1AD1`, neutral docks have none). The hexes
+  around the defender need not be occupied: two or three units can encircle it. `$06CF` halves
+  the defender's evasion after its support is added (`$01:A995`), in the attack only: the
+  counter-attack (`$01:A9ED`) uses the attacker's plain evasion, with no support and no
+  encirclement.
 * **Targets per weapon slot** (`$01:E0F1`, the player's target marking; the AI's `$01:85BD`
   is the same rule): slot 0 only hits small craft and docks (`F206[type] ≥ $70`, category ≥ 7),
   slots 1 and 3 (bombs, ship missiles) only capital ships, fortresses and command centres
@@ -276,7 +284,7 @@ The game runs scenes as *tasks*: a routine stores an entry pointer in `$95/$96` 
       unless `F206[type] = $70`; ×2 if `$06E9`. Counter slot `$06B9` = slot if ≥ 2, else 1
       when the attacker is a capital ship (category < 7), else 0.
     * defence (`$02:92E2`) = `$01:F8BA[type]` × `AC3D[level]`/16, capped at 128.
-    * stage 1: defender defence halved when surrounded (`$06CF`).
+    * stage 1: defender defence halved when encircled (`$06CF`, `$02:91E8`).
     * stage 2: attacker attack += Σ attack of attacker-army units next to the defender / 4;
       defender attack += Σ of defender-army units next to the attacker / 16 (`$02:931D`; units
       need a direct weapon in that slot; skipped when `$06CE` ≠ 0).

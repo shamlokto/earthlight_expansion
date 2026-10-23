@@ -235,7 +235,7 @@ function initUnits() {
   const lv = levelBonus(rom);
   $('formula').innerHTML = [
     'P = weapon power of the attacker\'s slot',
-    'P ×= (128 − (defender evasion + support from the defender\'s adjacent allies, max 128)) / 128',
+    'P ×= (128 − (defender evasion + support from the defender\'s adjacent allies, max 128, halved when every hex around the defender is in the attacker\'s zone of control)) / 128',
     'P ×= (128 − terrain defence[target class][weapon mode] × 1.28) / 128',
     'P ×= attacker HP for small craft (category ≥ 7, max HP 8), or attacker HP × 8 / max HP for capital ships',
     'P += ¼ of the power of the attacker\'s adjacent allies',
