@@ -144,7 +144,7 @@ function draw() {
     ctx.drawImage(maskedIcon(u), X, Y);
     ctx.globalAlpha = 1;
     ctx.font = 'bold 13px system-ui'; ctx.fillStyle = '#000'; ctx.fillText(u.hp, X + 33, Y + 31);
-    ctx.fillStyle = u.army ? '#ff9aa6' : '#9cc4ff'; ctx.fillText(u.hp, X + 32, Y + 30);
+    ctx.fillStyle = u.army ? '#8fe38a' : '#ff8fd8'; ctx.fillText(u.hp, X + 32, Y + 30);
   }
   if (sel) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; hexPath(ctx, sel.x, sel.y); ctx.stroke(); }
 }

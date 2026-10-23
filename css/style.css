@@ -7,8 +7,8 @@
   --muted: #9097c0;
   --accent: #f5c542;
   --accent-2: #4fc3f7;
-  --army-a: #6fa8ff;
-  --army-b: #ff7a8a;
+  --army-a: #ff8fd8;   /* the game's own colours: army A (Union) pink, army B (Galt) green */
+  --army-b: #8fe38a;
   --err: #ff6b6b;
   color-scheme: dark;
 }
