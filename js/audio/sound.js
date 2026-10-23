@@ -107,7 +107,7 @@ export function trackTable(rom, group) {
   return out;
 }
 
-// Map music ($02:DD2A): table $02:DE32 (group) / $02:DE6E (cmd), indexed by map + 30 on army B's
+// Map music ($02:DD29): table $02:DE32 (group) / $02:DE6E (cmd), indexed by map + 30 on army B's
 // phase. Maps whose group is 4 or 7 always keep their own song. Otherwise, when one army has at
 // least twice the other's unit count ($02:DDE3, flags $06EA/$06EB), the phase plays a tension
 // track from group 5 (army A) or 8 (army B). $06EC/$06ED (event music, set by map scripts)
@@ -125,13 +125,36 @@ export function mapMusic(rom, map, side, countA = 0, countB = 0, event = false) 
   return { group, cmd };
 }
 
-// Songs seen on other screens (booting the game in research/spc_boot.py), as 'group:cmd'.
-// Song calls not identified yet: 9:$4A ($00:80CE), 11 + $4B ($00:928F), 1:$44 ($01:A14A),
-// 10:$50 ($01:DEE6, $08:8A58), 10:$4D ($05:CD7C), 10:$4F ($08:B0C5).
-export const SONG_USES = {
-  '1:67': 'opening (starfield intro), $08:9540',
-  '9:76': 'main menu ("SELECT MENU PLEASE"), $02:DA86',
-  '9:72': 'mission select / map intro, $05:EB6E', '9:73': 'mission select (alternative), $05:EB6E',
-  '6:77': 'pre-battle map overview, $02:C986',
+// Songs for the game's screens, as {group, cmd} for Sound.playSong(). Found by booting the game
+// in research/spc_boot.py and reading the code that sends them (docs/FORMATS.md "Sound").
+export const SONGS = {
+  title: { group: 1, cmd: 0x43 },        // opening starfield, runs on into the title ($08:9540)
+  menu: { group: 9, cmd: 0x4C },         // main menu "SELECT MENU PLEASE" ($02:DA86)
+  interlude: { group: 9, cmd: 0x4A },    // after a mission is won, before the next one ($00:8071)
+  overview: { group: 6, cmd: 0x4D },     // pre-battle map overview ($02:C97B)
+  ending: { group: 10, cmd: 0x4D },      // after map 30 is won ($01:B204 -> $05:CB00)
+  // Calls not tied to a screen yet: 1:$44 ($01:A148), 10:$50 ($01:DEC5, $08:8A48, $08:8F57),
+  // 10:$4F ($08:AE32/$08:B0C5), group 11 (asset 834) cmd 4 after cmd $4B ($00:928F/$00:92C8).
 };
 
+// Mission intro / briefing song ($05:EB51): maps 10, 20 and 28 have their own.
+export const briefingSong = (map) => ({ group: 9, cmd: [9, 19, 27].includes(map) ? 0x49 : 0x48 });
+
+// Phase start ($02:DC39, the 連邦軍 / enemy banner): stop the music (cmd 2), banner sound $0E,
+// then 60 frames later jingle $4C of the loaded battle group; then mapMusic() picks the song.
+export const PHASE = { stopMusic: 0x02, banner: 0x0E, jingle: 0x4C, jingleDelay: 60 };
+
+// Event music (map scripts set $06EC/$06ED at a scripted turn, $02:9B70): mapMusic(..., true),
+// i.e. group 5 (army A phase) or 8 (army B phase), cmd $4F.
+export const eventSong = (side) => ({ group: side ? 8 : 5, cmd: 0x4F });
+
+// Labels for the sound lab, 'group:cmd' (decimal cmd).
+export const SONG_USES = {
+  '1:67': 'opening + title, $08:9540',
+  '9:76': 'main menu ("SELECT MENU PLEASE"), $02:DA86',
+  '9:72': 'mission intro / briefing, $05:EB6E', '9:73': 'mission intro / briefing, maps 10, 20, 28',
+  '9:74': 'between missions (after a win), $00:80CE',
+  '6:77': 'pre-battle map overview, $02:C986',
+  '10:77': 'ending (after map 30), $05:CD7C',
+};
+for (let g = 3; g <= 8; g++) SONG_USES[g + ':76'] = 'phase start jingle (after the army banner), $02:DC72';

@@ -8,7 +8,7 @@ const write = (k, v) => { try { v === null ? localStorage.removeItem(k) : localS
 
 export function loadProgress() {
   const p = read(PROGRESS) || {};
-  return { next: p.next || 0, cleared: p.cleared || [], best: p.best || {}, hard: !!p.hard };
+  return { next: p.next || 0, cleared: p.cleared || [], best: p.best || {}, hard: !!p.hard, points: p.points || {} };
 }
 export function saveProgress(p) { return write(PROGRESS, p); }
 
@@ -22,7 +22,7 @@ export function saveBattle(b, mission) {
     return o;
   });
   const stakes = b.stakes.map((s) => ({ towers: s.towers.map(id), fortress: s.fortress.map(id), flagship: id(s.flagship), carriers: s.carriers.map(id) }));
-  return write(BATTLE, { mission, hard: b.hard, turn: b.turn, army: b.army, done: b.arrivals.map((e) => e.done), units, stakes, saved: Date.now() });
+  return write(BATTLE, { mission, hard: b.hard, turn: b.turn, army: b.army, done: b.arrivals.map((e) => e.done), units, stakes, blasted: b.blasted || [], points: b.points || null, saved: Date.now() });
 }
 
 export function savedBattle() { return read(BATTLE); }
@@ -36,6 +36,9 @@ export function restoreBattle(b, s) {
   b.units = units; b.turn = s.turn; b.army = s.army; b.hard = s.hard;
   s.done.forEach((d, i) => { if (b.arrivals[i]) b.arrivals[i].done = d; });
   b.stakes = s.stakes.map((t) => ({ towers: t.towers.map(ref), fortress: t.fortress.map(ref), flagship: ref(t.flagship), carriers: t.carriers.map(ref) }));
+  b.points = s.points || null;
+  b.blasted = s.blasted || [];   // cells cleared by the Decimator (events.js)
+  for (const [x, y] of b.blasted) b.grid[y * 62 + x] = 0;
   b.result = null;
   return b;
 }

@@ -13,6 +13,8 @@ import { Battle, NEUTRAL, TRANSFORM } from './game/rules.js';
 import { scenario } from './game/scenario.js';
 import { WIN_LINE, scriptFor } from './game/scripts.js';
 import { aiTurn } from './game/ai.js';
+import { mapPoints, rankOf, rankName } from './game/points.js';
+import { LABEL as EV, COMET_MAP, inLane, detachBurner, decimator, blast } from './game/events.js';
 import { FightScene } from './game/fightscene.js';
 import { Sound, mapMusic } from './audio/sound.js';
 import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle } from './game/savegame.js';
@@ -25,7 +27,7 @@ const LOST_LINES = [[0, [68, 69, 70, 71]], [10, [72, 73, 76]], [20, [74, 75]], [
 const ALERT_GALT = 87, ALERT_UNION = 88, BABYLON_ALERT = 94;
 
 let rom, romEn = null, en = null, pal, types, battle, mission = 0, terrainCanvas;
-let sel = null, reach = null, targets = [], hosts = [], launching = null, busy = false;
+let sel = null, reach = null, targets = [], hosts = [], launching = null, busy = false, blastCells = null;
 
 // Original music and effects (js/audio), started by the first click (browsers need a gesture);
 // the map music follows the phase and the unit counts, as in play.js.
@@ -33,7 +35,7 @@ let sound = null;
 const MUTE = 'earthlight-mute';
 function music() {
   if (!sound || !battle || $('sBattle').hidden || battle.winner() !== null) return;
-  sound.playSong(mapMusic(rom, mission, battle.army, battle.forces(0).length, battle.forces(1).length));
+  sound.playSong(mapMusic(rom, mission, battle.army, battle.forces(0).length, battle.forces(1).length, !!battle.eventMusic));
 }
 function silence() { if (sound) sound.stop(); }
 document.addEventListener('pointerdown', () => {
@@ -87,7 +89,7 @@ function show(id) {
 function wire() {
   $('bNew').onclick = () => {
     const p = progress();
-    saveProgress({ ...p, next: 0, cleared: p.cleared });
+    saveProgress({ ...p, next: 0, cleared: p.cleared, points: {} });
     clearSavedBattle();
     story(en ? en.main.slice(LAYOUT.intro[0], LAYOUT.intro[1] + 1) : [], 'EARTH LIGHT', () => briefing(0));
   };
@@ -158,9 +160,16 @@ function setupBoard(m) {
   const terr = renderMap(rom, info, { units: false });
   terrainCanvas = document.createElement('canvas');
   paint(terrainCanvas, terr.img, pal, { scale: Z });
-  sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; $('log').innerHTML = '';
+  sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; blastCells = null; $('log').innerHTML = '';
   show('sBattle'); $('where').textContent = `mission ${m + 1} · ${missionTitle(m)}`;
   return info;
+}
+
+// The board's terrain, redrawn from the battle's own cells (the Decimator clears them).
+function paintTerrain() {
+  const terr = renderMap(rom, battle.info, { units: false, grid: battle.grid });
+  terrainCanvas = document.createElement('canvas');
+  paint(terrainCanvas, terr.img, pal, { scale: Z });
 }
 
 function newBattle(m) {
@@ -172,6 +181,7 @@ function startMission(m) {
   setupBoard(m);
   battle = newBattle(m);
   begin();
+  if (m === COMET_MAP) alerts([EV.cometAlert, EV.comet]);
 }
 
 function loadBattle() {
@@ -179,6 +189,7 @@ function loadBattle() {
   if (!s) return;
   setupBoard(s.mission);
   battle = restoreBattle(newBattle(s.mission), s);
+  if (battle.blasted.length) paintTerrain();
   log('<b>Saved battle loaded.</b>');
   begin();
   if (!checkEnd() && battle.army === 1) enemyTurn();
@@ -193,8 +204,8 @@ function begin() {
 
 function runFight(e) {
   if (!$('optFights').checked) return Promise.resolve();
-  const sideOf = (u, before, after, other) => ({ type: u.type, army: u.army === NEUTRAL ? 1 - other.army : u.army, hp: before, hpAfter: after, cls: battle.cls(u.x, u.y) });
-  const scene = new FightScene(rom, sideOf(e.att, e.before[0], e.after[0], e.def), sideOf(e.def, e.before[1], e.after[1], e.att),
+  const sideOf = (u, before, after, other, w) => ({ type: u.type, army: u.army === NEUTRAL ? 1 - other.army : u.army, hp: before, hpAfter: after, cls: battle.cls(u.x, u.y), slot: w?.slot });
+  const scene = new FightScene(rom, sideOf(e.att, e.before[0], e.after[0], e.def, e.w), sideOf(e.def, e.before[1], e.after[1], e.att, e.cw),
     { counter: !!e.cw, info: e.info, textRom: romEn, names: en ? en.unitNames : null });
   scene.att.cls = battle.cls(e.att.x, e.att.y);
   const ov = $('fight'), ctx = $('fightCv').getContext('2d');
@@ -250,6 +261,14 @@ function draw() {
     ctx.fillStyle = launching ? 'rgba(120,255,160,.4)' : 'rgba(80,160,255,.35)';
     for (const key of reach.keys()) { const [x, y] = key.split(',').map(Number); hexPath(ctx, x, y); ctx.fill(); }
   }
+  if (battle.cannons.length) {   // Buccaneer lanes (map 19): everything here is destroyed at the next phase change
+    ctx.fillStyle = 'rgba(255,120,40,.18)';
+    for (const c of battle.cannons) for (let y = c.y; y <= battle.info.rows; y++) if (inLane(battle, c.x, y)) { hexPath(ctx, c.x, y); ctx.fill(); }
+  }
+  if (blastCells) {
+    ctx.fillStyle = 'rgba(200,90,255,.35)';
+    for (const [x, y] of blastCells) { hexPath(ctx, x, y); ctx.fill(); }
+  }
   ctx.fillStyle = 'rgba(255,60,60,.45)';
   for (const t of targets) { hexPath(ctx, t.x, t.y); ctx.fill(); }
   ctx.fillStyle = 'rgba(255,214,74,.45)';
@@ -262,6 +281,7 @@ function draw() {
     const n = battle.cargo(u).length, txt = n ? `${u.hp}+${n}` : `${u.hp}`;
     ctx.font = 'bold 13px system-ui'; ctx.fillStyle = '#000'; ctx.fillText(txt, X + 33, Y + 31);
     ctx.fillStyle = HP_COLOUR[u.army]; ctx.fillText(txt, X + 32, Y + 30);
+    if (u.burner) { ctx.font = 'bold 10px system-ui'; ctx.fillStyle = '#000'; ctx.fillText('AB', X + 1, Y + 31); ctx.fillStyle = '#ffa040'; ctx.fillText('AB', X, Y + 30); }
     if (u.level) { ctx.font = 'bold 10px system-ui'; ctx.fillStyle = '#000'; ctx.fillText(`L${u.level}`, X + 1, Y + 9); ctx.fillStyle = '#ffd84a'; ctx.fillText(`L${u.level}`, X, Y + 8); }
   }
   if (sel) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; hexPath(ctx, sel.x, sel.y); ctx.stroke(); }
@@ -279,7 +299,7 @@ function unitCard(u, extra = '') {
   const t = types[u.type];
   const ws = t.weapons.filter(Boolean).map((w) => `${'BNM'[w.mode]} r${w.min}${w.max > w.min ? '–' + w.max : ''} p${w.power}`).join(' · ');
   const who = u.army === NEUTRAL ? '<p class="dim">Neutral dock: bring it to 0 HP to capture it and everything inside.</p>' : '';
-  const role = u.guard ? ' · <span class="dim">guard</span>' : '';
+  const role = (u.guard ? ' · <span class="dim">guard</span>' : '') + (u.burner ? ' · <span style="color:#ffa040">afterburner (move 10)</span>' : '');
   return `<h3 class="${side(u.army)}">${nameOf(u)} <span class="dim mono">${t.code}</span></h3>
     HP ${u.hp}/${t.hp} · Move ${t.move} · Lv ${u.level}${role}<br><span class="mono small">${ws || 'unarmed'}</span>${who}${extra}`;
 }
@@ -303,10 +323,20 @@ function select(u) {
   sel = u; launching = null;
   reach = battle.movePoints(u) ? battle.reachable(u) : null;
   targets = battle.targets(u); hosts = battle.boardable(u);
+  blastCells = null;
+  const dec = u.army === 0 ? decimator(battle, u) : [];
+  if (dec.length) targets = targets.filter((e) => battle.weaponsAgainst(u, e).some((w) => w.slot !== 3));
   const tf = battle.canTransform(u) ? `<button class="btn" id="bTransform">Transform → ${types[TRANSFORM[u.type]].code}</button>` : '';
   const again = u.acted && u.reMove ? '<p>Move again (optional), or click elsewhere to finish.</p>' : '';
+  const det = (u.burner && u.army === 0 ? '<button class="btn" id="bDetach">Detach burner</button>' : '')
+    + (dec.length ? '<button class="btn" id="bDecimator">Quantum Decimator</button>' : '');
   const legend = `<p class="dim">Blue: move${hosts.length ? ' · yellow: board (full repair, re-arm)' : ''} · red: attack.</p>`;
-  draw(); hud(unitCard(u, cargoPanel(u) + again + legend + (tf ? `<div class="row">${tf}</div>` : '')));
+  draw(); hud(unitCard(u, cargoPanel(u) + again + legend + (tf || det ? `<div class="row">${tf}${det}</div>` : '')));
+  if (dec.length) $('bDecimator').onclick = () => {
+    reach = null; targets = []; hosts = []; blastCells = dec;
+    draw(); hud(unitCard(u, '<p>Click a purple hex: the Decimator clears it and the six hexes around it, destroying whatever is there.</p>'));
+  };
+  if (u.burner && u.army === 0) $('bDetach').onclick = async () => { detachBurner(battle, u); log(`<span class="armyA">${nameOf(u)}</span> detached its afterburner`); await alerts([EV.burner]); select(u); };
   for (const b of $('info').querySelectorAll('[data-launch]')) b.onclick = () => startLaunch(battle.units[+b.dataset.launch]);
   if (tf) $('bTransform').onclick = () => { battle.transform(u); log(`<span class="armyA">${nameOf(u)}</span> transformed (${types[u.type].code})`); select(u); };
 }
@@ -317,7 +347,7 @@ function startLaunch(u) {
   draw(); hud(unitCard(u, '<p>Click a green hex to launch.</p>'));
 }
 
-function clearSel() { sel = null; reach = null; targets = []; hosts = []; launching = null; draw(); }
+function clearSel() { sel = null; reach = null; targets = []; hosts = []; launching = null; blastCells = null; draw(); }
 
 function onClick(ev) {
   if (busy || battle.winner() !== null || battle.army !== 0) return;
@@ -333,6 +363,7 @@ function onClick(ev) {
     return;
   }
   if (sel && targets.includes(u)) { attack(sel, u); return; }
+  if (sel && blastCells && blastCells.some(([x, y]) => x === cx && y === cy)) { fireDecimator(sel, cx, cy); return; }
   if (sel && hosts.includes(u)) {
     const s = sel;
     battle.board(s, u); log(`<span class="armyA">${nameOf(s)}</span> boarded ${nameOf(u)} (repaired)`);
@@ -354,12 +385,58 @@ function onClick(ev) {
   clearSel();
 }
 
+// The Abaddon's slot 3 is the Decimator, fired at a hex (fireDecimator), not at a unit.
 function bestWeapon(a, d) {
-  return battle.weaponsAgainst(a, d).map((w) => [w, battle.forecast(a, d, w)]).sort((x, y) => y[1].dealt - x[1].dealt)[0][0];
+  const ws = battle.weaponsAgainst(a, d), direct = decimator(battle, a).length ? ws.filter((w) => w.slot !== 3) : ws;
+  return (direct.length ? direct : ws).map((w) => [w, battle.forecast(a, d, w)]).sort((x, y) => y[1].dealt - x[1].dealt)[0][0];
 }
 function forecastHtml(a, d) {
   const f = battle.forecast(a, d, bestWeapon(a, d));
   return `<p>Forecast: deal ≈${f.dealt.toFixed(1)}, take ≈${f.taken.toFixed(1)}</p>`;
+}
+
+async function fireDecimator(a, x, y) {
+  const e = blast(battle, a, x, y);
+  log(`<span class="armyA">${nameOf(a)}</span> fired the Quantum Decimator: ${e.hit.length ? e.hit.map((u) => `<span class="${side(u.army)}">${nameOf(u)}</span>`).join(', ') + ' destroyed' : 'path cleared'}`);
+  sel = null; reach = null; targets = []; hosts = []; blastCells = null; busy = true;
+  if (sound) sound.playSfx(0x3F);   // explosion
+  await flash(e.cells, 'rgba(255,255,255,.8)');
+  paintTerrain();
+  busy = false;
+  if (checkEnd()) { draw(); return; }
+  if (a.hp && a.reMove) select(a); else { draw(); hud(unitCard(a)); }
+}
+
+// Brief highlight of some hexes (cannon fire, Decimator blast).
+function flash(cells, colour) {
+  return new Promise((done) => {
+    let n = 0;
+    const tick = () => {
+      draw();
+      if (n % 2 === 0) { const ctx = $('cv').getContext('2d'); ctx.fillStyle = colour; for (const [x, y] of cells) { hexPath(ctx, x, y); ctx.fill(); } }
+      if (++n < 6) setTimeout(tick, 110); else { draw(); done(); }
+    };
+    tick();
+  });
+}
+
+// The map-event windows (labels block), one after the other; click or wait to go on.
+function alerts(ids) {
+  const texts = ids.map(label).filter(Boolean);
+  if (!texts.length) return Promise.resolve();
+  const ov = $('alert');
+  return new Promise((done) => {
+    let k = 0, timer = 0;
+    const next = () => {
+      clearTimeout(timer);
+      if (k >= texts.length) { ov.hidden = true; ov.onclick = null; done(); return; }
+      $('alertText').textContent = texts[k++];
+      ov.hidden = false;
+      timer = setTimeout(next, 2600);
+    };
+    ov.onclick = next;
+    next();
+  });
 }
 
 async function attack(a, d) {
@@ -391,6 +468,7 @@ async function endTurn() {
   if (busy || battle.winner() !== null) return;
   clearSel();
   announce(battle.endTurn());
+  await phaseEvents();
   draw(); hud('');
   if (checkEnd()) return;
   await enemyTurn();
@@ -408,9 +486,26 @@ async function enemyTurn() {
   busy = false;
   if (checkEnd()) return;
   announce(battle.endTurn());
+  await phaseEvents();
   draw(); hud('<span class="dim">Your turn.</span>');
   turnAlert();
   checkEnd();
+}
+
+// Buccaneer cannon (map 19): fires down its lanes at every phase change.
+async function phaseEvents() {
+  const ev = battle.phaseEvent;
+  if (!ev) return;
+  battle.phaseEvent = null;
+  busy = true;
+  log(`<b>Buccaneer Cannon fired</b>${ev.hit.length ? ': ' + ev.hit.map((u) => `<span class="${side(u.army)}">${nameOf(u)}</span>`).join(', ') + ' destroyed' : ''}`);
+  await alerts([EV.cannon]);
+  if (sound) sound.playSfx(0x3F);
+  const cells = [];
+  for (const c of ev.cannons) for (let y = c.y; y <= battle.info.rows; y++) cells.push([c.x, y]);
+  await flash(cells, 'rgba(255,240,200,.75)');
+  busy = false;
+  battle.result = null;
 }
 
 // ------------------------------------------------------------------ results
@@ -425,7 +520,6 @@ function result(w) {
   silence();
   show('sResult');
   const p = progress();
-  const lost = battle.units.filter((u) => u.army === 0 && u.hp <= 0).length;
   if (w === 0) {
     if (!p.cleared.includes(mission)) p.cleared.push(mission);
     p.next = Math.max(p.next, mission + 1);
@@ -435,6 +529,7 @@ function result(w) {
     clearSavedBattle();
     $('resTitle').textContent = `Mission ${mission + 1} complete`;
     $('resText').textContent = `${label(WIN_LINE[battle.result.reason] ?? 1)}\n\nCleared on turn ${battle.turn}.`;
+    pointsScreen(p);
     const last = mission + 1 >= MAP_COUNT;
     $('bResNext').textContent = last ? 'Ending' : `Next: mission ${mission + 2}`;
     $('bResNext').onclick = () => (last
@@ -450,6 +545,22 @@ function result(w) {
     $('bResStory').onclick = () => story(lines.map(label).filter(Boolean), 'GAME OVER', () => result(w));
   }
   if (w === 0) $('bResStory').hidden = true;
-  $('resLoss').textContent = w === 0 ? `Units lost: ${lost}` : '';
+  else $('points').hidden = true;
   $('bResTitle').onclick = showTitle;
+}
+
+// The points screen ($08:A6C0): this map's points, the campaign total and the rank. The
+// campaign total is kept per map, so replaying a map replaces its points.
+function pointsScreen(p) {
+  const mp = mapPoints(battle, mission);
+  p.points = { ...p.points, [mission]: mp.total };
+  saveProgress(p);
+  const total = Object.values(p.points).reduce((s, v) => s + v, 0), rank = rankOf(total);
+  const L = (i, fallback) => (label(i) || fallback).replace(/\n/g, ' ').trim();
+  const rows = [[14, 'Units Destroyed', mp.destroyed], [15, 'Units Survived', mp.survived], [16, 'Units Lost', mp.lost],
+    [17, 'Docks Captured', mp.docks], [18, 'Stage Win Bonus', mp.bonus], [20, 'Map Victory Points', mp.total], [19, 'Total Victory Points', total]];
+  const grade = '◆'.repeat((rank & 3) + 1) + '◇'.repeat(3 - (rank & 3));
+  $('points').innerHTML = `<table>${rows.map(([i, f, v], k) => `<tr${k >= 5 ? ' class="sum"' : ''}><td>${L(i, f)}</td><td>${v}</td></tr>`).join('')}</table>`
+    + `<div class="rank"><span class="dim">Rank</span> <b>${rankName(rom, rank, en ? en.labels : null)}</b> <span class="grade" title="emblem grade ${(rank & 3) + 1} of 4">${grade}</span></div>`;
+  $('points').hidden = false;
 }

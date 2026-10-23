@@ -21,7 +21,17 @@ export const FIRE_SFX = {
   38: 0x28, 39: 0x30, 40: 0x2E, 42: 0x30, 43: 0x30, 44: 0x30, 49: 0x30, 50: 0x30, 51: 0x2F, 52: 0x2E,
 };
 
-export const fireSfx = (type) => FIRE_SFX[type] ?? SFX.SHOT;
+// Per weapon slot (0-3), captured with research/spc_fightsfx.py for every valid slot; null = empty
+// slot. $26 is the close-range slot of most mecha (in those runs the defending Mars counters with
+// its own close-range weapon, so it may also be the counter's sound).
+export const FIRE_SFX_SLOT = {
+  0: [0x22, null, 0x26, null], 1: [0x23, null, 0x26, null], 2: [0x22, null, 0x27, null], 3: [0x2F, null, 0x26, null],
+  4: [0x23, null, null, 0x28], 6: [0x22, null, 0x26, null], 7: [0x22, null, 0x26, null], 9: [0x23, 0x24, null, null],
+  15: [null, 0x23, null, null], 21: [null, null, 0x26, null], 23: [null, 0x2B, null, null], 42: [0x30, 0x30, 0x32, null],
+};
+
+// Weapon sound for a unit type firing weapon slot `slot` (falls back to the type's slot-1 capture).
+export const fireSfx = (type, slot) => FIRE_SFX_SLOT[type]?.[slot] ?? FIRE_SFX[type] ?? SFX.SHOT;
 
 // Labels for the sound lab.
 export const FIGHT_SFX_NAMES = {

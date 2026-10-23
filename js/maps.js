@@ -123,9 +123,10 @@ export function cellAt(px, py) {
   return [c0, Math.floor((py - (c0 & 1) * 8) / 16)];
 }
 
-export function renderMap(rom, info, { units = true } = {}) {
+// `grid` overrides the map's own cells (a battle whose cells changed, see game/events.js).
+export function renderMap(rom, info, { units = true, grid: cellGrid = null } = {}) {
   const header = rom.body(info.headerId);
-  const grid = rom.body(info.gridId);
+  const grid = cellGrid || rom.body(info.gridId);
   const W = GRID_W * 16 + 8, H = GRID_H * 16 + 8;
   const full = new Indexed(W, H);
   const cells = new Map();

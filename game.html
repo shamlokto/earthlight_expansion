@@ -30,6 +30,12 @@
     .fightov { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; cursor: pointer; }
     .fightov canvas { width: min(768px, 96vw); aspect-ratio: 256 / 224; image-rendering: pixelated; border: 2px solid var(--line); }
     .fightov p { margin: 6px 0 0; }
+    .alertov { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 9; cursor: pointer; }
+    .alertov div { background: #0a0f3a; border: 3px double #c8d0ff; color: #fff; padding: 16px 22px; white-space: pre-line; font: 18px/1.4 ui-monospace, monospace; text-align: center; box-shadow: 0 0 0 9999px rgba(0,0,0,.35); }
+    .points table { border-collapse: collapse; font: 15px/1.6 ui-monospace, monospace; margin: 0 auto; }
+    .points td { padding: 0 14px; text-align: left; } .points td + td { text-align: right; }
+    .points tr.sum td { border-top: 1px solid var(--line); color: var(--accent); }
+    .points .rank { margin-top: 10px; font-size: 18px; } .points .grade { color: #ffd84a; letter-spacing: 2px; }
     .result { font-size: 18px; white-space: pre-line; max-width: 560px; }
   </style>
 </head>
@@ -78,9 +84,11 @@
     <div class="briefTitle" id="resTitle"></div>
     <div class="result" id="resText"></div>
     <div class="dim" id="resLoss"></div>
+    <div class="points" id="points" hidden></div>
     <div class="row"><button class="btn primary" id="bResNext"></button><button class="btn" id="bResStory" hidden>Epilogue</button><button class="btn" id="bResTitle">Title</button></div>
   </section>
 
+  <div id="alert" class="alertov" hidden><div id="alertText"></div></div>
   <div id="fight" class="fightov" hidden>
     <canvas id="fightCv" width="256" height="224"></canvas>
     <p class="dim">click to skip</p>

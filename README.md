@@ -92,6 +92,18 @@ Not yet: the original AI (the stand-in AI can stall on large maps), the Buccanee
 comet, afterburner and mine-clearing events of maps 11, 19, 21, 23, 25 and 28, the points and
 rank screen, and the original title and menu graphics.
 
+## The original AI (`js/game/ai.js`)
+
+The computer opponent now follows the game's own AI, decoded from bank `$01`. Each turn it
+runs the original's phases in order: per-map scripted orders for chosen Galt units (drop
+troops, move to a hex, wait N turns), damaged units and spent bombers back to a dock,
+attacks, then the rest walk the map's waypoint routes, and docks and carriers put their
+cargo out at the end of the turn. Targets go by the game's priority (a per-type value, the
+mission's key units, and how much of Galt's force each enemy threatens). An attack is only
+made when the damage dealt beats the counter-attack, from the best free hex in range.
+Details in [docs/FORMATS.md](docs/FORMATS.md) ("Computer opponent"). AI-vs-AI runs of all 30
+maps finish each turn in well under 0.2 s (map 30: about 20 ms).
+
 ## Unit description art (`js/unitart.js`, `js/unitinfo.js`)
 
 The large unit pictures from the original's unit info screen are drawn from the ROM: each
@@ -126,8 +138,9 @@ ships with the project.
 1. **Battle animations**: the cut-in fight scenes are the most important thing to keep.
 2. **Unit description graphics**: done (see above; the art is assets 207–278 assembled from
    sprite frames in bank `$06`).
-3. **Sound and music**: done (see above). Open: event music from map scripts, and the
-   title, briefing and ending songs once those screens exist.
+3. **Sound and music**: done (see above). Title, menu, briefing, interlude and ending songs
+   are exported for those screens (`SONGS` in `js/audio/sound.js`). Open: event music from map
+   scripts, and four songs not yet tied to a screen (likely mission lost / game over / staff roll).
 4. Map scripts, transformation, levels, then the original AI. Check the web first for
    documented mechanics before decoding them from the ROM.
 
@@ -160,4 +173,4 @@ clears it.
 | `fightlab.html` | development page: renders a fight at any frame, to compare with emulator captures |
 | `js/audio/` | sound: SPC700 + S-DSP emulator (`spc.js`), AudioWorklet (`worklet.js`), API and ROM tables (`sound.js`: `Sound.playSong/playSfx/stop/setMuted`, `soundTest`, `trackTable`, `mapMusic`), fight effects (`fightsfx.js`) |
 | `soundlab.html` | sound test: every song and effect from the ROM |
-| `research/` | Python tools used to reverse-engineer the game: a 65816 + DMA emulator (`emu.py`), disassembler (`dis65.py`), reference decoder (`decomp.py`), sound upload blocks (`spc_blocks.py`) and fight sound capture (`spc_fightsfx.py`). Set `EARTHLIGHT_ROM` to your ROM path. |
+| `research/` | Python tools used to reverse-engineer the game: a 65816 + DMA emulator (`emu.py`), disassembler (`dis65.py`), reference decoder (`decomp.py`), sound upload blocks (`spc_blocks.py`) fight sound capture (`spc_fightsfx.py`) and a boot/song logger (`spc_boot.py`). Set `EARTHLIGHT_ROM` to your ROM path. |

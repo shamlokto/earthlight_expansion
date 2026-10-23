@@ -255,7 +255,7 @@ export class FightScene {
     if (f === T_FLYIN + FLY_LEN - 4) out.push(SFX.STOP_SFX);
     for (const [side, acts, fires] of sides) {
       // small craft fire at T_FIRE; capital ships and structures ~41 frames later (captured)
-      if (fires && f === T_FIRE + (kindOf(side.type) === 'craft' ? 0 : 41)) out.push(fireSfx(side.type));
+      if (fires && f === T_FIRE + (kindOf(side.type) === 'craft' ? 0 : 41)) out.push(fireSfx(side.type, side.slot));
       acts.forEach((a, i) => {
         if (a.dies && !a.ship && f === T_FIRE + a.hit + i * 6) out.push(SFX.BOOM);
         if ((a.ship || a.struct) && a.hits && f === T_FIRE + variant(side === this.leftSide ? this.rightSide.type : this.leftSide.type).hit) out.push(SFX.BOOM);

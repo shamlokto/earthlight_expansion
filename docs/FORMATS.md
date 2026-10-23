@@ -348,6 +348,69 @@ flag bit 6; `$01:A67C` counts only `$00`/`$80` units per army). The ROM has no u
   carriers, flagship, all command centres; 68–86 are the defeat texts per operation, 87/88 the
   reinforcement alerts, 94 the Babylon countdown). The ROM's own per-map table wasn't found.
 
+## Computer opponent (`js/game/ai.js`, read from the game code)
+
+Turn setup `$02:894B`: per-unit AI byte `$042F` = `$10` (army A on the map), `$90` (army B
+on the map, type ≠ `$12` and < `$34`), else 0; bit 0 (scripted) is kept, bit 2 copies the
+afterburner flag. Then the phase table `$01:9077` (index `$0401`) runs:
+
+| phase | code | what |
+|---|---|---|
+| 0/1, 4/5 | `$01:E466/E46C` | map scripts (run twice: before attacks, and again after) |
+| 2 | `$01:8B3C` → `$01:8C10` | dock return |
+| 3 | `$01:80A9` | attacks |
+| 6 | `$01:87DC` | advance along waypoint routes |
+| 7 | `$01:8D37` | docks and carriers launch cargo |
+| 8 | `$01:806A` | end turn |
+
+* **Priority** `$04B9` (`$02:89ED`): `$02:8AB8[type]`; carriers + 4 per unit carried; docks
+  only 4 per unit carried + `$40` (0 when empty). `$80` more for the mission's key units:
+  class `$02:E64F[map]` applies to army A, `$02:E631[map]` to army B; class → types
+  (`$02:E52D`): 1/8 `$38–39` command centres, 2 `$35–37` fortresses, 3 `$27–33`, 4 `$1E–21`,
+  5/6 `$22–26` carriers, 9 `$35–39`, 7 type `$1F`, 0 none. `$02:E631` matches the Galt
+  objective of each mission, so it is most likely the ROM's own victory table. Then `$01:9089`:
+  each army A unit adds the highest priority among the army B units it could attack with
+  profit this turn.
+* **Attacks** (`$01:80A9`): pick the army A unit with the highest priority (ties: the later
+  slot); every army B unit with `$042F & $F4 = $90` tries slots 0–3 (`$01:84A2`); the best
+  score wins (ties: the first). Nobody qualifies → the target is skipped for this phase.
+  Per slot: `$01:84E0` form (Athena types 4–7: slots 0/2 in HU form, slot 3 only as the armed
+  fighter, slot 1 never; Siren 36 fights as 37 when 37 has that slot); `$01:85BD` slot 0 only
+  against small craft (category ≥ 7), slots 1 and 3 only against capital ships, slot 2 both;
+  `$01:858B` distance ≤ move + max range; `$01:85DF` reach = one-turn flood (own hex only for
+  move-or-fire indirect weapons); `$01:8626` every reachable free hex at range max…min
+  (`$01:8E7A` ring walk), firing-hex terrain and line of fire checked, then `$01:8741` moves
+  the unit there and `$01:A871` computes both raw blows. Score = dealt − counter (`$06C4` −
+  `$06C6`, before the random term, not capped by HP); only > 0 counts. The Abaddon (`$2B`)
+  fires its slot 3 Decimator at the first hex that works (`$01:81D7`; the remake calls `blast`). After firing, a unit with
+  movement left (`$06A3`) goes to a dock if due, else back toward where it started
+  (`$01:8FF2`/`$01:8F1E`).
+* **Multi-turn field** (`$01:B606`, into `$7E:4D52`): value = turns left × 16 + points left +
+  1, starting with turns = 12 / move − 1 (`$071A`); when points run out the next turn's refill
+  continues the search. Entering a hex next to an enemy uses all points left (`$7E:2DD2`).
+  `$01:B866` walks back from a goal to the neighbour with the highest value until it reaches
+  this turn's range; `$01:89D8` takes that hex, or the first free one of this turn within 2
+  hexes of it.
+* **Dock return** (`$01:8C10`): types 5, 7, 11, 44 or HP ≤ max/4 → the reachable host
+  (`$01:A554`) with the highest field value; board it this turn or move toward it.
+* **Routes** `$02:89B1[map]` → bank `$02`: (priority, cell = y·64 + x)* until 0. Each unit
+  not scripted heads for the highest-priority waypoint inside its field (ties: the closer);
+  none in reach → it stays put. Units moved this way don't fire afterwards, except
+  afterburner units (`$01:8A93`).
+* **Scripts** `$00:E900[map]` → bank `$00`: (x, y, type, pointer)* until 0, matched to units
+  at map start (`$02:D724`, any army; they run only while the unit is army B and on the
+  map). Commands (`$01:E77A`): `1 T x y` / `3 T x y` put a carried unit of type T out on
+  (x, y); `2 x y` move to (x, y) or the first free reachable of 37 hexes around it, then go on
+  with the next command; `4` wait (no attack) this turn; `5 x y` Abaddon missile at (x, y);
+  `6` no attack this turn; `0` end. Scripted units never use the routes, even after their list
+  ends. A blocked command is retried next phase.
+* **Launch** (`$01:8D37`): every army B dock, and every carrier without an afterburner, puts
+  each unit it carries (except those that boarded this turn, flag `$10`) on the first free
+  hex around it (18 hexes for the Erinyes, `$22`).
+* **Afterburner** units (`$1AD1` bit 2, cells `$02:90F2[map]`) sit out the attack phase,
+  advance with 10 points (an Athena keeps its HU form, `$01:880D`), then fire from where they stop.
+  The AI keeps out of the Buccaneer cannon lanes (`$01:9340`, `inLane`).
+
 ## Unit info screen and description art (`js/unitart.js`, verified)
 
 The battle dispatcher task (`$01:B163`) polls `$06EE`; request `$0A` runs `$01:B342`, which
@@ -405,7 +468,7 @@ in every group that uses 833); `$43` and up are music on voices 0–5. Groups 3�
 **Sound test** (`$02:D4C6`): 113 entries of `[cmd, group]` at `$02:D500` (`$FF` = keep the
 current group); `soundlab.html` lists them.
 
-**Map music** (`$02:DD2A`): group `$02:DE32[x]`, command `$02:DE6E[x]` with
+**Map music** (`$02:DD29`): group `$02:DE32[x]`, command `$02:DE6E[x]` with
 `x = map + 30` during army B's phase (`$06E6`). Maps whose group is 4 or 7 (10, 20, 29, 30)
 always keep their song. Otherwise `$02:DDE3` compares the unit counts `$1E0D/$1E0E`
 (armies A/B): A ≥ 2×B sets `$06EA`, B ≥ 2×A sets `$06EB`, and the phase plays
@@ -422,7 +485,25 @@ the attacker fires (~416; ships ~475), `$3F` per explosion, `$03` at the end. We
 per type (default `$22`) is `FIRE_SFX` in `js/audio/fightsfx.js`: `$23` types
 1, 4, 5, 9, 15, 26, 27; `$24` 16, 24; `$2B` 23; `$2E` 14, 30, 34, 40, 52; `$28` 38;
 `$2F` 3, 12, 13, 17, 19–22, 28, 29, 31, 35, 51; `$30` 33, 36, 37, 39, 42–44, 49, 50. Types 32, 41,
-45–48 and 53–57 fire nothing at a Mars. Other weapon slots were not captured.
+45–48 and 53–57 fire nothing at a Mars. Captures of every valid weapon slot
+(`FIRE_SFX_SLOT`) differ in a few places: type 2 slot 3 `$27`, type 4 slot 4 `$28`, type 9 slot 2
+`$24`, type 42 slot 3 `$32`, and `$26` for the close-range slot 3 of most mecha (types 0, 1, 3,
+6, 7, 21). In those runs the defending Mars counters with its own close-range weapon, so `$26`
+may be partly the counter's. An empty slot makes the game pick a valid weapon.
+
+**Other screens** (booting the game with `research/spc_boot.py`, plus the code that sends
+them; `SONGS`, `briefingSong`, `eventSong`, `PHASE` in `js/audio/sound.js`): opening + title
+1/`$43` (`$08:9540`; the title stops it after ~90 s and the opening loops), main menu
+9/`$4C` (`$02:DA86`), mission intro/briefing 9/`$48`, or `$49` on maps 10, 20, 28 (`$05:EB51`),
+between missions after a win 9/`$4A` (`$01:B1D1` → `$00:8071`), pre-battle map overview
+6/`$4D` (`$02:C97B`), ending 10/`$4D` (after map 30: `$01:B204` → `$05:CB00`). Phase start
+(`$02:DC39`, the army banner): command 2 (stop music), effect `$0E`, then 60 frames later `$4C`
+of the loaded battle group (a jingle shared by groups 3–8), then `$02:DD29` picks the map song.
+The scene dispatcher `$01:B1B1` maps `$06EE`: `$80` fight, `$81` `$01:B42B`, `$82` mission won,
+`$8C` next mission (`$01:B041`: group 9, mission intro `$05:E9C1`). BGM is re-picked at each
+phase start (`$01:B105`) and after a unit is lost (`$01:A0E1`, skipped on group 4/7 maps).
+Not tied to a screen yet: 1/`$44` (`$01:A148`), 10/`$50` (`$01:DEC5`, `$08:8A48`, `$08:8F57`),
+10/`$4F` (`$08:AE32`), group 11 (asset 834) cmd 4 after `$4B` (`$00:9110`).
 
 **Emulator notes** (`js/audio/spc.js`): SPC700 with the standard cycle table (taken branches
 +2), timers at 8 kHz/8 kHz/64 kHz, one DSP sample per 32 cycles; the DSP is per sample

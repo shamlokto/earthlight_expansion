@@ -12,6 +12,8 @@
 import { terrainOf, moveCost, EDGE_CLASS } from '../terrain.js';
 import { scriptFor, setupScript, outcome } from './scripts.js';
 import { TRANSFORM, SPENT } from '../units.js';
+import { setupEvents, burnerMove, fireCannons } from './events.js';
+import { tally } from './points.js';
 
 const D042 = 0x01d042, D0C2 = 0x01d0c2, LEVEL = 0x01ac3d;
 export const NEUTRAL = 2;           // army of the neutral docks (deployment flag $40)
@@ -55,7 +57,7 @@ export class Battle {
     this.rom = rom; this.info = info; this.types = unitTypes;
     this.script = opts.script || scriptFor(info.index); this.hard = !!opts.hard;
     this.header = rom.body(info.headerId);
-    this.grid = rom.body(info.gridId);
+    this.grid = rom.body(info.gridId).slice();   // own copy: the Decimator clears cells (events.js)
     this.units = [];
     const made = new Map();
     for (const d of deploy) {
@@ -66,6 +68,7 @@ export class Battle {
     this.arrivals = arrivals.map((e) => ({ ...e, done: false }));
     this.turn = 1; this.army = 0; this.log = [];
     setupScript(this);
+    setupEvents(this);
     this.result = null;
   }
 
@@ -101,7 +104,7 @@ export class Battle {
     const uc = this.type(u).category, hc = this.type(host).category;
     if (hc === DOCK_CAT) return uc >= 3 && uc !== 5 && uc !== 6 && uc !== 7;
     if (host.type === CRAB) return uc >= 8 && uc !== 13;
-    if (hc === CARRIER_CAT) return uc >= 8;
+    if (hc === CARRIER_CAT) return uc >= 8 && !u.burner;   // no boarding with an afterburner ($01:A576)
     return false;
   }
   // Hosts u can reach this turn (moving onto a friendly host's hex boards it).
@@ -173,7 +176,7 @@ export class Battle {
   movePoints(u) {
     if (u.carrier) return 0;
     if (u.acted) return u.reMove;
-    return u.moved ? 0 : this.type(u).move;
+    return u.moved ? 0 : (burnerMove(u) ?? this.type(u).move);
   }
 
   // Dijkstra over movement points. Returns Map "x,y" -> remaining points (free hexes only).
@@ -355,20 +358,30 @@ export class Battle {
     const entry = { turn: this.turn, att, def, w, cw, before, after: [att.hp, def.hp], info, levels: [att.level, def.level] };
     this.afterFight(att, def, before, entry);
     for (const c of [att, def]) if (!c.hp) for (const u of this.cargo(c)) u.hp = 0;   // cargo goes down with its carrier
+    tally(this, entry);   // victory points (points.js)
     // bomb or missile fired: switch to the spent form; bombers, missile ships and destroyers
     // may move again with what is left (plus the spent form's extra movement)
-    const mpLeft = att.moved ? (att.mp ?? 0) : this.type(att).move;
-    let reMove = 0;
-    if (att.hp && SPENT[att.type] !== undefined && w.slot === 3) {
-      const old = this.type(att).move;
-      this.setType(att, SPENT[att.type]);
-      reMove = mpLeft + this.type(att).move - old;
-      entry.spent = true;
-    } else if (att.hp && DESTROYERS.has(att.type)) reMove = mpLeft;
-    att.acted = true; att.moved = true; att.reMove = Math.max(0, reMove);
+    if (att.hp) entry.spent = this.spend(att, w);
+    else { att.acted = true; att.moved = true; att.reMove = 0; }
     this.log.push(entry);
     this.result = outcome(this);
     return entry;
+  }
+
+  // After firing: a bomb or missile (slot 3) switches to the spent form; bombers, missile
+  // ships and destroyers may move again with what is left (plus the spent form's extra
+  // movement). Returns true when the unit switched to its spent form.
+  spend(att, w) {
+    const mpLeft = att.moved ? (att.mp ?? 0) : this.movePoints(att);
+    let reMove = 0, spent = false;
+    if (SPENT[att.type] !== undefined && w.slot === 3) {
+      const old = this.type(att).move;
+      this.setType(att, SPENT[att.type]);
+      reMove = mpLeft + this.type(att).move - old;
+      spent = true;
+    } else if (DESTROYERS.has(att.type)) reMove = mpLeft;
+    att.acted = true; att.moved = true; att.reMove = Math.max(0, reMove);
+    return spent;
   }
 
   // $01:9EA9: levels, then dock capture ($01:A626) or the dock's repair pause.
@@ -400,7 +413,9 @@ export class Battle {
     this.army = 1 - this.army;
     if (this.army === 0) this.turn++;
     this.repairDocks(this.army);
+    this.phaseEvent = fireCannons(this);   // map events run at every phase change ($01:9E4E)
     const arrived = this.arrive();
+    this.eventMusic = arrived.length > 0;   // $06EC/$06ED: event song for this phase ($02:9B70)
     this.result = outcome(this);
     return arrived;
   }

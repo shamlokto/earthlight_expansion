@@ -13,8 +13,8 @@ import { showUnitInfo } from './unitinfo.js';
 // Play the fight cut-in for a resolved attack (log entry from Battle.attack).
 function runFight(e) {
   if (!$('showFights').checked) return Promise.resolve();
-  const side = (u, before, after) => ({ type: u.type, army: u.army, hp: before, hpAfter: after, cls: battle.cls(u.x, u.y) });
-  const scene = new FightScene(rom, side(e.att, e.before[0], e.after[0]), side(e.def, e.before[1], e.after[1]),
+  const side = (u, before, after, w) => ({ type: u.type, army: u.army, hp: before, hpAfter: after, cls: battle.cls(u.x, u.y), slot: w?.slot });
+  const scene = new FightScene(rom, side(e.att, e.before[0], e.after[0], e.w), side(e.def, e.before[1], e.after[1], e.cw),
     { counter: !!e.cw, info: e.info, textRom: romEn, names });
   scene.att.cls = battle.cls(e.att.x, e.att.y);
   const ov = $('fight'), cv = $('fightCv'), ctx = cv.getContext('2d');
