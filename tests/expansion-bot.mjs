@@ -71,6 +71,7 @@ for (let r = 0; r < runs; r++) {
     if (b.winner() !== null) break;
     b.endTurn();
   }
+  if (process.env.TRACE && r === 0) console.log("end", b.turn, b.army, b.result, b.units.filter((u) => u.army === 0).map((u) => `${types[u.type].code}:${u.hp}${u.carrier ? "@" + (u.carrier.id ?? "x") : ""}${u.escaped ? "!" : ""}`).join(" "));
   const k = `${b.winner() === 0 ? 'win' : b.winner() === 1 ? 'loss' : 'none'}:${b.result?.reason}`;
   tally.set(k, (tally.get(k) || 0) + 1); turns += b.turn;
 }
