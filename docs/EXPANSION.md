@@ -480,6 +480,9 @@ the editor (those come with phase 3).
     after a move). Escape maps now carry over only the units that escaped.
   * The ROM targeting rule ($01:E0F1/$01:85BD) now applies to the player too (earthlight-final's
     change in `rules.js`): bombs only hit ships and structures.
+  * Rebalanced after the playtest (`missions/asimov.json`): the Union mecha start 5–6 hexes away,
+    the Hannibal and Fenrirs sit further back, the gate force arrives on turn 4, and the general
+    plus 2 units must escape. Not replayed yet.
   * To do: the reinforcement alert uses the ROM's "Galt reinforcements" line even when the Union
     reinforces; there's no early defeat once an escape becomes impossible.
 * Found while building: the ROM's map grids have no class-10 frame (the game marks the bounds at
