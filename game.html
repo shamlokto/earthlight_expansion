@@ -18,7 +18,37 @@
     .play { display: flex; gap: 12px; padding: 12px 16px; flex: 1; min-height: 0; flex-wrap: wrap; }
     .board { position: relative; overflow: auto; border: 1px solid var(--line); max-width: 100%; max-height: calc(100vh - 90px); align-self: flex-start; }
     .board canvas { cursor: pointer; display: block; }
-    .hud { width: 300px; max-width: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .hud { width: 340px; max-width: 100%; display: flex; flex-direction: column; gap: 10px; }
+    /* unit card: the original's unit-info picture with its stats, weapons and description */
+    .ucard { display: flex; flex-direction: column; gap: 10px; --tint: var(--muted); }
+    .ucard.armyA { --tint: #ff8fd8; } .ucard.armyB { --tint: #8fe38a; } .ucard.neutral { --tint: #d0d0d0; }
+    .utop { display: flex; gap: 12px; align-items: flex-start; }
+    .uart { width: 144px; height: auto; flex: none; image-rendering: pixelated; border: 2px solid var(--tint); border-radius: 6px; background: #05070f; box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint) 18%, transparent); }
+    .uid { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .uid h3 { margin: 0; font-size: 18px; letter-spacing: .02em; color: var(--tint); text-wrap: balance; }
+    .ucode { color: var(--muted); font-size: 12px; letter-spacing: .08em; }
+    .urole { font-size: 12px; color: var(--text); opacity: .85; margin-bottom: 4px; }
+    .ustats { display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; margin: 4px 0 0; font-size: 12px; font-variant-numeric: tabular-nums; }
+    .ustats dt { color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-size: 10px; align-self: center; }
+    .ustats dd { margin: 0; display: flex; align-items: center; gap: 6px; }
+    .bar { flex: 1; height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; min-width: 40px; }
+    .bar span { display: block; height: 100%; background: var(--tint); }
+    .pips { gap: 2px !important; } .pips i { width: 7px; height: 7px; border-radius: 1px; background: var(--panel-2); } .pips i.on { background: var(--accent); }
+    .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+    .tag.gen { color: #ffd84a; border-color: #8a7420; } .tag.burn { color: #ffa040; border-color: #7a4a18; }
+    .uweap { border-collapse: collapse; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
+    .uweap th { text-align: left; color: var(--muted); font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; padding: 0 6px 3px 0; }
+    .uweap td { padding: 3px 6px 3px 0; border-top: 1px solid var(--line); }
+    .uweap .slot { color: var(--muted); width: 2em; } .uweap .num { white-space: nowrap; }
+    .mode { font-size: 11px; padding: 0 6px; border-radius: 3px; }
+    .mode.m0 { background: #13306b; color: #9fd0ff; } .mode.m1 { background: #4a3a0e; color: #ffd86a; } .mode.m2 { background: #561a1a; color: #ff9a8a; }
+    .pow { width: 48%; } .pow b { display: inline-block; min-width: 2.2em; font-weight: 600; }
+    .pbar { display: inline-block; vertical-align: middle; width: calc(100% - 2.6em); height: 4px; border-radius: 2px; background: var(--panel-2); overflow: hidden; }
+    .pbar span { display: block; height: 100%; background: color-mix(in srgb, var(--tint) 70%, transparent); }
+    .udesc { font-size: 12.5px; line-height: 1.5; color: var(--text); opacity: .9; border-top: 1px solid var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .udesc p { margin: 0; } .udesc .arm { color: var(--muted); }
+    .uextra p { margin: 4px 0; }
     .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
     .card h3 { margin: 0 0 6px; }
     .log { max-height: 220px; overflow: auto; font-size: 12px; color: var(--muted); }

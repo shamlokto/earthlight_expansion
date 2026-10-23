@@ -7,7 +7,8 @@ import { paint } from './gfx.js';
 import { MAP_COUNT, mapInfo, battlePalette, renderMap, unitIcon, cellOrigin, cellAt, HEX_POINTS } from './maps.js';
 import { allUnitTypes } from './units.js';
 import { applyBps } from './bps.js';
-import { readEnglish, LAYOUT } from './text.js';
+import { readEnglish, LAYOUT, unitText } from './text.js';
+import { paintUnitArt } from './unitart.js';
 import { readRomFile, readPatchFile } from './romfile.js';
 import { Battle, NEUTRAL, TRANSFORM } from './game/rules.js';
 import { scenario } from './game/scenario.js';
@@ -426,13 +427,57 @@ function hud(msg) {
   if (msg !== undefined) $('info').innerHTML = msg;
 }
 
+// The unit card: the original's unit-info picture (js/unitart.js), name, role, stats, weapons
+// and the unit's own description text, as on the unit info screen and the wiki.
+const artCache = new Map();
+function artUrl(type) {
+  if (!artCache.has(type)) {
+    let url = '';
+    try { const c = document.createElement('canvas'); paintUnitArt(c, rom, type, 2); url = c.toDataURL(); } catch { /* no picture for this type */ }
+    artCache.set(type, url);
+  }
+  return artCache.get(type);
+}
+// Description texts: the expansion's own (unitInfo) or the English patch's; spent and loaded
+// forms use their base type's text, as the wiki does.
+function unitInfoText(type) {
+  const t = types[type], base = t.armed ?? t.empty ?? t.formOf;
+  const own = (k) => en?.unitInfo?.find((e) => e.type === k);
+  const patch = (k) => (en?.brief && en?.main ? unitText(en, k) : null);
+  for (const k of [type, base]) {
+    if (k === undefined) continue;
+    const x = own(k) || patch(k);
+    if (x && (x.info || x.short)) return x;
+  }
+  return null;
+}
+const prose = (s) => (s || '').replace(/(\w)-\n(\w)/g, '$1$2').replace(/\s*\n\s*/g, ' ').trim();
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const MODE_NAMES = ['Beam', 'Railgun', 'Missile'];
+
 function unitCard(u, extra = '') {
-  const t = types[u.type];
-  const ws = t.weapons.filter(Boolean).map((w) => `${'BNM'[w.mode]} r${w.min}${w.max > w.min ? '–' + w.max : ''} p${w.power}`).join(' · ');
-  const who = u.army === NEUTRAL ? '<p class="dim">Neutral dock: bring it to 0 HP to capture it and everything inside.</p>' : '';
-  const role = (u.guard ? ' · <span class="dim">guard</span>' : '') + (u.burner ? ' · <span style="color:#ffa040">afterburner (move 10)</span>' : '');
-  return `<h3 class="${side(u.army)}">${nameOf(u)} <span class="dim mono">${t.code}</span></h3>
-    HP ${u.hp}/${t.hp} · Move ${t.move} · Lv ${u.level}${role}<br><span class="mono small">${ws || 'unarmed'}</span>${who}${extra}`;
+  const t = types[u.type], tx = unitInfoText(u.type), art = artUrl(u.type);
+  const evade = Math.round((battle.type(u).evasion * 100) / 128);
+  const tags = [u.general ? '<span class="tag gen">★ General aboard</span>' : '', u.guard ? '<span class="tag">Guard</span>' : '',
+    u.burner ? '<span class="tag burn">Afterburner · move 10</span>' : '', t.moveOrFire ? '<span class="tag">Long guns: move or fire</span>' : '',
+    u.army === NEUTRAL ? '<span class="tag">Neutral dock</span>' : ''].join('');
+  const weapons = t.weapons.filter(Boolean).map((w) => `<tr><td class="slot">W${w.slot + 1}</td><td><span class="mode m${w.mode}">${MODE_NAMES[w.mode]}</span></td>
+    <td class="num">${w.min === w.max ? w.min : `${w.min}–${w.max}`}</td><td class="pow"><b>${w.power}</b><span class="pbar"><span style="width:${Math.round((w.power / 255) * 100)}%"></span></span></td></tr>`).join('');
+  // the info strings: [mount labels, role + armament, flavour]
+  const armament = tx?.info ? prose(tx.info[1].split(/\n\s*\n/).slice(1).join(' ')) : '';
+  const flavour = tx?.info ? prose(tx.info[2]) : '';
+  const who = u.army === NEUTRAL ? '<p class="dim">Bring it to 0 HP to capture it and everything inside.</p>' : '';
+  return `<div class="ucard ${side(u.army)}">
+    <div class="utop">${art ? `<img class="uart" src="${art}" alt="">` : ''}
+      <div class="uid"><h3>${esc(nameOf(u))}</h3><div class="ucode mono">${esc(t.code)}</div>${tx?.short ? `<div class="urole">${esc(prose(tx.short))}</div>` : ''}
+        <dl class="ustats"><dt>HP</dt><dd><span class="bar"><span style="width:${Math.round((u.hp / t.hp) * 100)}%"></span></span>${u.hp}/${t.hp}</dd>
+          <dt>Move</dt><dd>${u.burner ? 10 : t.move}</dd><dt>Evade</dt><dd>${evade}%</dd>
+          <dt>Level</dt><dd class="pips">${Array.from({ length: 9 }, (_, i) => `<i${i < u.level ? ' class="on"' : ''}></i>`).join('')}</dd></dl></div></div>
+    ${tags ? `<div class="tags">${tags}</div>` : ''}
+    ${weapons ? `<table class="uweap"><tr><th></th><th>Weapon</th><th>Range</th><th>Power</th></tr>${weapons}</table>` : '<p class="dim">Unarmed.</p>'}
+    ${who}${extra ? `<div class="uextra">${extra}</div>` : ''}
+    ${armament || flavour ? `<div class="udesc">${armament ? `<p class="arm">${esc(armament)}</p>` : ''}${flavour ? `<p>${esc(flavour)}</p>` : ''}</div>` : ''}
+  </div>`;
 }
 
 function cargoPanel(c) {
