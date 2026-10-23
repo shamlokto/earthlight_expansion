@@ -79,12 +79,15 @@ export const deployCap = (mission) => Math.min(mission.cap || 99, mission.units.
 // other player unit still alive (joiners, captured dock cargo) joins the roster. Supply grows
 // from the score. Production and trade reset for the next intermission.
 export function finish(s, battle, points, missionNo) {
-  const alive = battle.units.filter((u) => u.army === 0 && u.hp > 0 && u.type < STRUCTURE && !u.exit);
+  // on an escape map, whoever is still on it when the general gets away is left behind
+  const escape = battle.mission.objective?.kind === 'escape';
+  const out = (u) => u.hp > 0 && (!escape || u.escaped);
+  const alive = battle.units.filter((u) => u.army === 0 && out(u) && u.type < STRUCTURE && !u.exit);
   const kept = [];
   for (const r of s.roster) {
     const deployed = battle.units.find((u) => u.rosterId === r.id);
     if (!deployed) kept.push(r);                                   // stayed home
-    else if (deployed.hp > 0) kept.push({ ...r, type: baseForm(battle, deployed.type), level: deployed.general ? r.level : deployed.level });
+    else if (out(deployed)) kept.push({ ...r, type: baseForm(battle, deployed.type), level: deployed.general ? r.level : deployed.level });
   }
   for (const u of alive) if (u.rosterId === undefined) kept.push({ id: s.nextId++, type: baseForm(battle, u.type), level: u.level });
   if (!kept.some((r) => r.id === s.general)) s.general = null;

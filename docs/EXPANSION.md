@@ -468,6 +468,20 @@ the editor (those come with phase 3).
   = 10 + map points / 10, auto-save in the browser. A won campaign battle saves survivors, levels,
   captured or joined units and supply, then returns to the intermission.
   Not done yet: the in-battle free Athena from a dock; tuning the numbers; missions 2–10 (phase 5).
+* **Playtest of mission 1 (2026-10-23, test layout)**:
+  * Lost: the escape (general + 3) became impossible on turn 6. The Titan, a Mars and the Crane
+    died; Fenrirs (move 8) and the Hannibal intercepted at the meteoroid gap. When the real map is
+    painted: start out of contact (the base is boxed in by zone of control on turn 1), give the
+    gate force more distance, require general + 2, and put the Hannibal further back.
+  * The general works as designed: the bomb sank a full Fenrir in one hit, but two Talos or Fenrir
+    hits take the Athena from 8 to 2. Boarding the Selene for a full repair saved the general
+    once; a damaged carrier carrying the general is a liability.
+  * Fixed: winning by a move (escape) never showed the result screen (`gameapp.js` now checks
+    after a move). Escape maps now carry over only the units that escaped.
+  * The ROM targeting rule ($01:E0F1/$01:85BD) now applies to the player too (earthlight-final's
+    change in `rules.js`): bombs only hit ships and structures.
+  * To do: the reinforcement alert uses the ROM's "Galt reinforcements" line even when the Union
+    reinforces; there's no early defeat once an escape becomes impossible.
 * Found while building: the ROM's map grids have no class-10 frame (the game marks the bounds at
   run time), and army A's icons are the pink ones, as the owner remembered.
 

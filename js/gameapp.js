@@ -488,6 +488,7 @@ function act(cx, cy) {
   if (sel && reach && reach.has(key) && !u) {
     const again = sel.acted;
     battle.move(sel, cx, cy);
+    if (checkEnd()) { clearSel(); return; }   // expansion: a unit leaving by the exit edge can win the map
     if (again) { const s = sel; clearSel(); hud(unitCard(s)); return; }
     reach = null; targets = battle.targets(sel); hosts = [];
     draw(); hud(unitCard(sel, targets.length ? '<p>Click a red hex to attack.</p>' : '<p>No targets in range.</p>'));

@@ -135,6 +135,10 @@ Class 10 is impassable and is also written as the frame around every map. A
 * `D082[class*4+mode]` = 射線通過, whether a shot of that mode passes through the terrain.
 * Surrounded: `$06CF` is set when all 6 hexes around the defender are occupied (`$01:A91A`),
   which halves its evasion.
+* **Targets per weapon slot** (`$01:E0F1`, the player's target marking; the AI's `$01:85BD`
+  is the same rule): slot 0 only hits small craft and docks (`F206[type] ≥ $70`, category ≥ 7),
+  slots 1 and 3 (bombs, ship missiles) only capital ships, fortresses and command centres
+  (category < 7), slot 2 anything.
 
 ## Scenes (milestone 5, in progress)
 

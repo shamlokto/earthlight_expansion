@@ -234,8 +234,12 @@ export class Battle {
   // Weapons of u usable against target from u's current hex.
   weaponsAgainst(u, target) {
     const t = this.type(u), d = distance(u, target), out = [];
+    // Target marking ($01:E0F1, the AI's $01:85BD alike): slot 0 only hits small craft and
+    // docks (category >= 7), slots 1 and 3 only capital ships and structures, slot 2 anything.
+    const small = this.type(target).category >= 7;
     for (const w of t.weapons) {
       if (!w || !w.power) continue;
+      if (w.slot === 0 ? !small : w.slot !== 2 && small) continue;
       if (d < w.min || d > w.max) continue;
       if (w.min >= 2 && u.moved && t.moveOrFire) continue;
       if (!this.canTarget(this.cls(target.x, target.y), w.mode)) continue;
