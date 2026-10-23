@@ -34,13 +34,14 @@ for text. Neither the ROM nor the patch is included here.
 
 ## Milestone 4: battle prototype (`play.html`)
 
-Pick any of the 30 maps and play Army A against a simple computer opponent (or a second
-human). The rules come from the decoded tables: hex movement with terrain costs and zone of
-control, weapon ranges and targeting, the damage formula with support, terrain defence and
-simultaneous counter-attacks. Not done yet: map scripts (reinforcements, objectives),
-transformation, levels, the original AI, and battle animations.
+Pick any of the 30 maps and play Army A against the computer (the original AI, see below) or
+a second human. The rules come from the decoded tables: hex movement with terrain costs and
+zone of control, weapon ranges and targeting, the damage formula with support, terrain defence,
+simultaneous counter-attacks, levels and the map objectives, with fight scenes. The sandbox
+starts from each map's deployment only (no extra units, dock cargo or reinforcements) and has
+no Transform button; the full missions are in the campaign (`game.html`, milestone 6).
 
-## Milestone 5: fight scenes (in progress)
+## Milestone 5: fight scenes
 
 Every attack in `play.html` now plays a fight cut-in (`js/game/fightscene.js`). It's a
 hand-written JavaScript rewrite modelled on fights recorded from the original in the
@@ -162,8 +163,9 @@ ships with the project.
    are exported for those screens (`SONGS` in `js/audio/sound.js`) and play in `game.html`, as
    does the event music of scripted reinforcements. Open: four songs not yet tied to a screen
    (likely mission lost / game over / staff roll).
-4. Map scripts, transformation, levels, then the original AI. Check the web first for
-   documented mechanics before decoding them from the ROM.
+4. Map scripts, transformation, levels, then the original AI: done (milestone 6 and "The
+   original AI" above). Check the web first for documented mechanics before decoding more
+   from the ROM.
 
 Formats and addresses are documented in [docs/FORMATS.md](docs/FORMATS.md).
 
@@ -218,4 +220,5 @@ objective (usually: destroy the Galt command centre or fortress, or sink a flags
 | `fightlab.html` | development page: renders a fight at any frame, to compare with emulator captures |
 | `js/audio/` | sound: SPC700 + S-DSP emulator (`spc.js`), AudioWorklet (`worklet.js`), API and ROM tables (`sound.js`: `Sound.playSong/playSfx/stop/setMuted`, `soundTest`, `trackTable`, `mapMusic`), fight effects (`fightsfx.js`) |
 | `soundlab.html` | sound test: every song and effect from the ROM |
+| `tests/aivai.mjs` | regression run: the original AI plays both sides on every ROM map (`EARTHLIGHT_ROM=… node tests/aivai.mjs`) |
 | `research/` | Python tools used to reverse-engineer the game: a 65816 + DMA emulator (`emu.py`), disassembler (`dis65.py`), reference decoder (`decomp.py`), sound upload blocks (`spc_blocks.py`) fight sound capture (`spc_fightsfx.py`) and a boot/song logger (`spc_boot.py`). Set `EARTHLIGHT_ROM` to your ROM path. |
