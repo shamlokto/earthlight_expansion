@@ -124,3 +124,14 @@ export function mapMusic(rom, map, side, countA = 0, countB = 0, event = false) 
   if (bWins) return { group: g, cmd: side ? 0x4D : 0x4E };
   return { group, cmd };
 }
+
+// Songs seen on other screens (booting the game in research/spc_boot.py), as 'group:cmd'.
+// Song calls not identified yet: 9:$4A ($00:80CE), 11 + $4B ($00:928F), 1:$44 ($01:A14A),
+// 10:$50 ($01:DEE6, $08:8A58), 10:$4D ($05:CD7C), 10:$4F ($08:B0C5).
+export const SONG_USES = {
+  '1:67': 'opening (starfield intro), $08:9540',
+  '9:76': 'main menu ("SELECT MENU PLEASE"), $02:DA86',
+  '9:72': 'mission select / map intro, $05:EB6E', '9:73': 'mission select (alternative), $05:EB6E',
+  '6:77': 'pre-battle map overview, $02:C986',
+};
+

@@ -49,7 +49,7 @@
 <script type="module">
 import { Rom } from './js/rom.js';
 import { readRomFile } from './js/romfile.js';
-import { Sound, GROUPS, SLOT_ASSETS, soundTest, trackTable, mapMusic } from './js/audio/sound.js';
+import { Sound, GROUPS, SLOT_ASSETS, SONG_USES, soundTest, trackTable, mapMusic } from './js/audio/sound.js';
 import { FIGHT_SFX_NAMES } from './js/audio/fightsfx.js';
 
 const $ = (id) => document.getElementById(id);
@@ -99,6 +99,7 @@ for (let side = 0; side < 2; side++) {
 note(5, 0x4D, 'army A phase when A has 2× the units'); note(5, 0x4E, 'army A phase when B has 2× the units');
 note(8, 0x4E, 'army B phase when A has 2× the units'); note(8, 0x4D, 'army B phase when B has 2× the units');
 note(5, 0x4F, 'army A phase, event music (map script)'); note(8, 0x4F, 'army B phase, event music (map script)');
+for (const [k, text] of Object.entries(SONG_USES)) { const [g, c] = k.split(':'); note(+g, +c, text); }
 for (const [c, text] of Object.entries(FIGHT_SFX_NAMES)) for (let g = 1; g <= 10; g++) if (g !== 2) note(g, +c, text);
 
 const kindOf = new Map();
