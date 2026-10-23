@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Earth Light Expansion</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    html, body { height: auto; }
+    body { display: block; }
+    main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 14px; }
+    .box { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+    .box h2 { margin: 0 0 8px; font-size: 16px; color: var(--accent); }
+    .muted { color: var(--muted); font-size: 13px; }
+    .stats { display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; }
+    .stats b { color: var(--accent-2); }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    td, th { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    th { color: var(--muted); font-weight: 500; }
+    canvas { image-rendering: pixelated; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+    .shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+    .shop button { display: flex; gap: 8px; align-items: center; text-align: left; width: 100%; }
+    .brief { white-space: pre-wrap; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo">EARTH LIGHT</span>
+      <span class="sub">expansion · Galt remnant intermission</span>
+    </div>
+    <nav class="tabs"><a class="btn" href="game.html">Original game</a><a class="btn" href="editor.html">Map editor</a></nav>
+  </header>
+  <main id="app"><p id="status">Loading ROM…</p></main>
+  <script type="module" src="js/expansion/intermission.js"></script>
+</body>
+</html>

@@ -74,7 +74,7 @@ export function romView(rom, mission) {
 export function deployList(mission) {
   const out = [];
   for (const u of mission.units) {
-    const host = { type: u.type, army: u.army, x: u.x, y: u.y, flag40: !!u.neutral };
+    const host = { type: u.type, army: u.army, x: u.x, y: u.y, flag40: !!u.neutral, level: u.level, rosterId: u.rosterId };
     out.push(host);
     for (const t of u.cargo || []) out.push({ type: t, army: u.army, x: u.x, y: u.y, carrier: host });
   }

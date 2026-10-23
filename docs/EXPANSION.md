@@ -442,7 +442,7 @@ only through small hooks agreed with the file's owner.
 | 5 | **Content**: the ten missions painted in the editor, briefings, intro and ending text. | `missions/*.json` | — |
 | 6 | **Balance pass**: playtest, tune unit counts, turn limits, production costs. | — | — |
 
-Status (2026-10-23): **phases 1 and 2 done, phase 3 first cut**, apart from authoring arrivals and the general in
+Status (2026-10-23): **phases 1–3 done, phase 4 first cut**, apart from authoring arrivals and the general in
 the editor (those come with phase 3).
 * `js/expansion/mission.js`: the mission format and loader. Checked: `Battle` from `rules.js` runs
   unchanged on a custom map (terrain classes, movement and units all correct).
@@ -457,8 +457,17 @@ the editor (those come with phase 3).
   scenes, music and the AI. Hooks added to base files: `gameapp.js` (custom-mission branch), `ai.js`
   and `events.js` (skip ROM per-map tables on custom maps). `missions/asimov.json` is a rough test
   layout of map 1, still to be painted properly in the editor.
-  Still to do in phase 3: the HUD calls the player "Union"; there's no briefing screen for
-  custom missions; escaped units aren't shown in a list; the general isn't marked on the board.
+  Phase 3 polish done: "Galt remnant" in the HUD, briefing screen, ★ on the general's unit,
+  general status and escaped list in the HUD.
+* **Phase 4 done (first cut)**: `expansion.html` + `js/expansion/intermission.js` (the page) and
+  `js/expansion/campaign.js` (state). Roster with pilot levels, deploy (up to the mission's cap;
+  the mission's own player units are the deployment slots, `joiner` units stay fixed), the general
+  (eligible machines only; stays home or boards), production (unlocks per `missions/index.json`,
+  max 3 a visit, price = ROM value × HP: Mars 8, Athena 24, Tiamat 48), trade (give machines,
+  get one worth up to their total; best pilot moves over), free Athena when none is left, supply
+  = 10 + map points / 10, auto-save in the browser. A won campaign battle saves survivors, levels,
+  captured or joined units and supply, then returns to the intermission.
+  Not done yet: the in-battle free Athena from a dock; tuning the numbers; missions 2–10 (phase 5).
 * Found while building: the ROM's map grids have no class-10 frame (the game marks the bounds at
   run time), and army A's icons are the pink ones, as the owner remembered.
 

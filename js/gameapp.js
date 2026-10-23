@@ -94,7 +94,10 @@ async function boot() {
   if (patch) { try { const b = applyBps(patch, rom.bytes.slice().buffer); en = readEnglish(b); romEn = new Rom(b); } catch { en = null; } }
   $('status').textContent = en ? 'English patch loaded' : 'Japanese ROM: add the English patch (☰ → ROM & patch) for the story and briefings';
   wire();
-  if ((custom = await expansionFromUrl(rom, types))) { startMission(-1); return; }
+  if ((custom = await expansionFromUrl(rom, types))) {
+    story(custom.briefing(), custom.mission.title || custom.mission.name, () => { silence(); startMission(-1); }, { art: true, song: briefingSong(custom.musicMap) });
+    return;
+  }
   showTitle();
 }
 
@@ -142,6 +145,7 @@ const label = (i) => (en ? en.labels[i] : '');
 const nameOf = (u) => (en ? en.unitNames[u.type] : types[u.type].name);
 const missionTitle = (m) => (en ? en.labels[LAYOUT.mapTitles + m].replace(/\n/g, ' ') : mapInfo(rom, m).name);
 const side = (a) => (a === NEUTRAL ? 'neutral' : a ? 'armyB' : 'armyA');
+const armyName = (a) => (custom ? custom.names[a] : a ? 'Galt' : 'Union');
 
 function show(id) {
   for (const s of ['sLoad', 'sTitle', 'sStory', 'sBattle', 'sResult']) $(s).hidden = s !== id;
@@ -359,6 +363,7 @@ function draw() {
     ctx.font = 'bold 13px system-ui'; ctx.fillStyle = '#000'; ctx.fillText(txt, X + 33, Y + 31);
     ctx.fillStyle = HP_COLOUR[u.army]; ctx.fillText(txt, X + 32, Y + 30);
     if (u.burner) { ctx.font = 'bold 10px system-ui'; ctx.fillStyle = '#000'; ctx.fillText('AB', X + 1, Y + 31); ctx.fillStyle = '#ffa040'; ctx.fillText('AB', X, Y + 30); }
+    if (u.general) { ctx.font = 'bold 14px system-ui'; ctx.fillStyle = '#000'; ctx.fillText('★', X + 35, Y + 13); ctx.fillStyle = '#ffd84a'; ctx.fillText('★', X + 34, Y + 12); }   // expansion: the general's unit
     if (u.level) { ctx.font = 'bold 10px system-ui'; ctx.fillStyle = '#000'; ctx.fillText(`L${u.level}`, X + 1, Y + 9); ctx.fillStyle = '#ffd84a'; ctx.fillText(`L${u.level}`, X, Y + 8); }
   }
   if (sel) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; hexPath(ctx, sel.x, sel.y); ctx.stroke(); }
@@ -367,9 +372,9 @@ function draw() {
 
 function hud(msg) {
   const lim = battle.script.limit;
-  $('turn').innerHTML = `Turn ${battle.turn}${lim ? ` / ${lim}` : ''} · <span class="${side(battle.army)}">${battle.army ? 'Galt' : 'Union'}</span>`
+  $('turn').innerHTML = `Turn ${battle.turn}${lim ? ` / ${lim}` : ''} · <span class="${side(battle.army)}">${armyName(battle.army)}</span>`
     + ` <small>${battle.forces(0).length} vs ${battle.forces(1).length}</small>`
-    + `<div class="small dim">${battle.script.goal}${battle.hard ? ' · hard mode' : ''}</div>`;
+    + `<div class="small dim">${battle.script.goal}${battle.hard ? ' · hard mode' : ''}</div>` + (custom ? custom.hud(battle) : '');
   if (msg !== undefined) $('info').innerHTML = msg;
 }
 
@@ -562,7 +567,7 @@ async function attack(a, d) {
 function announce(arrived) {
   if (!arrived.length) return;
   const a = arrived[0].army;
-  log(`<b class="${side(a)}">${a ? 'Galt' : 'Union'} reinforcements: ${arrived.length} units</b>`);
+  log(`<b class="${side(a)}">${armyName(a)} reinforcements: ${arrived.length} units</b>`);
   const t = label(a ? ALERT_GALT : ALERT_UNION).replace(/\n/g, ' ');
   if (t) log(`<i>${t}</i>`);
 }
@@ -676,6 +681,13 @@ function expansionResult(w) {
   $('bResNext').textContent = 'Retry';
   $('bResNext').onclick = () => startMission(-1);
   $('bResTitle').onclick = () => { location.search = ''; };
+  if (!custom.campaign) return;
+  $('bResTitle').onclick = () => { location.href = 'expansion.html'; };
+  if (w === 0) {   // the campaign moves on: survivors, levels and supply are saved for the intermission
+    $('resText').textContent += `\n\nSupply +${custom.finish(battle)}.`;
+    $('bResNext').textContent = 'Intermission';
+    $('bResNext').onclick = () => { location.href = 'expansion.html'; };
+  }
 }
 
 // The points screen ($08:A6C0): this map's points, the campaign total and the rank. The

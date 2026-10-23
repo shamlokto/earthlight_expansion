@@ -8,6 +8,8 @@
 // The player is army 0 (pink, on the left in fights), the Union army 1, as in the original.
 import { Battle } from '../game/rules.js';
 import { romView, deployList, arrivalList } from './mission.js';
+import { mapPoints } from '../game/points.js';
+import * as campaign from './campaign.js';
 
 const GENERAL_EVASION_CAP = 96;
 const OBJECTIVE_LINES = { annihilate: 'annihilate', command: 'tower', fortress: 'fortress', flagship: 'flagship', carriers: 'carriers', escape: 'annihilate', destroyType: 'annihilate' };
@@ -39,12 +41,15 @@ export class ExpansionBattle extends Battle {
   constructor(rom, mission, types, opts = {}) {
     const { rom: view, info } = romView(rom, mission);
     info.routes = mission.routes || null;
-    super(view, info, types, deployList(mission), arrivalList(mission), { script: scriptOf(mission), hard: opts.hard });
+    const list = deployList(mission);
+    super(view, info, types, list, arrivalList(mission), { script: scriptOf(mission), hard: opts.hard });
     this.mission = mission;
+    // campaign machines bring their pilot's level and their roster id (Battle spawns in list order)
+    list.forEach((d, i) => { if (d.level !== undefined) this.units[i].level = d.level; if (d.rosterId !== undefined) this.units[i].rosterId = d.rosterId; });
     this.escaped = [];
     const g = mission.general && this.units.find((u) => u.army === 0 && u.x === mission.general.x && u.y === mission.general.y && !u.carrier);
     this.general = g || null;
-    if (g) { g.general = true; g.level = 9; }
+    if (g) { g.general = true; g.pilotLevel = g.level; g.level = 9; }   // level 9 only while the general is aboard
     this.boosted = new Map();
   }
 
@@ -99,11 +104,39 @@ export class ExpansionBattle extends Battle {
 // Escaped units ride in this placeholder host: off the map, never drawn, never targeted.
 const EXIT = { id: -1, type: 0, army: 0, x: -1, y: -1, hp: 1, carrier: null, exit: true };
 
+// HUD and briefing helpers for gameapp.js's expansion branch.
+export const ARMY_NAMES = ['Galt remnant', 'Union'];
+
+export function expansionHud(b) {
+  const o = b.mission.objective || {}, parts = [];
+  if (b.general) parts.push(`General aboard: ${b.general.hp > 0 ? (b.general.escaped ? 'escaped' : 'on the map') : 'lost'}`);
+  if (o.kind === 'escape') {
+    const need = (o.count ?? 3) + (b.general ? 1 : 0), names = b.escaped.map((u) => (u.general ? `${b.types[u.type].code.trim()} ★` : b.types[u.type].code.trim()));
+    parts.push(`Escaped ${b.escaped.length}/${need}${names.length ? ': ' + names.join(', ') : ''}`);
+  }
+  return parts.length ? `<div class="small">${parts.join('<br>')}</div>` : '';
+}
+
+export function briefingPages(mission, goal) {
+  const pages = (mission.briefing || '').split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean);
+  pages.push(`Objective\n\n${goal}`);
+  return pages;
+}
+
 // ?mission=missions/asimov.json on game.html plays that mission.
 export async function expansionFromUrl(rom, types) {
-  const url = new URLSearchParams(location.search).get('mission');
+  const q = new URLSearchParams(location.search), url = q.get('mission');
   if (!url) return null;
-  const mission = await (await fetch(url)).json();
+  let mission = await (await fetch(url)).json(), state = null;
+  const missionNo = +(q.get('no') || 0);
+  if (q.get('campaign')) { state = campaign.load(); if (state) mission = campaign.applyRoster(mission, state); }
   const { rom: view, info } = romView(rom, mission);
-  return { mission, rom: view, info, musicMap: mission.music ?? 0, newBattle: (opts) => new ExpansionBattle(rom, mission, types, opts) };
+  return {
+    mission, rom: view, info, musicMap: mission.music ?? 0, names: ARMY_NAMES, campaign: !!state,
+    // a won campaign battle goes into the saved campaign; returns the supply gained
+    finish: (b) => { const s = campaign.load(); const gain = campaign.finish(s, b, mapPoints(b, missionNo).total, missionNo); campaign.save(s); return gain; },
+    newBattle: (opts) => new ExpansionBattle(rom, mission, types, opts),
+    briefing: () => briefingPages(mission, scriptOf(mission).goal),
+    hud: expansionHud,
+  };
 }
