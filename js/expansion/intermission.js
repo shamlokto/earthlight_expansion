@@ -1,28 +1,16 @@
 // The intermission between expansion battles, a plain web page in the spirit of SRW's:
 // roster (machines and their pilots' levels), production, trade, the general, deployment, and
 // the next mission's briefing. State lives in campaign.js; battles run in game.html.
-import { Rom } from '../rom.js';
 import { paint } from '../gfx.js';
 import { battlePalette, unitIcon } from '../maps.js';
 import { allUnitTypes } from '../units.js';
-import { applyBps } from '../bps.js';
-import { readEnglish } from '../text.js';
 import * as C from './campaign.js';
+import { ensurePack } from './pack.js';
 import { clearSavedBattle, EXPANSION_BATTLE } from '../game/savegame.js';
 
 const $ = (id) => document.getElementById(id);
 let rom, pal, types, en = null, index, state, next = null, picked = new Set();
 
-function idbGet(key) {
-  return new Promise((res) => {
-    try {
-      const r = indexedDB.open('earthlight-lab', 1);
-      r.onupgradeneeded = () => r.result.createObjectStore('rom');
-      r.onsuccess = () => { const g = r.result.transaction('rom').objectStore('rom').get(key); g.onsuccess = () => res(g.result || null); g.onerror = () => res(null); };
-      r.onerror = () => res(null);
-    } catch { res(null); }
-  });
-}
 
 const name = (t) => (en ? en.unitNames[t] : types[t].name);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
@@ -119,10 +107,9 @@ async function startNew() {
 }
 
 (async () => {
-  const buf = await idbGet('rom'), patch = await idbGet('patch');
-  if (!buf) { $('status').innerHTML = 'No ROM loaded yet — open the <a href="game.html">game</a> or the <a href="index.html">lab</a> and load it first.'; return; }
-  rom = new Rom(buf); pal = battlePalette(rom); types = allUnitTypes(rom);
-  if (patch) { try { en = readEnglish(applyBps(patch, rom.bytes.slice().buffer)); } catch { } }
+  // the original's art and sound, copied once from the player's ROM (pack.js); no ROM needed after that
+  const pack = await ensurePack({ onProgress: (t) => { $('status').textContent = t; } });
+  rom = pack.rom; en = pack.text; pal = battlePalette(rom); types = allUnitTypes(rom);
   index = await C.missionIndex();
   state = C.load();
   if (!state) await startNew(); else await loadNext();
