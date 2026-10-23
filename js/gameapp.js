@@ -16,7 +16,8 @@ import { aiTurn } from './game/ai.js';
 import { mapPoints, rankOf, rankName } from './game/points.js';
 import { LABEL as EV, COMET_MAP, inLane, detachBurner, decimator, blast } from './game/events.js';
 import { FightScene } from './game/fightscene.js';
-import { Sound, mapMusic } from './audio/sound.js';
+import { Sound, mapMusic, SONGS, briefingSong } from './audio/sound.js';
+import { drawScreen } from './screens.js';
 import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle } from './game/savegame.js';
 
 const $ = (id) => document.getElementById(id);
@@ -28,6 +29,7 @@ const ALERT_GALT = 87, ALERT_UNION = 88, BABYLON_ALERT = 94;
 
 let rom, romEn = null, en = null, pal, types, battle, mission = 0, terrainCanvas;
 let sel = null, reach = null, targets = [], hosts = [], launching = null, busy = false, blastCells = null;
+let cursor = null;   // keyboard cursor hex [x, y]
 
 // Original music and effects (js/audio), started by the first click (browsers need a gesture);
 // the map music follows the phase and the unit counts, as in play.js.
@@ -37,43 +39,89 @@ function music() {
   if (!sound || !battle || $('sBattle').hidden || battle.winner() !== null) return;
   sound.playSong(mapMusic(rom, mission, battle.army, battle.forces(0).length, battle.forces(1).length, !!battle.eventMusic));
 }
-function silence() { if (sound) sound.stop(); }
-document.addEventListener('pointerdown', () => {
+function silence() { screenSong = null; if (sound) sound.stop(); }
+// Songs of the non-battle screens (sound.js SONGS): title, menu, briefing, between missions, ending.
+let screenSong = null;
+function playSong(s) { screenSong = s; if (sound) sound.playSong(s); }
+function startSound() {
   if (sound || !rom) return;
-  sound = new Sound(rom); sound.setMuted($('mute').checked); sound.start().then(music);
-}, { capture: true });
+  sound = new Sound(rom); sound.setMuted($('mute').checked);
+  sound.start().then(() => { if (screenSong) sound.playSong(screenSong); else music(); });
+}
+document.addEventListener('pointerdown', startSound, { capture: true });
+document.addEventListener('keydown', startSound, { capture: true });
 
 // ------------------------------------------------------------------ loading
-function idbGet(key) {
+// The ROM and the patch are kept in this browser only (IndexedDB, shared with the lab).
+function idb(mode, fn) {
   return new Promise((res) => {
     try {
       const r = indexedDB.open('earthlight-lab', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('rom');
       r.onsuccess = () => {
-        const g = r.result.transaction('rom').objectStore('rom').get(key);
-        g.onsuccess = () => res(g.result || null); g.onerror = () => res(null);
+        const q = fn(r.result.transaction('rom', mode).objectStore('rom'));
+        q.onsuccess = () => res(q.result ?? null); q.onerror = () => res(null);
       };
       r.onerror = () => res(null);
     } catch { res(null); }
   });
 }
+const idbGet = (key) => idb('readonly', (st) => st.get(key));
+const idbPut = (key, v) => idb('readwrite', (st) => st.put(v, key));
+const idbDel = (key) => idb('readwrite', (st) => st.delete(key));
 // serve.py --rom/--patch exposes test files on localhost; used when nothing is stored
 async function testFile(url, read) {
   try { const r = await fetch(url); return r.ok ? await read(new File([await r.arrayBuffer()], 'f')) : null; } catch { return null; }
 }
 
-(async () => {
+async function boot() {
   const buf = (await idbGet('rom')) || (await testFile('/__test_rom', readRomFile));
-  if (!buf) { $('loadMsg').innerHTML = 'No ROM loaded yet. Open the <a href="index.html">lab</a> and load your Earth Light ROM (and the English patch, if you have it).'; return; }
+  if (!buf) { setup(); return; }
   rom = new Rom(buf);
-  if (!rom.isEarthLight()) { $('loadMsg').textContent = 'That ROM is not Earth Light (Japan).'; return; }
+  if (!rom.isEarthLight()) { setup('The stored ROM is not Earth Light (Japan). Choose it again.'); return; }
   pal = battlePalette(rom); types = allUnitTypes(rom);
   const patch = (await idbGet('patch')) || (await testFile('/__test_patch', readPatchFile));
   if (patch) { try { const b = applyBps(patch, rom.bytes.slice().buffer); en = readEnglish(b); romEn = new Rom(b); } catch { en = null; } }
-  $('status').textContent = en ? 'English patch loaded' : 'Japanese ROM (load the English patch in the lab for story text)';
+  $('status').textContent = en ? 'English patch loaded' : 'Japanese ROM: add the English patch (☰ → ROM & patch) for the story and briefings';
   wire();
   showTitle();
-})();
+}
+
+// First run (and ☰ → ROM & patch): pick the ROM and, optionally, the English patch; both are
+// checked here and remembered for next time.
+function setup(msg = '', cancel = false) {
+  show('sLoad');
+  $('loadMsg').hidden = true; $('setup').hidden = false;
+  $('setupMsg').textContent = msg; $('setupCancel').hidden = !cancel;
+  let romBuf = null, patchBuf = null;
+  const ready = () => { $('setupGo').disabled = !(romBuf || (cancel && patchBuf)); };
+  $('romFile').onchange = async (e) => {
+    romBuf = null;
+    try {
+      const b = await readRomFile(e.target.files[0]);
+      if (new Rom(b).isEarthLight()) romBuf = b; else $('setupMsg').textContent = 'That file is not Earth Light (Japan).';
+    } catch (err) { $('setupMsg').textContent = `Could not read that file: ${err.message}`; }
+    if (romBuf) $('setupMsg').textContent = 'ROM recognised.';
+    ready();
+  };
+  $('patchFile').onchange = async (e) => {
+    patchBuf = null;
+    try { patchBuf = await readPatchFile(e.target.files[0]); $('setupMsg').textContent = 'Patch read.'; } catch (err) { $('setupMsg').textContent = `Could not read the patch: ${err.message}`; }
+    ready();
+  };
+  $('setupCancel').onclick = () => { $('setup').hidden = true; showTitle({ menu: true }); };
+  $('setup').onsubmit = async (e) => {
+    e.preventDefault();
+    if (patchBuf) {
+      try { applyBps(patchBuf, (romBuf || rom.bytes.slice().buffer).slice(0)); } catch { $('setupMsg').textContent = 'That patch does not fit this ROM.'; return; }
+      await idbPut('patch', patchBuf);
+    }
+    if (romBuf) await idbPut('rom', romBuf);
+    location.reload();
+  };
+  ready();
+}
+boot();
 
 // ------------------------------------------------------------------ progress
 const progress = loadProgress;
@@ -91,7 +139,7 @@ function wire() {
     const p = progress();
     saveProgress({ ...p, next: 0, cleared: p.cleared, points: {} });
     clearSavedBattle();
-    story(en ? en.main.slice(LAYOUT.intro[0], LAYOUT.intro[1] + 1) : [], 'EARTH LIGHT', () => briefing(0));
+    story(en ? en.main.slice(LAYOUT.intro[0], LAYOUT.intro[1] + 1) : [], 'EARTH LIGHT', () => briefing(0), { song: SONGS.title });
   };
   $('bContinue').onclick = () => briefing(progress().next);
   $('bLoad').onclick = loadBattle;
@@ -100,8 +148,13 @@ function wire() {
   $('endTurn').onclick = endTurn;
   $('bSave').onclick = () => { if (!busy && battle.army === 0) log(saveBattle(battle, mission) ? '<b>Battle saved.</b>' : '<b>Could not save (storage unavailable).</b>'); };
   $('bRestart').onclick = () => { if (!busy) startMission(mission); };
-  $('bRetreat').onclick = () => { if (!busy) showTitle(); };
+  $('bRetreat').onclick = () => { if (!busy) showTitle({ menu: true }); };
   $('cv').addEventListener('click', onClick);
+  document.addEventListener('keydown', onKey);
+  $('mSetup').onclick = (e) => { e.preventDefault(); e.target.closest('details').open = false; if (!busy) setup('', true); };
+  const start = () => { if ($('menuBox').hidden) showTitle({ menu: true }); };
+  $('pressStart').onclick = start;
+  $('pressStart').onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); start(); } };
   try { $('mute').checked = localStorage.getItem(MUTE) === '1'; } catch { /* no storage */ }
   $('mute').onchange = (e) => {
     try { localStorage.setItem(MUTE, e.target.checked ? '1' : '0'); } catch { /* no storage */ }
@@ -110,9 +163,15 @@ function wire() {
 }
 
 // ------------------------------------------------------------------ title and story
-function showTitle() {
+// The original's title (PUSH START BUTTON!), then its main menu picture with the menu below.
+let screensDrawn = false;
+function showTitle({ menu = false } = {}) {
   silence();
   show('sTitle'); $('where').textContent = 'campaign';
+  if (!screensDrawn) { drawScreen(rom, 'title', $('titleCv'), paint); drawScreen(rom, 'menu', $('menuCv'), paint); screensDrawn = true; }
+  $('pressStart').hidden = menu; $('menuBox').hidden = !menu;
+  if (menu) playSong(SONGS.menu);
+  else { playSong(SONGS.title); $('pressStart').focus(); }
   const p = progress(), s = savedBattle();
   $('bContinue').hidden = p.next === 0 && !p.cleared.length;
   $('bContinue').textContent = p.next >= MAP_COUNT ? 'Campaign complete' : `Continue: mission ${p.next + 1} · ${missionTitle(p.next)}`;
@@ -132,9 +191,12 @@ function showTitle() {
   }
 }
 
-function story(pages, title, done) {
+function story(pages, title, done, { art = false, song = null } = {}) {
   if (!pages.length) { done(); return; }
   show('sStory');
+  $('storyArt').hidden = !art;
+  if (art) drawScreen(rom, 'mission', $('missionCv'), paint);
+  if (song) playSong(song);
   let k = 0;
   const step = () => {
     if (k >= pages.length) { done(); return; }
@@ -150,7 +212,7 @@ function briefing(m) {
   const pages = en ? en.brief.slice(LAYOUT.briefings + m * 4, LAYOUT.briefings + m * 4 + 4).filter((s) => s.trim()).map(unwrap) : [];
   if (!pages.length) pages.push(`${mapInfo(rom, m).name}\n\n(Briefing text needs the English patch.)`);
   pages.push(`Objective\n\n${scriptFor(m).goal}`);
-  story(pages, `Mission ${m + 1}\n${missionTitle(m)}`, () => startMission(m));
+  story(pages, `Mission ${m + 1}\n${missionTitle(m)}`, () => { silence(); startMission(m); }, { art: true, song: briefingSong(m) });
 }
 
 // ------------------------------------------------------------------ battle
@@ -285,6 +347,7 @@ function draw() {
     if (u.level) { ctx.font = 'bold 10px system-ui'; ctx.fillStyle = '#000'; ctx.fillText(`L${u.level}`, X + 1, Y + 9); ctx.fillStyle = '#ffd84a'; ctx.fillText(`L${u.level}`, X, Y + 8); }
   }
   if (sel) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; hexPath(ctx, sel.x, sel.y); ctx.stroke(); }
+  if (cursor) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); hexPath(ctx, ...cursor); ctx.stroke(); ctx.setLineDash([]); }
 }
 
 function hud(msg) {
@@ -350,9 +413,41 @@ function startLaunch(u) {
 function clearSel() { sel = null; reach = null; targets = []; hosts = []; launching = null; blastCells = null; draw(); }
 
 function onClick(ev) {
+  const r = ev.target.getBoundingClientRect(), k = ev.target.width / r.width;   // the board may be scaled down on phones
+  const [cx, cy] = cellAt(((ev.clientX - r.left) * k) / Z + OFF, ((ev.clientY - r.top) * k) / Z + OFF);
+  cursor = null;
+  act(cx, cy);
+}
+
+// Keyboard: arrows move a cursor hex, Enter/Space act on it like a click, Esc deselects,
+// E ends the turn; Enter/Esc also step through story pages, alerts and fights.
+function onKey(e) {
+  if (e.target.closest && e.target.closest('input, textarea, select, summary, a, button') && e.key !== 'Escape') return;
+  const k = e.key;
+  if (!$('alert').hidden) { if (k === 'Enter' || k === ' ' || k === 'Escape') { e.preventDefault(); $('alert').click(); } return; }
+  if (!$('fight').hidden) { if (k === 'Enter' || k === ' ' || k === 'Escape') { e.preventDefault(); $('fight').click(); } return; }
+  if (!$('sStory').hidden) {
+    if (k === 'Enter' || k === ' ' || k === 'ArrowRight') { e.preventDefault(); $('bStoryNext').click(); } else if (k === 'Escape') $('bStorySkip').click();
+    return;
+  }
+  if ($('sBattle').hidden || !battle) return;
+  const moves = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+  if (moves[k]) {
+    e.preventDefault();
+    if (!cursor) { const u = sel || battle.alive(0)[0] || { x: 1, y: 1 }; cursor = [u.x, u.y]; }
+    cursor = [Math.min(battle.info.cols - 1, Math.max(1, cursor[0] + moves[k][0])), Math.min(battle.info.rows, Math.max(1, cursor[1] + moves[k][1]))];
+    const [X, Y] = px(...cursor), b = $('board');
+    if (X < b.scrollLeft || X > b.scrollLeft + b.clientWidth - 48 || Y < b.scrollTop || Y > b.scrollTop + b.clientHeight - 32) b.scrollTo(X - b.clientWidth / 2, Y - b.clientHeight / 2);
+    draw();
+    const u = battle.unitAt(...cursor);
+    if (u && !sel) hud(unitCard(u));
+  } else if ((k === 'Enter' || k === ' ') && cursor) { e.preventDefault(); act(...cursor); }
+  else if (k === 'Escape') { if (sel && sel.acted) sel.reMove = 0; clearSel(); }
+  else if (k === 'e' || k === 'E') endTurn();
+}
+
+function act(cx, cy) {
   if (busy || battle.winner() !== null || battle.army !== 0) return;
-  const r = ev.target.getBoundingClientRect();
-  const [cx, cy] = cellAt((ev.clientX - r.left) / Z + OFF, (ev.clientY - r.top) / Z + OFF);
   const u = battle.unitAt(cx, cy), key = `${cx},${cy}`;
   if (launching && reach && reach.has(key)) {
     const l = launching;
@@ -480,6 +575,12 @@ async function enemyTurn() {
   for (const step of aiTurn(battle)) {
     draw(); hud();
     if (step.kind === 'attack') { logAttack(step); await runFight(step); draw(); }
+    else if (step.kind === 'blast') {   // Galt Abaddon fired the Quantum Decimator
+      log(`<span class="armyB">${nameOf(step.att)}</span> fired the Quantum Decimator${step.hit.length ? ': ' + step.hit.map((u) => `<span class="${side(u.army)}">${nameOf(u)}</span>`).join(', ') + ' destroyed' : ''}`);
+      if (sound) sound.playSfx(0x3F);
+      await flash(step.cells, 'rgba(255,255,255,.8)');
+      paintTerrain(); draw();
+    }
     else await new Promise((r) => setTimeout(r, 120));
     if (battle.winner() !== null) break;
   }
@@ -530,10 +631,11 @@ function result(w) {
     $('resTitle').textContent = `Mission ${mission + 1} complete`;
     $('resText').textContent = `${label(WIN_LINE[battle.result.reason] ?? 1)}\n\nCleared on turn ${battle.turn}.`;
     pointsScreen(p);
+    playSong(SONGS.interlude);
     const last = mission + 1 >= MAP_COUNT;
     $('bResNext').textContent = last ? 'Ending' : `Next: mission ${mission + 2}`;
     $('bResNext').onclick = () => (last
-      ? story(en ? en.labels.slice(LAYOUT.ending, LAYOUT.ending + 6).filter((s) => s.trim()) : ['The End'], 'EARTH LIGHT', showTitle)
+      ? story(en ? en.labels.slice(LAYOUT.ending, LAYOUT.ending + 6).filter((s) => s.trim()) : ['The End'], 'EARTH LIGHT', () => showTitle(), { song: SONGS.ending })
       : briefing(mission + 1));
   } else {
     const lines = LOST_LINES.filter(([m]) => mission >= m).pop()[1];
@@ -546,7 +648,7 @@ function result(w) {
   }
   if (w === 0) $('bResStory').hidden = true;
   else $('points').hidden = true;
-  $('bResTitle').onclick = showTitle;
+  $('bResTitle').onclick = () => showTitle({ menu: true });
 }
 
 // The points screen ($08:A6C0): this map's points, the campaign total and the rank. The
@@ -560,7 +662,8 @@ function pointsScreen(p) {
   const rows = [[14, 'Units Destroyed', mp.destroyed], [15, 'Units Survived', mp.survived], [16, 'Units Lost', mp.lost],
     [17, 'Docks Captured', mp.docks], [18, 'Stage Win Bonus', mp.bonus], [20, 'Map Victory Points', mp.total], [19, 'Total Victory Points', total]];
   const grade = '◆'.repeat((rank & 3) + 1) + '◇'.repeat(3 - (rank & 3));
-  $('points').innerHTML = `<table>${rows.map(([i, f, v], k) => `<tr${k >= 5 ? ' class="sum"' : ''}><td>${L(i, f)}</td><td>${v}</td></tr>`).join('')}</table>`
-    + `<div class="rank"><span class="dim">Rank</span> <b>${rankName(rom, rank, en ? en.labels : null)}</b> <span class="grade" title="emblem grade ${(rank & 3) + 1} of 4">${grade}</span></div>`;
+  drawScreen(rom, 'results', $('resultCv'), paint);
+  $('pointsBody').innerHTML = `<table>${rows.map(([i, f, v], k) => `<tr${k >= 5 ? ' class="sum"' : ''}><td>${L(i, f)}</td><td>${v}</td></tr>`).join('')}</table>`;
+  $('pointsRank').innerHTML = `<span class="dim">Rank</span><b>${rankName(rom, rank, en ? en.labels : null)}</b><span class="grade" title="emblem grade ${(rank & 3) + 1} of 4">${grade}</span>`;
   $('points').hidden = false;
 }

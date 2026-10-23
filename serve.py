@@ -18,6 +18,8 @@ root = os.path.dirname(os.path.abspath(__file__))
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
+        if self.path == '/':
+            self.path = '/game.html'   # the game is the front door; the lab is /index.html
         src = {'/__test_rom': args.rom, '/__test_patch': args.patch}.get(self.path)
         if src:
             data = open(src, 'rb').read()

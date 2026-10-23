@@ -72,9 +72,9 @@ Consequences for the engine:
 
 * Player = army B. The ROM has map icons for every type in both army colours, so mixed rosters
   (Galt plus defecting or traded Union types) need no new art.
-* The fight scenes always put army A on the left (`fightscene.js`). Either keep it that way, so the
-  player's Galt units are on the right as the original's enemy was, or mirror it so the player is on the left.
-* The AI has to play the Union side (army A). Check with whoever owns `ai.js` that it isn't tied to army B.
+* **The player stays pink and on the left** (decided), as in the original. The simplest way: the
+  player stays army A internally (left in fights, the player's colour) and the enemy Union is army B
+  (the original enemy's colour). That avoids mirroring the fight scenes or making the AI play army A.
 
 ## Economy draft: carry-over, minimal production, trade
 
@@ -164,10 +164,13 @@ gains afterwards; "next map wants" is the hint that makes trading matter.
 
 16. The campaign is linear: one mission after another, in a fixed order (2026-10-23).
 
+17. Mission outline draft 1 is accepted as it is (2026-10-23).
+18. No capturing units in battle. Docks are captured as in the original (2026-10-23).
+19. The player is shown pink and on the left, as in the original; the enemy Union uses the
+    enemy's colour (2026-10-23).
+
 ## Open questions
 
-* Can units be captured in battle (beyond neutral docks) to feed the trade?
-* The mission outline: keep, reorder, add or cut any missions? (The order is linear, decided.)
 * Maps: reuse only (draft 1 assumes this), or add a map editor later for new layouts?
-* Fight-scene sides: keep the player on the right, or mirror?
 * Does Ahriman return? Check the ending text and *Luna Strike*'s story.
+* The general: which capital ship, and any bonus to nearby units? (Owner is choosing from the wiki.)

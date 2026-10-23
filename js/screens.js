@@ -39,10 +39,11 @@ export function composeScreen(rom, layers, palAssets, { w = 32, h = 28 } = {}) {
 export const SCREENS = {
   // title ($08:B84A): BG1 only; logo, mascot, PUSH START BUTTON! and the copyright line
   title: { layers: [{ tiles: 26, map: 27 }], pal: [[25, 0, 80], [82, 16, 16]] },
-  // main menu "SELECT MENU PLEASE!" ($02:D9E3): the Earth-Moon foundry orbits
-  menu: { layers: [{ tiles: 149, map: 151 }], pal: [[150, 16, 48]] },
+  // main menu "SELECT MENU PLEASE!" ($02:D9E3): the Earth-Moon foundry orbits; CGRAM 0-15 is
+  // still the title's when it opens
+  menu: { layers: [{ tiles: 149, map: 151 }], pal: [[25, 0, 80], [150, 16, 48]] },
   // mission intro ($05:EAA8): the same picture, top 21 rows; operation name and map title below
-  mission: { layers: [{ tiles: 149, map: 151 }], pal: [[110, 0, 16], [150, 16, 32]], h: 21 },
+  mission: { layers: [{ tiles: 149, map: 151 }], pal: [[110, 0, 16], [25, 0, 1], [150, 16, 32]], h: 21 },   // backdrop: navy, as on screen
   // VP / turn graph frame shown after a map ($08:8082)
   results: { layers: [{ tiles: 146, map: 148 }], pal: [[147, 0, 32]] },
 };

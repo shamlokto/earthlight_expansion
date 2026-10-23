@@ -32,38 +32,70 @@
     .fightov p { margin: 6px 0 0; }
     .alertov { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 9; cursor: pointer; }
     .alertov div { background: #0a0f3a; border: 3px double #c8d0ff; color: #fff; padding: 16px 22px; white-space: pre-line; font: 18px/1.4 ui-monospace, monospace; text-align: center; box-shadow: 0 0 0 9999px rgba(0,0,0,.35); }
+    /* ROM screens: 256 px wide pictures scaled up without smoothing */
+    .scr { position: relative; width: min(640px, 94vw); container-type: inline-size; }
+    .scr canvas { width: 100%; height: auto; display: block; image-rendering: pixelated; }
+    #pressStart { cursor: pointer; outline: none; }
+    #menuBox { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .win { background: #0a1446; border: 3px double #b8c4ff; border-radius: 6px; padding: 12px; font-family: ui-monospace, monospace; }
+    .points .vp { position: absolute; left: 11%; top: 15%; width: 77%; height: 37%; font-size: 3.1cqw; line-height: 1.45; overflow: hidden; color: #fff; }
+    .points .vp table { width: 100%; }
+    .points .vprank { position: absolute; left: 5%; top: 60%; width: 33%; height: 33%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: .3em; text-align: center; font-size: 3.8cqw; color: #fff; }
+    .setup { font-family: inherit; line-height: 1.5; max-width: 560px; text-align: left; display: flex; flex-direction: column; gap: 12px; color: #fff; }
+    .setup h2 { margin: 0; color: var(--accent); } .setup label { display: flex; flex-direction: column; gap: 6px; }
+    .pages { position: relative; } .pages summary { list-style: none; cursor: pointer; padding: 2px 10px; }
+    .pages summary::-webkit-details-marker { display: none; }
+    .pages nav { position: absolute; right: 0; top: 120%; z-index: 20; display: flex; flex-direction: column; min-width: 220px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 0; }
+    .pages nav a { padding: 6px 14px; color: inherit; text-decoration: none; } .pages nav a:hover, .pages nav a:focus { background: var(--line); }
     .points table { border-collapse: collapse; font: 15px/1.6 ui-monospace, monospace; margin: 0 auto; }
-    .points td { padding: 0 14px; text-align: left; } .points td + td { text-align: right; }
+    .points td { padding: 0 0.6em; text-align: left; } .points td + td { text-align: right; }
     .points tr.sum td { border-top: 1px solid var(--line); color: var(--accent); }
-    .points .rank { margin-top: 10px; font-size: 18px; } .points .grade { color: #ffd84a; letter-spacing: 2px; }
+    .points .grade { color: #ffd84a; letter-spacing: 2px; }
     .result { font-size: 18px; white-space: pre-line; max-width: 560px; }
   </style>
 </head>
 <body>
   <header class="top">
     <div class="brand"><span class="logo">EARTH LIGHT</span><span class="sub" id="where">campaign</span></div>
-    <div class="row"><label title="original music and sound effects, played from the ROM"><input type="checkbox" id="mute"> Mute</label><div class="romstatus" id="status"></div></div>
+    <div class="row"><label title="original music and sound effects, played from the ROM"><input type="checkbox" id="mute"> Mute</label><div class="romstatus" id="status"></div>
+      <details class="pages"><summary class="btn">☰</summary><nav>
+        <a href="#" id="mSetup">ROM &amp; patch…</a><a href="index.html">Lab (maps, units, text, assets)</a><a href="wiki.html">Unit wiki</a>
+        <a href="play.html">Battle sandbox</a><a href="soundlab.html">Sound test</a><a href="fightlab.html">Fight lab</a><a href="README.md">README</a>
+      </nav></details></div>
   </header>
 
   <section class="screen center" id="sLoad">
     <p id="loadMsg">Loading your ROM…</p>
+    <form class="win setup" id="setup" hidden>
+      <h2>Earth Light</h2>
+      <p>This remake draws everything (graphics, maps, units, text and music) from your own copy of the game. Nothing is uploaded: the files stay in this browser.</p>
+      <label><span>1. Your ROM: <b>Earth Light (Japan)</b>, <code>.sfc</code> or the <code>.zip</code> it came in</span>
+        <input type="file" id="romFile" accept=".sfc,.smc,.zip"></label>
+      <label><span>2. Optional: Nezz's English translation patch (<code>.bps</code> or <code>.zip</code>, <a href="https://github.com/HoratioVex/Earthlight-1-Translation" target="_blank" rel="noopener">GPL-3.0</a>) for the English story and briefings</span>
+        <input type="file" id="patchFile" accept=".bps,.zip"></label>
+      <p class="dim" id="setupMsg"></p>
+      <div class="row"><button class="btn primary" id="setupGo" type="submit" disabled>Start</button><button class="btn" id="setupCancel" type="button" hidden>Cancel</button></div>
+    </form>
   </section>
 
   <section class="screen center" id="sTitle" hidden>
-    <div class="logo bigLogo">EARTH LIGHT</div>
-    <p class="dim">A remake built from your own ROM · Hudson Soft, 1992</p>
-    <div class="menu">
-      <button class="btn primary" id="bContinue" hidden></button>
-      <button class="btn" id="bLoad" hidden></button>
-      <button class="btn" id="bNew">New campaign</button>
-      <button class="btn" id="bSelect">Mission select</button>
-      <label class="row" style="justify-content:center"><input type="checkbox" id="optFights" checked> Fight scenes</label>
-      <label class="row" style="justify-content:center" id="hardRow" hidden><input type="checkbox" id="optHard"> Hard mode (attack ×2)</label>
+    <div class="scr" id="pressStart" tabindex="0" title="click or press Enter"><canvas id="titleCv" width="256" height="224"></canvas></div>
+    <div id="menuBox" hidden>
+      <div class="scr"><canvas id="menuCv" width="256" height="224"></canvas></div>
+      <div class="menu win">
+        <button class="btn primary" id="bContinue" hidden></button>
+        <button class="btn" id="bLoad" hidden></button>
+        <button class="btn" id="bNew">New campaign</button>
+        <button class="btn" id="bSelect">Mission select</button>
+        <label class="row" style="justify-content:center"><input type="checkbox" id="optFights" checked> Fight scenes</label>
+        <label class="row" style="justify-content:center" id="hardRow" hidden><input type="checkbox" id="optHard"> Hard mode (attack ×2)</label>
+      </div>
+      <div class="missions" id="missions" hidden></div>
     </div>
-    <div class="missions" id="missions" hidden></div>
   </section>
 
   <section class="screen center" id="sStory" hidden>
+    <div class="scr" id="storyArt" hidden><canvas id="missionCv" width="256" height="168"></canvas></div>
     <div class="briefTitle" id="storyTitle"></div>
     <div class="story" id="storyText"></div>
     <div class="row"><button class="btn primary" id="bStoryNext">Next</button><button class="btn" id="bStorySkip">Skip</button></div>
@@ -84,7 +116,7 @@
     <div class="briefTitle" id="resTitle"></div>
     <div class="result" id="resText"></div>
     <div class="dim" id="resLoss"></div>
-    <div class="points" id="points" hidden></div>
+    <div class="points scr" id="points" hidden><canvas id="resultCv" width="256" height="224"></canvas><div class="vp" id="pointsBody"></div><div class="vprank" id="pointsRank"></div></div>
     <div class="row"><button class="btn primary" id="bResNext"></button><button class="btn" id="bResStory" hidden>Epilogue</button><button class="btn" id="bResTitle">Title</button></div>
   </section>
 

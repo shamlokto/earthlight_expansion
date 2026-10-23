@@ -510,6 +510,68 @@ Not tied to a screen yet: 1/`$44` (`$01:A148`), 10/`$50` (`$01:DEC5`, `$08:8A48`
 (not per cycle): KON/KOFF act on the next sample with a 5-sample key-on delay; the IPL ROM is
 not emulated (the upload writes RAM directly).
 
+## Map events, points, screens (phase 3b, read from the game code)
+
+Map numbers here are the ROM's (`$06E4`, 0-based; the game shows them +1).
+
+**Phase change** (`$01:9DF0`, after every army phase): toggle `$06E6`, turn + 1 after army B;
+then in order: map 29's Babylon drift (`$02:8AF2`), the Buccaneer cannon (`$02:8CC3`), event
+music (`$02:9B70` sets `$06EC/$06ED` when a reinforcement key matches), reinforcements
+(`$02:9B91`). `$06EC/$06ED` are cleared at every phase change.
+
+* **Buccaneer cannon** (map 19): at map start (`$02:8C88`) `$058F[0..2]` = column
+  (`$02:8ED0`: 21, 22, 23) and `$0592[0..2]` = first row (`$02:8ED3`: 6). (The copy loop ends on
+  `DEY/BPL`; the caller leaves Y = 3 × extras, so all three are set.) When an Adzam (type 57)
+  falls, its cannon is disarmed (`$01:A856` → `$02:8CAF`, index x − 21). At every phase change
+  each armed cannon fires (`$02:8D03`, beam objects `$02:8DCE`), then `$02:8E1C` walks its
+  column for `$29 − row` rows and destroys every unit there (`$02:8E6E`: type | `$80`, unit
+  counts − 1; carriers and Crabs lose their cargo via `$01:9537`). There is no charge counter;
+  labels 90/91 aren't used by the code. The AI avoids the lanes (`$01:9340`).
+* **Babylon** (map 29, `$02:8B11`): every phase change, cells `$20–$4F` except `$49` move one
+  column left (hex row adjusted for column parity, `$02:8C82`) carrying their units; units in
+  the way are destroyed. Army B's phase with turn ≥ 17 ends the game (`$01:9E19`). Not in the
+  remake yet (only the turn limit).
+* **Afterburner** (`$02:90AD` at map start): `$02:90F2[map]` → (x, y) pairs, 0-terminated; maps
+  16 (`$02:912F`), 17, 26 and 28 (8 cells). The unit there gets flag `$04` in `$1AD1`. With it:
+  movement 10 instead of `F240[type]` (`$01:9694`; the AI at `$01:880D` takes 10 and skips its
+  usual HU-to-fighter change for Athenas), no carrier boarding (`$01:A576`). Command `$0D`
+  (`$01:97BB` → `$01:9D50`) detaches it: window `$02:8F08` (graphics 0x159–0x15D), flag cleared.
+* **Quantum Decimator** (`$01:A064`): after a fight where the attacker is type 43 (Abaddon) and
+  the slot `$06B8` is 3, the normal defeat handling is skipped and `$02:E05E` runs on the target
+  cell (`$06D3/$06D5`): explosions on the cell and its six neighbours (ring `$01:B942`), and
+  `$02:E10E` clears each one (`$7E:2352/2DD2/3852` = 0, open space) and destroys its unit. The
+  remake fires it at any hex in range 2–4 without a fight scene.
+* **Mines**: Wisp (18), Pandora (17) and Remora (19) are category-15 units, no special code.
+* **Comet** (map 23): Comet Tail / Comet Body cells are part of the map; no code moves them.
+
+**Victory points** (24-bit, `$7E:208E…`):
+
+| value | address | how |
+|---|---|---|
+| Units Destroyed / Lost | `$208E` / `$2091` | after every fight (`$01:9EA9`): (HP before − after) × `F27A[type]` per side; the moving army's own losses go to Lost in army A's phase (`$01:9F46`), to Destroyed in B's (`$01:9F7F`). Per-turn copies at `$7E:209A`/`$7E:20F4` |
+| Docks Captured | `$2094` | + 100 when army A captures a dock (`$01:A626`) |
+| Units Survived | `$2097` | Σ HP × `F27A[type]` over live units without flag bit 7 (`$02:E580`) |
+| Stage Win Bonus | `$214E` | B = 100 × (map + 1); B − (B / 20) × `$06E5`, at least 0 (`$02:E5D3`) |
+| Map points | `$0F97` | destroyed + survived + docks + bonus − lost, 0 if negative (`$08:A916`) |
+| Total points | `$208B` | campaign sum |
+| Rank | `$208A` | `$08:ABEE`: v = (total − 128) / 2 (0 if negative); position of v's top bit × 4 + the two bits below it (same byte), capped at 63. Name = label `$08:AD52[rank >> 2]` (66 Moon Rat … 51 Hellhound), emblem sprite `$08:AD62`, colour `rank & 3` |
+
+The points screen is `$08:A6C0` (labels 14–20; text via `$0757` = label index, digits are
+labels 38–47, map titles 97 + map).
+
+**Screens** (traced in the emulator by hooking the loaders: `$00:CFDE` tiles with VRAM
+`$87/$88`, `$00:DC2F` tilemap with BG `$18E9`, `$00:8557` palette at colour `$06B1`, count `$06B3`):
+
+| screen | code | tiles → tilemap | palettes (asset @ first colour) |
+|---|---|---|---|
+| opening (Moon, Earth) | `$08:93CC` | 8 → 9 (BG3), 11 → 12 (BG1); sprites 6, 4 | 7 @16, 10 @32, 13 @80, 5 @128, 3 @240 |
+| title | `$08:B84A` | 26 → 27 (BG1, whole screen); sprites 4 | 25 @0 (80), 82 @16, 5 @128, 3 @240 |
+| main menu | `$02:D9E3` | 149 → 151; cursor sprites 152 | 150 @16 (48), 153 @128 |
+| mission intro | `$05:EAA8` | 105, 149 → 151 (21 rows); sprites 154 | 110 @0, 150 @16, 155 @128 |
+| briefing overview | `$02:AC6D` | 156 (Mode 7) | 157 @0, 190 @128 |
+| load window | `$08:AE8E…` | 134 → 135 | 133, 138 |
+| VP / turn graph frame | `$08:8082` | 146 → 148 | 147 |
+
 ## Key RAM (battle)
 
 | address | meaning |
@@ -564,9 +626,7 @@ whose notes and script dumps document the original blocks.
   defence) are decoded (info screen); the rest are read only by bank `$02`/`$04` code.
 * Rendering the original Japanese glyph strings (the index→glyph base per text block).
 * Which weapon mount (Rapid/Pierce/Bomb/Melee) maps to which attack mode or slot.
-* Full-screen composition for title/menu screens (which tileset, palette and tilemap
-  combine for each screen).
+* Sprite layouts (OAM) of the title and menu screens; the BG layers are decoded (see above).
 * The ROM's per-mission victory table (the remake defines objectives by hand), and flag bit 6
   on reinforcement entries (on docks it means neutral).
-* Map events: the Buccaneer cannon (labels 90/91), the comet (92/93), afterburner modules (89).
-* Sound: the driver's sequence format (not needed to play it), event music (`$06EC/$06ED`).
+* Sound: the driver's sequence format (not needed to play it).

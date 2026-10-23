@@ -88,9 +88,29 @@ The game has no unit production, and units and levels don't carry over between m
 mission, and replay any mission you've reached. After clearing the last mission, the title
 screen offers hard mode (both sides attack ×2, the original's second-round option).
 
-Not yet: the original AI (the stand-in AI can stall on large maps), the Buccaneer cannon,
-comet, afterburner and mine-clearing events of maps 11, 19, 21, 23, 25 and 28, the points and
-rank screen, and the original title and menu graphics.
+**Map events** (`js/game/events.js`, read from the game code): on map 20 (The Buccaneer Cannon)
+the three Adzam towers each arm a cannon that, after every phase, destroys every unit in its
+column, of either army, until its tower falls; the lanes are tinted on the board. Hunters
+starting on the listed cells of maps 17, 18, 27 and 29 carry an afterburner module (movement 10,
+no carrier boarding) until you detach it. The Abaddon's Quantum Decimator (its bomb) clears the
+target hex and the six around it to open space, destroying whatever is there: that is how the
+Union blasts paths through the asteroids of map 26 and the minefields of map 22. Mines (Wisp,
+Pandora) are units that block the way until destroyed (maps 12 and 22). The comet of map 24 is
+part of the map; its alert opens the battle. Scripted reinforcements switch to the event song
+for that phase.
+
+**Points and rank** (`js/game/points.js`): after a won map the original's points screen, in
+its own frame: units destroyed, survived and lost (HP × each type's point value), docks
+captured (100 each), the stage bonus (100 × map number, less 5% a turn), map and total
+victory points, and the rank (16 ranks from Moon Rat up to Hellhound, 4 emblem grades each),
+all computed as the game does.
+
+**Screens** (`js/screens.js`): the title, the main menu picture, the mission header and the
+points frame are drawn from the ROM's own tiles, tilemaps and palettes, with the original title,
+menu, briefing, between-missions and ending songs.
+
+Not yet: Babylon's drift toward Earth on map 30 (its turn limit is in), the Mode 7 map overview
+before each battle, and the menu font (menus are HTML in the game's colours).
 
 ## The original AI (`js/game/ai.js`)
 
@@ -139,8 +159,9 @@ ships with the project.
 2. **Unit description graphics**: done (see above; the art is assets 207–278 assembled from
    sprite frames in bank `$06`).
 3. **Sound and music**: done (see above). Title, menu, briefing, interlude and ending songs
-   are exported for those screens (`SONGS` in `js/audio/sound.js`). Open: event music from map
-   scripts, and four songs not yet tied to a screen (likely mission lost / game over / staff roll).
+   are exported for those screens (`SONGS` in `js/audio/sound.js`) and play in `game.html`, as
+   does the event music of scripted reinforcements. Open: four songs not yet tied to a screen
+   (likely mission lost / game over / staff roll).
 4. Map scripts, transformation, levels, then the original AI. Check the web first for
    documented mechanics before decoding them from the ROM.
 
@@ -152,9 +173,30 @@ Formats and addresses are documented in [docs/FORMATS.md](docs/FORMATS.md).
 python3 serve.py
 ```
 
-Then open http://localhost:8765 and choose `Earth Light (Japan).sfc` (or the
-`.zip` it came in). The ROM is remembered in that browser only; **Forget ROM**
-clears it.
+Then open http://localhost:8765: that is the game. The first time, it asks for
+`Earth Light (Japan).sfc` (or the `.zip` it came in) and, optionally, the English patch; both
+are remembered in that browser only (☰ → *ROM & patch* changes them). The ☰ menu also leads to
+the lab (`index.html`: maps, units, text, assets), the unit wiki, the battle sandbox, the sound
+test and the fight lab.
+
+## How to play
+
+You command the Terran Union through 30 missions. Each one opens with its briefing and its
+objective (usually: destroy the Galt command centre or fortress, or sink a flagship).
+
+* **Select** one of your units (pink) by clicking it, or move the cursor with the **arrow
+  keys** and press **Enter**. Blue hexes: where it can move. Red: enemies in range. Yellow: a
+  dock or carrier it can board (full repair, bombs re-armed).
+* **Move**, then **attack** a red hex; each fight plays the original cut-in (click, Enter or
+  Esc to skip). Bombers, missile ships and destroyers may move again after firing.
+* Docks and carriers hold units: click them to **launch** what's aboard. Grey docks are
+  neutral; bring one to 0 HP to capture it with everything inside.
+* Buttons on the unit card: **Transform** (Athena, Siren), **Detach burner**, **Quantum
+  Decimator** (Abaddon).
+* **End turn** (or **E**) hands over to Galt. **Esc** cancels a selection. **Save** keeps the
+  battle; the menu offers **Load**, **Continue** and **Mission select**. Units and levels don't
+  carry over between missions, as in the original.
+* Clearing all 30 missions unlocks hard mode (both sides attack ×2).
 
 ## Layout
 
@@ -169,6 +211,9 @@ clears it.
 | `js/game/scenario.js` | per-map units: deployment, extras, fortresses, dock cargo, warp-in, reinforcements |
 | `js/game/scripts.js` | per-map objectives, guards, turn limits |
 | `js/game/savegame.js` | campaign progress and the battle save slot (localStorage) |
+| `js/game/events.js` | map events: Buccaneer cannon, afterburner, Quantum Decimator, comet alert |
+| `js/game/points.js` | victory points and rank |
+| `js/screens.js` | full-screen ROM pictures (title, menu, mission header, points frame) |
 | `js/unitart.js`, `js/unitinfo.js` | unit description art and the unit info screen |
 | `fightlab.html` | development page: renders a fight at any frame, to compare with emulator captures |
 | `js/audio/` | sound: SPC700 + S-DSP emulator (`spc.js`), AudioWorklet (`worklet.js`), API and ROM tables (`sound.js`: `Sound.playSong/playSfx/stop/setMuted`, `soundTest`, `trackTable`, `mapMusic`), fight effects (`fightsfx.js`) |
