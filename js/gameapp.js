@@ -122,6 +122,8 @@ function setup(msg = '', cancel = false) {
   ready();
 }
 boot();
+// game.html?debug: lets test scripts read the battle and act like a click
+if (new URLSearchParams(location.search).has('debug')) window.earthlight = { battle: () => battle, act: (x, y) => act(x, y), busy: () => busy };
 
 // ------------------------------------------------------------------ progress
 const progress = loadProgress;
@@ -132,6 +134,7 @@ const side = (a) => (a === NEUTRAL ? 'neutral' : a ? 'armyB' : 'armyA');
 
 function show(id) {
   for (const s of ['sLoad', 'sTitle', 'sStory', 'sBattle', 'sResult']) $(s).hidden = s !== id;
+  window.scrollTo(0, 0);   // each screen starts at its top (the results screen can be long)
 }
 
 function wire() {
