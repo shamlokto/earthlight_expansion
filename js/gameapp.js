@@ -77,6 +77,17 @@ async function testFile(url, read) {
 }
 
 async function boot() {
+  // expansion missions run from the expansion's pack (js/expansion/pack.js): the original's
+  // graphics and sound, copied once from the player's ROM, so no ROM is needed after that
+  if (new URLSearchParams(location.search).has('mission')) {
+    const { ensurePack } = await import('./expansion/pack.js');
+    const p = await ensurePack({ onProgress: (t) => { $('loadMsg').textContent = t; } });
+    rom = p.rom; romEn = p.textRom; en = p.text; pal = battlePalette(rom);
+    $('status').textContent = '';
+    wire();
+    await startExpansion();
+    return;
+  }
   const buf = (await idbGet('rom')) || (await testFile('/__test_rom', readRomFile));
   if (!buf) { setup(); return; }
   rom = new Rom(buf);
@@ -94,17 +105,18 @@ async function boot() {
   if (patch) { try { const b = applyBps(patch, rom.bytes.slice().buffer); en = readEnglish(b); romEn = new Rom(b); } catch { en = null; } }
   $('status').textContent = en ? 'English patch loaded' : 'Japanese ROM: add the English patch (☰ → ROM & patch) for the story and briefings';
   wire();
-  if ((custom = await expansionFromUrl(rom, types))) {
-    // expansion battles use the expansion's own unit data and text (js/expansion/data); the ROM
-    // (and the patched ROM for the info screen's English graphics) only draws and plays them
-    types = custom.types; en = { ...(en || {}), ...custom.text };
-    const s = savedBattle(EXPANSION_BATTLE), title = custom.mission.title || custom.mission.name;
-    const brief = () => story(custom.briefing(), title, () => { silence(); startMission(-1); }, { art: true, song: briefingSong(custom.musicMap) });
-    if (s && s.mission === custom.url) choose(title, `You have a saved battle of this mission (turn ${s.turn}).`, 'Resume', 'Start over', () => resumeExpansion(s), brief);
-    else brief();
-    return;
-  }
   showTitle();
+}
+
+// An expansion mission (game.html?mission=...): its own unit data and text (js/expansion/data);
+// the pack (or the patched ROM, for the info screen's English graphics) only draws and plays them.
+async function startExpansion() {
+  custom = await expansionFromUrl(rom);
+  types = custom.types; en = { ...(en || {}), ...custom.text };
+  const s = savedBattle(EXPANSION_BATTLE), title = custom.mission.title || custom.mission.name;
+  const brief = () => story(custom.briefing(), title, () => { silence(); startMission(-1); }, { art: true, song: briefingSong(custom.musicMap) });
+  if (s && s.mission === custom.url) choose(title, `You have a saved battle of this mission (turn ${s.turn}).`, 'Resume', 'Start over', () => resumeExpansion(s), brief);
+  else brief();
 }
 
 // First run (and ☰ → ROM & patch): pick the ROM and, optionally, the English patch; both are

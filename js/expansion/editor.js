@@ -2,7 +2,7 @@
 // from the 30 ROM maps, place units and cargo, and export the mission JSON (mission.js).
 import { paint, Indexed } from '../gfx.js';
 import { MAP_COUNT, mapInfo, battlePalette, cellGraphic, unitIcon, cellOrigin, cellAt, renderMap } from '../maps.js';
-import { allUnitTypes } from '../units.js';
+import { loadExpansionData } from './data.js';
 import { terrainOf, defence, nameIndex } from '../terrain.js';
 import { LAYOUT } from '../text.js';
 import { ensurePack } from './pack.js';
@@ -253,7 +253,8 @@ const status = (s) => { $('status').textContent = s; };
 (async () => {
   // the original's art, copied once from the player's ROM (pack.js); no ROM needed after that
   const pack = await ensurePack({ onProgress: (t) => status(t) });
-  rom = pack.rom; en = pack.text; pal = battlePalette(rom); types = allUnitTypes(rom);
+  const data = await loadExpansionData();   // the expansion's own units and text; the pack only draws them
+  rom = pack.rom; en = { ...(pack.text || {}), ...data.text }; pal = battlePalette(rom); types = data.types;
   palette = terrainPalette(rom);
 
   for (const id of ['sw', 'sh']) for (let n = 1; n <= 4; n++) $(id).append(new Option(n, n));

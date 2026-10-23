@@ -6,14 +6,14 @@
 //   node tools/record-pack-manifest.mjs --rom "Earth Light (Japan).zip" --patch Earthlight_1_English.zip
 //
 // Sections: `render` (graphics, music, effects and the tables the renderers read), `interim`
-// (rule tables the expansion still reads from the ROM: unit stats, terrain, AI, until it has its
-// own data files) and `en` (info-screen graphics taken from the English-patched ROM).
+// (terrain tables the map editor reads to describe the ROM maps' terrain; battles take their rules
+// from js/expansion/data and read none) and `en` (info-screen graphics from the English-patched ROM).
 // Bump `version` whenever the list changes so stored packs are rebuilt.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
-const VERSION = 1;
+const VERSION = 2;
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const imp = (p) => import(pathToFileURL(join(root, p)).href);
 const args = process.argv.slice(2), opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
@@ -115,15 +115,15 @@ during('render', () => {
 });
 
 // ------------------------------------------------------------------ interim: rule tables
+const data = await (await imp('js/expansion/data.js')).loadExpansionData();
 during('interim', () => {
-  const ty = allUnitTypes(rec); levelBonus(rec);
   terrainPalette(rec);
   for (let t = 0; t < terrain.TYPES; t++) terrain.nameIndex(rec, t), terrain.classOfType(rec, t);
   for (let c = 0; c < terrain.CLASSES; c++) for (let m = 0; m < 3; m++) terrain.defence(rec, c, m), terrain.targetable(rec, c, m);
   for (let k = 1; k <= terrain.CATEGORIES; k++) for (let c = 0; c < terrain.CLASSES; c++) terrain.moveCost(rec, k, c);
   // battles: the expansion engine on a custom map, AI on both sides, points at the end
   for (let run = 0; run < 6; run++) {
-    const b = new ExpansionBattle(rec, mission, ty);
+    const b = new ExpansionBattle(rec, mission, data.types, { tables: data.tables });
     for (let turn = 0; turn < 24 && b.winner() === null; turn++) {
       b.army = b.army;   // AI plays whichever army is up
       for (const _ of aiTurn(b)) if (b.winner() !== null) break;

@@ -3,7 +3,7 @@
 // the next mission's briefing. State lives in campaign.js; battles run in game.html.
 import { paint } from '../gfx.js';
 import { battlePalette, unitIcon } from '../maps.js';
-import { allUnitTypes } from '../units.js';
+import { loadExpansionData } from './data.js';
 import * as C from './campaign.js';
 import { ensurePack } from './pack.js';
 import { clearSavedBattle, EXPANSION_BATTLE } from '../game/savegame.js';
@@ -109,7 +109,8 @@ async function startNew() {
 (async () => {
   // the original's art and sound, copied once from the player's ROM (pack.js); no ROM needed after that
   const pack = await ensurePack({ onProgress: (t) => { $('status').textContent = t; } });
-  rom = pack.rom; en = pack.text; pal = battlePalette(rom); types = allUnitTypes(rom);
+  const data = await loadExpansionData();   // the expansion's own units and text; the pack only draws them
+  rom = pack.rom; en = { ...(pack.text || {}), ...data.text }; pal = battlePalette(rom); types = data.types;
   index = await C.missionIndex();
   state = C.load();
   if (!state) await startNew(); else await loadNext();

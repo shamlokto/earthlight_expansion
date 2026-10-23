@@ -34,11 +34,14 @@ const pack = buildPack(manifest, real, realEn);
 const { rom: packRom, textRom } = packRoms(structuredClone(pack));   // as it comes back from IndexedDB
 const mission = JSON.parse(readFileSync(join(root, 'missions/asimov.json'), 'utf8'));
 
+// the expansion's own unit data and rule tables (battles read no rules from the ROM or pack)
+const data = await (await imp('js/expansion/data.js')).loadExpansionData();
+
 // everything below runs once per ROM and is hashed
 function run(rom, romEn) {
   const h = createHash('sha256'), add = (x) => h.update(typeof x === 'string' ? x : Buffer.from(x.buffer ?? x, x.byteOffset ?? 0, x.byteLength ?? x.length));
   const ctx = { fillStyle: '', fillRect() {}, drawImage() {}, putImageData(img) { add(img.data); } };
-  const types = allUnitTypes(rom);
+  const types = data.types;
   add(JSON.stringify(types));
   add(new Uint8Array(maps.battlePalette(rom).flat()));
   for (let m = 0; m < 30; m += 7) add(maps.renderMap(rom, maps.mapInfo(rom, m), { units: true }).img.px);
@@ -62,7 +65,7 @@ function run(rom, romEn) {
   for (let m = 0; m < 30; m++) add(JSON.stringify(sound.mapMusic(rom, m, m & 1, 3, 1)));
   // an expansion battle, AI on both sides, with a seeded random term
   let seed = 7; const rnd = Math.random; Math.random = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x80000000);
-  const b = new ExpansionBattle(rom, mission, types);
+  const b = new ExpansionBattle(rom, mission, types, { tables: data.tables });
   for (let t = 0; t < 20 && b.winner() === null; t++) { for (const _ of aiTurn(b)) if (b.winner() !== null) break; if (b.winner() === null) b.endTurn(); }
   Math.random = rnd;
   add(JSON.stringify([b.turn, b.result, b.units.map((x) => [x.type, x.hp, x.x, x.y, x.level])]));
