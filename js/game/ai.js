@@ -23,11 +23,9 @@
 // enemy units, using their priority as the waypoint value. Guards (scripts.js) keep their
 // post: they only fire at units within GUARD_ZONE of what they guard and never advance.
 import { distance, neighbours, hexRing } from './rules.js';
-import { moveCost } from '../terrain.js';
 import { inLane, decimator, blast } from './events.js';
 
-const ROUTES = 0x0289b1, SCRIPTS = 0x00e900, VIP_UNION = 0x02e64f, VIP_GALT = 0x02e631, TYPE_VALUE = 0x028ab8;
-const WEAPON_MODE = 0x01f2b4;
+const ROUTES = 0x0289b1, SCRIPTS = 0x00e900, VIP_UNION = 0x02e64f, VIP_GALT = 0x02e631;
 const SPENT_FORMS = new Set([5, 7, 11, 44]);     // $01:8C10
 const ABADDON = 43, SIREN = 36, ERINYES = 34;
 const DOCK_CAT = 7, CARRIER_CAT = 1, GUARD_ZONE = 3;
@@ -102,7 +100,7 @@ class Brain {
       if (c) { const [lo, hi] = vipRange(c); if (u.type >= lo && u.type < hi) p = 0x80; }
       const cat = b.type(u).category, carried = b.cargo(u).length * 4;
       if (cat === DOCK_CAT) p += carried ? carried + 0x40 : 0;
-      else p += (cat === CARRIER_CAT ? carried : 0) + rom.byteAt(TYPE_VALUE + u.type);
+      else p += (cat === CARRIER_CAT ? carried : 0) + b.tables.aiValue(u.type);
       prio.set(u, Math.min(255, p));
     }
     // $01:9089: an enemy is worth as much again as the best unit of ours it could hurt
@@ -127,7 +125,7 @@ class Brain {
       if (s === 3) return t === 6 || t === 4 ? 4 : null;
       return t < 6 ? t + 2 : t;
     }
-    if (t === SIREN) return this.rom.byteAt(WEAPON_MODE + 37 * 4 + s) ? 37 : null;
+    if (t === SIREN) return this.b.tables.hasWeapon(37, s) ? 37 : null;
     return this.b.types[t].weapons[s] ? t : null;
   }
 
@@ -209,7 +207,7 @@ class Brain {
       for (const [x, y] of neighbours(e.x, e.y)) if (x >= 0 && y >= 0 && x < 64 && y < 64) zoc[K(x, y)] = 1;
     }
     const costs = [];
-    for (let c = 0; c < 16; c++) costs.push(moveCost(this.rom, cat, c));
+    for (let c = 0; c < 16; c++) costs.push(b.tables.moveCost(cat, c));
     const step = (c, mp, z) => {
       let left = c === 'stop' ? (mp > 0 ? 0 : -1) : mp - c;
       if (left >= 0 && z) left = 0;
@@ -354,7 +352,7 @@ class Brain {
 
   launchable(c, x, y) {
     const b = this.b;
-    return b.inBounds(x, y) && !b.unitAt(x, y) && moveCost(this.rom, b.type(c).category, b.cls(x, y)) !== 0 && !this.blocked(x, y);
+    return b.inBounds(x, y) && !b.unitAt(x, y) && b.tables.moveCost(b.type(c).category, b.cls(x, y)) !== 0 && !this.blocked(x, y);
   }
 
   // ---------------------------------------------------------------- the turn

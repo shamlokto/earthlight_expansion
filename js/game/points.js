@@ -1,7 +1,7 @@
 // Victory points and rank, as the game computes them for its points screen ($08:A6C0,
 // labels 14-20; ranks are labels 51-66).
 //
-//   Units Destroyed  $7E:208E  every fight adds HP lost x F27A[type] for the Galt side ($01:9F7F)
+//   Units Destroyed  $7E:208E  every fight adds HP lost x value[type] ($01:F27A, battle tables) for the Galt side ($01:9F7F)
 //   Units Lost       $7E:2091  ... and for the Union side ($01:9F46)
 //   Docks Captured   $7E:2094  +100 per dock the Union captures ($01:A626)
 //   Units Survived   $7E:2097  sum of HP x F27A[type] over every unit not of army B ($02:E580)
@@ -11,11 +11,11 @@
 //   Rank             $7E:208A  from (total - 128) / 2: highest bit x 4 + the next two bits,
 //                              capped at 63 ($08:ABEE). Rank name = label $08:AD52[rank >> 2]
 //                              (66 Moon Rat up to 51 Hellhound); rank & 3 is the emblem colour.
-const F27A = 0x01f27a, RANK_NAMES = 0x08ad52;
+const RANK_NAMES = 0x08ad52;
 
 export function newTally() { return { destroyed: 0, lost: 0, docks: 0 }; }
 
-const worth = (b, u) => b.rom.byteAt(F27A + u.type);
+const worth = (b, u) => b.tables.value(u.type);
 
 // Called after every fight (rules.js attack).
 export function tally(b, e) {

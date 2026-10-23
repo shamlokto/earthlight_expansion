@@ -1,7 +1,9 @@
 // Playtest bot for expansion missions: plays the player's side with simple rules against the
 // real Union AI, many times, and reports how often each mission is won and how.
 //   EARTHLIGHT_ROM=... node tests/expansion-bot.mjs missions/asimov.json [runs]
-// It is a weak player (no boarding, no transforming, greedy moves), so its win rate is a floor.
+// It is a weak player (greedy moves, no transforming), so its win rate is a floor.
+// By default it uses the expansion's own data (js/expansion/data); ROMTABLES=1 uses the ROM's
+// tables instead. SEED=n makes runs repeatable; HASH=1 prints a hash of every run's end state.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -13,11 +15,16 @@ const { readRomFile } = await imp('js/romfile.js');
 const { allUnitTypes } = await imp('js/units.js');
 const { ExpansionBattle } = await imp('js/expansion/battle.js');
 const { aiTurn } = await imp('js/game/ai.js');
+const { loadExpansionData } = await imp('js/expansion/data.js');
+const { createHash } = await import('node:crypto');
 const { distance } = await imp('js/game/rules.js');
 
 const f = readFileSync(process.env.EARTHLIGHT_ROM);
 const rom = new Rom(await readRomFile({ arrayBuffer: async () => f.buffer.slice(f.byteOffset, f.byteOffset + f.length) }));
-const types = allUnitTypes(rom);
+const data = await loadExpansionData();
+const types = process.env.ROMTABLES ? allUnitTypes(rom) : data.types, tables = process.env.ROMTABLES ? undefined : data.tables;
+if (process.env.SEED) { let seed = +process.env.SEED; Math.random = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x80000000; }
+const runHash = createHash('sha256');
 const mission = JSON.parse(readFileSync(join(root, process.argv[2]), 'utf8'));
 const runs = +(process.argv[3] || 50);
 
@@ -63,7 +70,7 @@ function playerTurn(b) {
 
 const tally = new Map(); let turns = 0;
 for (let r = 0; r < runs; r++) {
-  const b = new ExpansionBattle(rom, mission, types);
+  const b = new ExpansionBattle(rom, mission, types, { tables });
   let guard = 0;
   while (b.winner() === null && guard++ < 200) {
     if (b.army === 0) { playerTurn(b); if (process.env.TRACE && r === 0) console.log(`turn ${b.turn}:`, b.units.filter((u) => u.army === 0 && u.hp > 0).map((u) => `${types[u.type].code}${u.general ? "*" : ""}${u.escaped ? "!esc" : `(${u.x},${u.y})`}`).join(" "), "| union", b.alive(1).length); }
@@ -74,5 +81,6 @@ for (let r = 0; r < runs; r++) {
   if (process.env.TRACE && r === 0) console.log("end", b.turn, b.army, b.result, b.units.filter((u) => u.army === 0).map((u) => `${types[u.type].code}:${u.hp}${u.carrier ? "@" + (u.carrier.id ?? "x") : ""}${u.escaped ? "!" : ""}`).join(" "));
   const k = `${b.winner() === 0 ? 'win' : b.winner() === 1 ? 'loss' : 'none'}:${b.result?.reason}`;
   tally.set(k, (tally.get(k) || 0) + 1); turns += b.turn;
+  runHash.update(b.units.map((u) => [u.id, u.type, u.x, u.y, u.hp, u.level, u.escaped ? 1 : 0].join(',')).join(';') + k + b.turn);
 }
-console.log(`${mission.name} x${runs}:`, Object.fromEntries(tally), `avg turn ${(turns / runs).toFixed(1)}`);
+console.log(`${mission.name} x${runs}:`, Object.fromEntries(tally), `avg turn ${(turns / runs).toFixed(1)}`, process.env.HASH ? runHash.digest('hex').slice(0, 16) : '');

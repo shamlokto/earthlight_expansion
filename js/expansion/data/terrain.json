@@ -1,0 +1,981 @@
+{
+ "note": "Seeded from Earth Light (Japan) by tools/extract-expansion-data.mjs; the expansion's own data from here on (may diverge from the original).",
+ "legend": "ids[terrain id] = terrain type; types[type].cls = class; classes[cls]: defence = combat reduction /128 per mode (B, N, M), display = % shown, targetable per mode, moveCost[category-1] (0 blocked, \"stop\" ends movement)",
+ "ids": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  6,
+  6,
+  6,
+  6,
+  15,
+  7,
+  8,
+  9,
+  9,
+  9,
+  9,
+  9,
+  9,
+  9,
+  9,
+  9,
+  9,
+  9,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  11,
+  11,
+  11,
+  11,
+  11,
+  11,
+  11,
+  11,
+  11,
+  11,
+  11,
+  12,
+  12,
+  12,
+  12,
+  12,
+  12,
+  12,
+  12,
+  12,
+  12,
+  12,
+  14,
+  14,
+  14,
+  14,
+  14,
+  14,
+  14,
+  13,
+  16,
+  17,
+  19,
+  18,
+  20,
+  22,
+  21,
+  23,
+  24,
+  29,
+  30,
+  31,
+  32,
+  33,
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  9,
+  10,
+  10,
+  11,
+  12,
+  12,
+  13,
+  14,
+  14,
+  14,
+  14,
+  14,
+  14,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  9,
+  10,
+  10,
+  11
+ ],
+ "types": [
+  {
+   "type": 0,
+   "cls": 0,
+   "nameIndex": 0,
+   "name": "Void",
+   "description": "Open Space\n\nNo effect on movement or\nattacks"
+  },
+  {
+   "type": 1,
+   "cls": 1,
+   "nameIndex": 1,
+   "name": "Magnetic Field",
+   "description": "A dense concentration of\nmagnetic particles\n\nIt has no effect on movement,\nbut the strong magnetism com-\npletely disables beam weapons"
+  },
+  {
+   "type": 2,
+   "cls": 2,
+   "nameIndex": 2,
+   "name": "Meteoroid Field",
+   "description": "A cluster of small rocks\n\nShips can't enter\nOther units have greatly re-\nduced movement"
+  },
+  {
+   "type": 3,
+   "cls": 3,
+   "nameIndex": 3,
+   "name": "Asteroid",
+   "description": "An asteroid belt\n\nShips can't enter\nTurrets can be deployed"
+  },
+  {
+   "type": 4,
+   "cls": 4,
+   "nameIndex": 4,
+   "name": "Galactic Plasma",
+   "description": "Interstellar medium consisting\nof gas, dust and cosmic rays\n\nThe effect on each weapon\ntype is small, but the flow\nof particles slows down the\nmovement of all but the\nlargest vessels."
+  },
+  {
+   "type": 5,
+   "cls": 5,
+   "nameIndex": 5,
+   "name": "Gravity Flux",
+   "description": "A random fluctuation of\ngalactic gravity fields\n\nLarge impact on railguns and\nmissiles\n\nHunters can't enter"
+  },
+  {
+   "type": 6,
+   "cls": 6,
+   "nameIndex": 6,
+   "name": "Atmosphere",
+   "description": "Earth's atmosphere\n\nBecause of the increasing\ngravitational forces, units\ncan't attack"
+  },
+  {
+   "type": 7,
+   "cls": 7,
+   "nameIndex": 7,
+   "name": "Bedrock",
+   "description": "Solid asteroid rock suitable\nfor construction\n\nShips can't enter\nTurrets can be deployed"
+  },
+  {
+   "type": 8,
+   "cls": 8,
+   "nameIndex": 8,
+   "name": "Fortress Deck",
+   "description": "The deck of a floating\nfortress built on an asteroid\n\nSmall effect on movement and\nattack\nTurrets can be deployed"
+  },
+  {
+   "type": 9,
+   "cls": 9,
+   "nameIndex": 9,
+   "name": "Turret Railway",
+   "description": "A railway for the Rahab turret\nbuilt into a fortress deck\n\nA Rahab can move only on\nthese railways\n\nIdentical to a fortress deck\nfor all other units"
+  },
+  {
+   "type": 10,
+   "cls": 9,
+   "nameIndex": 9,
+   "name": "Turret Railway",
+   "description": "A railway for the Rahab turret\nbuilt into a fortress deck\n\nA Rahab can move only on\nthese railways\n\nIdentical to a fortress deck\nfor all other units"
+  },
+  {
+   "type": 11,
+   "cls": 10,
+   "nameIndex": 10,
+   "name": "Fortress Wall",
+   "description": "A defensive wall built on a\nfortress deck\n\nNo unit can enter\nNo shots can pass through"
+  },
+  {
+   "type": 12,
+   "cls": 10,
+   "nameIndex": 10,
+   "name": "Fortress Wall",
+   "description": "A defensive wall built on a\nfortress deck\n\nNo unit can enter\nNo shots can pass through"
+  },
+  {
+   "type": 13,
+   "cls": 11,
+   "nameIndex": 11,
+   "name": "Comet Tail",
+   "description": "The tail of a comet\n\nEntry requires all movement\npoints\nUnits can't attack, but can be\nattacked"
+  },
+  {
+   "type": 14,
+   "cls": 12,
+   "nameIndex": 12,
+   "name": "Comet Body",
+   "description": "A comet\n\nNo unit can enter\nNo shots can pass through"
+  },
+  {
+   "type": 15,
+   "cls": 12,
+   "nameIndex": 13,
+   "name": "Earth",
+   "description": "Earth's gravity field\n\nNo unit can enter\nNo shots can pass through"
+  },
+  {
+   "type": 16,
+   "cls": 13,
+   "nameIndex": 14,
+   "name": "Babylon Hull",
+   "description": "Hull of the superdreadnought\nBabylon\n\nSmall effect on movement and\nattack\nAs ships can't enter, Hunters\nwill be required"
+  },
+  {
+   "type": 17,
+   "cls": 14,
+   "nameIndex": 15,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 18,
+   "cls": 14,
+   "nameIndex": 15,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 19,
+   "cls": 14,
+   "nameIndex": 15,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 20,
+   "cls": 14,
+   "nameIndex": 15,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 21,
+   "cls": 14,
+   "nameIndex": 15,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 22,
+   "cls": 14,
+   "nameIndex": 15,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 23,
+   "cls": 15,
+   "nameIndex": 16,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 24,
+   "cls": 15,
+   "nameIndex": 16,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 25,
+   "cls": 15,
+   "nameIndex": 16,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 26,
+   "cls": 15,
+   "nameIndex": 16,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 27,
+   "cls": 15,
+   "nameIndex": 16,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 28,
+   "cls": 15,
+   "nameIndex": 16,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 29,
+   "cls": 15,
+   "nameIndex": 16,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 30,
+   "cls": 15,
+   "nameIndex": 17,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 31,
+   "cls": 15,
+   "nameIndex": 17,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 32,
+   "cls": 15,
+   "nameIndex": 17,
+   "name": null,
+   "description": null
+  },
+  {
+   "type": 33,
+   "cls": 15,
+   "nameIndex": 17,
+   "name": null,
+   "description": null
+  }
+ ],
+ "classes": [
+  {
+   "cls": 0,
+   "names": [
+    "Void"
+   ],
+   "defence": [
+    0,
+    0,
+    0
+   ],
+   "display": [
+    0,
+    0,
+    0
+   ],
+   "targetable": [
+    true,
+    true,
+    true
+   ],
+   "moveCost": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "cls": 1,
+   "names": [
+    "Magnetic Field"
+   ],
+   "defence": [
+    128,
+    0,
+    0
+   ],
+   "display": [
+    100,
+    0,
+    0
+   ],
+   "targetable": [
+    false,
+    true,
+    true
+   ],
+   "moveCost": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "cls": 2,
+   "names": [
+    "Meteoroid Field"
+   ],
+   "defence": [
+    19,
+    27,
+    51
+   ],
+   "display": [
+    15,
+    20,
+    40
+   ],
+   "targetable": [
+    true,
+    true,
+    true
+   ],
+   "moveCost": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    3,
+    3,
+    2,
+    2,
+    3,
+    0,
+    2
+   ]
+  },
+  {
+   "cls": 3,
+   "names": [
+    "Asteroid"
+   ],
+   "defence": [
+    19,
+    19,
+    19
+   ],
+   "display": [
+    15,
+    15,
+    15
+   ],
+   "targetable": [
+    true,
+    true,
+    true
+   ],
+   "moveCost": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    1,
+    1,
+    3,
+    0,
+    1,
+    0,
+    0
+   ]
+  },
+  {
+   "cls": 4,
+   "names": [
+    "Galactic Plasma"
+   ],
+   "defence": [
+    19,
+    19,
+    19
+   ],
+   "display": [
+    15,
+    15,
+    15
+   ],
+   "targetable": [
+    true,
+    true,
+    true
+   ],
+   "moveCost": [
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    1,
+    2,
+    0,
+    1
+   ]
+  },
+  {
+   "cls": 5,
+   "names": [
+    "Gravity Flux"
+   ],
+   "defence": [
+    6,
+    64,
+    32
+   ],
+   "display": [
+    5,
+    50,
+    25
+   ],
+   "targetable": [
+    true,
+    true,
+    true
+   ],
+   "moveCost": [
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    2,
+    0,
+    3,
+    3,
+    3,
+    0,
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "cls": 6,
+   "names": [
+    "Atmosphere"
+   ],
+   "defence": [
+    32,
+    58,
+    45
+   ],
+   "display": [
+    25,
+    45,
+    35
+   ],
+   "targetable": [
+    false,
+    false,
+    false
+   ],
+   "moveCost": [
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    1,
+    2,
+    0,
+    1
+   ]
+  },
+  {
+   "cls": 7,
+   "names": [
+    "Bedrock"
+   ],
+   "defence": [
+    32,
+    32,
+    32
+   ],
+   "display": [
+    25,
+    25,
+    25
+   ],
+   "targetable": [
+    true,
+    true,
+    true
+   ],
+   "moveCost": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    2,
+    2,
+    2,
+    3,
+    0,
+    2,
+    0,
+    2
+   ]
+  },
+  {
+   "cls": 8,
+   "names": [
+    "Fortress Deck"
+   ],
+   "defence": [
+    6,
+    6,
+    6
+   ],
+   "display": [
+    5,
+    5,
+    5
+   ],
+   "targetable": [
+    true,
+    true,
+    true
+   ],
+   "moveCost": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "cls": 9,
+   "names": [
+    "Turret Railway"
+   ],
+   "defence": [
+    6,
+    6,
+    6
+   ],
+   "display": [
+    5,
+    5,
+    5
+   ],
+   "targetable": [
+    true,
+    true,
+    true
+   ],
+   "moveCost": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "cls": 10,
+   "names": [
+    "Fortress Wall"
+   ],
+   "defence": [
+    64,
+    64,
+    64
+   ],
+   "display": [
+    0,
+    0,
+    0
+   ],
+   "targetable": [
+    false,
+    false,
+    false
+   ],
+   "moveCost": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "cls": 11,
+   "names": [
+    "Comet Tail"
+   ],
+   "defence": [
+    64,
+    64,
+    64
+   ],
+   "display": [
+    50,
+    50,
+    50
+   ],
+   "targetable": [
+    false,
+    false,
+    false
+   ],
+   "moveCost": [
+    "stop",
+    "stop",
+    "stop",
+    "stop",
+    "stop",
+    "stop",
+    "stop",
+    "stop",
+    "stop",
+    "stop",
+    "stop",
+    "stop",
+    "stop",
+    "stop",
+    "stop"
+   ]
+  },
+  {
+   "cls": 12,
+   "names": [
+    "Comet Body",
+    "Earth"
+   ],
+   "defence": [
+    0,
+    0,
+    0
+   ],
+   "display": [
+    0,
+    0,
+    0
+   ],
+   "targetable": [
+    false,
+    false,
+    false
+   ],
+   "moveCost": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "cls": 13,
+   "names": [
+    "Babylon Hull"
+   ],
+   "defence": [
+    13,
+    13,
+    13
+   ],
+   "display": [
+    10,
+    10,
+    10
+   ],
+   "targetable": [
+    true,
+    true,
+    true
+   ],
+   "moveCost": [
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "cls": 14,
+   "names": [],
+   "defence": [
+    0,
+    0,
+    0
+   ],
+   "display": [
+    0,
+    0,
+    0
+   ],
+   "targetable": [
+    true,
+    true,
+    true
+   ],
+   "moveCost": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "cls": 15,
+   "names": [],
+   "defence": [
+    0,
+    0,
+    0
+   ],
+   "display": [
+    0,
+    0,
+    0
+   ],
+   "targetable": [
+    true,
+    true,
+    true
+   ],
+   "moveCost": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  }
+ ]
+}

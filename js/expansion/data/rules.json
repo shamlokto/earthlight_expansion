@@ -1,0 +1,22 @@
+{
+ "note": "Seeded from Earth Light (Japan) by tools/extract-expansion-data.mjs; the expansion's own data from here on (may diverge from the original).",
+ "levelBonus": [
+  16,
+  17,
+  18,
+  19,
+  20,
+  21,
+  22,
+  23,
+  24,
+  32,
+  255,
+  255,
+  192,
+  255,
+  1,
+  0
+ ],
+ "maxLevel": 9
+}
