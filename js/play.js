@@ -7,6 +7,8 @@ import { readEnglish } from './text.js';
 import { Battle } from './game/rules.js';
 import { aiTurn } from './game/ai.js';
 import { FightScene } from './game/fightscene.js';
+import { Sound, mapMusic } from './audio/sound.js';
+import { showUnitInfo } from './unitinfo.js';
 
 // Play the fight cut-in for a resolved attack (log entry from Battle.attack).
 function runFight(e) {
@@ -24,9 +26,15 @@ function runFight(e) {
     const tick = (t) => {
       if (last === null) last = t;
       // fixed 60 fps timestep, like the SNES frame
-      while (t - last >= 1000 / 60 && !scene.done) { scene.step(); last += 1000 / 60; }
+      while (t - last >= 1000 / 60 && !scene.done) {
+        scene.step(); last += 1000 / 60;
+        if (sound) new Set(scene.sounds()).forEach((id) => sound.playSfx(id));
+      }
       scene.render(ctx);
-      if (scene.done || skip) { ov.hidden = true; resolve(); } else requestAnimationFrame(tick);
+      if (scene.done || skip) {
+        if (skip && sound) sound.playSfx(3);   // stop the fight's effects, as the fight end does
+        ov.hidden = true; resolve();
+      } else requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
   });
@@ -49,7 +57,7 @@ function idbGet(key) {
   });
 }
 
-let rom, romEn = null, pal, types, names = null, battle, terrainCanvas, sel = null, reach = null, targets = [], busy = false;
+let rom, romEn = null, english = null, pal, types, names = null, battle, terrainCanvas, sel = null, reach = null, targets = [], busy = false;
 
 (async () => {
   const buf = await idbGet('rom');
@@ -57,7 +65,7 @@ let rom, romEn = null, pal, types, names = null, battle, terrainCanvas, sel = nu
   rom = new Rom(buf); pal = battlePalette(rom); types = allUnitTypes(rom);
   const patch = await idbGet('patch');
   if (patch) {
-    try { const en = applyBps(patch, rom.bytes.slice().buffer); names = readEnglish(en).unitNames; romEn = new Rom(en); } catch { }
+    try { const en = applyBps(patch, rom.bytes.slice().buffer); english = readEnglish(en); names = english.unitNames; romEn = new Rom(en); } catch { }
   }
   for (let m = 0; m < MAP_COUNT; m++) {
     const i = mapInfo(rom, m), d = deployment(rom, i);
@@ -68,10 +76,36 @@ let rom, romEn = null, pal, types, names = null, battle, terrainCanvas, sel = nu
   $('mapSel').onchange = $('restart').onclick = start;
   $('endTurn').onclick = endTurn;
   $('cv').addEventListener('click', onClick);
+  // unit info screen (js/unitinfo.js): right-click a unit, or the Info button on its card
+  $('cv').addEventListener('contextmenu', (ev) => {
+    const r = ev.target.getBoundingClientRect(), u = battle.unitAt(...cellAt((ev.clientX - r.left) / Z + OFF, (ev.clientY - r.top) / Z + OFF));
+    if (u) { ev.preventDefault(); showUnitInfo(rom, types, english, u); }
+  });
+  $('info').addEventListener('click', (ev) => { const b = ev.target.closest('[data-info]'); if (b) showUnitInfo(rom, types, english, battle.units[+b.dataset.info]); });
   start();
 })();
 
 const nameOf = (u) => (names ? names[u.type] : types[u.type].name);
+
+// Original music/SFX (js/audio): started by the first click, map BGM follows the phase and unit counts.
+let sound = null;
+function music() {
+  if (!sound || battle.winner() !== null) return;
+  const m = mapMusic(rom, +$('mapSel').value, battle.army, battle.forces(0).length, battle.forces(1).length);
+  sound.playSong(m);
+}
+document.addEventListener('pointerdown', () => {
+  if (sound || !rom) return;
+  sound = new Sound(rom);
+  sound.setMuted($('mute').checked);
+  sound.start().then(music);
+}, { capture: true });
+const muteKey = 'earthlight-mute';
+try { $('mute').checked = localStorage.getItem(muteKey) === '1'; } catch { }
+$('mute').onchange = (e) => {
+  try { localStorage.setItem(muteKey, e.target.checked ? '1' : '0'); } catch { }
+  if (sound) sound.setMuted(e.target.checked);
+};
 
 function start() {
   const info = mapInfo(rom, +$('mapSel').value);
@@ -93,6 +127,7 @@ function hexPath(ctx, x, y) {
 }
 
 function draw() {
+  music();
   const cv = $('cv'), ctx = cv.getContext('2d');
   cv.width = terrainCanvas.width; cv.height = terrainCanvas.height;
   ctx.drawImage(terrainCanvas, 0, 0);
@@ -136,7 +171,7 @@ function hud(msg) {
 function unitCard(u, extra = '') {
   const t = types[u.type];
   const ws = t.weapons.filter(Boolean).map((w) => `W${w.slot + 1}: M${w.mode + 1} r${w.min}${w.max > w.min ? '–' + w.max : ''} p${w.power}`).join('<br>');
-  return `<h3 class="${u.army ? 'armyB' : 'armyA'}">${nameOf(u)} <span class="dim mono">${t.code}</span></h3>
+  return `<h3 class="${u.army ? 'armyB' : 'armyA'}">${nameOf(u)} <span class="dim mono">${t.code}</span> <button class="btn" data-info="${u.id}">Info</button></h3>
     HP ${u.hp}/${t.hp} · Move ${t.move} · Evasion ${Math.round(t.evasion * 100 / 128)}%<br><span class="mono small">${ws || 'unarmed'}</span>${extra}`;
 }
 

@@ -2,12 +2,25 @@
 //   movement flood fill  $01:B605   (costs $01:CF12, zone of control via $7E:2DD2 bits)
 //   weapon choice/range  $01:853A   (F2B4 mode, F39C/F484 range, F56C move-or-fire)
 //   damage + counter     $01:A976   (F6B0 power, F798 evasion, D042 terrain, F676 HP, AC3D level)
-// Things the decode did not settle (random term range, level gain, $06E9 doubling,
-// map scripts) are marked TODO/ASSUMED.
+//   levels after a fight $01:9EA9  (attacker +1, +2 for a kill; defender +1, +2 if unhurt; max 9)
+//   boarding / re-arm    $01:A5F2   (full HP on boarding, spent forms 5/7/11/44 go back one type)
+//   dock capture         $01:A626   (HP 0 -> capturer's army at full HP, cargo included)
+//   dock self-repair     $02:94DD   (+2 HP a turn, paused for 2 turns after taking damage)
+//   bomb used            $01:A00A   (type + 1, movement grows by the difference: re-move)
+// Map objectives live in scripts.js. Things the decode did not settle (random term range,
+// the exact transform menu) are marked TODO/ASSUMED.
 import { terrainOf, moveCost, EDGE_CLASS } from '../terrain.js';
+import { scriptFor, setupScript, outcome } from './scripts.js';
 
 const D042 = 0x01d042, D0C2 = 0x01d0c2, LEVEL = 0x01ac3d;
-const TOWERS = new Set([56, 57]);   // command towers
+export const NEUTRAL = 2;           // army of the neutral docks (deployment flag $40)
+const DOCK_CAT = 7, CARRIER_CAT = 1, CRAB = 26;   // CR-1: 26 empty, 27 loaded
+// Form changes. Manual: Athena bomber <-> HU (4/5 <-> 6/7, from $01:84E0), Siren carrier <->
+// battleship (36 <-> 37). After firing the bomb or missile in slot 3: armed -> spent.
+export const TRANSFORM = { 4: 6, 6: 4, 5: 7, 7: 5, 36: 37, 37: 36 };
+const SPENT = { 4: 5, 10: 11, 12: 13, 43: 44, 45: 46, 47: 48 };
+const REARM = { 5: 4, 7: 6, 11: 10, 44: 43 };
+const DESTROYERS = new Set([49, 50, 51]);   // may move again with what is left after firing
 // Info-screen tables (read by $02:9157): display attack per slot, display defence,
 // category byte, minimum range, terrain defence % per weapon mode.
 const F7D2 = 0x01f7d2, F8BA = 0x01f8ba, F206 = 0x01f206, F39C = 0x01f39c, D002 = 0x01d002;
@@ -39,21 +52,30 @@ export function distance(a, b) {
 export class Battle {
   // deploy: [{ type, army, x, y, carrier? }] (maps.deployment or scenario.units);
   // arrivals: scenario.arrivals (turn-keyed reinforcements), optional.
-  constructor(rom, info, unitTypes, deploy, arrivals = []) {
+  // opts: { script (default: scripts.js entry for the map), hard (attack x2, $06E9) }
+  constructor(rom, info, unitTypes, deploy, arrivals = [], opts = {}) {
     this.rom = rom; this.info = info; this.types = unitTypes;
+    this.script = opts.script || scriptFor(info.index); this.hard = !!opts.hard;
     this.header = rom.body(info.headerId);
     this.grid = rom.body(info.gridId);
     this.units = [];
     const made = new Map();
-    for (const d of deploy) made.set(d, this.spawn(d.type, d.army, d.x, d.y, d.carrier ? made.get(d.carrier) : null));
-    this.arrivals = arrivals;
+    for (const d of deploy) {
+      const host = d.carrier ? made.get(d.carrier) : null;
+      const army = host ? host.army : (d.flag40 && this.types[d.type].category === DOCK_CAT ? NEUTRAL : d.army);
+      made.set(d, this.spawn(d.type, army, d.x, d.y, host));
+    }
+    this.arrivals = arrivals.map((e) => ({ ...e, done: false }));
     this.turn = 1; this.army = 0; this.log = [];
-    this.hadTower = [0, 1].map((a) => this.units.some((u) => u.army === a && TOWERS.has(u.type)));
+    setupScript(this);
+    this.result = null;
   }
 
+  // mp: movement left after moving (null = not moved); reMove: points for a move after firing;
+  // hold: turns before a damaged dock repairs itself again.
   spawn(type, army, x, y, carrier = null) {
     const t = this.types[type];
-    const u = { id: this.units.length, type, army, x, y, hp: t.hp, level: t.startLevel, moved: false, acted: false, carrier };
+    const u = { id: this.units.length, type, army, x, y, hp: t.hp, level: t.startLevel, moved: false, acted: false, carrier, mp: null, reMove: 0, hold: 0 };
     this.units.push(u);
     return u;
   }
@@ -67,7 +89,44 @@ export class Battle {
     if (!c) return [];
     return neighbours(c.x, c.y).filter(([x, y]) => this.inBounds(x, y) && !this.unitAt(x, y) && moveCost(this.rom, cat, this.cls(x, y)) !== 0);
   }
-  launch(u, x, y) { u.carrier = null; u.x = x; u.y = y; u.moved = true; }
+  launch(u, x, y) {
+    const c = u.carrier;
+    u.carrier = null; u.x = x; u.y = y; u.moved = true; u.mp = 0;
+    if (c.type === CRAB + 1) this.setType(c, CRAB);
+  }
+
+  // Who may board what ($01:A554): docks take ships from cruisers down and all small craft,
+  // not battleships, carriers or structures; carriers take small craft (not the Siren in its
+  // battleship form, which is category 2); the CR-1 takes one small craft.
+  canBoard(u, host) {
+    if (!host || host === u || host.army !== u.army || host.hp <= 0 || host.carrier || (u.acted && !u.reMove)) return false;
+    const uc = this.type(u).category, hc = this.type(host).category;
+    if (hc === DOCK_CAT) return uc >= 3 && uc !== 5 && uc !== 6 && uc !== 7;
+    if (host.type === CRAB) return uc >= 8 && uc !== 13;
+    if (hc === CARRIER_CAT) return uc >= 8;
+    return false;
+  }
+  // Hosts u can reach this turn (moving onto a friendly host's hex boards it).
+  boardable(u) {
+    const f = this.flood(u);
+    return this.alive(u.army).filter((h) => f.has(`${h.x},${h.y}`) && this.canBoard(u, h));
+  }
+  // Boarding restores full HP and re-arms spent bombers ($01:A5F2).
+  board(u, host) {
+    u.carrier = host; u.x = host.x; u.y = host.y; u.moved = true; u.acted = true; u.reMove = 0;
+    if (REARM[u.type] !== undefined) this.setType(u, REARM[u.type]);
+    u.hp = this.type(u).hp;
+    if (host.type === CRAB) this.setType(host, CRAB + 1);
+  }
+  setType(u, type) { u.type = type; }
+
+  // ------------------------------------------------------------ transformation
+  canTransform(u) {
+    const to = TRANSFORM[u.type];
+    if (to === undefined || u.moved || u.acted || u.carrier) return false;
+    return !(this.types[to].category !== CARRIER_CAT && this.cargo(u).length);   // Siren: empty hangar first
+  }
+  transform(u) { if (this.canTransform(u)) this.setType(u, TRANSFORM[u.type]); }
 
   // Turn-keyed arrivals ($02:9B70): the game fires an event when turn counter + army
   // flag equals its key; the counter is 0 on the first turn. Units take the nearest free
@@ -107,16 +166,37 @@ export class Battle {
   alive(army) { return this.units.filter((u) => u.hp > 0 && !u.carrier && (army === undefined || u.army === army)); }
   // everything still in play, including cargo
   forces(army) { return this.units.filter((u) => u.hp > 0 && u.army === army); }
+  // units on the map that `u` may attack (the other army and neutral docks)
+  hostiles(u) { return this.alive().filter((e) => e.army !== u.army); }
+  distance(a, b) { return distance(a, b); }
 
   // ------------------------------------------------------------ movement
-  // Dijkstra over movement points. Returns Map "x,y" -> remaining points.
+  // Points u can still move with: its full move, or what is left for a move after firing.
+  movePoints(u) {
+    if (u.carrier) return 0;
+    if (u.acted) return u.reMove;
+    return u.moved ? 0 : this.type(u).move;
+  }
+
+  // Dijkstra over movement points. Returns Map "x,y" -> remaining points (free hexes only).
   reachable(u) {
-    const t = this.type(u), cat = t.category;
-    const res = new Map([[`${u.x},${u.y}`, t.move]]);
-    if (u.moved || u.acted || t.move === 0) return res;
+    const res = this.flood(u);
+    // Can pass through friends but not stop on them.
+    for (const key of [...res.keys()]) {
+      const [x, y] = key.split(',').map(Number);
+      const occ = this.unitAt(x, y);
+      if (occ && occ !== u) res.delete(key);
+    }
+    return res;
+  }
+
+  flood(u) {
+    const t = this.type(u), cat = t.category, mp0 = this.movePoints(u);
+    const res = new Map([[`${u.x},${u.y}`, mp0]]);
+    if (!mp0) return res;
     const enemyAdj = new Set();
-    for (const e of this.alive(1 - u.army)) for (const [nx, ny] of neighbours(e.x, e.y)) enemyAdj.add(`${nx},${ny}`);
-    const open = [[t.move, u.x, u.y]];
+    for (const e of this.hostiles(u)) for (const [nx, ny] of neighbours(e.x, e.y)) enemyAdj.add(`${nx},${ny}`);
+    const open = [[mp0, u.x, u.y]];
     while (open.length) {
       open.sort((a, b) => b[0] - a[0]);
       const [mp, x, y] = open.shift();
@@ -138,16 +218,12 @@ export class Battle {
         open.push([left, nx, ny]);
       }
     }
-    // Can pass through friends but not stop on them.
-    for (const key of [...res.keys()]) {
-      const [x, y] = key.split(',').map(Number);
-      const occ = this.unitAt(x, y);
-      if (occ && occ !== u) res.delete(key);
-    }
     return res;
   }
 
   move(u, x, y) {
+    const left = this.flood(u).get(`${x},${y}`) ?? 0;
+    if (u.acted) u.reMove = 0; else u.mp = left;
     u.x = x; u.y = y; u.moved = true;
   }
 
@@ -168,8 +244,8 @@ export class Battle {
   }
 
   targets(u) {
-    if (u.acted) return [];
-    return this.alive(1 - u.army).filter((e) => this.weaponsAgainst(u, e).length);
+    if (u.acted || u.carrier) return [];
+    return this.hostiles(u).filter((e) => this.weaponsAgainst(u, e).length);
   }
 
   // HP scaling ($01:ABCA): small craft (category >= 7) multiply by HP,
@@ -214,7 +290,7 @@ export class Battle {
     // support from the attacker's allies next to the defender (power/4)
     for (const s of this.supporters(def, att.army, w.slot, att)) p += s >> 2;
     if (at.category !== 7) p = Math.floor((p * this.rom.byteAt(LEVEL + Math.min(9, att.level))) / 16);
-    return p;
+    return this.hard ? p * 2 : p;
   }
 
   // Counter-attack weapon ($01:A9D8): none after indirect fire or slot 4;
@@ -234,9 +310,10 @@ export class Battle {
   // stage 0 when the screen opens, 1 when the support panel opens, 2 at the terrain panel.
   fightInfo(att, def, w) {
     const rom = this.rom;
+    const x2 = this.hard ? 2 : 1;   // $06E9 doubles attack only
     const scaled = (u, v) => (rom.byteAt(F206 + u.type) === 0x70 ? v : (v * rom.byteAt(LEVEL + (u.level & 15))) >> 4);
     // $02:9269: HP * 8 * F7D2[type*4+slot] / max HP, then the level factor
-    const atk = (u, slot) => scaled(u, Math.floor((u.hp * 8 * rom.byteAt(F7D2 + u.type * 4 + slot)) / this.type(u).hp));
+    const atk = (u, slot) => scaled(u, Math.floor((u.hp * 8 * rom.byteAt(F7D2 + u.type * 4 + slot)) / this.type(u).hp)) * x2;
     // $02:92E2: F8BA[type] with the level factor, capped at 128
     const dfn = (u) => (rom.byteAt(F206 + u.type) === 0x70 ? rom.byteAt(F8BA + u.type) : Math.min(128, scaled(u, rom.byteAt(F8BA + u.type))));
     // $02:931D: attack of every unit of `army` next to `about` (except `skip`) with a direct weapon in `slot`
@@ -267,8 +344,7 @@ export class Battle {
   }
 
   // Both blows are computed from pre-combat HP, then applied together.
-  // TODO: exact range of the random term ($00:CF93, a signed byte added to the
-  // damage); level gain; the x2 flag $06E9.
+  // TODO: exact range of the random term ($00:CF93, a signed byte added to the damage).
   attack(att, def, w, rnd = Math.random) {
     const cw = this.counterWeapon(att, def, w);
     const info = this.fightInfo(att, def, w);
@@ -278,28 +354,62 @@ export class Battle {
     const before = [att.hp, def.hp];
     def.hp = Math.max(0, Math.floor((def.hp * 128 - dmg) / 128));
     if (cw) att.hp = Math.max(0, Math.floor((att.hp * 128 - back) / 128));
+    const entry = { turn: this.turn, att, def, w, cw, before, after: [att.hp, def.hp], info, levels: [att.level, def.level] };
+    this.afterFight(att, def, before, entry);
     for (const c of [att, def]) if (!c.hp) for (const u of this.cargo(c)) u.hp = 0;   // cargo goes down with its carrier
-    att.acted = true; att.moved = true;
-    const entry = { turn: this.turn, att, def, w, cw, before, after: [att.hp, def.hp], info };
+    // bomb or missile fired: switch to the spent form; bombers, missile ships and destroyers
+    // may move again with what is left (plus the spent form's extra movement)
+    const mpLeft = att.moved ? (att.mp ?? 0) : this.type(att).move;
+    let reMove = 0;
+    if (att.hp && SPENT[att.type] !== undefined && w.slot === 3) {
+      const old = this.type(att).move;
+      this.setType(att, SPENT[att.type]);
+      reMove = mpLeft + this.type(att).move - old;
+      entry.spent = true;
+    } else if (att.hp && DESTROYERS.has(att.type)) reMove = mpLeft;
+    att.acted = true; att.moved = true; att.reMove = Math.max(0, reMove);
     this.log.push(entry);
+    this.result = outcome(this);
     return entry;
+  }
+
+  // $01:9EA9: levels, then dock capture ($01:A626) or the dock's repair pause.
+  afterFight(att, def, before, entry) {
+    const up = (u, n) => { if (this.type(u).category !== DOCK_CAT) u.level = Math.min(9, u.level + n); };
+    up(att, def.hp === 0 ? 2 : 1);
+    up(def, def.hp === before[1] ? 2 : 1);
+    for (const d of [att, def]) if (this.type(d).category === DOCK_CAT && d.hp < (d === att ? before[0] : before[1])) d.hold = 2;
+    if (def.hp === 0 && this.type(def).category === DOCK_CAT && att.hp) {
+      def.army = att.army; def.hp = this.type(def).hp; def.hold = 0;
+      for (const u of this.cargo(def)) u.army = att.army;
+      entry.captured = def;
+    }
+    entry.levels = [att.level, def.level];
+  }
+
+  // Start of a side's turn: its docks repair themselves ($02:94DD).
+  repairDocks(army) {
+    for (const d of this.alive(army)) {
+      if (this.type(d).category !== DOCK_CAT) continue;
+      if (d.hold) d.hold--;
+      else d.hp = Math.min(this.type(d).hp, d.hp + 2);
+    }
   }
 
   // Returns the units that arrived for the side whose turn starts.
   endTurn() {
-    for (const u of this.units) { u.moved = false; u.acted = false; }
+    for (const u of this.units) { u.moved = false; u.acted = false; u.mp = null; u.reMove = 0; }
     this.army = 1 - this.army;
     if (this.army === 0) this.turn++;
-    return this.arrive();
+    this.repairDocks(this.army);
+    const arrived = this.arrive();
+    this.result = outcome(this);
+    return arrived;
   }
 
-  // A side loses when all its units (cargo included) are gone, or when it had a command
-  // tower (types 56/57) and lost it. (The game's mission screens: UNION must wipe out the
-  // enemy, GALT must destroy the command tower.)
+  // 0 or 1 once the map script says the battle is decided (reason in this.result).
   winner() {
-    const lost = (a) => !this.forces(a).length || (this.hadTower[a] && !this.forces(a).some((u) => TOWERS.has(u.type)));
-    if (lost(1) && this.units.some((u) => u.army === 1)) return 0;
-    if (lost(0)) return 1;
-    return null;
+    if (!this.result) this.result = outcome(this);
+    return this.result ? this.result.winner : null;
   }
 }

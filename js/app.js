@@ -8,6 +8,7 @@ import {
   unitTypeGfx, cellAt, cellOrigin, cellGraphic,
 } from './maps.js';
 import { allUnitTypes, levelBonus } from './units.js';
+import { paintUnitArt } from './unitart.js';
 import {
   CLASSES, CATEGORIES, MODES, EDGE_CLASS, TYPES, terrainOf, moveCost, defence, targetable, classSamples,
   nameIndex, classOfType,
@@ -69,7 +70,7 @@ async function forgetRom() {
 function usePatch(patchBuf) {
   english = readEnglish(applyBps(patchBuf, rom.bytes.slice().buffer));
   $('patchprompt').hidden = true;
-  drawText(); drawUnitTable(); initTerrain();
+  drawText(); drawUnitTable(); drawUnitArt(); initTerrain();
   if (curRender) selectMap(curMap);
 }
 
@@ -230,6 +231,7 @@ function initUnits() {
   for (const id of ['unitFrame', 'unitArmy']) $(id).onchange = () => { drawUnitTable(); drawUnits(); };
   drawUnitTable();
   drawUnits();
+  drawUnitArt();
   const lv = levelBonus(rom);
   $('formula').innerHTML = [
     'P = weapon power of the attacker\'s slot',
@@ -274,6 +276,27 @@ function drawUnitTable() {
     body.append(tr);
   }
   table.append(body);
+}
+
+// Unit description art (js/unitart.js), one card per picture, with the unit-info text.
+function drawUnitArt() {
+  const el = $('unitArt');
+  el.innerHTML = '';
+  const seen = new Set();
+  for (const u of unitTypes) {
+    const key = rom.byteAt(0x04f25a + u.type);
+    if (seen.has(key)) continue;   // types without art of their own reuse another picture
+    seen.add(key);
+    const card = document.createElement('div');
+    card.className = 'artcard';
+    const c = document.createElement('canvas');
+    paintUnitArt(c, rom, u.type, 2);
+    const t = english ? unitText(english, u.type) : null;
+    card.append(c);
+    card.insertAdjacentHTML('beforeend', `<div><b>${t ? esc(t.name) : u.name}</b> <span class="mono dim">${u.code}</span>`
+      + (t && t.info ? t.info.map((s) => `<p>${esc(oneLine(s))}</p>`).join('') : '') + '</div>');
+    el.append(card);
+  }
 }
 
 // ---------------------------------------------------------------- terrain

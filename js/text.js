@@ -64,6 +64,9 @@ export const LAYOUT = {
   terrainName: 145,
   terrainNames: 15,
   briefings: 23,                  // brief: 4 pages per map
+  mapTitles: 97,                  // labels: mission title per map
+  missionLost: 68,                // labels: first line after a defeat
+  ending: 139,                    // labels: ending, 6 strings
   labelSections: [
     ['Mission won', 0, 9], ['After a loss', 9, 14], ['Points screen', 14, 68], ['Mission lost', 68, 87],
     ['In-game alerts', 87, 97], ['Map titles', 97, 139], ['Ending', 139, 145],

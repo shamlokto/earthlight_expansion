@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Earth Light Sound Lab</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    main { padding: 12px 16px; display: flex; flex-direction: column; gap: 14px; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .meters { display: flex; gap: 4px; align-items: flex-end; height: 40px; }
+    .meters div { width: 14px; background: var(--army-a); border-radius: 2px 2px 0 0; transition: height .05s; }
+    .meters div.sfx { background: var(--army-b); }
+    table { border-collapse: collapse; font-size: 13px; width: 100%; max-width: 980px; }
+    th, td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 500; }
+    tr.on td { background: var(--panel-2); }
+    td.k-music { color: var(--army-a); } td.k-sfx { color: var(--army-b); } td.k-control { color: var(--muted); }
+    td button { padding: 1px 10px; }
+    details { max-width: 980px; }
+    summary { cursor: pointer; padding: 4px 0; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo">EARTH LIGHT</span><span class="sub">sound lab · <a href="play.html">battle</a> · <a href="index.html">lab</a></span></div>
+    <div class="row">
+      <button class="btn" id="stop">Stop</button>
+      <button class="btn" id="fade">Fade out</button>
+      <label><input type="checkbox" id="mute"> Mute</label>
+      <label>Volume <input type="range" id="vol" min="0" max="1" step="0.05" value="0.8"></label>
+      <div class="meters" id="meters" title="voice envelopes 0-7 (6-7 = sound effects)"></div>
+    </div>
+    <div class="romstatus" id="status"></div>
+  </header>
+  <main>
+    <p class="sub">Everything here is the game's own SPC700 driver, sequences and samples, uploaded from
+      your ROM into an emulated SNES sound unit (<code>js/audio/</code>). Click a row to play it.
+      Music groups are uploaded on demand, like the game does, so switching groups restarts the driver.</p>
+    <section>
+      <h3>Sound test <small>(the game's own list, $02:D500)</small></h3>
+      <table id="test"><thead><tr><th>#</th><th>cmd</th><th>group</th><th>kind</th><th>used for</th></tr></thead><tbody></tbody></table>
+    </section>
+    <section>
+      <h3>Every entry, by song group <small>($1400 command table of each group's upload)</small></h3>
+      <div id="groups"></div>
+    </section>
+  </main>
+<script type="module">
+import { Rom } from './js/rom.js';
+import { readRomFile } from './js/romfile.js';
+import { Sound, GROUPS, SLOT_ASSETS, soundTest, trackTable, mapMusic } from './js/audio/sound.js';
+import { FIGHT_SFX_NAMES } from './js/audio/fightsfx.js';
+
+const $ = (id) => document.getElementById(id);
+const hex = (v) => '$' + v.toString(16).toUpperCase().padStart(2, '0');
+
+function idbGet(key) {
+  return new Promise((res) => {
+    try {
+      const r = indexedDB.open('earthlight-lab', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('rom');
+      r.onsuccess = () => {
+        const g = r.result.transaction('rom').objectStore('rom').get(key);
+        g.onsuccess = () => res(g.result || null); g.onerror = () => res(null);
+      };
+      r.onerror = () => res(null);
+    } catch { res(null); }
+  });
+}
+
+async function loadRom() {
+  const buf = await idbGet('rom');
+  if (buf) return new Rom(buf);
+  try {   // serve.py --rom (testing)
+    const r = await fetch('__test_rom');
+    if (r.ok) return new Rom(await readRomFile(new File([await r.blob()], 'rom.zip')));
+  } catch { }
+  return null;
+}
+
+const rom = await loadRom();
+if (!rom) {
+  $('status').innerHTML = 'No ROM loaded yet — open the <a href="index.html">lab</a> and load it first.';
+  throw new Error('no ROM');
+}
+$('status').textContent = rom.title;
+const sound = new Sound(rom);
+window.sound = sound;
+
+// what each (group, cmd) is used for in the game
+const usage = new Map();
+const note = (g, c, text) => { const k = g + ':' + c; usage.set(k, (usage.get(k) ? usage.get(k) + '; ' : '') + text); };
+for (let side = 0; side < 2; side++) {
+  const maps = new Map();
+  for (let m = 0; m < 30; m++) { const s = mapMusic(rom, m, side); const k = s.group + ':' + s.cmd; (maps.get(k) || maps.set(k, []).get(k)).push(m + 1); }
+  for (const [k, list] of maps) { const [g, c] = k.split(':'); note(+g, +c, `map BGM, army ${side ? 'B' : 'A'} phase: maps ${list.join(',')}`); }
+}
+note(5, 0x4D, 'army A phase when A has 2× the units'); note(5, 0x4E, 'army A phase when B has 2× the units');
+note(8, 0x4E, 'army B phase when A has 2× the units'); note(8, 0x4D, 'army B phase when B has 2× the units');
+note(5, 0x4F, 'army A phase, event music (map script)'); note(8, 0x4F, 'army B phase, event music (map script)');
+for (const [c, text] of Object.entries(FIGHT_SFX_NAMES)) for (let g = 1; g <= 10; g++) if (g !== 2) note(g, +c, text);
+
+const kindOf = new Map();
+for (let g = 0; g < GROUPS.length; g++) for (const t of trackTable(rom, g)) kindOf.set(g + ':' + t.cmd, t.kind);
+
+let current = null;
+function play(tr, entry) {
+  sound.start().then(() => {
+    sound.node.port.postMessage({ type: 'meter', on: true });
+    sound.node.port.onmessage = (e) => { if (e.data.type === 'meter') meter(e.data.env); };
+    // groups that upload the shared samples (833) have the same effects, so no reload is needed
+    const sameSet = (a, b) => a === b || (GROUPS[a]?.[1] === 2 && GROUPS[b]?.[1] === 2);
+    if (entry.group === 0xFF || entry.kind === 'control') {
+      if (entry.group === 0xFF && !sameSet(sound.group, 3)) sound.loadGroup(3);
+      sound.command(entry.cmd); sound.song = null;
+    } else if (entry.kind === 'sfx') {
+      if (!sameSet(sound.group, entry.group)) { sound.loadGroup(entry.group); sound.song = null; }
+      sound.playSfx(entry.cmd);
+    } else {
+      sound.song = null; sound.playSong(entry);
+    }
+  });
+  if (current) current.classList.remove('on');
+  current = tr; tr.classList.add('on');
+}
+
+function row(tbody, cells, entry) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = cells.map((c) => `<td${c.cls ? ` class="${c.cls}"` : ''}>${c.t ?? c}</td>`).join('');
+  tr.style.cursor = 'pointer';
+  tr.onclick = () => play(tr, entry);
+  tbody.append(tr);
+}
+
+const groupName = (g) => g === 0xFF ? '—' : `${g} <small>(${GROUPS[g].filter((v) => v !== 0xFF).map((v) => SLOT_ASSETS[v]).join('+')})</small>`;
+for (const e of soundTest(rom)) {
+  const kind = e.group === 0xFF ? (e.cmd === 1 ? 'control' : 'sfx') : kindOf.get(e.group + ':' + e.cmd) || '?';
+  const use = e.cmd === 1 ? 'stop all' : usage.get((e.group === 0xFF ? 3 : e.group) + ':' + e.cmd) || '';
+  row($('test').tBodies[0], [e.index, hex(e.cmd), groupName(e.group), { t: kind, cls: 'k-' + kind }, use], { ...e, kind });
+}
+
+for (let g = 1; g < GROUPS.length; g++) {
+  const list = trackTable(rom, g);
+  const d = document.createElement('details');
+  const counts = ['music', 'sfx'].map((k) => `${list.filter((t) => t.kind === k).length} ${k}`).join(', ');
+  d.innerHTML = `<summary>Group ${groupName(g)}: ${list.length} commands (${counts})</summary><table><thead><tr><th>cmd</th><th>voices</th><th>kind</th><th>used for</th></tr></thead><tbody></tbody></table>`;
+  for (const t of list) {
+    const voices = [...Array(8)].map((_, v) => (t.tracks >> v & 1) ? v : '·').join('');
+    row(d.querySelector('tbody'), [hex(t.cmd), `<code>${voices}</code>`, { t: t.kind, cls: 'k-' + t.kind }, usage.get(g + ':' + t.cmd) || ''], { group: g, cmd: t.cmd, kind: t.kind });
+  }
+  $('groups').append(d);
+}
+
+for (let v = 0; v < 8; v++) $('meters').insertAdjacentHTML('beforeend', `<div class="${v >= 6 ? 'sfx' : ''}" style="height:0"></div>`);
+function meter(env) { [...$('meters').children].forEach((b, v) => { b.style.height = Math.round(env[v] / 127 * 40) + 'px'; }); }
+
+$('stop').onclick = () => { sound.stop(); if (current) current.classList.remove('on'); };
+$('fade').onclick = () => sound.fadeOut();
+$('mute').onchange = (e) => sound.setMuted(e.target.checked);
+$('vol').oninput = (e) => sound.setVolume(+e.target.value);
+</script>
+</body>
+</html>

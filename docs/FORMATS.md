@@ -294,6 +294,138 @@ The game runs scenes as *tasks*: a routine stores an entry pointer in `$95/$96` 
 * Large battle part graphics: kind-0 bitplane-xor assets ~290–440 (mecha bodies, ship
   hulls, emblems).
 
+## Mission setup and reinforcements (`js/game/scenario.js`)
+
+All units are created by `$01:E98D` (type `$21`, flags `$25`, x `$23`, y `$24`, carrier `$26`).
+At map start (`$01:E88D` and following, skipped when `$06F0` is set):
+
+| source | table | format |
+|---|---|---|
+| deployment | asset `$02:E47D[map]` | count, (army<<7 \| type, x, y)* |
+| extras (command towers…) | `$01:E7C4[map]` → bank `$01` | (army<<7 \| type, x, y)*, 0 |
+| fortresses | `$01:B52E + map*6` | 2 × (army<<7 \| type, x, y); 0 = none |
+| dock cargo (`$02:93C1`) | `$02:9523[map]` → bank `$02` | until 0: `flags\|x, y, types…, FF` spawns a dock (type 52) with that cargo; `$C0\|x, y, types…, FF` loads the unit already at (x, y). Cargo gets flag `$20` and `$1BE5` = carrier id + 1 |
+| warp-in event | `$02:CEAC[map]` (FF = none) | set → types `$02:CF31 + set*4`, 8 object scripts `$02:CF45 + set*16` (interpreter `$02:C9A7`): first byte army<<7 \| type index; `10 n` wait, `20 x y` place, `30–35` one hex step SW/NW/N/NE/SE/S, `40–47`, `50–54` no operand, `60–6D n`, `70` spawn here, `E0 n`/`F0`/`80` end. Maps 0, 5, 11, 16. Checked on HAMILTON against the emulator: Mars (10,2), Mars (9,1), Talos (11,3). |
+| reinforcements (`$02:9B70`) | `$02:9E96[map]` → bank `$02` | until FF: key (turn \| `$80` for army B; fires when `$06E5` turn + `$06E6` army equals it, turn counter 0 on the first turn), screen (x \| y<<4), then (flags \| type, x, y [, cargo…, FF for category-1 carriers])*, FF. Units go to the nearest free passable hex (`$02:9D40`). Maps 12, 18, 20, 24, 27, 28. |
+
+`$02:9523` was first taken for AI grouping; it is the dock cargo. Map titles are English
+labels 97 + map, briefings `brief` 23 + 4·map. HAMILTON (map 0) is mission 1
+("Hamilton Must Stand Fast"); its enemies come only from the warp-in.
+
+## Levels, docks, transformation (phase 2, read from the game code)
+
+Unit flags `$1AD1` bits 6–7: `$00` army A, `$80` army B, `$40` **neutral** (the dock-cargo
+flag bit 6; `$01:A67C` counts only `$00`/`$80` units per army). The ROM has no unit production
+(confirmed by the Japanese Wikipedia article): docks and carriers only hold, repair and re-arm.
+
+* **Levels** (`$01:9EA9`, after every fight): attacker level + 1, or + 2 if the defender was
+  destroyed; defender + 1, or + 2 if it lost no HP. Capped at 9 (`$01:9F29`), stored in the low
+  nibble of `$1B5B`. Docks (category 7) use those bits as a repair pause instead: set to 2 when
+  a dock loses HP (`$01:9F0E`).
+* **Dock self-repair** (`$02:94DD`): every dock with pause 0 gains 2 HP (up to `F676`);
+  otherwise the pause counts down.
+* **Dock capture** (`$01:A626`, reached from `$01:A087` when a category-7 defender drops to 0
+  HP): the dock and every unit inside take the attacker's army, the dock returns to full HP.
+  Category 5 (fortress, `$01:A819`) and 6 (command centre, `$01:A81E`) have their own defeat
+  handlers.
+* **Boarding** (`$01:A5F2`): sets `$1BE5` = host + 1 and flags `| $30`, restores full HP, and
+  types 5, 7, 11 and 44 (spent forms) go back one type (re-armed). Boarding a CR-1 (type 26)
+  makes it type 27 (`$01:A5AF`). Hosts (`$01:A554`): docks reject categories 0–2, carriers
+  take small craft.
+* **Spent forms** (`$01:A00A`): after the bomb/missile attack the unit's type + 1 and its
+  remaining movement grows by `F240[new] − F240[old]` (Brontes 7 → 12, Abaddon 3 → 5), so it
+  can move again. Pairs: 4→5 (Athena bomber), 10→11 (FB-97), 12→13, 43→44 (MSP-21), 45→46,
+  47→48. The AI (`$01:8C10`) sends spent forms and units at ≤ ¼ HP back to a dock.
+* **Transformation** is folded into weapon selection (`$01:84E0`): Athena types 4/5 become
+  6/7 (HU form) for slot 0/2, type 6 becomes 4 again; Siren 36 becomes 37 (battleship) when
+  it picks a weapon only that form has (`$01:F348`). The remake offers both as a Transform
+  button before moving.
+* **Map objectives** are hand-written in `js/game/scripts.js` from the briefings and victory
+  lines (labels 0–8: command centre, annihilation, fortress, fleet, battleship, carrier, all
+  carriers, flagship, all command centres; 68–86 are the defeat texts per operation, 87/88 the
+  reinforcement alerts, 94 the Babylon countdown). The ROM's own per-map table wasn't found.
+
+## Unit info screen and description art (`js/unitart.js`, verified)
+
+The battle dispatcher task (`$01:B163`) polls `$06EE`; request `$0A` runs `$01:B342`, which
+calls `$04:E4E0` for the unit in slot `$06DE` − 1 (type into `$1022`). The screen: BG text from
+assets 124 (tiles) and 125 (tilemap, "0d8aca tilemaps unit info" in the translation notes), the
+name/model code (`$01:EE66`/`$01:F036`), weapon table, movement, defence, map icon and role, and
+the description (main text block, 3 strings per unit). The picture is a sprite object:
+
+| table (bank `$04`) | per type | meaning |
+|---|---|---|
+| `F172` | word | asset with the picture tiles (207, 209 … 277), lead `$1000`, loaded at VRAM `$E000` so the art starts at sprite tile 384 |
+| `F1E6` | word | its palette asset (208, 210 … 278), to CGRAM `$90` (OBJ palette 1) |
+| `F25A` | byte | frame id; frame pointer = word at `$06:E0AB` + (id − 1)·2, data in bank `$06` |
+
+Frame format (sprite builder `$00:AB2B`): count, then per sprite 4 bytes: flags, x, y, tile.
+Flags: bit 0 = tile + 256, bit 3 = 16×16 (OBSEL `$03`: 8/16), bit 4 = x negative, bit 5 =
+y negative, bit 6/7 = h/v flip, bit 1 picks how the object palette is applied. Sprite tile n
+is asset offset (n − 256)·32. The first sprites use tile 384, a solid tile in the unit's
+backdrop colour, which paints the 96×96 box. Types without their own art reuse type 0's (Mars).
+`$02:E26B`, previously listed for this art, only copies a 240-byte map icon from bank `$04`.
+
+Capture: `research/info3.py <battle state> <unit slot> <frames> <prefix> [--type N]` sets the
+request from a state where the battle has finished starting (the dispatcher is polling).
+Mars, Talos and Tiamat match the emulator 9216/9216 pixels.
+
+## Sound (verified by playing the driver in `js/audio/spc.js`)
+
+**Upload ($00:A799, A = song group).** Each group names two upload slots (table `$00:A839`,
+2 bytes per group, `$FF` = none); a slot value indexes the asset list at `$00:A851`
+(822, 823, 833, 832, 829, 830, 826, 827, 828, 825, 831, 824, 834). Slots already in place
+(`$0A4F/$0A50`) are skipped. Before the first upload it writes `$FF` to port 0 and waits for
+`$AA/$BB` (`$00:A86B`, the IPL ROM signature), then sends each asset with the standard IPL
+protocol (`$00:A89F`, bytes from the asset stream `$00:D385`). An asset is a stream of
+`[len16][addr16][len bytes]` blocks; `len = 0` ends it and its address is the entry point
+(always `$0800`). `$00:A883` jumps there, then port 0 gets 1. `research/spc_blocks.py` lists them.
+
+| group | assets | contents |
+|---|---|---|
+| 0 | 822 | driver code `$0800` (+`$F800`), tables `$4E00/$5000/$5080` (uploaded once at boot) |
+| 1, 3–10 | 823, 829, 830, 826, 827, 828, 825, 831, 824 + 833 | command table and sequences at `$1400`; 833 = shared sample directory `$4C00` + BRR samples `$5100–$D62F` |
+| 2, 11 | 832, 834 | self-contained sets with their own samples (12 and 4 commands) |
+
+**Commands.** `$0A51` = command, `$0A52` = parameter; once a frame `$00:A817` writes
+`$2140 = cmd | toggle`, `$2141 = param` and flips toggle bit 7 (`$0A53`), so repeating a command
+is seen as new. `$00:A80C` = fade out (`$FE`, param `$32`). The driver clears its input
+ports (`$F1 = $F0`) ~27 ms into its init and misses any command sent before that; the
+worklet holds commands until it has done so.
+
+**Command table** (`$1400` of each group): one pointer per command, command 1 first. Each
+entry is a voice mask (bits 0–5 = music, 6–7 = effects) and 8 track pointers (voices 0–7).
+1 = stop all, 2 = stop music, 3 = stop effects; `$04–$42` are effects on voices 6–7 (same
+in every group that uses 833); `$43` and up are music on voices 0–5. Groups 3–8 share
+`$43–$4C`; `$4D–$4F` are each group's own songs.
+
+**Sound test** (`$02:D4C6`): 113 entries of `[cmd, group]` at `$02:D500` (`$FF` = keep the
+current group); `soundlab.html` lists them.
+
+**Map music** (`$02:DD2A`): group `$02:DE32[x]`, command `$02:DE6E[x]` with
+`x = map + 30` during army B's phase (`$06E6`). Maps whose group is 4 or 7 (10, 20, 29, 30)
+always keep their song. Otherwise `$02:DDE3` compares the unit counts `$1E0D/$1E0E`
+(armies A/B): A ≥ 2×B sets `$06EA`, B ≥ 2×A sets `$06EB`, and the phase plays
+group 5 (army A) or 8 (army B), cmd `$4D/$4E` (A ahead: A `$4D`, B `$4E`; B ahead:
+A `$4E`, B `$4D`). `$06EC/$06ED`, set by map scripts (`$02:9B70`), select cmd `$4F` of
+group 5/8 (event music, not wired yet).
+
+**Fights** keep the map song. Their effects come from the object scripts (`$03:A374`: a
+script byte → `$0A51`, skipped when `$0643` ≠ 0). Captured with `research/spc_fightsfx.py`
+(fight3.py + a `$0A51` write log; every type attacking a Mars, slot 1), frames counted from
+the fight's start: `$15` at 31/128/213 (info panels open), `$14` per info icon, `$39` at
+fly-in (`$3C` too with a capital ship), `$03` when the fly-in ends, the weapon sound when
+the attacker fires (~416; ships ~475), `$3F` per explosion, `$03` at the end. Weapon sound
+per type (default `$22`) is `FIRE_SFX` in `js/audio/fightsfx.js`: `$23` types
+1, 4, 5, 9, 15, 26, 27; `$24` 16, 24; `$2B` 23; `$2E` 14, 30, 34, 40, 52; `$28` 38;
+`$2F` 3, 12, 13, 17, 19–22, 28, 29, 31, 35, 51; `$30` 33, 36, 37, 39, 42–44, 49, 50. Types 32, 41,
+45–48 and 53–57 fire nothing at a Mars. Other weapon slots were not captured.
+
+**Emulator notes** (`js/audio/spc.js`): SPC700 with the standard cycle table (taken branches
++2), timers at 8 kHz/8 kHz/64 kHz, one DSP sample per 32 cycles; the DSP is per sample
+(not per cycle): KON/KOFF act on the next sample with a 5-sample key-on delay; the IPL ROM is
+not emulated (the upload writes RAM directly).
+
 ## Key RAM (battle)
 
 | address | meaning |
@@ -342,12 +474,15 @@ whose notes and script dumps document the original blocks.
 ## Not yet decoded
 
 * Text encoding for Japanese unit names, descriptions and dialogue.
-* The random term's exact range, the `$06E9` doubling flag, and what `D082` controls.
+* The random term's exact range and what `D082` controls. (`$06E9`, the ×2 attack flag, is
+  most likely the second-round hard mode, where both sides attack ×2; the remake treats it so.)
 * Tables from `$01:F7D2` on: `F7D2[4]` (display attack per slot) and `F8BA` (display
   defence) are decoded (info screen); the rest are read only by bank `$02`/`$04` code.
 * Rendering the original Japanese glyph strings (the index→glyph base per text block).
 * Which weapon mount (Rapid/Pierce/Bomb/Melee) maps to which attack mode or slot.
 * Full-screen composition for title/menu screens (which tileset, palette and tilemap
   combine for each screen).
-* Map scripts: enemy reinforcements, production and victory conditions.
-* Sound driver and music (assets 822–833, SPC700 code).
+* The ROM's per-mission victory table (the remake defines objectives by hand), and flag bit 6
+  on reinforcement entries (on docks it means neutral).
+* Map events: the Buccaneer cannon (labels 90/91), the comet (92/93), afterburner modules (89).
+* Sound: the driver's sequence format (not needed to play it), event music (`$06EC/$06ED`).

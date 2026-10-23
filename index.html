@@ -17,7 +17,8 @@
       <button role="tab" data-tab="units">Units</button>
       <button role="tab" data-tab="terrain">Terrain</button>
       <button role="tab" data-tab="text">Text</button>
-      <a class="btn" href="play.html">▶ Play</a>
+      <a class="btn primary" href="game.html">▶ Play the campaign</a>
+      <a class="btn" href="play.html">Battle sandbox</a>
       <button role="tab" data-tab="assets">Assets</button>
     </nav>
     <div class="romstatus" id="romstatus"></div>
@@ -65,6 +66,14 @@
         <div class="tablewrap"><table class="stats" id="unitTable"></table></div>
         <h3>Damage formula <small>$01:A976</small></h3>
         <ol class="formula" id="formula"></ol>
+        <h3>Description art <small>(unit info screen, $04:E4E0; js/unitart.js)</small></h3>
+        <div class="artgrid" id="unitArt"></div>
+        <style>
+          .artgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; margin: 8px 0 16px; }
+          .artcard { display: flex; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+          .artcard canvas { image-rendering: pixelated; flex: none; }
+          .artcard p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+        </style>
         <h3>Map icons</h3>
         <h3 class="army a">Army A <small>(bank $04, palette row 8)</small></h3>
         <div class="icons" id="iconsA"></div>

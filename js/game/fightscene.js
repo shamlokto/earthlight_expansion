@@ -9,6 +9,7 @@
 // per-type differences measured so far are in VARIANT below.
 import { decodeTile, paletteFromBytes } from '../gfx.js';
 import { InfoScreen } from './infoscreen.js';
+import { SFX, fireSfx } from '../audio/fightsfx.js';
 
 const W = 256, H = 224;
 const T_BG = 0x04cce0, T_BGPAL = 0x04cd78, T_BGMAP = 0x04cd2c, T_SHEET = 0x04d038;
@@ -238,6 +239,30 @@ export class FightScene {
     this.clock = (this.clock || 0) + 1;
     this.frame = this.clock - this.introLen;   // battle frames start after the info screen
     if (this.frame >= this.end) this.done = true;
+  }
+
+  // Sound commands for the current frame (js/audio/fightsfx.js, timed like the captures).
+  sounds() {
+    const out = [], c = this.clock, f = this.frame, I = this.intro;
+    if (I && c < this.introLen) {
+      if (c === I.T.open + 1 || c === I.T.S || c === I.T.T + 1) out.push(SFX.INFO_PANEL);
+      if (I.icons.some((n) => n.t === c) || c === I.T.T + 4) out.push(SFX.INFO_ICON);
+      return out;
+    }
+    const sides = [[this.leftSide, this.left, this.shooters.left], [this.rightSide, this.right, this.shooters.right]];
+    const ship = sides.some(([s]) => kindOf(s.type) === 'ship');
+    if (f === T_FLYIN + 1) out.push(...(ship ? [SFX.SHIP_FLY_IN, SFX.FLY_IN] : [SFX.FLY_IN]));
+    if (f === T_FLYIN + FLY_LEN - 4) out.push(SFX.STOP_SFX);
+    for (const [side, acts, fires] of sides) {
+      // small craft fire at T_FIRE; capital ships and structures ~41 frames later (captured)
+      if (fires && f === T_FIRE + (kindOf(side.type) === 'craft' ? 0 : 41)) out.push(fireSfx(side.type));
+      acts.forEach((a, i) => {
+        if (a.dies && !a.ship && f === T_FIRE + a.hit + i * 6) out.push(SFX.BOOM);
+        if ((a.ship || a.struct) && a.hits && f === T_FIRE + variant(side === this.leftSide ? this.rightSide.type : this.leftSide.type).hit) out.push(SFX.BOOM);
+      });
+    }
+    if (f === this.end - 1) out.push(SFX.STOP_SFX);
+    return out;
   }
 
   // Position and pose of an actor at the current frame.
