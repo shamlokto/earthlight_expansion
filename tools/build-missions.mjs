@@ -126,7 +126,8 @@ function build(spec) {
   m.pairs = list.map((k) => k.split(':').map(Number));
   m.grid = pairs.map((row) => row.map((p) => index.get(p.join(':'))));
 
-  // units: a layer of characters, one per hex, with spec.legend { ch: { type, army, cargo?, general?, joiner?, neutral? } }
+  // units: a layer of characters, one per hex, with spec.legend { ch: { type, army, cargo?, general?, joiner?, neutral? } };
+  // spec.cargo { 'x,y': [type, ...] } loads the unit at that hex (a dock or carrier)
   const units = [];
   if (spec.units) {
     spec.units.replace(/^\n|\n\s*$/g, '').split('\n').forEach((line, j) => [...line].forEach((ch, i) => {
@@ -135,6 +136,11 @@ function build(spec) {
       if (!L) throw new Error(`${spec.name}: no legend entry for unit '${ch}' at (${i + 1},${j + 1})`);
       units.push({ ...L, x: i + 1, y: j + 1 });
     }));
+  }
+  for (const [k, cargo] of Object.entries(spec.cargo || {})) {
+    const [x, y] = k.split(',').map(Number), host = units.find((u) => u.x === x && u.y === y);
+    if (!host) throw new Error(`${spec.name}: cargo for (${x},${y}) but no unit there`);
+    host.cargo = cargo;
   }
   const view = romView(rom, { ...m, units: [] });
   const hd = view.rom.body(view.info.headerId), gr = view.rom.body(view.info.gridId);
@@ -156,7 +162,7 @@ function build(spec) {
   Object.assign(m, {
     name: spec.name, title: spec.title, units: out, arrivals: spec.arrivals || [], objective: spec.objective,
     general: g ? { x: g.x, y: g.y } : null, turnLimit: spec.turnLimit || 0, cap: spec.cap || 0, music: spec.music ?? 0,
-    briefing: spec.briefing.trim(), ...(spec.routes ? { routes: spec.routes } : {}), ...(spec.guards ? { guards: spec.guards } : {}),
+    briefing: spec.briefing.trim(), ...(spec.goal ? { goal: spec.goal } : {}), ...(spec.routes ? { routes: spec.routes } : {}), ...(spec.guards ? { guards: spec.guards } : {}),
   });
   return { mission: m, view };
 }
