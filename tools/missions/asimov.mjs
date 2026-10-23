@@ -1,0 +1,52 @@
+// Mission 1, Betrayal: MAP-ASIMOV, Hamilton Command on F1 Olympos (docs/EXPANSION.md).
+// The general breaks out of the locked-down base and runs for the east edge. Rebalanced after
+// the first playtest: the Union mecha start 5-6 hexes from the gate, the cruiser screen waits
+// behind the meteoroid gap, the base's own troops come out on turn 5, and the general plus two
+// units must get away.
+export default {
+  name: 'ASIMOV', title: 'Betrayal', screens: [2, 1],
+  objective: { kind: 'escape', edge: 'east', count: 2 }, turnLimit: 12, cap: 6, music: 0,
+  briefing: `
+Hamilton Command, F1 Olympos. The commander is dead, shot in the command centre an hour after the victory parade, and the Union's new masters already call it the work of Galt saboteurs.
+
+You were his deputy, and you know better. The base is locking down around you. A handful of crews have chosen to follow you rather than the men who gave the order.
+
+Take the gate before it seals, cross the magnetic band and get through the meteoroid gap to the east. The Union's beam weapons can't touch a ship sheltering in the magnetic field; their cruisers can't follow you into the meteoroids.`,
+  //          11111111112222222222
+  // 12345678901234567890123456789
+  terrain: `
+#######...mm.......:::::.....
+#ddddd#....mm......:::::..a..
+#ddddd#.....mm.....::::.....a
+#ddddd#......mm.....::::.....
+#dddddd.......mm.............
+#dddddd........mm............
+#ddddd#........mm...::::.....
+#ddddd#.......mm...:::::..a..
+#ddddd#......mm....:::::.....
+#######.....mm.....:::::..aa.`,
+  units: `
+.............................
+...........m............f....
+..S..........................
+...M.....t...................
+..G..........................
+....C....................h...
+..TM.....t...................
+.............................
+............m...........f....
+.............................`,
+  legend: {
+    G: { type: 4, army: 0, general: true },   // Athena (bomber form), the general's machine
+    M: { type: 0, army: 0 },                  // Mars
+    T: { type: 1, army: 0 },                  // Titan
+    C: { type: 9, army: 0 },                  // Crane
+    S: { type: 38, army: 0 },                 // Selene, light carrier
+    m: { type: 0, army: 1 },                  // Union Mars
+    t: { type: 2, army: 1 },                  // Union Talos
+    h: { type: 39, army: 1 },                 // Hannibal cruiser
+    f: { type: 49, army: 1 },                 // Fenrir destroyer
+  },
+  // the base's garrison comes out behind you (rules.js: event turn 4 = the Union phase of turn 5)
+  arrivals: [{ turn: 4, army: 1, units: [{ type: 2, x: 2, y: 2 }, { type: 2, x: 2, y: 9 }, { type: 3, x: 3, y: 2 }] }],
+};
