@@ -1,12 +1,11 @@
 // Map editor for expansion missions: paint with the ROM's own terrain graphics, copy regions
 // from the 30 ROM maps, place units and cargo, and export the mission JSON (mission.js).
-import { Rom } from '../rom.js';
 import { paint, Indexed } from '../gfx.js';
 import { MAP_COUNT, mapInfo, battlePalette, cellGraphic, unitIcon, cellOrigin, cellAt, renderMap } from '../maps.js';
 import { allUnitTypes } from '../units.js';
 import { terrainOf, defence, nameIndex } from '../terrain.js';
-import { applyBps } from '../bps.js';
-import { readEnglish, LAYOUT } from '../text.js';
+import { LAYOUT } from '../text.js';
+import { ensurePack } from './pack.js';
 import { terrainPalette, blankMission, isFrame, GRID_W, MAX_PAIRS, SCREEN_COLS, SCREEN_ROWS } from './mission.js';
 
 const $ = (id) => document.getElementById(id);
@@ -18,16 +17,6 @@ let rom, pal, types, en = null, palette, mission, tool = 'paint', cur = null, un
 const gfxCache = new Map();
 const gfx = (g) => gfxCache.get(g) || gfxCache.set(g, cellGraphic(rom, g)).get(g);
 
-function idbGet(key) {
-  return new Promise((res) => {
-    try {
-      const r = indexedDB.open('earthlight-lab', 1);
-      r.onupgradeneeded = () => r.result.createObjectStore('rom');
-      r.onsuccess = () => { const g = r.result.transaction('rom').objectStore('rom').get(key); g.onsuccess = () => res(g.result || null); g.onerror = () => res(null); };
-      r.onerror = () => res(null);
-    } catch { res(null); }
-  });
-}
 
 const cols = () => mission.screensW * SCREEN_COLS, rows = () => mission.screensH * SCREEN_ROWS;
 const terrainName = (p) => {
@@ -261,17 +250,10 @@ function exportJson() {
 const status = (s) => { $('status').textContent = s; };
 
 // ------------------------------------------------------------ boot
-async function testFile(url) { try { const r = await fetch(url); return r.ok ? r : null; } catch { return null; } }
 (async () => {
-  let buf = await idbGet('rom'), patch = await idbGet('patch');
-  if (!buf) {
-    const { readRomFile, readPatchFile } = await import('../romfile.js');
-    const r = await testFile('/__test_rom'); if (r) buf = await readRomFile(new File([await r.arrayBuffer()], 'rom.zip'));
-    const p = await testFile('/__test_patch'); if (p) patch = await readPatchFile(new File([await p.arrayBuffer()], 'patch.zip'));
-  }
-  if (!buf) { $('status').innerHTML = 'No ROM loaded yet — open the <a href="index.html">lab</a> and load it first.'; return; }
-  rom = new Rom(buf); pal = battlePalette(rom); types = allUnitTypes(rom);
-  if (patch) { try { en = readEnglish(applyBps(patch, rom.bytes.slice().buffer)); } catch { } }
+  // the original's art, copied once from the player's ROM (pack.js); no ROM needed after that
+  const pack = await ensurePack({ onProgress: (t) => status(t) });
+  rom = pack.rom; en = pack.text; pal = battlePalette(rom); types = allUnitTypes(rom);
   palette = terrainPalette(rom);
 
   for (const id of ['sw', 'sh']) for (let n = 1; n <= 4; n++) $(id).append(new Option(n, n));
