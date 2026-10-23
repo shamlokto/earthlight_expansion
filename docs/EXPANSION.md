@@ -225,7 +225,7 @@ P .  .  ggg  U  .  ggg  U   .  .>
 ```
 * **Story**: the admiral who ordered the killing flies a captured Nodens (BB-MM4, 30 HP, Missile 255
   at range 2–4): a Galt super-battleship now in Union colours.
-* **Player**: cap 8. **Union**: Nodens `N`, Regulus ×2, Hannibal ×2, Fenrir ×2, Crane ×2.
+* **Player**: cap 8. **Union**: Nodens `N`, Regulus ×2, Hannibal ×2, Fenrir (built: one Fenrir and no Cranes, after the encirclement rule made the full escort unbeatable for a six-machine force; bot: 6 machines win 1 in 3, 8 machines always).
 * **Terrain idea**: two gravity-flux belts give 50% against railguns. The escorts sit in them, so
   beams and missiles go through while railgun players get stuck.
 * **Objective**: sink the Nodens (existing flagship objective). It runs for the east edge;

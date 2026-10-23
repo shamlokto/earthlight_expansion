@@ -24,7 +24,8 @@ const U = {
   // the player's deployment slots, west edge (open space, so any machine can take them)
   '2,7': 'G', '2,9': 'M', '3,10': 'M', '2,11': 'T', '3,12': 'C', '2,13': 'L', '3,8': 'S', '1,10': 'C',
   // the admiral's flight
-  '18,10': 'N', '17,7': 'r', '17,13': 'r', '21,7': 'h', '20,12': 'h', '23,6': 'f', '23,14': 'f', '18,4': 'c', '18,16': 'c',
+  // (rebalanced for the ROM's encirclement rule: one Fenrir and no Cranes, or a six-machine force can't break the screen)
+  '18,10': 'N', '17,7': 'r', '17,13': 'r', '21,7': 'h', '20,12': 'h', '23,6': 'f',
 };
 const units = rows.map((_, j) => Array.from({ length: COLS }, (_, i) => U[`${i + 1},${j + 1}`] || '.').join('')).join('\n');
 
@@ -37,7 +38,7 @@ The Le Guin sector, where the Union sank the Tiamat a year ago. Fitting.
 
 Admiral Varga signed the order that killed the commander. We have the transcript now, and so does he: he is running for Olympos aboard the Nodens, the Galt super-battleship the Union captured at Babylon and repainted in its own colours.
 
-The Nodens carries the heaviest missile battery ever built, but it was designed to kill warships. Our fighters and mecha are beneath its notice. Its escorts are not: Regulus and Hannibal cruisers, Fenrir destroyers, a pair of Cranes.
+The Nodens carries the heaviest missile battery ever built, but it was designed to kill warships. Our fighters and mecha are beneath its notice. Its escorts are not: two Regulus and two Hannibal cruisers, and a Fenrir destroyer.
 
 It is slow. It has a long way to go. Sink it before it crosses the east edge.
 
