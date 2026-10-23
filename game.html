@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Earth Light</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .screen { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .center { align-items: center; justify-content: center; text-align: center; gap: 18px; padding: 24px 16px; }
+    .bigLogo { font-size: clamp(40px, 9vw, 88px); letter-spacing: .14em; }
+    .menu { display: flex; flex-direction: column; gap: 10px; min-width: min(320px, 90vw); }
+    .menu .btn { padding: 10px 16px; font-size: 15px; }
+    .missions { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; width: min(820px, 94vw); }
+    .missions .btn { text-align: left; font-size: 12px; }
+    .story { max-width: 560px; white-space: pre-line; font-size: 17px; line-height: 1.6; min-height: 8em; }
+    .briefTitle { font-size: 24px; white-space: pre-line; color: var(--accent); }
+    .play { display: flex; gap: 12px; padding: 12px 16px; flex: 1; min-height: 0; flex-wrap: wrap; }
+    .board { position: relative; overflow: auto; border: 1px solid var(--line); max-width: 100%; max-height: calc(100vh - 90px); align-self: flex-start; }
+    .board canvas { cursor: pointer; display: block; }
+    .hud { width: 300px; max-width: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+    .card h3 { margin: 0 0 6px; }
+    .log { max-height: 220px; overflow: auto; font-size: 12px; color: var(--muted); }
+    .log div { padding: 2px 0; border-bottom: 1px solid var(--line); }
+    .armyA { color: var(--army-a); } .armyB { color: var(--army-b); }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .cargo .btn { font-size: 12px; padding: 3px 8px; margin: 2px 4px 2px 0; }
+    .fightov { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; cursor: pointer; }
+    .fightov canvas { width: min(768px, 96vw); aspect-ratio: 256 / 224; image-rendering: pixelated; border: 2px solid var(--line); }
+    .fightov p { margin: 6px 0 0; }
+    .result { font-size: 18px; white-space: pre-line; max-width: 560px; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo">EARTH LIGHT</span><span class="sub" id="where">campaign</span></div>
+    <div class="romstatus" id="status"></div>
+  </header>
+
+  <section class="screen center" id="sLoad">
+    <p id="loadMsg">Loading your ROM…</p>
+  </section>
+
+  <section class="screen center" id="sTitle" hidden>
+    <div class="logo bigLogo">EARTH LIGHT</div>
+    <p class="dim">A remake built from your own ROM · Hudson Soft, 1992</p>
+    <div class="menu">
+      <button class="btn primary" id="bContinue" hidden></button>
+      <button class="btn" id="bNew">New campaign</button>
+      <button class="btn" id="bSelect">Mission select</button>
+      <label class="row" style="justify-content:center"><input type="checkbox" id="optFights" checked> Fight scenes</label>
+    </div>
+    <div class="missions" id="missions" hidden></div>
+  </section>
+
+  <section class="screen center" id="sStory" hidden>
+    <div class="briefTitle" id="storyTitle"></div>
+    <div class="story" id="storyText"></div>
+    <div class="row"><button class="btn primary" id="bStoryNext">Next</button><button class="btn" id="bStorySkip">Skip</button></div>
+  </section>
+
+  <section class="screen" id="sBattle" hidden>
+    <main class="play">
+      <div class="board" id="board"><canvas id="cv"></canvas></div>
+      <div class="hud">
+        <div class="card"><h3 id="turn">—</h3><div class="row"><button class="btn primary" id="endTurn">End turn</button><button class="btn" id="bRetreat">Quit to title</button></div></div>
+        <div class="card" id="info"><span class="dim">Click one of your units.</span></div>
+        <div class="card"><h3>Log</h3><div class="log" id="log"></div></div>
+      </div>
+    </main>
+  </section>
+
+  <section class="screen center" id="sResult" hidden>
+    <div class="briefTitle" id="resTitle"></div>
+    <div class="result" id="resText"></div>
+    <div class="row"><button class="btn primary" id="bResNext"></button><button class="btn" id="bResTitle">Title</button></div>
+  </section>
+
+  <div id="fight" class="fightov" hidden>
+    <canvas id="fightCv" width="256" height="224"></canvas>
+    <p class="dim">click to skip</p>
+  </div>
+  <script type="module" src="js/gameapp.js"></script>
+</body>
+</html>

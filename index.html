@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Earth Light Lab</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo">EARTH LIGHT</span>
+      <span class="sub">remake lab · maps, units, terrain &amp; text</span>
+    </div>
+    <nav class="tabs" role="tablist" hidden>
+      <button role="tab" data-tab="maps" aria-selected="true">Maps</button>
+      <button role="tab" data-tab="units">Units</button>
+      <button role="tab" data-tab="terrain">Terrain</button>
+      <button role="tab" data-tab="text">Text</button>
+      <a class="btn" href="play.html">▶ Play</a>
+      <button role="tab" data-tab="assets">Assets</button>
+    </nav>
+    <div class="romstatus" id="romstatus"></div>
+  </header>
+
+  <main>
+    <section id="loader" class="loader">
+      <div class="drop" id="drop">
+        <h1>Load your Earth Light ROM</h1>
+        <p>Choose or drop <code>Earth Light (Japan).sfc</code>, or the <code>.zip</code> that contains it.
+           Everything is decoded locally in your browser from your own copy; no game data ships with this page.</p>
+        <label class="btn primary">Choose file<input type="file" id="file" accept=".sfc,.smc,.zip" hidden></label>
+        <p class="err" id="loaderr" role="alert"></p>
+      </div>
+    </section>
+
+    <section id="tab-maps" class="panel" hidden>
+      <aside class="side">
+        <h2>Battle maps</h2>
+        <ol id="maplist" class="list"></ol>
+      </aside>
+      <div class="stage">
+        <div class="toolbar">
+          <h2 id="maptitle">—</h2>
+          <label><input type="checkbox" id="showUnits" checked> Starting units</label>
+          <label><input type="checkbox" id="showGrid"> Hex grid</label>
+          <label>Zoom <select id="mapZoom"><option>1</option><option selected>2</option><option>3</option></select></label>
+          <button class="btn" id="mapPng">Save PNG</button>
+        </div>
+        <div class="canvaswrap"><canvas id="mapCanvas"></canvas><canvas id="mapOverlay" class="overlay"></canvas></div>
+        <p class="hint" id="cellinfo">Hover a hex to inspect it.</p>
+      </div>
+    </section>
+
+    <section id="tab-units" class="panel single" hidden>
+      <div class="stage">
+        <div class="toolbar">
+          <h2>Unit types</h2>
+          <label>Army <select id="unitArmy"><option value="0">A</option><option value="1">B</option></select></label>
+          <label>Frame <select id="unitFrame"><option value="0">1</option><option value="1">2</option></select></label>
+        </div>
+        <p class="hint">58 types from the tables at $01:EE2C–$01:F7D1. Weapons are listed per slot:
+          attack mode (M1–M3, which picks the terrain defence column), range, power.
+          Slot 1 answers attacks from small craft, slot 2 from capital ships (counter-attack rule at $01:A9ED).</p>
+        <div class="tablewrap"><table class="stats" id="unitTable"></table></div>
+        <h3>Damage formula <small>$01:A976</small></h3>
+        <ol class="formula" id="formula"></ol>
+        <h3>Map icons</h3>
+        <h3 class="army a">Army A <small>(bank $04, palette row 8)</small></h3>
+        <div class="icons" id="iconsA"></div>
+        <h3 class="army b">Army B <small>(bank $05, palette row 10)</small></h3>
+        <div class="icons" id="iconsB"></div>
+      </div>
+    </section>
+
+    <section id="tab-terrain" class="panel single" hidden>
+      <div class="stage">
+        <div class="toolbar"><h2>Terrain classes</h2></div>
+        <p class="hint">Map value → terrain id (map header byte 80+v) → type ($01:CE7E) → class ($01:CECE).
+          Movement and combat only use the class. Class 10 (blocked) is also written as the out-of-bounds frame around every map.</p>
+        <div class="tablewrap"><table class="stats" id="terrainTable"></table></div>
+        <h3>Movement cost <small>$01:CF12 · rows = terrain class, columns = unit category</small></h3>
+        <p class="hint">Each hex costs this many movement points; <b>—</b> impassable; <b>stop</b> entering uses all remaining movement.
+          Enemy zone of control also forces a stop.</p>
+        <div class="tablewrap"><table class="stats" id="costTable"></table></div>
+      </div>
+    </section>
+
+    <section id="tab-text" class="panel" hidden>
+      <aside class="side">
+        <h2>Game text</h2>
+        <ol id="textnav" class="list"></ol>
+      </aside>
+      <div class="stage" id="textstage">
+        <div class="loader-inline" id="patchprompt">
+          <h2>English text</h2>
+          <p class="hint">The original script is Japanese, stored as pre-rendered kanji glyphs. English comes from
+            Nezz's fan translation (GPL-3.0, <a href="https://github.com/HoratioVex/Earthlight-1-Translation" target="_blank" rel="noopener">HoratioVex/Earthlight-1-Translation</a>).
+            Load its <code>.bps</code> (or the <code>.zip</code> it came in). It is applied to your ROM in memory and only read for text.</p>
+          <label class="btn primary">Load English patch<input type="file" id="patchfile" accept=".bps,.zip" hidden></label>
+          <p class="err" id="patcherr" role="alert"></p>
+        </div>
+        <div id="textbody"></div>
+      </div>
+    </section>
+
+    <section id="tab-assets" class="panel" hidden>
+      <aside class="side">
+        <h2>Asset table <small>$00:AEF5</small></h2>
+        <select id="kindFilter">
+          <option value="">All kinds</option>
+          <option value="tiles">Tiles</option>
+          <option value="5">Palettes</option>
+          <option value="6">Tilemaps</option>
+          <option value="7">Data</option>
+        </select>
+        <ol id="assetlist" class="list mono"></ol>
+      </aside>
+      <div class="stage">
+        <div class="toolbar">
+          <h2 id="assettitle">—</h2>
+          <label>View <select id="aView"><option value="tiles">Tiles</option><option value="tilemap">Tilemap</option><option value="palette">Palette</option><option value="hex">Hex</option></select></label>
+          <label>Bpp <select id="aBpp"><option>2</option><option selected>4</option><option>8</option></select></label>
+          <label>Palette <select id="aPal"></select></label>
+          <label>Row <input type="number" id="aRow" min="0" max="15" value="0"></label>
+          <label class="tm">Tiles asset <input type="number" id="aTiles" min="0" max="834"></label>
+          <label>Zoom <select id="aZoom"><option>1</option><option selected>2</option><option>3</option></select></label>
+        </div>
+        <p class="meta mono" id="assetmeta"></p>
+        <div class="canvaswrap"><canvas id="assetCanvas"></canvas></div>
+        <pre class="hex mono" id="assetHex" hidden></pre>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

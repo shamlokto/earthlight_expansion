@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Earth Light Wiki</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    html, body { height: auto; }
+    body { display: block; }
+    .wiki { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; max-width: 1180px; margin: 0 auto; padding: 16px; }
+    .toc { position: sticky; top: 12px; align-self: start; max-height: calc(100vh - 24px); overflow: auto; font-size: 13px; }
+    .toc a { display: block; color: var(--muted); text-decoration: none; padding: 2px 0; }
+    .toc a:hover { color: var(--text); }
+    .toc .h { color: var(--accent); font-weight: 600; margin-top: 10px; }
+    article h1 { font-size: 26px; margin: 4px 0 4px; }
+    article h2 { font-size: 20px; margin: 32px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+    article h3 { font-size: 15px; margin: 0; }
+    article p { max-width: 72ch; }
+    .lede { color: var(--muted); }
+    .act { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin: 12px 0; }
+    .act h3 { color: var(--accent); margin-bottom: 4px; }
+    .foundries { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; list-style: none; }
+    .foundries li { background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+    details.mission { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; margin: 8px 0; }
+    details.mission > summary { cursor: pointer; padding: 10px 14px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+    details.mission > summary b { font-size: 15px; }
+    .mission .body { padding: 0 14px 12px; }
+    .mission .body p { margin: 6px 0; }
+    .forces { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+    .forces span { display: inline-flex; align-items: center; gap: 4px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+    .unit { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .unit header { display: flex; gap: 10px; align-items: center; }
+    .unit header .icons { display: flex; gap: 2px; flex-shrink: 0; }
+    .unit header canvas { image-rendering: pixelated; border-radius: 4px; }
+    .unit .role { color: var(--muted); font-size: 12px; }
+    .unit .jp { color: var(--muted); font-size: 12px; margin-left: 4px; }
+    .stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; }
+    .stats b { color: var(--accent-2); font-weight: 600; }
+    .unit table { border-collapse: collapse; font-size: 12px; width: 100%; }
+    .unit td, .unit th { text-align: left; padding: 2px 6px 2px 0; border-bottom: 1px solid var(--line); }
+    .unit th { color: var(--muted); font-weight: 500; }
+    .unit p { margin: 0; font-size: 13px; }
+    .unit .note { color: var(--muted); font-size: 12px; }
+    .armyA { color: var(--army-a); } .armyB { color: var(--army-b); }
+    .warn { background: var(--panel-2); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 4px; }
+    @media (max-width: 760px) {
+      .wiki { grid-template-columns: minmax(0, 1fr); }
+      .toc { position: static; max-height: none; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+      .toc .h { width: 100%; margin-top: 4px; }
+      .grid { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo">EARTH LIGHT</span>
+      <span class="sub">wiki · story, missions &amp; units</span>
+    </div>
+    <nav class="tabs"><a class="btn" href="index.html">Lab</a><a class="btn" href="play.html">▶ Play</a></nav>
+  </header>
+  <div class="wiki">
+    <nav class="toc" id="toc"></nav>
+    <article id="wiki"><p id="status">Loading ROM…</p></article>
+  </div>
+  <script type="module" src="js/wiki.js"></script>
+</body>
+</html>

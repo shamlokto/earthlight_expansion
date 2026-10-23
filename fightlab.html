@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fight lab</title>
+<style>
+  body { background: #111; color: #ccc; font: 13px system-ui, sans-serif; margin: 16px; }
+  canvas { image-rendering: pixelated; width: 512px; height: 448px; background: #000; display: block; margin-top: 8px; }
+  input[type=number] { width: 5em; }
+</style>
+</head>
+<body>
+<!-- Development page: replays a fight against the emulator captures. Needs serve.py
+     started with --rom (and optionally --patch); see research/README notes in FORMATS.md. -->
+<div>
+  att <input id="at" type="number" value="0"> def <input id="dt" type="number" value="0">
+  frame <input id="fr" type="number" value="200"> <label><input id="en" type="checkbox"> English</label>
+  <label><input id="ally" type="checkbox"> ally next to defender</label>
+  <label><input id="lv" type="checkbox"> attacker level 3</label>
+  <button id="play">play</button> <span id="st"></span>
+</div>
+<canvas id="cv" width="256" height="224"></canvas>
+<script type="module">
+import { Rom } from './js/rom.js';
+import { readRomFile, readPatchFile } from './js/romfile.js';
+import { applyBps } from './js/bps.js';
+import { readEnglish } from './js/text.js';
+import { MAP_COUNT, mapInfo, deployment } from './js/maps.js';
+import { allUnitTypes } from './js/units.js';
+import { Battle } from './js/game/rules.js';
+import { FightScene } from './js/game/fightscene.js';
+
+const $ = (id) => document.getElementById(id);
+const get = async (u, rd) => { const r = await fetch(u); if (!r.ok) return null; return rd(new File([await r.arrayBuffer()], 'x')); };
+const q = new URLSearchParams(location.search);
+for (const k of ['at', 'dt', 'fr']) if (q.has(k)) $(k).value = q.get(k);
+for (const k of ['en', 'ally', 'lv']) if (q.has(k)) $(k).checked = q.get(k) === '1';
+
+const rom = new Rom(await get('/__test_rom', readRomFile));
+const patch = await get('/__test_patch', readPatchFile);
+let romEn = null, names = null;
+if (patch) { const en = applyBps(patch, rom.bytes.slice().buffer); romEn = new Rom(en); names = readEnglish(en).unitNames; }
+const types = allUnitTypes(rom);
+let m = 0;
+for (; m < MAP_COUNT; m++) if (mapInfo(rom, m).name.startsWith('HAMILTON')) break;
+const info = mapInfo(rom, m);
+
+// The captured situation (research/fight3.py rf_end.pkl 0 6 0 ...): player unit at (10,3),
+// enemies at (10,2) (the defender), (9,1) and (11,3).
+function scene() {
+  const b = new Battle(rom, info, types, deployment(rom, info));
+  b.units = [];   // HAMILTON's enemies arrive later; build the captured layout by hand
+  const place = (army, t, x, y) => {
+    const u = { id: b.units.length, type: t, army, x, y, hp: types[t].hp, level: types[t].startLevel };
+    b.units.push(u); return u;
+  };
+  const att = place(0, +$('at').value, 10, 3);
+  const def = place(1, +$('dt').value, 10, 2);
+  place(1, 0, 9, 1); place(1, 2, 11, 3);
+  if ($('ally').checked) place(0, 0, 10, 1);
+  if ($('lv').checked) att.level = 3;
+  const w = b.type(att).weapons.find((x) => x && x.power);
+  const fi = b.fightInfo(att, def, w);
+  const side = (u, hpAfter) => ({ type: u.type, army: u.army, hp: u.hp, hpAfter, cls: b.cls(att.x, att.y) });
+  const s = new FightScene(rom, side(att, Math.max(0, att.hp - 2)), side(def, Math.max(0, def.hp - 3)),
+    { counter: true, info: fi, textRom: $('en').checked ? romEn : null, names: $('en').checked ? names : null });
+  $('st').textContent = `atk ${fi.att.atk} def ${fi.att.def} | ${fi.def.atk} ${fi.def.def} | pct ${fi.att.pct}/${fi.def.pct} | intro ${s.introLen}`;
+  return s;
+}
+function show() {
+  const s = scene(), n = +$('fr').value;
+  for (let i = 0; i < n; i++) s.step();
+  window.scene = s;
+  s.render($('cv').getContext('2d'));
+}
+for (const k of ['at', 'dt', 'fr', 'en', 'ally', 'lv']) $(k).onchange = show;
+$('play').onclick = () => {
+  const s = scene(), ctx = $('cv').getContext('2d');
+  const tick = () => { s.step(); s.render(ctx); if (!s.done) requestAnimationFrame(tick); };
+  tick();
+};
+show();
+window.renderAt = (f) => { $('fr').value = f; show(); };
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Earth Light Battle</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .play { display: flex; gap: 12px; padding: 12px 16px; flex: 1; min-height: 0; flex-wrap: wrap; }
+    .board { position: relative; overflow: auto; border: 1px solid var(--line); max-width: 100%; align-self: flex-start; }
+    .board canvas { cursor: pointer; }
+    .hud { width: 300px; display: flex; flex-direction: column; gap: 10px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+    .card h3 { margin: 0 0 6px; }
+    .log { max-height: 260px; overflow: auto; font-size: 12px; color: var(--muted); }
+    .log div { padding: 2px 0; border-bottom: 1px solid var(--line); }
+    .armyA { color: var(--army-a); } .armyB { color: var(--army-b); }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo">EARTH LIGHT</span><span class="sub">battle prototype · <a href="index.html">lab</a></span></div>
+    <div class="row">
+      <label>Map <select id="mapSel"></select></label>
+      <label>Army B <select id="bCtl"><option value="ai">Computer</option><option value="human">Human</option></select></label>
+      <button class="btn" id="restart">Restart</button>
+      <label><input type="checkbox" id="showFights" checked> Fight scenes</label>
+    </div>
+    <div class="romstatus" id="status"></div>
+  </header>
+  <main class="play">
+    <div class="board"><canvas id="cv"></canvas></div>
+    <div class="hud">
+      <div class="card"><h3 id="turn">—</h3><button class="btn primary" id="endTurn">End turn</button></div>
+      <div class="card" id="info"><span class="dim">Click a unit.</span></div>
+      <div class="card"><h3>Log</h3><div class="log" id="log"></div></div>
+      <p class="hint">Movement, zone of control, weapon range, terrain defence, support and counter-attacks follow the decoded game tables.
+        Not yet: map scripts (reinforcements, objectives), transformation, levels, original AI, animations.</p>
+    </div>
+  </main>
+  <div id="fight" class="fightov" hidden>
+    <canvas id="fightCv" width="256" height="224"></canvas>
+    <p id="fightCap"></p><p class="dim">click to skip</p>
+  </div>
+  <style>
+    .fightov { position: fixed; inset: 0; background: rgba(0,0,0,.8); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; cursor: pointer; }
+    .fightov canvas { width: min(768px, 96vw); aspect-ratio: 256 / 224; image-rendering: pixelated; border: 2px solid var(--line); }
+    .fightov p { margin: 6px 0 0; }
+  </style>
+  <script type="module" src="js/play.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# Never commit game data: the ROM and patches stay with the owner
+*.sfc
+*.smc
+*.zip
+*.bps
+*.pkl
+*.bin
+__pycache__/
+.DS_Store
