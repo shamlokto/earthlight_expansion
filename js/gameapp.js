@@ -30,6 +30,7 @@ const ALERT_GALT = 87, ALERT_UNION = 88, BABYLON_ALERT = 94;
 
 let rom, romEn = null, en = null, pal, types, battle, mission = 0, terrainCanvas;
 let sel = null, reach = null, targets = [], hosts = [], launching = null, busy = false, blastCells = null;
+let threat = null;   // an enemy unit's reach, shown when it is clicked: { u, move: Map, fire: Set }
 let cursor = null;   // keyboard cursor hex [x, y]
 let custom = null;   // expansion mission (game.html?mission=...), see js/expansion/battle.js
 
@@ -270,7 +271,7 @@ function setupBoard(m) {
   const terr = renderMap(custom ? custom.rom : rom, info, { units: false });
   terrainCanvas = document.createElement('canvas');
   paint(terrainCanvas, terr.img, pal, { scale: Z });
-  sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; blastCells = null; $('log').innerHTML = '';
+  sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; blastCells = null; threat = null; $('log').innerHTML = '';
   show('sBattle'); $('where').textContent = custom ? `expansion · ${custom.mission.title || custom.mission.name}` : `mission ${m + 1} · ${missionTitle(m)}`;
   return info;
 }
@@ -317,7 +318,7 @@ function resumeExpansion(s) {
 }
 
 function begin() {
-  draw(); hud(`<p><b>Objective:</b> ${battle.script.goal}</p><span class="dim">Click one of your units. Docks and carriers hold more units: click them to launch.
+  draw(); hud(`<p><b>Objective:</b> ${battle.script.goal}</p><span class="dim">Click one of your units; click an enemy to see where it can move and fire. Docks and carriers hold more units: click them to launch.
     Neutral docks (grey) can be captured, with the units inside, by bringing them down to 0 HP.</span>`);
   const first = battle.alive(0)[0];
   if (first) { const [X, Y] = px(first.x, first.y); $('board').scrollTo(X - 200, Y - 150); }
@@ -378,6 +379,13 @@ function draw() {
   const cv = $('cv'), ctx = cv.getContext('2d');
   cv.width = terrainCanvas.width; cv.height = terrainCanvas.height;
   ctx.drawImage(terrainCanvas, 0, 0);
+  if (threat) {   // an enemy's reach: where it can fire on (red) and move to (orange) this turn
+    ctx.fillStyle = 'rgba(255,60,60,.28)';
+    for (const key of threat.fire) if (!threat.move.has(key)) { const [x, y] = key.split(',').map(Number); hexPath(ctx, x, y); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,170,60,.38)';
+    for (const key of threat.move.keys()) { const [x, y] = key.split(',').map(Number); hexPath(ctx, x, y); ctx.fill(); }
+    ctx.strokeStyle = '#ff6a3d'; ctx.lineWidth = 2; hexPath(ctx, threat.u.x, threat.u.y); ctx.stroke();
+  }
   if (reach) {
     ctx.fillStyle = launching ? 'rgba(120,255,160,.4)' : 'rgba(80,160,255,.35)';
     for (const key of reach.keys()) { const [x, y] = key.split(',').map(Number); hexPath(ctx, x, y); ctx.fill(); }
@@ -443,7 +451,7 @@ function logAttack(e) {
 }
 
 function select(u) {
-  sel = u; launching = null;
+  sel = u; launching = null; threat = null;
   reach = battle.movePoints(u) ? battle.reachable(u) : null;
   targets = battle.targets(u); hosts = battle.boardable(u);
   blastCells = null;
@@ -470,7 +478,28 @@ function startLaunch(u) {
   draw(); hud(unitCard(u, '<p>Click a green hex to launch.</p>'));
 }
 
-function clearSel() { sel = null; reach = null; targets = []; hosts = []; launching = null; blastCells = null; draw(); }
+function clearSel() { sel = null; reach = null; targets = []; hosts = []; launching = null; blastCells = null; threat = null; draw(); }
+
+// Where an enemy unit can move this turn (its full movement, held up by your zones of control) and
+// every hex it could fire on from there: each armed weapon's range, from every hex it can reach, or
+// only from where it stands for long-range weapons that can't fire after moving; hexes whose
+// terrain that weapon's mode can't target are left out.
+function threatOf(u) {
+  const t = battle.type(u), move = battle.movePoints(u) ? battle.reachable(u) : new Map();
+  move.set(`${u.x},${u.y}`, 0);
+  const fire = new Set(), from = [...move.keys()].map((k) => k.split(',').map(Number));
+  for (const w of t.weapons) {
+    if (!w || !w.power) continue;
+    for (const [fx, fy] of w.min >= 2 && t.moveOrFire ? [[u.x, u.y]] : from) {
+      for (let x = fx - w.max; x <= fx + w.max; x++) for (let y = fy - w.max - 1; y <= fy + w.max + 1; y++) {
+        if (!battle.inBounds(x, y) || !battle.canTarget(battle.cls(x, y), w.mode)) continue;   // its weapon mode can't hit this terrain
+        const d = battle.distance({ x: fx, y: fy }, { x, y });
+        if (d >= w.min && d <= w.max) fire.add(`${x},${y}`);
+      }
+    }
+  }
+  return { u, move, fire };
+}
 
 function onClick(ev) {
   const r = ev.target.getBoundingClientRect(), k = ev.target.width / r.width;   // the board may be scaled down on phones
@@ -536,9 +565,13 @@ function act(cx, cy) {
     return;
   }
   if (u && u.army === 0 && (!u.acted || u.reMove || battle.cargo(u).length)) { select(u); return; }
-  if (u) hud(unitCard(u, sel && targets.includes(u) ? forecastHtml(sel, u) : ''));
+  const extra = sel && targets.includes(u) ? forecastHtml(sel, u) : '';
   if (sel && sel.acted) sel.reMove = 0;   // a pending move-after-firing is given up
   clearSel();
+  if (u && u.army !== 0) {   // an enemy or neutral dock: show how far it reaches this turn
+    threat = threatOf(u); draw();
+    hud(unitCard(u, extra + '<p class="dim">Orange: where it can move this turn · red: where it can fire.</p>'));
+  } else if (u) hud(unitCard(u, extra));
 }
 
 // The Abaddon's slot 3 is the Decimator, fired at a hex (fireDecimator), not at a unit.
