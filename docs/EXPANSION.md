@@ -109,6 +109,31 @@ Consequences for the engine:
 * **New code**: score tally, roster in the save, between-missions screen (roster, production, trade,
   deployment), placing chosen units on the map.
 
+## Mission outline (draft 1, 2026-10-23)
+
+Ten missions. Each one reuses a ROM map layout with a new deployment (no map editor needed), so
+the player revisits the original's battlefields from the other side. "Unlocks" is what production
+gains afterwards; "next map wants" is the hint that makes trading matter.
+
+| # | Title (working) | Map reused | Story | Objective | Unlocks |
+|---|---|---|---|---|---|
+| 1 | Betrayal | Hamilton | The commander is assassinated at Hamilton Command. The general escapes with a few loyal Union units. | Survive N turns or reach the map edge (**new**: escape objective) | — |
+| 2 | Old Enemies | Aldiss (asteroids) | Galt remnant fighters find the fugitives. The general proves himself by breaking a Union patrol that hunts them both. | Wipe out the patrol (existing) | Galt fighters |
+| 3 | Shipyard | Asgard | The remnant's hidden base at the shipyards that built Babylon. A Union garrison holds the docks. | Capture the neutral docks (existing) | Mecha, carriers |
+| 4 | Le Guin Again | Le Guin | Strike the corrupt admiral who ordered the assassination. | Sink the flagship (existing) | — |
+| 5 | Foundry | Luggnagg | Free the industrial Foundry dock by dock. Its workers join the revolt. | Destroy the command centres (existing) | Cruisers |
+| 6 | Decimators | Verne Docks | The Union plans to use Quantum Decimators on a rebel Foundry. | Destroy them before turn N (turn limit, existing) | — |
+| 7 | The Wreck | Babylon (Earth orbit) | The Union is salvaging Babylon's unfired main cannon. Deny it. | Destroy the salvage command centres (existing) | Battleships |
+| 8 | Gate | Gate of Eden | Break the blockade on the road to Olympos. | Destroy the fortress (existing) | — |
+| 9 | Line | Derleth | An artillery duel against the Union's home fleet. | Wipe out (existing) | — |
+| 10 | Olympos | Hamilton / Nemea layout | Depose the Union leadership. They try to fire the salvaged cannon. | Command centres within N turns; **lose if the general dies** | — |
+
+* Next map wants (to show at intermission): 2 asteroids → missiles; 3 docks → mecha and boarding;
+  4 flagship → fast strikers; 6 time limit → speed; 7 wide orbit → carriers; 9 artillery → long range.
+* New code beyond the economy: the escape objective (mission 1), and the general's flagship-loss rule
+  for the player's side. Everything else uses objectives the engine already has.
+* The text is original writing: briefings, the intro and the ending.
+
 ## Decisions
 
 1. Direction: post-Babylon campaign arc (2026-10-23).
@@ -137,10 +162,12 @@ Consequences for the engine:
 
 15. Trade has no characters: an abstract exchange at fixed rates (2026-10-23).
 
+16. The campaign is linear: one mission after another, in a fixed order (2026-10-23).
+
 ## Open questions
 
 * Can units be captured in battle (beyond neutral docks) to feed the trade?
-* Length: around 8–10 missions? Linear, or choose the order (C's structure)?
-* Maps: reuse the ROM layouts, author new ones, or a mix?
+* The mission outline: keep, reorder, add or cut any missions? (The order is linear, decided.)
+* Maps: reuse only (draft 1 assumes this), or add a map editor later for new layouts?
 * Fight-scene sides: keep the player on the right, or mirror?
 * Does Ahriman return? Check the ending text and *Luna Strike*'s story.

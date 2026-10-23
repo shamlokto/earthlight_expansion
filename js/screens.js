@@ -33,3 +33,23 @@ export function composeScreen(rom, layers, palAssets, { w = 32, h = 28 } = {}) {
   }
   return { img, pal };
 }
+
+// Screens as the game loads them (traced in the emulator: loader $00:CFDE for tiles,
+// $00:DC2F for tilemaps, $00:8557 for palettes).
+export const SCREENS = {
+  // title ($08:B84A): BG1 only; logo, mascot, PUSH START BUTTON! and the copyright line
+  title: { layers: [{ tiles: 26, map: 27 }], pal: [[25, 0, 80], [82, 16, 16]] },
+  // main menu "SELECT MENU PLEASE!" ($02:D9E3): the Earth-Moon foundry orbits
+  menu: { layers: [{ tiles: 149, map: 151 }], pal: [[150, 16, 48]] },
+  // mission intro ($05:EAA8): the same picture, top 21 rows; operation name and map title below
+  mission: { layers: [{ tiles: 149, map: 151 }], pal: [[110, 0, 16], [150, 16, 32]], h: 21 },
+  // VP / turn graph frame shown after a map ($08:8082)
+  results: { layers: [{ tiles: 146, map: 148 }], pal: [[147, 0, 32]] },
+};
+
+// Paints a named screen onto a canvas at 1:1 (scale it with CSS, image-rendering: pixelated).
+export function drawScreen(rom, name, canvas, paint) {
+  const S = SCREENS[name], h = S.h || 28;
+  const { img, pal } = composeScreen(rom, S.layers, S.pal, { h });
+  paint(canvas, img, pal, { scale: 1 });
+}
