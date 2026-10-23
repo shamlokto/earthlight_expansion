@@ -18,7 +18,7 @@ import { LABEL as EV, COMET_MAP, inLane, detachBurner, decimator, blast } from '
 import { FightScene } from './game/fightscene.js';
 import { Sound, mapMusic, SONGS, briefingSong } from './audio/sound.js';
 import { drawScreen } from './screens.js';
-import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle } from './game/savegame.js';
+import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle, EXPANSION_BATTLE } from './game/savegame.js';
 import { expansionFromUrl } from './expansion/battle.js';
 
 const $ = (id) => document.getElementById(id);
@@ -95,6 +95,8 @@ async function boot() {
   $('status').textContent = en ? 'English patch loaded' : 'Japanese ROM: add the English patch (☰ → ROM & patch) for the story and briefings';
   wire();
   if ((custom = await expansionFromUrl(rom, types))) {
+    const s = savedBattle(EXPANSION_BATTLE);
+    if (s && s.mission === custom.url && confirm(`Resume your saved battle (turn ${s.turn})?`)) { resumeExpansion(s); return; }
     story(custom.briefing(), custom.mission.title || custom.mission.name, () => { silence(); startMission(-1); }, { art: true, song: briefingSong(custom.musicMap) });
     return;
   }
@@ -164,9 +166,10 @@ function wire() {
   $('bSelect').onclick = () => { $('missions').hidden = !$('missions').hidden; };
   $('optHard').onchange = () => saveProgress({ ...progress(), hard: $('optHard').checked });
   $('endTurn').onclick = endTurn;
-  $('bSave').onclick = () => { if (!busy && battle.army === 0 && !custom) log(saveBattle(battle, mission) ? '<b>Battle saved.</b>' : '<b>Could not save (storage unavailable).</b>'); };
+  $('bSave').onclick = () => { if (!busy && battle.army === 0) log((custom ? saveBattle(battle, custom.url, EXPANSION_BATTLE) : saveBattle(battle, mission)) ? '<b>Battle saved.</b>' : '<b>Could not save (storage unavailable).</b>'); };
   $('bRestart').onclick = () => { if (!busy) startMission(mission); };
-  $('bRetreat').onclick = () => { if (!busy) showTitle({ menu: true }); };
+  // an expansion battle leaves for its own pages, so the base title never runs with `custom` set
+  $('bRetreat').onclick = () => { if (busy) return; if (custom) location.href = custom.campaign ? 'expansion.html' : 'game.html'; else showTitle({ menu: true }); };
   $('cv').addEventListener('click', onClick);
   document.addEventListener('keydown', onKey);
   $('mSetup').onclick = (e) => { e.preventDefault(); e.target.closest('details').open = false; if (!busy) setup('', true); };
@@ -270,6 +273,16 @@ function loadBattle() {
   if (!s) return;
   setupBoard(s.mission);
   battle = restoreBattle(newBattle(s.mission), s);
+  if (battle.blasted.length) paintTerrain();
+  log('<b>Saved battle loaded.</b>');
+  begin();
+  if (!checkEnd() && battle.army === 1) enemyTurn();
+}
+
+// A saved expansion battle (its own slot, keyed by the mission's URL).
+function resumeExpansion(s) {
+  setupBoard(-1);
+  battle = restoreBattle(newBattle(-1), s).restored();
   if (battle.blasted.length) paintTerrain();
   log('<b>Saved battle loaded.</b>');
   begin();
@@ -569,7 +582,8 @@ function announce(arrived) {
   if (!arrived.length) return;
   const a = arrived[0].army;
   log(`<b class="${side(a)}">${armyName(a)} reinforcements: ${arrived.length} units</b>`);
-  const t = label(a ? ALERT_GALT : ALERT_UNION).replace(/\n/g, ' ');
+  const galt = custom ? a === 0 : a === 1;   // in the expansion the player leads the Galt remnant
+  const t = label(galt ? ALERT_GALT : ALERT_UNION).replace(/\n/g, ' ');
   if (t) log(`<i>${t}</i>`);
 }
 
@@ -675,9 +689,13 @@ function result(w) {
 
 function expansionResult(w) {
   const r = battle.result.reason;
+  clearSavedBattle(EXPANSION_BATTLE);
   $('resTitle').textContent = `${custom.mission.title || custom.mission.name} ${w === 0 ? 'complete' : 'failed'}`;
   $('resText').textContent = w === 0 ? `Cleared on turn ${battle.turn}.`
-    : r === 'general' ? 'The general has fallen. Game over.' : r === 'timeup' ? label(83) || 'Time is up.' : label(LAYOUT.missionLost);
+    : r === 'general' ? 'The general has fallen. Game over.'
+    : r === 'escapeFailed' ? 'Too few units are left to break out. The escape has failed.'
+    : r === 'breakthrough' ? 'A marked Union unit got through. The mission has failed.'
+    : r === 'timeup' ? label(83) || 'Time is up.' : label(LAYOUT.missionLost);
   $('points').hidden = true; $('bResStory').hidden = true;
   $('bResNext').textContent = 'Retry';
   $('bResNext').onclick = () => startMission(-1);

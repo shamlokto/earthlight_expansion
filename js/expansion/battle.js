@@ -3,12 +3,14 @@
 //   * the general rides one unit: evasion x2 (capped at 96/128), power x2, level 9; if that unit
 //     is destroyed the game is over
 //   * objectives beyond the base game's: escape (get N units, the general among them, off an
-//     edge) and destroyType (destroy every enemy unit of one type, cargo included)
+//     edge; lost once too few units are left) and destroyType (destroy every enemy unit of one
+//     type, cargo included; optionally lost if one of them reaches an edge)
 //   * a turn limit from the mission
 // The player is army 0 (pink, on the left in fights), the Union army 1, as in the original.
 import { Battle } from '../game/rules.js';
 import { romView, deployList, arrivalList } from './mission.js';
 import { mapPoints } from '../game/points.js';
+import { terrainOf, moveCost } from '../terrain.js';
 import * as campaign from './campaign.js';
 
 const GENERAL_EVASION_CAP = 96;
@@ -64,20 +66,32 @@ export class ExpansionBattle extends Battle {
     const p = super.damage(att, def, w);
     return att.general ? p * 2 : p;
   }
+  // The info screen shows the general's doubled attack too.
+  fightInfo(att, def, w) {
+    const fi = super.fightInfo(att, def, w);
+    for (const s of [fi.att, fi.def]) if (s.unit.general) s.atk = s.atk.map((v) => v * 2);
+    return fi;
+  }
 
+  // (x, y) on the playfield's edge ('east', 'west', 'north' or 'south').
+  onEdge(edge, x, y) {
+    const c = this.info.cols - 1, r = this.info.rows;
+    return edge === 'east' ? x === c : edge === 'west' ? x === 1 : edge === 'north' ? y === 1 : y === r;
+  }
   // Escape: a player unit that ends its move on the exit edge leaves the map.
   exitCells() {
     const o = this.mission.objective;
     if (o?.kind !== 'escape') return null;
-    const edge = o.edge || 'east', c = this.info.cols - 1, r = this.info.rows;
-    return (x, y) => (edge === 'east' ? x === c : edge === 'west' ? x === 1 : edge === 'north' ? y === 1 : y === r);
+    return (x, y) => this.onEdge(o.edge || 'east', x, y);
   }
   move(u, x, y) {
     super.move(u, x, y);
     const exit = this.exitCells();
     if (exit && u.army === 0 && exit(x, y)) {
-      u.escaped = true; u.carrier = EXIT; u.x = -1; u.y = -1;
-      this.escaped.push(u);
+      // whatever rides inside leaves with it (the general may be aboard a carrier)
+      const leaving = [u, ...this.cargo(u)];
+      u.carrier = EXIT; u.x = -1; u.y = -1;
+      for (const v of leaving) { v.escaped = true; this.escaped.push(v); }
       this.log.push({ kind: 'escape', u });
     }
   }
@@ -92,12 +106,25 @@ export class ExpansionBattle extends Battle {
     if (o.kind === 'escape') {
       const need = (o.count ?? 3) + (this.general ? 1 : 0);
       if (this.escaped.length >= need && (!this.general || this.general.escaped)) return { winner: 0, reason: 'escape' };
+      // lost once fewer machines are left (escaped ones included) than the escape needs
+      if (this.forces(0).filter((u) => this.type(u).move > 0).length < need) return { winner: 1, reason: 'escapeFailed' };
     }
     if (o.kind === 'destroyType') {
-      const marked = this.units.filter((u) => u.army === 1 && u.type === o.type);
+      // a transport's loaded and empty forms count as the same type
+      const base = (t) => this.types[t].empty ?? t;
+      const marked = this.units.filter((u) => u.army === 1 && base(u.type) === base(o.type));
       if (marked.length && marked.every((u) => u.hp <= 0)) return { winner: 0, reason: 'annihilate' };
+      if (o.edge && marked.some((u) => u.hp > 0 && !u.carrier && this.onEdge(o.edge, u.x, u.y))) return { winner: 1, reason: 'breakthrough' };
     }
     return null;
+  }
+
+  // After savegame.restoreBattle: relink the general and the escaped units.
+  restored() {
+    this.general = this.units.find((u) => u.general) || null;
+    this.escaped = this.units.filter((u) => u.escaped);
+    for (const u of this.escaped) if (!u.carrier) u.carrier = EXIT;   // left the map themselves (saved as id -1)
+    return this;
   }
 }
 
@@ -123,16 +150,22 @@ export function briefingPages(mission, goal) {
   return pages;
 }
 
+// Whether a unit of `type` may stand on (x, y) of the mission's map (start hexes for the roster).
+export function standChecker(rom, mission, types) {
+  const { rom: view, info } = romView(rom, mission), header = view.body(info.headerId), grid = view.body(info.gridId);
+  return (type, x, y) => moveCost(rom, types[type].category, terrainOf(rom, header, grid[y * 62 + x]).cls) !== 0;
+}
+
 // ?mission=missions/asimov.json on game.html plays that mission.
 export async function expansionFromUrl(rom, types) {
   const q = new URLSearchParams(location.search), url = q.get('mission');
   if (!url) return null;
   let mission = await (await fetch(url)).json(), state = null;
   const missionNo = +(q.get('no') || 0);
-  if (q.get('campaign')) { state = campaign.load(); if (state) mission = campaign.applyRoster(mission, state); }
+  if (q.get('campaign')) { state = campaign.load(); if (state) mission = campaign.applyRoster(mission, state, standChecker(rom, mission, types)); }
   const { rom: view, info } = romView(rom, mission);
   return {
-    mission, rom: view, info, musicMap: mission.music ?? 0, names: ARMY_NAMES, campaign: !!state,
+    url, mission, rom: view, info, musicMap: mission.music ?? 0, names: ARMY_NAMES, campaign: !!state,
     // a won campaign battle goes into the saved campaign; returns the supply gained
     finish: (b) => { const s = campaign.load(); const gain = campaign.finish(s, b, mapPoints(b, missionNo).total, missionNo); campaign.save(s); return gain; },
     newBattle: (opts) => new ExpansionBattle(rom, mission, types, opts),
