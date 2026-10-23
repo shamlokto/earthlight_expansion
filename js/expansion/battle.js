@@ -10,7 +10,7 @@
 import { Battle } from '../game/rules.js';
 import { romView, deployList, arrivalList } from './mission.js';
 import { mapPoints } from '../game/points.js';
-import { terrainOf, moveCost } from '../terrain.js';
+import { loadExpansionData } from './data.js';
 import * as campaign from './campaign.js';
 
 const GENERAL_EVASION_CAP = 96;
@@ -44,7 +44,7 @@ export class ExpansionBattle extends Battle {
     const { rom: view, info } = romView(rom, mission);
     info.routes = mission.routes || null;
     const list = deployList(mission);
-    super(view, info, types, list, arrivalList(mission), { script: scriptOf(mission), hard: opts.hard });
+    super(view, info, types, list, arrivalList(mission), { script: scriptOf(mission), hard: opts.hard, tables: opts.tables });
     this.mission = mission;
     // campaign machines bring their pilot's level and their roster id (Battle spawns in list order)
     list.forEach((d, i) => { if (d.level !== undefined) this.units[i].level = d.level; if (d.rosterId !== undefined) this.units[i].rosterId = d.rosterId; });
@@ -151,24 +151,27 @@ export function briefingPages(mission, goal) {
 }
 
 // Whether a unit of `type` may stand on (x, y) of the mission's map (start hexes for the roster).
-export function standChecker(rom, mission, types) {
+export function standChecker(rom, mission, types, tables) {
   const { rom: view, info } = romView(rom, mission), header = view.body(info.headerId), grid = view.body(info.gridId);
-  return (type, x, y) => moveCost(rom, types[type].category, terrainOf(rom, header, grid[y * 62 + x]).cls) !== 0;
+  return (type, x, y) => tables.moveCost(types[type].category, tables.terrain(header[80 + grid[y * 62 + x]]).cls) !== 0;
 }
 
 // ?mission=missions/asimov.json on game.html plays that mission.
-export async function expansionFromUrl(rom, types) {
+// Units, rule tables and text come from the expansion's own data (data.js), not the ROM.
+export async function expansionFromUrl(rom) {
   const q = new URLSearchParams(location.search), url = q.get('mission');
   if (!url) return null;
+  const data = await loadExpansionData(), { types, tables } = data;
   let mission = await (await fetch(url)).json(), state = null;
   const missionNo = +(q.get('no') || 0);
-  if (q.get('campaign')) { state = campaign.load(); if (state) mission = campaign.applyRoster(mission, state, standChecker(rom, mission, types)); }
+  if (q.get('campaign')) { state = campaign.load(); if (state) mission = campaign.applyRoster(mission, state, standChecker(rom, mission, types, tables)); }
   const { rom: view, info } = romView(rom, mission);
   return {
     url, mission, rom: view, info, musicMap: mission.music ?? 0, names: ARMY_NAMES, campaign: !!state,
+    types, tables, text: data.text,
     // a won campaign battle goes into the saved campaign; returns the supply gained
     finish: (b) => { const s = campaign.load(); const gain = campaign.finish(s, b, mapPoints(b, missionNo).total, missionNo); campaign.save(s); return gain; },
-    newBattle: (opts) => new ExpansionBattle(rom, mission, types, opts),
+    newBattle: (opts) => new ExpansionBattle(rom, mission, types, { ...opts, tables }),
     briefing: () => briefingPages(mission, scriptOf(mission).goal),
     hud: expansionHud,
   };

@@ -9,21 +9,18 @@
 //   bomb used            $01:A00A   (type + 1, movement grows by the difference: re-move)
 // Map objectives live in scripts.js. Things the decode did not settle (random term range,
 // the exact transform menu) are marked TODO/ASSUMED.
-import { terrainOf, moveCost, EDGE_CLASS } from '../terrain.js';
+import { EDGE_CLASS } from '../terrain.js';
+import { romTables } from './tables.js';
 import { scriptFor, setupScript, outcome } from './scripts.js';
 import { TRANSFORM, SPENT } from '../units.js';
 import { setupEvents, burnerMove, fireCannons } from './events.js';
 import { tally } from './points.js';
 
-const D042 = 0x01d042, D0C2 = 0x01d0c2, LEVEL = 0x01ac3d;
 export const NEUTRAL = 2;           // army of the neutral docks (deployment flag $40)
 const DOCK_CAT = 7, CARRIER_CAT = 1, CRAB = 26;   // CR-1: 26 empty, 27 loaded
 export { TRANSFORM };   // form tables live in units.js
 const REARM = { 5: 4, 7: 6, 11: 10, 44: 43 };   // $01:A60C re-arms only these on boarding
 const DESTROYERS = new Set([49, 50, 51]);   // may move again with what is left after firing
-// Info-screen tables (read by $02:9157): display attack per slot, display defence,
-// category byte, minimum range, terrain defence % per weapon mode.
-const F7D2 = 0x01f7d2, F8BA = 0x01f8ba, F206 = 0x01f206, F39C = 0x01f39c, D002 = 0x01d002;
 
 // ---------------------------------------------------------------- hex grid
 // Flat-top hexes, columns 16 px apart, odd columns shifted down half a hex.
@@ -52,9 +49,11 @@ export function distance(a, b) {
 export class Battle {
   // deploy: [{ type, army, x, y, carrier? }] (maps.deployment or scenario.units);
   // arrivals: scenario.arrivals (turn-keyed reinforcements), optional.
-  // opts: { script (default: scripts.js entry for the map), hard (attack x2, $06E9) }
+  // opts: { script (default: scripts.js entry for the map), hard (attack x2, $06E9),
+  //         tables (rule tables, tables.js; default: read from the ROM) }
   constructor(rom, info, unitTypes, deploy, arrivals = [], opts = {}) {
     this.rom = rom; this.info = info; this.types = unitTypes;
+    this.tables = opts.tables || romTables(rom);
     this.script = opts.script || scriptFor(info.index); this.hard = !!opts.hard;
     this.header = rom.body(info.headerId);
     this.grid = rom.body(info.gridId).slice();   // own copy: the Decimator clears cells (events.js)
@@ -88,7 +87,7 @@ export class Battle {
   launchCells(u) {
     const c = u.carrier, cat = this.type(u).category;
     if (!c) return [];
-    return neighbours(c.x, c.y).filter(([x, y]) => this.inBounds(x, y) && !this.unitAt(x, y) && moveCost(this.rom, cat, this.cls(x, y)) !== 0);
+    return neighbours(c.x, c.y).filter(([x, y]) => this.inBounds(x, y) && !this.unitAt(x, y) && this.tables.moveCost(cat, this.cls(x, y)) !== 0);
   }
   launch(u, x, y) {
     const c = u.carrier;
@@ -150,7 +149,7 @@ export class Battle {
     const cat = this.type({ type }).category, seen = new Set([`${x0},${y0}`]), q = [[x0, y0]];
     while (q.length) {
       const [x, y] = q.shift();
-      if (this.inBounds(x, y) && !this.unitAt(x, y) && moveCost(this.rom, cat, this.cls(x, y)) !== 0) return [x, y];
+      if (this.inBounds(x, y) && !this.unitAt(x, y) && this.tables.moveCost(cat, this.cls(x, y)) !== 0) return [x, y];
       for (const [nx, ny] of neighbours(x, y)) if (!seen.has(`${nx},${ny}`) && this.inBounds(nx, ny)) { seen.add(`${nx},${ny}`); q.push([nx, ny]); }
     }
     return [x0, y0];
@@ -159,7 +158,7 @@ export class Battle {
   inBounds(x, y) { return x >= 1 && y >= 1 && x < this.info.cols && y <= this.info.rows; }
   cls(x, y) {
     if (!this.inBounds(x, y)) return EDGE_CLASS;
-    return terrainOf(this.rom, this.header, this.grid[y * 62 + x]).cls;
+    return this.tables.terrain(this.header[80 + this.grid[y * 62 + x]]).cls;
   }
   type(u) { return this.types[u.type]; }
   unitAt(x, y) { return this.units.find((u) => u.hp > 0 && !u.carrier && u.x === x && u.y === y) || null; }
@@ -209,7 +208,7 @@ export class Battle {
         if (!this.inBounds(nx, ny)) continue;
         const occ = this.unitAt(nx, ny);
         if (occ && occ.army !== u.army) continue;
-        const c = moveCost(this.rom, cat, this.cls(nx, ny));
+        const c = this.tables.moveCost(cat, this.cls(nx, ny));
         if (c === 0) continue;
         const left = c === 'stop' ? 0 : mp - c;
         if (left < 0 || (c === 'stop' && mp <= 0)) continue;
@@ -229,7 +228,7 @@ export class Battle {
   }
 
   // ------------------------------------------------------------ combat
-  canTarget(cls, mode) { return !!this.rom.byteAt(D0C2 + cls * 4 + mode); }
+  canTarget(cls, mode) { return this.tables.targetable(cls, mode); }
 
   // Weapons of u usable against target from u's current hex.
   weaponsAgainst(u, target) {
@@ -289,12 +288,12 @@ export class Battle {
     if (neighbours(def.x, def.y).every(([nx, ny]) => this.unitAt(nx, ny))) eva >>= 1;
     p = Math.floor((p * (128 - eva) * 2) / 256);
     // terrain defence of the defender's hex
-    const td = this.rom.byteAt(D042 + this.cls(def.x, def.y) * 4 + w.mode);
+    const td = this.tables.defence(this.cls(def.x, def.y), w.mode);
     p = Math.floor((p * (128 - td) * 2) / 256);
     p = this.hpScale(att, p);
     // support from the attacker's allies next to the defender (power/4)
     for (const s of this.supporters(def, att.army, w.slot, att)) p += s >> 2;
-    if (at.category !== 7) p = Math.floor((p * this.rom.byteAt(LEVEL + Math.min(9, att.level))) / 16);
+    if (at.category !== 7) p = Math.floor((p * this.tables.levelBonus(Math.min(9, att.level))) / 16);
     return this.hard ? p * 2 : p;
   }
 
@@ -314,24 +313,24 @@ export class Battle {
   // Per side, stage 0 = base, 1 = after encirclement, 2 = after support; the game prints
   // stage 0 when the screen opens, 1 when the support panel opens, 2 at the terrain panel.
   fightInfo(att, def, w) {
-    const rom = this.rom;
+    const T = this.tables;
     const x2 = this.hard ? 2 : 1;   // $06E9 doubles attack only
-    const scaled = (u, v) => (rom.byteAt(F206 + u.type) === 0x70 ? v : (v * rom.byteAt(LEVEL + (u.level & 15))) >> 4);
+    const scaled = (u, v) => (T.catByte(u.type) === 0x70 ? v : (v * T.levelBonus(u.level & 15)) >> 4);
     // $02:9269: HP * 8 * F7D2[type*4+slot] / max HP, then the level factor
-    const atk = (u, slot) => scaled(u, Math.floor((u.hp * 8 * rom.byteAt(F7D2 + u.type * 4 + slot)) / this.type(u).hp)) * x2;
+    const atk = (u, slot) => scaled(u, Math.floor((u.hp * 8 * T.infoAttack(u.type, slot)) / this.type(u).hp)) * x2;
     // $02:92E2: F8BA[type] with the level factor, capped at 128
-    const dfn = (u) => (rom.byteAt(F206 + u.type) === 0x70 ? rom.byteAt(F8BA + u.type) : Math.min(128, scaled(u, rom.byteAt(F8BA + u.type))));
+    const dfn = (u) => (T.catByte(u.type) === 0x70 ? T.infoDefence(u.type) : Math.min(128, scaled(u, T.infoDefence(u.type))));
     // $02:931D: attack of every unit of `army` next to `about` (except `skip`) with a direct weapon in `slot`
     const support = (about, army, skip, slot) => neighbours(about.x, about.y).reduce((sum, [x, y]) => {
       const s = this.unitAt(x, y);
-      if (!s || s === skip || s.army !== army || !rom.byteAt(F7D2 + s.type * 4 + slot) || rom.byteAt(F39C + s.type * 4 + slot) >= 2) return sum;
+      if (!s || s === skip || s.army !== army || !T.infoAttack(s.type, slot) || T.minRange(s.type, slot) >= 2) return sum;
       return sum + atk(s, slot);
     }, 0);
     const cslot = w.slot >= 2 ? w.slot : (this.type(att).category < 7 ? 1 : 0);   // $06B9
     const A = atk(att, w.slot), B = atk(def, cslot), dA = dfn(att), dB = dfn(def);
     const surrounded = neighbours(def.x, def.y).every(([x, y]) => this.unitAt(x, y));
     const dB1 = surrounded ? dB >> 1 : dB;
-    const pct = (u) => rom.byteAt(D002 + this.cls(u.x, u.y) * 4 + w.mode);   // both sides use the attacker's mode ($06BA)
+    const pct = (u) => T.displayDefence(this.cls(u.x, u.y), w.mode);   // both sides use the attacker's mode ($06BA)
     const side = (u, atkS, defS) => ({ unit: u, hp: u.hp, level: u.level, atk: atkS, def: defS, mode: w.mode, pct: pct(u) });
     // hex diagrams: neighbours in the game's scan order ($01:AC47): SW, NW, N, NE, SE, S
     const ring = (c, keep) => hexRing(c.x, c.y).map(([x, y], dir) => ({ dir, u: this.unitAt(x, y) })).filter((n) => n.u && keep(n.u));

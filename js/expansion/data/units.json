@@ -1,0 +1,4199 @@
+{
+ "note": "Seeded from Earth Light (Japan) by tools/extract-expansion-data.mjs; the expansion's own data from here on (may diverge from the original).",
+ "units": [
+  {
+   "type": 0,
+   "name": "Mars",
+   "nameJp": "マルス",
+   "code": "HUB-01",
+   "category": 8,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 5,
+   "evasion": 51,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 51
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 64
+    },
+    null
+   ],
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     40,
+     0,
+     50,
+     0
+    ],
+    "defence": 40,
+    "minRange": [
+     1,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    207,
+    217,
+    189,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    72,
+    85,
+    66,
+    45,
+    48,
+    49,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 1,
+   "name": "Titan",
+   "nameJp": "ティタン",
+   "code": "HU-NN7",
+   "category": 8,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 5,
+   "evasion": 38,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 2,
+     "max": 3,
+     "power": 77
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 45
+    },
+    null
+   ],
+   "aiValue": 5,
+   "info": {
+    "attack": [
+     60,
+     0,
+     35,
+     0
+    ],
+    "defence": 30,
+    "minRange": [
+     2,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 1,
+   "art": {
+    "fightSheet": 4,
+    "tiles": 209,
+    "palette": 210,
+    "frame": 2
+   },
+   "nameBytes": [
+    195,
+    168,
+    192,
+    221,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    72,
+    85,
+    45,
+    78,
+    78,
+    55,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 2,
+   "name": "Talos",
+   "nameJp": "タロス",
+   "code": "HU-AX45",
+   "category": 8,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 4,
+   "evasion": 70,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 13
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 115
+    },
+    null
+   ],
+   "aiValue": 10,
+   "info": {
+    "attack": [
+     10,
+     0,
+     90,
+     0
+    ],
+    "defence": 55,
+    "minRange": [
+     1,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 2,
+   "art": {
+    "fightSheet": 6,
+    "tiles": 211,
+    "palette": 212,
+    "frame": 3
+   },
+   "nameBytes": [
+    192,
+    219,
+    189,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    72,
+    85,
+    45,
+    65,
+    88,
+    52,
+    53,
+    0
+   ]
+  },
+  {
+   "type": 3,
+   "name": "Medusa",
+   "nameJp": "メデゥサ",
+   "code": "HU-M34",
+   "category": 8,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 6,
+   "evasion": 32,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 2,
+     "min": 1,
+     "max": 1,
+     "power": 70
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 38
+    },
+    null
+   ],
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     55,
+     0,
+     30,
+     0
+    ],
+    "defence": 25,
+    "minRange": [
+     1,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 3,
+   "art": {
+    "fightSheet": 8,
+    "tiles": 213,
+    "palette": 214,
+    "frame": 4
+   },
+   "nameBytes": [
+    210,
+    195,
+    222,
+    169,
+    187,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    72,
+    85,
+    45,
+    77,
+    51,
+    52,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 4,
+   "name": "Athena",
+   "nameJp": "アテナ",
+   "code": "CHU-03F",
+   "category": 10,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 9,
+   "evasion": 58,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 26
+    },
+    null,
+    null,
+    {
+     "slot": 3,
+     "mode": 2,
+     "min": 2,
+     "max": 2,
+     "power": 230
+    }
+   ],
+   "form": 1,
+   "otherForm": 6,
+   "spent": 5,
+   "aiValue": 20,
+   "info": {
+    "attack": [
+     20,
+     0,
+     0,
+     180
+    ],
+    "defence": 45,
+    "minRange": [
+     1,
+     0,
+     0,
+     2
+    ]
+   },
+   "gfx": 4,
+   "art": {
+    "fightSheet": 10,
+    "tiles": 215,
+    "palette": 216,
+    "frame": 5
+   },
+   "nameBytes": [
+    177,
+    195,
+    197,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    72,
+    85,
+    45,
+    48,
+    51,
+    70,
+    0
+   ]
+  },
+  {
+   "type": 5,
+   "name": "Athena",
+   "nameJp": "アテナ",
+   "code": "CHU-03F",
+   "category": 9,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 9,
+   "evasion": 58,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 26
+    },
+    null,
+    null,
+    null
+   ],
+   "form": 1,
+   "otherForm": 7,
+   "armed": 4,
+   "aiValue": 20,
+   "info": {
+    "attack": [
+     20,
+     0,
+     0,
+     0
+    ],
+    "defence": 45,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 5,
+   "art": {
+    "fightSheet": 11,
+    "tiles": 215,
+    "palette": 216,
+    "frame": 5
+   },
+   "nameBytes": [
+    177,
+    195,
+    197,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    72,
+    85,
+    45,
+    48,
+    51,
+    70,
+    0
+   ]
+  },
+  {
+   "type": 6,
+   "name": "Athena",
+   "nameJp": "アテナ",
+   "code": "CHU-03R",
+   "category": 8,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 4,
+   "evasion": 58,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 2,
+     "max": 2,
+     "power": 89
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 102
+    },
+    null
+   ],
+   "form": 2,
+   "formOf": 4,
+   "spent": 7,
+   "aiValue": 20,
+   "info": {
+    "attack": [
+     70,
+     0,
+     80,
+     0
+    ],
+    "defence": 45,
+    "minRange": [
+     2,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 6,
+   "art": {
+    "fightSheet": 12,
+    "tiles": 217,
+    "palette": 218,
+    "frame": 6
+   },
+   "nameBytes": [
+    177,
+    195,
+    197,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    72,
+    85,
+    45,
+    48,
+    51,
+    82,
+    0
+   ]
+  },
+  {
+   "type": 7,
+   "name": "Athena",
+   "nameJp": "アテナ",
+   "code": "CHU-03R",
+   "category": 8,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 4,
+   "evasion": 58,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 2,
+     "max": 2,
+     "power": 89
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 102
+    },
+    null
+   ],
+   "form": 2,
+   "formOf": 5,
+   "armed": 6,
+   "aiValue": 20,
+   "info": {
+    "attack": [
+     70,
+     0,
+     80,
+     0
+    ],
+    "defence": 45,
+    "minRange": [
+     2,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 6,
+   "art": {
+    "fightSheet": 12,
+    "tiles": 217,
+    "palette": 218,
+    "frame": 6
+   },
+   "nameBytes": [
+    177,
+    195,
+    197,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    72,
+    85,
+    45,
+    48,
+    51,
+    82,
+    0
+   ]
+  },
+  {
+   "type": 8,
+   "name": "Lobster",
+   "nameJp": "ロブスター",
+   "code": "FS-41",
+   "category": 9,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 10,
+   "evasion": 38,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 102
+    },
+    null,
+    null,
+    null
+   ],
+   "aiValue": 10,
+   "info": {
+    "attack": [
+     80,
+     0,
+     0,
+     0
+    ],
+    "defence": 30,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 7,
+   "art": {
+    "fightSheet": 14,
+    "tiles": 219,
+    "palette": 220,
+    "frame": 7
+   },
+   "nameBytes": [
+    219,
+    204,
+    222,
+    189,
+    192,
+    176,
+    32,
+    0
+   ],
+   "codeBytes": [
+    70,
+    83,
+    45,
+    52,
+    49,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 9,
+   "name": "Crane",
+   "nameJp": "クレーネ",
+   "code": "FFA-81",
+   "category": 9,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 9,
+   "evasion": 64,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 58
+    },
+    {
+     "slot": 1,
+     "mode": 2,
+     "min": 1,
+     "max": 1,
+     "power": 77
+    },
+    null,
+    null
+   ],
+   "aiValue": 10,
+   "info": {
+    "attack": [
+     45,
+     60,
+     0,
+     0
+    ],
+    "defence": 50,
+    "minRange": [
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 8,
+   "art": {
+    "fightSheet": 15,
+    "tiles": 221,
+    "palette": 222,
+    "frame": 8
+   },
+   "nameBytes": [
+    184,
+    218,
+    176,
+    200,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    70,
+    70,
+    65,
+    45,
+    56,
+    49,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 10,
+   "name": "Brontes",
+   "nameJp": "ブロンテス",
+   "code": "FB-97",
+   "category": 10,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 7,
+   "evasion": 26,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 19
+    },
+    null,
+    null,
+    {
+     "slot": 3,
+     "mode": 2,
+     "min": 2,
+     "max": 2,
+     "power": 255
+    }
+   ],
+   "spent": 11,
+   "aiValue": 30,
+   "info": {
+    "attack": [
+     15,
+     0,
+     0,
+     200
+    ],
+    "defence": 20,
+    "minRange": [
+     1,
+     0,
+     0,
+     2
+    ]
+   },
+   "gfx": 9,
+   "art": {
+    "fightSheet": 16,
+    "tiles": 223,
+    "palette": 224,
+    "frame": 9
+   },
+   "nameBytes": [
+    204,
+    222,
+    219,
+    221,
+    195,
+    189,
+    32,
+    0
+   ],
+   "codeBytes": [
+    70,
+    66,
+    45,
+    57,
+    55,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 11,
+   "name": "Brontes",
+   "nameJp": "ブロンテス",
+   "code": "FB-97",
+   "category": 9,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 12,
+   "evasion": 83,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 19
+    },
+    null,
+    null,
+    null
+   ],
+   "armed": 10,
+   "aiValue": 30,
+   "info": {
+    "attack": [
+     15,
+     0,
+     0,
+     0
+    ],
+    "defence": 65,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 10,
+   "art": {
+    "fightSheet": 17,
+    "tiles": 223,
+    "palette": 224,
+    "frame": 9
+   },
+   "nameBytes": [
+    204,
+    222,
+    219,
+    221,
+    195,
+    189,
+    32,
+    0
+   ],
+   "codeBytes": [
+    70,
+    66,
+    45,
+    57,
+    55,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 12,
+   "name": "Horus",
+   "nameJp": "ホルス",
+   "code": "FB-33",
+   "category": 10,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 9,
+   "evasion": 45,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 27
+    },
+    null,
+    null,
+    {
+     "slot": 3,
+     "mode": 2,
+     "min": 1,
+     "max": 2,
+     "power": 77
+    }
+   ],
+   "spent": 13,
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     20,
+     0,
+     0,
+     60
+    ],
+    "defence": 35,
+    "minRange": [
+     1,
+     0,
+     0,
+     1
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    206,
+    217,
+    189,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    70,
+    66,
+    45,
+    51,
+    51,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 13,
+   "name": "Horus",
+   "nameJp": "ホルス",
+   "code": "FB-33",
+   "category": 9,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 9,
+   "evasion": 45,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 27
+    },
+    null,
+    null,
+    null
+   ],
+   "armed": 12,
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     20,
+     0,
+     0,
+     0
+    ],
+    "defence": 35,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    206,
+    217,
+    189,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    70,
+    66,
+    45,
+    51,
+    51,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 14,
+   "name": "Vulcan",
+   "nameJp": "ガンナー",
+   "code": "CUB-6",
+   "category": 11,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 4,
+   "evasion": 45,
+   "value": 1,
+   "moveOrFire": true,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 2,
+     "max": 4,
+     "power": 128
+    },
+    null,
+    null,
+    null
+   ],
+   "aiValue": 10,
+   "info": {
+    "attack": [
+     100,
+     0,
+     0,
+     0
+    ],
+    "defence": 35,
+    "minRange": [
+     2,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 11,
+   "art": {
+    "fightSheet": 18,
+    "tiles": 225,
+    "palette": 226,
+    "frame": 10
+   },
+   "nameBytes": [
+    182,
+    222,
+    221,
+    197,
+    176,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    85,
+    66,
+    45,
+    54,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 15,
+   "name": "Phoibos",
+   "nameJp": "スナイパー",
+   "code": "CUN-42",
+   "category": 11,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 5,
+   "evasion": 38,
+   "value": 1,
+   "moveOrFire": true,
+   "cut": false,
+   "weapons": [
+    null,
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 2,
+     "max": 4,
+     "power": 192
+    },
+    null,
+    null
+   ],
+   "aiValue": 10,
+   "info": {
+    "attack": [
+     0,
+     150,
+     0,
+     0
+    ],
+    "defence": 30,
+    "minRange": [
+     0,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 12,
+   "art": {
+    "fightSheet": 19,
+    "tiles": 227,
+    "palette": 228,
+    "frame": 11
+   },
+   "nameBytes": [
+    189,
+    197,
+    178,
+    202,
+    223,
+    176,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    85,
+    78,
+    45,
+    52,
+    50,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 16,
+   "name": "Cyclops",
+   "nameJp": "ランチャー",
+   "code": "CUM-7",
+   "category": 11,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 5,
+   "evasion": 51,
+   "value": 1,
+   "moveOrFire": true,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 2,
+     "min": 2,
+     "max": 5,
+     "power": 115
+    },
+    {
+     "slot": 1,
+     "mode": 2,
+     "min": 2,
+     "max": 5,
+     "power": 153
+    },
+    null,
+    null
+   ],
+   "aiValue": 10,
+   "info": {
+    "attack": [
+     90,
+     120,
+     0,
+     0
+    ],
+    "defence": 40,
+    "minRange": [
+     2,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 13,
+   "art": {
+    "fightSheet": 20,
+    "tiles": 229,
+    "palette": 230,
+    "frame": 12
+   },
+   "nameBytes": [
+    215,
+    221,
+    193,
+    172,
+    176,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    85,
+    77,
+    45,
+    55,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 17,
+   "name": "Pandora",
+   "nameJp": "パンドラ",
+   "code": "SBBM-0",
+   "category": 15,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 0,
+   "evasion": 77,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 3,
+     "power": 77
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 1,
+     "max": 3,
+     "power": 77
+    },
+    null,
+    null
+   ],
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     60,
+     60,
+     0,
+     0
+    ],
+    "defence": 60,
+    "minRange": [
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    202,
+    223,
+    221,
+    196,
+    222,
+    215,
+    32,
+    0
+   ],
+   "codeBytes": [
+    83,
+    66,
+    66,
+    77,
+    45,
+    48,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 18,
+   "name": "Wisp",
+   "nameJp": "ウィスプ",
+   "code": "SBBW-4",
+   "category": 15,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 0,
+   "evasion": 77,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "defence": 80,
+    "minRange": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 14,
+   "art": {
+    "fightSheet": 21,
+    "tiles": 231,
+    "palette": 232,
+    "frame": 14
+   },
+   "nameBytes": [
+    179,
+    168,
+    189,
+    204,
+    223,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    83,
+    66,
+    66,
+    87,
+    45,
+    52,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 19,
+   "name": "Remora",
+   "nameJp": "レモラ",
+   "code": "SBBC-1",
+   "category": 15,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 2,
+   "evasion": 90,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "defence": 70,
+    "minRange": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    218,
+    211,
+    215,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    83,
+    66,
+    66,
+    67,
+    45,
+    49,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 20,
+   "name": "Echidna",
+   "nameJp": "エキドナ",
+   "code": "BS-B13",
+   "category": 12,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 3,
+   "evasion": 58,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 2,
+     "power": 51
+    },
+    {
+     "slot": 1,
+     "mode": 0,
+     "min": 1,
+     "max": 2,
+     "power": 51
+    },
+    null,
+    null
+   ],
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     40,
+     40,
+     0,
+     0
+    ],
+    "defence": 45,
+    "minRange": [
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    180,
+    183,
+    196,
+    222,
+    197,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    66,
+    83,
+    45,
+    66,
+    49,
+    51,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 21,
+   "name": "Naga",
+   "nameJp": "ナーガ",
+   "code": "BS-AX4",
+   "category": 12,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 2,
+   "evasion": 45,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    null,
+    null,
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 3,
+     "power": 77
+    },
+    null
+   ],
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     0,
+     0,
+     60,
+     0
+    ],
+    "defence": 35,
+    "minRange": [
+     0,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    197,
+    176,
+    182,
+    222,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    66,
+    83,
+    45,
+    65,
+    88,
+    52,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 22,
+   "name": "Rockeye",
+   "nameJp": "ロックアイ",
+   "code": "BSF-6",
+   "category": 12,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 3,
+   "evasion": 58,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 3,
+     "power": 51
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 1,
+     "max": 3,
+     "power": 51
+    },
+    null,
+    null
+   ],
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     40,
+     40,
+     0,
+     0
+    ],
+    "defence": 45,
+    "minRange": [
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    219,
+    175,
+    184,
+    177,
+    178,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    66,
+    83,
+    70,
+    45,
+    54,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 23,
+   "name": "Dragon",
+   "nameJp": "ドラゴン",
+   "code": "SG-DR10",
+   "category": 14,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 0,
+   "evasion": 6,
+   "value": 1,
+   "moveOrFire": true,
+   "cut": false,
+   "weapons": [
+    null,
+    {
+     "slot": 1,
+     "mode": 0,
+     "min": 2,
+     "max": 7,
+     "power": 255
+    },
+    null,
+    null
+   ],
+   "aiValue": 40,
+   "info": {
+    "attack": [
+     0,
+     200,
+     0,
+     0
+    ],
+    "defence": 5,
+    "minRange": [
+     0,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 15,
+   "art": {
+    "fightSheet": 22,
+    "tiles": 233,
+    "palette": 234,
+    "frame": 16
+   },
+   "nameBytes": [
+    196,
+    222,
+    215,
+    186,
+    222,
+    221,
+    32,
+    0
+   ],
+   "codeBytes": [
+    83,
+    71,
+    45,
+    68,
+    82,
+    49,
+    48,
+    0
+   ]
+  },
+  {
+   "type": 24,
+   "name": "Hydra",
+   "nameJp": "ハイドラ",
+   "code": "SG-HY7",
+   "category": 14,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 0,
+   "evasion": 12,
+   "value": 1,
+   "moveOrFire": true,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 2,
+     "min": 2,
+     "max": 6,
+     "power": 230
+    },
+    null,
+    null,
+    null
+   ],
+   "aiValue": 40,
+   "info": {
+    "attack": [
+     180,
+     0,
+     0,
+     0
+    ],
+    "defence": 10,
+    "minRange": [
+     2,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 16,
+   "art": {
+    "fightSheet": 23,
+    "tiles": 235,
+    "palette": 236,
+    "frame": 17
+   },
+   "nameBytes": [
+    202,
+    178,
+    196,
+    222,
+    215,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    83,
+    71,
+    45,
+    72,
+    89,
+    55,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 25,
+   "name": "Rahab",
+   "nameJp": "ラハブ",
+   "code": "SG-RA4",
+   "category": 14,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 10,
+   "evasion": 6,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 2,
+     "max": 5,
+     "power": 204
+    },
+    {
+     "slot": 1,
+     "mode": 0,
+     "min": 2,
+     "max": 4,
+     "power": 204
+    },
+    null,
+    null
+   ],
+   "aiValue": 40,
+   "info": {
+    "attack": [
+     160,
+     160,
+     0,
+     0
+    ],
+    "defence": 5,
+    "minRange": [
+     2,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 17,
+   "art": {
+    "fightSheet": 24,
+    "tiles": 237,
+    "palette": 238,
+    "frame": 18
+   },
+   "nameBytes": [
+    215,
+    202,
+    204,
+    222,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    83,
+    71,
+    45,
+    82,
+    65,
+    52,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 26,
+   "name": "Crab",
+   "nameJp": "クラブI",
+   "code": "CR-1",
+   "category": 13,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 9,
+   "evasion": 19,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "loaded": 27,
+   "aiValue": 20,
+   "info": {
+    "attack": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "defence": 15,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 18,
+   "art": {
+    "fightSheet": 25,
+    "tiles": 239,
+    "palette": 240,
+    "frame": 19
+   },
+   "nameBytes": [
+    184,
+    215,
+    204,
+    222,
+    73,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    82,
+    45,
+    49,
+    32,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 27,
+   "name": "Crab",
+   "nameJp": "クラブI",
+   "code": "CR-1",
+   "category": 13,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 9,
+   "evasion": 19,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 19
+    },
+    null,
+    null,
+    null
+   ],
+   "empty": 26,
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     15,
+     0,
+     0,
+     0
+    ],
+    "defence": 15,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 18,
+   "art": {
+    "fightSheet": 25,
+    "tiles": 239,
+    "palette": 240,
+    "frame": 19
+   },
+   "nameBytes": [
+    184,
+    215,
+    204,
+    222,
+    73,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    82,
+    45,
+    49,
+    32,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 28,
+   "name": "Camelii",
+   "nameJp": "キャメルII",
+   "code": "CR-61II",
+   "category": 13,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 7,
+   "evasion": 13,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    null,
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 0
+    },
+    null,
+    null
+   ],
+   "loaded": 29,
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "defence": 10,
+    "minRange": [
+     0,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    183,
+    172,
+    210,
+    217,
+    73,
+    73,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    82,
+    45,
+    54,
+    49,
+    73,
+    73,
+    0
+   ]
+  },
+  {
+   "type": 29,
+   "name": "Camelii",
+   "nameJp": "キャメルII",
+   "code": "CR-61II",
+   "category": 13,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 7,
+   "evasion": 13,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    null,
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 13
+    },
+    null,
+    null
+   ],
+   "empty": 28,
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     0,
+     10,
+     0,
+     0
+    ],
+    "defence": 10,
+    "minRange": [
+     0,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    183,
+    172,
+    210,
+    217,
+    73,
+    73,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    82,
+    45,
+    54,
+    49,
+    73,
+    73,
+    0
+   ]
+  },
+  {
+   "type": 30,
+   "name": "Tiamat",
+   "nameJp": "ティアマト",
+   "code": "BB-04",
+   "category": 2,
+   "startLevel": 0,
+   "hp": 24,
+   "move": 4,
+   "evasion": 45,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 115
+    },
+    {
+     "slot": 1,
+     "mode": 0,
+     "min": 2,
+     "max": 5,
+     "power": 154
+    },
+    null,
+    null
+   ],
+   "aiValue": 10,
+   "info": {
+    "attack": [
+     90,
+     120,
+     0,
+     0
+    ],
+    "defence": 35,
+    "minRange": [
+     1,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 19,
+   "art": {
+    "fightSheet": 26,
+    "tiles": 241,
+    "palette": 242,
+    "frame": 20
+   },
+   "nameBytes": [
+    195,
+    168,
+    177,
+    207,
+    196,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    66,
+    66,
+    45,
+    48,
+    52,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 31,
+   "name": "Asura-Ii",
+   "nameJp": "アスラII",
+   "code": "BB-AII",
+   "category": 2,
+   "startLevel": 0,
+   "hp": 18,
+   "move": 5,
+   "evasion": 64,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 2,
+     "min": 1,
+     "max": 1,
+     "power": 140
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 2,
+     "max": 4,
+     "power": 192
+    },
+    null,
+    null
+   ],
+   "aiValue": 10,
+   "info": {
+    "attack": [
+     110,
+     150,
+     0,
+     0
+    ],
+    "defence": 50,
+    "minRange": [
+     1,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 20,
+   "art": {
+    "fightSheet": 28,
+    "tiles": 243,
+    "palette": 244,
+    "frame": 21
+   },
+   "nameBytes": [
+    177,
+    189,
+    215,
+    73,
+    73,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    66,
+    66,
+    45,
+    65,
+    73,
+    73,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 32,
+   "name": "Nodens",
+   "nameJp": "ノーデンス",
+   "code": "BB-MM4",
+   "category": 2,
+   "startLevel": 0,
+   "hp": 30,
+   "move": 3,
+   "evasion": 70,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    null,
+    {
+     "slot": 1,
+     "mode": 2,
+     "min": 2,
+     "max": 4,
+     "power": 255
+    },
+    null,
+    null
+   ],
+   "aiValue": 20,
+   "info": {
+    "attack": [
+     0,
+     200,
+     0,
+     0
+    ],
+    "defence": 70,
+    "minRange": [
+     0,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 21,
+   "art": {
+    "fightSheet": 30,
+    "tiles": 245,
+    "palette": 246,
+    "frame": 22
+   },
+   "nameBytes": [
+    201,
+    176,
+    195,
+    222,
+    221,
+    189,
+    32,
+    0
+   ],
+   "codeBytes": [
+    66,
+    66,
+    45,
+    77,
+    77,
+    52,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 33,
+   "name": "Hastur",
+   "nameJp": "ハスター",
+   "code": "BB-V3",
+   "category": 1,
+   "startLevel": 0,
+   "hp": 20,
+   "move": 6,
+   "evasion": 25,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 2,
+     "max": 2,
+     "power": 51
+    },
+    {
+     "slot": 1,
+     "mode": 0,
+     "min": 2,
+     "max": 4,
+     "power": 115
+    },
+    null,
+    null
+   ],
+   "aiValue": 30,
+   "info": {
+    "attack": [
+     40,
+     90,
+     0,
+     0
+    ],
+    "defence": 20,
+    "minRange": [
+     2,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 22,
+   "art": {
+    "fightSheet": 32,
+    "tiles": 247,
+    "palette": 248,
+    "frame": 23
+   },
+   "nameBytes": [
+    202,
+    189,
+    192,
+    176,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    66,
+    66,
+    45,
+    86,
+    51,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 34,
+   "name": "Artemis",
+   "nameJp": "アルテミス",
+   "code": "CV-B44",
+   "category": 1,
+   "startLevel": 0,
+   "hp": 24,
+   "move": 5,
+   "evasion": 25,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 90
+    },
+    null,
+    null,
+    null
+   ],
+   "aiValue": 30,
+   "info": {
+    "attack": [
+     70,
+     0,
+     0,
+     0
+    ],
+    "defence": 20,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 23,
+   "art": {
+    "fightSheet": 34,
+    "tiles": 249,
+    "palette": 250,
+    "frame": 24
+   },
+   "nameBytes": [
+    177,
+    217,
+    195,
+    208,
+    189,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    86,
+    45,
+    66,
+    52,
+    52,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 35,
+   "name": "Iris",
+   "nameJp": "イリス",
+   "code": "CV-MN2",
+   "category": 1,
+   "startLevel": 0,
+   "hp": 18,
+   "move": 5,
+   "evasion": 32,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 2,
+     "min": 2,
+     "max": 3,
+     "power": 77
+    },
+    null,
+    null,
+    null
+   ],
+   "aiValue": 30,
+   "info": {
+    "attack": [
+     60,
+     0,
+     0,
+     0
+    ],
+    "defence": 25,
+    "minRange": [
+     2,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 24,
+   "art": {
+    "fightSheet": 35,
+    "tiles": 251,
+    "palette": 252,
+    "frame": 25
+   },
+   "nameBytes": [
+    178,
+    216,
+    189,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    86,
+    45,
+    77,
+    78,
+    50,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 36,
+   "name": "Siren",
+   "nameJp": "サイレン",
+   "code": "CV-CHX",
+   "category": 1,
+   "startLevel": 0,
+   "hp": 20,
+   "move": 5,
+   "evasion": 25,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 64
+    },
+    null,
+    null,
+    null
+   ],
+   "form": 1,
+   "otherForm": 37,
+   "aiValue": 30,
+   "info": {
+    "attack": [
+     50,
+     0,
+     0,
+     0
+    ],
+    "defence": 20,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 25,
+   "art": {
+    "fightSheet": 37,
+    "tiles": 253,
+    "palette": 254,
+    "frame": 26
+   },
+   "nameBytes": [
+    187,
+    178,
+    218,
+    221,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    86,
+    45,
+    67,
+    72,
+    88,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 37,
+   "name": "Siren",
+   "nameJp": "サイレン",
+   "code": "CV-CHX",
+   "category": 2,
+   "startLevel": 0,
+   "hp": 20,
+   "move": 5,
+   "evasion": 51,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 102
+    },
+    {
+     "slot": 1,
+     "mode": 0,
+     "min": 2,
+     "max": 4,
+     "power": 128
+    },
+    null,
+    null
+   ],
+   "form": 2,
+   "formOf": 36,
+   "aiValue": 30,
+   "info": {
+    "attack": [
+     80,
+     100,
+     0,
+     0
+    ],
+    "defence": 40,
+    "minRange": [
+     1,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 26,
+   "art": {
+    "fightSheet": 38,
+    "tiles": 255,
+    "palette": 256,
+    "frame": 27
+   },
+   "nameBytes": [
+    187,
+    178,
+    218,
+    221,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    86,
+    45,
+    67,
+    72,
+    88,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 38,
+   "name": "Selene",
+   "nameJp": "セレネ",
+   "code": "CV-C8",
+   "category": 1,
+   "startLevel": 0,
+   "hp": 16,
+   "move": 7,
+   "evasion": 19,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 51
+    },
+    null,
+    null,
+    null
+   ],
+   "aiValue": 30,
+   "info": {
+    "attack": [
+     40,
+     0,
+     0,
+     0
+    ],
+    "defence": 15,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 27,
+   "art": {
+    "fightSheet": 39,
+    "tiles": 257,
+    "palette": 258,
+    "frame": 28
+   },
+   "nameBytes": [
+    190,
+    218,
+    200,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    86,
+    45,
+    67,
+    56,
+    32,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 39,
+   "name": "Hannibal",
+   "nameJp": "ハンニバル",
+   "code": "SCG-MB1",
+   "category": 3,
+   "startLevel": 0,
+   "hp": 12,
+   "move": 5,
+   "evasion": 51,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 26
+    },
+    {
+     "slot": 1,
+     "mode": 0,
+     "min": 2,
+     "max": 3,
+     "power": 102
+    },
+    null,
+    null
+   ],
+   "aiValue": 5,
+   "info": {
+    "attack": [
+     20,
+     80,
+     0,
+     0
+    ],
+    "defence": 40,
+    "minRange": [
+     1,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 28,
+   "art": {
+    "fightSheet": 40,
+    "tiles": 259,
+    "palette": 260,
+    "frame": 29
+   },
+   "nameBytes": [
+    202,
+    221,
+    198,
+    202,
+    222,
+    217,
+    32,
+    0
+   ],
+   "codeBytes": [
+    83,
+    67,
+    71,
+    45,
+    77,
+    66,
+    49,
+    0
+   ]
+  },
+  {
+   "type": 40,
+   "name": "Regulus",
+   "nameJp": "レグルス",
+   "code": "SCG-BM",
+   "category": 3,
+   "startLevel": 0,
+   "hp": 12,
+   "move": 4,
+   "evasion": 38,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 102
+    },
+    {
+     "slot": 1,
+     "mode": 2,
+     "min": 2,
+     "max": 3,
+     "power": 26
+    },
+    null,
+    null
+   ],
+   "aiValue": 5,
+   "info": {
+    "attack": [
+     80,
+     20,
+     0,
+     0
+    ],
+    "defence": 30,
+    "minRange": [
+     1,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 29,
+   "art": {
+    "fightSheet": 41,
+    "tiles": 261,
+    "palette": 262,
+    "frame": 30
+   },
+   "nameBytes": [
+    218,
+    184,
+    222,
+    217,
+    189,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    83,
+    67,
+    71,
+    45,
+    66,
+    77,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 41,
+   "name": "Palmyra",
+   "nameJp": "パルミラ",
+   "code": "SCG-OL",
+   "category": 3,
+   "startLevel": 0,
+   "hp": 10,
+   "move": 4,
+   "evasion": 51,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    null,
+    {
+     "slot": 1,
+     "mode": 2,
+     "min": 1,
+     "max": 3,
+     "power": 64
+    },
+    null,
+    null
+   ],
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     0,
+     20,
+     0,
+     0
+    ],
+    "defence": 40,
+    "minRange": [
+     0,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    202,
+    223,
+    217,
+    208,
+    215,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    83,
+    67,
+    71,
+    45,
+    79,
+    76,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 42,
+   "name": "Corvus",
+   "nameJp": "コルバス",
+   "code": "SCG-AX",
+   "category": 3,
+   "startLevel": 0,
+   "hp": 12,
+   "move": 4,
+   "evasion": 70,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 89
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 2,
+     "max": 3,
+     "power": 102
+    },
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 153
+    },
+    null
+   ],
+   "aiValue": 20,
+   "info": {
+    "attack": [
+     70,
+     80,
+     230,
+     0
+    ],
+    "defence": 55,
+    "minRange": [
+     1,
+     2,
+     1,
+     0
+    ]
+   },
+   "gfx": 30,
+   "art": {
+    "fightSheet": 42,
+    "tiles": 263,
+    "palette": 264,
+    "frame": 31
+   },
+   "nameBytes": [
+    186,
+    217,
+    202,
+    222,
+    189,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    83,
+    67,
+    71,
+    45,
+    65,
+    88,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 43,
+   "name": "Abaddon",
+   "nameJp": "アバドン",
+   "code": "MSP-21",
+   "category": 4,
+   "startLevel": 0,
+   "hp": 10,
+   "move": 3,
+   "evasion": 51,
+   "value": 2,
+   "moveOrFire": true,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 19
+    },
+    null,
+    null,
+    {
+     "slot": 3,
+     "mode": 2,
+     "min": 2,
+     "max": 4,
+     "power": 255
+    }
+   ],
+   "spent": 44,
+   "aiValue": 50,
+   "info": {
+    "attack": [
+     15,
+     0,
+     0,
+     255
+    ],
+    "defence": 40,
+    "minRange": [
+     1,
+     0,
+     0,
+     2
+    ]
+   },
+   "gfx": 31,
+   "art": {
+    "fightSheet": 43,
+    "tiles": 265,
+    "palette": 266,
+    "frame": 32
+   },
+   "nameBytes": [
+    177,
+    202,
+    222,
+    196,
+    222,
+    221,
+    32,
+    0
+   ],
+   "codeBytes": [
+    77,
+    83,
+    80,
+    45,
+    50,
+    49,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 44,
+   "name": "Abaddon",
+   "nameJp": "アバドン",
+   "code": "MSP-21",
+   "category": 3,
+   "startLevel": 0,
+   "hp": 10,
+   "move": 5,
+   "evasion": 51,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 19
+    },
+    null,
+    null,
+    null
+   ],
+   "armed": 43,
+   "aiValue": 50,
+   "info": {
+    "attack": [
+     15,
+     0,
+     0,
+     0
+    ],
+    "defence": 40,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 32,
+   "art": {
+    "fightSheet": 44,
+    "tiles": 265,
+    "palette": 266,
+    "frame": 32
+   },
+   "nameBytes": [
+    177,
+    202,
+    222,
+    196,
+    222,
+    221,
+    32,
+    0
+   ],
+   "codeBytes": [
+    77,
+    83,
+    80,
+    45,
+    50,
+    49,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 45,
+   "name": "Msnp-Ii",
+   "nameJp": "バルバトス",
+   "code": "MSNP-II",
+   "category": 4,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 3,
+   "evasion": 58,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 26
+    },
+    null,
+    null,
+    {
+     "slot": 3,
+     "mode": 2,
+     "min": 2,
+     "max": 4,
+     "power": 230
+    }
+   ],
+   "spent": 46,
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     20,
+     0,
+     0,
+     180
+    ],
+    "defence": 45,
+    "minRange": [
+     1,
+     0,
+     0,
+     2
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    202,
+    222,
+    217,
+    202,
+    222,
+    196,
+    189,
+    0
+   ],
+   "codeBytes": [
+    77,
+    83,
+    78,
+    80,
+    45,
+    73,
+    73,
+    0
+   ]
+  },
+  {
+   "type": 46,
+   "name": "Msnp-Ii",
+   "nameJp": "バルバトス",
+   "code": "MSNP-II",
+   "category": 3,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 5,
+   "evasion": 58,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 26
+    },
+    null,
+    null,
+    null
+   ],
+   "armed": 45,
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     20,
+     0,
+     0,
+     0
+    ],
+    "defence": 45,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    202,
+    222,
+    217,
+    202,
+    222,
+    196,
+    189,
+    0
+   ],
+   "codeBytes": [
+    77,
+    83,
+    78,
+    80,
+    45,
+    73,
+    73,
+    0
+   ]
+  },
+  {
+   "type": 47,
+   "name": "Msfb-5",
+   "nameJp": "オリアス",
+   "code": "MSFB-5",
+   "category": 4,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 3,
+   "evasion": 77,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 45
+    },
+    null,
+    null,
+    {
+     "slot": 3,
+     "mode": 2,
+     "min": 2,
+     "max": 4,
+     "power": 0
+    }
+   ],
+   "spent": 48,
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     35,
+     0,
+     0,
+     0
+    ],
+    "defence": 60,
+    "minRange": [
+     1,
+     0,
+     0,
+     2
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    181,
+    216,
+    177,
+    189,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    77,
+    83,
+    70,
+    66,
+    45,
+    53,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 48,
+   "name": "Msfb-5",
+   "nameJp": "オリアス",
+   "code": "MSFB-5",
+   "category": 3,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 5,
+   "evasion": 77,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": true,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 45
+    },
+    null,
+    null,
+    null
+   ],
+   "armed": 47,
+   "aiValue": 0,
+   "info": {
+    "attack": [
+     35,
+     0,
+     0,
+     0
+    ],
+    "defence": 60,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "nameBytes": [
+    181,
+    216,
+    177,
+    189,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    77,
+    83,
+    70,
+    66,
+    45,
+    53,
+    32,
+    0
+   ]
+  },
+  {
+   "type": 49,
+   "name": "Fenrir",
+   "nameJp": "フェンリル",
+   "code": "DDG-BB7",
+   "category": 3,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 8,
+   "evasion": 25,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 115
+    },
+    null,
+    null,
+    null
+   ],
+   "aiValue": 5,
+   "info": {
+    "attack": [
+     90,
+     0,
+     0,
+     0
+    ],
+    "defence": 20,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 33,
+   "art": {
+    "fightSheet": 45,
+    "tiles": 267,
+    "palette": 268,
+    "frame": 33
+   },
+   "nameBytes": [
+    204,
+    170,
+    221,
+    216,
+    217,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    68,
+    68,
+    71,
+    45,
+    66,
+    66,
+    55,
+    0
+   ]
+  },
+  {
+   "type": 50,
+   "name": "Cerberus",
+   "nameJp": "ヘルハウンド",
+   "code": "DDG-MN6",
+   "category": 3,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 6,
+   "evasion": 19,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 76
+    },
+    {
+     "slot": 1,
+     "mode": 2,
+     "min": 2,
+     "max": 2,
+     "power": 102
+    },
+    null,
+    null
+   ],
+   "aiValue": 5,
+   "info": {
+    "attack": [
+     60,
+     80,
+     0,
+     0
+    ],
+    "defence": 15,
+    "minRange": [
+     1,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 34,
+   "art": {
+    "fightSheet": 46,
+    "tiles": 269,
+    "palette": 270,
+    "frame": 34
+   },
+   "nameBytes": [
+    205,
+    217,
+    202,
+    179,
+    221,
+    196,
+    222,
+    0
+   ],
+   "codeBytes": [
+    68,
+    68,
+    71,
+    45,
+    77,
+    78,
+    54,
+    0
+   ]
+  },
+  {
+   "type": 51,
+   "name": "Gulon",
+   "nameJp": "グラント",
+   "code": "DDG-AX9",
+   "category": 3,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 7,
+   "evasion": 32,
+   "value": 1,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 19
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 115
+    },
+    null,
+    null
+   ],
+   "aiValue": 5,
+   "info": {
+    "attack": [
+     15,
+     90,
+     0,
+     0
+    ],
+    "defence": 25,
+    "minRange": [
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 35,
+   "art": {
+    "fightSheet": 47,
+    "tiles": 271,
+    "palette": 272,
+    "frame": 35
+   },
+   "nameBytes": [
+    184,
+    222,
+    215,
+    221,
+    196,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    68,
+    68,
+    71,
+    45,
+    65,
+    88,
+    57,
+    0
+   ]
+  },
+  {
+   "type": 52,
+   "name": "Pergamon",
+   "nameJp": "ペルガミノ",
+   "code": "DOC-TY3",
+   "category": 7,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 0,
+   "evasion": 26,
+   "value": 0,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 19
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 19
+    },
+    null,
+    null
+   ],
+   "aiValue": 64,
+   "info": {
+    "attack": [
+     15,
+     15,
+     0,
+     0
+    ],
+    "defence": 20,
+    "minRange": [
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 36,
+   "art": {
+    "fightSheet": 49,
+    "tiles": 275,
+    "palette": 276,
+    "frame": 37
+   },
+   "nameBytes": [
+    205,
+    223,
+    217,
+    182,
+    222,
+    208,
+    201,
+    0
+   ],
+   "codeBytes": [
+    68,
+    79,
+    67,
+    45,
+    84,
+    89,
+    51,
+    0
+   ]
+  },
+  {
+   "type": 53,
+   "name": "Solomon",
+   "nameJp": "ソロモン",
+   "code": "FOR-TY1",
+   "category": 5,
+   "startLevel": 0,
+   "hp": 12,
+   "move": 0,
+   "evasion": 45,
+   "value": 6,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 26
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 26
+    },
+    null,
+    null
+   ],
+   "aiValue": 64,
+   "info": {
+    "attack": [
+     20,
+     20,
+     0,
+     0
+    ],
+    "defence": 35,
+    "minRange": [
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 37,
+   "art": {
+    "fightSheet": 54,
+    "tiles": 273,
+    "palette": 274,
+    "frame": 36
+   },
+   "nameBytes": [
+    191,
+    219,
+    211,
+    221,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    70,
+    79,
+    82,
+    45,
+    84,
+    89,
+    49,
+    0
+   ]
+  },
+  {
+   "type": 54,
+   "name": "Carthago",
+   "nameJp": "カルタゴ",
+   "code": "FOR-TY2",
+   "category": 5,
+   "startLevel": 0,
+   "hp": 20,
+   "move": 0,
+   "evasion": 26,
+   "value": 6,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 38
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 38
+    },
+    null,
+    null
+   ],
+   "aiValue": 64,
+   "info": {
+    "attack": [
+     30,
+     30,
+     0,
+     0
+    ],
+    "defence": 20,
+    "minRange": [
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 37,
+   "art": {
+    "fightSheet": 54,
+    "tiles": 273,
+    "palette": 274,
+    "frame": 36
+   },
+   "nameBytes": [
+    182,
+    217,
+    192,
+    186,
+    222,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    70,
+    79,
+    82,
+    45,
+    84,
+    89,
+    50,
+    0
+   ]
+  },
+  {
+   "type": 55,
+   "name": "Goliath",
+   "nameJp": "ゴリアテ",
+   "code": "FOR-TY4",
+   "category": 5,
+   "startLevel": 0,
+   "hp": 12,
+   "move": 0,
+   "evasion": 83,
+   "value": 6,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 83
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 83
+    },
+    null,
+    null
+   ],
+   "aiValue": 64,
+   "info": {
+    "attack": [
+     65,
+     65,
+     0,
+     0
+    ],
+    "defence": 65,
+    "minRange": [
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 37,
+   "art": {
+    "fightSheet": 54,
+    "tiles": 273,
+    "palette": 274,
+    "frame": 36
+   },
+   "nameBytes": [
+    186,
+    222,
+    216,
+    177,
+    195,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    70,
+    79,
+    82,
+    45,
+    84,
+    89,
+    52,
+    0
+   ]
+  },
+  {
+   "type": 56,
+   "name": "Cortex",
+   "nameJp": "ブレイン",
+   "code": "CT-TYX6",
+   "category": 6,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 0,
+   "evasion": 58,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "aiValue": 64,
+   "info": {
+    "attack": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "defence": 45,
+    "minRange": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 38,
+   "art": {
+    "fightSheet": 55,
+    "tiles": 277,
+    "palette": 278,
+    "frame": 38
+   },
+   "nameBytes": [
+    204,
+    222,
+    218,
+    178,
+    221,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    84,
+    45,
+    84,
+    89,
+    88,
+    54,
+    0
+   ]
+  },
+  {
+   "type": 57,
+   "name": "Adzam",
+   "nameJp": "アッザム",
+   "code": "CT-TY4",
+   "category": 6,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 0,
+   "evasion": 45,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "aiValue": 64,
+   "info": {
+    "attack": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "defence": 35,
+    "minRange": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 39,
+   "art": {
+    "fightSheet": 56,
+    "tiles": 277,
+    "palette": 278,
+    "frame": 38
+   },
+   "nameBytes": [
+    177,
+    175,
+    187,
+    222,
+    209,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    84,
+    45,
+    84,
+    89,
+    52,
+    32,
+    0
+   ]
+  }
+ ]
+}

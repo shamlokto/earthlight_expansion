@@ -1,0 +1,940 @@
+{
+ "note": "Seeded from Earth Light (Japan) by tools/extract-expansion-data.mjs; the expansion's own data from here on (may diverge from the original). English text from Nezz's fan translation (GPL-3.0, github.com/HoratioVex/Earthlight-1-Translation).",
+ "armyNames": [
+  "Galt remnant",
+  "Union"
+ ],
+ "unitNames": [
+  "Mars",
+  "Titan",
+  "Talos",
+  "Medusa",
+  "Athena",
+  "Athena",
+  "Athena",
+  "Athena",
+  "Lobster",
+  "Crane",
+  "Brontes",
+  "Brontes",
+  "Horus",
+  "Horus",
+  "Vulcan",
+  "Phoibos",
+  "Cyclops",
+  "Pandora",
+  "Wisp",
+  "Remora",
+  "Echidna",
+  "Naga",
+  "Rockeye",
+  "Dragon",
+  "Hydra",
+  "Rahab",
+  "Crab",
+  "Crab",
+  "Camelii",
+  "Camelii",
+  "Tiamat",
+  "Asura-Ii",
+  "Nodens",
+  "Hastur",
+  "Artemis",
+  "Iris",
+  "Siren",
+  "Siren",
+  "Selene",
+  "Hannibal",
+  "Regulus",
+  "Palmyra",
+  "Corvus",
+  "Abaddon",
+  "Abaddon",
+  "Msnp-Ii",
+  "Msnp-Ii",
+  "Msfb-5",
+  "Msfb-5",
+  "Fenrir",
+  "Cerberus",
+  "Gulon",
+  "Pergamon",
+  "Solomon",
+  "Carthago",
+  "Goliath",
+  "Cortex",
+  "Adzam"
+ ],
+ "unitInfo": [
+  {
+   "type": 0,
+   "name": "Mars",
+   "short": "Combat Hunter",
+   "info": [
+    "   Melee",
+    "Combat Hunter\n\nArmed with a beamgun and a\nmonoblade for melee combat",
+    "The Mars requires support from\nother unit types to be effec-\ntive. It relies on flanking\nand support effects."
+   ]
+  },
+  {
+   "type": 1,
+   "name": "Titan",
+   "short": "Artillery Hunter",
+   "info": [
+    "   Artillery\n   Melee",
+    "Artillery Hunter\n\nArmed with a medium-range\nrailgun and a forcehammer for\nmelee combat",
+    "The Titan strikes enemies from\na distance, then rushes in to\nfinish them in close combat."
+   ]
+  },
+  {
+   "type": 2,
+   "name": "Talos",
+   "short": "Close Combat Hunter",
+   "info": [
+    "   Melee",
+    "Close Combat Hunter\n\nArmed with an overcharged\nbeamsaber and light beamguns\non both arms",
+    "The Talos tries to engage\nenemies in melee combat, but\nsince it relies entirely on\nbeam weapons, this unit is\ncompletely ineffective in\nmagnetic fields."
+   ]
+  },
+  {
+   "type": 3,
+   "name": "Medusa",
+   "short": "Fire Support Hunter",
+   "info": [
+    "   Melee",
+    "Fire Support Hunter\n\nArmed with a huge rapid-fire\nmissile launcher on its head\nand a shockflail for melee\ncombat",
+    "The Medusa's primary role is\nthe defense of fortresses and\ncapital ships. The exposed\nmissile pods are both its\ngreatest strength and weak-\nness."
+   ]
+  },
+  {
+   "type": 4,
+   "name": "Athena",
+   "short": "Convertible Hunter",
+   "info": [
+    "   Convert\n   Bomb",
+    "Convertible Hunter\n(Fighter-Bomber Mode)\n\nArmed with a rapid-fire rail-\ngun and one anti-ship torpedo",
+    "The fighter-bomber form has\nbetter mobility and bombard-\nment capability, whereas the\nHunter form is more versatile\nand can fight in melee."
+   ]
+  },
+  {
+   "type": 5,
+   "name": "Athena",
+   "short": "Convertible Hunter",
+   "info": [
+    "   Convert\n   Bomb",
+    "Convertible Hunter\n(Fighter-Bomber Mode)\n\nArmed with a rapid-fire rail-\ngun and one anti-ship torpedo",
+    "The fighter-bomber form has\nbetter mobility and bombard-\nment capability, whereas the\nHunter form is more versatile\nand can fight in melee."
+   ]
+  },
+  {
+   "type": 6,
+   "name": "Athena",
+   "short": null,
+   "info": [
+    "   Convert\n   Melee",
+    "Convertible Hunter\n(Hunter Mode)\n\nArmed with a rail rifle\nand a monosaber for melee\ncombat",
+    "The fighter-bomber form has\nbetter mobility and bombard-\nment capability, whereas the\nHunter form is more versatile\nand can fight in melee."
+   ]
+  },
+  {
+   "type": 7,
+   "name": "Athena",
+   "short": null,
+   "info": [
+    "   Convert\n   Melee",
+    "Convertible Hunter\n(Hunter Mode)\n\nArmed with a rail rifle\nand a monosaber for melee\ncombat",
+    "The fighter-bomber form has\nbetter mobility and bombard-\nment capability, whereas the\nHunter form is more versatile\nand can fight in melee."
+   ]
+  },
+  {
+   "type": 8,
+   "name": "Lobster",
+   "short": "Interceptor",
+   "info": [
+    "",
+    "Interceptor\n\nArmed with twin pulse beam\ncannons",
+    "Excellent speed and attack\nagainst fighters and Hunters.\nIt can be used to gain super-\niority in an area and deny\nenemy operations."
+   ]
+  },
+  {
+   "type": 9,
+   "name": "Crane",
+   "short": "Heavy Fighter",
+   "info": [
+    "",
+    "Heavy Fighter\nA more versatile unit than the\nLobster, the Crane is armed\nwith both a light railgun for\ndogfights and anti-ship\nmissile pods.",
+    "The Crane can counter a\nvariety of enemies, creating\nopenings for other units\nto advance."
+   ]
+  },
+  {
+   "type": 10,
+   "name": "Brontes",
+   "short": "Heavy Bomber",
+   "info": [
+    "   Bomb\n   and Move",
+    "Heavy Bomber\n\nArmed with a large anti-ship\ntorpedo.\nMobility and defense change\ndepending on payload.",
+    "The most powerful counter to\nwarships. It becomes a prime\ntarget when carrying a pay-\nload and always requires\nsupport."
+   ]
+  },
+  {
+   "type": 11,
+   "name": "Brontes",
+   "short": "Heavy Bomber",
+   "info": [
+    "   Bomb\n   and Move",
+    "Heavy Bomber\n\nArmed with a large anti-ship\ntorpedo.\nMobility and defense change\ndepending on payload.",
+    "The most powerful counter to\nwarships. It becomes a prime\ntarget when carrying a pay-\nload and always requires\nsupport."
+   ]
+  },
+  {
+   "type": 12,
+   "name": "Horus",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 13,
+   "name": "Horus",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 14,
+   "name": "Vulcan",
+   "short": "Pulse Gunboat",
+   "info": [
+    "   Ranged\n   Attack II",
+    "Pulse Gunboat\n\nArmed with a long-range pulse\nbeam cannon\n\nCan't fire after moving",
+    "The Vulcan uses active radar\nto accurately target and shoot\ndown distant enemies. Its\nattack power is immense and\nposes a significant threat to\nHunters."
+   ]
+  },
+  {
+   "type": 15,
+   "name": "Phoibos",
+   "short": "Rail Gunboat",
+   "info": [
+    "   Ranged\n   Attack II",
+    "Rail Gunboat\n\nArmed with two four-barreled\nbattleship-grade railcannons\n\nCan't fire after moving",
+    "It attacks from outside the\nrange of rapid-fire weapons\nto counter enemy warships,\nbut is always vulnerable to\nHunters and fighters."
+   ]
+  },
+  {
+   "type": 16,
+   "name": "Cyclops",
+   "short": "Missile Boat",
+   "info": [
+    "   Ranged\n   Attack II",
+    "Missile Boat\n\nArmed with both rapid-fire and\narmor-piercing long-range\nmissile launchers",
+    "The long range of its missiles\nallows the Cyclops to attack\nfrom behind obstacles before\nit can be targeted"
+   ]
+  },
+  {
+   "type": 17,
+   "name": "Pandora",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 18,
+   "name": "Wisp",
+   "short": "Space Mine",
+   "info": [
+    "   No Attack",
+    "Space Mine\n\nUsed to delay enemy movement.\nVulnerable to rapid-fire\nattacks.\nDeployed by transport ships.",
+    "A common strategy is to stop\nan enemy invasion with Wisps\nand then shell the area with\nlong-range weapons as the\nenemies try to clear the\nmines."
+   ]
+  },
+  {
+   "type": 19,
+   "name": "Remora",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 20,
+   "name": "Echidna",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 21,
+   "name": "Naga",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 22,
+   "name": "Rockeye",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 23,
+   "name": "Dragon",
+   "short": "Beam Turret",
+   "info": [
+    "",
+    "Beam Turret\n\nA long-range beam cannon that\ncan be installed on fortress\ndecks, asteroids and bedrock.\nTransported as cargo.",
+    "The Dragon has long range and\ngreat attack power. However,\nit is unusable in magnetic\nfields."
+   ]
+  },
+  {
+   "type": 24,
+   "name": "Hydra",
+   "short": "Missile Turret",
+   "info": [
+    "",
+    "Missile Turret\n\nArmed with long-range rapid-\nfire missiles.\nThe strongest counter to\nfighters and Hunters.",
+    "The Hydra can intercept enemy\nHunters outside of their en-\ngagement range.\nIts primary functions are\nfortress defense and sup-\nporting the front line."
+   ]
+  },
+  {
+   "type": 25,
+   "name": "Rahab",
+   "short": "Train Cannon",
+   "info": [
+    "   Moves on\n   Rails",
+    "Train Cannon\n\nArmed with both rapid-fire\nand armor-piercing beam\ncannons",
+    "Moves on a railway network\ninstalled on a fortress deck.\nRather than an independent\nunit, it can be seen as a\npart of the fortress itself."
+   ]
+  },
+  {
+   "type": 26,
+   "name": "Crab",
+   "short": "Transport Ship",
+   "info": [
+    "   Transport",
+    "Transport Ship\n\nThe Crab is fast and can load\na small unit into its cargo\nbay.",
+    "It also transports space mines\nand turrets to their deploy-\nment area. Slow-moving units\ncan be brought to the front\nline.\nCan't attack while full."
+   ]
+  },
+  {
+   "type": 27,
+   "name": "Crab",
+   "short": "Transport Ship",
+   "info": [
+    "   Transport",
+    "Transport Ship\n\nThe Crab is fast and can load\na small unit into its cargo\nbay.",
+    "It also transports space mines\nand turrets to their deploy-\nment area. Slow-moving units\ncan be brought to the front\nline.\nCan't attack while full."
+   ]
+  },
+  {
+   "type": 28,
+   "name": "Camelii",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 29,
+   "name": "Camelii",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 30,
+   "name": "Tiamat",
+   "short": null,
+   "info": [
+    "   Large\n   Warship",
+    "Battleship\n\nArmed with four triple-barrel\nbeam cannons and thirty-two\npulsebeam point-defense\nturrets.",
+    "The Tiamat is often used as\nthe primary attack vessel\nagainst ships and fortresses\nand also commonly serves as\nthe flagship of a fleet."
+   ]
+  },
+  {
+   "type": 31,
+   "name": "Asura-Ii",
+   "short": null,
+   "info": [
+    "   Large",
+    "Advanced Battleship\n\nArmed with two four-barrel\nrailguns as main cannons and\nten rapid-fire missile pods.\nThe strongest battleship.",
+    "The Asura-II can move as fast\nas a cruiser while attacking\nwith the full power of a\nbattleship.\nIt often serves as the flag-\nship of a fleet."
+   ]
+  },
+  {
+   "type": 32,
+   "name": "Nodens",
+   "short": null,
+   "info": [
+    "   Large",
+    "Fortified Battleship\n\nArmed with five large internal\nmissile tubes\nTurretless design enables\nextra armor-plating",
+    "The Nodens' entire hull is\nreinforced with special armor\nlayers, providing exceptional\nprotection to its powerful\nmissile launchers. It's very\nhard to destroy."
+   ]
+  },
+  {
+   "type": 33,
+   "name": "Hastur",
+   "short": null,
+   "info": [
+    "   Carrier\n   Large",
+    "Cruiser-Carrier\n\nArmed with four main beam\ncannons and railguns for\nprotection",
+    "The Hastur combines the fire-\npower of a cruiser with the\nsupport abilities of a\ncarrier.\nIt's vulnerable to enemies\nat close range."
+   ]
+  },
+  {
+   "type": 34,
+   "name": "Artemis",
+   "short": null,
+   "info": [
+    "   Carrier\n   Large",
+    "Catapult Carrier\n\nLarge carrier with two flight\ndecks and a launch catapult\nfor a two hex boost",
+    "Deployed as a mobile base\nbehind the front line.\n\nThe Artemis can launch up to\neighteen units at once."
+   ]
+  },
+  {
+   "type": 35,
+   "name": "Iris",
+   "short": null,
+   "info": [
+    "   Carrier\n   Large",
+    "Carrier\n\nArmed with medium-range rapid-\nfire missiles",
+    "The Iris is used as a front-\nline base for Hunter and\nfighter operations.\n\nAs its defenses are weak, it\nrequires escort vessels."
+   ]
+  },
+  {
+   "type": 36,
+   "name": "Siren",
+   "short": null,
+   "info": [
+    "   Carrier\n   Convert",
+    "Convertible Carrier\n(Carrier Mode)\n\nIn carrier mode, the main guns\nare rotated below the flight\ndeck, so they can't be fired",
+    "As each of the modes has its\nown strengths and weaknesses,\nthe Siren must always consider\nwhat the tactical situation\nrequires."
+   ]
+  },
+  {
+   "type": 37,
+   "name": "Siren",
+   "short": null,
+   "info": [
+    "   Carrier\n   Convert",
+    "Convertible Carrier\n(Battleship Mode)\nIn battleship mode, the main\nguns are deployed on the\nflight deck, so units can't\nlaunch or land",
+    "As each of the modes has its\nown strengths and weaknesses,\nthe Siren must always consider\nwhat the tactical situation\nrequires."
+   ]
+  },
+  {
+   "type": 38,
+   "name": "Selene",
+   "short": null,
+   "info": [
+    "   Carrier\n   Large",
+    "Fast Carrier\n\nWith a design focussed on\nmobility, its movement speed\nsurpasses that of cruisers.",
+    "Its speed allows the Selene\nto flank enemy positions, re-\ncover and repair damaged units\nand operate beyond the front\nline."
+   ]
+  },
+  {
+   "type": 39,
+   "name": "Hannibal",
+   "short": "Heavy Cruiser",
+   "info": [
+    "",
+    "Heavy Cruiser\n\nArmed with three medium-range\narmor-piercing beam turrets\nand twenty-eight rapid-fire\nrailguns for point-defense",
+    "A mainstay of fleet battles\nand support operations, the\nHannibal serves as a fire\nsupport and escort vessel."
+   ]
+  },
+  {
+   "type": 40,
+   "name": "Regulus",
+   "short": "Escort Cruiser",
+   "info": [
+    "",
+    "Escort Cruiser\n\nArmed with thirty-eight pulse\nbeam turrets and several\nmissile pods",
+    "The Regulus screens the fleet\nfrom Hunters and fighters.\n\nIt is mainly used to escort\ncarriers, but can also assault\nHunter squadrons on its own."
+   ]
+  },
+  {
+   "type": 41,
+   "name": "Palmyra",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 42,
+   "name": "Corvus",
+   "short": "Claw Cruiser",
+   "info": [
+    "   Melee",
+    "Claw Cruiser\n\nArmed with melee claws, rail-\ngun cannons and several point-\ndefense turrets",
+    "The Corvus can eject remote-\ncontrolled claws to attack\nenemy Hunters and warships.\n\nIt is the only capital ship\ncapable of close combat."
+   ]
+  },
+  {
+   "type": 43,
+   "name": "Abaddon",
+   "short": "Quantum Bomber",
+   "info": [
+    "   Quantum\n   Bomb",
+    "Quantum Bomber\n\nCarries one Quantum Decimator\nbomb",
+    "The bomb's attack power can't\nbe reduced unless the ship is\ndestroyed.\nThe Decimator annihilates\nall units and terrain in a two\nhex radius."
+   ]
+  },
+  {
+   "type": 44,
+   "name": "Abaddon",
+   "short": "Quantum Bomber",
+   "info": [
+    "   Quantum\n   Bomb",
+    "Quantum Bomber\n\nCarries one Quantum Decimator\nbomb",
+    "The bomb's attack power can't\nbe reduced unless the ship is\ndestroyed.\nThe Decimator annihilates\nall units and terrain in a two\nhex radius."
+   ]
+  },
+  {
+   "type": 45,
+   "name": "Msnp-Ii",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 46,
+   "name": "Msnp-Ii",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 47,
+   "name": "Msfb-5",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 48,
+   "name": "Msfb-5",
+   "short": null,
+   "info": null
+  },
+  {
+   "type": 49,
+   "name": "Fenrir",
+   "short": "Interdiction Destroyer",
+   "info": [
+    "   Fire and\n   Move",
+    "Interdiction Destroyer\n\nArmed with four eight-barrel\nturrets for a total of thirty-\ntwo guns\nExcels at hit-and-run tactics",
+    "Utilizing its high mobility,\nthe Fenrir is capable of con-\nducting preemptive attacks\nagainst enemy Hunters while\nmaneuvering difficult terrain."
+   ]
+  },
+  {
+   "type": 50,
+   "name": "Cerberus",
+   "short": "Light Destroyer",
+   "info": [
+    "   Fire and\n   Move",
+    "Light Destroyer\n\nArmed with two eight-barrel\nrapid-fire railguns and six\nmissile tubes",
+    "It packs less attack power\nthan other destroyers and is\noften used to deliver the\nfinishing blow to damaged\nenemy vessels."
+   ]
+  },
+  {
+   "type": 51,
+   "name": "Gulon",
+   "short": "Assault Destroyer",
+   "info": [
+    "   Fire and\n   Move",
+    "Assault Destroyer\n\nArmed with a fixed quadruple\nrailgun and small short-range\nmissile pods",
+    "The Gulon is a shock unit that\nrushes into the heart of enemy\nformations, hits a vulnerable\nship with a massive blast and\nwithdraws before they can re-\ntaliate."
+   ]
+  },
+  {
+   "type": 52,
+   "name": "Pergamon",
+   "short": null,
+   "info": [
+    "   Def. Fire\n   Repairs",
+    "Space Dock\n\nCan be captured by reducing\nits HP to zero with rapid-\nfire or melee attacks",
+    "Units other than battleships\nand carriers can enter an\nallied dock to receive main-\ntenance and repairs"
+   ]
+  },
+  {
+   "type": 53,
+   "name": "Solomon",
+   "short": null,
+   "info": [
+    "   Defensive\n   Fire only",
+    "Small Sector Fortress\n\nVulnerable to armor-piercing,\nmelee and bombing attacks.",
+    "A sector fortress serves as\nthe local command center and\nmilitary headquarters."
+   ]
+  },
+  {
+   "type": 54,
+   "name": "Carthago",
+   "short": null,
+   "info": [
+    "   Defensive\n   Fire only",
+    "Medium Sector Fortress\n\nVulnerable to armor-piercing,\nmelee and bombing attacks.",
+    "Carthago is equipped with\nextra armor plates to allow\ndeployment at the front line.\n\nIt can serve as a command cen-\nter even while under fire."
+   ]
+  },
+  {
+   "type": 55,
+   "name": "Goliath",
+   "short": null,
+   "info": [
+    "   Defensive\n   Fire only",
+    "Large Sector Fortress\n\nVulnerable to armor-piercing,\nmelee and bombing attacks.",
+    "The Goliath fortress is\nheavily armored and armed with\npowerful cannons for reaction\nfire.\nIt's advisable to attack it\nfrom a safe distance."
+   ]
+  },
+  {
+   "type": 56,
+   "name": "Cortex",
+   "short": null,
+   "info": [
+    "   Unarmed",
+    "Command Center\n\nVulnerable to armor-piercing,\nmelee and bomb attacks",
+    "A field headquarters that co-\nordinates all troop movement.\nLarger areas require more than\none command center."
+   ]
+  },
+  {
+   "type": 57,
+   "name": "Adzam",
+   "short": null,
+   "info": [
+    "   Buccaneer\n   Cannon",
+    "Command Center which controls\nthe Buccaneer Cannon\n\nVulnerable to armor-piercing,\nmelee and bomb attacks",
+    "Destroying Adzam will prevent\nthe Buccaneer Cannon from\nfiring"
+   ]
+  }
+ ],
+ "labels": [
+  "The Union has destroyed\nGalt's command center.",
+  "The Union has completely\nannihilated the forces\nof the Galt Empire.",
+  "The Union has destroyed\nthe fortress of the Galt\nEmpire.",
+  "The Union's perfect\nstrategy scatters the\nGalt fleet in space.",
+  "Relentless Union\nassaults destroyed\nGalt's battleship.",
+  "The Union's superior\nstrategy overcame Galt's\ncarrier.",
+  "All of Galt's carriers\nhave been destroyed.",
+  "The loss of their flag-\nship has routed Galt's\nforces.",
+  "After losing all command\ncenters, the Galt forces\nhave surrendered.",
+  "What now?",
+  "Restart Mission",
+  "Main Menu",
+  "Save",
+  "Load",
+  "\nUnits Destroyed",
+  "\nUnits Survived",
+  "\nUnits Lost",
+  "\nDocks Captured",
+  "\nStage Win Bonus",
+  " Total\nVictory Points",
+  " Map\nVictory Points",
+  "Save progress?",
+  "Save",
+  "Don't Save",
+  "Save Game\nSelect Slot",
+  "File1",
+  "File2",
+  "Old data will be\noverwritten",
+  "Yes",
+  "No",
+  "Progress will be\nlost\nAre you sure?",
+  "Save complete",
+  "Next Map",
+  "Quit",
+  "Game not saved\nWhat now?",
+  "Map",
+  "Saved",
+  "Thanks for playing",
+  "0",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "Select file",
+  "Load",
+  "Load complete",
+  "Hellhound",
+  "Phoenix",
+  "Pegasus",
+  "Unicorn",
+  "Salamander",
+  "Griffon",
+  "Skeleton",
+  "Fire Eagle",
+  "Falcon",
+  "Solar Bird",
+  "Wild Tiger",
+  "Star Wolf",
+  "Mad Shark",
+  "Silent Fox",
+  "Shadow Bat",
+  "Moon Rat",
+  "Map",
+  "The Union forces perish\nbefore the might of\nGalt's Imperial Fleet.",
+  "Operation Hercules, a\nrebel strike intended\nto give Earth a fighting\nchance, ends in disaster.",
+  "Soon after, the govern-\nment of the Terran Union\ndeclares its uncondi-\ntional surrender to the\nGalt Empire.",
+  "Thus begins Emperor\nAhriman's long reign\nover all of mankind.",
+  "The Terran Union's\ndesperate attack\ncrumbles before the\nmighty Imperial Fleet\nof Galt.",
+  "Thus, Operation Erebos,\nthe plan to capture\nGrand Fortress Basilisk,\nends in failure.",
+  "The remnants of the\nUnion's fleet are un-\nable to stop the relent-\nless counterattack of\nthe Imperial Fleet.",
+  "Once again, Emperor\nAhriman accepts the\ntotal surrender of the\nTerran Union.",
+  "Shortly afterwards, the\ngovernment of the Terran\nUnion declares its\nunconditional surrender\nto the Galt Empire.",
+  "The fleet of the Terran\nUnion crumbles before\nthe desperate counter-\nattack of the cornered\nGalt forces.",
+  "The operation to capture\nBalam, the capital as-\nteroid of F3 Galt, has\nfailed.",
+  "With the failure of\nOperation Ragnarok the\ninitiative returns to\nthe Galt Empire.",
+  "Slowly but surely, the\nTerran Union loses con-\ntrol of the war.",
+  "It probably won't be\nlong before Ahriman's\nlaughter echoes through-\nout the entire galaxy.",
+  "Operation Yahweh, the\nplan to destroy the\nsuperdreadnought Baby-\nlon, ends in failure.",
+  "Ahriman is able to play\nhis trump card. Babylon\nreveals itself in\nEarth's orbit.",
+  "Turning Babylon's fear-\nsome cannons against the\ncities of Earth, Galt\nEmperor Ahriman demands\nthe Terran Union's\nsurrender.",
+  "The government of the\nTerran Union has no\nchoice but to accept his\nterms.",
+  "And so the Galt War\ncomes to its worst\npossible conclusion.",
+  "ALERT\n\nGalt reinforcements\nare arriving in\nthis sector!",
+  "INFORMATION\n\nUnion reinforce-\nments are ap-\nproaching this\nsector!",
+  "Afterburner fuel\ndepleted.\n\nDetach the\nburner module.",
+  "Buccaneer Cannon\nfiring in\n** turns",
+  "Buccaneer Cannon\nfully charged!\nAll ships,\nmaintain standoff\ndistance!",
+  "ALERT *** ALERT\nComet is approach-\ning the sector",
+  "Comet passing\nthrough!\nAll units, clear\nthe path of the\ncomet!",
+  "Babylon enters\nEarth's orbit in\n** turns",
+  "",
+  "",
+  "Hamilton Must\nStand Fast",
+  "Operation Gallun\nBreakthrough",
+  "Escape from\nBertram",
+  "Insurrection at\nFort Rucker",
+  "The Raymond\nCampaign",
+  "Uniting the\nFleet",
+  "Fortune Smiles\nat Le Guin",
+  "The Defense of\nF1 Olympos",
+  "Battle at the\nGate of Eden",
+  "Into the\nLion's Den",
+  "Not on\nNorton's Watch",
+  "The Blockade\nof Van Vogt",
+  "Ambush at\nArthur's Belt",
+  "Skirmish at\nMoore's Star",
+  "Foundry\nLuggnagg",
+  "In the Shadows\nof Verne Docks",
+  "Flight of the\nRaven",
+  "Basked in\nEarthlight",
+  "As Hope\nFades",
+  "The Buccaneer\nCannon",
+  "A Goddess\nDescends",
+  "Pandora\nParallax",
+  "Warships\nwithout Turrets",
+  "A Wish upon a\nShooting Star",
+  "Assault on\nAlfred",
+  "New Paths\nthrough Aldiss",
+  "Standoff at\nDerleth",
+  "Showdown at\nBalam",
+  "The Shipyards\nof Asgard",
+  "Render unto\nBabylon",
+  "Destroy The\nEnemy\nCommand\nCenter",
+  "Destroy All\nEnemy\nForces",
+  "Destroy The\nEnemy\nFortress",
+  "Destroy All\nEnemy Ships",
+  "Destroy The\nEnemy\nBattleship",
+  "Destroy The\nEnemy\nCarrier",
+  "Destroy The\nEnemy\nCarrier\nGroup",
+  "Destroy the\nEnemy\nAsura-II",
+  "Destroy All\nEnemy\nCommand\nCenters",
+  "Destroy The\nEnemy\nCommand\nCenter and\nFortifica-\ntions",
+  "Union",
+  "Galt",
+  "\"I didn't think I would see\nBabylon lose…\nBut this is not the end!\nSome day… Surely…\"",
+  "Babylon spins out of control\nand is pulled down by\nEarth's gravity.",
+  "Its descent can no longer be\nstopped.",
+  "Superdreadnought Babylon\nhas not once spewed fire\nfrom its main cannon.",
+  "Along with the dreams\nof Emperor Ahriman, it\nfalls from the sky and\nis swallowed by the sea.",
+  "All Missions Completed\n\nReturn to Your\nHome Foundry"
+ ],
+ "main": [
+  "Out of move range",
+  "Out of range",
+  "No attack target",
+  "Enemy unit",
+  "Not done yet",
+  "It is the 22nd century.\n\nMankind has unified Earth and\nreaches for the stars.",
+  "Earth's orbit is bustling\nwith colonies and factories\nbuilt on drifting asteroids.",
+  "Already two-thirds of Earth's\npopulation have left the\nplanet to live in space.",
+  "The clusters of developed\nasteroids are called\nFoundries.\n\nSeven Foundries have been\nconstructed in total.",
+  "Their names: Olympos, Eden,\nGalt, Arcadia, Atlantis,\nLuggnagg and Asgard.",
+  "\"Target acquired for main gun!\"",
+  "\"Main gun ready to fire!\"",
+  "\"Understood! Fire!\"",
+  "   Melee",
+  "Combat Hunter\n\nArmed with a beamgun and a\nmonoblade for melee combat",
+  "The Mars requires support from\nother unit types to be effec-\ntive. It relies on flanking\nand support effects.",
+  "   Artillery\n   Melee",
+  "Artillery Hunter\n\nArmed with a medium-range\nrailgun and a forcehammer for\nmelee combat",
+  "The Titan strikes enemies from\na distance, then rushes in to\nfinish them in close combat.",
+  "   Melee",
+  "Close Combat Hunter\n\nArmed with an overcharged\nbeamsaber and light beamguns\non both arms",
+  "The Talos tries to engage\nenemies in melee combat, but\nsince it relies entirely on\nbeam weapons, this unit is\ncompletely ineffective in\nmagnetic fields.",
+  "   Melee",
+  "Fire Support Hunter\n\nArmed with a huge rapid-fire\nmissile launcher on its head\nand a shockflail for melee\ncombat",
+  "The Medusa's primary role is\nthe defense of fortresses and\ncapital ships. The exposed\nmissile pods are both its\ngreatest strength and weak-\nness.",
+  "   Convert\n   Bomb",
+  "Convertible Hunter\n(Fighter-Bomber Mode)\n\nArmed with a rapid-fire rail-\ngun and one anti-ship torpedo",
+  "The fighter-bomber form has\nbetter mobility and bombard-\nment capability, whereas the\nHunter form is more versatile\nand can fight in melee.",
+  "   Convert\n   Melee",
+  "Convertible Hunter\n(Hunter Mode)\n\nArmed with a rail rifle\nand a monosaber for melee\ncombat",
+  "The fighter-bomber form has\nbetter mobility and bombard-\nment capability, whereas the\nHunter form is more versatile\nand can fight in melee.",
+  "",
+  "Interceptor\n\nArmed with twin pulse beam\ncannons",
+  "Excellent speed and attack\nagainst fighters and Hunters.\nIt can be used to gain super-\niority in an area and deny\nenemy operations.",
+  "",
+  "Heavy Fighter\nA more versatile unit than the\nLobster, the Crane is armed\nwith both a light railgun for\ndogfights and anti-ship\nmissile pods.",
+  "The Crane can counter a\nvariety of enemies, creating\nopenings for other units\nto advance.",
+  "   Bomb\n   and Move",
+  "Heavy Bomber\n\nArmed with a large anti-ship\ntorpedo.\nMobility and defense change\ndepending on payload.",
+  "The most powerful counter to\nwarships. It becomes a prime\ntarget when carrying a pay-\nload and always requires\nsupport.",
+  "   Ranged\n   Attack II",
+  "Pulse Gunboat\n\nArmed with a long-range pulse\nbeam cannon\n\nCan't fire after moving",
+  "The Vulcan uses active radar\nto accurately target and shoot\ndown distant enemies. Its\nattack power is immense and\nposes a significant threat to\nHunters.",
+  "   Ranged\n   Attack II",
+  "Rail Gunboat\n\nArmed with two four-barreled\nbattleship-grade railcannons\n\nCan't fire after moving",
+  "It attacks from outside the\nrange of rapid-fire weapons\nto counter enemy warships,\nbut is always vulnerable to\nHunters and fighters.",
+  "   Ranged\n   Attack II",
+  "Missile Boat\n\nArmed with both rapid-fire and\narmor-piercing long-range\nmissile launchers",
+  "The long range of its missiles\nallows the Cyclops to attack\nfrom behind obstacles before\nit can be targeted",
+  "   No Attack",
+  "Space Mine\n\nUsed to delay enemy movement.\nVulnerable to rapid-fire\nattacks.\nDeployed by transport ships.",
+  "A common strategy is to stop\nan enemy invasion with Wisps\nand then shell the area with\nlong-range weapons as the\nenemies try to clear the\nmines.",
+  "",
+  "Beam Turret\n\nA long-range beam cannon that\ncan be installed on fortress\ndecks, asteroids and bedrock.\nTransported as cargo.",
+  "The Dragon has long range and\ngreat attack power. However,\nit is unusable in magnetic\nfields.",
+  "",
+  "Missile Turret\n\nArmed with long-range rapid-\nfire missiles.\nThe strongest counter to\nfighters and Hunters.",
+  "The Hydra can intercept enemy\nHunters outside of their en-\ngagement range.\nIts primary functions are\nfortress defense and sup-\nporting the front line.",
+  "   Moves on\n   Rails",
+  "Train Cannon\n\nArmed with both rapid-fire\nand armor-piercing beam\ncannons",
+  "Moves on a railway network\ninstalled on a fortress deck.\nRather than an independent\nunit, it can be seen as a\npart of the fortress itself.",
+  "   Transport",
+  "Transport Ship\n\nThe Crab is fast and can load\na small unit into its cargo\nbay.",
+  "It also transports space mines\nand turrets to their deploy-\nment area. Slow-moving units\ncan be brought to the front\nline.\nCan't attack while full.",
+  "   Large\n   Warship",
+  "Battleship\n\nArmed with four triple-barrel\nbeam cannons and thirty-two\npulsebeam point-defense\nturrets.",
+  "The Tiamat is often used as\nthe primary attack vessel\nagainst ships and fortresses\nand also commonly serves as\nthe flagship of a fleet.",
+  "   Large",
+  "Advanced Battleship\n\nArmed with two four-barrel\nrailguns as main cannons and\nten rapid-fire missile pods.\nThe strongest battleship.",
+  "The Asura-II can move as fast\nas a cruiser while attacking\nwith the full power of a\nbattleship.\nIt often serves as the flag-\nship of a fleet.",
+  "   Large",
+  "Fortified Battleship\n\nArmed with five large internal\nmissile tubes\nTurretless design enables\nextra armor-plating",
+  "The Nodens' entire hull is\nreinforced with special armor\nlayers, providing exceptional\nprotection to its powerful\nmissile launchers. It's very\nhard to destroy.",
+  "   Carrier\n   Large",
+  "Cruiser-Carrier\n\nArmed with four main beam\ncannons and railguns for\nprotection",
+  "The Hastur combines the fire-\npower of a cruiser with the\nsupport abilities of a\ncarrier.\nIt's vulnerable to enemies\nat close range.",
+  "   Carrier\n   Large",
+  "Catapult Carrier\n\nLarge carrier with two flight\ndecks and a launch catapult\nfor a two hex boost",
+  "Deployed as a mobile base\nbehind the front line.\n\nThe Artemis can launch up to\neighteen units at once.",
+  "   Carrier\n   Large",
+  "Carrier\n\nArmed with medium-range rapid-\nfire missiles",
+  "The Iris is used as a front-\nline base for Hunter and\nfighter operations.\n\nAs its defenses are weak, it\nrequires escort vessels.",
+  "   Carrier\n   Convert",
+  "Convertible Carrier\n(Carrier Mode)\n\nIn carrier mode, the main guns\nare rotated below the flight\ndeck, so they can't be fired",
+  "As each of the modes has its\nown strengths and weaknesses,\nthe Siren must always consider\nwhat the tactical situation\nrequires.",
+  "   Carrier\n   Convert",
+  "Convertible Carrier\n(Battleship Mode)\nIn battleship mode, the main\nguns are deployed on the\nflight deck, so units can't\nlaunch or land",
+  "As each of the modes has its\nown strengths and weaknesses,\nthe Siren must always consider\nwhat the tactical situation\nrequires.",
+  "   Carrier\n   Large",
+  "Fast Carrier\n\nWith a design focussed on\nmobility, its movement speed\nsurpasses that of cruisers.",
+  "Its speed allows the Selene\nto flank enemy positions, re-\ncover and repair damaged units\nand operate beyond the front\nline.",
+  "",
+  "Heavy Cruiser\n\nArmed with three medium-range\narmor-piercing beam turrets\nand twenty-eight rapid-fire\nrailguns for point-defense",
+  "A mainstay of fleet battles\nand support operations, the\nHannibal serves as a fire\nsupport and escort vessel.",
+  "",
+  "Escort Cruiser\n\nArmed with thirty-eight pulse\nbeam turrets and several\nmissile pods",
+  "The Regulus screens the fleet\nfrom Hunters and fighters.\n\nIt is mainly used to escort\ncarriers, but can also assault\nHunter squadrons on its own.",
+  "   Melee",
+  "Claw Cruiser\n\nArmed with melee claws, rail-\ngun cannons and several point-\ndefense turrets",
+  "The Corvus can eject remote-\ncontrolled claws to attack\nenemy Hunters and warships.\n\nIt is the only capital ship\ncapable of close combat.",
+  "   Quantum\n   Bomb",
+  "Quantum Bomber\n\nCarries one Quantum Decimator\nbomb",
+  "The bomb's attack power can't\nbe reduced unless the ship is\ndestroyed.\nThe Decimator annihilates\nall units and terrain in a two\nhex radius.",
+  "   Fire and\n   Move",
+  "Interdiction Destroyer\n\nArmed with four eight-barrel\nturrets for a total of thirty-\ntwo guns\nExcels at hit-and-run tactics",
+  "Utilizing its high mobility,\nthe Fenrir is capable of con-\nducting preemptive attacks\nagainst enemy Hunters while\nmaneuvering difficult terrain.",
+  "   Fire and\n   Move",
+  "Light Destroyer\n\nArmed with two eight-barrel\nrapid-fire railguns and six\nmissile tubes",
+  "It packs less attack power\nthan other destroyers and is\noften used to deliver the\nfinishing blow to damaged\nenemy vessels.",
+  "   Fire and\n   Move",
+  "Assault Destroyer\n\nArmed with a fixed quadruple\nrailgun and small short-range\nmissile pods",
+  "The Gulon is a shock unit that\nrushes into the heart of enemy\nformations, hits a vulnerable\nship with a massive blast and\nwithdraws before they can re-\ntaliate.",
+  "   Def. Fire\n   Repairs",
+  "Space Dock\n\nCan be captured by reducing\nits HP to zero with rapid-\nfire or melee attacks",
+  "Units other than battleships\nand carriers can enter an\nallied dock to receive main-\ntenance and repairs",
+  "   Defensive\n   Fire only",
+  "Small Sector Fortress\n\nVulnerable to armor-piercing,\nmelee and bombing attacks.",
+  "A sector fortress serves as\nthe local command center and\nmilitary headquarters.",
+  "   Defensive\n   Fire only",
+  "Medium Sector Fortress\n\nVulnerable to armor-piercing,\nmelee and bombing attacks.",
+  "Carthago is equipped with\nextra armor plates to allow\ndeployment at the front line.\n\nIt can serve as a command cen-\nter even while under fire.",
+  "   Defensive\n   Fire only",
+  "Large Sector Fortress\n\nVulnerable to armor-piercing,\nmelee and bombing attacks.",
+  "The Goliath fortress is\nheavily armored and armed with\npowerful cannons for reaction\nfire.\nIt's advisable to attack it\nfrom a safe distance.",
+  "   Unarmed",
+  "Command Center\n\nVulnerable to armor-piercing,\nmelee and bomb attacks",
+  "A field headquarters that co-\nordinates all troop movement.\nLarger areas require more than\none command center.",
+  "   Buccaneer\n   Cannon",
+  "Command Center which controls\nthe Buccaneer Cannon\n\nVulnerable to armor-piercing,\nmelee and bomb attacks",
+  "Destroying Adzam will prevent\nthe Buccaneer Cannon from\nfiring",
+  "Open Space\n\nNo effect on movement or\nattacks",
+  "A dense concentration of\nmagnetic particles\n\nIt has no effect on movement,\nbut the strong magnetism com-\npletely disables beam weapons",
+  "A cluster of small rocks\n\nShips can't enter\nOther units have greatly re-\nduced movement",
+  "An asteroid belt\n\nShips can't enter\nTurrets can be deployed",
+  "Interstellar medium consisting\nof gas, dust and cosmic rays\n\nThe effect on each weapon\ntype is small, but the flow\nof particles slows down the\nmovement of all but the\nlargest vessels.",
+  "A random fluctuation of\ngalactic gravity fields\n\nLarge impact on railguns and\nmissiles\n\nHunters can't enter",
+  "Earth's atmosphere\n\nBecause of the increasing\ngravitational forces, units\ncan't attack",
+  "Solid asteroid rock suitable\nfor construction\n\nShips can't enter\nTurrets can be deployed",
+  "The deck of a floating\nfortress built on an asteroid\n\nSmall effect on movement and\nattack\nTurrets can be deployed",
+  "A railway for the Rahab turret\nbuilt into a fortress deck\n\nA Rahab can move only on\nthese railways\n\nIdentical to a fortress deck\nfor all other units",
+  "A defensive wall built on a\nfortress deck\n\nNo unit can enter\nNo shots can pass through",
+  "The tail of a comet\n\nEntry requires all movement\npoints\nUnits can't attack, but can be\nattacked",
+  "A comet\n\nNo unit can enter\nNo shots can pass through",
+  "Earth's gravity field\n\nNo unit can enter\nNo shots can pass through",
+  "Hull of the superdreadnought\nBabylon\n\nSmall effect on movement and\nattack\nAs ships can't enter, Hunters\nwill be required",
+  "Void",
+  "Magnetic\nField",
+  "Meteoroid\nField",
+  "Asteroid",
+  "Galactic\nPlasma",
+  "Gravity\nFlux",
+  "Atmo-\nsphere",
+  "Bedrock",
+  "Fortress\nDeck",
+  "Turret\nRailway",
+  "Fortress\nWall",
+  "Comet\nTail",
+  "Comet\nBody",
+  "Earth",
+  "Babylon\nHull",
+  "0",
+  "5",
+  "10",
+  "15",
+  "20",
+  "25",
+  "35",
+  "40",
+  "45",
+  "50",
+  "100",
+  "strategy",
+  "earthlight has many tricks",
+  "battleships,carriers",
+  "lots of map events",
+  "wait for full release",
+  "Load Game\nSelect Slot",
+  "No data to load",
+  "Load Complete\n\nResuming Battle",
+  "Game saved\nKeep playing?",
+  "Thank you for\nplaying!\n\nYou can turn off\nthe console",
+  "Save Game\nSelect Slot",
+  "File1",
+  "File2",
+  "OK to overwrite\nprevious data?",
+  "Yes",
+  "No",
+  "Map",
+  "0",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9"
+ ]
+}
