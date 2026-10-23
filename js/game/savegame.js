@@ -2,6 +2,8 @@
 // Save/Load on its "What now?" menu, labels 12/13). A battle is stored as its unit list;
 // object links (carrier, guard post, script stakes) are saved as unit ids.
 const PROGRESS = 'earthlight-campaign', BATTLE = 'earthlight-battle';
+// expansion battles (js/expansion/battle.js) keep their own slot, so they never replace a base-game save
+export const EXPANSION_BATTLE = 'earthlight-expansion-battle';
 
 const read = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
 const write = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } };
@@ -14,7 +16,7 @@ export function saveProgress(p) { return write(PROGRESS, p); }
 
 const UNIT_REFS = ['carrier', 'guard'];
 
-export function saveBattle(b, mission) {
+export function saveBattle(b, mission, key = BATTLE) {
   const id = (u) => (u ? u.id : null);
   const units = b.units.map((u) => {
     const o = { ...u };
@@ -22,11 +24,11 @@ export function saveBattle(b, mission) {
     return o;
   });
   const stakes = b.stakes.map((s) => ({ towers: s.towers.map(id), fortress: s.fortress.map(id), flagship: id(s.flagship), carriers: s.carriers.map(id) }));
-  return write(BATTLE, { mission, hard: b.hard, turn: b.turn, army: b.army, done: b.arrivals.map((e) => e.done), units, stakes, blasted: b.blasted || [], points: b.points || null, saved: Date.now() });
+  return write(key, { mission, hard: b.hard, turn: b.turn, army: b.army, done: b.arrivals.map((e) => e.done), units, stakes, blasted: b.blasted || [], points: b.points || null, saved: Date.now() });
 }
 
-export function savedBattle() { return read(BATTLE); }
-export function clearSavedBattle() { write(BATTLE, null); }
+export function savedBattle(key = BATTLE) { return read(key); }
+export function clearSavedBattle(key = BATTLE) { write(key, null); }
 
 // Puts a saved state into a Battle freshly built for the same map.
 export function restoreBattle(b, s) {

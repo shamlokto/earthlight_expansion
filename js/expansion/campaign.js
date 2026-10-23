@@ -29,14 +29,18 @@ export async function missionIndex() { return (await fetch(INDEX_URL)).json(); }
 // A new campaign starts with the first mission's own player units as the roster.
 export function newCampaign(firstMission) {
   let id = 0;
-  const roster = firstMission.units.filter((u) => u.army === 0 && !u.neutral).map((u) => ({ id: id++, type: u.type, level: 0 }));
-  const g = firstMission.general && firstMission.units.findIndex((u) => u.x === firstMission.general.x && u.y === firstMission.general.y);
-  return { version: 1, next: 0, nextId: id, roster, supply: 0, builds: 0, general: g >= 0 ? roster[g]?.id ?? null : null, deploy: null, history: [] };
+  const own = firstMission.units.filter((u) => u.army === 0 && !u.neutral), gen = firstMission.general;
+  const roster = own.map((u) => ({ id: id++, type: u.type, level: 0 }));
+  const g = gen ? own.findIndex((u) => u.x === gen.x && u.y === gen.y) : -1;
+  return { version: 1, next: 0, nextId: id, roster, supply: 0, builds: 0, general: g >= 0 ? roster[g].id : null, deploy: null, history: [] };
 }
 
-// Free replacement Athena when the roster has none (decided: Athena is always available).
+// Free replacement when the last Athena was lost in battle (decided: a lost Athena is replaced
+// for free). Trading it away earns no replacement.
+const isAthena = (type) => type >= 4 && type <= 7;
 export function ensureAthena(s) {
-  if (s.roster.some((r) => r.type >= 4 && r.type <= 7)) return false;
+  if (!s.athenaLost || s.roster.some((r) => isAthena(r.type))) return false;
+  s.athenaLost = false;
   s.roster.push({ id: s.nextId++, type: ATHENA, level: 0 });
   return true;
 }
@@ -61,14 +65,24 @@ export function trade(s, types, giveIds, type) {
   return true;
 }
 
-// The mission as game.html should play it: its player units are deployment slots, filled in
-// order with the deployed roster machines (cap = the mission's cap, or the number of slots).
+// The mission as game.html should play it: its player units are deployment slots, filled with
+// the deployed roster machines (cap = the mission's cap, or the number of slots). A machine only
+// takes a slot whose terrain it can enter (`canStand`, from battle.js): the general's machine
+// first, then those with the fewest usable slots; one with no usable slot left stays home.
 // Units marked `joiner` stay as they are and join the roster if they survive.
-export function applyRoster(mission, s) {
+export function applyRoster(mission, s, canStand = () => true) {
   const slots = mission.units.filter((u) => u.army === 0 && !u.neutral && !u.joiner);
   const chosen = (s.deploy || s.roster.map((r) => r.id)).map((id) => s.roster.find((r) => r.id === id)).filter(Boolean).slice(0, slots.length);
   const others = mission.units.filter((u) => !slots.includes(u));
-  const placed = chosen.map((r, i) => ({ ...slots[i], type: r.type, level: r.level, rosterId: r.id, cargo: [] }));
+  const usable = new Map(chosen.map((r) => [r, slots.filter((sl) => canStand(r.type, sl.x, sl.y)).length]));
+  const order = [...chosen].sort((a, b) => (b.id === s.general) - (a.id === s.general) || usable.get(a) - usable.get(b));
+  const free = [...slots], placed = [];
+  for (const r of order) {
+    const i = free.findIndex((sl) => canStand(r.type, sl.x, sl.y));
+    if (i < 0) continue;
+    placed.push({ ...free[i], type: r.type, level: r.level, rosterId: r.id, cargo: [] });
+    free.splice(i, 1);
+  }
   const g = placed.find((u) => u.rosterId === s.general);
   return { ...mission, units: [...placed, ...others], general: g ? { x: g.x, y: g.y } : null };
 }
@@ -79,13 +93,15 @@ export const deployCap = (mission) => Math.min(mission.cap || 99, mission.units.
 // other player unit still alive (joiners, captured dock cargo) joins the roster. Supply grows
 // from the score. Production and trade reset for the next intermission.
 export function finish(s, battle, points, missionNo) {
-  // on an escape map, whoever is still on it when the general gets away is left behind
-  const escape = battle.mission.objective?.kind === 'escape';
+  // on an escape map, whoever is still on it when the general gets away is left behind (a map
+  // won another way, by wiping out the Union, keeps everyone)
+  const escape = battle.result?.reason === 'escape';
   const out = (u) => u.hp > 0 && (!escape || u.escaped);
   const alive = battle.units.filter((u) => u.army === 0 && out(u) && u.type < STRUCTURE && !u.exit);
   const kept = [];
   for (const r of s.roster) {
     const deployed = battle.units.find((u) => u.rosterId === r.id);
+    if (deployed && !out(deployed) && isAthena(deployed.type)) s.athenaLost = true;
     if (!deployed) kept.push(r);                                   // stayed home
     else if (out(deployed)) kept.push({ ...r, type: baseForm(battle, deployed.type), level: deployed.general ? r.level : deployed.level });
   }

@@ -8,6 +8,7 @@ import { allUnitTypes } from '../units.js';
 import { applyBps } from '../bps.js';
 import { readEnglish } from '../text.js';
 import * as C from './campaign.js';
+import { clearSavedBattle, EXPANSION_BATTLE } from '../game/savegame.js';
 
 const $ = (id) => document.getElementById(id);
 let rom, pal, types, en = null, index, state, next = null, picked = new Set();
@@ -101,6 +102,7 @@ function wire(cap) {
     // the general's machine must deploy if the general boards
     if (state.general !== null && !state.deploy.includes(state.general)) state.deploy = [state.general, ...state.deploy].slice(0, cap);
     save();
+    clearSavedBattle(EXPANSION_BATTLE);   // a new launch never resumes an older saved battle
     location.href = `game.html?mission=${encodeURIComponent(entry().file)}&no=${state.next}&campaign=1`;
   };
   $('restart').onclick = async () => { if (!confirm('Start over from mission 1?')) return; await startNew(); render(); };
