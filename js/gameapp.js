@@ -95,6 +95,9 @@ async function boot() {
   $('status').textContent = en ? 'English patch loaded' : 'Japanese ROM: add the English patch (☰ → ROM & patch) for the story and briefings';
   wire();
   if ((custom = await expansionFromUrl(rom, types))) {
+    // expansion battles use the expansion's own unit data and text (js/expansion/data); the ROM
+    // (and the patched ROM for the info screen's English graphics) only draws and plays them
+    types = custom.types; en = { ...(en || {}), ...custom.text };
     const s = savedBattle(EXPANSION_BATTLE), title = custom.mission.title || custom.mission.name;
     const brief = () => story(custom.briefing(), title, () => { silence(); startMission(-1); }, { art: true, song: briefingSong(custom.musicMap) });
     if (s && s.mission === custom.url) choose(title, `You have a saved battle of this mission (turn ${s.turn}).`, 'Resume', 'Start over', () => resumeExpansion(s), brief);
