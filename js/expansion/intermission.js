@@ -32,8 +32,9 @@ function render() {
   if (!state.deploy) state.deploy = state.roster.slice(0, cap).map((r) => r.id);
   const deployed = new Set(state.deploy), value = (ids) => [...ids].reduce((t, id) => t + C.price(types, state.roster.find((r) => r.id === id).type), 0);
   const tradeValue = value(picked);
-  let html = `<div class="box stats"><span>Mission <b>${e ? e.no : '—'}</b> / ${index.missions.length}</span><span>Supply <b>${state.supply}</b></span>
-    <span>Built this intermission <b>${state.builds}</b> / ${C.MAX_BUILDS}</span><span>Machines <b>${state.roster.length}</b></span></div>`;
+  const beta = C.beta(state);
+  let html = `<div class="box stats"><span>Mission <b>${e ? e.no : '—'}</b> / ${index.missions.length}</span><span>Supply <b>${beta ? '∞' : state.supply}</b>${beta ? ' <span class="muted">beta</span>' : ''}</span>
+    <span>Built this intermission <b>${state.builds}</b>${beta ? '' : ` / ${C.MAX_BUILDS}`}</span><span>Machines <b>${state.roster.length}</b></span></div>`;
 
   if (!e) html += `<div class="box"><h2>Campaign complete</h2><p>The Union leadership has fallen.</p></div>`;
   else {
@@ -58,16 +59,17 @@ function render() {
   html += `</table><div class="row"><label><input type="radio" name="general" data-general="none" ${state.general === null ? 'checked' : ''}> General stays home</label>
     <span class="muted">Aboard: evasion ×2 (max 96), power ×2, level 9. If that unit is destroyed, the game is over.</span></div></div>`;
 
-  html += `<div class="two"><div class="box"><h2>Production</h2><p class="muted">Up to ${C.MAX_BUILDS} machines per intermission, paid with supply. Each comes with a new pilot at level 0.</p><div class="shop">`;
-  for (const t of unlocked().map((k) => types[k])) {
-    const cost = C.price(types, t.type), ok = state.supply >= cost && state.builds < C.MAX_BUILDS;
+  html += `<div class="two"><div class="box"><h2>Production</h2><p class="muted">${beta ? 'Beta: every machine type, free and without limit.' : `Up to ${C.MAX_BUILDS} machines per intermission, paid with supply.`} Each comes with a new pilot at level 0.</p><div class="shop">`;
+  for (const t of beta ? C.marketTypes(types) : unlocked().map((k) => types[k])) {
+    const cost = C.price(types, t.type), ok = beta || (state.supply >= cost && state.builds < C.MAX_BUILDS);
     html += `<button class="btn" data-build="${t.type}" ${ok ? '' : 'disabled'}>${icon(t.type)}<span>${esc(name(t.type))}<br><span class="muted">${cost} supply</span></span></button>`;
   }
-  html += `</div></div><div class="box"><h2>Trade</h2><p class="muted">Tick machines in the roster to give (worth <b>${tradeValue}</b>). You get one machine worth up to that; the best pilot moves to it.</p>
-    <div class="row"><select id="tradeFor">${C.marketTypes(types).map((t) => `<option value="${t.type}" ${C.price(types, t.type) > tradeValue ? 'disabled' : ''}>${esc(name(t.type))} · ${C.price(types, t.type)}</option>`).join('')}</select>
+  html += `</div></div><div class="box"><h2>Trade</h2><p class="muted">Tick machines in the roster to give (worth <b>${tradeValue}</b>). You get one machine ${beta ? 'of any type (beta)' : 'worth up to that'}; the best pilot moves to it.</p>
+    <div class="row"><select id="tradeFor">${C.marketTypes(types).map((t) => `<option value="${t.type}" ${!beta && C.price(types, t.type) > tradeValue ? 'disabled' : ''}>${esc(name(t.type))} · ${C.price(types, t.type)}</option>`).join('')}</select>
     <button class="btn" id="tradeBtn" ${picked.size ? '' : 'disabled'}>Trade</button></div></div></div>`;
 
   html += `<div class="box"><h2>Campaign</h2><p class="muted">Progress saves automatically in this browser. Repairs between battles are free.</p>
+    <div class="row"><label><input type="checkbox" id="beta" ${beta ? 'checked' : ''}> Beta testing: unlimited supply, every machine, trades at any price</label></div>
     <div class="row"><button class="btn" id="restart">Start a new campaign</button></div></div>`;
   $('app').innerHTML = html;
   fillIcons();
@@ -93,6 +95,7 @@ function wire(cap) {
     clearSavedBattle(EXPANSION_BATTLE);   // a new launch never resumes an older saved battle
     location.href = `game.html?mission=${encodeURIComponent(entry().file)}&no=${state.next}&campaign=1`;
   };
+  $('beta').onchange = (ev) => { state.beta = ev.target.checked; save(); render(); };
   // two clicks to start over (embedded viewers can suppress confirm() dialogs)
   $('restart').onclick = async () => {
     if ($('restart').dataset.armed !== '1') { $('restart').dataset.armed = '1'; $('restart').textContent = 'Click again to start over from mission 1'; return; }

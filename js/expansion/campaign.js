@@ -45,10 +45,16 @@ export function ensureAthena(s) {
   return true;
 }
 
+// Beta testing (owner's request, 2026-10-23): on by default, also for campaigns saved before it.
+// Unlimited supply, every machine type buildable with no per-visit limit, and trades at any
+// price, so every unit can be tried. Turning it off (s.beta = false) restores the earned supply.
+export const beta = (s) => s.beta !== false;
+
 export function build(s, types, type) {
   const cost = price(types, type);
-  if (s.builds >= MAX_BUILDS || s.supply < cost) return false;
-  s.supply -= cost; s.builds++;
+  if (!beta(s) && (s.builds >= MAX_BUILDS || s.supply < cost)) return false;
+  if (!beta(s)) s.supply -= cost;
+  s.builds++;
   s.roster.push({ id: s.nextId++, type, level: 0 });
   return true;
 }
@@ -57,7 +63,7 @@ export function build(s, types, type) {
 // best of the given pilots flies the new machine; the others are gone with their machines.
 export function trade(s, types, giveIds, type) {
   const give = s.roster.filter((r) => giveIds.includes(r.id));
-  if (!give.length || give.reduce((t, r) => t + price(types, r.type), 0) < price(types, type)) return false;
+  if (!give.length || (!beta(s) && give.reduce((t, r) => t + price(types, r.type), 0) < price(types, type))) return false;
   const best = give.reduce((a, b) => (b.level > a.level ? b : a));
   s.roster = s.roster.filter((r) => !giveIds.includes(r.id) || r === best);
   if (s.general !== null && giveIds.includes(s.general) && (s.general !== best.id || !GENERAL_SHIPS.has(type))) s.general = null;
