@@ -154,7 +154,7 @@ class Brain {
         const ok = b.weaponsAgainst(att, tgt).some((v) => v.slot === s);
         if (ok) {
           const cw = b.counterWeapon(att, tgt, w);
-          const score = b.damage(att, tgt, w) - (cw ? b.damage(tgt, att, cw) : 0);
+          const score = b.damage(att, tgt, w) - (cw ? b.damage(tgt, att, cw, true) : 0);
           if (special) { best = { x, y, score: 1, form, special }; break; }
           if (!best || score >= best.score) best = { x, y, score, form };
         }

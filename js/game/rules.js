@@ -276,16 +276,33 @@ export class Battle {
     return out;
   }
 
-  // Raw damage in 1/128 HP, before the random term.
-  damage(att, def, w) {
+  // Encirclement ($01:A8E5-A926 sets $06CF): every one of the defender's six neighbouring hexes
+  // lies in `army`'s zone of control. The zones are rebuilt by $02:E66C: each unit of the army on
+  // the map (not carried, not a fortress, command centre or dock: categories 5-7) marks its own
+  // hex and its six neighbours ($7E:2DD2 bit $80 for army A, $40 for army B). So two or three
+  // well-placed units can encircle a defender; the hexes themselves may be empty.
+  encircled(def, army) {
+    const zone = new Set();
+    for (const u of this.alive(army)) {
+      const c = this.type(u).category;
+      if (c >= 5 && c <= 7) continue;
+      zone.add(`${u.x},${u.y}`);
+      for (const [nx, ny] of neighbours(u.x, u.y)) zone.add(`${nx},${ny}`);
+    }
+    return neighbours(def.x, def.y).every(([nx, ny]) => zone.has(`${nx},${ny}`));
+  }
+
+  // Raw damage in 1/128 HP, before the random term. `counter`: the defender's reply, which the
+  // game computes without encirclement ($01:A9ED).
+  damage(att, def, w, counter = false) {
     const at = this.type(att), dt = this.type(def);
     let p = w.power;
     // defender evasion + support from the defender's allies next to the attacker (power/16, cap 128)
     let eva = dt.evasion;
     for (const s of this.supporters(att, def.army, w.slot, def)) eva = Math.min(128, eva + (s >> 4));
     eva = Math.min(128, eva);
-    // Surrounded ($06CF, set at $01:A91A): all 6 neighbouring hexes occupied halves evasion.
-    if (neighbours(def.x, def.y).every(([nx, ny]) => this.unitAt(nx, ny))) eva >>= 1;
+    // encircled by the attacker's zones of control ($06CF, applied at $01:A995): evasion halved
+    if (!counter && this.encircled(def, att.army)) eva >>= 1;
     p = Math.floor((p * (128 - eva) * 2) / 256);
     // terrain defence of the defender's hex
     const td = this.tables.defence(this.cls(def.x, def.y), w.mode);
@@ -328,8 +345,7 @@ export class Battle {
     }, 0);
     const cslot = w.slot >= 2 ? w.slot : (this.type(att).category < 7 ? 1 : 0);   // $06B9
     const A = atk(att, w.slot), B = atk(def, cslot), dA = dfn(att), dB = dfn(def);
-    const surrounded = neighbours(def.x, def.y).every(([x, y]) => this.unitAt(x, y));
-    const dB1 = surrounded ? dB >> 1 : dB;
+    const dB1 = this.encircled(def, att.army) ? dB >> 1 : dB;   // $02:91E8: encirclement halves the shown defence
     const pct = (u) => T.displayDefence(this.cls(u.x, u.y), w.mode);   // both sides use the attacker's mode ($06BA)
     const side = (u, atkS, defS) => ({ unit: u, hp: u.hp, level: u.level, atk: atkS, def: defS, mode: w.mode, pct: pct(u) });
     // hex diagrams: neighbours in the game's scan order ($01:AC47): SW, NW, N, NE, SE, S
@@ -344,7 +360,7 @@ export class Battle {
 
   forecast(att, def, w) {
     const cw = this.counterWeapon(att, def, w);
-    return { dealt: this.damage(att, def, w) / 128, taken: cw ? this.damage(def, att, cw) / 128 : 0, counter: cw };
+    return { dealt: this.damage(att, def, w) / 128, taken: cw ? this.damage(def, att, cw, true) / 128 : 0, counter: cw };
   }
 
   // Both blows are computed from pre-combat HP, then applied together.
@@ -354,7 +370,7 @@ export class Battle {
     const info = this.fightInfo(att, def, w);
     const jitter = () => Math.floor(rnd() * 256) - 128;
     const dmg = Math.max(0, this.damage(att, def, w) + jitter());
-    const back = cw ? Math.max(0, this.damage(def, att, cw) + jitter()) : 0;
+    const back = cw ? Math.max(0, this.damage(def, att, cw, true) + jitter()) : 0;
     const before = [att.hp, def.hp];
     def.hp = Math.max(0, Math.floor((def.hp * 128 - dmg) / 128));
     if (cw) att.hp = Math.max(0, Math.floor((att.hp * 128 - back) / 128));
