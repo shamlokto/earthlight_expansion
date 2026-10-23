@@ -80,7 +80,15 @@ async function boot() {
   rom = new Rom(buf);
   if (!rom.isEarthLight()) { setup('The stored ROM is not Earth Light (Japan). Choose it again.'); return; }
   pal = battlePalette(rom); types = allUnitTypes(rom);
-  const patch = (await idbGet('patch')) || (await testFile('/__test_patch', readPatchFile));
+  let patch = (await idbGet('patch')) || (await testFile('/__test_patch', readPatchFile));
+  // the published site bundles Nezz's GPL English patch; remember it so the other pages get it too
+  if (!patch) {
+    try {
+      const { PATCH_BASE64 } = await import('../patch/earthlight-en.js');
+      patch = Uint8Array.from(atob(PATCH_BASE64), (c) => c.charCodeAt(0)).buffer;
+      await idbPut('patch', patch);
+    } catch { patch = null; }
+  }
   if (patch) { try { const b = applyBps(patch, rom.bytes.slice().buffer); en = readEnglish(b); romEn = new Rom(b); } catch { en = null; } }
   $('status').textContent = en ? 'English patch loaded' : 'Japanese ROM: add the English patch (☰ → ROM & patch) for the story and briefings';
   wire();
