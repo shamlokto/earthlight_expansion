@@ -38,9 +38,9 @@ export function setupEvents(b) {
       b.cannons.push({ x, y, tower: tower ? tower.id : null });
     }
   }
-  // afterburner cells: (x, y) pairs until 0, list per map
+  // afterburner cells: (x, y) pairs until 0, list per map (none on expansion maps)
   let a = 0x020000 | rom.byteAt(BURNER_LISTS + m * 2) | (rom.byteAt(BURNER_LISTS + m * 2 + 1) << 8);
-  for (let x = rom.byteAt(a); x; x = rom.byteAt(a)) {
+  for (let x = b.info.custom ? 0 : rom.byteAt(a); x; x = rom.byteAt(a)) {
     const u = b.unitAt(x, rom.byteAt(a + 1));
     if (u) u.burner = true;
     a += 2;

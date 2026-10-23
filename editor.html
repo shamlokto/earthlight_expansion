@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Earth Light Map Editor</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    html, body { height: auto; }
+    body { display: block; }
+    .ed { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; padding: 12px; }
+    .col { display: flex; flex-direction: column; gap: 10px; }
+    .box { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+    .box h3 { margin: 0 0 6px; font-size: 13px; color: var(--accent); }
+    .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; font-size: 12px; }
+    .row label { color: var(--muted); }
+    input[type=text], textarea { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; font: inherit; font-size: 12px; }
+    textarea { width: 100%; min-height: 70px; box-sizing: border-box; }
+    .tools button[aria-pressed="true"] { background: var(--accent); color: #231a00; border-color: var(--accent); }
+    .pal { display: flex; flex-wrap: wrap; gap: 3px; max-height: 360px; overflow: auto; }
+    .pal .cls { width: 100%; font-size: 11px; color: var(--muted); margin-top: 6px; }
+    .pal canvas, .units canvas { image-rendering: pixelated; cursor: pointer; border: 2px solid transparent; border-radius: 3px; }
+    .pal canvas.sel, .units canvas.sel { border-color: var(--accent); }
+    .units { display: flex; flex-wrap: wrap; gap: 3px; max-height: 220px; overflow: auto; }
+    .view { overflow: auto; background: #000; border: 1px solid var(--line); border-radius: 8px; max-height: calc(100vh - 140px); }
+    .view canvas { image-rendering: pixelated; display: block; cursor: crosshair; }
+    #status, #hover { font-size: 12px; color: var(--muted); }
+    #romMap { max-width: 100%; }
+    .rombox .view { max-height: 300px; }
+    @media (max-width: 860px) { .ed { grid-template-columns: minmax(0, 1fr); } }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo">EARTH LIGHT</span>
+      <span class="sub">expansion · map editor</span>
+    </div>
+    <nav class="tabs"><a class="btn" href="index.html">Lab</a><a class="btn" href="wiki.html">Wiki</a></nav>
+  </header>
+  <div class="ed">
+    <div class="col">
+      <div class="box">
+        <h3>Mission</h3>
+        <div class="row"><label>Map</label><input type="text" id="name" maxlength="8" size="9"><label>Title</label><input type="text" id="title" size="14"></div>
+        <div class="row"><label>Size (screens)</label><select id="sw"></select>×<select id="sh"></select>
+          <button class="btn" id="newBtn">New</button></div>
+        <div class="row"><button class="btn" id="exportBtn">Export JSON</button>
+          <label class="btn">Import<input type="file" id="importFile" accept=".json" hidden></label></div>
+        <div class="row"><label>Objective</label><select id="objective"></select></div>
+        <div class="row"><label>Turn limit</label><input type="number" id="turnLimit" min="0" max="99">
+          <label>Cap</label><input type="number" id="cap" min="0" max="30"></div>
+        <textarea id="briefing" placeholder="Briefing"></textarea>
+      </div>
+      <div class="box tools">
+        <h3>Tool</h3>
+        <div class="row" id="tools"></div>
+        <div class="row" id="armyRow"><label>Army</label><select id="army">
+          <option value="0">Player (Galt remnant)</option><option value="1">Union</option><option value="2">Neutral dock</option></select></div>
+        <div id="hover">&nbsp;</div>
+      </div>
+      <div class="box"><h3>Terrain <span id="pairCount"></span></h3><div class="pal" id="pal"></div></div>
+      <div class="box"><h3>Units</h3><div class="units" id="units"></div></div>
+    </div>
+    <div class="col">
+      <div id="status">Loading ROM…</div>
+      <div class="view"><canvas id="map"></canvas></div>
+      <div class="box rombox">
+        <h3>Copy from a ROM map</h3>
+        <div class="row"><select id="romSel"></select><span id="stampInfo">Drag over the ROM map to pick a region, then use the Stamp tool.</span></div>
+        <div class="view"><canvas id="romMap"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="js/expansion/editor.js"></script>
+</body>
+</html>

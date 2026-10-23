@@ -94,7 +94,7 @@ class Brain {
   // ---------------------------------------------------------------- priorities
   priorities() {
     const b = this.b, rom = this.rom, m = b.info.index, prio = new Map();
-    const vip = [rom.byteAt(VIP_UNION + m), rom.byteAt(VIP_GALT + m)];
+    const vip = b.info.custom ? [0, 0] : [rom.byteAt(VIP_UNION + m), rom.byteAt(VIP_GALT + m)];   // expansion maps have no ROM tables
     for (const u of b.units) {
       if (u.hp <= 0) continue;
       let p = 0;
@@ -301,7 +301,7 @@ class Brain {
     for (const u of b.units) if (!('aiScripted' in u)) u.aiScripted = false;
     // matched once, on Galt's first turn ($02:D724 at map start), for units of any army
     // (a neutral dock's orders run once Galt has taken it)
-    if (this.army !== 1 || b.turn !== 1) return;
+    if (this.army !== 1 || b.turn !== 1 || b.info.custom) return;
     let a = rom.wordAt(SCRIPTS + b.info.index * 2), seq = 0;
     for (; rom.byteAt(a); a += 5) {
       const x = rom.byteAt(a), y = rom.byteAt(a + 1), t = rom.byteAt(a + 2);
@@ -404,7 +404,7 @@ class Brain {
     if (end()) return;
 
     // advance along the routes ($01:87DC)
-    const goals = this.army === 1 ? routes(this.rom, b.info.index) : null;
+    const goals = this.army !== 1 ? null : b.info.custom ? b.info.routes : routes(this.rom, b.info.index);
     for (const u of b.units) {
       if (!this.mobile(u) || !this.free(u) || u.aiScripted || u.guard || this.passive.has(u)) continue;
       const t0 = u.type, athena = t0 === 6 || t0 === 7;

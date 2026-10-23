@@ -4,7 +4,15 @@
     {
       "name": "earthlight-lab",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["serve.py", "--port", "8765", "--rom", "/Users/shamlokto/Downloads/Earth Light (Japan).zip", "--patch", "/Users/shamlokto/Downloads/Earthlight_1_English.zip"],
+      "runtimeArgs": [
+        "serve.py",
+        "--port",
+        "8765",
+        "--rom",
+        "/Users/shamlokto/Downloads/Earth Light (Japan).zip",
+        "--patch",
+        "/Users/shamlokto/Downloads/Earthlight_1_English.zip"
+      ],
       "port": 8765
     }
   ]

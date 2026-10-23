@@ -6,16 +6,16 @@
 //   name, title           map name (8 chars, like the ROM's) and mission title
 //   screensW, screensH    size in 15x10 screens (1-4)
 //   pairs                 [[graphic, terrainId], ...] up to 80; a cell value indexes this list
-//   grid                  rows 0..rows+1 of values for columns 0..cols+1 (the edge frame included)
+//   grid                  rows 0..rows+1 of values for columns 0..cols+1 (the cells around the playfield included)
 //   units                 [{ type, army, x, y, neutral?, cargo?: [type, ...] }] (cargo = inside a dock/carrier)
 //   arrivals              [{ turn, army, units: [{ type, x, y, cargo?: [...] }] }]
 //   objective             { kind, ... } (see campaign rules), bonus, turnLimit, cap, briefing
 import { MAP_COUNT, mapInfo } from '../maps.js';
-import { terrainOf, EDGE_CLASS } from '../terrain.js';
+import { terrainOf } from '../terrain.js';
 
 export const GRID_W = 62, GRID_H = 42, MAX_PAIRS = 80;
 export const SCREEN_COLS = 15, SCREEN_ROWS = 10;
-const HEADER_ID = 'exp:header', GRID_ID = 'exp:grid';
+const HEADER_ID = 'exp:header', GRID_ID = 'exp:grid', DEPLOY_ID = 'exp:deploy';
 
 // Every (graphic, terrain id) pair the 30 ROM maps use, with its class and where it appears.
 // These are the editor's paints: a pair keeps the ROM's own meaning for that graphic.
@@ -36,22 +36,11 @@ export function terrainPalette(rom) {
   return [...pairs.values()].sort((a, b) => a.cls - b.cls || b.count - a.count);
 }
 
-// The frame around every map is class 10; take the pair HAMILTON uses at its corner.
-export function edgePair(rom) {
-  const info = mapInfo(rom, 0), header = rom.body(info.headerId), v = rom.body(info.gridId)[0];
-  const t = terrainOf(rom, header, v);
-  return t.cls === EDGE_CLASS ? [header[v], t.id] : null;
-}
-
-export function blankMission(rom, screensW = 1, screensH = 1, fill = null) {
-  const edge = edgePair(rom), pairs = [edge];
-  if (fill) pairs.push(fill);
-  const cols = screensW * SCREEN_COLS, rows = screensH * SCREEN_ROWS, grid = [];
-  for (let cy = 0; cy <= rows + 1; cy++) {
-    const row = [];
-    for (let cx = 0; cx <= cols + 1; cx++) row.push(isFrame(cx, cy, cols, rows) || !fill ? 0 : 1);
-    grid.push(row);
-  }
+// `fill` is the [graphic, terrain id] pair every cell starts with (void space). The cells around
+// the playfield are ordinary terrain in the ROM too; the game marks the bounds itself at run time.
+export function blankMission(screensW, screensH, fill) {
+  const pairs = [fill], cols = screensW * SCREEN_COLS, rows = screensH * SCREEN_ROWS;
+  const grid = Array.from({ length: rows + 2 }, () => new Array(cols + 2).fill(0));
   return { version: 1, name: 'NEW', title: '', screensW, screensH, pairs, grid, units: [], arrivals: [], objective: { kind: 'annihilate' } };
 }
 
@@ -66,7 +55,7 @@ export function buildMap(mission) {
   mission.grid.forEach((row, cy) => row.forEach((v, cx) => { grid[cy * GRID_W + cx] = v; }));
   const cols = mission.screensW * SCREEN_COLS, rows = mission.screensH * SCREEN_ROWS;
   const info = {
-    index: -1, custom: true, name: mission.name, headerId: HEADER_ID, gridId: GRID_ID,
+    index: -1, custom: true, name: mission.name, headerId: HEADER_ID, gridId: GRID_ID, deployId: DEPLOY_ID,
     screensW: mission.screensW, screensH: mission.screensH, cols, rows,
   };
   return { info, header, grid };
@@ -76,7 +65,8 @@ export function buildMap(mission) {
 export function romView(rom, mission) {
   const { info, header, grid } = buildMap(mission);
   const view = Object.create(rom);
-  view.body = (k) => (k === HEADER_ID ? header : k === GRID_ID ? grid : rom.body(k));
+  const noDeploy = new Uint8Array(1);   // renderMap reads a ROM deployment; units come from the mission
+  view.body = (k) => (k === HEADER_ID ? header : k === GRID_ID ? grid : k === DEPLOY_ID ? noDeploy : rom.body(k));
   return { rom: view, info };
 }
 

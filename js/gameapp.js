@@ -19,6 +19,7 @@ import { FightScene } from './game/fightscene.js';
 import { Sound, mapMusic, SONGS, briefingSong } from './audio/sound.js';
 import { drawScreen } from './screens.js';
 import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle } from './game/savegame.js';
+import { expansionFromUrl } from './expansion/battle.js';
 
 const $ = (id) => document.getElementById(id);
 const Z = 2, OFF = 16;          // board zoom; render crop offset (playfield starts at cell 1,1)
@@ -30,6 +31,7 @@ const ALERT_GALT = 87, ALERT_UNION = 88, BABYLON_ALERT = 94;
 let rom, romEn = null, en = null, pal, types, battle, mission = 0, terrainCanvas;
 let sel = null, reach = null, targets = [], hosts = [], launching = null, busy = false, blastCells = null;
 let cursor = null;   // keyboard cursor hex [x, y]
+let custom = null;   // expansion mission (game.html?mission=...), see js/expansion/battle.js
 
 // Original music and effects (js/audio), started by the first click (browsers need a gesture);
 // the map music follows the phase and the unit counts, as in play.js.
@@ -37,7 +39,7 @@ let sound = null;
 const MUTE = 'earthlight-mute';
 function music() {
   if (!sound || !battle || $('sBattle').hidden || battle.winner() !== null) return;
-  sound.playSong(mapMusic(rom, mission, battle.army, battle.forces(0).length, battle.forces(1).length, !!battle.eventMusic));
+  sound.playSong(mapMusic(rom, custom ? custom.musicMap : mission, battle.army, battle.forces(0).length, battle.forces(1).length, !!battle.eventMusic));
 }
 function silence() { screenSong = null; if (sound) sound.stop(); }
 // Songs of the non-battle screens (sound.js SONGS): title, menu, briefing, between missions, ending.
@@ -92,6 +94,7 @@ async function boot() {
   if (patch) { try { const b = applyBps(patch, rom.bytes.slice().buffer); en = readEnglish(b); romEn = new Rom(b); } catch { en = null; } }
   $('status').textContent = en ? 'English patch loaded' : 'Japanese ROM: add the English patch (☰ → ROM & patch) for the story and briefings';
   wire();
+  if ((custom = await expansionFromUrl(rom, types))) { startMission(-1); return; }
   showTitle();
 }
 
@@ -157,7 +160,7 @@ function wire() {
   $('bSelect').onclick = () => { $('missions').hidden = !$('missions').hidden; };
   $('optHard').onchange = () => saveProgress({ ...progress(), hard: $('optHard').checked });
   $('endTurn').onclick = endTurn;
-  $('bSave').onclick = () => { if (!busy && battle.army === 0) log(saveBattle(battle, mission) ? '<b>Battle saved.</b>' : '<b>Could not save (storage unavailable).</b>'); };
+  $('bSave').onclick = () => { if (!busy && battle.army === 0 && !custom) log(saveBattle(battle, mission) ? '<b>Battle saved.</b>' : '<b>Could not save (storage unavailable).</b>'); };
   $('bRestart').onclick = () => { if (!busy) startMission(mission); };
   $('bRetreat').onclick = () => { if (!busy) showTitle({ menu: true }); };
   $('cv').addEventListener('click', onClick);
@@ -229,23 +232,24 @@ function briefing(m) {
 // ------------------------------------------------------------------ battle
 function setupBoard(m) {
   mission = m;
-  const info = mapInfo(rom, m);
-  const terr = renderMap(rom, info, { units: false });
+  const info = custom ? custom.info : mapInfo(rom, m);
+  const terr = renderMap(custom ? custom.rom : rom, info, { units: false });
   terrainCanvas = document.createElement('canvas');
   paint(terrainCanvas, terr.img, pal, { scale: Z });
   sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; blastCells = null; $('log').innerHTML = '';
-  show('sBattle'); $('where').textContent = `mission ${m + 1} · ${missionTitle(m)}`;
+  show('sBattle'); $('where').textContent = custom ? `expansion · ${custom.mission.title || custom.mission.name}` : `mission ${m + 1} · ${missionTitle(m)}`;
   return info;
 }
 
 // The board's terrain, redrawn from the battle's own cells (the Decimator clears them).
 function paintTerrain() {
-  const terr = renderMap(rom, battle.info, { units: false, grid: battle.grid });
+  const terr = renderMap(battle.rom, battle.info, { units: false, grid: battle.grid });
   terrainCanvas = document.createElement('canvas');
   paint(terrainCanvas, terr.img, pal, { scale: Z });
 }
 
 function newBattle(m) {
+  if (custom) return custom.newBattle({ hard: $('optHard').checked && !$('hardRow').hidden });
   const info = mapInfo(rom, m), sc = scenario(rom, info);
   return new Battle(rom, info, types, sc.units, sc.arrivals, { hard: $('optHard').checked && !$('hardRow').hidden });
 }
@@ -631,6 +635,7 @@ function checkEnd() {
 function result(w) {
   silence();
   show('sResult');
+  if (custom) { expansionResult(w); return; }
   const p = progress();
   if (w === 0) {
     if (!p.cleared.includes(mission)) p.cleared.push(mission);
@@ -660,6 +665,17 @@ function result(w) {
   if (w === 0) $('bResStory').hidden = true;
   else $('points').hidden = true;
   $('bResTitle').onclick = () => showTitle({ menu: true });
+}
+
+function expansionResult(w) {
+  const r = battle.result.reason;
+  $('resTitle').textContent = `${custom.mission.title || custom.mission.name} ${w === 0 ? 'complete' : 'failed'}`;
+  $('resText').textContent = w === 0 ? `Cleared on turn ${battle.turn}.`
+    : r === 'general' ? 'The general has fallen. Game over.' : r === 'timeup' ? label(83) || 'Time is up.' : label(LAYOUT.missionLost);
+  $('points').hidden = true; $('bResStory').hidden = true;
+  $('bResNext').textContent = 'Retry';
+  $('bResNext').onclick = () => startMission(-1);
+  $('bResTitle').onclick = () => { location.search = ''; };
 }
 
 // The points screen ($08:A6C0): this map's points, the campaign total and the rank. The

@@ -442,7 +442,25 @@ only through small hooks agreed with the file's owner.
 | 5 | **Content**: the ten missions painted in the editor, briefings, intro and ending text. | `missions/*.json` | — |
 | 6 | **Balance pass**: playtest, tune unit counts, turn limits, production costs. | — | — |
 
-Status: phase 1 and 2 in progress.
+Status (2026-10-23): **phases 1 and 2 done, phase 3 first cut**, apart from authoring arrivals and the general in
+the editor (those come with phase 3).
+* `js/expansion/mission.js`: the mission format and loader. Checked: `Battle` from `rules.js` runs
+  unchanged on a custom map (terrain classes, movement and units all correct).
+* `editor.html` + `js/expansion/editor.js`: paint with the 252 (graphic, terrain) pairs the ROM
+  maps use, fill, pick, copy regions from any ROM map (for example the Earth and its atmosphere
+  from CLARKE), place units for either army or neutral docks, load cargo (shift-click), set
+  objective, turn limit, cap and briefing, export/import JSON. Work in progress autosaves in the browser.
+* **Phase 3 done (first cut)**: `js/expansion/battle.js` (`ExpansionBattle` extends the base
+  `Battle`): the general (evasion ×2 capped at 96, power ×2, level 9; death = game over), the escape
+  and destroy-a-type objectives, turn limits, and the base objectives mapped onto `scripts.js`.
+  `game.html?mission=missions/asimov.json` plays a mission in the real battle screen, with fight
+  scenes, music and the AI. Hooks added to base files: `gameapp.js` (custom-mission branch), `ai.js`
+  and `events.js` (skip ROM per-map tables on custom maps). `missions/asimov.json` is a rough test
+  layout of map 1, still to be painted properly in the editor.
+  Still to do in phase 3: the HUD calls the player "Union"; there's no briefing screen for
+  custom missions; escaped units aren't shown in a list; the general isn't marked on the board.
+* Found while building: the ROM's map grids have no class-10 frame (the game marks the bounds at
+  run time), and army A's icons are the pink ones, as the owner remembered.
 
 ## Decisions
 
