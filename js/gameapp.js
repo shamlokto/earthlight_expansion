@@ -95,9 +95,10 @@ async function boot() {
   $('status').textContent = en ? 'English patch loaded' : 'Japanese ROM: add the English patch (☰ → ROM & patch) for the story and briefings';
   wire();
   if ((custom = await expansionFromUrl(rom, types))) {
-    const s = savedBattle(EXPANSION_BATTLE);
-    if (s && s.mission === custom.url && confirm(`Resume your saved battle (turn ${s.turn})?`)) { resumeExpansion(s); return; }
-    story(custom.briefing(), custom.mission.title || custom.mission.name, () => { silence(); startMission(-1); }, { art: true, song: briefingSong(custom.musicMap) });
+    const s = savedBattle(EXPANSION_BATTLE), title = custom.mission.title || custom.mission.name;
+    const brief = () => story(custom.briefing(), title, () => { silence(); startMission(-1); }, { art: true, song: briefingSong(custom.musicMap) });
+    if (s && s.mission === custom.url) choose(title, `You have a saved battle of this mission (turn ${s.turn}).`, 'Resume', 'Start over', () => resumeExpansion(s), brief);
+    else brief();
     return;
   }
   showTitle();
@@ -210,6 +211,17 @@ function showTitle({ menu = false } = {}) {
     b.onclick = () => briefing(m);
     $('missions').append(b);
   }
+}
+
+// A two-way choice on the story screen (embedded viewers can suppress confirm() dialogs).
+function choose(title, text, yes, no, onYes, onNo) {
+  show('sStory');
+  $('storyArt').hidden = true;
+  $('storyTitle').textContent = title; $('storyText').textContent = text;
+  const restore = () => { $('bStoryNext').textContent = 'Next'; $('bStorySkip').textContent = 'Skip'; };
+  $('bStoryNext').textContent = yes; $('bStorySkip').textContent = no;
+  $('bStoryNext').onclick = () => { restore(); onYes(); };
+  $('bStorySkip').onclick = () => { restore(); onNo(); };
 }
 
 function story(pages, title, done, { art = false, song = null } = {}) {

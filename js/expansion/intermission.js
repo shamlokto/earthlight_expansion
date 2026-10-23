@@ -105,7 +105,11 @@ function wire(cap) {
     clearSavedBattle(EXPANSION_BATTLE);   // a new launch never resumes an older saved battle
     location.href = `game.html?mission=${encodeURIComponent(entry().file)}&no=${state.next}&campaign=1`;
   };
-  $('restart').onclick = async () => { if (!confirm('Start over from mission 1?')) return; await startNew(); render(); };
+  // two clicks to start over (embedded viewers can suppress confirm() dialogs)
+  $('restart').onclick = async () => {
+    if ($('restart').dataset.armed !== '1') { $('restart').dataset.armed = '1'; $('restart').textContent = 'Click again to start over from mission 1'; return; }
+    await startNew(); render();
+  };
 }
 
 async function startNew() {
