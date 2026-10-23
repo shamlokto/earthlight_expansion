@@ -89,8 +89,17 @@ function icon(type, army, scale = 2) {
 }
 
 const nameOf = (t) => (en ? en.unitNames[t] : types[t].name);
+const hasIcon = (t) => !types[t].cut; // cut types point at Mars's icon
+const placed = new Set(); // types any map deploys or brings in
 
 function render() {
+  for (let m = 0; m < MAP_COUNT; m++) {
+    try {
+      const sc = scenario(rom, mapInfo(rom, m));
+      for (const u of sc.units) placed.add(u.type);
+      for (const ev of sc.arrivals || []) for (const u of ev.units) placed.add(u.type);
+    } catch { }
+  }
   const toc = [['h', 'Story'], ['story', 'Synopsis'], ['missions', 'Missions'], ['h', 'Units'],
     ...FAMILIES.map(([id, title]) => [id, title])];
   $('toc').innerHTML = toc.map(([id, t]) => (id === 'h' ? `<div class="h">${t}</div>` : `<a href="#${id}">${t}</a>`)).join('');
@@ -121,7 +130,7 @@ function render() {
   // Icons go in after the markup exists.
   for (const el of document.querySelectorAll('[data-icons]')) {
     const t = +el.dataset.icons;
-    el.append(icon(t, 0), icon(t, 1));
+    if (hasIcon(t)) el.append(icon(t, 0), icon(t, 1));
   }
   for (const el of document.querySelectorAll('[data-icon]')) {
     const [t, army] = el.dataset.icon.split(',').map(Number);
@@ -159,9 +168,10 @@ function missionHtml(m) {
 
 function unitHtml(t) {
   const u = types[t];
-  // The second form of a transforming unit shares the first form's text.
+  // Spent and loaded variants share the base entry's text.
   const tx = en ? unitText(en, t) : null;
-  const tx0 = en && u.formOf !== undefined ? unitText(en, u.formOf) : null;
+  const base = u.armed ?? u.empty;
+  const tx0 = en && base !== undefined ? unitText(en, base) : null;
   const short = tx?.short || tx0?.short;
   const info = tx?.info || tx0?.info;
   const weapons = u.weapons.filter(Boolean);
@@ -178,7 +188,14 @@ function unitHtml(t) {
   } else html += '<p class="note">Unarmed.</p>';
   if (info) html += `<p>${esc(prose(info[1]))}</p><p>${esc(prose(info[2]))}</p>`;
   const notes = [];
-  if (u.form) notes.push(`Transforming unit, form ${u.form} (other form: ${esc(nameOf(u.form === 1 ? u.otherForm : u.formOf))} <span class="mono">${esc(types[u.form === 1 ? u.otherForm : u.formOf].code)}</span>).`);
+  const ref = (o) => `${esc(nameOf(o))} <span class="mono">${esc(types[o].code)}</span> (type ${o})`;
+  if (u.cut) notes.push('No map icon of its own (the icon table points at the Mars icon), and no map places it: probably cut from the game.');
+  else if (!placed.has(t) && u.armed === undefined && u.empty === undefined && u.formOf === undefined) notes.push('No map places it at the start or as reinforcements.');
+  if (u.form) notes.push(`Transforms into ${ref(u.form === 1 ? u.otherForm : u.formOf)}.`);
+  if (u.spent !== undefined) notes.push(`After firing its one-shot W4 it becomes ${ref(u.spent)}.`);
+  if (u.armed !== undefined) notes.push(`Spent form of ${ref(u.armed)}, after its one-shot W4 is fired; re-armed on boarding.`);
+  if (u.loaded !== undefined) notes.push(`Empty; becomes ${ref(u.loaded)} when units board.`);
+  if (u.empty !== undefined) notes.push(`Loaded form of ${ref(u.empty)}, carrying units.`);
   if (u.moveOrFire) notes.push('Can\'t move in a turn it fires its long-range weapon.');
   if (notes.length) html += `<p class="note">${notes.join(' ')}</p>`;
   return html + '</section>';

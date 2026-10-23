@@ -92,8 +92,11 @@ tilemap, 7 = other data (maps, unit icons, sound driver/music at 822–833).
 | `F798` | evasion (damage reduction /128) | `$01:A98A` |
 | `AC3D` | level bonus ×n/16 for levels 0–9 | `$01:AC20` |
 
-Consecutive types with the same name are the two forms of a transforming unit;
-the game transforms by incrementing the type. Categories 1–6 are capital ships
+Consecutive types with the same name are either a payload pair (armed → spent: 4/5, 10/11,
+12/13, 43/44, 45/46, 47/48), the CR-1's empty/loaded pair (26/27, 28/29), or, for the Siren
+only (36/37), the two forms of a transforming unit. The Athena transforms across pairs:
+CHU-03F 4/5 ↔ CHU-03R 6/7 (see "Levels, docks, transformation"). Types 12/13, 17, 19–22,
+28/29, 41 and 45–48 use icon 0 and no map places them: cut units (`cut` in `units.js`). Categories 1–6 are capital ships
 and structures, 7 is the dock, and 8 and up are small craft (mecha, fighters,
 artillery…). Counter-attack: slot 0 against small craft, slot 1 against capital
 ships, slot 2 against slot 2. Slot 3 and indirect fire get no counter.

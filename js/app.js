@@ -266,7 +266,7 @@ function drawUnitTable() {
     if (u.moveOrFire) notes.push('move or fire');
     if (u.weapons.some((x) => x && x.min >= 2)) notes.push('indirect');
     tr.insertAdjacentHTML('beforeend',
-      `<td class="num">${u.type}</td><td class="jp">${u.name}</td>`
+      `<td class="num">${u.type}</td><td class="jp">${u.name}${u.cut ? ' <span class="dim small" style="border:1px solid var(--line);border-radius:4px;padding:0 4px" title="No map icon and never placed on a map">cut</span>' : ''}</td>`
       + (english ? (() => { const t = unitText(english, u.type); return `<td>${esc(t.name)}</td><td class="desc">${t.short ? esc(oneLine(t.short)) : ''}</td>`; })() : '')
       + `<td class="mono">${u.code}</td>`
       + `<td title="${[...cats.get(u.category)].join(', ')}">${u.category} <span class="dim">${[...cats.get(u.category)].join(', ')}</span></td>`

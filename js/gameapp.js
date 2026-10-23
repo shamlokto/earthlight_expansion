@@ -14,6 +14,7 @@ import { scenario } from './game/scenario.js';
 import { WIN_LINE, scriptFor } from './game/scripts.js';
 import { aiTurn } from './game/ai.js';
 import { FightScene } from './game/fightscene.js';
+import { Sound, mapMusic } from './audio/sound.js';
 import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle } from './game/savegame.js';
 
 const $ = (id) => document.getElementById(id);
@@ -25,6 +26,20 @@ const ALERT_GALT = 87, ALERT_UNION = 88, BABYLON_ALERT = 94;
 
 let rom, romEn = null, en = null, pal, types, battle, mission = 0, terrainCanvas;
 let sel = null, reach = null, targets = [], hosts = [], launching = null, busy = false;
+
+// Original music and effects (js/audio), started by the first click (browsers need a gesture);
+// the map music follows the phase and the unit counts, as in play.js.
+let sound = null;
+const MUTE = 'earthlight-mute';
+function music() {
+  if (!sound || !battle || $('sBattle').hidden || battle.winner() !== null) return;
+  sound.playSong(mapMusic(rom, mission, battle.army, battle.forces(0).length, battle.forces(1).length));
+}
+function silence() { if (sound) sound.stop(); }
+document.addEventListener('pointerdown', () => {
+  if (sound || !rom) return;
+  sound = new Sound(rom); sound.setMuted($('mute').checked); sound.start().then(music);
+}, { capture: true });
 
 // ------------------------------------------------------------------ loading
 function idbGet(key) {
@@ -85,10 +100,16 @@ function wire() {
   $('bRestart').onclick = () => { if (!busy) startMission(mission); };
   $('bRetreat').onclick = () => { if (!busy) showTitle(); };
   $('cv').addEventListener('click', onClick);
+  try { $('mute').checked = localStorage.getItem(MUTE) === '1'; } catch { /* no storage */ }
+  $('mute').onchange = (e) => {
+    try { localStorage.setItem(MUTE, e.target.checked ? '1' : '0'); } catch { /* no storage */ }
+    if (sound) sound.setMuted(e.target.checked);
+  };
 }
 
 // ------------------------------------------------------------------ title and story
 function showTitle() {
+  silence();
   show('sTitle'); $('where').textContent = 'campaign';
   const p = progress(), s = savedBattle();
   $('bContinue').hidden = p.next === 0 && !p.cleared.length;
@@ -183,8 +204,12 @@ function runFight(e) {
     ov.onclick = () => { skip = true; };
     const tick = (t) => {
       if (last === null) last = t;
-      while (t - last >= 1000 / 60 && !scene.done) { scene.step(); last += 1000 / 60; }
+      while (t - last >= 1000 / 60 && !scene.done) {
+        scene.step(); last += 1000 / 60;
+        if (sound) new Set(scene.sounds()).forEach((id) => sound.playSfx(id));
+      }
       scene.render(ctx);
+      if (skip && sound) sound.playSfx(3);   // stop the fight's effects, as the fight end does
       if (scene.done || skip) { ov.hidden = true; resolve(); } else requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
@@ -217,6 +242,7 @@ function maskedIcon(u) {
 
 const HP_COLOUR = ['#ff8fd8', '#8fe38a', '#d0d0d0'];
 function draw() {
+  music();
   const cv = $('cv'), ctx = cv.getContext('2d');
   cv.width = terrainCanvas.width; cv.height = terrainCanvas.height;
   ctx.drawImage(terrainCanvas, 0, 0);
@@ -396,6 +422,7 @@ function checkEnd() {
 }
 
 function result(w) {
+  silence();
   show('sResult');
   const p = progress();
   const lost = battle.units.filter((u) => u.army === 0 && u.hp <= 0).length;

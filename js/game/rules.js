@@ -11,15 +11,13 @@
 // the exact transform menu) are marked TODO/ASSUMED.
 import { terrainOf, moveCost, EDGE_CLASS } from '../terrain.js';
 import { scriptFor, setupScript, outcome } from './scripts.js';
+import { TRANSFORM, SPENT } from '../units.js';
 
 const D042 = 0x01d042, D0C2 = 0x01d0c2, LEVEL = 0x01ac3d;
 export const NEUTRAL = 2;           // army of the neutral docks (deployment flag $40)
 const DOCK_CAT = 7, CARRIER_CAT = 1, CRAB = 26;   // CR-1: 26 empty, 27 loaded
-// Form changes. Manual: Athena bomber <-> HU (4/5 <-> 6/7, from $01:84E0), Siren carrier <->
-// battleship (36 <-> 37). After firing the bomb or missile in slot 3: armed -> spent.
-export const TRANSFORM = { 4: 6, 6: 4, 5: 7, 7: 5, 36: 37, 37: 36 };
-const SPENT = { 4: 5, 10: 11, 12: 13, 43: 44, 45: 46, 47: 48 };
-const REARM = { 5: 4, 7: 6, 11: 10, 44: 43 };
+export { TRANSFORM };   // form tables live in units.js
+const REARM = { 5: 4, 7: 6, 11: 10, 44: 43 };   // $01:A60C re-arms only these on boarding
 const DESTROYERS = new Set([49, 50, 51]);   // may move again with what is left after firing
 // Info-screen tables (read by $02:9157): display attack per slot, display defence,
 // category byte, minimum range, terrain defence % per weapon mode.
