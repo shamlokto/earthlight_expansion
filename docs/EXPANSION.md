@@ -595,3 +595,11 @@ screen keep the unit's own name and code. The base game has no looks and is unch
 Carriers have no capacity limit in the rules, so the Selene Kai's edge is speed, armour and its
 beam turret. Prices are value × HP (Horus 16, Palmyra 10, Selene Kai 40). The Union units replace a
 few Wisps and guns on missions 5–10 (`tools/missions/revive.mjs`); missions 1–4 are unchanged.
+
+**The Selene Kai's own art** (owner, 2026-10-24): original pixel art, not from the ROM, drawn by
+`tools/art/selene-kai.mjs` (shapes rasterized and shaded by `tools/art/raster.mjs`) into
+`js/art/selenekai.js`; the unit data names it with `ownArt` (`js/art/own.js`). It has a unit-info
+picture (its own palette), a map icon (the icon rows' colours 1–7, pink or green by army, mirrored
+for army B; also the modern board's token and the info screen's icon) and a fight hull (the ships'
+fight-palette colours) drawn as one 128 px sprite over the box the Selene's hull would fill, so the
+Selene's choreography, shots and timings are unchanged. Re-run the tool after changing a shape.

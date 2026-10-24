@@ -4,11 +4,12 @@
 // every mission starts from the ROM's own deployment.
 import { Rom } from './rom.js';
 import { paint } from './gfx.js';
-import { MAP_COUNT, mapInfo, battlePalette, renderMap, unitIcon } from './maps.js';
+import { MAP_COUNT, mapInfo, battlePalette, renderMap } from './maps.js';
 import { allUnitTypes } from './units.js';
 import { applyBps } from './bps.js';
 import { readEnglish, LAYOUT, unitText } from './text.js';
-import { paintLookArt, lookOf, lookSlot } from './look.js';
+import { paintLookArt, lookOf, lookSlot, typeIcon } from './look.js';
+import { ownArt, ownIcon } from './art/own.js';
 import { terrainCardHtml } from './terraincard.js';
 import { cellTerrain } from './terraininfo.js';
 import { readRomFile, readPatchFile } from './romfile.js';
@@ -380,10 +381,10 @@ function runFight(e) {
   // units with a borrowed look (js/look.js) fight with that type's sprites, under their own name
   const label = (u) => (types[u.type].look !== undefined ? { label: en ? en.unitNames[u.type] : types[u.type].name, code: types[u.type].code } : {});
   const sideOf = (u, before, after, other, w) => ({ type: lookOf(types, u.type), army: u.army === NEUTRAL ? 1 - other.army : u.army, hp: before, hpAfter: after,
-    cls: battle.cls(u.x, u.y), slot: lookSlot(types, u.type, w?.slot), ...label(u) });
+    cls: battle.cls(u.x, u.y), slot: lookSlot(types, u.type, w?.slot), own: ownArt(types, u.type), ...label(u) });
   const seen = new Map(), v = (u) => {   // the same stand-in for a unit wherever the info screen meets it
     if (!u || types[u.type].look === undefined) return u;
-    if (!seen.has(u)) seen.set(u, { ...u, type: lookOf(types, u.type), ...label(u) });
+    if (!seen.has(u)) { const own = ownArt(types, u.type); seen.set(u, { ...u, type: lookOf(types, u.type), ...label(u), ...(own ? { icon: ownIcon(own, u.army === 1 ? 1 : 0) } : {}) }); }
     return seen.get(u);
   };
   const ring = (r) => ({ centre: v(r.centre), around: r.around.map((n) => ({ ...n, u: v(n.u) })) });
@@ -421,7 +422,7 @@ function maskedIcon(u) {
   const key = `${u.army}:${u.type}`;
   if (!iconCache.has(key)) {
     const c = document.createElement('canvas');
-    paint(c, unitIcon(rom, u.army === NEUTRAL ? 0 : u.army, types[u.type].gfx, 0), pal, { scale: 1 });
+    paint(c, typeIcon(rom, types, u.type, u.army === NEUTRAL ? 0 : u.army), pal, { scale: 1 });
     if (u.army === NEUTRAL) {
       const g = document.createElement('canvas'); g.width = c.width; g.height = c.height;
       const gx = g.getContext('2d'); gx.filter = 'grayscale(1) brightness(1.1)'; gx.drawImage(c, 0, 0);

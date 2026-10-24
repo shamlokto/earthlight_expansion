@@ -1,7 +1,8 @@
 // Map editor for expansion missions: paint with the ROM's own terrain graphics, copy regions
 // from the 30 ROM maps, place units and cargo, and export the mission JSON (mission.js).
 import { paint, Indexed } from '../gfx.js';
-import { MAP_COUNT, mapInfo, battlePalette, cellGraphic, unitIcon, cellOrigin, cellAt, renderMap } from '../maps.js';
+import { MAP_COUNT, mapInfo, battlePalette, cellGraphic, cellOrigin, cellAt, renderMap } from '../maps.js';
+import { typeIcon } from '../look.js';
 import { loadExpansionData } from './data.js';
 import { terrainOf, defence, nameIndex } from '../terrain.js';
 import { LAYOUT } from '../text.js';
@@ -35,7 +36,7 @@ function render() {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 24; x++) full.px[(Y + y) * W + X + x] |= g.px[y * 24 + x];
   }));
   for (const u of mission.units) {
-    const icon = unitIcon(rom, u.army === 1 ? 1 : 0, types[u.type].gfx), [X, Y] = cellOrigin(u.x, u.y);
+    const icon = typeIcon(rom, types, u.type, u.army === 1 ? 1 : 0), [X, Y] = cellOrigin(u.x, u.y);
     for (let i = 0; i < 24 * 16; i++) if (icon.opaque[i]) full.px[(Y + (i / 24 | 0)) * W + X + i % 24] = icon.px[i];
   }
   const vw = cols() * 16, vh = rows() * 16 + 8, out = new Indexed(vw, vh);
@@ -170,7 +171,7 @@ function buildUnits() {
   for (const t of types) {
     if (t.cut) continue;
     const c = document.createElement('canvas');
-    paint(c, unitIcon(rom, army, t.gfx), pal, { scale: 2 });
+    paint(c, typeIcon(rom, types, t.type, army), pal, { scale: 2 });
     c.title = `${unitName(t.type)} ${t.code.trim()} · HP ${t.hp} · move ${t.move}`;
     c.classList.toggle('sel', t.type === unitType);
     c.onclick = () => { unitType = t.type; setTool('unit'); buildUnits(); };

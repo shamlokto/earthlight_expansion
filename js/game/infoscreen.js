@@ -160,7 +160,7 @@ export class InfoScreen {
     const phase = f >= this.T.T ? 'T' : f >= this.T.S ? 'S' : 'E';
     for (const ic of this.icons) {
       if (ic.phase !== phase || f < ic.t) continue;
-      const u = ic.u, icon = unitIcon(this.rom, u.army, unitTypeGfx(this.rom, u.type));
+      const u = ic.u, icon = u.icon || unitIcon(this.rom, u.army, unitTypeGfx(this.rom, u.type));   // u.icon: the type's own (js/art/own.js)
       const [ox, oy] = ic.dir < 0 ? [0, 0] : DIR[ic.dir];
       const X = ic.at[0] + ox, Y = ic.at[1] + oy;
       for (let y = 0; y < 16; y++) for (let x = 0; x < 24; x++) {
