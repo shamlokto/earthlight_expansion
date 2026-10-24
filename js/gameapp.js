@@ -9,6 +9,8 @@ import { allUnitTypes } from './units.js';
 import { applyBps } from './bps.js';
 import { readEnglish, LAYOUT, unitText } from './text.js';
 import { paintUnitArt } from './unitart.js';
+import { terrainCardHtml } from './terraincard.js';
+import { cellTerrain } from './terraininfo.js';
 import { readRomFile, readPatchFile } from './romfile.js';
 import { Battle, NEUTRAL, TRANSFORM } from './game/rules.js';
 import { scenario } from './game/scenario.js';
@@ -617,6 +619,14 @@ function act(cx, cy) {
     threat = threatOf(u); draw();
     hud(unitCard(u, extra + '<p class="dim">Orange: where it can move this turn · red: where it can fire.</p>'));
   } else if (u) hud(unitCard(u, extra));
+  else if (battle.inBounds(cx, cy)) { cursor = [cx, cy]; draw(); hud(terrainCard(cx, cy)); }   // an empty hex: what the terrain is
+}
+
+// The terrain card for hex (x, y) (js/terraincard.js): expansion battles describe it from the
+// expansion's own terrain data, the original campaign from the ROM and the English patch.
+function terrainCard(x, y) {
+  return terrainCardHtml({ rom, tables: battle.tables, types, cell: cellTerrain(battle, x, y), x, y,
+    text: custom ? { terrainData: custom.terrain } : { en, rom } });
 }
 
 // The Abaddon's slot 3 is the Decimator, fired at a hex (fireDecimator), not at a unit.

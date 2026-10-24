@@ -44,6 +44,17 @@
     .unit p { margin: 0; font-size: 13px; }
     .unit .note { color: var(--muted); font-size: 12px; }
     .armyA { color: var(--army-a); } .armyB { color: var(--army-b); }
+    .terrains { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+    .terrain { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; scroll-margin-top: 12px; }
+    .terrain .tban { border: 0; border-radius: 0; }
+    .terrain .tbody { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 12px; }
+    .terrain .tcells { display: flex; flex-wrap: wrap; gap: 4px; }
+    .terrain .tcells img { width: 48px; height: 32px; image-rendering: pixelated; }
+    .terrain .twho summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+    .terrain .twho p, .terrain .tmaps { margin: 4px 0 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .terrain .twho b { color: var(--text); font-weight: 600; }
+    .terrain .tmaps a { color: var(--accent-2); text-decoration: none; padding: 0 2px; }
+    .terrain:target { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
     .warn { background: var(--panel-2); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 4px; }
     @media (max-width: 760px) {
       .wiki { grid-template-columns: minmax(0, 1fr); }

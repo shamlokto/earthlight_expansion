@@ -168,7 +168,7 @@ export async function expansionFromUrl(rom) {
   const { rom: view, info } = romView(rom, mission);
   return {
     url, mission, rom: view, info, musicMap: mission.music ?? 0, names: ARMY_NAMES, campaign: !!state,
-    types, tables, text: data.text,
+    types, tables, text: data.text, terrain: data.terrain,
     // a won campaign battle goes into the saved campaign; returns the supply gained
     finish: (b) => { const s = campaign.load(); const gain = campaign.finish(s, b, mapPoints(b, missionNo).total, missionNo); campaign.save(s); return gain; },
     newBattle: (opts) => new ExpansionBattle(rom, mission, types, { ...opts, tables }),

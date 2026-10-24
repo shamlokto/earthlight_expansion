@@ -129,6 +129,13 @@ defender HP -= P / 128
 Class 10 is impassable and is also written as the frame around every map. A
 1-screen map's playable area is columns 1–14 and rows 1–10.
 
+**Terrain pictures** (`js/terrainart.js`, the battle's terrain card and the wiki): the original's
+terrain window (`$01:D4AF`, values from `D002` at `$01:D4C2`) is text only. The picture per class is
+its fight backdrop: tiles `$04:CCE0[cls]`, palette `$04:CD78[cls]`, tilemaps `$04:CD06` / `$04:CD2C`
+(BG1 over BG2 shifted 128 px, over colour `$3193`). Class 12 (Earth, Comet Body) has none; classes
+10 and 13 share the deck's, 14/15 (base hatches, base machinery; unnamed in the text, `$01:CEF0`
+gives 15-17) have their own.
+
 ## Weapon modes and line of fire (from the in-game terrain screen)
 
 * Attack modes M1/M2/M3 = **B ビーム兵器 Beam / N レールガン Railgun / M ミサイル Missile**.

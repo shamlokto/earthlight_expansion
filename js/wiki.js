@@ -7,6 +7,11 @@ import { allUnitTypes } from './units.js';
 import { applyBps } from './bps.js';
 import { readEnglish, unitText, LAYOUT } from './text.js';
 import { scenario } from './game/scenario.js';
+import { terrainOf } from './terrain.js';
+import { romTables } from './game/tables.js';
+import { terrainText, categoryUnits, slug, MOVERS } from './terraininfo.js';
+import { bannerUrl, cellUrl } from './terrainart.js';
+import { factsHtml, TERRAIN_CSS } from './terraincard.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -100,7 +105,8 @@ function render() {
       for (const ev of sc.arrivals || []) for (const u of ev.units) placed.add(u.type);
     } catch { }
   }
-  const toc = [['h', 'Story'], ['story', 'Synopsis'], ['missions', 'Missions'], ['h', 'Units'],
+  const terrains = terrainEntries();
+  const toc = [['h', 'Story'], ['story', 'Synopsis'], ['missions', 'Missions'], ['h', 'Terrain'], ...terrains.map((t) => [t.slug, t.name]), ['h', 'Units'],
     ...FAMILIES.map(([id, title]) => [id, title])];
   $('toc').innerHTML = toc.map(([id, t]) => (id === 'h' ? `<div class="h">${t}</div>` : `<a href="#${id}">${t}</a>`)).join('');
 
@@ -120,6 +126,7 @@ function render() {
 
   html += `<h2 id="missions">Missions</h2>`;
   for (let m = 0; m < MAP_COUNT; m++) html += missionHtml(m);
+  html += terrainHtml(terrains);
 
   for (const [id, title, a, b, codes] of FAMILIES) {
     html += `<h2 id="${id}">${title} <small>${codes}</small></h2><div class="grid">`;
@@ -136,6 +143,52 @@ function render() {
     const [t, army] = el.dataset.icon.split(',').map(Number);
     el.prepend(icon(t, army, 1));
   }
+  // the page fills in after the ROM loads, so jump to a linked section (e.g. #terrain-asteroid) now
+  if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();
+}
+
+// ---------------------------------------------------------------- terrain
+// One entry per named terrain type, with every hex graphic the maps use for it and the maps it is on.
+function terrainEntries() {
+  const byName = new Map();
+  for (let m = 0; m < MAP_COUNT; m++) {
+    const info = mapInfo(rom, m), header = rom.body(info.headerId), grid = rom.body(info.gridId);
+    for (let y = 1; y <= info.rows; y++) {
+      for (let x = 1; x < info.cols; x++) {
+        const v = grid[y * 62 + x], t = terrainOf(rom, header, v), tx = terrainText(t.type, t.cls, { en, rom });
+        let e = byName.get(tx.name);
+        if (!e) byName.set(tx.name, e = { ...tx, cls: t.cls, slug: slug(tx.name), gfx: new Map(), maps: new Set() });
+        e.gfx.set(header[v], (e.gfx.get(header[v]) || 0) + 1);
+        e.maps.add(m);
+      }
+    }
+  }
+  return [...byName.values()].sort((a, b) => a.cls - b.cls || a.name.localeCompare(b.name))
+    .map((e) => ({ ...e, gfx: [...e.gfx].sort((a, b) => b[1] - a[1]).map(([g]) => g) }));
+}
+
+function terrainHtml(list) {
+  if (!document.getElementById('terrain-css')) { const s = document.createElement('style'); s.id = 'terrain-css'; s.textContent = TERRAIN_CSS; document.head.append(s); }
+  const tables = romTables(rom), who = categoryUnits(types, en ? en.unitNames : null);
+  let html = `<h2 id="terrain">Terrain</h2>
+    <p>Every hex of a map is one of these terrains. A unit's defence depends on the terrain it stands on and on the
+    weapon mode it is hit with (Beam, Railgun or Missile); some terrain can't be targeted by a mode at all, and each kind
+    of unit pays its own price to enter. The pictures are the scenes the original fights in on that terrain.</p><div class="terrains">`;
+  for (const e of list) {
+    const units = MOVERS.filter((g) => who[g.cat]?.length).map((g) => `<b>${g.label}</b> ${who[g.cat].map(esc).join(', ')}`).join(' · ');
+    html += `<section class="terrain" id="${e.slug}">
+      <div class="tban" style="background-image:url(${bannerUrl(rom, e.cls, e.gfx[0])})">
+        <div class="ttl" style="left:14px">${e.tag ? `<span class="ttag">${esc(e.tag)}</span>` : ''}<h3>${esc(e.name)}</h3></div>
+        <span class="tco">class ${e.cls}</span></div>
+      <div class="tbody">
+        ${e.description ? `<p class="tdesc">${esc(e.description)}${e.ours ? ' <span class="ours">(not named in the original)</span>' : ''}</p>` : ''}
+        <div class="tcells">${e.gfx.slice(0, 10).map((g) => `<img src="${cellUrl(rom, g)}" alt="" title="hex graphic #${g}">`).join('')}</div>
+        ${factsHtml(rom, tables, e.cls, types)}
+        <details class="twho"><summary>Units in each class</summary><p>${units}</p></details>
+        <p class="tmaps"><span>On ${e.maps.size} of ${MAP_COUNT} maps:</span> ${[...e.maps].map((m) => `<a href="#mission-${m + 1}">${m + 1}</a>`).join(' ')}</p>
+      </div></section>`;
+  }
+  return html + '</div>';
 }
 
 // Unit counts as "icon ×n name" chips for one army.
