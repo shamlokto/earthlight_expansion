@@ -90,7 +90,9 @@
     .switch input:checked + span { background: rgba(245, 197, 66, .25); border-color: var(--gold); }
     .switch input:checked + span::after { transform: translateX(20px); background: var(--gold); box-shadow: 0 0 10px rgba(245, 197, 66, .6); }
     .switch input:focus-visible + span { outline: 2px solid var(--gold); outline-offset: 2px; }
-    .tabs { margin-left: auto; gap: 8px; }
+    .tabs { gap: 8px; }
+    .mutebox { margin-left: auto; }
+    .hero .soundHint { position: relative; z-index: 1; margin: 0 0 16px; }
     @media (max-width: 820px) { .two { grid-template-columns: minmax(0, 1fr); } .hero { padding: 22px 18px; } }
     @media (prefers-reduced-motion: reduce) { .box, .two { animation: none; } .rcard, .shopitem img { transition: none; } }
   </style>
@@ -102,6 +104,7 @@
       <span class="logo">EARTH LIGHT</span>
       <span class="sub">Expansion · Galt remnant</span>
     </div>
+    <label class="mutebox" title="original music, played from the ROM"><input type="checkbox" id="mute"> Mute</label>
     <nav class="tabs"><a class="btn" href="game.html">Original game</a><a class="btn" href="editor.html">Map editor</a></nav>
   </header>
   <main id="app"><p id="status">Loading ROM…</p></main>

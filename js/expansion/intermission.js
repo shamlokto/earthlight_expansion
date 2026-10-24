@@ -5,8 +5,8 @@ import { paint } from '../gfx.js';
 import { paintUnitArt } from '../unitart.js';
 import { battlePalette, unitIcon, renderMap } from '../maps.js';
 import { romView } from './mission.js';
-import { drawOverview } from './briefing.js';
-import { VILLAIN, villainPortrait } from './villain.js';
+import { storyHtml, transmissionHtml, mapHtml, strategyHtml, startBriefingFx } from './briefing.js';
+import { Sound, briefingSong } from '../audio/sound.js';
 import { loadExpansionData } from './data.js';
 import * as C from './campaign.js';
 import { ensurePack } from './pack.js';
@@ -20,19 +20,44 @@ const name = (t) => (en ? en.unitNames[t] : types[t].name);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 function icon(type) { const c = document.createElement('canvas'); paint(c, unitIcon(rom, 0, types[type].gfx), pal, { scale: 2 }); return c.outerHTML.replace('<canvas', `<canvas data-icon="${type}"`); }
 // the next mission's map with its units and the suggested plan (briefing.js), as in game.html's briefing
+// Its animations (briefing.js) run on one clock per mission, so the page's re-renders (every
+// roster click) carry on where they were instead of starting over.
+let briefFx = null, briefFor = null, briefT0 = 0, briefTerrain = null;
 function drawBriefMap() {
-  if (!next || !$('briefMap')) return;
+  briefFx?.stop(); briefFx = null;
+  const hero = document.querySelector('.hero');
+  if (!next || !hero) return;
+  const e = entry();
+  if (briefFor !== e.file) { briefFor = e.file; briefT0 = performance.now(); briefTerrain = null; }
   try {
-    const { rom: view, info } = romView(rom, next), terr = document.createElement('canvas');
-    paint(terr, renderMap(view, info, { units: false }).img, pal, { scale: 1 });
-    const icons = new Map(), icon = ({ type, army }) => {
-      const k = `${army}:${type}`;
-      if (!icons.has(k)) { const c = document.createElement('canvas'); paint(c, unitIcon(rom, army === 1 ? 1 : 0, types[type].gfx, 0), pal, { scale: 1 }); icons.set(k, c); }
-      return icons.get(k);
-    };
-    drawOverview($('briefMap'), { terrain: terr, mission: next, types, icon });
+    if (!briefTerrain) {
+      const { rom: view, info } = romView(rom, next);
+      briefTerrain = document.createElement('canvas');
+      paint(briefTerrain, renderMap(view, info, { units: false }).img, pal, { scale: 1 });
+    }
+    briefFx = startBriefingFx(hero, { terrain: briefTerrain, mission: next, types, icon: mapIcon }, briefT0);
   } catch (err) { console.warn('briefing map', err); }
 }
+const mapIcons = new Map();
+function mapIcon({ type, army }) {
+  const k = `${army}:${type}`;
+  if (!mapIcons.has(k)) { const c = document.createElement('canvas'); paint(c, unitIcon(rom, army === 1 ? 1 : 0, types[type].gfx, 0), pal, { scale: 1 }); mapIcons.set(k, c); }
+  return mapIcons.get(k);
+}
+
+// The original's briefing song for the next mission (sound.js briefingSong, as game.html plays
+// it), from the pack. Browsers start audio only after a click or key press on the page.
+const MUTE = 'earthlight-mute';
+let sound = null;
+const soundOn = () => !!(sound && sound.ctx && sound.ctx.state === 'running');
+function startSound() {
+  if (sound || !rom) return;
+  sound = new Sound(rom); sound.setMuted($('mute').checked);
+  sound.start().then(() => { document.querySelectorAll('.soundHint').forEach((h) => h.remove()); playBriefing(); }).catch((err) => console.warn('sound', err));
+}
+function playBriefing() { if (sound && next) sound.playSong(briefingSong(next.music ?? 0)); }
+document.addEventListener('pointerdown', startSound, { capture: true });
+document.addEventListener('keydown', startSound, { capture: true });
 function fillIcons() { for (const c of document.querySelectorAll('canvas[data-icon]')) paint(c, unitIcon(rom, 0, types[+c.dataset.icon].gfx), pal, { scale: 2 }); }
 
 // late in the campaign (index.json allFrom) every machine type can be built
@@ -72,18 +97,13 @@ function render() {
   // the next mission: the hero of the page
   if (!e) html += `<section class="hero box"><div class="eyebrow">Campaign complete</div><h1>The Union leadership has fallen.</h1></section>`;
   else {
-    html += `<section class="hero box"><div class="heroNum" aria-hidden="true">${String(e.no).padStart(2, '0')}</div>
+    const intro = briefFor !== e.file;
+    html += `<section class="hero box${intro ? ' fxIntro' : ''}"><div class="heroNum" aria-hidden="true">${String(e.no).padStart(2, '0')}</div>
       <div class="eyebrow">Intermission · next: mission ${e.no} of ${total}</div><h1>${esc(e.title)}</h1>`;
     if (!next) html += `<p class="muted">This mission isn't built yet: paint it in the map editor and add its file to missions/index.json.</p>`;
     else {
-      const story = (next.briefing || '').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-      html += `<div class="bTop"><article class="bStory">${story.map((p) => `<p>${esc(p)}</p>`).join('')}</article>
-        ${next.transmission ? `<aside class="bTx"><div class="txHead"><span class="rec"></span>Incoming transmission · Union Security Directorate</div>
-          <div class="txFace">${villainPortrait()}<div class="txScan"></div></div><div class="txWho"><b>${esc(VILLAIN.name)}</b><span>${esc(VILLAIN.rank)}</span></div>
-          <blockquote>${esc(next.transmission)}</blockquote></aside>` : ''}</div>
-        <section class="bMap"><h2>Theatre map</h2><div class="mapWrap"><canvas id="briefMap"></canvas></div>
-          <div class="legend"><span><i class="lg own"></i>Your forces</span><span><i class="lg foe"></i>Union</span><span><i class="lg grey"></i>Grey dock (capture)</span><span><i class="lg tgt"></i>Objective</span><span><i class="lg arr"></i>Plan, numbered as below</span><span><i class="lg rein"></i>Reinforcements (turn)</span></div></section>
-        ${(next.strategy || []).length ? `<section class="bPlan"><h2>Suggested strategy</h2><ol>${next.strategy.map((t) => `<li>${esc(t)}</li>`).join('')}</ol></section>` : ''}
+      if (!soundOn() && !$('mute').checked) html += `<button class="btn soundHint" type="button">♪ Click for the briefing music</button>`;
+      html += `<div class="bTop">${storyHtml(next)}${transmissionHtml(next)}</div>${mapHtml()}${strategyHtml(next)}
         <div class="chips">${e.hint ? `<span class="chip cyan">Next map wants: ${esc(e.hint)}</span>` : ''}<span class="chip ${deployed.size ? 'gold' : ''}">Deploy ${deployed.size} / ${cap}</span>${next.turnLimit ? `<span class="chip">Turn limit ${next.turnLimit}</span>` : ''}</div>
         <div class="row launchrow"><button class="btn primary big" id="launch" ${deployed.size ? '' : 'disabled'}>Launch mission</button>${resumable() ? `<button class="btn" id="resume">Resume saved battle (turn ${resumable().turn})</button>` : ''}</div>`;
     }
@@ -151,10 +171,11 @@ function wire(cap) {
     if (state.general !== null && !state.deploy.includes(state.general)) state.deploy = [state.general, ...state.deploy].slice(0, cap);
     save();
     clearSavedBattle(EXPANSION_BATTLE);   // a new launch never resumes an older saved battle
+    sound?.stop(); briefFx?.stop();
     location.href = battleUrl();
   };
   // a battle saved mid-mission (Save in the battle screen): game.html offers to resume it
-  if ($('resume')) $('resume').onclick = () => { location.href = battleUrl(); };
+  if ($('resume')) $('resume').onclick = () => { sound?.stop(); location.href = battleUrl(); };
   $('beta').onchange = (ev) => { state.beta = ev.target.checked; save(); render(); };
   // two clicks to start over (embedded viewers can suppress confirm() dialogs)
   $('restart').onclick = async () => {
@@ -173,6 +194,12 @@ async function startNew() {
   // the original's art and sound, copied once from the player's ROM (pack.js); no ROM needed after that
   const pack = await ensurePack({ onProgress: (t) => { $('status').textContent = t; } });
   const data = await loadExpansionData();   // the expansion's own units and text; the pack only draws them
+  try { $('mute').checked = localStorage.getItem(MUTE) === '1'; } catch { /* no storage */ }
+  $('mute').onchange = (ev) => {
+    try { localStorage.setItem(MUTE, ev.target.checked ? '1' : '0'); } catch { /* no storage */ }
+    if (sound) sound.setMuted(ev.target.checked);
+    if (ev.target.checked) document.querySelectorAll('.soundHint').forEach((h) => h.remove());
+  };
   rom = pack.rom; en = { ...(pack.text || {}), ...data.text }; pal = battlePalette(rom); types = data.types;
   index = await C.missionIndex();
   state = C.load();

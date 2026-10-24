@@ -25,7 +25,7 @@ import { drawScreen } from './screens.js';
 import { Board } from './render/board.js';
 import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle, EXPANSION_BATTLE } from './game/savegame.js';
 import { expansionFromUrl } from './expansion/battle.js';
-import { briefingHtml, drawOverview } from './expansion/briefing.js';
+import { briefingHtml, startBriefingFx } from './expansion/briefing.js';
 
 const $ = (id) => document.getElementById(id);
 // the battle board (js/render/board.js): terrain, units, overlays and effects drawn from the ROM's art
@@ -57,7 +57,15 @@ function playSong(s) { screenSong = s; if (sound) sound.playSong(s); }
 function startSound() {
   if (sound || !rom) return;
   sound = new Sound(rom); sound.setMuted($('mute').checked);
-  sound.start().then(() => { if (screenSong) sound.playSong(screenSong); else music(); });
+  sound.start().then(() => { document.querySelectorAll('.soundHint').forEach((h) => h.remove()); if (screenSong) sound.playSong(screenSong); else music(); });
+}
+// Browsers only start audio after a click or key press on the page: arriving straight on a
+// screen with music (the expansion's briefing, opened from the intermission), say so.
+function soundHint(parent) {
+  if (!parent || (sound && sound.ctx && sound.ctx.state === 'running') || $('mute').checked) return;
+  const b = document.createElement('button');
+  b.className = 'btn soundHint'; b.type = 'button'; b.textContent = '♪ Click for sound';
+  parent.append(b);
 }
 document.addEventListener('pointerdown', startSound, { capture: true });
 document.addEventListener('keydown', startSound, { capture: true });
@@ -140,9 +148,10 @@ async function expansionBriefing() {
   $('briefBody').innerHTML = briefingHtml(custom.mission, { goal, no, total });
   const terr = document.createElement('canvas');
   paint(terr, renderMap(custom.rom, custom.info, { units: false }).img, pal, { scale: 1 });
-  drawOverview($('briefMap'), { terrain: terr, mission: custom.mission, types, icon: (u) => maskedIcon({ type: u.type, army: u.army === 2 ? NEUTRAL : u.army }) });
-  $('bBriefGo').onclick = () => { silence(); startMission(-1); };
-  $('bBriefBack').onclick = () => { silence(); if (custom.campaign) location.href = 'expansion.html'; else location.search = ''; };
+  const fx = startBriefingFx($('briefBody'), { terrain: terr, mission: custom.mission, types, icon: (u) => maskedIcon({ type: u.type, army: u.army === 2 ? NEUTRAL : u.army }) });
+  soundHint($('briefBody').querySelector('.bHead'));
+  $('bBriefGo').onclick = () => { fx.stop(); silence(); startMission(-1); };
+  $('bBriefBack').onclick = () => { fx.stop(); silence(); if (custom.campaign) location.href = 'expansion.html'; else location.search = ''; };
 }
 
 // First run (and ☰ → ROM & patch): pick the ROM and, optionally, the English patch; both are
