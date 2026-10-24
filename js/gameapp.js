@@ -189,6 +189,13 @@ function wire() {
   $('optHard').onchange = () => saveProgress({ ...progress(), hard: $('optHard').checked });
   $('endTurn').onclick = endTurn;
   $('bSave').onclick = () => { if (!busy && battle.army === 0) log((custom ? saveBattle(battle, custom.url, EXPANSION_BATTLE) : saveBattle(battle, mission)) ? '<b>Battle saved.</b>' : '<b>Could not save (storage unavailable).</b>'); };
+  // Load: back to this mission's saved battle (the save slot keeps only one battle)
+  $('bBattleLoad').onclick = () => {
+    if (busy) return;
+    const s = custom ? savedBattle(EXPANSION_BATTLE) : savedBattle();
+    if (!s || s.mission !== (custom ? custom.url : mission)) return log('<b>No saved battle of this mission.</b>');
+    custom ? resumeExpansion(s) : loadBattle();
+  };
   $('bRestart').onclick = () => { if (!busy) startMission(mission); };
   // an expansion battle leaves for its own pages, so the base title never runs with `custom` set
   $('bRetreat').onclick = () => { if (busy) return; if (custom) location.href = custom.campaign ? 'expansion.html' : 'game.html'; else showTitle({ menu: true }); };

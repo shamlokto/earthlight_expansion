@@ -206,7 +206,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--gold); }
 #turn { font-size: 20px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px; }
 #turn small { font-family: var(--f-data); font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--dim); }
 #turn .small, #turn .dim { font-family: var(--f-body); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 13px; line-height: 1.45; margin-top: 4px; }
-.hud .card:first-child .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.hud .card:first-child .row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .hud .card:first-child .row #endTurn { grid-column: 1 / -1; font-size: 15px; padding: 11px; }
 .hud .card:first-child .row .btn { padding: 8px 6px; font-size: 11px; text-align: center; }
 .hud .card h3 { font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--cyan); }
