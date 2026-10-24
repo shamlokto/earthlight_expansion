@@ -380,3 +380,53 @@ input[type=checkbox], input[type=radio] { accent-color: var(--gold); }
   .bHead::after, .bStory p, .bTx, .hero > h1, .txFace svg, .txScan, .txNoise, .txHead .rec, .bTx .caret, .chip, .bHead h1, .bChap, .bNo, .mapWrap, .bPlan li::before, .soundHint, .resHero canvas, .crew .cm { animation: none !important; }
   .bPlan li { transition: none; }
 }
+
+/* ---- the new campaign: briefing comms with portraits (js/expansion/briefing.js commsHtml) */
+.bComms h2 { font-size: 13px; letter-spacing: .22em; text-transform: uppercase; color: var(--cyan); margin: 0 0 10px; }
+.bComms { display: grid; gap: 10px; }
+.cline { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: start; padding: 10px 12px; border: 1px solid rgba(111, 211, 255, .45);
+  background: linear-gradient(90deg, rgba(10, 40, 70, .75), rgba(6, 14, 30, .6)); transition: opacity .5s, transform .5s var(--ease); }
+.cline.enemy { border-color: rgba(255, 61, 90, .55); background: linear-gradient(90deg, rgba(60, 6, 22, .75), rgba(14, 4, 18, .6)); }
+.cline.cartel { border-color: rgba(255, 201, 74, .55); background: linear-gradient(90deg, rgba(58, 37, 8, .75), rgba(18, 10, 2, .6)); }
+.fxIntro .cline:not(.on) { opacity: 0; transform: translateX(-12px); }
+.cFace { position: relative; overflow: hidden; border: 1px solid currentColor; color: rgba(111, 211, 255, .5); aspect-ratio: 5 / 6; }
+.cline.enemy .cFace { color: rgba(255, 61, 90, .5); }
+.cline.cartel .cFace { color: rgba(255, 201, 74, .5); }
+.cFace svg { display: block; width: 100%; height: 100%; animation: flicker 6s infinite; }
+.cWho { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 4px; }
+.cWho b { font: 700 14px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: #cdeeff; }
+.cline.enemy .cWho b { color: #ffd0d8; }
+.cline.cartel .cWho b { color: #ffe3a0; }
+.cWho span { font-size: 12px; color: var(--dim); }
+.cWho .rec { width: 8px; height: 8px; border-radius: 50%; background: #ff3d5a; box-shadow: 0 0 10px #ff3d5a; animation: blink 1.1s steps(2) infinite; align-self: center; }
+.cline.cartel .rec { background: #ffc94a; box-shadow: 0 0 10px #ffc94a; }
+.cBody p { margin: 0; font-size: 15px; line-height: 1.6; min-height: 1.6em; color: #e6f4ff; }
+.cline.enemy .cBody p { font-style: italic; color: #ffe3e8; }
+.cline.cartel .cBody p { color: #fff1d0; }
+.cBody .caret { display: inline-block; width: .5em; height: 1.05em; margin-left: 2px; vertical-align: -.15em; background: currentColor; animation: blink .7s steps(2) infinite; }
+
+/* ---- the choice before a mission (js/expansion/intermission.js choiceHtml) */
+.choice h1 { font: 700 30px var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: var(--gold); margin: 6px 0 10px; }
+.choice .prompt { font-size: 17px; line-height: 1.6; max-width: 70ch; }
+.choice .faces { display: flex; gap: 12px; margin: 14px 0; }
+.choice .faces .cFace { width: 96px; }
+.choice .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 12px; }
+.choice .opt { text-align: left; display: grid; gap: 8px; padding: 18px; border: 1px solid var(--edge-hi); background: rgba(10, 18, 44, .8); color: var(--ink); cursor: pointer; font: inherit; transition: transform .2s var(--ease), border-color .2s, box-shadow .2s; }
+.choice .opt:hover, .choice .opt:focus-visible { transform: translateY(-3px); border-color: var(--gold); box-shadow: 0 0 30px rgba(245, 197, 66, .25); }
+.choice .opt b { font: 700 18px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+.choice .opt span { line-height: 1.55; color: #d8e2ff; }
+.choice .opt.armed { border-color: var(--gold); box-shadow: 0 0 36px rgba(245, 197, 66, .4); }
+
+/* ---- campaign select (expansion.html) */
+.camps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.camp { display: grid; gap: 10px; padding: 22px; text-align: left; cursor: pointer; font: inherit; color: var(--ink); border: 1px solid var(--edge-hi); background: linear-gradient(160deg, rgba(20, 34, 80, .85), rgba(6, 10, 26, .9)); transition: transform .2s var(--ease), box-shadow .2s, border-color .2s; }
+.camp:hover, .camp:focus-visible { transform: translateY(-4px); border-color: var(--gold); box-shadow: 0 0 40px rgba(245, 197, 66, .25); }
+.camp h2 { margin: 0; font: 700 26px var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+.camp .tag { justify-self: start; font: 600 11px var(--f-display); letter-spacing: .16em; text-transform: uppercase; padding: 3px 8px; border: 1px solid var(--cyan); color: var(--cyan); }
+.camp p { margin: 0; line-height: 1.55; color: #d8e2ff; }
+.camp .state { font-size: 13px; color: var(--dim); }
+.camp .faces { display: flex; gap: 8px; }
+.camp .faces .cFace { width: 64px; }
+@media (max-width: 600px) { .cline { grid-template-columns: 64px minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .cFace svg, .cWho .rec, .cBody .caret { animation: none !important; } .cline, .choice .opt, .camp { transition: none; } }
+.bTop.solo { grid-template-columns: minmax(0, 1fr); }

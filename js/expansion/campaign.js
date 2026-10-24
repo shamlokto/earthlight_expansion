@@ -3,8 +3,21 @@
 // earned from the battle score; trade swaps machines at fixed rates by price; repairs are free;
 // the general boards one eligible machine. Kept in localStorage; game.html reads it when it
 // plays a mission with &campaign=1 and writes the outcome back.
-const KEY = 'el-expansion-campaign';
-export const INDEX_URL = 'missions/index.json';
+// Two campaigns (docs/STORY.md): the new "Galt remnant" and the Classic one (the first 10
+// missions). Each keeps its own save and mid-battle slot; the Classic one uses the keys every
+// earlier save was written under, so existing progress carries over as the Classic campaign.
+export const CAMPAIGNS = {
+  remnant: { id: 'remnant', title: 'Galt remnant', index: 'missions/remnant/index.json', key: 'el-expansion-campaign-remnant', battle: 'earthlight-expansion-battle-remnant' },
+  classic: { id: 'classic', title: 'Classic campaign', index: 'missions/index.json', key: 'el-expansion-campaign', battle: 'earthlight-expansion-battle' },
+};
+const CURRENT = 'el-expansion-current';
+let current = CAMPAIGNS.classic;
+// The campaign being played: chosen on expansion.html (remembered), or `c=` in game.html's URL.
+export function use(id) { current = CAMPAIGNS[id] || CAMPAIGNS.classic; return current; }
+export const campaign = () => current;
+export function remembered() { try { return localStorage.getItem(CURRENT); } catch { return null; } }
+export function remember(id) { try { id ? localStorage.setItem(CURRENT, id) : localStorage.removeItem(CURRENT); } catch { } }
+export const saved = (id) => { try { return JSON.parse(localStorage.getItem(CAMPAIGNS[id].key)); } catch { return null; } };
 export const MAX_BUILDS = 3;
 export const BASE_SUPPLY = 10;          // every intermission, so a bad battle still builds something
 export const SCORE_PER_SUPPLY = 10;     // map points per supply point
@@ -24,11 +37,34 @@ export function marketTypes(types) {
   return types.filter((t) => !t.cut && (t.move > 0 || BATTERIES.includes(t.type)) && !isStructure(t.type) && t.armed === undefined && t.formOf === undefined && t.empty === undefined);
 }
 
-export function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
-export function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); return true; } catch { return false; } }
-export function clear() { try { localStorage.removeItem(KEY); } catch { } }
+export function load() { try { return JSON.parse(localStorage.getItem(current.key)); } catch { return null; } }
+export function save(s) { try { localStorage.setItem(current.key, JSON.stringify(s)); return true; } catch { return false; } }
+export function clear() { try { localStorage.removeItem(current.key); } catch { } }
 
-export async function missionIndex() { return (await fetch(INDEX_URL)).json(); }
+// The campaign's mission index, or null while it isn't written yet.
+export async function missionIndex() { try { const r = await fetch(current.index); return r.ok ? r.json() : null; } catch { return null; } }
+
+// The missions as this campaign plays them. Entries sharing a `no` are alternatives: the one whose
+// `when.choice` matches the campaign's choice, else the one without `when`, else (choice not made
+// yet) the group's first. Index entries without `no` stand alone.
+export function missionList(index, s) {
+  const out = [], seen = new Map();
+  for (const e of index.missions) {
+    if (e.no === undefined) { out.push(e); continue; }
+    if (!seen.has(e.no)) { seen.set(e.no, out.length); out.push(e); continue; }
+    const i = seen.get(e.no), cur = out[i], fits = (x) => x.when && s.choice !== undefined && x.when.choice === s.choice;
+    if (fits(e) && !fits(cur)) out[i] = e;
+    else if (!e.when && cur.when && !fits(cur)) out[i] = e;
+  }
+  return out;
+}
+// The choice to make before the mission at `i` (its alternatives carry it), if not made yet.
+export function pendingChoice(index, s, i) {
+  const e = missionList(index, s)[i];
+  if (!e || s.choice !== undefined) return null;
+  const alts = index.missions.filter((x) => x === e || (e.no !== undefined && x.no === e.no));
+  return alts.map((x) => x.choice).find(Boolean) || null;
+}
 
 // A new campaign starts with the first mission's own player units as the roster.
 export function newCampaign(firstMission) {

@@ -1,0 +1,11 @@
+{"campaign":"remnant","title":"Galt remnant","start":[0,1,3],"missions":[
+{"no":1,"title":"Night of Knives","file":"missions/remnant/knives.json","unlocks":[],"hint":"Break out: go through both gates at once and run for the magnetic band."},
+{"no":2,"title":"Salvage Rights","file":"missions/remnant/salvage.json","unlocks":[8,9],"hint":"Grey docks: bring one to zero and it joins you with its machines."},
+{"no":3,"title":"The Shepherd","file":"missions/remnant/shepherd.json","unlocks":[26],"hint":"Crabs cross asteroids cheaply but crawl through meteoroids and flux."},
+{"no":4,"title":"Iron Garden","file":"missions/remnant/garden.json","unlocks":[23,24,10],"hint":"Batteries: a Crab sets a Dragon or Hydra down on bedrock, and it never moves again."},
+{"no":5,"title":"Vane's Gambit","file":"missions/remnant/gambit.json","unlocks":[14,15],"hint":"Railguns and missiles: Vane hides in a magnetic field where beams can't reach."},
+{"no":6,"title":"Moraine's Price","file":"missions/remnant/price.json","unlocks":[33,39],"hint":"A walled depot on bedrock: mecha for the gates, turrets on the railway.","when":{"choice":"deal"},"choice":{"prompt":"Queen Moraine offers her raiders and her yards. Her price: a free dock at Olympos when Kessrin falls, and the right to sell whatever flies out of it.","options":[{"id":"deal","label":"Take the deal","text":"Fight beside the cartel against the Directorate depot at Kerberos Rock. Her ships join you, and she will name her price later."},{"id":"refuse","label":"Refuse","text":"Turn her down and strike first: sink the cartel fleet at anchor in the Ashfall scrapyard before she can turn on you."}]}},
+{"no":6,"title":"The Ashfall Raid","file":"missions/remnant/raid.json","unlocks":[41,50],"hint":"Carriers can't enter asteroids: hunt them down the open lanes.","when":{"choice":"refuse"}},
+{"no":7,"title":"Babylon Run","file":"missions/remnant/babylon.json","unlocks":[34,36],"hint":"A magnetic belt runs up to the wreck's stern; mecha can cross the hull, ships can't.","when":{"choice":"deal"}},
+{"no":7,"title":"Burning Yards","file":"missions/remnant/yards.json","unlocks":[31,42],"hint":"A walled yard on bedrock: bring mecha for the gates and long guns for the turrets.","when":{"choice":"refuse"}}
+]}
