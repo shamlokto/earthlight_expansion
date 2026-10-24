@@ -551,3 +551,20 @@ the editor (those come with phase 3).
 * Map designs: feedback on maps 5–10 (draft 2) after a first playtest.
 * Bonus objectives (capture all docks, sink every carrier…) add score. Score is new code anyway.
 * New rules the maps need: the escape objective (map 1) and "destroy all units of a type" (map 6).
+
+## Briefings, the villain and the results screens (2026-10-24)
+
+* **Briefing screen** (`js/expansion/briefing.js`, game.html `#sBrief`): chapter header, the story,
+  an incoming transmission from the villain, an annotated overview of the map (targets, the
+  general, grey docks, reinforcement waves with their turn, the exit edge and the numbered plan)
+  and the suggested strategy. Mission spec fields: `chapter`, `transmission`, `strategy` (steps)
+  and `plan` (`{ n, path: [[x, y], ...] }` arrows, `{ n, at: [x, y], note }` markers; `n` is the
+  step), passed through by `tools/build-missions.mjs`.
+* **Villain: Marshal Oren Kessrin**, Director of the Union Security Directorate. He staged the
+  commander's assassination and blamed Galt; Admiral Varga only signed the order, and Kessrin is
+  glad to see him sunk (mission 4). Cold, courteous, never raises his voice; speaks once per
+  mission and waits in the Olympos citadel for the finale. The ROM has no character portraits, so
+  his face is original SVG art (`js/expansion/villain.js`).
+* **Results**: every results screen opens on the ROM's Earthrise (the opening's BG1, tiles 11 →
+  map 12, palette 10; `screens.js` `earthrise`), red-tinted on a defeat. Expansion results add the
+  battle in numbers and every machine that flew it, with level gains, kills and an MVP.

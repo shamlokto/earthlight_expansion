@@ -58,6 +58,10 @@ export default {
   name: 'SIMAK', title: 'The Wreck', screens: [4, 3],
   objective: { kind: 'command' }, turnLimit: 30, cap: 20, guards: 2, music: 29,
   goal: "Destroy the three Cortex command centres inside Babylon's hull.",
+  chapter: "Chapter 7 · Earth orbit, the wreck of Babylon",
+  transmission: "Babylon never fired. That is the trouble with emperors, General: they hesitate. I won't.",
+  strategy: ["Your northwest group rides the magnetic belt down to the hull's west end: the Dragons' beams can't touch a ship inside it.", "The north group drops straight onto the hull. Don't trade with the carriers: kill fighters only when they block your way.", "The west group crosses the plasma lake and the meteoroids to the southern Cortex.", "A wave of fighters launches from the atmosphere on turn 4. Be inside the hull by then.", "Three Cortex centres: kill them all. The home fleet behind the eastern asteroids will come once you're committed."],
+  plan: [{"n": 1, "path": [[3, 5], [9, 9], [16, 12]]}, {"n": 2, "path": [[24, 2], [26, 5], [28, 8]]}, {"n": 3, "path": [[3, 15], [11, 17], [19, 17]]}, {"n": 4, "at": [30, 23], "note": "Fighter wave T4"}],
   briefing: `
 Earth orbit. Babylon.
 

@@ -43,6 +43,10 @@ const units = Array.from({ length: ROWS }, (_, j) => Array.from({ length: COLS }
 export default {
   name: 'HERBERT', title: 'Shipyard', screens: [3, 2],
   objective: { kind: 'command' }, cap: 10, guards: 2, music: 28,
+  chapter: "Chapter 3 · F7 Asgard, the shipyards",
+  transmission: "So you have found the Emperor's toys. Keep them, General. They will make a fine exhibit at your trial.",
+  strategy: ["Take the two near docks first, north and south of the plasma river: a Crane and a Mars for the price of a few shots each.", "Wisp mines sit in the river crossing at rows 11 to 13. Go around them, through the ridge gap in rows 12 to 15.", "Keep mecha out of the gravity flux in the south: they can't enter it.", "The dock on the south deck holds an Athena, and the deep one inside the station walls holds a cruiser.", "The Dragon turret only hits ships. Send small craft past it to the Cortex; its two Vulcan guards only fire on units near it."],
+  plan: [{"n": 1, "path": [[4, 6], [9, 5], [12, 4]]}, {"n": 1, "path": [[4, 13], [9, 15], [12, 16]]}, {"n": 2, "path": [[13, 15], [17, 13], [21, 13]]}, {"n": 4, "path": [[22, 14], [28, 16]]}, {"n": 5, "path": [[29, 14], [34, 10], [40, 6]]}, {"n": 2, "at": [12, 12], "note": "Wisp mines"}, {"n": 3, "at": [19, 17], "note": "Gravity flux: no mecha"}],
   briefing: `
 F7 Asgard. The shipyards that built Babylon.
 

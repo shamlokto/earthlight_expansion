@@ -136,6 +136,8 @@
     <div class="row"><button class="btn primary" id="bStoryNext">Next</button><button class="btn" id="bStorySkip">Skip</button></div>
   </section>
 
+  <section class="screen" id="sBrief" hidden><div id="briefBody"></div></section>
+
   <section class="screen" id="sBattle" hidden>
     <main class="play">
       <div class="board" id="board"><canvas id="cv"></canvas></div>
@@ -148,8 +150,11 @@
   </section>
 
   <section class="screen center" id="sResult" hidden>
-    <div class="briefTitle" id="resTitle"></div>
+    <div class="resHero" id="resHero"><canvas id="resArtCv" width="256" height="224"></canvas><div class="resOver"><div class="resKicker" id="resKicker"></div><div class="briefTitle" id="resTitle"></div></div></div>
     <div class="result" id="resText"></div>
+    <div class="resStats" id="resStats" hidden></div>
+    <div class="resCrew" id="resCrew" hidden></div>
+    <div class="story epilogue" id="resEpilogue" hidden></div>
     <div class="dim" id="resLoss"></div>
     <div class="points scr" id="points" hidden><canvas id="resultCv" width="256" height="224"></canvas><div class="vp" id="pointsBody"></div><div class="vprank" id="pointsRank"></div></div>
     <div class="row"><button class="btn primary" id="bResNext"></button><button class="btn" id="bResStory" hidden>Epilogue</button><button class="btn" id="bResTitle">Title</button></div>

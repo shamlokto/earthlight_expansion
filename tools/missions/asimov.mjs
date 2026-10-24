@@ -6,6 +6,10 @@
 export default {
   name: 'ASIMOV', title: 'Betrayal', screens: [2, 1],
   objective: { kind: 'escape', edge: 'east', count: 2 }, turnLimit: 12, cap: 6, music: 0,
+  chapter: "Chapter 1 · F1 Olympos, Hamilton Command",
+  transmission: "All units, Hamilton Command. This is Marshal Kessrin, Security Directorate. The commander's murderer is the deputy commander. He is trying to leave the base. Stop him. Alive, if it is convenient.",
+  strategy: ["Out of the gate on turn 1. The two Talos outside fire beams: shelter in the magnetic band, where beams can't reach you, and kill them from there.", "Run for the meteoroid fields in the north or south. The Hannibal and the Fenrirs can't enter meteoroids, so cross the gap through the rocks, not the open middle.", "The garrison comes out of the base behind you on turn 5 and hunts your carrier. Keep the Selene moving east, ahead of the pack.", "Only the general and two more machines have to get off the east edge. Don't turn back for stragglers."],
+  plan: [{"n": 1, "path": [[4, 5], [8, 5], [13, 5]]}, {"n": 2, "path": [[14, 4], [18, 2], [22, 2]]}, {"n": 4, "path": [[23, 3], [28, 4]]}, {"n": 3, "at": [3, 3], "note": "Garrison sorties T5"}],
   briefing: `
 Hamilton Command, F1 Olympos. The commander is dead, shot in the command centre an hour after the victory parade, and the Union's new masters already call it the work of Galt saboteurs.
 

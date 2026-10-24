@@ -49,6 +49,10 @@ export default {
   name: 'GIBSON', title: 'Le Guin Again', screens: [4, 2],
   objective: { kind: 'destroyType', type: 32, edge: 'east' }, turnLimit: 22, cap: 12, music: 6,
   goal: 'Sink the admiral\'s Nodens before it reaches the east edge.',
+  chapter: "Chapter 4 · The Le Guin sector",
+  transmission: "Admiral Varga signed an order. Orders are paper, General, and paper burns. Did you think I would let him reach Olympos and talk? Sink him. You will be doing me a favour.",
+  strategy: ["Bombers kill battleships. Send the Athena and the Brontes straight at the Nodens: its missile battery can't target small craft.", "Mecha cross the gravity belts only through the gaps, rows 5-6 and 14-15 at the first belt. Use them to tie up the escorts.", "Strike before the Nodens reaches the second belt at column 34: its escorts shelter in the flux, where railguns lose half their power.", "Two destroyers come in from the east on turn 6. Finish the job before they join."],
+  plan: [{"n": 1, "path": [[4, 7], [12, 9], [20, 10]]}, {"n": 2, "path": [[4, 6], [10, 5], [17, 5]]}, {"n": 2, "path": [[4, 14], [10, 14], [17, 14]]}, {"n": 3, "at": [35, 10], "note": "Escorts shelter in the flux"}, {"n": 4, "at": [57, 4], "note": "Destroyers T6"}, {"n": 4, "at": [57, 16], "note": "Destroyers T6"}],
   briefing: `
 The Le Guin sector, where the Union sank the Tiamat a year ago. Fitting.
 

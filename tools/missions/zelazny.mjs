@@ -39,6 +39,10 @@ export default {
   name: 'ZELAZNY', title: 'Gate', screens: [3, 3],
   objective: { kind: 'fortress' }, turnLimit: 30, cap: 22, guards: 3, music: 21,
   goal: 'Destroy the Carthago fortress at the heart of the Gate.',
+  chapter: "Chapter 8 · The Gate of Eden",
+  transmission: "The Gate has held for forty years. It only has to hold for one more day. That is all the time I need.",
+  strategy: ["Advance through the magnetic river on your side of the approach: the Talos beams can't reach you there. Use the comet debris as stepping stones, but remember a ship that enters it stops.", "Go in gate by gate. The gates are two hexes wide and mined: clear the Wisps with ranged fire first.", "The dock beside the Carthago is full of Talos. Bring it to zero early, before it empties onto the decks.", "Reserves come from the east on turns 4, 6 and 9. Hold the inner walls against them, and send everything else at the Carthago."],
+  plan: [{"n": 2, "path": [[3, 4], [9, 5], [14, 6]]}, {"n": 1, "path": [[3, 15], [9, 15], [14, 15]]}, {"n": 2, "path": [[3, 26], [9, 25], [14, 24]]}, {"n": 3, "path": [[18, 15], [26, 15]]}, {"n": 4, "at": [42, 15], "note": "Reserves T4 · T6 · T9"}],
   briefing: `
 The Gate of Eden.
 

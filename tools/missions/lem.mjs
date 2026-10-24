@@ -43,6 +43,10 @@ const units = Array.from({ length: ROWS }, (_, j) => Array.from({ length: COLS }
 export default {
   name: 'LEM', title: 'Old Enemies', screens: [3, 2],
   objective: { kind: 'annihilate' }, cap: 8, music: 25,
+  chapter: "Chapter 2 · The Aldiss belt",
+  transmission: "Hiding among Galt wreckage, General? How fitting. When my patrol finds you together, the Foundries will see for themselves who your friends are.",
+  strategy: ["Don't charge. The patrol is missile-heavy, and missiles lose 40% against ships in meteoroids: hold the western fields and let them come to you.", "Their destroyers can't follow into meteoroids or asteroids. Fight them from the rocks and they can only shoot back from the open lanes.", "The Galt band breaks cover in the northeast on turn 2. Push east once they arrive and catch the patrol between you.", "Send a mecha south for the grey dock: bring it to zero and its Mars and Crane join you."],
+  plan: [{"n": 1, "at": [4, 5], "note": "Meteoroid cover"}, {"n": 3, "path": [[37, 4], [33, 7], [28, 9]]}, {"n": 3, "at": [38, 2], "note": "Galt band joins T2"}, {"n": 4, "path": [[5, 13], [14, 16], [21, 17]]}, {"n": 2, "at": [20, 9], "note": "Missiles −40% in meteoroids"}],
   briefing: `
 The Aldiss belt. We came here to disappear, and for two days it worked.
 

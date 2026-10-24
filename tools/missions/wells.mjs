@@ -80,6 +80,10 @@ export default {
   name: 'WELLS', title: 'Olympos', screens: [4, 4],
   objective: { kind: 'command' }, turnLimit: 24, cap: 30, guards: 3, music: 7,
   goal: 'Destroy both of the Union leadership\'s command centres within 24 turns. If the general falls, it is over.',
+  chapter: "Chapter 10 · F1 Olympos, the citadel",
+  transmission: "Come in, then. The cannon is loaded, the doors are open, and history will decide which of us betrayed the Union. I write history from this room, General.",
+  strategy: ["You start in four corners. Converge on the west and east gates. The gravity ring opens only in front of them.", "The western Cortex is close to the west gates and the eastern Cortex to the east gates. Give each one a strike group.", "Stay clear of the north approach: it's mined.", "Union waves arrive from the east on turn 6 and from the west on turn 12. The Luggnagg cruisers join you from the south on turn 8.", "The general must survive. Keep that machine back, in the second line."],
+  plan: [{"n": 1, "path": [[5, 5], [10, 8], [14, 10]]}, {"n": 1, "path": [[5, 36], [10, 33], [14, 30]]}, {"n": 1, "path": [[54, 5], [49, 8], [45, 10]]}, {"n": 1, "path": [[54, 36], [49, 33], [45, 30]]}, {"n": 2, "path": [[15, 10], [18, 12]]}, {"n": 2, "path": [[44, 30], [43, 22]]}, {"n": 4, "at": [13, 39], "note": "Luggnagg cruisers T8"}, {"n": 4, "at": [57, 21], "note": "Union wave T6"}, {"n": 4, "at": [2, 21], "note": "Union wave T12"}],
   briefing: `
 F1 Olympos. Where the Union was born, and where it went wrong.
 

@@ -25,6 +25,7 @@ import { drawScreen } from './screens.js';
 import { Board } from './render/board.js';
 import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle, EXPANSION_BATTLE } from './game/savegame.js';
 import { expansionFromUrl } from './expansion/battle.js';
+import { briefingHtml, drawOverview } from './expansion/briefing.js';
 
 const $ = (id) => document.getElementById(id);
 // the battle board (js/render/board.js): terrain, units, overlays and effects drawn from the ROM's art
@@ -38,6 +39,7 @@ let rom, romEn = null, en = null, pal, types, battle, mission = 0;
 let sel = null, reach = null, targets = [], hosts = [], launching = null, busy = false, blastCells = null;
 let threat = null;   // an enemy unit's reach, shown when it is clicked: { u, move: Map, fire: Set }
 let cursor = null;   // keyboard cursor hex [x, y]
+let startLevels = new Map();   // unit id -> level when the battle began (the results screen's level gains)
 let custom = null;   // expansion mission (game.html?mission=...), see js/expansion/battle.js
 
 // Original music and effects (js/audio), started by the first click (browsers need a gesture);
@@ -121,9 +123,26 @@ async function startExpansion() {
   custom = await expansionFromUrl(rom);
   types = custom.types; en = { ...(en || {}), ...custom.text };
   const s = savedBattle(EXPANSION_BATTLE), title = custom.mission.title || custom.mission.name;
-  const brief = () => story(custom.briefing(), title, () => { silence(); startMission(-1); }, { art: true, song: briefingSong(custom.musicMap) });
+  const brief = () => expansionBriefing();
   if (s && s.mission === custom.url) choose(title, `You have a saved battle of this mission (turn ${s.turn}).`, 'Resume', 'Start over', () => resumeExpansion(s), brief);
   else brief();
+}
+
+// The expansion's briefing screen (js/expansion/briefing.js): story, the villain's transmission,
+// the annotated map, the suggested strategy and the objective.
+async function expansionBriefing() {
+  show('sBrief');
+  playSong(briefingSong(custom.musicMap));
+  const q = new URLSearchParams(location.search), no = q.has('no') ? +q.get('no') : null;
+  let total = null;
+  if (custom.campaign) try { total = (await (await fetch('missions/index.json')).json()).missions.length; } catch { }
+  const goal = custom.briefing().pop().replace(/^Objective\s*/, '');
+  $('briefBody').innerHTML = briefingHtml(custom.mission, { goal, no, total });
+  const terr = document.createElement('canvas');
+  paint(terr, renderMap(custom.rom, custom.info, { units: false }).img, pal, { scale: 1 });
+  drawOverview($('briefMap'), { terrain: terr, mission: custom.mission, types, icon: (u) => maskedIcon({ type: u.type, army: u.army === 2 ? NEUTRAL : u.army }) });
+  $('bBriefGo').onclick = () => { silence(); startMission(-1); };
+  $('bBriefBack').onclick = () => { silence(); if (custom.campaign) location.href = 'expansion.html'; else location.search = ''; };
 }
 
 // First run (and ☰ → ROM & patch): pick the ROM and, optionally, the English patch; both are
@@ -162,7 +181,7 @@ function setup(msg = '', cancel = false) {
 }
 boot();
 // game.html?debug: lets test scripts read the battle and act like a click
-if (new URLSearchParams(location.search).has('debug')) window.earthlight = { battle: () => battle, act: (x, y) => act(x, y), busy: () => busy };
+if (new URLSearchParams(location.search).has('debug')) window.earthlight = { battle: () => battle, act: (x, y) => act(x, y), busy: () => busy, checkEnd: () => checkEnd() };
 
 // ------------------------------------------------------------------ progress
 const progress = loadProgress;
@@ -173,7 +192,7 @@ const side = (a) => (a === NEUTRAL ? 'neutral' : a ? 'armyB' : 'armyA');
 const armyName = (a) => (custom ? custom.names[a] : a ? 'Galt' : 'Union');
 
 function show(id) {
-  for (const s of ['sLoad', 'sTitle', 'sStory', 'sBattle', 'sResult']) $(s).hidden = s !== id;
+  for (const s of ['sLoad', 'sTitle', 'sStory', 'sBrief', 'sBattle', 'sResult']) $(s).hidden = s !== id;
   window.scrollTo(0, 0);   // each screen starts at its top (the results screen can be long)
 }
 
@@ -330,6 +349,7 @@ function resumeExpansion(s) {
 }
 
 function begin() {
+  startLevels = new Map(battle.units.map((u) => [u.id, u.general ? u.pilotLevel : u.level]));
   draw(); hud(`<p><b>Objective:</b> ${battle.script.goal}</p><span class="dim">Click one of your units; click an enemy to see where it can move and fire. Docks and carriers hold more units: click them to launch.
     Neutral docks (grey) can be captured, with the units inside, by bringing them down to 0 HP.</span>`);
   const first = battle.alive(0)[0];
@@ -736,6 +756,7 @@ function checkEnd() {
 function result(w) {
   silence();
   show('sResult');
+  resultHero(w);
   if (custom) { expansionResult(w); return; }
   const p = progress();
   if (w === 0) {
@@ -778,6 +799,7 @@ function expansionResult(w) {
     : r === 'breakthrough' ? 'A marked Union unit got through. The mission has failed.'
     : r === 'timeup' ? label(83) || 'Time is up.' : label(LAYOUT.missionLost);
   $('points').hidden = true; $('bResStory').hidden = true;
+  expansionReport(w);
   if (w === 0 && custom.mission.ending) {   // the finale's ending (mission JSON `ending`, pages split by blank lines)
     $('bResStory').hidden = false;
     $('bResStory').onclick = () => story(custom.mission.ending.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean), 'EARTH LIGHT', () => { silence(); show('sResult'); }, { song: SONGS.ending });
@@ -788,10 +810,48 @@ function expansionResult(w) {
   if (!custom.campaign) return;
   $('bResTitle').onclick = () => { location.href = 'expansion.html'; };
   if (w === 0) {   // the campaign moves on: survivors, levels and supply are saved for the intermission
-    $('resText').textContent += `\n\nSupply +${custom.finish(battle)}.`;
+    const gain = custom.finish(battle);
+    $('resStats').querySelector('[data-k=supply]').textContent = `+${gain}`;
     $('bResNext').textContent = 'Intermission';
     $('bResNext').onclick = () => { location.href = 'expansion.html'; };
   }
+}
+
+// The results screens open on the ROM's Earthrise (the opening's BG1), tinted red on a defeat.
+function resultHero(w) {
+  drawScreen(rom, 'earthrise', $('resArtCv'), paint);
+  $('resHero').classList.toggle('lost', w !== 0);
+  $('resKicker').textContent = w === 0 ? 'Mission accomplished' : 'Mission failed';
+  for (const id of ['resStats', 'resCrew', 'resEpilogue']) $(id).hidden = true;
+}
+
+// Expansion results: the battle in numbers, and every machine that flew it with its pilot's
+// level gain and kills (from the battle log); the best of them is the MVP.
+function expansionReport(w) {
+  const mine = battle.units.filter((u) => u.army === 0 && !u.exit && u.type < 52 && (u.rosterId !== undefined || u.hp > 0));
+  const kills = new Map(), dealt = new Map();
+  for (const e of battle.log) {
+    if (!e.att || !e.before) continue;
+    const [ab, db] = e.before, [aa, da] = e.after;
+    dealt.set(e.att, (dealt.get(e.att) || 0) + db - da); dealt.set(e.def, (dealt.get(e.def) || 0) + ab - aa);
+    if (db > 0 && da === 0) kills.set(e.att, (kills.get(e.att) || 0) + 1);
+    if (ab > 0 && aa === 0) kills.set(e.def, (kills.get(e.def) || 0) + 1);
+  }
+  const score = (u) => (kills.get(u) || 0) * 1000 + (dealt.get(u) || 0);
+  const mvp = w === 0 ? mine.filter((u) => u.hp > 0 && score(u) > 0).sort((a, b) => score(b) - score(a))[0] : null;
+  const no = +(new URLSearchParams(location.search).get('no') || 0);
+  const foes = battle.units.filter((u) => u.army === 1 && u.hp <= 0).length, lost = mine.filter((u) => u.hp <= 0).length;
+  $('resStats').innerHTML = [['Turns', battle.turn], ['Map points', mapPoints(battle, no).total], ['Union destroyed', foes], ['Machines lost', lost], ['Supply', '—', 'supply']]
+    .map(([k, v, key]) => `<div><span>${k}</span><b${key ? ` data-k="${key}"` : ''}>${v}</b></div>`).join('');
+  $('resStats').hidden = false;
+  $('resCrew').innerHTML = `<h2>${w === 0 ? 'The crews' : 'Who flew'}</h2><div class="crew">${mine.map((u, i) => {
+    const lv = u.general ? u.pilotLevel : u.level, was = startLevels.get(u.id) ?? lv, k = kills.get(u) || 0;
+    return `<div class="cm${u.hp <= 0 ? ' lost' : ''}${u === mvp ? ' mvp' : ''}" style="--d:${i}"><canvas data-art="${u.type}"></canvas><b>${nameOf(u)}${u.general ? ' ★' : ''}</b>
+      <small>Lv ${lv}${lv > was ? ` <span class="up">▲${lv - was}</span>` : ''} · ${k} kill${k === 1 ? '' : 's'}${u.hp <= 0 ? ' · lost' : ''}</small></div>`;
+  }).join('')}</div>`;
+  for (const c of $('resCrew').querySelectorAll('canvas[data-art]')) paintUnitArt(c, rom, +c.dataset.art, 1);
+  $('resCrew').hidden = !mine.length;
+  if (w === 0 && custom.mission.ending) { $('resEpilogue').textContent = custom.mission.ending.split(/\n\s*\n/)[0]; $('resEpilogue').hidden = false; }
 }
 
 // The points screen ($08:A6C0): this map's points, the campaign total and the rank. The

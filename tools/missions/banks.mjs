@@ -86,6 +86,10 @@ export default {
   name: 'BANKS', title: 'Foundry', screens: [3, 3],
   objective: { kind: 'command' }, turnLimit: 24, cap: 16, guards: 2, music: 14,
   goal: 'Destroy both Cortex command centres in the eastern works.',
+  chapter: "Chapter 5 · F6 Luggnagg, the Foundry",
+  transmission: "Luggnagg's workers asked for their wages. I am sending them the general instead. Let us see who pays whom.",
+  strategy: ["Take the grey dock in the southwest works first: its Titan and Mars join you, and the workers' two Hannibal cruisers arrive beside it on turn 5.", "Split into two strike groups, north and south. Each Cortex sits inside its own works in the east.", "Gravity flux rings the works: mecha can't cross it, and railguns lose half their power against anything sheltering in it. Go in through the gates, and use beams and missiles on defenders in the flux.", "The east lane is mined and a carrier group waits behind it. Stay inside the works once you get there."],
+  plan: [{"n": 1, "path": [[6, 23], [11, 22], [14, 22]]}, {"n": 1, "at": [11, 27], "note": "Workers’ cruisers T5"}, {"n": 2, "path": [[2, 10], [15, 8], [30, 7]]}, {"n": 2, "path": [[16, 23], [24, 24], [31, 24]]}],
   briefing: `
 F6 Luggnagg, the Foundry that builds half the Union's warships. Its workers have not been paid since Babylon fell. They have been told to work faster.
 
