@@ -49,11 +49,12 @@ function run(rom, romEn) {
   add(JSON.stringify(terrainPalette(rom).map((p) => [p.gfx, p.id, p.cls, p.count])));
   for (let g = 0; g < 40; g++) add(maps.unitIcon(rom, g & 1, g, g & 2 ? 1 : 0).px);
   const u = (type, army) => ({ type, army, hp: types[type].hp, level: 2, x: 5, y: 5 });
-  for (const [a, d, c] of [[0, 2, 0], [9, 30, 3], [30, 34, 5], [24, 53, 8], [56, 43, 6], [16, 39, 2]]) {
+  // [attacker, defender, terrain class, attacker's weapon slot]: ranged, melee (slot 2), ship batteries (slot 1)
+  for (const [a, d, c, w = 0] of [[0, 2, 0], [9, 30, 3], [30, 34, 5], [24, 53, 8], [56, 43, 6], [16, 39, 2], [2, 0, 7, 2], [1, 30, 4, 2], [30, 34, 15, 1], [31, 0, 7, 1]]) {
     const A = u(a, 0), D = u(d, 1);
     const info = { att: { unit: A, hp: A.hp, level: 2, atk: [90, 90, 120], def: [30, 30, 30], mode: 0, pct: 15 }, def: { unit: D, hp: D.hp, level: 1, atk: [60, 60, 60], def: [40, 20, 20], mode: 0, pct: 5 },
       encircle: { centre: D, around: [{ dir: 1, u: u(1, 0) }] }, support: [{ centre: A, around: [{ dir: 4, u: u(3, 1) }] }, { centre: D, around: [] }] };
-    const s = new FightScene(rom, { type: a, army: 0, hp: A.hp, hpAfter: 2, cls: c, slot: 0 }, { type: d, army: 1, hp: D.hp, hpAfter: 0, cls: c, slot: 2 },
+    const s = new FightScene(rom, { type: a, army: 0, hp: A.hp, hpAfter: 2, cls: c, slot: w }, { type: d, army: 1, hp: D.hp, hpAfter: 0, cls: c, slot: 2 },
       { counter: true, info, textRom: romEn, names: romEn ? types.map((t) => t.code) : null });
     let n = 0;
     while (!s.done) { s.step(); add(JSON.stringify(s.sounds())); if (n++ % 37 === 0) s.render(ctx); }

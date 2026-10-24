@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
-const VERSION = 2;
+const VERSION = 3;
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const imp = (p) => import(pathToFileURL(join(root, p)).href);
 const args = process.argv.slice(2), opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
@@ -87,16 +87,17 @@ function fakeInfo(att, def) {
   const around = (army) => [0, 1, 2, 3, 4, 5].map((dir) => ({ dir, u: unit((dir * 7) % T, army) }));
   return { att: side(att), def: side(def), encircle: { centre: def, around: around(att.army) }, support: [{ centre: att, around: around(def.army) }, { centre: def, around: around(att.army) }] };
 }
-function playFight(attType, defType, cls, english) {
+function playFight(attType, defType, cls, english, slot = 0) {
   const a = unit(attType, 0), d = unit(defType, 1);
   const side = (u, cut, slot) => ({ type: u.type, army: u.army, hp: u.hp, hpAfter: Math.max(0, u.hp - cut), cls, slot });
-  const s = new FightScene(rec, side(a, 2, 0), side(d, 3, 2), { counter: true, info: fakeInfo(a, d), textRom: english ? recEn : null, names: english ? types.map((t) => t.code) : null });
+  const s = new FightScene(rec, side(a, 2, slot), side(d, 3, 2), { counter: true, info: fakeInfo(a, d), textRom: english ? recEn : null, names: english ? types.map((t) => t.code) : null });
   const stops = new Set([0, 31, 40, 60, 90, 140, 200, 240, s.introLen - 1, s.introLen + 1, s.introLen + 100, s.introLen + 200]);
   while (!s.done) { s.step(); s.sounds(); if (stops.has(s.clock)) s.render(ctx); }
   s.render(ctx);
 }
 during('render', () => {
-  for (let t = 0; t < T; t++) { playFight(t, 0, 0, t & 1); playFight(0, t, 0, !(t & 1)); }
+  // every weapon slot: slots 1-3 load the second sprite sheets ($04:D072), for both sides
+  for (let t = 0; t < T; t++) for (const slot of [0, 1, 2, 3]) { playFight(t, 0, 0, t & 1, slot); playFight(t, 34, 0, t & 1, slot); playFight(0, t, 0, !(t & 1), slot); playFight(34, t, 0, t & 1, slot); }
   for (let c = 0; c < 16; c++) playFight(0, 0, c, false);
   for (let t = 0; t < T; t++) for (const en of [false, true]) {   // info screen names and codes for every type, both languages
     const info = fakeInfo(unit(t, 0), unit((t + 9) % T, 1)), I = new InfoScreen(rec, info, { textRom: en ? recEn : null, names: en ? types.map((x) => x.code) : null });
