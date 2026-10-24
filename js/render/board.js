@@ -370,8 +370,18 @@ export class Board {
       ctx.fillStyle = '#ffd84a'; ctx.font = '700 12px system-ui, sans-serif'; ctx.fillText(`L${u.level}`, X + 6, Y + 10);
     }
     if (u.general) { ctx.font = '700 20px system-ui, sans-serif'; ctx.shadowColor = '#ffb800'; ctx.shadowBlur = 10; ctx.fillStyle = '#ffd84a'; ctx.fillText('★', X + 50, Y + 8); ctx.shadowBlur = 0; }
-    if (u.burner) { ctx.font = '700 11px system-ui, sans-serif'; ctx.fillStyle = 'rgba(6,8,20,.82)'; roundRect(ctx, X + 2, Y + 30, 22, 15, 5); ctx.fill(); ctx.fillStyle = '#ffa040'; ctx.fillText('AB', X + 5, Y + 38); }
+    // bombers: a loaded missile on the armed form, an empty rack once it has been dropped (the
+    // spent form's sprite differs from the armed one only slightly, or not at all)
+    const t = b.types[u.type];
+    if (t.armed !== undefined || this.spentOf(b, u.type)) missileBadge(ctx, X + 2, Y + 31, t.armed === undefined);
+    if (u.burner) { ctx.font = '700 11px system-ui, sans-serif'; ctx.fillStyle = 'rgba(6,8,20,.82)'; roundRect(ctx, X + 2, Y + 16, 22, 15, 5); ctx.fill(); ctx.fillStyle = '#ffa040'; ctx.fillText('AB', X + 5, Y + 24); }
     ctx.restore();
+  }
+
+  // whether some type is this one after dropping its payload
+  spentOf(b, type) {
+    if (!this.armedTypes || this.armedTypes.types !== b.types) this.armedTypes = { types: b.types, set: new Set(b.types.filter((t) => t.armed !== undefined).map((t) => t.armed)) };
+    return this.armedTypes.set.has(type);
   }
 
   ambient(ctx, sec, inView) {
@@ -482,4 +492,21 @@ function hexRoute(b, x0, y0, x1, y1) {
   const path = [];
   for (let p = [x1, y1]; p; p = from.get(key(...p))) path.unshift(p);
   return path.length > 1 && path.length <= 14 ? path : [[x0, y0], [x1, y1]];
+}
+
+// A 28x18 munitions badge at the token's lower left: a lit missile when loaded, an empty dashed
+// outline struck through in red once it has been dropped.
+function missileBadge(ctx, x, y, loaded) {
+  ctx.save();
+  ctx.fillStyle = loaded ? 'rgba(6,8,20,.85)' : 'rgba(60,10,16,.9)'; roundRect(ctx, x, y, 28, 18, 5); ctx.fill();
+  ctx.strokeStyle = loaded ? '#ffc860' : '#ff5050'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x + 7, y + 6.5); ctx.lineTo(x + 19, y + 6.5); ctx.lineTo(x + 24, y + 9); ctx.lineTo(x + 19, y + 11.5); ctx.lineTo(x + 7, y + 11.5);
+  ctx.closePath(); ctx.moveTo(x + 4, y + 4); ctx.lineTo(x + 9, y + 6.5); ctx.lineTo(x + 9, y + 11.5); ctx.lineTo(x + 4, y + 14); ctx.closePath();
+  if (loaded) { ctx.shadowColor = '#ffb040'; ctx.shadowBlur = 6; ctx.fillStyle = '#ffd070'; ctx.fill(); }
+  else {
+    ctx.setLineDash([2, 1.5]); ctx.strokeStyle = '#aab0c8'; ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = '#ff4040'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x + 5, y + 15); ctx.lineTo(x + 23, y + 3); ctx.stroke();
+  }
+  ctx.restore();
 }
