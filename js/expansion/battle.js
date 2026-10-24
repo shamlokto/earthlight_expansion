@@ -164,7 +164,7 @@ export async function expansionFromUrl(rom) {
   const q = new URLSearchParams(location.search), url = q.get('mission');
   if (!url) return null;
   const data = await loadExpansionData(), { types, tables } = data;
-  let mission = await (await fetch(url)).json(), state = null;
+  let mission = await (await fetch(url, { cache: 'no-cache' })).json(), state = null;
   const missionNo = +(q.get('no') || 0);
   // &c=remnant|classic: which campaign's save the battle reads and writes (campaign.js CAMPAIGNS)
   const camp = campaign.use(q.get('c') || 'classic');

@@ -42,7 +42,7 @@ export function save(s) { try { localStorage.setItem(current.key, JSON.stringify
 export function clear() { try { localStorage.removeItem(current.key); } catch { } }
 
 // The campaign's mission index, or null while it isn't written yet.
-export async function missionIndex() { try { const r = await fetch(current.index); return r.ok ? r.json() : null; } catch { return null; } }
+export async function missionIndex() { try { const r = await fetch(current.index, { cache: 'no-cache' }); return r.ok ? r.json() : null; } catch { return null; } }
 
 // The missions as this campaign plays them. Entries sharing a `no` are alternatives: the one whose
 // `when.choice` matches the campaign's choice, else the one without `when`, else (choice not made

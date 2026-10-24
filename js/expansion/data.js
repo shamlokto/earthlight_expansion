@@ -12,7 +12,7 @@ async function readJson(name) {
     const { readFile } = await import('node:fs/promises');
     return JSON.parse(await readFile(url, 'utf8'));
   }
-  const r = await fetch(url);
+  const r = await fetch(url, { cache: 'no-cache' });
   if (!r.ok) throw new Error(`expansion data ${name}.json: HTTP ${r.status}`);
   return r.json();
 }

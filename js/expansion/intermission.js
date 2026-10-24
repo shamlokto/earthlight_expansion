@@ -70,7 +70,7 @@ const choicePending = () => C.pendingChoice(index, state, state.next);
 
 async function loadNext() {
   const e = entry();
-  next = e && e.file ? await (await fetch(e.file)).json() : null;
+  next = e && e.file ? await (await fetch(e.file, { cache: 'no-cache' })).json() : null;
 }
 
 function save() { C.save(state); }
@@ -249,7 +249,7 @@ function wire(cap) {
 async function selectCampaign() {
   C.remember(null);
   const info = await Promise.all(Object.values(C.CAMPAIGNS).map(async (c) => {
-    const s = C.saved(c.id), idx = await (async () => { try { const r = await fetch(c.index); return r.ok ? r.json() : null; } catch { return null; } })();
+    const s = C.saved(c.id), idx = await (async () => { try { const r = await fetch(c.index, { cache: 'no-cache' }); return r.ok ? r.json() : null; } catch { return null; } })();
     const n = idx ? C.missionList(idx, s || {}).length : 0;
     return { c, s, idx, n };
   }));
@@ -280,7 +280,7 @@ async function openCampaign(id) {
 }
 
 async function startNew() {
-  const first = await (await fetch(C.missionList(index, {})[0].file)).json();
+  const first = await (await fetch(C.missionList(index, {})[0].file, { cache: 'no-cache' })).json();
   state = C.newCampaign(first); picked.clear();
   save(); await loadNext();
 }

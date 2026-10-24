@@ -49,10 +49,12 @@ place('A', [[5, 12]]);
 place('M', [[6, 11], [8, 4]]);
 place('T', [[7, 13]]);
 place('C', [[4, 21]]);
+place('L', [[8, 10], [6, 20]]);
+place('D', [[8, 17]]);
 // the strike group in the atmosphere
-place('o', [[12, 25], [20, 23], [27, 22], [35, 24], [44, 26]]);
+place('o', [[12, 25], [20, 23], [35, 24]]);
 place('e', [[16, 26], [31, 25], [50, 25]]);
-place('c', [[24, 24], [40, 25], [53, 26]]);
+place('c', [[24, 24], [53, 26]]);
 place('9', [[9, 26], [38, 26]]);
 // the anchorage: four carriers, their escort, and the screen at the west mouth
 place('k', [[46, 5], [51, 10]]);
@@ -67,7 +69,7 @@ const units = rows.map((_, j) => Array.from({ length: COLS }, (_, i) => U[`${i +
 
 export default {
   name: 'ATMOSPHERE', title: 'Atmosphere', file: 'remnant/atmosphere', screens: [4, 3],
-  objective: { kind: 'carriers' }, turnLimit: 22, cap: 22, chaseGeneral: true, music: 17,
+  objective: { kind: 'carriers' }, turnLimit: 22, cap: 25, chaseGeneral: true, music: 17,
   goal: 'Sink every Directorate carrier within 22 turns. If the general falls, it is over.',
   chapter: "Chapter 10 · The edge of Earth's atmosphere",
   transmission: "You took my Gate and you took my Lysa. Look down, General. That is what you are fighting for, and it has never once thanked anyone.",
@@ -134,11 +136,11 @@ Sink all four carriers. Their relief group is two days out.`,
     1: { type: 17, army: 1 },                 // Pandora armed mine
   },
   // the fighters each carrier puts out on the first turn
-  cargo: { '46,5': [8, 9], '51,10': [8, 10], '52,5': [9, 9], '46,10': [8, 8] },
+  cargo: { '46,5': [8], '51,10': [10], '52,5': [9], '46,10': [8] },
   // the carriers and their fighters keep to the anchorage; the strike group stays where it is
   routes: [[44, 7], [47, 4], [50, 8], [53, 6], [45, 11], [50, 12], [42, 9]].map(([x, y]) => ({ prio: 1, x, y })),
   arrivals: [
     // the Directorate relief group, from the north on turn 8
-    { turn: 7, army: 1, units: [{ type: 33, x: 30, y: 1 }, { type: 42, x: 26, y: 1 }, { type: 49, x: 34, y: 1 }, { type: 2, x: 28, y: 1 }, { type: 3, x: 32, y: 1 }] },
+    { turn: 7, army: 1, units: [{ type: 42, x: 26, y: 1 }, { type: 49, x: 34, y: 1 }, { type: 2, x: 28, y: 1 }] },
   ],
 };
