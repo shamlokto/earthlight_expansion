@@ -12,6 +12,8 @@ import { romTables } from './game/tables.js';
 import { terrainText, categoryUnits, slug, MOVERS } from './terraininfo.js';
 import { bannerUrl, cellUrl } from './terrainart.js';
 import { factsHtml, TERRAIN_CSS } from './terraincard.js';
+import { loadExpansionData } from './expansion/data.js';
+import { paintLookArt } from './look.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -75,7 +77,7 @@ function idbGet(key) {
   });
 }
 
-let rom, pal, types, en = null;
+let rom, pal, types, en = null, xp = null;   // xp: the expansion's own data (js/expansion/data)
 
 (async () => {
   const buf = await idbGet('rom');
@@ -83,6 +85,7 @@ let rom, pal, types, en = null;
   rom = new Rom(buf); pal = battlePalette(rom); types = allUnitTypes(rom);
   const patch = await idbGet('patch');
   if (patch) { try { en = readEnglish(applyBps(patch, rom.bytes.slice().buffer)); } catch { } }
+  try { xp = await loadExpansionData(); } catch { xp = null; }
   render();
 })();
 
@@ -107,7 +110,7 @@ function render() {
   }
   const terrains = terrainEntries();
   const toc = [['h', 'Story'], ['story', 'Synopsis'], ['missions', 'Missions'], ['h', 'Terrain'], ...terrains.map((t) => [t.slug, t.name]), ['h', 'Units'],
-    ...FAMILIES.map(([id, title]) => [id, title])];
+    ...FAMILIES.map(([id, title]) => [id, title]), ...(xp ? [['expansion-units', 'Expansion units']] : [])];
   $('toc').innerHTML = toc.map(([id, t]) => (id === 'h' ? `<div class="h">${t}</div>` : `<a href="#${id}">${t}</a>`)).join('');
 
   let html = `<h1>Earth Light <span class="dim">アースライト</span></h1>
@@ -133,7 +136,9 @@ function render() {
     for (let t = a; t <= b; t++) html += unitHtml(t);
     html += '</div>';
   }
+  if (xp) html += expansionUnitsHtml();
   $('wiki').innerHTML = html;
+  for (const c of document.querySelectorAll('canvas[data-xart]')) try { paintLookArt(c, rom, xp.types, +c.dataset.xart, 1); } catch { }
   // Icons go in after the markup exists.
   for (const el of document.querySelectorAll('[data-icons]')) {
     const t = +el.dataset.icons;
@@ -242,7 +247,8 @@ function unitHtml(t) {
   if (info) html += `<p>${esc(prose(info[1]))}</p><p>${esc(prose(info[2]))}</p>`;
   const notes = [];
   const ref = (o) => `${esc(nameOf(o))} <span class="mono">${esc(types[o].code)}</span> (type ${o})`;
-  if (u.cut) notes.push('No map icon of its own (the icon table points at the Mars icon), and no map places it: probably cut from the game.');
+  if (u.cut) notes.push('No map icon of its own (the icon table points at the Mars icon), and no map places it: probably cut from the game.'
+    + (xp && xp.types[t]?.look !== undefined ? ` Revived in the expansion: see <a href="#xunit-${t}">${esc(nameOf(t))} (expansion)</a>.` : ''));
   else if (!placed.has(t) && u.armed === undefined && u.empty === undefined && u.formOf === undefined) notes.push('No map places it at the start or as reinforcements.');
   if (u.form) notes.push(`Transforms into ${ref(u.form === 1 ? u.otherForm : u.formOf)}.`);
   if (u.spent !== undefined) notes.push(`After firing its one-shot W4 it becomes ${ref(u.spent)}.`);
@@ -252,4 +258,31 @@ function unitHtml(t) {
   if (u.moveOrFire) notes.push('Can\'t move in a turn it fires its long-range weapon.');
   if (notes.length) html += `<p class="note">${notes.join(' ')}</p>`;
   return html + '</section>';
+}
+
+// ---------------------------------------------------------------- expansion units
+// The cut units the expansion revives and its new machines (js/expansion/data): they have no
+// graphics of their own, so each borrows another type's (its `look`, js/look.js), hue-shifted.
+function expansionUnitsHtml() {
+  const T = xp.types, list = T.filter((u) => u && u.look !== undefined && u.armed === undefined && u.empty === undefined);
+  const range = (w) => (w.max > w.min ? `${w.min}–${w.max}` : w.min);
+  let html = `<h2 id="expansion-units">Expansion units <small>Galt remnant</small></h2>
+    <p class="lede">Units the original ROM defines but never uses, brought back by the expansion, and the expansion's new machines.
+    The ROM gives the cut units no graphics of their own, so each one borrows another unit's art, recoloured, and is tagged with its model on the map.</p><div class="grid">`;
+  for (const u of list) {
+    const tx = xp.text.unitInfo.find((e) => e.type === u.type), weapons = u.weapons.filter(Boolean);
+    const spent = T.find((v) => v && v.armed === u.type), loaded = T.find((v) => v && v.empty === u.type);
+    html += `<section class="unit" id="xunit-${u.type}"><header><canvas data-xart="${u.type}" style="width:64px;height:64px;image-rendering:pixelated"></canvas><div>
+      <h3>${esc(xp.text.unitNames[u.type] || u.name)}</h3><div class="role"><span class="mono">${esc(u.code)}</span>${tx?.short ? ` · ${esc(tx.short)}` : ''}</div></div></header>
+      <div class="stats"><span>HP <b>${u.hp}</b></span><span>Move <b>${u.move}</b></span><span>Evasion <b>${Math.round(u.evasion * 100 / 128)}%</b></span><span>Price <b>${Math.max(1, u.value) * u.hp}</b></span></div>`;
+    html += weapons.length ? `<table><tr><th>Slot</th><th>Type</th><th>Range</th><th>Power</th></tr>${weapons.map((w) =>
+      `<tr><td>W${w.slot + 1}</td><td>${MODES[w.mode]}</td><td>${range(w)}</td><td>${w.power}</td></tr>`).join('')}</table>` : '<p class="note">Unarmed.</p>';
+    if (tx?.info) html += `<p>${esc(prose(tx.info[1]))}</p><p>${esc(prose(tx.info[2]))}</p>`;
+    const notes = [`Borrows the ${esc(nameOf(u.look))}'s graphics; map tag <span class="mono">${esc(u.tag || '')}</span>.`];
+    if (u.type < types.length) notes.push(`Cut from the original: <a href="#unit-${u.type}">ROM entry</a>.`);
+    if (spent) notes.push(`After firing its one-shot W4 it becomes its spent form (type ${spent.type}); re-armed on boarding.`);
+    if (loaded) notes.push('Carries one small unit.');
+    html += `<p class="note">${notes.join(' ')}</p></section>`;
+  }
+  return html + '</div>';
 }

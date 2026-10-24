@@ -9,6 +9,7 @@
 //   * carriers in the east and west orbits put out fighters; Union waves on turns 6 and 12;
 //   * the Luggnagg workers send Hannibal and Regulus cruisers to the player on turn 8.
 // Objective: destroy both command centres within 24 turns. The general's death ends the game.
+import { REVIVED, revive } from './revive.mjs';
 const COLS = 59, ROWS = 40;
 const g = Array.from({ length: ROWS }, () => new Array(COLS).fill('.'));
 const set = (x, y, c) => { if (x >= 1 && y >= 1 && x <= COLS && y <= ROWS) g[y - 1][x - 1] = c; };
@@ -82,7 +83,7 @@ export default {
   goal: 'Destroy both of the Union leadership\'s command centres within 24 turns. If the general falls, it is over.',
   chapter: "Chapter 10 · F1 Olympos, the citadel",
   transmission: "Come in, then. The cannon is loaded, the doors are open, and history will decide which of us betrayed the Union. I write history from this room, General.",
-  strategy: ["You start in four corners. Converge on the west and east gates. The gravity ring opens only in front of them.", "The western Cortex is close to the west gates and the eastern Cortex to the east gates. Give each one a strike group.", "Stay clear of the north approach: it's mined.", "Union waves arrive from the east on turn 6 and from the west on turn 12. The Luggnagg cruisers join you from the south on turn 8.", "The general must survive. Keep that machine back, in the second line."],
+  strategy: ["You start in four corners. Converge on the west and east gates. The gravity ring opens only in front of them.", "The western Cortex is close to the west gates and the eastern Cortex to the east gates. Give each one a strike group.", "Stay clear of the north approach: it's mined.", "Union waves arrive from the east on turn 6 and from the west on turn 12. The Luggnagg cruisers join you from the south on turn 8.", "The general must survive. Keep that machine back, in the second line.", "The citadel's minefields now hold Pandoras and Remora drones, a Rockeye pod guards the inner ring, and the turn 6 wave brings an Msnp-II heavy bomber."],
   plan: [{"n": 1, "path": [[5, 5], [10, 8], [14, 10]]}, {"n": 1, "path": [[5, 36], [10, 33], [14, 30]]}, {"n": 1, "path": [[54, 5], [49, 8], [45, 10]]}, {"n": 1, "path": [[54, 36], [49, 33], [45, 30]]}, {"n": 2, "path": [[15, 10], [18, 12]]}, {"n": 2, "path": [[44, 30], [43, 22]]}, {"n": 4, "at": [13, 39], "note": "Luggnagg cruisers T8"}, {"n": 4, "at": [57, 21], "note": "Union wave T6"}, {"n": 4, "at": [2, 21], "note": "Union wave T12"}],
   briefing: `
 F1 Olympos. Where the Union was born, and where it went wrong.
@@ -111,8 +112,9 @@ Earth turns below, blue and indifferent, as it did before the first Foundry was 
   stamps: [{ map: 28, from: [28, 1], to: [59, 30], at: [14, 6] },
     // a railway for the cannon and the Hydras in the core chamber (the original DERLETH station's)
     { map: 27, from: [55, 11], to: [55, 15], at: [31, 18] }],
-  units: '\n' + units,
+  units: '\n' + revive(units, [['w', '1', [0, 4]], ['w', '2', [2, 6]], ['v', '5', [0]]]),
   legend: {
+    ...REVIVED,   // cut ROM units, revived (revive.mjs)
     G: { type: 4, army: 0, general: true },   // Athena, the general's machine
     M: { type: 0, army: 0 },                  // Mars
     T: { type: 1, army: 0 },                  // Titan
@@ -154,7 +156,7 @@ Earth turns below, blue and indifferent, as it did before the first Foundry was 
   },
   arrivals: [
     // the home guard's waves: turn 6 from the east, turn 12 from the west
-    { turn: 5, army: 1, units: [{ type: 2, x: 58, y: 20 }, { type: 3, x: 58, y: 22 }, { type: 49, x: 57, y: 18 }, { type: 0, x: 57, y: 24 }, { type: 40, x: 58, y: 26 }] },
+    { turn: 5, army: 1, units: [{ type: 2, x: 58, y: 20 }, { type: 3, x: 58, y: 22 }, { type: 49, x: 57, y: 18 }, { type: 0, x: 57, y: 24 }, { type: 45, x: 58, y: 26 }] },
     { turn: 11, army: 1, units: [{ type: 2, x: 1, y: 19 }, { type: 2, x: 1, y: 21 }, { type: 49, x: 2, y: 18 }, { type: 31, x: 2, y: 23 }, { type: 51, x: 1, y: 27 }] },
     // the Luggnagg workers' cruisers join the player on turn 8, from the south-west
     { turn: 7, army: 0, units: [{ type: 39, x: 10, y: 40 }, { type: 39, x: 12, y: 40 }, { type: 40, x: 14, y: 39 }, { type: 40, x: 16, y: 40 }] },

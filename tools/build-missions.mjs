@@ -189,7 +189,7 @@ async function preview(mission, view, file) {
 
 // ------------------------------------------------------------------ main
 const dir = join(root, 'tools/missions');
-const wanted = args.length ? args : readdirSync(dir).filter((f) => f.endsWith('.mjs')).map((f) => basename(f, '.mjs'));
+const wanted = args.length ? args : readdirSync(dir).filter((f) => f.endsWith('.mjs') && f !== 'revive.mjs').map((f) => basename(f, '.mjs'));
 if (previewDir) mkdirSync(previewDir, { recursive: true });
 for (const name of wanted) {
   const spec = (await import(pathToFileURL(join(dir, `${name}.mjs`)).href)).default;

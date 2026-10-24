@@ -79,7 +79,7 @@ class Brain {
   changed() { this.reach.clear(); }
   mine(u) { return u.hp > 0 && !u.carrier && u.army === this.army; }
   // units the AI moves itself ($02:894B): not structures (types $34+) or type $12
-  mobile(u) { return this.mine(u) && u.type !== 0x12 && u.type < 0x34; }
+  mobile(u) { return this.mine(u) && u.type !== 0x12 && (u.type < 0x34 || u.type >= 58); }   // 58+: expansion machines
   free(u) { return !this.done.has(u) && !u.moved && !u.acted; }
   blocked(x, y) { return this.lanes && inLane(this.b, x, y); }
 

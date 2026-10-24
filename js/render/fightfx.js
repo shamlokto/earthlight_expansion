@@ -82,7 +82,7 @@ export class FightRenderer {
     this.introImg = null; this.introCanvas = null; this.lastIntro = null; this.introEnd = null;
     this.hpShown = [this.scene.leftSide.hp, this.scene.rightSide.hp]; this.drain = [null, null];
     const names = scene.intro && scene.intro.names;
-    this.labels = [scene.leftSide, scene.rightSide].map((s) => (names && names[s.type] ? String(names[s.type]).toUpperCase() : ''));
+    this.labels = [scene.leftSide, scene.rightSide].map((s) => (s.label ? s.label.toUpperCase() : names && names[s.type] ? String(names[s.type]).toUpperCase() : ''));
     this.stars = this.makeStars();
     this.buildBackdrop();
   }

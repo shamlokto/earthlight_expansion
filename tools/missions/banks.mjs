@@ -7,6 +7,7 @@
 // Approximations of the design: the workers' rising is the southwest works' dock standing grey
 // (capture it with what it holds) plus two Hannibal cruisers of theirs joining on turn 5; the
 // design's Adzam is a second Cortex, since only Cortex centres count for the objective.
+import { REVIVED, revive } from './revive.mjs';
 const COLS = 44, ROWS = 30;
 let seed = 5;
 const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x80000000);
@@ -88,7 +89,7 @@ export default {
   goal: 'Destroy both Cortex command centres in the eastern works.',
   chapter: "Chapter 5 · F6 Luggnagg, the Foundry",
   transmission: "Luggnagg's workers asked for their wages. I am sending them the general instead. Let us see who pays whom.",
-  strategy: ["Take the grey dock in the southwest works first: its Titan and Mars join you, and the workers' two Hannibal cruisers arrive beside it on turn 5.", "Split into two strike groups, north and south. Each Cortex sits inside its own works in the east.", "Gravity flux rings the works: mecha can't cross it, and railguns lose half their power against anything sheltering in it. Go in through the gates, and use beams and missiles on defenders in the flux.", "The east lane is mined and a carrier group waits behind it. Stay inside the works once you get there."],
+  strategy: ["Take the grey dock in the southwest works first: its Titan and Mars join you, and the workers' two Hannibal cruisers arrive beside it on turn 5.", "Split into two strike groups, north and south. Each Cortex sits inside its own works in the east.", "Gravity flux rings the works: mecha can't cross it, and railguns lose half their power against anything sheltering in it. Go in through the gates, and use beams and missiles on defenders in the flux.", "The east lane is mined and a carrier group waits behind it. Stay inside the works once you get there.", "New on this map: Pandora armed mines among the Wisps fire railguns three hexes out, and an Echidna beam pod guards the north works. Outrange them or send missiles."],
   plan: [{"n": 1, "path": [[6, 23], [11, 22], [14, 22]]}, {"n": 1, "at": [11, 27], "note": "Workers’ cruisers T5"}, {"n": 2, "path": [[2, 10], [15, 8], [30, 7]]}, {"n": 2, "path": [[16, 23], [24, 24], [31, 24]]}],
   briefing: `
 F6 Luggnagg, the Foundry that builds half the Union's warships. Its workers have not been paid since Babylon fell. They have been told to work faster.
@@ -101,8 +102,9 @@ The plasma river cuts the station in two. Gravity flux rings the works: mecha ca
   terrain: '\n' + grid.map((r) => r.join('')).join('\n'),
   // the works themselves are copied from VARAMU, so walls and gates keep the original's graphics
   stamps: Object.values(WORKS).map(([x, y]) => ({ map: 28, from: [40, 11], to: [49, 21], at: [x, y] })),
-  units: '\n' + units,
+  units: '\n' + revive(units, [['w', '1', [1, 5]], ['v', '3', [0]]]),
   legend: {
+    ...REVIVED,   // cut ROM units, revived (revive.mjs)
     G: { type: 4, army: 0, general: true },   // Athena, the general's machine
     M: { type: 0, army: 0 }, T: { type: 1, army: 0 }, X: { type: 2, army: 0 }, D: { type: 3, army: 0 },
     C: { type: 9, army: 0 }, L: { type: 8, army: 0 }, S: { type: 38, army: 0 }, A: { type: 34, army: 0 }, H: { type: 39, army: 0 },

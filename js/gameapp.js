@@ -8,7 +8,7 @@ import { MAP_COUNT, mapInfo, battlePalette, renderMap, unitIcon } from './maps.j
 import { allUnitTypes } from './units.js';
 import { applyBps } from './bps.js';
 import { readEnglish, LAYOUT, unitText } from './text.js';
-import { paintUnitArt } from './unitart.js';
+import { paintLookArt, lookOf, lookSlot } from './look.js';
 import { terrainCardHtml } from './terraincard.js';
 import { cellTerrain } from './terraininfo.js';
 import { readRomFile, readPatchFile } from './romfile.js';
@@ -377,9 +377,20 @@ if ($('optClassicFights')) {
 
 function runFight(e) {
   if (!$('optFights').checked) return Promise.resolve();
-  const sideOf = (u, before, after, other, w) => ({ type: u.type, army: u.army === NEUTRAL ? 1 - other.army : u.army, hp: before, hpAfter: after, cls: battle.cls(u.x, u.y), slot: w?.slot });
+  // units with a borrowed look (js/look.js) fight with that type's sprites, under their own name
+  const label = (u) => (types[u.type].look !== undefined ? { label: en ? en.unitNames[u.type] : types[u.type].name, code: types[u.type].code } : {});
+  const sideOf = (u, before, after, other, w) => ({ type: lookOf(types, u.type), army: u.army === NEUTRAL ? 1 - other.army : u.army, hp: before, hpAfter: after,
+    cls: battle.cls(u.x, u.y), slot: lookSlot(types, u.type, w?.slot), ...label(u) });
+  const seen = new Map(), v = (u) => {   // the same stand-in for a unit wherever the info screen meets it
+    if (!u || types[u.type].look === undefined) return u;
+    if (!seen.has(u)) seen.set(u, { ...u, type: lookOf(types, u.type), ...label(u) });
+    return seen.get(u);
+  };
+  const ring = (r) => ({ centre: v(r.centre), around: r.around.map((n) => ({ ...n, u: v(n.u) })) });
+  const info = e.info && { ...e.info, att: { ...e.info.att, unit: v(e.info.att.unit) }, def: { ...e.info.def, unit: v(e.info.def.unit) },
+    encircle: ring(e.info.encircle), support: e.info.support.map(ring) };
   const scene = new FightScene(rom, sideOf(e.att, e.before[0], e.after[0], e.def, e.w), sideOf(e.def, e.before[1], e.after[1], e.att, e.cw),
-    { counter: !!e.cw, info: e.info, textRom: romEn, names: en ? en.unitNames : null });
+    { counter: !!e.cw, info, textRom: romEn, names: en ? en.unitNames : null });
   scene.att.cls = battle.cls(e.att.x, e.att.y);
   const ov = $('fight'), cv = $('fightCv'), classic = classicFights();
   ov.hidden = false;
@@ -440,7 +451,7 @@ const artCache = new Map();
 function artUrl(type) {
   if (!artCache.has(type)) {
     let url = '';
-    try { const c = document.createElement('canvas'); paintUnitArt(c, rom, type, 2); url = c.toDataURL(); } catch { /* no picture for this type */ }
+    try { const c = document.createElement('canvas'); paintLookArt(c, rom, types, type, 2); url = c.toDataURL(); } catch { /* no picture for this type */ }
     artCache.set(type, url);
   }
   return artCache.get(type);
@@ -839,7 +850,7 @@ function resultHero(w) {
 // Expansion results: the battle in numbers, and every machine that flew it with its pilot's
 // level gain and kills (from the battle log); the best of them is the MVP.
 function expansionReport(w) {
-  const mine = battle.units.filter((u) => u.army === 0 && !u.exit && u.type < 52 && (u.rosterId !== undefined || u.hp > 0));
+  const mine = battle.units.filter((u) => u.army === 0 && !u.exit && (u.type < 52 || u.type >= 58) && (u.rosterId !== undefined || u.hp > 0));
   const kills = new Map(), dealt = new Map();
   for (const e of battle.log) {
     if (!e.att || !e.before) continue;
@@ -860,7 +871,7 @@ function expansionReport(w) {
     return `<div class="cm${u.hp <= 0 ? ' lost' : ''}${u === mvp ? ' mvp' : ''}" style="--d:${i}"><canvas data-art="${u.type}"></canvas><b>${nameOf(u)}${u.general ? ' ★' : ''}</b>
       <small>Lv ${lv}${lv > was ? ` <span class="up">▲${lv - was}</span>` : ''} · ${k} kill${k === 1 ? '' : 's'}${u.hp <= 0 ? ' · lost' : ''}</small></div>`;
   }).join('')}</div>`;
-  for (const c of $('resCrew').querySelectorAll('canvas[data-art]')) paintUnitArt(c, rom, +c.dataset.art, 1);
+  for (const c of $('resCrew').querySelectorAll('canvas[data-art]')) paintLookArt(c, rom, types, +c.dataset.art, 1);
   $('resCrew').hidden = !mine.length;
   if (w === 0 && custom.mission.ending) { $('resEpilogue').textContent = custom.mission.ending.split(/\n\s*\n/)[0]; $('resEpilogue').hidden = false; }
 }

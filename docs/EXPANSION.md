@@ -568,3 +568,30 @@ the editor (those come with phase 3).
 * **Results**: every results screen opens on the ROM's Earthrise (the opening's BG1, tiles 11 →
   map 12, palette 10; `screens.js` `earthrise`), red-tinted on a defeat. Expansion results add the
   battle in numbers and every machine that flew it, with level gains, kills and an MVP.
+
+## Revived units and the Selene Kai (2026-10-24)
+
+The owner asked for every unit the ROM defines but never uses. The ROM gives them stats, names and
+codes but no graphics: their map-icon, unit-picture and fight-sheet table entries all point at the
+Mars's. In `js/expansion/data/units.json` each therefore has a `look` (the type whose art, map icon,
+board token and fight choreography it borrows), a `tint` (hue shift of its unit picture) and a
+`tag` (its model label on the board); `js/look.js` maps them at draw time, and fights and the info
+screen keep the unit's own name and code. The base game has no looks and is unchanged.
+
+| Type | Unit | Look | Changes from the ROM | Where |
+|---|---|---|---|---|
+| 12/13 | Horus FB-33, light bomber | Brontes | missile 77 → 150 (range 1–2) | production from mission 4 |
+| 17 | Pandora, armed mine | Wisp | — | Union, missions 5–10 |
+| 19 | Remora, decoy drone | Wisp | — | Union, missions 6, 9, 10 |
+| 20 | Echidna, beam pod | Vulcan | — | Union, missions 5, 8 |
+| 21 | Naga, rail pod | Phoibos | — | Union, missions 7, 9 |
+| 22 | Rockeye, twin rail pod | Titan | — | Union, missions 8, 10 |
+| 28/29 | Camelii CR-61II, transport | Crab | carries one small unit, like the Crab | production from mission 4 |
+| 41 | Palmyra, missile frigate | Regulus | missile 64 → 115, range 2–4 | production from mission 5 |
+| 45/46 | Msnp-II, heavy bomber | Abaddon | — (its missile is not a Decimator) | Union reinforcements, missions 8, 10 |
+| 47/48 | Msfb-5, strike bomber | Abaddon | missile 0 → 200 | Union, missions 7–9 |
+| 58 | Selene Kai CV-C8K, fast carrier (new) | Selene | HP 20, move 10, evasion 32 (25%), beam 77 at 1–2 | production from mission 6 |
+
+Carriers have no capacity limit in the rules, so the Selene Kai's edge is speed, armour and its
+beam turret. Prices are value × HP (Horus 16, Palmyra 10, Selene Kai 40). The Union units replace a
+few Wisps and guns on missions 5–10 (`tools/missions/revive.mjs`); missions 1–4 are unchanged.

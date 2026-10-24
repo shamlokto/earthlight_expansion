@@ -12,6 +12,7 @@ import { cellOrigin, cellAt, HEX_POINTS } from '../maps.js';
 import { neighbours } from '../game/rules.js';
 import { scale3x, indexedToRgba } from './upscale.js';
 import { tokenPixels } from './tokens.js';
+import { lookOf } from '../look.js';
 
 export const S = 3;                  // internal pixels per ROM pixel
 const OFF = 16;                      // the playfield starts at cell (1, 1)
@@ -284,6 +285,7 @@ export class Board {
   }
 
   modernToken(type, army) {
+    type = lookOf(this.state && this.state.battle.types, type);   // borrowed graphics (js/look.js)
     const p = tokenPixels(this.rom, type, army), up = scale3x(p.px, p.w, p.h);
     const src = canvas(up.w, up.h), sg = src.getContext('2d'), id = sg.createImageData(up.w, up.h);
     new Uint32Array(id.data.buffer).set(up.px); sg.putImageData(id, 0, 0);
@@ -374,6 +376,11 @@ export class Board {
     // spent form's sprite differs from the armed one only slightly, or not at all)
     const t = b.types[u.type];
     if (t.armed !== undefined || this.spentOf(b, u.type)) missileBadge(ctx, X + 2, Y + 31, t.armed === undefined);
+    if (t.tag) {   // a unit drawn with another type's graphics: its own model tag, right
+      ctx.font = '700 10px system-ui, sans-serif'; const tw = ctx.measureText(t.tag).width + 8;
+      ctx.fillStyle = 'rgba(6,8,20,.85)'; roundRect(ctx, X + 70 - tw, Y + 17, tw, 14, 4); ctx.fill();
+      ctx.strokeStyle = '#6fd3ff'; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#bfefff'; ctx.fillText(t.tag, X + 74 - tw, Y + 25);
+    }
     if (u.burner) { ctx.font = '700 11px system-ui, sans-serif'; ctx.fillStyle = 'rgba(6,8,20,.82)'; roundRect(ctx, X + 2, Y + 16, 22, 15, 5); ctx.fill(); ctx.fillStyle = '#ffa040'; ctx.fillText('AB', X + 5, Y + 24); }
     ctx.restore();
   }

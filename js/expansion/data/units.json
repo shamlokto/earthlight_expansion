@@ -907,9 +907,9 @@
    "hp": 8,
    "move": 9,
    "evasion": 45,
-   "value": 0,
+   "value": 2,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     {
      "slot": 0,
@@ -925,17 +925,17 @@
      "mode": 2,
      "min": 1,
      "max": 2,
-     "power": 77
+     "power": 150
     }
    ],
    "spent": 13,
-   "aiValue": 0,
+   "aiValue": 25,
    "info": {
     "attack": [
      20,
      0,
      0,
-     60
+     117
     ],
     "defence": 35,
     "minRange": [
@@ -945,12 +945,12 @@
      1
     ]
    },
-   "gfx": 0,
+   "gfx": 9,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 16,
+    "tiles": 223,
+    "palette": 224,
+    "frame": 9
    },
    "nameBytes": [
     206,
@@ -971,7 +971,10 @@
     32,
     32,
     0
-   ]
+   ],
+   "look": 10,
+   "tag": "FB33",
+   "tint": 150
   },
   {
    "type": 13,
@@ -983,9 +986,9 @@
    "hp": 8,
    "move": 9,
    "evasion": 45,
-   "value": 0,
+   "value": 2,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     {
      "slot": 0,
@@ -999,7 +1002,7 @@
     null
    ],
    "armed": 12,
-   "aiValue": 0,
+   "aiValue": 25,
    "info": {
     "attack": [
      20,
@@ -1015,12 +1018,12 @@
      0
     ]
    },
-   "gfx": 0,
+   "gfx": 10,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 17,
+    "tiles": 223,
+    "palette": 224,
+    "frame": 9
    },
    "nameBytes": [
     206,
@@ -1041,7 +1044,10 @@
     32,
     32,
     0
-   ]
+   ],
+   "look": 11,
+   "tag": "FB33",
+   "tint": 150
   },
   {
    "type": 14,
@@ -1266,9 +1272,9 @@
    "hp": 8,
    "move": 0,
    "evasion": 77,
-   "value": 0,
+   "value": 1,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     {
      "slot": 0,
@@ -1287,7 +1293,7 @@
     null,
     null
    ],
-   "aiValue": 0,
+   "aiValue": 10,
    "info": {
     "attack": [
      60,
@@ -1303,12 +1309,12 @@
      0
     ]
    },
-   "gfx": 0,
+   "gfx": 14,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 21,
+    "tiles": 231,
+    "palette": 232,
+    "frame": 14
    },
    "nameBytes": [
     202,
@@ -1329,7 +1335,10 @@
     48,
     32,
     0
-   ]
+   ],
+   "look": 18,
+   "tag": "PND",
+   "tint": 200
   },
   {
    "type": 18,
@@ -1404,16 +1413,16 @@
    "hp": 8,
    "move": 2,
    "evasion": 90,
-   "value": 0,
+   "value": 1,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     null,
     null,
     null,
     null
    ],
-   "aiValue": 0,
+   "aiValue": 5,
    "info": {
     "attack": [
      0,
@@ -1429,12 +1438,12 @@
      0
     ]
    },
-   "gfx": 0,
+   "gfx": 14,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 21,
+    "tiles": 231,
+    "palette": 232,
+    "frame": 14
    },
    "nameBytes": [
     218,
@@ -1455,7 +1464,10 @@
     49,
     32,
     0
-   ]
+   ],
+   "look": 18,
+   "tag": "RMR",
+   "tint": 100
   },
   {
    "type": 20,
@@ -1467,9 +1479,9 @@
    "hp": 8,
    "move": 3,
    "evasion": 58,
-   "value": 0,
+   "value": 1,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     {
      "slot": 0,
@@ -1488,7 +1500,7 @@
     null,
     null
    ],
-   "aiValue": 0,
+   "aiValue": 10,
    "info": {
     "attack": [
      40,
@@ -1504,12 +1516,12 @@
      0
     ]
    },
-   "gfx": 0,
+   "gfx": 11,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 18,
+    "tiles": 225,
+    "palette": 226,
+    "frame": 10
    },
    "nameBytes": [
     180,
@@ -1530,7 +1542,10 @@
     51,
     32,
     0
-   ]
+   ],
+   "look": 14,
+   "tag": "ECH",
+   "tint": 60
   },
   {
    "type": 21,
@@ -1542,9 +1557,9 @@
    "hp": 8,
    "move": 2,
    "evasion": 45,
-   "value": 0,
+   "value": 1,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     null,
     null,
@@ -1557,7 +1572,7 @@
     },
     null
    ],
-   "aiValue": 0,
+   "aiValue": 10,
    "info": {
     "attack": [
      0,
@@ -1573,12 +1588,12 @@
      0
     ]
    },
-   "gfx": 0,
+   "gfx": 12,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 19,
+    "tiles": 227,
+    "palette": 228,
+    "frame": 11
    },
    "nameBytes": [
     197,
@@ -1599,7 +1614,10 @@
     52,
     32,
     0
-   ]
+   ],
+   "look": 15,
+   "tag": "NAG",
+   "tint": 160
   },
   {
    "type": 22,
@@ -1611,9 +1629,9 @@
    "hp": 8,
    "move": 3,
    "evasion": 58,
-   "value": 0,
+   "value": 1,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     {
      "slot": 0,
@@ -1632,7 +1650,7 @@
     null,
     null
    ],
-   "aiValue": 0,
+   "aiValue": 10,
    "info": {
     "attack": [
      40,
@@ -1648,12 +1666,12 @@
      0
     ]
    },
-   "gfx": 0,
+   "gfx": 1,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 4,
+    "tiles": 209,
+    "palette": 210,
+    "frame": 2
    },
    "nameBytes": [
     219,
@@ -1674,7 +1692,10 @@
     32,
     32,
     0
-   ]
+   ],
+   "look": 1,
+   "tag": "RKE",
+   "tint": 250
   },
   {
    "type": 23,
@@ -2033,9 +2054,9 @@
    "hp": 8,
    "move": 7,
    "evasion": 13,
-   "value": 0,
+   "value": 1,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     null,
     {
@@ -2049,7 +2070,7 @@
     null
    ],
    "loaded": 29,
-   "aiValue": 0,
+   "aiValue": 20,
    "info": {
     "attack": [
      0,
@@ -2065,12 +2086,12 @@
      0
     ]
    },
-   "gfx": 0,
+   "gfx": 18,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 25,
+    "tiles": 239,
+    "palette": 240,
+    "frame": 19
    },
    "nameBytes": [
     183,
@@ -2091,7 +2112,10 @@
     73,
     73,
     0
-   ]
+   ],
+   "look": 26,
+   "tag": "C61",
+   "tint": 120
   },
   {
    "type": 29,
@@ -2103,9 +2127,9 @@
    "hp": 8,
    "move": 7,
    "evasion": 13,
-   "value": 0,
+   "value": 1,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     null,
     {
@@ -2119,7 +2143,7 @@
     null
    ],
    "empty": 28,
-   "aiValue": 0,
+   "aiValue": 20,
    "info": {
     "attack": [
      0,
@@ -2135,12 +2159,12 @@
      0
     ]
    },
-   "gfx": 0,
+   "gfx": 18,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 25,
+    "tiles": 239,
+    "palette": 240,
+    "frame": 19
    },
    "nameBytes": [
     183,
@@ -2161,7 +2185,10 @@
     73,
     73,
     0
-   ]
+   ],
+   "look": 27,
+   "tag": "C61",
+   "tint": 120
   },
   {
    "type": 30,
@@ -2972,43 +2999,43 @@
    "hp": 10,
    "move": 4,
    "evasion": 51,
-   "value": 0,
+   "value": 1,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     null,
     {
      "slot": 1,
      "mode": 2,
-     "min": 1,
-     "max": 3,
-     "power": 64
+     "min": 2,
+     "max": 4,
+     "power": 115
     },
     null,
     null
    ],
-   "aiValue": 0,
+   "aiValue": 10,
    "info": {
     "attack": [
      0,
-     20,
+     90,
      0,
      0
     ],
     "defence": 40,
     "minRange": [
      0,
-     1,
+     2,
      0,
      0
     ]
    },
-   "gfx": 0,
+   "gfx": 29,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 41,
+    "tiles": 261,
+    "palette": 262,
+    "frame": 30
    },
    "nameBytes": [
     202,
@@ -3029,7 +3056,10 @@
     76,
     32,
     0
-   ]
+   ],
+   "look": 40,
+   "tag": "PLM",
+   "tint": 140
   },
   {
    "type": 42,
@@ -3268,9 +3298,9 @@
    "hp": 8,
    "move": 3,
    "evasion": 58,
-   "value": 0,
+   "value": 2,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     {
      "slot": 0,
@@ -3290,7 +3320,7 @@
     }
    ],
    "spent": 46,
-   "aiValue": 0,
+   "aiValue": 45,
    "info": {
     "attack": [
      20,
@@ -3306,12 +3336,12 @@
      2
     ]
    },
-   "gfx": 0,
+   "gfx": 31,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 43,
+    "tiles": 265,
+    "palette": 266,
+    "frame": 32
    },
    "nameBytes": [
     202,
@@ -3332,7 +3362,10 @@
     73,
     73,
     0
-   ]
+   ],
+   "look": 43,
+   "tag": "NP2",
+   "tint": 90
   },
   {
    "type": 46,
@@ -3344,9 +3377,9 @@
    "hp": 8,
    "move": 5,
    "evasion": 58,
-   "value": 0,
+   "value": 2,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     {
      "slot": 0,
@@ -3360,7 +3393,7 @@
     null
    ],
    "armed": 45,
-   "aiValue": 0,
+   "aiValue": 45,
    "info": {
     "attack": [
      20,
@@ -3376,12 +3409,12 @@
      0
     ]
    },
-   "gfx": 0,
+   "gfx": 32,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 44,
+    "tiles": 265,
+    "palette": 266,
+    "frame": 32
    },
    "nameBytes": [
     202,
@@ -3402,7 +3435,10 @@
     73,
     73,
     0
-   ]
+   ],
+   "look": 44,
+   "tag": "NP2",
+   "tint": 90
   },
   {
    "type": 47,
@@ -3414,9 +3450,9 @@
    "hp": 8,
    "move": 3,
    "evasion": 77,
-   "value": 0,
+   "value": 2,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     {
      "slot": 0,
@@ -3432,17 +3468,17 @@
      "mode": 2,
      "min": 2,
      "max": 4,
-     "power": 0
+     "power": 200
     }
    ],
    "spent": 48,
-   "aiValue": 0,
+   "aiValue": 40,
    "info": {
     "attack": [
      35,
      0,
      0,
-     0
+     156
     ],
     "defence": 60,
     "minRange": [
@@ -3452,12 +3488,12 @@
      2
     ]
    },
-   "gfx": 0,
+   "gfx": 31,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 43,
+    "tiles": 265,
+    "palette": 266,
+    "frame": 32
    },
    "nameBytes": [
     181,
@@ -3478,7 +3514,10 @@
     53,
     32,
     0
-   ]
+   ],
+   "look": 43,
+   "tag": "FB5",
+   "tint": 210
   },
   {
    "type": 48,
@@ -3490,9 +3529,9 @@
    "hp": 8,
    "move": 5,
    "evasion": 77,
-   "value": 0,
+   "value": 2,
    "moveOrFire": false,
-   "cut": true,
+   "cut": false,
    "weapons": [
     {
      "slot": 0,
@@ -3506,7 +3545,7 @@
     null
    ],
    "armed": 47,
-   "aiValue": 0,
+   "aiValue": 40,
    "info": {
     "attack": [
      35,
@@ -3522,12 +3561,12 @@
      0
     ]
    },
-   "gfx": 0,
+   "gfx": 32,
    "art": {
-    "fightSheet": 0,
-    "tiles": 207,
-    "palette": 208,
-    "frame": 1
+    "fightSheet": 44,
+    "tiles": 265,
+    "palette": 266,
+    "frame": 32
    },
    "nameBytes": [
     181,
@@ -3548,7 +3587,10 @@
     53,
     32,
     0
-   ]
+   ],
+   "look": 44,
+   "tag": "FB5",
+   "tint": 210
   },
   {
    "type": 49,
@@ -4194,6 +4236,64 @@
     32,
     0
    ]
+  },
+  {
+   "type": 58,
+   "name": "Selene Kai",
+   "nameJp": "セレネ改",
+   "code": "CV-C8K",
+   "category": 1,
+   "startLevel": 0,
+   "hp": 20,
+   "move": 10,
+   "evasion": 32,
+   "value": 2,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 51
+    },
+    {
+     "slot": 1,
+     "mode": 0,
+     "min": 1,
+     "max": 2,
+     "power": 77
+    },
+    null,
+    null
+   ],
+   "aiValue": 40,
+   "info": {
+    "attack": [
+     40,
+     60,
+     0,
+     0
+    ],
+    "defence": 25,
+    "minRange": [
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 27,
+   "art": {
+    "fightSheet": 39,
+    "tiles": 257,
+    "palette": 258,
+    "frame": 28
+   },
+   "look": 38,
+   "tag": "KAI",
+   "tint": 300
   }
  ]
 }

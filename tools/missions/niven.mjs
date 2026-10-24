@@ -9,6 +9,7 @@
 // and its exits (a move-9 Crab can't be caught from behind), and the convoy is a light escort
 // with a slow rearguard (bot playtests). Approximations: the carriers put their Lobsters out at
 // the end of the Union's first turn (the AI launches all cargo), not in waves on turns 3 and 6.
+import { REVIVED, revive } from './revive.mjs';
 const COLS = 44, ROWS = 20;
 let seed = 6;
 const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x80000000);
@@ -82,7 +83,7 @@ export default {
   goal: 'Destroy all three Decimator transports (the loaded Crabs) before any reaches the east edge.',
   chapter: "Chapter 6 · The Verne Docks",
   transmission: "One shot clears a hex. Three will clear a Foundry that shelters traitors. I take no pleasure in arithmetic, General. Only in results.",
-  strategy: ["Don't fight the convoy. Only the three loaded Crabs matter.", "The Crabs will use the open lanes, rows 6-7 and 15. Block both with fast units.", "A Crab that has to stop next to one of yours can go no further this turn. Make a screen, then kill them.", "The belt slows everyone, the Crabs most. Hit them while they're in it, and send bombers at them first.", "The two machines hidden in the belt can take the grey dock: an Athena and a Crane."],
+  strategy: ["Don't fight the convoy. Only the three loaded Crabs matter.", "The Crabs will use the open lanes, rows 6-7 and 15. Block both with fast units.", "A Crab that has to stop next to one of yours can go no further this turn. Make a screen, then kill them.", "The belt slows everyone, the Crabs most. Hit them while they're in it, and send bombers at them first.", "The two machines hidden in the belt can take the grey dock: an Athena and a Crane.", "Some of the mines are Pandoras that shoot back at three hexes, and Remora drones soak up fire. Don't waste shots on the Remoras."],
   plan: [{"n": 2, "path": [[33, 6], [24, 6], [14, 7]]}, {"n": 2, "path": [[34, 15], [24, 15], [14, 14]]}, {"n": 5, "path": [[23, 9], [26, 11]]}, {"n": 1, "at": [4, 10], "note": "Decimator transports"}, {"n": 3, "at": [40, 10], "note": "Screen line"}],
   briefing: `
 The Verne Docks. A year ago Galt tried to steal the Quantum Decimators stored here, and the Union stopped them. Now the Union has taken them out itself.
@@ -95,8 +96,9 @@ The belt in the middle of the sector is meteoroids, plasma and gravity flux. It 
 
 Minefields close the east exits, all but the lanes. Whatever the Crabs do, they must not reach them.`,
   terrain: '\n' + grid.map((r) => r.join('')).join('\n'),
-  units: '\n' + units,
+  units: '\n' + revive(units, [['w', '1', [0, 5, 10]], ['w', '2', [3, 13]]]),
   legend: {
+    ...REVIVED,   // cut ROM units, revived (revive.mjs)
     G: { type: 4, army: 0, general: true },   // Athena, the general's machine
     M: { type: 0, army: 0 }, T: { type: 1, army: 0 }, X: { type: 2, army: 0 }, D: { type: 3, army: 0 },
     C: { type: 9, army: 0 }, L: { type: 8, army: 0 }, S: { type: 38, army: 0 }, A: { type: 34, army: 0 }, H: { type: 39, army: 0 },

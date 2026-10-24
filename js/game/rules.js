@@ -18,8 +18,10 @@ import { tally } from './points.js';
 
 export const NEUTRAL = 2;           // army of the neutral docks (deployment flag $40)
 const DOCK_CAT = 7, CARRIER_CAT = 1, CRAB = 26, ARTEMIS = 34;   // CR-1: 26 empty, 27 loaded
+// one-unit transports, empty form -> loaded form: the CR-1, and the expansion's revived CR-61II (28/29)
+const TRANSPORT = { [CRAB]: CRAB + 1, 28: 29 }, UNLOADED = { [CRAB + 1]: CRAB, 29: 28 };
 export { TRANSFORM };   // form tables live in units.js
-const REARM = { 5: 4, 7: 6, 11: 10, 44: 43 };   // $01:A60C re-arms only these on boarding
+const REARM = { 5: 4, 7: 6, 11: 10, 44: 43, 13: 12, 46: 45, 48: 47 };   // $01:A60C re-arms 5/7/11/44 on boarding; 13/46/48: the expansion's revived bombers
 const DESTROYERS = new Set([49, 50, 51]);   // may move again with what is left after firing
 
 // ---------------------------------------------------------------- hex grid
@@ -96,7 +98,7 @@ export class Battle {
   launch(u, x, y) {
     const c = u.carrier;
     u.carrier = null; u.x = x; u.y = y; u.moved = true; u.mp = 0;
-    if (c.type === CRAB + 1) this.setType(c, CRAB);
+    if (UNLOADED[c.type] !== undefined) this.setType(c, UNLOADED[c.type]);
   }
 
   // Who may board what ($01:A554): docks take ships from cruisers down and all small craft,
@@ -106,7 +108,7 @@ export class Battle {
     if (!host || host === u || host.army !== u.army || host.hp <= 0 || host.carrier || (u.acted && !u.reMove)) return false;
     const uc = this.type(u).category, hc = this.type(host).category;
     if (hc === DOCK_CAT) return uc >= 3 && uc !== 5 && uc !== 6 && uc !== 7;
-    if (host.type === CRAB) return uc >= 8 && uc !== 13;
+    if (TRANSPORT[host.type] !== undefined) return uc >= 8 && uc !== 13;
     if (hc === CARRIER_CAT) return uc >= 8 && !u.burner;   // no boarding with an afterburner ($01:A576)
     return false;
   }
@@ -120,7 +122,7 @@ export class Battle {
     u.carrier = host; u.x = host.x; u.y = host.y; u.moved = true; u.acted = true; u.reMove = 0;
     if (REARM[u.type] !== undefined) this.setType(u, REARM[u.type]);
     u.hp = this.type(u).hp;
-    if (host.type === CRAB) this.setType(host, CRAB + 1);
+    if (TRANSPORT[host.type] !== undefined) this.setType(host, TRANSPORT[host.type]);
   }
   setType(u, type) { u.type = type; }
 

@@ -62,7 +62,8 @@
   "Carthago",
   "Goliath",
   "Cortex",
-  "Adzam"
+  "Adzam",
+  "Selene Kai"
  ],
  "unitInfo": [
   {
@@ -188,8 +189,12 @@
   {
    "type": 12,
    "name": "Horus",
-   "short": null,
-   "info": null
+   "short": "Light Bomber",
+   "info": [
+    "   Bomb\n   and Move",
+    "Light Bomber\n\nThe FB-33 carries a short-\nrange anti-ship missile.\nCheaper and lighter than the\nBrontes.",
+    "Built in numbers before the\nBrontes replaced it. Galt\nyards still turn them out:\nthe missile hits hard enough\nto finish a damaged ship."
+   ]
   },
   {
    "type": 13,
@@ -230,8 +235,12 @@
   {
    "type": 17,
    "name": "Pandora",
-   "short": null,
-   "info": null
+   "short": "Armed Mine",
+   "info": [
+    "   Defence",
+    "Armed Mine\n\nA space mine fitted with two\nrailguns. It cannot move but\nfires on anything in range.",
+    "Laid across gates and cannon\nlanes, Pandoras turn a mine-\nfield into a battery. Clear\nthem from outside their\nthree-hex reach."
+   ]
   },
   {
    "type": 18,
@@ -246,26 +255,42 @@
   {
    "type": 19,
    "name": "Remora",
-   "short": null,
-   "info": null
+   "short": "Decoy Drone",
+   "info": [
+    "   No Attack",
+    "Decoy Drone\n\nA slow, unarmed drone that\nmimics a warship's signature.\nHard to hit.",
+    "The Union screens its\nadvance with Remoras. Every\nshot spent on one is a shot\nnot spent on the fleet."
+   ]
   },
   {
    "type": 20,
    "name": "Echidna",
-   "short": null,
-   "info": null
+   "short": "Beam Pod",
+   "info": [
+    "   Beam\n   Battery",
+    "Beam Pod\n\nA slow gun pod with twin\nbeam cannons reaching two\nhexes.",
+    "Echidnas hold chokepoints in\nthe asteroid belts. Beam-proof\nterrain and missiles deal with\nthem best."
+   ]
   },
   {
    "type": 21,
    "name": "Naga",
-   "short": null,
-   "info": null
+   "short": "Rail Pod",
+   "info": [
+    "   Railgun\n   Battery",
+    "Rail Pod\n\nA slow gun pod with a long\nrailgun reaching three hexes.",
+    "The Naga guards mining\nstations. It cannot chase, so\nflank it or outrange it."
+   ]
   },
   {
    "type": 22,
    "name": "Rockeye",
-   "short": null,
-   "info": null
+   "short": "Twin Rail Pod",
+   "info": [
+    "   Railgun\n   Battery",
+    "Twin Rail Pod\n\nA slow gun pod with two\nrailguns reaching three hexes.",
+    "Rockeyes are deployed in\npairs around fortresses.\nTheir crossfire makes the\napproach costly."
+   ]
   },
   {
    "type": 23,
@@ -320,8 +345,12 @@
   {
    "type": 28,
    "name": "Camelii",
-   "short": null,
-   "info": null
+   "short": "Transport Ship",
+   "info": [
+    "   Transport",
+    "Transport Ship\n\nThe CR-61II ferries one small\nunit like the Crab, with a\nlonger range.",
+    "The Galt remnant's yards\nbuild the Camelii to carry\nslow units to the front.\nCan't attack while empty."
+   ]
   },
   {
    "type": 29,
@@ -442,8 +471,12 @@
   {
    "type": 41,
    "name": "Palmyra",
-   "short": null,
-   "info": null
+   "short": "Missile Frigate",
+   "info": [
+    "   Missile\n   Barrage",
+    "Missile Frigate\n\nA light cruiser built around\nlong-range missile racks.",
+    "The Palmyra hits from beyond\nmost escorts' reach. Keep it\nbehind the line: its hull is\nthin."
+   ]
   },
   {
    "type": 42,
@@ -478,8 +511,12 @@
   {
    "type": 45,
    "name": "Msnp-Ii",
-   "short": null,
-   "info": null
+   "short": "Heavy Bomber",
+   "info": [
+    "   Bomb\n   and Move",
+    "Heavy Bomber\n\nThe Union's mass-produced\nmissile bomber, a cheaper\nAbaddon without the\nDecimator.",
+    "MSNP-IIs come in waves late\nin the war. Kill them before\nthey reach missile range."
+   ]
   },
   {
    "type": 46,
@@ -490,8 +527,12 @@
   {
    "type": 47,
    "name": "Msfb-5",
-   "short": null,
-   "info": null
+   "short": "Strike Bomber",
+   "info": [
+    "   Bomb\n   and Move",
+    "Strike Bomber\n\nArmoured railgun bomber with\none heavy missile.",
+    "The MSFB-5 is the Security\nDirectorate's own design:\nhard to hit, and it keeps\nits railgun after the strike."
+   ]
   },
   {
    "type": 48,
@@ -587,6 +628,16 @@
     "   Buccaneer\n   Cannon",
     "Command Center which controls\nthe Buccaneer Cannon\n\nVulnerable to armor-piercing,\nmelee and bomb attacks",
     "Destroying Adzam will prevent\nthe Buccaneer Cannon from\nfiring"
+   ]
+  },
+  {
+   "type": 58,
+   "name": "Selene Kai",
+   "short": "Fast Carrier",
+   "info": [
+    "   Carrier\n   Large",
+    "Fast Carrier\n\nThe Selene rebuilt with new\nengines and a beam turret.\nFaster than any warship.",
+    "The Kai outruns everything in\nthe Union fleet. It drops\nfighters deep behind the line\nand is gone before the\ncruisers can turn."
    ]
   }
  ],

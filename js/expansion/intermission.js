@@ -2,7 +2,7 @@
 // roster (machines and their pilots' levels), production, trade, the general, deployment, and
 // the next mission's briefing. State lives in campaign.js; battles run in game.html.
 import { paint } from '../gfx.js';
-import { paintUnitArt } from '../unitart.js';
+import { paintLookArt } from '../look.js';
 import { battlePalette, unitIcon, renderMap } from '../maps.js';
 import { romView } from './mission.js';
 import { storyHtml, transmissionHtml, mapHtml, strategyHtml, startBriefingFx } from './briefing.js';
@@ -79,7 +79,7 @@ const artCache = new Map();
 function art(type) {
   if (!artCache.has(type)) {
     let url = '';
-    try { const c = document.createElement('canvas'); paintUnitArt(c, rom, type, 1); url = c.toDataURL(); } catch { /* no picture */ }
+    try { const c = document.createElement('canvas'); paintLookArt(c, rom, types, type, 1); url = c.toDataURL(); } catch { /* no picture */ }
     artCache.set(type, url);
   }
   return artCache.get(type);

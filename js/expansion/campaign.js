@@ -8,8 +8,9 @@ export const INDEX_URL = 'missions/index.json';
 export const MAX_BUILDS = 3;
 export const BASE_SUPPLY = 10;          // every intermission, so a bad battle still builds something
 export const SCORE_PER_SUPPLY = 10;     // map points per supply point
-export const GENERAL_SHIPS = new Set([4, 5, 6, 7, 30, 31, 33, 34, 35, 36, 37, 38]);   // Athena, Tiamat, Asura-II, Hastur, carriers
-const ATHENA = 4, STRUCTURE = 52;       // types 52+ are docks, fortresses and command centres
+export const GENERAL_SHIPS = new Set([4, 5, 6, 7, 30, 31, 33, 34, 35, 36, 37, 38, 58]);   // Athena, Tiamat, Asura-II, Hastur, carriers (58: Selene Kai)
+const ATHENA = 4, STRUCTURE = 52;       // types 52-57 are docks, fortresses and command centres (58+: new expansion machines)
+const isStructure = (type) => type >= STRUCTURE && type < 58;
 
 // Price of a machine: the ROM's points-per-HP value times its HP, so a Mars costs 8, an Athena
 // 24, a Tiamat 48 and a Nodens 60.
@@ -17,7 +18,7 @@ export const price = (types, type) => Math.max(1, types[type].value) * types[typ
 
 // Machines that can be bought or traded for: mobile, not cut, not structures or mines.
 export function marketTypes(types) {
-  return types.filter((t) => !t.cut && t.move > 0 && t.type < STRUCTURE && t.armed === undefined && t.formOf === undefined && t.empty === undefined);
+  return types.filter((t) => !t.cut && t.move > 0 && !isStructure(t.type) && t.armed === undefined && t.formOf === undefined && t.empty === undefined);
 }
 
 export function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
@@ -119,7 +120,7 @@ export function finish(s, battle, points, missionNo) {
   // won another way, by wiping out the Union, keeps everyone)
   const escape = battle.result?.reason === 'escape';
   const out = (u) => u.hp > 0 && (!escape || u.escaped);
-  const alive = battle.units.filter((u) => u.army === 0 && out(u) && u.type < STRUCTURE && !u.exit);
+  const alive = battle.units.filter((u) => u.army === 0 && out(u) && !isStructure(u.type) && !u.exit);
   const kept = [];
   for (const r of s.roster) {
     const deployed = battle.units.find((u) => u.rosterId === r.id);

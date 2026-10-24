@@ -114,9 +114,11 @@ export class InfoScreen {
     const sides = [[this.left, 2, 11, 8], [this.right, 23, 20, 30]];
     for (const [s, col, kcol, ncol] of sides) {
       const u = s.unit;
-      if (this.english) text(19, col - (col === 2 ? 1 : 0), this.names[u.type].toUpperCase().slice(0, 8));
+      // (u.label / u.code: an expansion unit drawn with another type's graphics, js/look.js)
+      if (u.label || this.english) text(19, col - (col === 2 ? 1 : 0), (u.label || this.names[u.type]).toUpperCase().slice(0, 8));
       else bytes(19, col, NAMES + u.type * 8, 8);
-      bytes(20, col - (this.english && col === 2 ? 1 : 0), CODES + u.type * 8, 7);
+      if (u.code) text(20, col - (col === 2 ? 1 : 0), u.code.toUpperCase().slice(0, 7));
+      else bytes(20, col - (this.english && col === 2 ? 1 : 0), CODES + u.type * 8, 7);
       // 機数 (machine count): HP for small craft, HP x 2 for ships and structures (captured)
       const t = this.rom.byteAt(0x01f206 + u.type) >> 4;
       text(19, kcol, String(t < 8 ? s.hp * 2 : s.hp));

@@ -6,6 +6,7 @@
 // Nodens anchors the central block (bot, PATH_BOT=1 AGGR=3: about half its runs with 22 machines). The player
 // deploys along the west edge on three fronts; a magnetic river shelters the approach from the
 // Talos beams, and comet tails (best cover, but entering one ends a move) are stepping stones.
+import { REVIVED, revive } from './revive.mjs';
 const COLS = 44, ROWS = 30;
 const g = Array.from({ length: ROWS }, () => new Array(COLS).fill('.'));
 const set = (x, y, c) => { if (x >= 1 && y >= 1 && x <= COLS && y <= ROWS) g[y - 1][x - 1] = c; };
@@ -41,7 +42,7 @@ export default {
   goal: 'Destroy the Carthago fortress at the heart of the Gate.',
   chapter: "Chapter 8 · The Gate of Eden",
   transmission: "The Gate has held for forty years. It only has to hold for one more day. That is all the time I need.",
-  strategy: ["Advance through the magnetic river on your side of the approach: the Talos beams can't reach you there. Use the comet debris as stepping stones, but remember a ship that enters it stops.", "Go in gate by gate. The gates are two hexes wide and mined: clear the Wisps with ranged fire first.", "The dock beside the Carthago is full of Talos. Bring it to zero early, before it empties onto the decks.", "Reserves come from the east on turns 4, 6 and 9. Hold the inner walls against them, and send everything else at the Carthago."],
+  strategy: ["Advance through the magnetic river on your side of the approach: the Talos beams can't reach you there. Use the comet debris as stepping stones, but remember a ship that enters it stops.", "Go in gate by gate. The gates are two hexes wide and mined: clear the Wisps with ranged fire first.", "The dock beside the Carthago is full of Talos. Bring it to zero early, before it empties onto the decks.", "Reserves come from the east on turns 4, 6 and 9. Hold the inner walls against them, and send everything else at the Carthago.", "Pandoras guard two of the gates, Echidna and Rockeye pods hold the walls, and the turn 9 reserve brings an Msnp-II and an Msfb-5 bomber. Kill the bombers first."],
   plan: [{"n": 2, "path": [[3, 4], [9, 5], [14, 6]]}, {"n": 1, "path": [[3, 15], [9, 15], [14, 15]]}, {"n": 2, "path": [[3, 26], [9, 25], [14, 24]]}, {"n": 3, "path": [[18, 15], [26, 15]]}, {"n": 4, "at": [42, 15], "note": "Reserves T4 · T6 · T9"}],
   briefing: `
 The Gate of Eden.
@@ -53,8 +54,9 @@ The docks inside the walls are full of Talos. Their beams will cut us apart on t
 The Union's reserve is east of the Gate and will come through on the fourth turn, the sixth and the ninth. Destroy the Carthago and the road to Olympos is open.`,
   terrain,
   stamps: [{ map: 28, from: [28, 1], to: [59, 30], at: [12, 1] }],   // VARAMU's fortress complex
-  units: '\n' + units,
+  units: '\n' + revive(units, [['w', '1', [0, 3]], ['b', '3', [0]], ['b', '5', [3]]]),
   legend: {
+    ...REVIVED,   // cut ROM units, revived (revive.mjs)
     G: { type: 4, army: 0, general: true },   // Athena, the general's machine
     M: { type: 0, army: 0 }, T: { type: 1, army: 0 }, K: { type: 2, army: 0 }, D: { type: 3, army: 0 },
     L: { type: 8, army: 0 }, C: { type: 9, army: 0 }, R: { type: 34, army: 0 }, S: { type: 38, army: 0 },
@@ -72,6 +74,6 @@ The Union's reserve is east of the Gate and will come through on the fourth turn
   arrivals: [
     { turn: 3, army: 1, units: [{ type: 40, x: 44, y: 13 }, { type: 40, x: 44, y: 18 }, { type: 49, x: 44, y: 11 }, { type: 49, x: 44, y: 20 }] },
     { turn: 5, army: 1, units: [{ type: 33, x: 44, y: 15 }, { type: 49, x: 44, y: 10 }, { type: 49, x: 44, y: 21 }] },
-    { turn: 8, army: 1, units: [{ type: 49, x: 44, y: 12 }, { type: 49, x: 44, y: 19 }, { type: 3, x: 44, y: 14 }, { type: 3, x: 44, y: 17 }, { type: 39, x: 44, y: 15 }, { type: 51, x: 44, y: 16 }] },
+    { turn: 8, army: 1, units: [{ type: 49, x: 44, y: 12 }, { type: 49, x: 44, y: 19 }, { type: 3, x: 44, y: 14 }, { type: 3, x: 44, y: 17 }, { type: 45, x: 44, y: 15 }, { type: 47, x: 44, y: 16 }] },
   ],
 };

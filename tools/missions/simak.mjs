@@ -12,6 +12,7 @@
 // turrets (230-power missiles to range 6) or two fighters per carrier and a second wave, the bot
 // never won; the hull keeps its two Dragons (beams, which the magnetic belt shelters from), each
 // carrier one fighter, one wave of five. The bot then wins about 4-5 runs in 6 with 14-20 machines.
+import { REVIVED, revive } from './revive.mjs';
 const COLS = 59, ROWS = 30;
 const g = Array.from({ length: ROWS }, () => new Array(COLS).fill('.'));
 const set = (x, y, c) => { if (x >= 1 && y >= 1 && x <= COLS && y <= ROWS) g[y - 1][x - 1] = c; };
@@ -60,7 +61,7 @@ export default {
   goal: "Destroy the three Cortex command centres inside Babylon's hull.",
   chapter: "Chapter 7 · Earth orbit, the wreck of Babylon",
   transmission: "Babylon never fired. That is the trouble with emperors, General: they hesitate. I won't.",
-  strategy: ["Your northwest group rides the magnetic belt down to the hull's west end: the Dragons' beams can't touch a ship inside it.", "The north group drops straight onto the hull. Don't trade with the carriers: kill fighters only when they block your way.", "The west group crosses the plasma lake and the meteoroids to the southern Cortex.", "A wave of fighters launches from the atmosphere on turn 4. Be inside the hull by then.", "Three Cortex centres: kill them all. The home fleet behind the eastern asteroids will come once you're committed."],
+  strategy: ["Your northwest group rides the magnetic belt down to the hull's west end: the Dragons' beams can't touch a ship inside it.", "The north group drops straight onto the hull. Don't trade with the carriers: kill fighters only when they block your way.", "The west group crosses the plasma lake and the meteoroids to the southern Cortex.", "A wave of fighters launches from the atmosphere on turn 4. Be inside the hull by then.", "Three Cortex centres: kill them all. The home fleet behind the eastern asteroids will come once you're committed.", "A Naga rail pod watches the hull's west end and an Msfb-5 strike bomber flies with the home fleet: kill the bomber before it reaches missile range."],
   plan: [{"n": 1, "path": [[3, 5], [9, 9], [16, 12]]}, {"n": 2, "path": [[24, 2], [26, 5], [28, 8]]}, {"n": 3, "path": [[3, 15], [11, 17], [19, 17]]}, {"n": 4, "at": [30, 23], "note": "Fighter wave T4"}],
   briefing: `
 Earth orbit. Babylon.
@@ -75,8 +76,9 @@ We come down from high orbit on three fronts. In the northwest the magnetic belt
     { map: 30, from: [33, 2], to: [57, 17], at: [17, 6] },   // Babylon's hull
     { map: 30, from: [1, 35], to: [59, 40], at: [1, 25] },   // atmosphere and Earth
   ],
-  units: '\n' + units,
+  units: '\n' + revive(units, [['w', '1', [1, 4]], ['t', '4', [0]], ['h', '7', [1]]]),
   legend: {
+    ...REVIVED,   // cut ROM units, revived (revive.mjs)
     G: { type: 4, army: 0, general: true },   // Athena, the general's machine
     M: { type: 0, army: 0 }, T: { type: 1, army: 0 }, K: { type: 2, army: 0 }, D: { type: 3, army: 0 },
     L: { type: 8, army: 0 }, C: { type: 9, army: 0 }, R: { type: 34, army: 0 }, S: { type: 38, army: 0 },
