@@ -13,7 +13,8 @@ import { terrainText, categoryUnits, slug, MOVERS } from './terraininfo.js';
 import { bannerUrl, cellUrl } from './terrainart.js';
 import { factsHtml, TERRAIN_CSS } from './terraincard.js';
 import { loadExpansionData } from './expansion/data.js';
-import { paintLookArt } from './look.js';
+import { paintLookArt, lookOf } from './look.js';
+import { price, marketTypes } from './expansion/campaign.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -78,6 +79,7 @@ function idbGet(key) {
 }
 
 let rom, pal, types, en = null, xp = null;   // xp: the expansion's own data (js/expansion/data)
+let xpIndex = null, xpMissions = [];         // the expansion's missions (missions/index.json and each file)
 
 (async () => {
   const buf = await idbGet('rom');
@@ -86,6 +88,10 @@ let rom, pal, types, en = null, xp = null;   // xp: the expansion's own data (js
   const patch = await idbGet('patch');
   if (patch) { try { en = readEnglish(applyBps(patch, rom.bytes.slice().buffer)); } catch { } }
   try { xp = await loadExpansionData(); } catch { xp = null; }
+  if (xp) try {
+    xpIndex = await (await fetch('missions/index.json')).json();
+    xpMissions = await Promise.all(xpIndex.missions.map(async (m) => { try { return await (await fetch(m.file)).json(); } catch { return null; } }));
+  } catch { xpIndex = null; }
   render();
 })();
 
@@ -139,6 +145,8 @@ function render() {
   if (xp) html += expansionUnitsHtml();
   $('wiki').innerHTML = html;
   for (const c of document.querySelectorAll('canvas[data-xart]')) try { paintLookArt(c, rom, xp.types, +c.dataset.xart, 1); } catch { }
+  for (const el of document.querySelectorAll('[data-xicons]')) try { el.append(xpIcon(+el.dataset.xicons, 0), xpIcon(+el.dataset.xicons, 1)); } catch { }
+  wireXTable();
   // Icons go in after the markup exists.
   for (const el of document.querySelectorAll('[data-icons]')) {
     const t = +el.dataset.icons;
@@ -256,6 +264,8 @@ function unitHtml(t) {
   if (u.loaded !== undefined) notes.push(`Empty; becomes ${ref(u.loaded)} when units board.`);
   if (u.empty !== undefined) notes.push(`Loaded form of ${ref(u.empty)}, carrying units.`);
   if (u.moveOrFire) notes.push('Can\'t move in a turn it fires its long-range weapon.');
+  if (xp && XP_RULES[t]) notes.push(`<b>Expansion:</b> ${XP_RULES[t]}`);
+  if (xp && u.cut && xp.types[t]?.cut) notes.push('<b>Expansion:</b> cut, not used (its bombs never worked with the AI).');
   if (notes.length) html += `<p class="note">${notes.join(' ')}</p>`;
   return html + '</section>';
 }
@@ -263,26 +273,91 @@ function unitHtml(t) {
 // ---------------------------------------------------------------- expansion units
 // The cut units the expansion revives and its new machines (js/expansion/data): they have no
 // graphics of their own, so each borrows another type's (its `look`, js/look.js), hue-shifted.
+// Plus the expansion's rule changes on ROM units (XP_RULES, shown on their ROM entries too).
+const XP_RULES = {
+  23: 'buildable. A fixed battery: at the intermission, load it into a Crab from the Crab\'s <i>Carries</i> menu. It takes no deploy slot and goes into battle aboard that Crab, which sets it down on an asteroid, bedrock, a fortress deck or a turret railway. Once set down it can never be picked up again: it has no movement, so it can\'t board.',
+  24: 'buildable. A fixed battery: at the intermission, load it into a Crab from the Crab\'s <i>Carries</i> menu. It takes no deploy slot and goes into battle aboard that Crab, which sets it down on an asteroid, bedrock, a fortress deck or a turret railway. Once set down it can never be picked up again: it has no movement, so it can\'t board.',
+  26: 'its only use is carrying a battery. At the intermission its <i>Carries</i> menu loads a Dragon or Hydra, which then needs no deploy slot; in battle the Crab sets it down on an asteroid, bedrock, a fortress deck or a turret railway. A battery once set down can\'t be picked up again.',
+  34: 'launches its cargo up to two hexes away (18 hexes), as the ROM\'s launch routine does for it.',
+};
+
+// Where the campaign gets a type: production (from which mission), and which missions field it for the Union.
+function xpSources(type) {
+  const T = xp.types, base = (t) => T[t]?.armed ?? T[t]?.empty ?? t, out = { buy: null, union: [] };
+  if (xpIndex && marketTypes(T).some((t) => t.type === type)) {
+    if ((xpIndex.start || []).includes(type)) out.buy = 1;
+    else {
+      const i = xpIndex.missions.findIndex((m) => (m.unlocks || []).includes(type));
+      out.buy = i >= 0 ? i + 2 : (xpIndex.allFrom ?? 99) + 1;
+    }
+  }
+  xpMissions.forEach((m, i) => {
+    if (!m) return;
+    const all = [...m.units, ...(m.arrivals || []).flatMap((a) => a.units.map((u) => ({ ...u, army: a.army })))];
+    const here = all.some((u) => u.army === 1 && (base(u.type) === type || (u.cargo || []).some((c) => base(typeof c === 'number' ? c : c.type) === type)));
+    if (here) out.union.push(i + 1);
+  });
+  return out;
+}
+
+function xpIcon(type, army) {
+  const c = document.createElement('canvas');
+  paint(c, unitIcon(rom, army, xp.types[lookOf(xp.types, type)].gfx, 0), pal, { scale: 2 });
+  return c;
+}
+
 function expansionUnitsHtml() {
-  const T = xp.types, list = T.filter((u) => u && !u.cut && u.look !== undefined && u.armed === undefined && u.empty === undefined);
+  const T = xp.types, xname = (t) => xp.text.unitNames[t] || T[t].name;
+  const list = T.filter((u) => u && !u.cut && u.look !== undefined && u.armed === undefined && u.empty === undefined);
+  const extra = [23, 24].filter((t) => T[t] && !T[t].cut);   // ROM units the expansion makes buildable
   const range = (w) => (w.max > w.min ? `${w.min}–${w.max}` : w.min);
+  const wtxt = (u) => u.weapons.filter((w) => w && w.power).map((w) => `${MODES[w.mode][0]}${w.power} @${range(w)}`).join(', ') || '—';
+  const sideOf = (src) => [src.buy ? `Galt (build from mission ${src.buy})` : '', src.union.length ? `Union (missions ${src.union.join(', ')})` : ''].filter(Boolean).join(' · ') || 'not fielded';
   let html = `<h2 id="expansion-units">Expansion units <small>Galt remnant</small></h2>
-    <p class="lede">Units the original ROM defines but never uses, brought back by the expansion, and the expansion's new machines.
-    The ROM gives the cut units no graphics of their own, so each one borrows another unit's art, recoloured, and is tagged with its model on the map.</p><div class="grid">`;
+    <p class="lede">Units the original ROM defines but never uses, brought back by the expansion, its new machines, and ROM units the
+    expansion lets you build. The ROM gives the cut units no graphics of their own, so each one borrows another unit's art, recoloured, and is tagged with its model on the map.
+    Prices are in supply (in beta mode everything is free).</p>`;
+  // compact table, sortable by clicking a header
+  html += `<table class="xtable" id="xtable"><thead><tr>${['Unit', 'Side', 'Price', 'HP', 'Move', 'Evasion', 'Weapons'].map((h, i) => `<th data-col="${i}">${h}</th>`).join('')}</tr></thead><tbody>`;
+  for (const u of [...list, ...extra.map((t) => T[t])]) {
+    const src = xpSources(u.type), anchor = list.includes(u) ? `xunit-${u.type}` : `unit-${u.type}`;
+    html += `<tr><td data-v="${esc(xname(u.type))}"><a href="#${anchor}">${esc(xname(u.type))}</a> <span class="mono dim">${esc(u.code)}</span></td>
+      <td data-v="${src.buy ? 'a' : 'b'}${esc(sideOf(src))}">${esc(sideOf(src))}</td><td data-v="${price(T, u.type)}">${price(T, u.type)}</td><td data-v="${u.hp}">${u.hp}</td>
+      <td data-v="${u.move}">${u.move}</td><td data-v="${u.evasion}">${Math.round(u.evasion * 100 / 128)}%</td><td data-v="${esc(wtxt(u))}" class="mono">${esc(wtxt(u))}</td></tr>`;
+  }
+  html += `</tbody></table><p class="note">Expansion rules on ROM units: ${[34, 26, 23, 24].map((t) => `<a href="#unit-${t}">${esc(nameOf(t))}</a>`).join(', ')} (see the notes on their entries).</p><div class="grid">`;
   for (const u of list) {
-    const tx = xp.text.unitInfo.find((e) => e.type === u.type), weapons = u.weapons.filter(Boolean);
+    const tx = xp.text.unitInfo.find((e) => e.type === u.type), weapons = u.weapons.filter(Boolean), src = xpSources(u.type);
     const spent = T.find((v) => v && v.armed === u.type), loaded = T.find((v) => v && v.empty === u.type);
     html += `<section class="unit" id="xunit-${u.type}"><header><canvas data-xart="${u.type}" style="width:64px;height:64px;image-rendering:pixelated"></canvas><div>
-      <h3>${esc(xp.text.unitNames[u.type] || u.name)}</h3><div class="role"><span class="mono">${esc(u.code)}</span>${tx?.short ? ` · ${esc(tx.short)}` : ''}</div></div></header>
-      <div class="stats"><span>HP <b>${u.hp}</b></span><span>Move <b>${u.move}</b></span><span>Evasion <b>${Math.round(u.evasion * 100 / 128)}%</b></span><span>Price <b>${Math.max(1, u.value) * u.hp}</b></span></div>`;
+      <h3>${esc(xname(u.type))}</h3><div class="role"><span class="mono">${esc(u.code)}</span>${tx?.short ? ` · ${esc(tx.short)}` : ''}</div>
+      <span class="icons" data-xicons="${u.type}"></span></div></header>
+      <div class="stats"><span>HP <b>${u.hp}</b></span><span>Move <b>${u.move}</b></span><span>Evasion <b>${Math.round(u.evasion * 100 / 128)}%</b></span><span>Price <b>${price(T, u.type)}</b></span></div>
+      <p class="note">${esc(sideOf(src))}</p>`;
     html += weapons.length ? `<table><tr><th>Slot</th><th>Type</th><th>Range</th><th>Power</th></tr>${weapons.map((w) =>
       `<tr><td>W${w.slot + 1}</td><td>${MODES[w.mode]}</td><td>${range(w)}</td><td>${w.power}</td></tr>`).join('')}</table>` : '<p class="note">Unarmed.</p>';
     if (tx?.info) html += `<p>${esc(prose(tx.info[1]))}</p><p>${esc(prose(tx.info[2]))}</p>`;
-    const notes = [`Borrows the ${esc(nameOf(u.look))}'s graphics; map tag <span class="mono">${esc(u.tag || '')}</span>.`];
+    const notes = [`Borrows the <a href="#unit-${u.look}">${esc(nameOf(u.look))}</a>'s graphics; map tag <span class="mono">${esc(u.tag || '')}</span>.`];
     if (u.type < types.length) notes.push(`Cut from the original: <a href="#unit-${u.type}">ROM entry</a>.`);
+    else notes.push('New in the expansion.');
     if (spent) notes.push(`After firing its one-shot W4 it becomes its spent form (type ${spent.type}); re-armed on boarding.`);
-    if (loaded) notes.push('Carries one small unit.');
+    if (loaded) notes.push('A one-unit transport like the Crab: carries one small unit, and can set down a Dragon or Hydra.');
+    if (T[u.type].category === 1) notes.push('Carrier: launches small craft next to itself; the general can ride it.');
     html += `<p class="note">${notes.join(' ')}</p></section>`;
   }
   return html + '</div>';
+}
+
+// Click a header of the expansion table to sort by it (again to reverse).
+function wireXTable() {
+  const t = document.getElementById('xtable');
+  if (!t) return;
+  for (const th of t.querySelectorAll('th')) th.onclick = () => {
+    const col = +th.dataset.col, dir = th.dataset.dir === 'asc' ? -1 : 1;
+    for (const o of t.querySelectorAll('th')) delete o.dataset.dir;
+    th.dataset.dir = dir === 1 ? 'asc' : 'desc';
+    const rows = [...t.tBodies[0].rows], val = (r) => r.cells[col].dataset.v, num = rows.every((r) => !isNaN(+val(r)));
+    rows.sort((a, b) => dir * (num ? +val(a) - +val(b) : val(a).localeCompare(val(b))));
+    t.tBodies[0].append(...rows);
+  };
 }
