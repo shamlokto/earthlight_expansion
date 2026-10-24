@@ -88,7 +88,7 @@ const pips = (level) => `<span class="pips" title="Pilot level ${level}">${Array
 
 // Production asks first: the machine's wiki card (picture, role, stats, weapons, description),
 // a link to its full wiki entry, then Buy or Cancel.
-const MODES = ['Beam', 'Railgun', 'Missile'];
+const MODES = ['Beam', 'Railgun', 'Missile'], CRAB = 26;
 function confirmBuild(type) {
   const t = types[type], tx = en?.unitInfo?.find((e) => e.type === type), cost = C.price(types, type), beta = C.beta(state);
   const info = tx ? tx.info.slice(1).join('\n\n').replace(/-\n/g, '').replace(/\n(?!\n)/g, ' ') : '';
@@ -99,7 +99,7 @@ function confirmBuild(type) {
   d.innerHTML = `<div class="buyhead">${art(type) ? `<img src="${art(type)}" alt="">` : ''}<div><h2>${esc(name(type))}</h2><div class="muted">${esc(t.code)}${tx?.short ? ` · ${esc(tx.short)}` : ''}</div></div></div>
     <div class="buystats"><span><em>HP</em><b>${t.hp}</b></span><span><em>Move</em><b>${t.move}</b></span><span><em>Evasion</em><b>${Math.round((t.evasion * 100) / 128)}%</b></span><span><em>Price</em><b>${cost}</b></span></div>
     <ul class="buyweap">${weapons}</ul>${info ? `<p class="buyinfo">${esc(info)}</p>` : ''}
-    ${t.move === 0 ? '<p class="muted">Fixed battery: it cannot move. Deploy it with an empty Crab, which carries it and sets it down on bedrock, an asteroid, a fortress deck or a turret railway.</p>' : ''}
+    ${t.move === 0 ? '<p class="muted">Fixed battery: it cannot move. Load it into a Crab on the roster (its Carries menu) and deploy the Crab: in battle it sets the battery down on bedrock, an asteroid, a fortress deck or a turret railway.</p>' : ''}
     <p><a href="wiki.html#${anchor}" target="_blank" rel="noopener">Full wiki entry →</a></p>
     <div class="row"><button class="btn primary" id="buyYes" ${beta || (state.supply >= cost && state.builds < C.MAX_BUILDS) ? '' : 'disabled'}>Buy${beta ? ' (free, beta)' : ` for ${cost} supply`}</button><button class="btn" id="buyNo">Cancel</button></div>`;
   $('buyNo').onclick = () => d.close();
@@ -117,7 +117,7 @@ const byType = (a, b) => types[a].category - types[b].category || byPrice(a, b);
 
 function render() {
   const e = entry(), cap = next ? C.deployCap(next) : 0;
-  if (!state.deploy) state.deploy = state.roster.slice(0, cap).map((r) => r.id);
+  if (!state.deploy) state.deploy = state.roster.filter((r) => types[r.type].move > 0).slice(0, cap).map((r) => r.id);
   const deployed = new Set(state.deploy), value = (ids) => [...ids].reduce((t, id) => t + C.price(types, state.roster.find((r) => r.id === id).type), 0);
   const tradeValue = value(picked);
   const beta = C.beta(state), total = index.missions.length;
@@ -148,13 +148,17 @@ function render() {
   // the general's machine always comes first; the rest by the chosen order
   const rosterKey = { supply: (a, b) => byPrice(a.type, b.type) || b.level - a.level, new: (a, b) => b.id - a.id,
     type: (a, b) => byType(a.type, b.type) || b.level - a.level, level: (a, b) => b.level - a.level || byPrice(a.type, b.type), name: (a, b) => byName(a.type, b.type) || b.level - a.level }[sorting.roster];
+  const loads = C.crabLoads(state, types), aboard = Object.fromEntries(Object.entries(loads).map(([c, b]) => [b, c]));
+  const batteries = state.roster.filter((r) => types[r.type].move === 0);
   for (const r of [...state.roster].sort((a, b) => (b.id === state.general) - (a.id === state.general) || rosterKey(a, b))) {
     const t = types[r.type], can = C.GENERAL_SHIPS.has(r.type), on = deployed.has(r.id), gen = state.general === r.id;
     html += `<article class="rcard${on ? ' on' : ''}${gen ? ' gen' : ''}${picked.has(r.id) ? ' pick' : ''}">
       ${art(r.type) ? `<img class="rart" src="${art(r.type)}" alt="">` : ''}
       <div class="rbody"><div class="rname">${esc(name(r.type))}</div><div class="rcode">${esc(t.code.trim())} ${icon(r.type)}</div>
         <div class="rlv"><em>Pilot</em>${pips(r.level)}<b>L${r.level}</b></div><div class="rprice"><em>Value</em><b>${C.price(types, r.type)}</b></div></div>
-      <div class="ractions"><label class="tog"><input type="checkbox" data-deploy="${r.id}" ${on ? 'checked' : ''}><span>Deploy</span></label>
+      <div class="ractions">${t.move === 0 ? `<span class="muted small">${aboard[r.id] !== undefined ? `Aboard a Crab${deployed.has(+aboard[r.id]) ? ', deploying' : ' (Crab stays home)'}` : 'Load it into a Crab to deploy'}</span>`
+        : `<label class="tog"><input type="checkbox" data-deploy="${r.id}" ${on ? 'checked' : ''}><span>Deploy</span></label>`}
+        ${r.type === CRAB ? `<select class="crabload" data-crab="${r.id}" title="Battery the Crab carries"><option value="">Carries: nothing</option>${batteries.map((v) => `<option value="${v.id}" ${loads[r.id] === v.id ? 'selected' : ''}>Carries: ${esc(name(v.type))} L${v.level}${aboard[v.id] !== undefined && aboard[v.id] !== String(r.id) ? ' (other Crab)' : ''}</option>`).join('')}</select>` : ''}
         ${can ? `<label class="tog gold"><input type="radio" name="general" data-general="${r.id}" ${gen ? 'checked' : ''}><span>★ General</span></label>` : ''}
         <label class="tog cyan"><input type="checkbox" data-pick="${r.id}" ${picked.has(r.id) ? 'checked' : ''}><span>Trade</span></label></div>
     </article>`;
@@ -193,6 +197,7 @@ function wire(cap) {
     state.deploy = c.checked ? [...state.deploy, id].slice(0, cap) : state.deploy.filter((d) => d !== id);
     save(); render();
   };
+  for (const c of document.querySelectorAll('[data-crab]')) c.onchange = () => { C.loadCrab(state, +c.dataset.crab, c.value === '' ? null : +c.value); save(); render(); };
   for (const c of document.querySelectorAll('[data-general]')) c.onchange = () => { state.general = c.dataset.general === 'none' ? null : +c.dataset.general; save(); render(); };
   for (const c of document.querySelectorAll('[data-pick]')) c.onchange = () => { c.checked ? picked.add(+c.dataset.pick) : picked.delete(+c.dataset.pick); render(); };
   if ($('tradeBtn')) $('tradeBtn').onclick = () => {

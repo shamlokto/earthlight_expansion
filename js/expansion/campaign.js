@@ -17,8 +17,8 @@ const isStructure = (type) => type >= STRUCTURE && type < 58;
 export const price = (types, type) => Math.max(1, types[type].value) * types[type].hp;
 
 // Machines that can be bought or traded for: mobile, not cut, not structures or mines.
-// The Dragon and Hydra batteries (owner's request) can't move: a Crab carries one and sets it
-// down on bedrock, asteroid, deck or railway.
+// The Dragon and Hydra batteries (owner's request) can't move: a Crab is loaded with one at the
+// intermission and sets it down on bedrock, asteroid, deck or railway.
 const BATTERIES = [23, 24], CRAB_EMPTY = 26;
 export function marketTypes(types) {
   return types.filter((t) => !t.cut && (t.move > 0 || BATTERIES.includes(t.type)) && !isStructure(t.type) && t.armed === undefined && t.formOf === undefined && t.empty === undefined);
@@ -98,24 +98,39 @@ export function sell(s, types, ids) {
 // Units marked `joiner` stay as they are and join the roster if they survive.
 export function applyRoster(mission, s, canStand = () => true, types = null) {
   const slots = mission.units.filter((u) => u.army === 0 && !u.neutral && !u.joiner);
-  const chosen = (s.deploy || s.roster.map((r) => r.id)).map((id) => s.roster.find((r) => r.id === id)).filter(Boolean).slice(0, slots.length);
+  const battery = (r) => types && types[r.type].move === 0;
+  const chosen = (s.deploy || s.roster.map((r) => r.id)).map((id) => s.roster.find((r) => r.id === id)).filter((r) => r && !battery(r)).slice(0, slots.length);
   const others = mission.units.filter((u) => !slots.includes(u));
   const usable = new Map(chosen.map((r) => [r, slots.filter((sl) => canStand(r.type, sl.x, sl.y)).length]));
   const order = [...chosen].sort((a, b) => (b.id === s.general) - (a.id === s.general) || usable.get(a) - usable.get(b));
-  if (types) order.sort((a, b) => (types[a.type].move === 0) - (types[b.type].move === 0));   // batteries last, after the carriers
   const free = [...slots], placed = [];
-  // a fixed battery (Dragon, Hydra) starts aboard an empty deployed Crab, which carries it and sets
-  // it down on solid ground; with no free Crab it stays home
-  const crab = () => placed.find((u) => u.type === CRAB_EMPTY && !u.cargo.length);
   for (const r of order) {
-    if (types && types[r.type].move === 0) { const c = crab(); if (c) { c.cargo.push({ type: r.type, level: r.level, rosterId: r.id }); c.type = CRAB_EMPTY + 1; } continue; }
     const i = free.findIndex((sl) => canStand(r.type, sl.x, sl.y));
     if (i < 0) continue;
-    placed.push({ ...free[i], type: r.type, level: r.level, rosterId: r.id, cargo: [] });
+    const u = { ...free[i], type: r.type, level: r.level, rosterId: r.id, cargo: [] };
+    // a deployed Crab takes the battery loaded into it at the intermission (crabLoads)
+    const b = r.type === CRAB_EMPTY && s.roster.find((v) => v.id === crabLoads(s, types)[r.id]);
+    if (b) { u.cargo.push({ type: b.type, level: b.level, rosterId: b.id }); u.type = CRAB_EMPTY + 1; }
+    placed.push(u);
     free.splice(i, 1);
   }
   const g = placed.find((u) => u.rosterId === s.general);
   return { ...mission, units: [...placed, ...others], general: g ? { x: g.x, y: g.y } : null };
+}
+
+// Which battery (Dragon, Hydra) each Crab carries into battle: { crabId: batteryId }, set at the
+// intermission (the Crab's only job). Entries for machines no longer in the roster are dropped.
+export function crabLoads(s, types) {
+  const has = (id, ok) => s.roster.some((r) => r.id === id && ok(r));
+  const loads = {};
+  for (const [c, b] of Object.entries(s.loads || {})) if (has(+c, (r) => r.type === CRAB_EMPTY) && has(b, (r) => !types || types[r.type].move === 0)) loads[c] = b;
+  return loads;
+}
+export function loadCrab(s, crabId, batteryId) {
+  const loads = { ...(s.loads || {}) };
+  for (const k of Object.keys(loads)) if (loads[k] === batteryId) delete loads[k];
+  if (batteryId === null) delete loads[crabId]; else loads[crabId] = batteryId;
+  s.loads = loads;
 }
 
 export const deployCap = (mission) => Math.min(mission.cap || 99, mission.units.filter((u) => u.army === 0 && !u.neutral && !u.joiner).length);
