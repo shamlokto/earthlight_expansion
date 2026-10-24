@@ -4358,7 +4358,6 @@
    },
    "look": 32,
    "ownArt": "leviathan",
-   "tag": "LVT",
    "fightName": "Leviathan",
    "unionOnly": true
   },
@@ -4419,7 +4418,6 @@
    },
    "look": 2,
    "ownArt": "directorateTalos",
-   "tag": "TLD",
    "fightName": "D-Talos",
    "unionOnly": true
   },
