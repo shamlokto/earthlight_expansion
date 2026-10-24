@@ -82,7 +82,7 @@ export function ownHullTiles(set) {
 const secondHull = new WeakMap();
 export function ownHullSet(set, second) {
   if (!second || !set.hull2) return set;
-  if (!secondHull.has(set)) secondHull.set(set, { ...set, hull: set.hull2 });
+  if (!secondHull.has(set)) secondHull.set(set, { ...set, hull: set.hull2, hullArt: set.hull2Art || null });
   return secondHull.get(set);
 }
 

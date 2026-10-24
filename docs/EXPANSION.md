@@ -624,6 +624,14 @@ broadside, against craft; ports where the batteries' shots start, box x 15–28,
 `hull2` (top-down, against ships; gun pods whose emitters sit where the beams start, box x 89–96,
 y 3–19 and 101–116).
 
+Owner's art guidance (2026-10-24): heavy twin cannons like the Tiamat's on the wings, in every view.
+The modern fight renderer draws its hull from full-colour pictures three times the classic size
+(`hullArt`, `hull2Art`; fightfx.js `ownHullArt`), and its shots per weapon slot from the set's
+`shots`: slot 0 missiles (white body, red nose, flame, smoke trail) in place of the borrowed battery
+shots, slot 1 a thick red beam from the wing cannons to the target (fightfx.js `drawRedBeam`,
+`drawMissile`). The classic renderer recolours its effect row red when it fires slot 1
+(fightscene.js `buildSprites`). Visual only: the recorded timings and hits are unchanged.
+
 **Pallas** (types 62-65, owner 2026-10-24): the Athena's successor, with the same four forms and
 rules (62 fighter-bomber CHU-05F, 63 its spent form, 64 hunter CHU-05R, 65 its spent form: units.js
 TRANSFORM/SPENT, rules.js REARM, ai.js SPENT_FORMS and `athenaBase`). Galt, `GENERAL_SHIPS`,

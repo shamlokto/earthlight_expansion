@@ -76,7 +76,7 @@ export class FightRenderer {
     this.sprites = new Map();
     this.tilesId = new WeakMap(); this.nTiles = 0;
     this.particles = []; this.lights = []; this.decals = [];
-    this.trails = new Map(); this.shotAge = new Map(); this.lastShot = new Map();
+    this.trails = new Map(); this.shotAge = new Map(); this.lastShot = new Map(); this.shotOrigin = new Map();
     this.shake = 0; this.seed = 7; this.punch = null; this.whiteout = 0;
     this.prev = null; this.cur = scene.frameState(); this.hulls = []; this.hullGroups = [];
     this.introImg = null; this.introCanvas = null; this.lastIntro = null; this.introEnd = null;
@@ -302,6 +302,7 @@ export class FightRenderer {
         if (!before.has(sp.id)) this.explode(cx, cy, e.glow, sp);
         continue;
       }
+      if (!this.shotOrigin.has(sp.id)) this.shotOrigin.set(sp.id, [cx, cy]);
       const age = (this.shotAge.get(sp.id) || 0) + 1;
       this.shotAge.set(sp.id, age);
       // melee effects are numbered afresh every frame: no muzzle flashes, and a trail only while
@@ -316,7 +317,11 @@ export class FightRenderer {
       this.lastShot.set(sp.id, { x: cx, y: cy, col: e.glow, size: sp.size, moved: tr.length > 2 && Math.hypot(tr[tr.length - 1][0] - tr[0][0], tr[tr.length - 1][1] - tr[0][1]) > 6 });
       // a slow, long-lived shot is a missile: it smokes
       const sp1 = tr.length > 1 ? Math.hypot(tr[tr.length - 1][0] - tr[tr.length - 2][0], tr[tr.length - 1][1] - tr[tr.length - 2][1]) : 0;
-      if (sp1 > 0.4 && sp1 < 2.2 && age > 3 && !this.reduced) {
+      const kind = this.shotKind(sp);
+      if (kind === 'missile' && tr.length > 1 && !this.reduced) {   // the Azoras's missiles always smoke
+        const [tx, ty] = tr[tr.length - 2];
+        this.particles.push({ kind: 'smoke', x: tx, y: ty, vx: (this.rnd() - 0.5) * 0.25, vy: -0.05 - this.rnd() * 0.12, drag: 0.95, g: 0, r: 1.8 + this.rnd(), grow: 0.2, life: 30, max: 30, shade: 170, rot: this.rnd() * 6, vr: 0.02 });
+      } else if (sp1 > 0.4 && sp1 < 2.2 && age > 3 && !this.reduced) {
         const [tx, ty] = tr[tr.length - 2];
         this.particles.push({ kind: 'smoke', x: tx, y: ty, vx: (this.rnd() - 0.5) * 0.2, vy: -0.05 - this.rnd() * 0.1, drag: 0.96, g: 0, r: 1.5 + this.rnd(), grow: 0.16, life: 26, max: 26, shade: 150, rot: this.rnd() * 6, vr: 0.02 });
       }
@@ -327,7 +332,7 @@ export class FightRenderer {
       if (seen.has(id)) continue;
       const s = this.lastShot.get(id);
       if (s && s.moved) this.impact(s.x, s.y, s.col);
-      this.trails.delete(id); this.shotAge.delete(id); this.lastShot.delete(id);
+      this.trails.delete(id); this.shotAge.delete(id); this.lastShot.delete(id); this.shotOrigin.delete(id);
     }
     for (const p of this.particles) {
       p.x += p.vx; p.y += p.vy; p.vx *= p.drag; p.vy = p.vy * p.drag + p.g; p.life--;
@@ -388,6 +393,42 @@ export class FightRenderer {
       this.shake = Math.min(7, this.shake + (big ? 3.6 : 1.5));
       if (big && crowd === 1) { this.punch = { x, y, t: 0 }; this.whiteout = Math.min(0.22, this.whiteout + 0.14); }
     }
+  }
+
+  // A ship's own hull in full colour (js/art/own.js `hullArt`, drawn three times the classic
+  // size; the Azoras): drawn in place of the remastered palette version, where the classic
+  // renderer puts its 128 px hull sprite (the picture at the sheet's left end, or mirrored at its
+  // right end).
+  ownHullArt(sp) {
+    const m = /^([LR])(\d+)own#/.exec(sp.id);
+    if (!m) return null;
+    const a = (m[1] === 'L' ? this.scene.left : this.scene.right)[+m[2]], set = a && a.own;
+    if (!set || !set.hullArt) return null;
+    const key = `${set.hull.w}:${sp.flip}:${set.hullArt.rows[0].length}:${set.hullArt.rows.length}`;
+    this.ownArt = this.ownArt || new WeakMap();
+    let per = this.ownArt.get(set);
+    if (!per) { per = new Map(); this.ownArt.set(set, per); }
+    if (!per.has(key)) {
+      const A = set.hullArt, src = canvasOf(A.w, A.h), g = src.getContext('2d'), im = g.createImageData(A.w, A.h);
+      const pal = A.palette.map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+      A.rows.forEach((r, y) => { for (let x = 0; x < A.w; x++) { const v = parseInt(r[x], 36); if (!v) continue; const o = (y * A.w + x) * 4; [im.data[o], im.data[o + 1], im.data[o + 2]] = pal[v]; im.data[o + 3] = 255; } });
+      g.putImageData(im, 0, 0);
+      const w = set.hull.w, h = set.hull.h, c = canvasOf(w * UP, h * UP), cg = c.getContext('2d');
+      cg.imageSmoothingEnabled = true; cg.imageSmoothingQuality = 'high';
+      if (sp.flip) { cg.translate(w * UP, 0); cg.scale(-1, 1); }
+      cg.drawImage(src, 0, 0, w * UP, h * UP);
+      const sc = canvasOf(w * 2, h * 2), sg = sc.getContext('2d');
+      sg.drawImage(c, 0, 0, w * 2, h * 2); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = 'rgba(0,0,12,0.62)'; sg.fillRect(0, 0, w * 2, h * 2);
+      per.set(key, { c, pad: 0, fx: false, shadow: sc, glowC: null, glow: [255, 220, 200] });
+    }
+    return { e: per.get(key), sp, ox: sp.flip ? 128 - set.hull.w : 0, oy: 0 };
+  }
+  // How a shot sprite is drawn: 'missile' or 'redBeam' when its side's own art asks for it for the
+  // weapon slot in use (js/art/own.js `shots`), else null (the shot as recorded).
+  shotKind(sp) {
+    if (!this.isFx(sp) || this.isBoom(sp) || sp.size > 16) return null;
+    const sc = this.scene, side = this.sideOf(sp) ? sc.rightSide : sc.leftSide;
+    return (side && side.own && side.own.shots && side.own.shots[sc.slotOf(side)]) || null;
   }
 
   isBig(sp) {
@@ -469,7 +510,7 @@ export class FightRenderer {
     for (const sp of st.sprites) {
       if (this.isFx(sp)) { items.push({ fx: sp }); continue; }
       const g = groupOf.get(sp.id);
-      if (!g) { const e = this.sprite(sp); if (e) items.push({ e, sp, ox: 0, oy: 0 }); continue; }
+      if (!g) { const own = this.ownHullArt(sp); if (own) { items.push(own); continue; } const e = this.sprite(sp); if (e) items.push({ e, sp, ox: 0, oy: 0 }); continue; }
       if (done.has(g)) continue;
       done.add(g);
       const G = this.group(g);
@@ -536,6 +577,9 @@ export class FightRenderer {
   drawShot(ctx, sp, [x, y]) {
     const S = this.S, e = this.sprite(sp);
     if (!e) return;
+    const kind = this.shotKind(sp);
+    if (kind === 'redBeam') return this.drawRedBeam(ctx, sp, x, y);
+    if (kind === 'missile') return this.drawMissile(ctx, sp, x, y);
     const [r, g, b] = e.glow, n = sp.size * S;
     const cx = (x + sp.size / 2) * S, cy = (y + sp.size / 2) * S;
     ctx.globalCompositeOperation = 'lighter';
@@ -579,6 +623,45 @@ export class FightRenderer {
     ctx.drawImage(e.c, (x - e.pad) * S, (y - e.pad) * S, q, q);
     ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(e.c, (x - e.pad) * S, (y - e.pad) * S, q, q);
+  }
+
+  // The Azoras's anti-ship gun: a thick red beam from where the shot left the cannon to where it is
+  // now, with a glowing halo and a white-hot core (visual only: the recorded shot's timing).
+  drawRedBeam(ctx, sp, x, y) {
+    const S = this.S, cx = (x + sp.size / 2) * S, cy = (y + sp.size / 2) * S;
+    const o = this.shotOrigin.get(sp.id) || [x + sp.size / 2, y + sp.size / 2], ox = o[0] * S, oy = o[1] * S;
+    // the beam reaches across to the target: the nearest edge of the other side's machines
+    const right = this.sideOf(sp) === 0, foes = (this.cur.sprites || []).filter((q) => !this.isFx(q) && this.sideOf(q) !== this.sideOf(sp));
+    const edge = foes.length ? (right ? Math.min(...foes.map((q) => q.x + 6)) : Math.max(...foes.map((q) => q.x + q.size - 6))) : null;
+    const reach = edge === null ? cx : Math.max(right ? cx : -Infinity, Math.min(right ? Infinity : cx, edge * S));
+    const tx = right ? Math.max(cx, reach) : Math.min(cx, reach), ty = cy;
+    const flick = 0.85 + 0.15 * Math.sin((this.scene.clock || 0) * 1.7 + sp.y);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    for (const [wd, col, a] of [[14, [255, 30, 40], 0.18], [8, [255, 50, 50], 0.45], [4.5, [255, 120, 110], 0.8], [1.8, [255, 245, 235], 1]]) {
+      ctx.strokeStyle = rgbStr(col, a * flick); ctx.lineWidth = wd * S;
+      ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(tx, ty); ctx.stroke();
+    }
+    const rad = 12 * S;
+    ctx.globalAlpha = 0.8; ctx.drawImage(blob(255, 40, 40), tx - rad, ty - rad, rad * 2, rad * 2);
+    ctx.globalAlpha = 0.6; ctx.drawImage(blob(255, 60, 60), ox - rad * 0.7, oy - rad * 0.7, rad * 1.4, rad * 1.4);
+    ctx.restore();
+    this.lights.push({ x: x + sp.size / 2, y: y + sp.size / 2, col: [255, 40, 40], i: 0.5, r: 40, life: 1, max: 1 });
+  }
+  // The Azoras's anti-robot weapon: a missile (white body, red nose, a flame behind) pointing
+  // along its flight, in place of the borrowed battery shot.
+  drawMissile(ctx, sp, x, y) {
+    const S = this.S, cx = (x + sp.size / 2) * S, cy = (y + sp.size / 2) * S, tr = this.trails.get(sp.id);
+    let ang = this.sideOf(sp) ? Math.PI : 0;
+    if (tr && tr.length > 1) { const [ax, ay] = tr[tr.length - 2], [bx, by] = tr[tr.length - 1]; if (Math.hypot(bx - ax, by - ay) > 0.2) ang = Math.atan2(by - ay, bx - ax); }
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.scale(1.6, 1.6);
+    ctx.globalCompositeOperation = 'lighter';
+    const fr = 6 * S; ctx.globalAlpha = 0.9; ctx.drawImage(blob(255, 150, 50), -9 * S - fr, -fr, fr * 2, fr * 2);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#e9ecf7'; ctx.strokeStyle = '#2a2d44'; ctx.lineWidth = 0.6 * S;
+    ctx.beginPath(); ctx.moveTo(-6 * S, -1.6 * S); ctx.lineTo(3 * S, -1.6 * S); ctx.lineTo(6 * S, 0); ctx.lineTo(3 * S, 1.6 * S); ctx.lineTo(-6 * S, 1.6 * S); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ff3d5a'; ctx.beginPath(); ctx.moveTo(3 * S, -1.6 * S); ctx.lineTo(6 * S, 0); ctx.lineTo(3 * S, 1.6 * S); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#9aa0bd'; ctx.beginPath(); ctx.moveTo(-6 * S, -1.6 * S); ctx.lineTo(-7.5 * S, -3.2 * S); ctx.lineTo(-4 * S, -1.6 * S); ctx.moveTo(-6 * S, 1.6 * S); ctx.lineTo(-7.5 * S, 3.2 * S); ctx.lineTo(-4 * S, 1.6 * S); ctx.fill();
+    ctx.restore();
   }
 
   drawParticles(ctx, S, t) {

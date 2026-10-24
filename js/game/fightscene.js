@@ -314,6 +314,15 @@ export class FightScene {
     // a structure's palette is one row; its shots use the capital ships' effect row (captured)
     if (kindOf(this.leftSide.type) === 'struct') put(2, rom.body(PALS.ship[0]).subarray(64, 96));
     if (kindOf(this.rightSide.type) === 'struct') put(5, rom.body(PALS.ship[1]).subarray(64, 96));
+    // a ship whose own art asks for red beams (js/art/own.js `shots`; the Azoras's slot 1): its
+    // effect row turns red, keeping each colour's brightness (visual only)
+    for (const [side, row] of [[this.leftSide, 2], [this.rightSide, 5]]) {
+      if (side.own?.shots?.[this.slotOf(side)] !== 'redBeam') continue;
+      for (let i = row * 16 + 1; i < row * 16 + 16; i++) {
+        const c = obj[i], hi = Math.max(...c), lo = Math.min(...c);
+        obj[i] = [hi, Math.round(hi * 0.12 + lo * 0.55), Math.round(hi * 0.12 + lo * 0.5)];
+      }
+    }
     this.obj = obj;
     this.tilesL = tileCache(spriteBank(rom, this.leftSide.type, this.slotOf(this.leftSide), this.rightSide.type));
     this.tilesR = tileCache(spriteBank(rom, this.rightSide.type, this.slotOf(this.rightSide), this.leftSide.type));
