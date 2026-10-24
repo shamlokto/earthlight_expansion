@@ -380,3 +380,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--gold); }
   .bHead::after, .bStory p, .bTx, .hero > h1, .txFace svg, .txScan, .txNoise, .txHead .rec, .bTx .caret, .chip, .bHead h1, .bChap, .bNo, .mapWrap, .bPlan li::before, .soundHint, .resHero canvas, .crew .cm { animation: none !important; }
   .bPlan li { transition: none; }
 }
+
+/* Decimator aiming: who the blast would destroy (js/gameapp.js decimatorHelp) */
+.blastlist { margin: 4px 0 0; padding-left: 18px; }
+.blastlist li.warn, p.warn { color: #ff6b6b; }

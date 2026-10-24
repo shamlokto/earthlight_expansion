@@ -9,6 +9,7 @@ export const SFX = {
   INFO_PANEL: 0x15,   // info screen: a panel opens
   SHOT: 0x22,         // default weapon (Mars-type beam rifles)
   BOOM: 0x3F,         // a machine explodes
+  NUKE: 0x19,         // the Quantum Decimator detonating on the map ($02:E05E)
   FLY_IN: 0x39,       // both formations fly in
   SHIP_FLY_IN: 0x3C,  // ... with a capital ship in the fight
 };
@@ -28,6 +29,7 @@ export const FIRE_SFX_SLOT = {
   0: [0x22, null, 0x26, null], 1: [0x23, null, 0x26, null], 2: [0x22, null, 0x27, null], 3: [0x2F, null, 0x26, null],
   4: [0x23, null, null, 0x28], 6: [0x22, null, 0x26, null], 7: [0x22, null, 0x26, null], 9: [0x23, 0x24, null, null],
   15: [null, 0x23, null, null], 21: [null, null, 0x26, null], 23: [null, 0x2B, null, null], 42: [0x30, 0x30, 0x32, null],
+  43: [0x30, null, null, 0x33],   // the Abaddon's slot 3, the Quantum Decimator's warhead launch (captured against an Artemis)
 };
 
 // Weapon sound for a unit type firing weapon slot `slot` (falls back to the type's slot-1 capture).

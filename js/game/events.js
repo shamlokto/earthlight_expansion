@@ -91,7 +91,8 @@ export function decimator(b, u) {
 // Fires the Decimator at (x, y): the hex and its ring become open space (cell 0), units
 // there are destroyed, and the Abaddon switches to its spent form like any bomb attack.
 export function blast(b, u, x, y) {
-  const cells = [[x, y], ...hexRing(x, y)].filter(([cx, cy]) => b.inBounds(cx, cy));
+  const cells = blastArea(b, x, y);
+  const fight = blastFight(b, u, x, y);
   const hit = [];
   for (const [cx, cy] of cells) {
     const v = b.unitAt(cx, cy);
@@ -102,5 +103,23 @@ export function blast(b, u, x, y) {
   b.spend(u, b.type(u).weapons[DECIMATOR_SLOT]);
   b.result = null;
   b.winner();
-  return { att: u, cells, hit };
+  return { att: u, x, y, cells, hit, fight };
+}
+
+// The seven hexes a Decimator fired at (x, y) clears ($01:B942 ring order: the centre, then
+// SW, NW, N, NE, SE, S), cut to the playfield.
+export function blastArea(b, x, y) {
+  return [[x, y], ...hexRing(x, y)].filter(([cx, cy]) => b.inBounds(cx, cy));
+}
+
+// In the original the Decimator is an attack on a unit: the fight scene plays first (the
+// Abaddon's slot 3 launches its warhead), then $01:A064 skips the normal defeat handling and
+// $02:E05E detonates it on the map. This is that fight, for the fight scene only: worked out
+// before the blast, without the random term (no counter: the target is gone either way), so it
+// changes nothing. null when the hex is empty (the remake lets the Decimator clear any hex).
+function blastFight(b, u, x, y) {
+  const v = b.unitAt(x, y), w = b.type(u).weapons[DECIMATOR_SLOT];
+  if (!v || !w) return null;
+  const left = Math.max(0, Math.floor((v.hp * 128 - b.damage(u, v, w)) / 128));
+  return { turn: b.turn, att: u, def: v, w, cw: null, before: [u.hp, v.hp], after: [u.hp, left], info: b.fightInfo(u, v, w), levels: [u.level, v.level], cls: [b.cls(u.x, u.y), b.cls(x, y)], nuke: true };
 }

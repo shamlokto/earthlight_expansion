@@ -73,6 +73,7 @@ export class Board {
     this.classic = store.get(CLASSIC_KEY) === '1';
     this.zoom = +store.get(ZOOM_KEY) || 0.8;
     this.tokens = new Map(); this.anim = new Map(); this.fx = []; this.state = null; this.active = () => true;
+    this.held = new Set();   // units a Decimator has destroyed, still drawn until its fireball clears their hexes (holdBlast)
     this.stage = document.createElement('div');
     this.stage.style.cssText = 'position:relative;transform-origin:0 0';
     this.terrain = canvas(1, 1);
@@ -141,7 +142,9 @@ export class Board {
   // The map's terrain: an Indexed image from renderMap (playfield crop) and its palette.
   // cls(x, y) gives a cell's terrain class for the animated light (null: none yet).
   setTerrain(img, pal, cls = null) {
-    this.img = img; this.pal = pal; this.clsOf = cls; this.state = null;
+    // a repaint of the same battle (the Decimator clearing hexes) keeps the units' state and effects;
+    // a new battle resets them in update()
+    this.img = img; this.pal = pal; this.clsOf = cls;
     this.cv.width = img.w * S; this.cv.height = img.h * S;
     this.paint();
     this.applyZoom();
@@ -204,7 +207,7 @@ export class Board {
     const prev = this.state;
     this.state = state;
     if (!prev || prev.battle !== state.battle) {
-      this.anim.clear(); this.fx = []; this.seen = new Map();
+      this.anim.clear(); this.fx = []; this.seen = new Map(); this.held.clear();
       if (!this.clsOf) { this.clsOf = (x, y) => state.battle.cls(x, y); if (!this.classic) this.paint(); }
     }
     this.track(state.battle);
@@ -230,7 +233,7 @@ export class Board {
     for (const [id, s] of [...this.seen]) {
       if (live.has(id)) continue;
       const u = b.units[id];
-      if (u && u.hp <= 0 && !this.classic) { if (s.hp > 0) this.hit(s.x, s.y, s.hp); this.explode(s.x, s.y); }
+      if (u && u.hp <= 0 && !this.classic && !this.held.has(u)) { if (s.hp > 0) this.hit(s.x, s.y, s.hp); this.explode(s.x, s.y); }
       this.seen.delete(id); this.anim.delete(id);
     }
   }
@@ -251,6 +254,39 @@ export class Board {
       this.fx.push({ kind: 'flash', cells, colour, t0: performance.now(), life: 660 });
       setTimeout(done, 660);
     });
+  }
+
+  // The Quantum Decimator. holdBlast(e) right after events.blast (before anything redraws):
+  // the units it destroyed stay on the board, quietly, until the fireball covers them. nuke(e,
+  // onClear) then plays the detonation and calls onClear when the hexes are cleared (gameapp
+  // repaints the terrain there); it resolves when the game may go on (lingering smoke and
+  // scorch marks fade out afterwards).
+  //   Classic: the original's map effect ($02:E05E, captured in the emulator, 60 fps frames):
+  //   a fireball sprite grows over ~10 frames to an ellipse about 60x48 px over the seven hexes,
+  //   white with a yellow-orange-red rim, flickers; at frame 20 the hexes are cleared and their
+  //   units destroyed under it; at frame 40 it becomes an orange ring, at 44 a thin dark red one,
+  //   gone by frame 50.
+  //   Modern: a white-out flash, a hot fireball, two shockwaves rolling out over the map, debris
+  //   and embers, a rising plasma cloud, screen shake, and scorched hexes cooling to open space.
+  holdBlast(e) {
+    for (const u of e.hit) if (!u.carrier) this.held.add(u);
+  }
+  nuke(e, onClear = () => {}) {
+    const [cx, cy] = centre(e.x, e.y), t0 = performance.now(), classic = this.classic;
+    this.centerOn(e.x, e.y, true);
+    const clear = () => { for (const u of e.hit) this.held.delete(u); onClear(); };
+    if (classic) {
+      this.fx.push({ kind: 'nukeRom', cx, cy, t0, life: NUKE.romEnd * FRAME });
+      return new Promise((done) => { setTimeout(clear, NUKE.romClear * FRAME); setTimeout(done, NUKE.romEnd * FRAME); });
+    }
+    const R = () => Math.random(), parts = [], embers = [], puffs = [];
+    if (!reduced) {
+      for (let i = 0; i < 70; i++) { const a = R() * Math.PI * 2, v = 160 + R() * 520; parts.push({ a, v, s: 2 + R() * 4, hue: 20 + R() * 35, spin: R() }); }
+      for (let i = 0; i < 46; i++) { const a = R() * Math.PI * 2, v = 30 + R() * 170; embers.push({ a, v, s: 1.5 + R() * 2.5, ph: R() * 6.28, d: 400 + R() * 900 }); }
+      for (let i = 0; i < 26; i++) puffs.push({ k: i / 25, dx: (R() - 0.5) * 30, r: 18 + R() * 22, d: R() * 180 });
+    }
+    this.fx.push({ kind: 'nuke', cx, cy, cells: e.cells, t0, life: NUKE.life, reduced, parts, embers, puffs });
+    return new Promise((done) => { setTimeout(clear, NUKE.clear); setTimeout(done, reduced ? 900 : NUKE.done); });
   }
 
   // Scrolls the board so (x, y) is in view; smooth unless reduced motion.
@@ -319,7 +355,7 @@ export class Board {
     if (!this.classic && this.cells && !reduced) this.ambient(ctx, sec, inView);
     this.overlays(ctx, st, sec);
     // units, back to front
-    const units = b.alive().slice().sort((p, q) => p.y - q.y || p.x - q.x);
+    const units = [...b.alive(), ...this.held].sort((p, q) => p.y - q.y || p.x - q.x);
     for (const u of units) {
       const [X, Y] = this.position(u, t);
       if (!inView(X + 36, Y + 24)) continue;
@@ -328,6 +364,15 @@ export class Board {
     if (st.sel) this.ring(ctx, st.sel.x, st.sel.y, '#ffd84a', sec, 3);
     if (st.cursor) { ctx.save(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.setLineDash([10, 7]); ctx.lineDashOffset = -sec * 30; hexPath(ctx, ...st.cursor); ctx.stroke(); ctx.restore(); }
     this.effects(ctx, t);
+    this.shake(t);
+  }
+
+  // The Decimator's screen shake (modern board): the whole stage jolts, decaying.
+  shake(t) {
+    const n = this.fx.find((e) => e.kind === 'nuke' && !e.reduced && t - e.t0 < NUKE.shake);
+    const a = n ? 16 * Math.pow(1 - (t - n.t0) / NUKE.shake, 2) : 0;
+    const tr = a > 0.3 ? `translate(${((Math.random() * 2 - 1) * a).toFixed(1)}px, ${((Math.random() * 2 - 1) * a * 0.7).toFixed(1)}px)` : '';
+    if (this.stage.style.transform !== tr) this.stage.style.transform = tr;
   }
 
   position(u, t) {
@@ -438,6 +483,19 @@ export class Board {
     if (st.range) area([...st.range].filter((k) => !(st.reach && st.reach.has(k))).map(key), 'rgba(255,70,90,.13)', 'rgba(255,110,120,.3)');
     if (st.reach) area([...st.reach.keys()].map(key), st.launching ? 'rgba(110,255,160,.28)' : 'rgba(80,165,255,.26)', st.launching ? 'rgba(150,255,190,.6)' : 'rgba(130,200,255,.55)');
     if (st.blastCells) area(st.blastCells, `rgba(200,90,255,${0.25 + 0.1 * Math.sin(sec * 5)})`, 'rgba(230,160,255,.7)');
+    if (st.blastAim) {   // the Decimator's aim: the seven hexes it would clear, and who is on them
+      const pulse = 0.5 + 0.5 * Math.sin(sec * 8);
+      area(st.blastAim.cells, `rgba(255,${150 + 60 * pulse | 0},60,${0.35 + 0.15 * pulse})`, 'rgba(255,240,200,.95)', 0);
+      for (const u of st.blastAim.hit) {
+        ctx.save(); ctx.strokeStyle = u.army === b.army ? '#ff2a2a' : '#ffe14a'; ctx.lineWidth = 5; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 14;
+        hexPath(ctx, u.x, u.y, 3); ctx.stroke(); ctx.restore();
+      }
+      const [cx, cy] = centre(st.blastAim.x, st.blastAim.y);
+      ctx.save(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.shadowColor = '#ff8040'; ctx.shadowBlur = 12;
+      for (const r of [14, 30 + 6 * pulse]) { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(cx - 44, cy); ctx.lineTo(cx + 44, cy); ctx.moveTo(cx, cy - 44); ctx.lineTo(cx, cy + 44); ctx.stroke();
+      ctx.restore();
+    }
     if (st.hosts && st.hosts.length) area(st.hosts.map((h) => [h.x, h.y]), 'rgba(255,214,74,.3)', 'rgba(255,230,120,.8)');
     for (const u of st.targets || []) {   // targets: a pulsing reticle
       const [cx, cy] = centre(u.x, u.y), r = 26 + 3 * Math.sin(sec * 5);
@@ -467,6 +525,10 @@ export class Board {
         ctx.globalAlpha = Math.min(1, 2 * (1 - f)); ctx.font = '800 22px system-ui, sans-serif'; ctx.textAlign = 'center';
         ctx.lineWidth = 4; ctx.strokeStyle = '#1a0006'; const y = e.cy - 30 * f;
         ctx.strokeText(e.text, e.cx, y); ctx.fillStyle = '#ff5a6a'; ctx.fillText(e.text, e.cx, y);
+      } else if (e.kind === 'nukeRom') {
+        romFireball(ctx, e.cx, e.cy, (t - e.t0) / FRAME);
+      } else if (e.kind === 'nuke') {
+        ctx.restore(); this.drawNuke(ctx, e, t - e.t0); ctx.save();
       } else if (e.kind === 'boom') {
         ctx.globalCompositeOperation = 'lighter';
         ctx.globalAlpha = 1 - f; const r = 48 * (0.5 + f); ctx.drawImage(this.glow.boom, e.cx - r, e.cy - r, r * 2, r * 2);
@@ -479,6 +541,121 @@ export class Board {
     }
   }
 }
+
+// ------------------------------------------------------------------- the Quantum Decimator
+const FRAME = 1000 / 60;
+const NUKE = { romClear: 20, romEnd: 50, clear: 300, done: 1900, life: 4200, shake: 1000 };
+// The original's fireball ($02:E05E's sprite object, captured frame by frame): width x height in
+// ROM pixels by frame; then the ring stages.
+const ROM_FIREBALL = [[2, 23, 18], [4, 30, 24], [6, 44, 32], [10, 60, 48]];
+function romFireball(ctx, cx, cy, f) {
+  if (f < 2 || f >= NUKE.romEnd) return;
+  ctx.imageSmoothingEnabled = false;
+  if (f >= 40) {   // the burnt-out ring: orange, then a thin dark red one
+    const [w, h] = [61 * S, 49 * S];
+    ctx.lineWidth = (f < 44 ? 2 : 1) * S; ctx.strokeStyle = f < 44 ? '#f87800' : '#a01000';
+    ctx.beginPath(); ctx.ellipse(cx, cy, w / 2, h / 2, 0, 0, Math.PI * 2); ctx.stroke();
+    if (f < 44) { ctx.lineWidth = S; ctx.strokeStyle = '#d82000'; ctx.beginPath(); ctx.ellipse(cx, cy, w / 2 + S, h / 2 + S, 0, 0, Math.PI * 2); ctx.stroke(); }
+    return;
+  }
+  let [, w, h] = ROM_FIREBALL[0];
+  for (const st of ROM_FIREBALL) if (f >= st[0]) [, w, h] = st;
+  if (f >= 10 && Math.floor(f) % 2) { w += 2; h += 2; }   // the sprite's flicker
+  const rings = [['#d82000', 0], ['#f87800', 2], ['#f8d800', 4], ['#fff8e0', 6], ['#ffffff', 8]];
+  for (const [c, k] of rings) {
+    if (w - 2 * k <= 0 || h - 2 * k <= 0) break;
+    ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(cx, cy, (w / 2 - k) * S, (h / 2 - k) * S, 0, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+const ease = (x) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+Board.prototype.drawNuke = function (ctx, e, t) {
+  const { cx, cy } = e, HEX = 16 * S, red = e.reduced;
+  ctx.save();
+  // scorched hexes, cooling from white-hot to embers and fading into open space
+  if (t > NUKE.clear - 60) {
+    const k = Math.min(1, (t - NUKE.clear + 60) / 3400), heat = 1 - k;
+    for (const [x, y] of e.cells) {
+      hexPath(ctx, x, y);
+      ctx.fillStyle = `rgba(${255 * heat + 40 | 0},${130 * heat * heat + 10 | 0},${40 * heat | 0},${0.85 * (1 - k)})`; ctx.fill();
+      ctx.strokeStyle = `rgba(255,${120 + 100 * heat | 0},60,${0.6 * (1 - k)})`; ctx.lineWidth = 2; ctx.stroke();
+    }
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  // white-out: the whole board flashes, then the glare fades
+  if (t < 520) {
+    const a = t < 60 ? t / 60 : 1 - (t - 60) / 460;
+    ctx.fillStyle = `rgba(255,250,235,${(red ? 0.25 : 0.92) * a})`; ctx.fillRect(0, 0, this.cv.width, this.cv.height);
+  }
+  // fireball: a hot core swelling over the seven hexes, then cooling and collapsing
+  const fr = 2.3 * HEX * ease(t / 260) * (t > 900 ? Math.max(0.35, 1 - (t - 900) / 1600) : 1);
+  const heat = Math.max(0, 1 - Math.max(0, t - 350) / 1500);
+  if (fr > 1 && t < 2600) {
+    const flick = red ? 1 : 0.94 + 0.06 * Math.sin(t / 23);
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, fr * flick);
+    g.addColorStop(0, `rgba(255,255,255,${heat})`); g.addColorStop(0.35, `rgba(255,240,170,${0.95 * heat + 0.1})`);
+    g.addColorStop(0.6, `rgba(255,${150 * heat + 60 | 0},40,${0.8 * heat + 0.15})`); g.addColorStop(0.85, `rgba(200,40,20,${0.45 * heat + 0.1})`); g.addColorStop(1, 'rgba(120,0,0,0)');
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(1, 0.8); ctx.translate(-cx, -cy);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, fr * flick, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  }
+  if (!red) {
+    // two shockwaves rolling out across the map
+    for (const [delay, reach, colour] of [[0, 8.5, '255,245,220'], [140, 6, '160,200,255']]) {
+      const f = (t - delay) / 1150;
+      if (f <= 0 || f >= 1) continue;
+      const r = reach * HEX * ease(f);
+      ctx.lineWidth = 22 * (1 - f) + 2; ctx.strokeStyle = `rgba(${colour},${0.75 * (1 - f)})`;
+      ctx.beginPath(); ctx.ellipse(cx, cy, r, r * 0.7, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 6 * (1 - f) + 1; ctx.strokeStyle = `rgba(255,255,255,${0.5 * (1 - f)})`;
+      ctx.beginPath(); ctx.ellipse(cx, cy, r * 0.96, r * 0.67, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    // debris streaks and embers
+    for (const p of e.parts) {
+      const f = t / 1300; if (f >= 1) continue;
+      const d = p.v * ease(f), x = cx + Math.cos(p.a) * d, y = cy + Math.sin(p.a) * d * 0.7 + 60 * f * f;
+      const tail = 18 * (1 - f) + 2;
+      ctx.strokeStyle = `hsla(${p.hue},100%,${70 - 30 * f}%,${1 - f})`; ctx.lineWidth = p.s;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - Math.cos(p.a) * tail, y - Math.sin(p.a) * tail * 0.7); ctx.stroke();
+    }
+    for (const m of e.embers) {
+      const f = (t - 200) / (m.d + 1800); if (f <= 0 || f >= 1) continue;
+      const d = m.v * ease(f), x = cx + Math.cos(m.a) * d, y = cy + Math.sin(m.a) * d * 0.6 - 40 * f;
+      ctx.fillStyle = `rgba(255,${160 + 60 * Math.sin(t / 90 + m.ph) | 0},70,${(1 - f) * (0.6 + 0.4 * Math.sin(t / 60 + m.ph))})`;
+      ctx.fillRect(x, y, m.s, m.s);
+    }
+  }
+  // lingering glow at ground zero
+  if (t > 300) { const a = Math.max(0, 1 - (t - 300) / 3800) * 0.7, r = 1.6 * HEX; ctx.globalAlpha = a; ctx.drawImage(this.glow.boom, cx - r, cy - r * 0.8, r * 2, r * 1.6); ctx.globalAlpha = 1; }
+  ctx.globalCompositeOperation = 'source-over';
+  // the plasma cloud: a glowing stem and a rolling cap rising over ground zero, hot underneath,
+  // cooling to violet smoke and thinning out
+  if (!red && t > 160) {
+    const f = Math.min(1, (t - 160) / 2200), up = ease(f * 1.25), fade = t > 1900 ? Math.max(0, 1 - (t - 1900) / 1300) : 1;
+    const top = cy - 3.6 * HEX * up, capW = (0.9 + 1.5 * up) * HEX, capH = capW * 0.42, hot = Math.max(0, 1 - f * 1.6);
+    // stem
+    const sw = (0.35 + 0.35 * up) * HEX, sg = ctx.createLinearGradient(0, cy, 0, top);
+    sg.addColorStop(0, `rgba(255,${150 + 80 * hot | 0},80,${0.55 * fade})`); sg.addColorStop(1, `rgba(150,80,120,${0.35 * fade})`);
+    ctx.fillStyle = sg; ctx.beginPath();
+    ctx.moveTo(cx - sw, cy); ctx.quadraticCurveTo(cx - sw * 0.35, (cy + top) / 2, cx - sw * 0.55, top + capH * 0.4);
+    ctx.lineTo(cx + sw * 0.55, top + capH * 0.4); ctx.quadraticCurveTo(cx + sw * 0.35, (cy + top) / 2, cx + sw, cy); ctx.closePath(); ctx.fill();
+    // cap: puffs rolling around an ellipse, and a hot core under it
+    for (const p of e.puffs) {
+      const ang = p.k * Math.PI * 2 + t / 900, px = cx + Math.cos(ang) * capW * 0.62 + p.dx * 0.4, py = top + Math.sin(ang) * capH * 0.55;
+      const r = (0.32 + 0.22 * p.k) * capW * (0.8 + 0.2 * Math.sin(t / 300 + p.d));
+      const below = Math.sin(ang) > 0, warm = below ? hot * 0.9 + 0.1 : hot * 0.4;
+      const g = ctx.createRadialGradient(px, py, r * 0.1, px, py, r);
+      g.addColorStop(0, `rgba(${110 + 145 * warm | 0},${70 + 120 * warm | 0},${110 - 40 * warm | 0},${0.7 * fade})`);
+      g.addColorStop(1, 'rgba(60,40,70,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fill();
+    }
+    if (hot > 0) {
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = hot * fade;
+      ctx.drawImage(this.glow.boom, cx - capW * 0.7, top - capH * 0.6, capW * 1.4, capH * 1.6);
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+  ctx.restore();
+};
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
