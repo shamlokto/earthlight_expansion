@@ -174,7 +174,8 @@ The Union comes home, poorer and owing nobody.`,
   routes: [[37, 16], [37, 20], [40, 11], [40, 25], [34, 14], [34, 22], [51, 10], [51, 26], [42, 18]].map(([x, y]) => ({ prio: 1, x, y })),
   arrivals: [
     // the boss: the Leviathan and its Directorate guard, from the east on turn 14
-    { turn: 13, army: 1, units: [{ type: 59, x: LX + 10, y: LY, cargo: [60, 60] },   // a carrier-battlecruiser: two more Directorate Talos aboard ...[[-2, 0], [2, 0], [-1, -2], [1, -2], [-1, 2], [1, 2]].map(([dx, dy]) => ({ type: 60, x: LX + 10 + dx, y: LY + dy, level: 6 }))] },
+    // the Leviathan is a carrier-battlecruiser: two more Directorate Talos ride aboard
+    { turn: 13, army: 1, units: [{ type: 59, x: LX + 10, y: LY, cargo: [60, 60] }, ...[[-2, 0], [2, 0], [-1, -2], [1, -2], [-1, 2], [1, 2]].map(([dx, dy]) => ({ type: 60, x: LX + 10 + dx, y: LY + dy, level: 6 }))] },
     // Directorate reserves from the east, turns 6 and 11
     { turn: 5, army: 1, units: [{ type: 39, x: 59, y: 14 }, { type: 39, x: 59, y: 22 }, { type: 49, x: 58, y: 10 }, { type: 2, x: 59, y: 18 }, { type: 3, x: 58, y: 26 }] },
     { turn: 10, army: 1, units: [{ type: 31, x: 59, y: 18 }, { type: 42, x: 58, y: 12 }, { type: 42, x: 58, y: 24 }, { type: 49, x: 59, y: 30 }, { type: 51, x: 59, y: 6 }] },
