@@ -5,12 +5,13 @@ import { paint } from '../gfx.js';
 import { paintLookArt } from '../look.js';
 import { battlePalette, unitIcon, renderMap } from '../maps.js';
 import { romView } from './mission.js';
-import { storyHtml, transmissionHtml, mapHtml, strategyHtml, startBriefingFx } from './briefing.js';
+import { storyHtml, voiceHtml, commsHtml, mapHtml, strategyHtml, startBriefingFx } from './briefing.js';
+import { SPEAKERS, portrait } from './portraits.js';
 import { Sound, briefingSong } from '../audio/sound.js';
 import { loadExpansionData } from './data.js';
 import * as C from './campaign.js';
 import { ensurePack } from './pack.js';
-import { clearSavedBattle, savedBattle, EXPANSION_BATTLE } from '../game/savegame.js';
+import { clearSavedBattle, savedBattle } from '../game/savegame.js';
 
 const $ = (id) => document.getElementById(id);
 let rom, pal, types, en = null, index, state, next = null, picked = new Set();
@@ -26,7 +27,7 @@ let briefFx = null, briefFor = null, briefT0 = 0, briefTerrain = null;
 function drawBriefMap() {
   briefFx?.stop(); briefFx = null;
   const hero = document.querySelector('.hero');
-  if (!next || !hero) return;
+  if (!next || !hero || choicePending()) return;
   const e = entry();
   if (briefFor !== e.file) { briefFor = e.file; briefT0 = performance.now(); briefTerrain = null; }
   try {
@@ -61,8 +62,11 @@ document.addEventListener('keydown', startSound, { capture: true });
 function fillIcons() { for (const c of document.querySelectorAll('canvas[data-icon]')) paint(c, unitIcon(rom, 0, types[+c.dataset.icon].gfx), pal, { scale: 2 }); }
 
 // late in the campaign (index.json allFrom) every machine type can be built
-const unlocked = () => state.next >= (index.allFrom ?? Infinity) ? C.marketTypes(types).map((t) => t.type) : [...new Set([...(index.start || []), ...index.missions.slice(0, state.next).flatMap((m) => m.unlocks || [])])];
-const entry = () => index.missions[state.next] || null;
+const unlocked = () => state.next >= (index.allFrom ?? Infinity) ? C.marketTypes(types).map((t) => t.type) : [...new Set([...(index.start || []), ...list().slice(0, state.next).flatMap((m) => m.unlocks || [])])];
+// the campaign's missions as this playthrough has them (the choice picks among alternatives)
+const list = () => C.missionList(index, state);
+const entry = () => list()[state.next] || null;
+const choicePending = () => C.pendingChoice(index, state, state.next);
 
 async function loadNext() {
   const e = entry();
@@ -70,9 +74,9 @@ async function loadNext() {
 }
 
 function save() { C.save(state); }
-const battleUrl = () => `game.html?mission=${encodeURIComponent(entry().file)}&no=${state.next}&campaign=1`;
+const battleUrl = () => `game.html?mission=${encodeURIComponent(entry().file)}&no=${state.next}&campaign=1&c=${C.campaign().id}`;
 // the saved mid-battle state of the next mission, if there is one
-function resumable() { const s = savedBattle(EXPANSION_BATTLE), e = entry(); return s && e && s.mission === e.file ? s : null; }
+function resumable() { const s = savedBattle(C.campaign().battle), e = entry(); return s && e && s.mission === e.file ? s : null; }
 
 // The original's unit-info pictures (js/unitart.js), as image URLs, made once per type.
 const artCache = new Map();
@@ -115,24 +119,36 @@ const byName = (a, b) => name(a).localeCompare(name(b)) || a - b;
 // type: the machine's class (category: ships first, then craft), then price
 const byType = (a, b) => types[a].category - types[b].category || byPrice(a, b);
 
+// A decision before the next mission (index entry `choice`, docs/STORY.md): the speakers named in
+// the options' text-free `speakers` (or the cast), the prompt and the options; two clicks pick one.
+function choiceHtml(ch, e, total) {
+  const faces = (ch.speakers || ['sato', 'moraine']).filter((k) => SPEAKERS[k]);
+  return `<section class="hero box choice fxIntro"><div class="heroNum" aria-hidden="true">${String(e.no).padStart(2, '0')}</div>
+    <div class="eyebrow">Intermission · before mission ${e.no} of ${total} · a decision</div><h1>${esc(ch.title || 'Your call, General')}</h1>
+    <div class="faces">${faces.map((k) => `<div class="cline ${SPEAKERS[k].side} on" style="padding:0;border:0;background:none;display:block"><div class="cFace" title="${esc(SPEAKERS[k].name)}">${portrait(k)}<div class="txScan"></div></div></div>`).join('')}</div>
+    <p class="prompt">${esc(ch.prompt || '')}</p>
+    <div class="opts">${ch.options.map((o) => `<button class="opt" type="button" data-choice="${esc(o.id)}"><b>${esc(o.label)}</b><span>${esc(o.text || '')}</span><small class="muted">Click again to decide. This can't be undone.</small></button>`).join('')}</div></section>`;
+}
+
 function render() {
   const e = entry(), cap = next ? C.deployCap(next) : 0;
   if (!state.deploy) state.deploy = state.roster.filter((r) => types[r.type].move > 0).slice(0, cap).map((r) => r.id);
   const deployed = new Set(state.deploy), value = (ids) => [...ids].reduce((t, id) => t + C.price(types, state.roster.find((r) => r.id === id).type), 0);
   const tradeValue = value(picked);
-  const beta = C.beta(state), total = index.missions.length;
+  const beta = C.beta(state), total = list().length, pending = choicePending();
   let html = '';
 
   // the next mission: the hero of the page
-  if (!e) html += `<section class="hero box"><div class="eyebrow">Campaign complete</div><h1>The Union leadership has fallen.</h1></section>`;
+  if (!e) html += `<section class="hero box"><div class="eyebrow">Campaign complete</div><h1>${C.campaign().id === 'classic' ? 'The Union leadership has fallen.' : 'The war is over.'}</h1></section>`;
+  else if (pending) html += choiceHtml(pending, e, total);
   else {
     const intro = briefFor !== e.file;
     html += `<section class="hero box${intro ? ' fxIntro' : ''}"><div class="heroNum" aria-hidden="true">${String(e.no).padStart(2, '0')}</div>
       <div class="eyebrow">Intermission · next: mission ${e.no} of ${total}</div><h1>${esc(e.title)}</h1>`;
-    if (!next) html += `<p class="muted">This mission isn't built yet: paint it in the map editor and add its file to missions/index.json.</p>`;
+    if (!next) html += `<p class="muted">This mission is still being written.</p>`;
     else {
       if (!soundOn() && !$('mute').checked) html += `<button class="btn soundHint" type="button">♪ Click for the briefing music</button>`;
-      html += `<div class="bTop">${storyHtml(next)}${transmissionHtml(next)}</div>${mapHtml()}${strategyHtml(next)}
+      html += `<div class="bTop">${storyHtml(next)}${voiceHtml(next)}</div>${commsHtml(next)}${mapHtml()}${strategyHtml(next)}
         <div class="chips">${e.hint ? `<span class="chip cyan">Next map wants: ${esc(e.hint)}</span>` : ''}<span class="chip ${deployed.size ? 'gold' : ''}">Deploy ${deployed.size} / ${cap}</span>${next.turnLimit ? `<span class="chip">Turn limit ${next.turnLimit}</span>` : ''}</div>
         <div class="row launchrow"><button class="btn primary big" id="launch" ${deployed.size ? '' : 'disabled'}>Launch mission</button>${resumable() ? `<button class="btn" id="resume">Resume saved battle (turn ${resumable().turn})</button>` : ''}</div>`;
     }
@@ -182,7 +198,7 @@ function render() {
 
   html += `<section class="box"><h2>Campaign</h2><p class="muted">Progress saves automatically in this browser. Repairs between battles are free.</p>
     <div class="row"><label class="switch"><input type="checkbox" id="beta" ${beta ? 'checked' : ''}><span></span>Beta testing: unlimited supply, every machine, trades at any price</label></div>
-    <div class="row"><button class="btn" id="restart">Start a new campaign</button></div></section>`;
+    <div class="row"><button class="btn" id="restart">Start this campaign over</button><a class="btn" href="expansion.html?select=1">Switch campaign</a></div></section>`;
   $('app').innerHTML = html;
   fillIcons();
   drawBriefMap();
@@ -206,11 +222,15 @@ function wire(cap) {
   if ($('sellBtn')) $('sellBtn').onclick = () => {
     if (C.sell(state, types, [...picked])) { picked.clear(); state.deploy = state.deploy.filter((id) => state.roster.some((r) => r.id === id)); save(); render(); }
   };
+  for (const b of document.querySelectorAll('[data-choice]')) b.onclick = async () => {
+    if (!b.classList.contains('armed')) { document.querySelectorAll('[data-choice]').forEach((o) => o.classList.toggle('armed', o === b)); return; }
+    state.choice = b.dataset.choice; state.deploy = null; save(); await loadNext(); render();
+  };
   if ($('launch')) $('launch').onclick = () => {
     // the general's machine must deploy if the general boards
     if (state.general !== null && !state.deploy.includes(state.general)) state.deploy = [state.general, ...state.deploy].slice(0, cap);
     save();
-    clearSavedBattle(EXPANSION_BATTLE);   // a new launch never resumes an older saved battle
+    clearSavedBattle(C.campaign().battle);   // a new launch never resumes an older saved battle
     sound?.stop(); briefFx?.stop();
     location.href = battleUrl();
   };
@@ -224,8 +244,42 @@ function wire(cap) {
   };
 }
 
+// The campaign select: the new Galt remnant campaign and the Classic one, each with its own save.
+async function selectCampaign() {
+  C.remember(null);
+  const info = await Promise.all(Object.values(C.CAMPAIGNS).map(async (c) => {
+    const s = C.saved(c.id), idx = await (async () => { try { const r = await fetch(c.index); return r.ok ? r.json() : null; } catch { return null; } })();
+    const n = idx ? C.missionList(idx, s || {}).length : 0;
+    return { c, s, idx, n };
+  }));
+  const blurb = {
+    remnant: ['New', 'Kessrin seizes Olympos on the night of the victory parade. Break out with the crews who follow you, deal with the Ashfall Cartel, or don\'t, and take Earth orbit back. 12 missions, one choice, two endings.', ['sato', 'arkin', 'kessrin', 'vane']],
+    classic: ['Classic', 'The first expansion campaign: the commander shot after the parade, ten missions from Olympos to the Union citadel.', ['kessrin']],
+  };
+  $('campSub').textContent = 'Expansion · choose a campaign';
+  $('app').innerHTML = `<section class="box"><h2>Campaigns</h2><div class="camps">${info.map(({ c, s, idx, n }) => {
+    const [tag, text, faces] = blurb[c.id];
+    const state = !idx ? 'Being written: not playable yet.' : s ? (s.next >= n ? 'Campaign complete.' : `Saved: mission ${s.next + 1} of ${n}, ${s.roster.length} machines.`) : `Not started · ${n} missions.`;
+    return `<button class="camp" type="button" data-camp="${c.id}" ${idx ? '' : 'disabled'}><span class="tag">${tag}</span><h2>${esc(c.title)}</h2>
+      <div class="faces">${faces.map((k) => `<div class="cline ${SPEAKERS[k].side} on" style="padding:0;border:0;background:none;display:block"><div class="cFace">${portrait(k)}</div></div>`).join('')}</div>
+      <p>${esc(text)}</p><span class="state">${esc(state)}</span></button>`;
+  }).join('')}</div></section>`;
+  for (const b of document.querySelectorAll('[data-camp]')) b.onclick = () => { history.replaceState(null, '', `expansion.html?c=${b.dataset.camp}`); openCampaign(b.dataset.camp); };
+}
+
+async function openCampaign(id) {
+  const c = C.use(id); C.remember(id);
+  $('campSub').textContent = `Expansion · ${c.title}`;
+  index = await C.missionIndex();
+  if (!index) { $('app').innerHTML = `<section class="box"><h2>${esc(c.title)}</h2><p>This campaign is still being written. <a href="expansion.html?select=1">Back to the campaigns</a></p></section>`; return; }
+  state = C.load(); picked.clear(); briefFor = null;
+  if (!state) await startNew(); else await loadNext();
+  if (C.ensureAthena(state)) save();
+  render();
+}
+
 async function startNew() {
-  const first = await (await fetch(index.missions[0].file)).json();
+  const first = await (await fetch(C.missionList(index, {})[0].file)).json();
   state = C.newCampaign(first); picked.clear();
   save(); await loadNext();
 }
@@ -241,9 +295,7 @@ async function startNew() {
     if (ev.target.checked) document.querySelectorAll('.soundHint').forEach((h) => h.remove());
   };
   rom = pack.rom; en = { ...(pack.text || {}), ...data.text }; pal = battlePalette(rom); types = data.types;
-  index = await C.missionIndex();
-  state = C.load();
-  if (!state) await startNew(); else await loadNext();
-  if (C.ensureAthena(state)) save();
-  render();
+  const q = new URLSearchParams(location.search), id = q.get('c') || (q.has('select') ? null : C.remembered());
+  if (!id || !C.CAMPAIGNS[id]) return selectCampaign();
+  await openCampaign(id);
 })().catch((e) => { $('app').textContent = `Intermission error: ${e.message}`; console.error(e); });

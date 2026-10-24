@@ -25,7 +25,9 @@ const { blankMission, romView, MAX_PAIRS, SCREEN_COLS, SCREEN_ROWS } = await imp
 
 const args = process.argv.slice(2), opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args.splice(i, 2)[1] : null; };
 const romPath = opt('--rom') || process.env.EARTHLIGHT_ROM, previewDir = opt('--preview');
-if (!romPath) { console.error('usage: node tools/build-missions.mjs --rom ROM [--preview DIR] [name ...]'); process.exit(1); }
+// --dir remnant: specs from tools/missions/remnant, written to missions/remnant (the new campaign)
+const subDir = opt('--dir') || '';
+if (!romPath) { console.error('usage: node tools/build-missions.mjs --rom ROM [--dir SUBDIR] [--preview DIR] [name ...]'); process.exit(1); }
 const romFile = readFileSync(romPath);
 const rom = new Rom(await readRomFile({ arrayBuffer: async () => romFile.buffer.slice(romFile.byteOffset, romFile.byteOffset + romFile.length) }));
 if (!rom.isEarthLight()) throw new Error('not Earth Light (Japan)');
@@ -167,6 +169,9 @@ function build(spec) {
     // suggested strategy steps and the map annotations that go with them
     ...(spec.chapter ? { chapter: spec.chapter } : {}), ...(spec.transmission ? { transmission: spec.transmission.trim() } : {}),
     ...(spec.strategy ? { strategy: spec.strategy } : {}), ...(spec.plan ? { plan: spec.plan } : {}),
+    // the new campaign (docs/STORY.md): briefing dialogue with portraits, and per-choice epilogues
+    ...(spec.comms ? { comms: spec.comms.map((c) => ({ speaker: c.speaker, text: c.text.trim() })) } : {}),
+    ...(spec.endings ? { endings: Object.fromEntries(Object.entries(spec.endings).map(([k, v]) => [k, v.trim()])) } : {}),
   });
   return { mission: m, view };
 }
@@ -188,13 +193,14 @@ async function preview(mission, view, file) {
 }
 
 // ------------------------------------------------------------------ main
-const dir = join(root, 'tools/missions');
+const dir = join(root, 'tools/missions', subDir), outDir = join(root, 'missions', subDir);
+mkdirSync(outDir, { recursive: true });
 const wanted = args.length ? args : readdirSync(dir).filter((f) => f.endsWith('.mjs') && f !== 'revive.mjs').map((f) => basename(f, '.mjs'));
 if (previewDir) mkdirSync(previewDir, { recursive: true });
 for (const name of wanted) {
   const spec = (await import(pathToFileURL(join(dir, `${name}.mjs`)).href)).default;
   const { mission, view } = build(spec);
-  writeFileSync(join(root, 'missions', `${spec.file || name}.json`), JSON.stringify(mission));
+  writeFileSync(join(outDir, `${spec.file || name}.json`), JSON.stringify(mission));
   const counts = [0, 1].map((a) => mission.units.filter((u) => u.army === a && !u.neutral).length);
   console.log(`${name}: ${spec.screens.join('x')} screens, ${mission.pairs.length} graphics, units ${counts[0]} vs ${counts[1]}${mission.units.some((u) => u.neutral) ? ', neutral docks' : ''}, ${(mission.arrivals || []).length} arrival events`);
   if (previewDir) await preview(mission, view, join(previewDir, `${name}.png`));

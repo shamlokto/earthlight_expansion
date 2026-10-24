@@ -5,6 +5,7 @@
 // in map cells; n is the strategy step they belong to).
 import { cellOrigin } from '../maps.js';
 import { VILLAIN, villainPortrait } from './villain.js';
+import { SPEAKERS, portrait } from './portraits.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const STRUCTURE = 52, CORTEX = 56, FORTRESSES = [53, 54, 55, 57];
@@ -19,6 +20,18 @@ export const transmissionHtml = (mission) => (mission.transmission ? `<aside cla
       <div class="txWho"><b>${esc(VILLAIN.name)}</b><span>${esc(VILLAIN.rank)}</span></div>
       <blockquote data-type="${esc(mission.transmission)}">${esc(mission.transmission)}</blockquote>
     </aside>` : '');
+
+// The new campaign's briefing dialogue (mission JSON `comms`: [{ speaker, text }], docs/STORY.md):
+// each line with its speaker's portrait; your side in a cool comms panel, the Directorate in the
+// red incoming-transmission style, the cartel in amber. Lines type out one after another.
+export const commsHtml = (mission) => ((mission.comms || []).length ? `<section class="bComms"><h2>Comms</h2>${mission.comms.map((c, i) => {
+  const who = SPEAKERS[c.speaker] || { name: c.speaker, rank: '', side: 'ally' };
+  return `<div class="cline ${who.side}" style="--d:${i}"><div class="cFace">${portrait(c.speaker)}<div class="txScan"></div></div>
+    <div class="cBody"><div class="cWho">${who.side === 'ally' ? '' : '<span class="rec"></span>'}<b>${esc(who.name)}</b><span>${esc(who.rank)}</span></div>
+    <p data-type="${esc(c.text)}">${esc(c.text)}</p></div></div>`;
+}).join('')}</section>` : '');
+// The voice beside the story: Kessrin's transmission, unless the mission has full comms.
+export const voiceHtml = (mission) => ((mission.comms || []).length ? '' : transmissionHtml(mission));
 
 export const mapHtml = () => `<section class="bMap"><h2>Theatre map</h2>
     <div class="mapWrap"><canvas id="briefMap"></canvas></div>
@@ -40,8 +53,9 @@ export function briefingHtml(mission, { goal, no = null, total = null }) {
   </header>
   <div class="bTop">
     ${storyHtml(mission)}
-    ${transmissionHtml(mission)}
+    ${voiceHtml(mission)}
   </div>
+  ${commsHtml(mission)}
   ${mapHtml()}
   <div class="bBottom">
     ${strategyHtml(mission)}
@@ -56,7 +70,7 @@ const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(pre
 // Timeline of the briefing (seconds since it opened): the map's terrain fades in, the armies
 // pop in, then the objectives, the reinforcements, and the plan step by step. The strategy
 // steps and the villain's typed quote follow the same clock.
-const T = { terrain: 0.15, own: 0.9, neutral: 1.2, foe: 1.4, marks: 2.3, rein: 2.7, plan: 3.4, step: 1.25, quote: 1.6, cps: 38 };
+const T = { terrain: 0.15, own: 0.9, neutral: 1.2, foe: 1.4, marks: 2.3, rein: 2.7, plan: 3.4, step: 1.25, quote: 1.6, cps: 38, gap: 0.6 };
 export const stepTime = (n) => T.plan + (n - 1) * T.step;
 
 // Starts the briefing's animations in `root` (a .brief or the intermission's hero): the theatre
@@ -76,17 +90,21 @@ export function startBriefingFx(root, map, t0 = performance.now()) {
     li.onclick = () => { mark(ov ? ov.highlight(n, true) : n); if (canvas && canvas.getBoundingClientRect().bottom < 0) canvas.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); };
     li.tabIndex = 0;
   }
-  const quote = root.querySelector('.bTx blockquote[data-type]'), text = quote ? quote.dataset.type : '';
+  // the villain's quote and the comms lines type out one after another, a short pause between
+  const quotes = [...root.querySelectorAll('.bTx blockquote[data-type], .bComms .cline [data-type]')];
+  let at = T.quote;
+  const lines = quotes.map((el) => { const text = el.dataset.type, start = at; at += text.length / T.cps + T.gap; return { el, text, start, line: el.closest('.cline') }; });
   let raf = 0, stopped = false;
   const tick = () => {
     if (stopped) return;
     const t = reduced ? Infinity : (performance.now() - t0) / 1000;
     for (const li of steps) li.classList.toggle('on', t >= stepTime(+li.dataset.step));
-    if (quote) {
-      const n = Math.max(0, Math.min(text.length, Math.floor((t - T.quote) * T.cps)));
-      if (quote.dataset.n !== String(n)) { quote.dataset.n = n; quote.innerHTML = `${esc(text.slice(0, n))}${n < text.length ? '<span class="caret"></span>' : ''}`; }
+    for (const { el, text, start, line } of lines) {
+      const n = Math.max(0, Math.min(text.length, Math.floor((t - start) * T.cps)));
+      line?.classList.toggle('on', t >= start - 0.3);
+      if (el.dataset.n !== String(n)) { el.dataset.n = n; el.innerHTML = `${esc(text.slice(0, n))}${n < text.length && t >= start ? '<span class="caret"></span>' : ''}`; }
     }
-    const done = t >= stepTime(steps.length + 1) && (!quote || t >= T.quote + text.length / T.cps);
+    const done = t >= stepTime(steps.length + 1) && t >= at;
     if (!done) raf = requestAnimationFrame(tick);
   };
   tick();

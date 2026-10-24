@@ -68,9 +68,20 @@ the Directorate Talos, each marked `// standin: 59` / `// standin: 60` for a lat
   where an entry is `{ "no", "title", "file", "unlocks", "hint" }`, optionally
   `"choice": { "prompt", "options": [{ "id", "label", "text" }] }` (asked at the intermission
   before this mission; stored as `state.choice`) and `"when": { "choice": "deal" }` (entry used only for
-  that choice; entries with the same `no` are alternatives).
+  that choice; entries with the same `no` are alternatives). A choice may also carry `title` and
+  `speakers` (portraits shown on the decision panel).
 - Mission JSON additions: `comms: [{ "speaker": "sato|arkin|ruess|kessrin|vane|moraine", "text" }]`
   (briefing dialogue, shown with portraits; `transmission` stays for compatibility),
   `endings: { "deal": "...", "refuse": "..." }` on the finale (falls back to `ending`).
 - Speaker portraits: `js/expansion/portraits.js` exports `portrait(speaker)` (SVG strings, same
   style as villain.js) and `SPEAKERS[speaker] = { name, rank, side }`.
+
+## Where it is implemented
+- `js/expansion/campaign.js`: `CAMPAIGNS` (remnant / classic: index URL, save key, mid-battle
+  slot; Classic keeps the old keys, so earlier saves are the Classic campaign), `use()`,
+  `missionList()` (alternatives by `when`), `pendingChoice()`.
+- `expansion.html` / `js/expansion/intermission.js`: campaign select (`?select=1`), `?c=<id>`,
+  the decision panel, comms in the hero briefing. `game.html?...&campaign=1&c=<id>`.
+- `js/expansion/briefing.js` `commsHtml` and `js/expansion/portraits.js` (`portrait`, `SPEAKERS`).
+- `tools/build-missions.mjs --dir remnant` builds `tools/missions/remnant/*.mjs` into
+  `missions/remnant/`, passing `comms` and `endings` through.

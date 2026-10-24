@@ -23,7 +23,7 @@ import { FightRenderer, fightScale } from './render/fightfx.js';
 import { Sound, mapMusic, SONGS, briefingSong } from './audio/sound.js';
 import { drawScreen } from './screens.js';
 import { Board } from './render/board.js';
-import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle, EXPANSION_BATTLE } from './game/savegame.js';
+import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle } from './game/savegame.js';
 import { expansionFromUrl } from './expansion/battle.js';
 import { briefingHtml, startBriefingFx } from './expansion/briefing.js';
 
@@ -131,11 +131,14 @@ async function boot() {
 async function startExpansion() {
   custom = await expansionFromUrl(rom);
   types = custom.types; en = { ...(en || {}), ...custom.text };
-  const s = savedBattle(EXPANSION_BATTLE), title = custom.mission.title || custom.mission.name;
+  const s = savedBattle(custom.battleKey), title = custom.mission.title || custom.mission.name;
   const brief = () => expansionBriefing();
   if (s && s.mission === custom.url) choose(title, `You have a saved battle of this mission (turn ${s.turn}).`, 'Resume', 'Start over', () => resumeExpansion(s), brief);
   else brief();
 }
+
+// Back to this campaign's intermission (expansion.html).
+const interUrl = () => `expansion.html${custom?.campaignId ? `?c=${custom.campaignId}` : ''}`;
 
 // The expansion's briefing screen (js/expansion/briefing.js): story, the villain's transmission,
 // the annotated map, the suggested strategy and the objective.
@@ -143,8 +146,7 @@ async function expansionBriefing() {
   show('sBrief');
   playSong(briefingSong(custom.musicMap));
   const q = new URLSearchParams(location.search), no = q.has('no') ? +q.get('no') : null;
-  let total = null;
-  if (custom.campaign) try { total = (await (await fetch('missions/index.json')).json()).missions.length; } catch { }
+  const total = custom.total;
   const goal = custom.briefing().pop().replace(/^Objective\s*/, '');
   $('briefBody').innerHTML = briefingHtml(custom.mission, { goal, no, total });
   const terr = document.createElement('canvas');
@@ -152,7 +154,7 @@ async function expansionBriefing() {
   const fx = startBriefingFx($('briefBody'), { terrain: terr, mission: custom.mission, types, icon: (u) => maskedIcon({ type: u.type, army: u.army === 2 ? NEUTRAL : u.army }) });
   soundHint($('briefBody').querySelector('.bHead'));
   $('bBriefGo').onclick = () => { fx.stop(); silence(); startMission(-1); };
-  $('bBriefBack').onclick = () => { fx.stop(); silence(); if (custom.campaign) location.href = 'expansion.html'; else location.search = ''; };
+  $('bBriefBack').onclick = () => { fx.stop(); silence(); if (custom.campaign) location.href = interUrl(); else location.search = ''; };
 }
 
 // First run (and ☰ → ROM & patch): pick the ROM and, optionally, the English patch; both are
@@ -218,17 +220,17 @@ function wire() {
   $('bSelect').onclick = () => { $('missions').hidden = !$('missions').hidden; };
   $('optHard').onchange = () => saveProgress({ ...progress(), hard: $('optHard').checked });
   $('endTurn').onclick = endTurn;
-  $('bSave').onclick = () => { if (!busy && battle.army === 0) log((custom ? saveBattle(battle, custom.url, EXPANSION_BATTLE) : saveBattle(battle, mission)) ? '<b>Battle saved.</b>' : '<b>Could not save (storage unavailable).</b>'); };
+  $('bSave').onclick = () => { if (!busy && battle.army === 0) log((custom ? saveBattle(battle, custom.url, custom.battleKey) : saveBattle(battle, mission)) ? '<b>Battle saved.</b>' : '<b>Could not save (storage unavailable).</b>'); };
   // Load: back to this mission's saved battle (the save slot keeps only one battle)
   $('bBattleLoad').onclick = () => {
     if (busy) return;
-    const s = custom ? savedBattle(EXPANSION_BATTLE) : savedBattle();
+    const s = custom ? savedBattle(custom.battleKey) : savedBattle();
     if (!s || s.mission !== (custom ? custom.url : mission)) return log('<b>No saved battle of this mission.</b>');
     custom ? resumeExpansion(s) : loadBattle();
   };
   $('bRestart').onclick = () => { if (!busy) startMission(mission); };
   // an expansion battle leaves for its own pages, so the base title never runs with `custom` set
-  $('bRetreat').onclick = () => { if (busy) return; if (custom) location.href = custom.campaign ? 'expansion.html' : 'game.html'; else showTitle({ menu: true }); };
+  $('bRetreat').onclick = () => { if (busy) return; if (custom) location.href = custom.campaign ? interUrl() : 'game.html'; else showTitle({ menu: true }); };
   $('cv').addEventListener('click', onClick);
   document.addEventListener('keydown', onKey);
   $('mSetup').onclick = (e) => { e.preventDefault(); e.target.closest('details').open = false; if (!busy) setup('', true); };
@@ -813,7 +815,7 @@ function result(w) {
 
 function expansionResult(w) {
   const r = battle.result.reason;
-  clearSavedBattle(EXPANSION_BATTLE);
+  clearSavedBattle(custom.battleKey);
   $('resTitle').textContent = `${custom.mission.title || custom.mission.name} ${w === 0 ? 'complete' : 'failed'}`;
   $('resText').textContent = w === 0 ? `Cleared on turn ${battle.turn}.`
     : r === 'general' ? 'The general has fallen. Game over.'
@@ -822,20 +824,20 @@ function expansionResult(w) {
     : r === 'timeup' ? label(83) || 'Time is up.' : label(LAYOUT.missionLost);
   $('points').hidden = true; $('bResStory').hidden = true;
   expansionReport(w);
-  if (w === 0 && custom.mission.ending) {   // the finale's ending (mission JSON `ending`, pages split by blank lines)
+  if (w === 0 && custom.ending) {   // the finale's ending (mission JSON `endings[choice]` or `ending`, pages split by blank lines)
     $('bResStory').hidden = false;
-    $('bResStory').onclick = () => story(custom.mission.ending.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean), 'EARTH LIGHT', () => { silence(); show('sResult'); }, { song: SONGS.ending });
+    $('bResStory').onclick = () => story(custom.ending.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean), 'EARTH LIGHT', () => { silence(); show('sResult'); }, { song: SONGS.ending });
   }
   $('bResNext').textContent = 'Retry';
   $('bResNext').onclick = () => startMission(-1);
   $('bResTitle').onclick = () => { location.search = ''; };
   if (!custom.campaign) return;
-  $('bResTitle').onclick = () => { location.href = 'expansion.html'; };
+  $('bResTitle').onclick = () => { location.href = interUrl(); };
   if (w === 0) {   // the campaign moves on: survivors, levels and supply are saved for the intermission
     const gain = custom.finish(battle);
     $('resStats').querySelector('[data-k=supply]').textContent = `+${gain}`;
     $('bResNext').textContent = 'Intermission';
-    $('bResNext').onclick = () => { location.href = 'expansion.html'; };
+    $('bResNext').onclick = () => { location.href = interUrl(); };
   }
 }
 
@@ -873,7 +875,7 @@ function expansionReport(w) {
   }).join('')}</div>`;
   for (const c of $('resCrew').querySelectorAll('canvas[data-art]')) paintLookArt(c, rom, types, +c.dataset.art, 1);
   $('resCrew').hidden = !mine.length;
-  if (w === 0 && custom.mission.ending) { $('resEpilogue').textContent = custom.mission.ending.split(/\n\s*\n/)[0]; $('resEpilogue').hidden = false; }
+  if (w === 0 && custom.ending) { $('resEpilogue').textContent = custom.ending.split(/\n\s*\n/)[0]; $('resEpilogue').hidden = false; }
 }
 
 // The points screen ($08:A6C0): this map's points, the campaign total and the rank. The

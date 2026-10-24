@@ -12,6 +12,7 @@ import { romView, deployList, arrivalList } from './mission.js';
 import { mapPoints } from '../game/points.js';
 import { loadExpansionData } from './data.js';
 import * as campaign from './campaign.js';
+import { EXPANSION_BATTLE } from '../game/savegame.js';
 
 const GENERAL_EVASION_CAP = 96;
 const OBJECTIVE_LINES = { annihilate: 'annihilate', command: 'tower', fortress: 'fortress', flagship: 'flagship', carriers: 'carriers', escape: 'annihilate', destroyType: 'annihilate' };
@@ -164,10 +165,24 @@ export async function expansionFromUrl(rom) {
   const data = await loadExpansionData(), { types, tables } = data;
   let mission = await (await fetch(url)).json(), state = null;
   const missionNo = +(q.get('no') || 0);
-  if (q.get('campaign')) { state = campaign.load(); if (state) mission = campaign.applyRoster(mission, state, standChecker(rom, mission, types, tables), types); }
+  // &c=remnant|classic: which campaign's save the battle reads and writes (campaign.js CAMPAIGNS)
+  const camp = campaign.use(q.get('c') || 'classic');
+  let total = null;
+  if (q.get('campaign')) {
+    state = campaign.load();
+    if (state) {
+      mission = campaign.applyRoster(mission, state, standChecker(rom, mission, types, tables), types);
+      const index = await campaign.missionIndex();
+      if (index) total = campaign.missionList(index, state).length;
+    }
+  }
   const { rom: view, info } = romView(rom, mission);
   return {
     url, mission, rom: view, info, musicMap: mission.music ?? 0, names: ARMY_NAMES, campaign: !!state,
+    // the campaign's mid-battle save slot (each campaign has its own), its length, and the
+    // story choice made so far (the finale's epilogue depends on it)
+    battleKey: state ? camp.battle : EXPANSION_BATTLE, campaignId: state ? camp.id : null, total, choice: state?.choice,
+    ending: (state?.choice !== undefined && mission.endings?.[state.choice]) || mission.ending || null,
     types, tables, text: data.text, terrain: data.terrain,
     // a won campaign battle goes into the saved campaign; returns the supply gained
     finish: (b) => { const s = campaign.load(); const gain = campaign.finish(s, b, mapPoints(b, missionNo).total, missionNo); campaign.save(s); return gain; },
