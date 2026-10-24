@@ -17,7 +17,7 @@ import { setupEvents, burnerMove, fireCannons } from './events.js';
 import { tally } from './points.js';
 
 export const NEUTRAL = 2;           // army of the neutral docks (deployment flag $40)
-const DOCK_CAT = 7, CARRIER_CAT = 1, CRAB = 26;   // CR-1: 26 empty, 27 loaded
+const DOCK_CAT = 7, CARRIER_CAT = 1, CRAB = 26, ARTEMIS = 34;   // CR-1: 26 empty, 27 loaded
 export { TRANSFORM };   // form tables live in units.js
 const REARM = { 5: 4, 7: 6, 11: 10, 44: 43 };   // $01:A60C re-arms only these on boarding
 const DESTROYERS = new Set([49, 50, 51]);   // may move again with what is left after firing
@@ -87,7 +87,11 @@ export class Battle {
   launchCells(u) {
     const c = u.carrier, cat = this.type(u).category;
     if (!c) return [];
-    return neighbours(c.x, c.y).filter(([x, y]) => this.inBounds(x, y) && !this.unitAt(x, y) && this.tables.moveCost(cat, this.cls(x, y)) !== 0);
+    // the Artemis (type 34) puts its cargo out up to two hexes away, as the ROM's launch does
+    // for it ($01:8D37: 18 hexes); every other host only next to itself
+    const cells = c.type === ARTEMIS ? [...neighbours(c.x, c.y), ...neighbours(c.x, c.y).flatMap(([x, y]) => neighbours(x, y))]
+      .filter(([x, y], i, a) => distance({ x, y }, c) > 0 && a.findIndex(([p, q]) => p === x && q === y) === i) : neighbours(c.x, c.y);
+    return cells.filter(([x, y]) => this.inBounds(x, y) && !this.unitAt(x, y) && this.tables.moveCost(cat, this.cls(x, y)) !== 0);
   }
   launch(u, x, y) {
     const c = u.carrier;
