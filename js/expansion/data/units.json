@@ -4438,7 +4438,7 @@
    "weapons": [
     {
      "slot": 0,
-     "mode": 0,
+     "mode": 2,
      "min": 1,
      "max": 2,
      "power": 90
