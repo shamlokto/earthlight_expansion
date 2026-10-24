@@ -66,7 +66,7 @@
   "Selene Kai",
   "Leviathan",
   "Directorate Talos",
-  "Pegasus",
+  "Azoras",
   "Pallas",
   "Pallas",
   "Pallas",
@@ -669,12 +669,12 @@
   },
   {
    "type": 61,
-   "name": "Pegasus",
+   "name": "Azoras",
    "short": "General's Flagship",
    "info": [
-    "   Carrier\n   Large",
-    "General's Flagship\n\nWingtip beam emitters, a\nrailgun broadside and a\nclose-in railgun turret.",
-    "The fastest capital ship ever\nbuilt. It dances clear of\nfire, carries the General's\nwing, and outguns anything\nthat can keep up with it."
+    "   Beam\n   Large",
+    "General's Flagship\n\nA Tiamat-class hull with\nbeam batteries for close\nwork and long beam cannons.",
+    "Refitted with oversized\nengines: the fastest\nbattleship in the sky. The\nGeneral's chariot.\nUnique: one at a time."
    ]
   },
   {

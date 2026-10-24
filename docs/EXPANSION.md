@@ -607,15 +607,21 @@ barrels fire from (y 11 and 121 of the hull's box), so the recorded broadsides l
 The modern board uses a dedicated 32x21 token (fight-palette colours, `ownToken`), not the icon.
 Re-run the tool after changing a shape.
 
-**Pegasus** (type 61, owner 2026-10-24): the General's flagship, a Galt carrier (category 1, so
-small craft board it) that the general can ride (`GENERAL_SHIPS`). HP 32, move 9 (the fastest capital
-ship), evasion 77 (60%); beam 140 at 1–2 (slot 0, also its counter against craft), railgun 192 at
-1–4 (slot 1, its counter against ships) and a close-in railgun 102 at 1. Price 96; built from the
-intermission before mission 9 in both campaigns (index `unlocks` of mission 8). Fights with the
-Hastur's recording (`look: 33`). Own art, `tools/art/pegasus.mjs` → `js/art/pegasus.js`: a
-streamlined blended-wing ship, needle prow, forward-swept wings to two wingtip pods; the hull puts
-the broadside ports on the wing leading edges and the beam emitters on the pods where the Hastur's
-recorded shots start (box x 39–56; y 36–100 broadside, y 17 and 101 beams).
+**Azoras** (type 61, owner 2026-10-24; was the Pegasus): the General's flagship, a Tiamat-class
+battleship (category 2) refitted with oversized engines, that the general can ride (`GENERAL_SHIPS`),
+`unique` (one at a time outside beta). Rebalanced because the Pegasus was overpowering with the
+General aboard: HP 24, move 9 (the fastest capital ship, kept), evasion 38 (×2 with the General →
+76, under the 96 cap); beam 90 at 1–2 (slot 0, against craft) and beam 120 at 2–4 (slot 1, against
+ships). With the General aboard (level 9, power ×2) it deals about 10 HP to a Talos and 19 to a
+Tiamat at range 2 and takes about 3-4 per enemy shot; the old Pegasus dealt 16 and 31 and took about
+2, and a Tiamat with the General aboard would deal 13 and 25 (node forecasts, open space). Price 72; built from the intermission before mission 9 in both campaigns
+(index `unlocks` of mission 8). Fights with the Tiamat's recordings (`look: 30`, `keepSlots` so each
+beam keeps its own slot's choreography). Own art, `tools/art/azoras.mjs` → `js/art/azoras.js`: the
+Tiamat's drum hull, end-cap cannon and gold turret rows with a three-nozzle engine block and
+exhaust plumes. Two fight hulls, like the Tiamat's two sheets (own.js `ownHullSet`): `hull` (the
+broadside, against craft; ports where the batteries' shots start, box x 15–28, y 22–110) and
+`hull2` (top-down, against ships; gun pods whose emitters sit where the beams start, box x 89–96,
+y 3–19 and 101–116).
 
 **Pallas** (types 62-65, owner 2026-10-24): the Athena's successor, with the same four forms and
 rules (62 fighter-bomber CHU-05F, 63 its spent form, 64 hunter CHU-05R, 65 its spent form: units.js
