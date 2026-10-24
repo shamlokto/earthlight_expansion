@@ -200,7 +200,9 @@ input[type=checkbox], input[type=radio] { accent-color: var(--gold); }
 /* ------------------------------------------------------------------ battle */
 .play { gap: 16px; padding-block: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .board { --bl: 22px; --br: var(--gold); padding: 6px; border-color: rgba(245, 197, 66, .25); box-shadow: 0 20px 60px rgba(0, 0, 0, .55), 0 0 60px rgba(var(--earth), .12); }
-.hud { width: 360px; gap: 12px; }
+/* under the board: the turn panel on the left, the unit card (wiki, transform) and the log on its right */
+.hud { width: 100%; max-width: none; display: grid; grid-template-columns: 340px minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.hud > .card { min-width: 0; }
 .hud .card { padding: 14px 16px; }
 .hud .card:first-child { --br: var(--gold); border-left: 3px solid var(--gold); }
 #turn { font-size: 20px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px; }
@@ -211,7 +213,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--gold); }
 .hud .card:first-child .row .btn { padding: 8px 6px; font-size: 11px; text-align: center; }
 .hud .card h3 { font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--cyan); }
 #info:empty { display: none; }
-.log { max-height: 240px; font-size: 11.5px; line-height: 1.5; color: var(--dim); }
+.log { max-height: 320px; overflow-y: auto; font-size: 11.5px; line-height: 1.5; color: var(--dim); }
 .log div { padding: 4px 0 4px 10px; border-bottom: 1px solid rgba(111, 211, 255, .1); position: relative; animation: pop .25s var(--ease); }
 .log div::before { content: ""; position: absolute; left: 0; top: 10px; width: 4px; height: 4px; background: var(--cyan); opacity: .6; }
 .log b { color: var(--ink); }
@@ -245,8 +247,9 @@ input[type=checkbox], input[type=radio] { accent-color: var(--gold); }
 .result { font-size: 18px; line-height: 1.6; color: var(--ink); text-shadow: 0 0 20px rgba(111, 211, 255, .2); }
 .points .vprank b { font-family: var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
 
+@media (max-width: 1100px) { .hud { grid-template-columns: 300px minmax(0, 1fr); } .hud > .card:last-child { grid-column: 1 / -1; } }
 @media (max-width: 760px) {
-  .hud { width: 100%; }
+  .hud { width: 100%; grid-template-columns: minmax(0, 1fr); }
   .logo { font-size: 18px; letter-spacing: .16em; }
   .story { font-size: 16px; padding: 14px 16px; }
   .fightov::before, .fightov::after { height: 6vh; }
