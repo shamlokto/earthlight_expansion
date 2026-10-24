@@ -272,6 +272,14 @@ class Brain {
   }
 
   // ---------------------------------------------------------------- docks ($01:8C10)
+  // Where the enemy general is: its machine, or the carrier it rides in.
+  generalAt() {
+    const g = this.b.units.find((e) => e.general && e.army !== this.army && e.hp > 0 && !e.escaped);
+    if (!g) return [];
+    const at = g.carrier && g.carrier.x > 0 ? g.carrier : g;
+    return at.x > 0 ? [{ prio: 255, x: at.x, y: at.y }] : [];
+  }
+
   // Expansion: what a unit with nothing in reach closes in on: the nearest grey dock or the enemy
   // general (whichever is nearer), else every enemy.
   huntTargets(u) {
@@ -431,7 +439,10 @@ class Brain {
       let goal = null;
       if (mp0) {
         // expansion arrivals may be ordered to hunt the enemy's carriers ({ chase: 'carriers' }); with none left they advance as usual
-        const prey = u.chase === 'carriers' ? b.alive().filter((e) => e.army !== this.army && b.type(e).category === CARRIER_CAT).map((e) => ({ prio: 255, x: e.x, y: e.y })) : [];
+        // ... or the enemy general ({ chase: 'general' }, or the mission's chaseGeneral for every unit but carriers)
+        const huntsGeneral = u.chase === 'general' || (b.info.chaseGeneral && b.type(u).category !== CARRIER_CAT);
+        const prey = u.chase === 'carriers' ? b.alive().filter((e) => e.army !== this.army && b.type(e).category === CARRIER_CAT).map((e) => ({ prio: 255, x: e.x, y: e.y }))
+          : huntsGeneral ? this.generalAt() : [];
         const f = this.field(u, mp0), list = prey.length ? prey : goals || b.alive().filter((e) => e.army !== this.army).map((e) => ({ prio: (this.prio.get(e) ?? 0) + 1, x: e.x, y: e.y }));
         let gp = 1, gv = 0;
         for (const g of list) {

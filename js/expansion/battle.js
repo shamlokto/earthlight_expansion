@@ -44,6 +44,7 @@ export class ExpansionBattle extends Battle {
   constructor(rom, mission, types, opts = {}) {
     const { rom: view, info } = romView(rom, mission);
     info.routes = mission.routes || null;
+    info.chaseGeneral = !!mission.chaseGeneral;   // every Union machine but the carriers hunts the general (ai.js)
     const list = deployList(mission);
     super(view, info, types, list, arrivalList(mission), { script: scriptOf(mission), hard: opts.hard, tables: opts.tables });
     this.mission = mission;

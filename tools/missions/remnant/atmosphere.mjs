@@ -45,6 +45,10 @@ place('S', [[1, 12]]);
 place('H', [[2, 3]]);
 place('R', [[3, 16]]);
 place('A', [[5, 12]]);
+// more slots (owner, 2026-10-24: deploy more machines)
+place('M', [[6, 11], [8, 4]]);
+place('T', [[7, 13]]);
+place('C', [[4, 21]]);
 // the strike group in the atmosphere
 place('o', [[12, 25], [20, 23], [27, 22], [35, 24], [44, 26]]);
 place('e', [[16, 26], [31, 25], [50, 25]]);
@@ -63,7 +67,7 @@ const units = rows.map((_, j) => Array.from({ length: COLS }, (_, i) => U[`${i +
 
 export default {
   name: 'ATMOSPHERE', title: 'Atmosphere', file: 'remnant/atmosphere', screens: [4, 3],
-  objective: { kind: 'carriers' }, turnLimit: 22, cap: 15, music: 17,
+  objective: { kind: 'carriers' }, turnLimit: 22, cap: 22, chaseGeneral: true, music: 17,
   goal: 'Sink every Directorate carrier within 22 turns. If the general falls, it is over.',
   chapter: "Chapter 10 · The edge of Earth's atmosphere",
   transmission: "You took my Gate and you took my Lysa. Look down, General. That is what you are fighting for, and it has never once thanked anyone.",
