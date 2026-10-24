@@ -616,9 +616,10 @@ ships). With the General aboard (level 9, power ×2) it deals about 10 HP to a T
 Tiamat at range 2 and takes about 3-4 per enemy shot; the old Pegasus dealt 16 and 31 and took about
 2, and a Tiamat with the General aboard would deal 13 and 25 (node forecasts, open space). Price 72; built from the intermission before mission 9 in both campaigns
 (index `unlocks` of mission 8). Fights with the Tiamat's recordings (`look: 30`, `keepSlots` so each
-beam keeps its own slot's choreography). Own art, `tools/art/azoras.mjs` → `js/art/azoras.js`: the
-Tiamat's drum hull, end-cap cannon and gold turret rows with a three-nozzle engine block and
-exhaust plumes. Two fight hulls, like the Tiamat's two sheets (own.js `ownHullSet`): `hull` (the
+beam keeps its own slot's choreography). Own art, `tools/art/azoras.mjs` → `js/art/azoras.js`: a
+hybrid of the old Pegasus and the Tiamat (owner): the Pegasus's needle prow, forward-swept wings,
+wingtip engine pods and pearl/gold/pink, around a Tiamat-class armoured drum with gold turret rows
+and a three-nozzle engine block with exhaust plumes. Two fight hulls, like the Tiamat's two sheets (own.js `ownHullSet`): `hull` (the
 broadside, against craft; ports where the batteries' shots start, box x 15–28, y 22–110) and
 `hull2` (top-down, against ships; gun pods whose emitters sit where the beams start, box x 89–96,
 y 3–19 and 101–116).

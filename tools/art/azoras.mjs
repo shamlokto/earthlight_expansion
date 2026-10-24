@@ -3,9 +3,10 @@
 //   node tools/art/azoras.mjs
 // Same pictures as the Selene Kai's (tools/art/selene-kai.mjs): unit-info picture (96x96, own
 // palette), map icon (24x16, icon rows), board token and two fight hulls (ships' fight rows).
-// The design: a Tiamat-family battleship (the ROM's drum hull, end-cap cannon and rows of gold
-// turrets) refitted with an oversized engine block: three heavy nozzles with intake vanes and long
-// exhaust plumes, in Galt pearl, pink and gold. Crisp cel shading (raster.mjs `cel`).
+// The design (owner, 2026-10-24: a hybrid of the old Pegasus and the Tiamat): the Pegasus's lines,
+// a needle prow, forward-swept wings out to wingtip engine pods, pearl with gold leading edges and
+// the Galt pink stripe, built around a Tiamat-class armoured drum with rows of gold turrets and a
+// heavy three-nozzle engine block with exhaust plumes. Crisp cel shading (raster.mjs `cel`).
 // The fight hulls follow the Tiamat's recorded fights (its `look`): against craft its broadside
 // hull, with the batteries' shots leaving ports at box x 15-28, y 22-110; against ships its
 // top-down hull (`hull2`, the Tiamat's second sheet), whose beams leave the emitters at box x 89-96,
@@ -19,31 +20,34 @@ const CEL = { cel: true, smooth: 1, bands: [0.12, 0.45, 0.88], bands3: [0.18, 0.
 // ---------------------------------------------------------------- unit-info picture
 export const ART_PALETTE = ['#7b7bde', '#000000', '#4a4a6b', '#8484a5', '#b5b5d6', '#dedef7', '#ffffff', '#ff5abd', '#bd3984',
   '#bd8400', '#ffbd00', '#ffe784', '#0063bd', '#00b5ff', '#7bffff', '#ff7b00', '#ff395a', '#5a185a', '#9c399c', '#de7bde'];
-const PEARL = [3, 4, 5, 6], GOLD = [9, 10, 11], PINK = [17, 8, 7, 19], CYAN = [12, 13, 14], DARK = [1, 2, 3], FIRE = [16, 15, 10, 11, 6];
+const PEARL = [3, 4, 5, 6], GOLD = [9, 10, 11], PINK = [8, 7], CYAN = [12, 13, 14], DARK = [1, 2, 3], FIRE = [16, 15, 10, 11, 6];
 
 export function infoArt() {
-  // the ship's frame: u forward (to the bow, lower left), v across (lower right)
-  const C = [46, 52], F = norm([-0.82, 0.57]), S = [-F[1], F[0]].map((v) => -v);
-  const K = 1.42, toLocal = (x, y) => { const dx = (x - C[0]) * K, dy = (y - C[1]) * K; return [dx * F[0] + dy * F[1], dx * S[0] + dy * S[1]]; };
-  const NOZ = [-11, 0, 11];
+  // the ship's frame: u forward (down-left on the picture), v to starboard (down-right)
+  const C = [50, 46], F = [-0.8, 0.6], S = [0.6, 0.8];
+  const K = 1.36, toLocal = (x, y) => { const dx = (x - C[0]) * K, dy = (y - C[1]) * K; return [dx * F[0] + dy * F[1], dx * S[0] + dy * S[1]]; };
+  const side = (f) => union(f(1), f(-1)), NOZ = [-8, 0, 8];
   const parts = [
-    // exhaust plumes streaming from the stern
-    { shape: union(...NOZ.map((v) => capsule(-46, v * 1.05, -60, v * 1.3, 5))), ramp: FIRE, bevel: 3, dome: 1, bias: 0.25, line: false },
-    // the engine block: a collar around three heavy nozzles, intake vanes on the flanks
-    { shape: union(capsule(-30, -15, -30, 15, 9), poly([[-26, -21], [-14, -21], [-14, 21], [-26, 21]])), ramp: DARK.concat([4]), bevel: 4, dome: 1 },
-    { shape: union(...NOZ.map((v) => capsule(-34, v, -44, v, 5.6))), ramp: [1, 2, 3, 4], bevel: 3, dome: 1, spec: 0.8 },
-    { shape: union(...NOZ.map((v) => ellipse(-44.5, v, 2.4, 4.4))), ramp: [15, 10, 11, 6], bevel: 2, dome: 1, bias: 0.4 },
-    { shape: union(...[-1, 1].map((s) => poly([[-24, 19 * s], [-8, 19 * s], [-12, 25 * s], [-26, 25 * s]]))), ramp: GOLD, bevel: 2, dome: 1 },
-    // the drum hull
-    { shape: capsule(-16, 0, 22, 0, 18), ramp: PEARL, bevel: 9, dome: 1, height: 1.3, spec: 0.9 },
-    { shape: rect(-16, 5, 22, 9), ramp: PINK, bevel: 1, line: false },
-    // the bow: a blue ring and the pink end-cap cannon
-    { shape: ellipse(24, 0, 5.5, 18), ramp: CYAN, bevel: 3, dome: 1 },
-    { shape: ellipse(27, 3, 9, 9), ramp: PINK, bevel: 3, dome: 1, spec: 0.8 },
-    { shape: union(capsule(30, 1, 44, 1, 2.2), capsule(30, 5.5, 44, 5.5, 2.2)), ramp: PINK, bevel: 1, dome: 1 },
-    // rows of gold turrets along the spine and a command mast
-    { shape: union(...[-12, -5, 2, 9, 16].map((u) => ellipse(u, -15, 2.6, 2.6)), ...[-9, -2, 5, 12].map((u) => ellipse(u, -7, 2.4, 2.4))), ramp: GOLD, bevel: 2, dome: 1, spec: 1 },
-    { shape: union(rect(-6, -22, 2, -17), ellipse(-2, -24, 3.2, 3.2)), ramp: PINK, bevel: 2, dome: 1 },
+    // exhaust plumes from the engine block and the wingtip pods
+    { shape: union(...NOZ.map((v) => capsule(-44, v, -58, v * 1.2, 4)), side((s) => capsule(-10, 36 * s, -22, 38 * s, 3))), ramp: FIRE, bevel: 2, dome: 1, bias: 0.25, line: false },
+    // forward-swept wings with gold leading edges
+    { shape: side((s) => poly([[-24, 9 * s], [6, 11 * s], [24, 33 * s], [20, 41 * s], [-2, 42 * s], [-20, 26 * s], [-30, 14 * s]])), ramp: PEARL, bevel: 6, dome: 1, bias: -0.05 },
+    { shape: side((s) => poly([[6, 11 * s], [24, 33 * s], [22, 35.5 * s], [4, 14 * s]])), ramp: GOLD, bevel: 1, line: false },
+    // wingtip engine pods with beam emitters at their noses
+    { shape: side((s) => capsule(-8, 38 * s, 22, 38 * s, 4.5)), ramp: PEARL, bevel: 3, dome: 1, spec: 0.9 },
+    { shape: side((s) => ellipse(-9, 38 * s, 2.2, 3.6)), ramp: [15, 10, 11, 6], bevel: 2, dome: 1, bias: 0.35 },
+    { shape: side((s) => capsule(22, 38 * s, 29, 38 * s, 1.4)), ramp: CYAN, bevel: 1, bias: 0.2 },
+    // the engine block: three heavy nozzles behind the drum
+    { shape: capsule(-30, -12, -30, 12, 8), ramp: DARK.concat([4]), bevel: 4, dome: 1 },
+    { shape: union(...NOZ.map((v) => capsule(-33, v, -43, v, 4.4))), ramp: [1, 2, 3, 4], bevel: 2, dome: 1, spec: 0.8 },
+    { shape: union(...NOZ.map((v) => ellipse(-43.5, v, 2, 3.4))), ramp: [15, 10, 11, 6], bevel: 2, dome: 1, bias: 0.4 },
+    // the armoured drum, drawn out into the needle prow
+    { shape: union(capsule(-26, 0, 12, 0, 14), poly([[46, 0], [24, 5], [8, 12], [8, -12], [24, -5]])), ramp: PEARL, bevel: 9, dome: 1, height: 1.35, spec: 0.9 },
+    { shape: poly([[44, 0.6], [12, 2.6], [-26, 2.6], [-26, -2.6], [12, -2.6], [44, -0.6]]), ramp: PINK, bevel: 1, line: false },
+    { shape: poly([[46, 0], [37, 2], [37, -2]]), ramp: GOLD, bevel: 1, line: false },
+    { shape: ellipse(18, 0, 6, 3.6), ramp: CYAN, bevel: 3, dome: 1, bias: 0.15, spec: 1 },
+    // rows of gold turrets on the drum (the Tiamat's)
+    { shape: union(...[-20, -13, -6, 1].map((u) => union(ellipse(u, -8.5, 2.3, 2.3), ellipse(u + 3, 8.5, 2.1, 2.1)))), ramp: GOLD, bevel: 2, dome: 1, spec: 1 },
   ];
   return render(96, 96, parts, { toLocal, bg: 0, outline: 1, ...CEL });
 }
@@ -52,11 +56,11 @@ export function infoArt() {
 // colour numbers of the icon rows: 1 white, 2-6 light to dark, 7 near black
 export function mapIcon() {
   const parts = [
-    { shape: union(ellipse(1.5, 5, 1.8, 1.2), ellipse(1, 8, 2, 1.3), ellipse(1.5, 11, 1.8, 1.2)), ramp: [1], flat: 1, line: false },
-    { shape: union(capsule(3, 5, 6, 5, 1.6), capsule(3, 8, 6, 8, 1.8), capsule(3, 11, 6, 11, 1.6)), ramp: [5, 4, 3], bevel: 1, dome: 1 },
-    { shape: capsule(8, 8, 18, 8, 5), ramp: [6, 5, 4, 3, 2], bevel: 2, dome: 1 },
-    { shape: union(capsule(19, 6.5, 23.5, 6.5, 1), capsule(19, 9.5, 23.5, 9.5, 1)), ramp: [4, 3, 2], bevel: 1 },
-    { shape: union(...[9, 12, 15].map((x) => ellipse(x, 3.4, 1.1, 1.1))), ramp: [1], flat: 1, line: false },
+    { shape: union(poly([[6, 6], [11, 6], [17, 2], [15, 1], [10, 1.5]]), poly([[6, 10], [11, 10], [17, 14], [15, 15], [10, 14.5]])), ramp: [5, 4, 3], bevel: 1, dome: 1 },
+    { shape: union(capsule(9, 1.6, 17, 1.6, 1.2), capsule(9, 14.4, 17, 14.4, 1.2)), ramp: [6, 5, 4], bevel: 1 },
+    { shape: union(capsule(1.5, 6, 4, 6, 1.3), capsule(1.5, 10, 4, 10, 1.3)), ramp: [4, 3], bevel: 1 },
+    { shape: union(capsule(6, 8, 13, 8, 4), poly([[23.5, 8], [15, 6.4], [12, 4.5], [12, 11.5], [15, 9.6]])), ramp: [6, 5, 4, 3, 2], bevel: 2, dome: 1 },
+    { shape: union(...[6, 9, 12].map((x) => ellipse(x, 5, 0.9, 0.9))), ramp: [1], flat: 1, line: false },
   ];
   return render(24, 16, parts, { outline: 7, cel: true, smooth: 0 });
 }
@@ -65,41 +69,44 @@ export function mapIcon() {
 // colour numbers of the ships' fight rows: 2-7 hull (light to dark), 8-11 metal (dark to light)
 const HULL = [7, 6, 5, 4, 3, 2], METAL = [8, 9, 10, 11], GLOW = [9, 10, 11];
 
-// against craft: the broadside, length running down the screen, stern (engines) at the bottom
+// against craft: the broadside, length down the screen, needle prow at the top, engines below;
+// the battery ports at box x 15-28, y 22-110 (the Tiamat's)
 export function fightHull() {
   const PORTS = [24, 35, 46, 57, 68, 79, 90, 101, 110];
   const parts = [
-    // plumes and the three nozzles under the stern
-    { shape: union(...[10, 26, 42].map((x) => poly([[x - 4, 118], [x + 4, 118], [x + 2, 128], [x - 2, 128]]))), ramp: GLOW, bevel: 2, dome: 1, bias: 0.4, line: false },
-    { shape: union(...[10, 26, 42].map((x) => capsule(x, 102, x, 116, 7.5))), ramp: METAL, bevel: 3, dome: 1, spec: 0.8 },
-    { shape: union(poly([[0, 92], [52, 92], [56, 104], [-2, 104]]), rect(48, 70, 56, 104)), ramp: HULL, bevel: 4, dome: 1 },
-    // the drum hull (bow at the top) with its broadside ports
-    { shape: union(capsule(24, 12, 24, 94, 22), rect(2, 12, 46, 94)), ramp: HULL, bevel: 8, dome: 1, height: 1.3, spec: 0.9 },
-    { shape: rect(38, 14, 42, 92), ramp: [4, 3], bevel: 1, line: false },
+    { shape: union(...[12, 26, 40].map((x) => poly([[x - 4, 118], [x + 4, 118], [x + 2, 128], [x - 2, 128]]))), ramp: GLOW, bevel: 2, dome: 1, bias: 0.4, line: false },
+    { shape: union(...[12, 26, 40].map((x) => capsule(x, 104, x, 116, 6))), ramp: METAL, bevel: 3, dome: 1, spec: 0.8 },
+    // a forward-swept wing out to the right with its pod
+    { shape: poly([[44, 92], [44, 70], [58, 30], [63, 30], [63, 40], [52, 92]]), ramp: HULL, bevel: 4, dome: 1, bias: -0.05 },
+    { shape: poly([[44, 70], [58, 30], [60, 31], [47, 72]]), ramp: [3, 2], bevel: 1, line: false },
+    { shape: capsule(58, 22, 58, 52, 5), ramp: HULL, bevel: 3, dome: 1, spec: 0.9 },
+    { shape: union(ellipse(58, 53, 3, 2.4), capsule(58, 12, 58, 20, 1.6)), ramp: GLOW, bevel: 1, bias: 0.4 },
+    // the armoured drum with the needle prow at the top
+    { shape: union(capsule(26, 26, 26, 96, 20), rect(6, 26, 46, 98), poly([[26, 0], [32, 16], [44, 28], [8, 28], [20, 16]])), ramp: HULL, bevel: 8, dome: 1, height: 1.3, spec: 0.9 },
+    { shape: union(rect(36, 18, 40, 96), poly([[26, 2], [28, 18], [24, 18]])), ramp: [4, 3], bevel: 1, line: false },
     { shape: union(...PORTS.map((y) => capsule(16, y, 27, y, 3))), ramp: METAL, bevel: 2, dome: 1 },
-    // dorsal turret dome with its barrel, and the intake vanes
-    { shape: ellipse(50, 42, 11, 13), ramp: HULL, bevel: 4, dome: 1, spec: 0.9 },
-    { shape: capsule(52, 4, 52, 34, 2.6), ramp: METAL, bevel: 1, dome: 1 },
-    { shape: union(...[74, 80, 86].map((y) => rect(50, y, 60, y + 2))), ramp: [9, 10], bevel: 1, line: false },
   ];
   return render(64, 128, parts, { outline: 7, ...CEL });
 }
 
-// against ships: top-down, bow to the right, gun pods above and below, engines at the stern (left)
+// against ships: top-down, needle prow to the right, forward-swept wings to the gun pods above and
+// below (their emitters at box x 89-96, y 3-19 and 101-116, the Tiamat's), engines at the stern
 export function fightHull2() {
-  const PODS = [12, 110];
+  const PODS = [11, 108], cy = 60;
+  const wing = (P) => { const s = Math.sign(P - cy); return poly([[22, cy + 14 * s], [46, cy + 14 * s], [80, P - 5 * s], [44, P - 5 * s]]); };
   const parts = [
-    // engines: three heavy nozzles on the stern with glowing cores
-    { shape: union(...[42, 64, 86].map((y) => poly([[0, y - 4], [6, y - 6], [6, y + 6], [0, y + 4]]))), ramp: GLOW, bevel: 2, dome: 1, bias: 0.4, line: false },
-    { shape: union(...[42, 64, 86].map((y) => capsule(8, y, 26, y, 10))), ramp: METAL, bevel: 4, dome: 1, spec: 0.8 },
-    { shape: union(...[42, 64, 86].map((y) => ellipse(7, y, 3, 7))), ramp: GLOW, bevel: 2, dome: 1, bias: 0.4 },
-    // the hull
-    { shape: union(ellipse(70, 64, 22, 34), rect(26, 30, 70, 98)), ramp: HULL, bevel: 9, dome: 1, height: 1.3, spec: 0.9 },
-    { shape: union(...[34, 46, 58, 70].map((x) => union(rect(x, 38, x + 6, 48), rect(x, 80, x + 6, 90)))), ramp: METAL, bevel: 2, dome: 1 },
-    { shape: rect(26, 62, 92, 66), ramp: [4, 3], bevel: 1, line: false },
-    // the gun pods and their beam emitters
-    { shape: union(...PODS.map((y) => capsule(34, y, 76, y, 11))), ramp: HULL, bevel: 5, dome: 1, spec: 0.9 },
-    { shape: union(...PODS.map((y) => union(capsule(74, y - 3, 95, y - 3, 2.4), capsule(74, y + 3, 95, y + 3, 2.4)))), ramp: METAL, bevel: 1, dome: 1 },
+    { shape: union(...[cy - 18, cy, cy + 18].map((y) => poly([[0, y - 4], [6, y - 6], [6, y + 6], [0, y + 4]]))), ramp: GLOW, bevel: 2, dome: 1, bias: 0.4, line: false },
+    { shape: union(...[cy - 18, cy, cy + 18].map((y) => capsule(8, y, 24, y, 8.5))), ramp: METAL, bevel: 4, dome: 1, spec: 0.8 },
+    { shape: union(...[cy - 18, cy, cy + 18].map((y) => ellipse(7, y, 2.6, 6))), ramp: GLOW, bevel: 2, dome: 1, bias: 0.4 },
+    // forward-swept wings with the wingtip gun pods
+    { shape: union(...PODS.map(wing)), ramp: HULL, bevel: 6, dome: 1, bias: -0.05 },
+    { shape: union(...PODS.map((P) => { const s = Math.sign(P - cy); return poly([[46, cy + 14 * s], [80, P - 5 * s], [76, P - 5 * s], [42, cy + 14 * s]]); })), ramp: [3, 2], bevel: 1, line: false },
+    { shape: union(...PODS.map((y) => capsule(42, y, 82, y, 8))), ramp: HULL, bevel: 4, dome: 1, spec: 0.9 },
+    { shape: union(...PODS.map((y) => union(capsule(80, y - 3, 95, y - 3, 2.2), capsule(80, y + 3, 95, y + 3, 2.2)))), ramp: METAL, bevel: 1, dome: 1 },
+    // the armoured drum drawn out into the needle prow, with its turret rows
+    { shape: union(capsule(30, cy, 60, cy, 24), poly([[95, cy], [74, cy - 8], [58, cy - 20], [58, cy + 20], [74, cy + 8]])), ramp: HULL, bevel: 9, dome: 1, height: 1.3, spec: 0.9 },
+    { shape: poly([[93, cy + 1], [60, cy + 2.5], [26, cy + 2.5], [26, cy - 2.5], [60, cy - 2.5], [93, cy - 1]]), ramp: [4, 3], bevel: 1, line: false },
+    { shape: union(...[26, 36, 46, 56].map((x) => union(ellipse(x, cy - 13, 3.2, 3.2), ellipse(x, cy + 13, 3.2, 3.2)))), ramp: METAL, bevel: 2, dome: 1 },
   ];
   return render(96, 128, parts, { outline: 7, ...CEL });
 }
@@ -108,12 +115,14 @@ export function fightHull2() {
 export function boardToken() {
   const cy = 12;
   const parts = [
-    { shape: union(...[-6, 0, 6].map((d) => poly([[0, cy + d - 1.6], [5, cy + d - 2.4], [5, cy + d + 2.4], [0, cy + d + 1.6]]))), ramp: GLOW, bevel: 1, bias: 0.4, line: false },
-    { shape: union(...[-6, 0, 6].map((d) => capsule(5, cy + d, 9, cy + d, 2.6))), ramp: METAL, bevel: 1, dome: 1 },
-    { shape: capsule(12, cy, 27, cy, 8), ramp: HULL, bevel: 3, dome: 1, height: 1.3, spec: 0.9 },
-    { shape: union(capsule(27, cy - 2.2, 35, cy - 2.2, 1.3), capsule(27, cy + 2.2, 35, cy + 2.2, 1.3)), ramp: METAL, bevel: 1 },
-    { shape: union(...[13, 17, 21, 25].map((x) => ellipse(x, cy - 6, 1.3, 1.3))), ramp: [10, 11], bevel: 1, line: false },
-    { shape: rect(10, cy + 2, 28, cy + 3), ramp: [4], flat: 4, line: false },
+    { shape: union(...[-4, 0, 4].map((d) => poly([[0, cy + d - 1.2], [4, cy + d - 1.8], [4, cy + d + 1.8], [0, cy + d + 1.2]]))), ramp: GLOW, bevel: 1, bias: 0.4, line: false },
+    { shape: union(poly([[6, cy - 4], [13, cy - 4], [25, cy - 10], [21, cy - 11.5], [12, cy - 9]]), poly([[6, cy + 4], [13, cy + 4], [25, cy + 10], [21, cy + 11.5], [12, cy + 9]])), ramp: HULL, bevel: 2, dome: 1, bias: -0.05 },
+    { shape: union(capsule(13, cy - 10.5, 26, cy - 10.5, 1.8), capsule(13, cy + 10.5, 26, cy + 10.5, 1.8)), ramp: HULL, bevel: 2, dome: 1 },
+    { shape: union(ellipse(12.5, cy - 10.5, 1, 1.4), ellipse(12.5, cy + 10.5, 1, 1.4)), ramp: [10, 11], bevel: 1, bias: 0.4, line: false },
+    { shape: union(...[-4, 0, 4].map((d) => capsule(4, cy + d, 8, cy + d, 1.9))), ramp: METAL, bevel: 1, dome: 1 },
+    { shape: union(capsule(10, cy, 20, cy, 5.5), poly([[35.5, cy], [26, cy - 2], [18, cy - 4.8], [18, cy + 4.8], [26, cy + 2]])), ramp: HULL, bevel: 3, dome: 1, height: 1.35, spec: 0.9 },
+    { shape: union(...[10, 13.5, 17].map((x) => ellipse(x, cy - 3.6, 1.1, 1.1))), ramp: [10, 11], bevel: 1, line: false },
+    { shape: capsule(8, cy + 0.5, 33, cy + 0.5, 0.5), ramp: [4], flat: 4, line: false },
   ];
   return render(36, 24, parts, { outline: 7, ...CEL });
 }
