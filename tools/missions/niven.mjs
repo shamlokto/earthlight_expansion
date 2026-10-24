@@ -80,6 +80,10 @@ export default {
   name: 'NIVEN', title: 'Decimators', screens: [3, 2],
   objective: { kind: 'destroyType', type: 27, edge: 'east' }, turnLimit: 18, cap: 16, music: 15,
   goal: 'Destroy all three Decimator transports (the loaded Crabs) before any reaches the east edge.',
+  chapter: "Chapter 6 · The Verne Docks",
+  transmission: "One shot clears a hex. Three will clear a Foundry that shelters traitors. I take no pleasure in arithmetic, General. Only in results.",
+  strategy: ["Don't fight the convoy. Only the three loaded Crabs matter.", "The Crabs will use the open lanes, rows 6-7 and 15. Block both with fast units.", "A Crab that has to stop next to one of yours can go no further this turn. Make a screen, then kill them.", "The belt slows everyone, the Crabs most. Hit them while they're in it, and send bombers at them first.", "The two machines hidden in the belt can take the grey dock: an Athena and a Crane."],
+  plan: [{"n": 2, "path": [[33, 6], [24, 6], [14, 7]]}, {"n": 2, "path": [[34, 15], [24, 15], [14, 14]]}, {"n": 5, "path": [[23, 9], [26, 11]]}, {"n": 1, "at": [4, 10], "note": "Decimator transports"}, {"n": 3, "at": [40, 10], "note": "Screen line"}],
   briefing: `
 The Verne Docks. A year ago Galt tried to steal the Quantum Decimators stored here, and the Union stopped them. Now the Union has taken them out itself.
 

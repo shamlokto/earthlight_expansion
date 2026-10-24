@@ -44,6 +44,8 @@ export const SCREENS = {
   menu: { layers: [{ tiles: 149, map: 151 }], pal: [[25, 0, 80], [150, 16, 48]] },
   // mission intro ($05:EAA8): the same picture, top 21 rows; operation name and map title below
   mission: { layers: [{ tiles: 149, map: 151 }], pal: [[110, 0, 16], [25, 0, 1], [150, 16, 32]], h: 21 },   // backdrop: navy, as on screen
+  // the opening's Earth rising over the Moon's horizon ($08:93CC, BG1 only): the results screens
+  earthrise: { layers: [{ tiles: 11, map: 12 }], pal: [[10, 32, 16]] },
   // VP / turn graph frame shown after a map ($08:8082)
   results: { layers: [{ tiles: 146, map: 148 }], pal: [[147, 0, 32]] },
 };

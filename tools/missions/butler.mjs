@@ -87,6 +87,10 @@ export default {
   name: 'BUTLER', title: 'Line', screens: [4, 2],
   objective: { kind: 'flagship', type: 30 }, cap: 24, music: 26, turnLimit: 30,
   goal: 'Sink the Tiamat, flagship of the Union home fleet.',
+  chapter: "Chapter 9 · The Derleth line",
+  transmission: "The home fleet is the Union, General. Every gun on that line was paid for by the Foundries you claim to defend. Sink the Tiamat, and you sink what you swore to protect.",
+  strategy: ["Mecha cross the gravity river only at the three fords: rows 4-5, 10-11 and 16-17. Ships and craft can fly over.", "The centre lane is mined. Push the north and south lanes, where the ridges keep their capital ships from swinging around.", "Long-range railguns win the artillery duel. Send Hunters at the guns on the ridges.", "The Galt squadron comes in from the north on turn 6: two Corvus, an Asura-II and Lobsters. Time the north push to meet them.", "Then drive for the Tiamat. When it sinks, the line breaks."],
+  plan: [{"n": 1, "path": [[6, 5], [13, 5]]}, {"n": 1, "path": [[6, 11], [13, 11]]}, {"n": 1, "path": [[6, 17], [13, 17]]}, {"n": 5, "path": [[16, 5], [30, 4], [42, 6]]}, {"n": 4, "at": [24, 1], "note": "Galt squadron T6"}, {"n": 2, "at": [30, 10], "note": "Mined centre lane"}],
   briefing: `
 The Derleth line. Everything the Union has left is here.
 
