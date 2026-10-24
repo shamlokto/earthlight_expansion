@@ -69,7 +69,7 @@ function starfield(w, h, n, seed, big) {
 
 export class Board {
   // container: the scrolling #board element; cv: the canvas that takes the clicks (#cv)
-  constructor(container, cv, { rom, icon }) {
+  constructor(container, cv, { rom, icon, controlsHost = null }) {
     this.el = container; this.cv = cv; this.rom = rom; this.icon = icon;
     this.classic = store.get(CLASSIC_KEY) === '1';
     this.zoom = +store.get(ZOOM_KEY) || 0.8;
@@ -81,8 +81,10 @@ export class Board {
     for (const c of [this.terrain, cv]) { c.style.cssText = 'position:absolute;left:0;top:0;display:block;image-rendering:auto'; }
     cv.style.cursor = 'pointer';
     container.textContent = '';
-    this.controls = this.buildControls();
-    container.append(this.controls, this.stage);
+    // the zoom / Classic buttons sit in the page header when there is room for them there (game.html
+    // #boardCtl), so they never cover units; otherwise they float over the board's corner
+    this.controls = this.buildControls(!!controlsHost);
+    if (controlsHost) { controlsHost.textContent = ''; controlsHost.append(this.controls); container.append(this.stage); } else container.append(this.controls, this.stage);
     this.stage.append(this.terrain, cv);
     container.style.backgroundColor = '#04050d';
     if (!this.bgReady) {
@@ -99,11 +101,11 @@ export class Board {
     requestAnimationFrame(this.frame);
   }
 
-  buildControls() {
+  buildControls(inHeader = false) {
     const bar = document.createElement('div');
-    bar.style.cssText = 'position:sticky;left:8px;top:8px;height:0;z-index:5;width:0';
+    bar.style.cssText = inHeader ? 'display:inline-flex' : 'position:sticky;left:8px;top:8px;height:0;z-index:5;width:0';
     const box = document.createElement('div');
-    box.style.cssText = 'position:absolute;display:flex;gap:4px;padding:4px;border-radius:8px;background:rgba(8,10,24,.72);border:1px solid rgba(160,170,255,.25);backdrop-filter:blur(4px);font:12px system-ui;color:#dfe3ff;white-space:nowrap';
+    box.style.cssText = (inHeader ? '' : 'position:absolute;') + 'display:flex;gap:4px;padding:4px;border-radius:8px;background:rgba(8,10,24,.72);border:1px solid rgba(160,170,255,.25);backdrop-filter:blur(4px);font:12px system-ui;color:#dfe3ff;white-space:nowrap';
     const btn = (label, title, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.title = title; b.className = 'btn'; b.style.cssText = 'padding:2px 9px;font-size:13px;line-height:1.4'; b.onclick = (e) => { e.stopPropagation(); fn(); }; return b; };
     box.append(btn('−', 'Zoom out (ctrl + wheel)', () => this.zoomBy(-1)), btn('+', 'Zoom in (ctrl + wheel)', () => this.zoomBy(1)));
     this.classicBtn = btn('', 'Switch between the modern board and the original map graphics', () => this.setClassic(!this.classic));

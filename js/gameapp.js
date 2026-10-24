@@ -208,6 +208,7 @@ const armyName = (a) => (custom ? custom.names[a] : a ? 'Galt' : 'Union');
 
 function show(id) {
   for (const s of ['sLoad', 'sTitle', 'sStory', 'sBrief', 'sBattle', 'sResult']) $(s).hidden = s !== id;
+  if ($('boardCtl')) $('boardCtl').hidden = id !== 'sBattle';   // the board's zoom / Classic buttons, in the header
   window.scrollTo(0, 0);   // each screen starts at its top (the results screen can be long)
 }
 
@@ -317,7 +318,7 @@ function setupBoard(m) {
   mission = m;
   const info = custom ? custom.info : mapInfo(rom, m);
   const terr = renderMap(custom ? custom.rom : rom, info, { units: false });
-  if (!board) { board = new Board($('board'), $('cv'), { rom, icon: maskedIcon }); board.active = () => !$('sBattle').hidden; }
+  if (!board) { board = new Board($('board'), $('cv'), { rom, icon: maskedIcon, controlsHost: $('boardCtl') }); board.active = () => !$('sBattle').hidden; }
   board.setTerrain(terr.img, pal);   // terrain classes come with the battle (board.update)
   sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; blastCells = null; blastAim = null; threat = null; range = null; $('log').innerHTML = '';
   show('sBattle'); $('where').textContent = custom ? `expansion · ${custom.mission.title || custom.mission.name}` : `mission ${m + 1} · ${missionTitle(m)}`;
