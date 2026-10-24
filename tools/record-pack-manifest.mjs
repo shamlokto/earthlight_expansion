@@ -79,6 +79,12 @@ during('render', () => {
 // an expansion map through its ROM view (mission.js)
 const mission = JSON.parse(readFileSync(join(root, 'missions/asimov.json'), 'utf8'));
 during('render', () => { const v = romView(rec, mission); maps.renderMap(v.rom, v.info, { units: true }); });
+// the battle's terrain card (js/terraincard.js): each class's fight backdrop, or a field of hex cells
+const terrainArt = await imp('js/terrainart.js');
+during('render', () => {
+  for (let c = 0; c < 16; c++) terrainArt.terrainBackdrop(rec, c);
+  for (const g of new Set(terrainPalette(realRom).map((p) => p.gfx))) { terrainArt.cellImage(rec, g); terrainArt.cellField(rec, g); }   // the graphics maps use
+});
 
 // ------------------------------------------------------------------ render: fights and the info screen
 const unit = (type, army, extra = {}) => ({ type, army, hp: types[type].hp, level: 3, x: 5, y: 5, ...extra });

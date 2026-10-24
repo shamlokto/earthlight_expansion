@@ -36,6 +36,7 @@ const mission = JSON.parse(readFileSync(join(root, 'missions/asimov.json'), 'utf
 
 // the expansion's own unit data and rule tables (battles read no rules from the ROM or pack)
 const data = await (await imp('js/expansion/data.js')).loadExpansionData();
+const terrainArt = await imp('js/terrainart.js');
 
 // everything below runs once per ROM and is hashed
 function run(rom, romEn) {
@@ -60,6 +61,8 @@ function run(rom, romEn) {
     while (!s.done) { s.step(); add(JSON.stringify(s.sounds())); if (n++ % 37 === 0) s.render(ctx); }
   }
   for (let t = 0; t < 58; t += 5) add(unitArt(rom, t).data);
+  for (let c = 0; c < 16; c++) { const bg = terrainArt.terrainBackdrop(rom, c); if (bg) add(bg.data); }   // terrain card pictures
+  for (const g of [0, 5, 6, 27, 64, 124, 159, 221]) { add(terrainArt.cellImage(rom, g).data); add(terrainArt.cellField(rom, g).data); }
   for (const S of Object.values(SCREENS)) add(composeScreen(rom, S.layers, S.pal, { h: S.h || 28 }).img.px);
   for (const a of sound.SLOT_ASSETS) for (const [addr, d] of sound.uploadBlocks(rom.body(a)).blocks) { add(String(addr)); add(d); }
   for (let g = 1; g < 12; g++) add(JSON.stringify(sound.trackTable(rom, g)));
