@@ -154,7 +154,6 @@ function build(spec) {
     if (u.joiner) o.joiner = true;
     if (u.level !== undefined) o.level = u.level;
     if (u.cargo) o.cargo = u.cargo;
-    if (u.level !== undefined) o.level = u.level;   // a named enemy ace (deployList passes it on)
     return o;
   });
   const g = units.find((u) => u.general);
