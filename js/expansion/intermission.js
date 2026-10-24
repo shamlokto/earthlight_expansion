@@ -6,7 +6,7 @@ import { battlePalette, unitIcon } from '../maps.js';
 import { loadExpansionData } from './data.js';
 import * as C from './campaign.js';
 import { ensurePack } from './pack.js';
-import { clearSavedBattle, EXPANSION_BATTLE } from '../game/savegame.js';
+import { clearSavedBattle, savedBattle, EXPANSION_BATTLE } from '../game/savegame.js';
 
 const $ = (id) => document.getElementById(id);
 let rom, pal, types, en = null, index, state, next = null, picked = new Set();
@@ -26,6 +26,9 @@ async function loadNext() {
 }
 
 function save() { C.save(state); }
+const battleUrl = () => `game.html?mission=${encodeURIComponent(entry().file)}&no=${state.next}&campaign=1`;
+// the saved mid-battle state of the next mission, if there is one
+function resumable() { const s = savedBattle(EXPANSION_BATTLE), e = entry(); return s && e && s.mission === e.file ? s : null; }
 
 function render() {
   const e = entry(), cap = next ? C.deployCap(next) : 0;
@@ -43,7 +46,7 @@ function render() {
     else {
       html += `<p class="brief">${esc(next.briefing || '')}</p>${e.hint ? `<p class="muted">Next map wants: ${esc(e.hint)}</p>` : ''}
         <p class="muted">Deploy up to ${cap} machines (${deployed.size} chosen).${next.turnLimit ? ` Turn limit ${next.turnLimit}.` : ''}</p>
-        <div class="row"><button class="btn primary" id="launch" ${deployed.size ? '' : 'disabled'}>Launch mission</button></div>`;
+        <div class="row"><button class="btn primary" id="launch" ${deployed.size ? '' : 'disabled'}>Launch mission</button>${resumable() ? `<button class="btn" id="resume">Resume saved battle (turn ${resumable().turn})</button>` : ''}</div>`;
     }
     html += `</div>`;
   }
@@ -93,8 +96,10 @@ function wire(cap) {
     if (state.general !== null && !state.deploy.includes(state.general)) state.deploy = [state.general, ...state.deploy].slice(0, cap);
     save();
     clearSavedBattle(EXPANSION_BATTLE);   // a new launch never resumes an older saved battle
-    location.href = `game.html?mission=${encodeURIComponent(entry().file)}&no=${state.next}&campaign=1`;
+    location.href = battleUrl();
   };
+  // a battle saved mid-mission (Save in the battle screen): game.html offers to resume it
+  if ($('resume')) $('resume').onclick = () => { location.href = battleUrl(); };
   $('beta').onchange = (ev) => { state.beta = ev.target.checked; save(); render(); };
   // two clicks to start over (embedded viewers can suppress confirm() dialogs)
   $('restart').onclick = async () => {
