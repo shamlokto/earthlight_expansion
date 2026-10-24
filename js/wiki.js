@@ -13,7 +13,7 @@ import { terrainText, categoryUnits, slug, MOVERS } from './terraininfo.js';
 import { bannerUrl, cellUrl } from './terrainart.js';
 import { factsHtml, TERRAIN_CSS } from './terraincard.js';
 import { loadExpansionData } from './expansion/data.js';
-import { paintLookArt, lookOf } from './look.js';
+import { paintLookArt, lookOf, typeIcon } from './look.js';
 import { price, marketTypes } from './expansion/campaign.js';
 
 const $ = (id) => document.getElementById(id);
@@ -302,7 +302,8 @@ function xpSources(type) {
 
 function xpIcon(type, army) {
   const c = document.createElement('canvas');
-  paint(c, unitIcon(rom, army, xp.types[lookOf(xp.types, type)].gfx, 0), pal, { scale: 2 });
+  // its own icon (js/art/own.js), else its look's
+  paint(c, xp.types[type].ownArt ? typeIcon(rom, xp.types, type, army) : unitIcon(rom, army, xp.types[lookOf(xp.types, type)].gfx, 0), pal, { scale: 2 });
   return c;
 }
 

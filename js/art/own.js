@@ -38,6 +38,14 @@ export function ownIcon(set, army) {
   return img;
 }
 
+// The modern board's token: colour numbers of the ships' fight palette row, facing right (army B's
+// faces left). { w, h, px } with px the colour numbers (0 clear).
+export function ownToken(set, army) {
+  const e = set.token, px = pixels(e), out = new Uint8Array(e.w * e.h);
+  for (let y = 0; y < e.h; y++) for (let x = 0; x < e.w; x++) out[y * e.w + x] = px[y * e.w + (army ? e.w - 1 - x : x)];
+  return { w: e.w, h: e.h, px: out };
+}
+
 // The fight hull as one 128 px sprite sheet: tile n (16 to a row, as in the fight sheets) holds
 // the hull's 8x8 block, in the colour numbers of the side's ship palette row.
 const hullTiles = new WeakMap();
