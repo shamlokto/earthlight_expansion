@@ -48,5 +48,6 @@ Take the gate before it seals, cross the magnetic band and get through the meteo
     f: { type: 49, army: 1 },                 // Fenrir destroyer
   },
   // the base's garrison comes out behind you (rules.js: event turn 4 = the Union phase of turn 5)
-  arrivals: [{ turn: 4, army: 1, units: [{ type: 2, x: 2, y: 2 }, { type: 2, x: 2, y: 9 }, { type: 3, x: 3, y: 2 }] }],
+  // ... and hunts the player's carriers (ai.js `chase`)
+  arrivals: [{ turn: 4, army: 1, units: [{ type: 2, x: 2, y: 2, chase: 'carriers' }, { type: 2, x: 2, y: 9, chase: 'carriers' }, { type: 3, x: 3, y: 2, chase: 'carriers' }] }],
 };

@@ -410,7 +410,9 @@ class Brain {
       const mp0 = b.movePoints(u);
       let goal = null;
       if (mp0) {
-        const f = this.field(u, mp0), list = goals || b.alive().filter((e) => e.army !== this.army).map((e) => ({ prio: (this.prio.get(e) ?? 0) + 1, x: e.x, y: e.y }));
+        // expansion arrivals may be ordered to hunt the enemy's carriers ({ chase: 'carriers' }); with none left they advance as usual
+        const prey = u.chase === 'carriers' ? b.alive().filter((e) => e.army !== this.army && b.type(e).category === CARRIER_CAT).map((e) => ({ prio: 255, x: e.x, y: e.y })) : [];
+        const f = this.field(u, mp0), list = prey.length ? prey : goals || b.alive().filter((e) => e.army !== this.army).map((e) => ({ prio: (this.prio.get(e) ?? 0) + 1, x: e.x, y: e.y }));
         let gp = 1, gv = 0;
         for (const g of list) {
           const v = f.val[K(g.x, g.y)];
@@ -418,6 +420,15 @@ class Brain {
           gp = g.prio; gv = v; goal = g;
         }
         goal = goal && this.stepToward(u, f, goal.x, goal.y);
+        // a hunted carrier beyond the original's ~12-point planning range: close in as far as this turn allows
+        if (!goal && prey.length) {
+          const far = (x, y) => Math.min(...prey.map((p) => distance({ x, y }, p)));
+          let bd = far(u.x, u.y);
+          for (const k of this.reachable(u).keys()) {
+            const [x, y] = k.split(',').map(Number), d = far(x, y);
+            if (d < bd && !this.blocked(x, y)) { bd = d; goal = [x, y]; }
+          }
+        }
       }
       if (u.type !== t0) {
         u.type = t0;

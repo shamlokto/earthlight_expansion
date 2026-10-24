@@ -139,6 +139,7 @@ export class Battle {
       for (const a of ev.units) {
         const [x, y] = this.freeNear(a.x, a.y, a.type);
         const u = this.spawn(a.type, this.army, x, y);
+        if (a.chase) u.chase = a.chase;   // expansion: an order for the AI (ai.js), e.g. 'carriers'
         for (const t of a.cargo) this.spawn(t, this.army, x, y, u);
         out.push(u);
       }
