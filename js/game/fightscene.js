@@ -147,7 +147,7 @@ function track(s) {
         }
       }
     }
-    parsed.set(s, { t0, size, row, f });
+    parsed.set(s, { t0, size, row, f, uid: parsed.size });
   }
   return parsed.get(s);
 }
@@ -465,7 +465,11 @@ export class FightScene {
     const t = track(s), k = f - t.t0;
     if (k < 0 || (k >= t.f.length && !hold)) return;
     const e = t.f[Math.min(k, t.f.length - 1)];
-    if (e) this.drawRec(img, e[0], e[1] + dy, e[2], e[3], t.size, t.row, mirror);
+    if (!e) return;
+    const tag = this.tagK;
+    this.tagAs(`t${t.uid}`);
+    this.drawRec(img, e[0], e[1] + dy, e[2], e[3], t.size, t.row, mirror);
+    this.tagAs(tag);
   }
 
   // A recorded sprite: rows 0-2 belong to the attacker, 3-5 to the defender; mirrored, the
@@ -573,6 +577,10 @@ export class FightScene {
   }
 
   drawSprite(img, tiles, base, x, y, size, flip, palRow, vflip = false) {
+    if (this.capture) {   // frameState(): record the sprite instead of drawing it
+      this.capture.push({ tiles, base, x, y, size, flip: !!flip, vflip: !!vflip, row: palRow, id: `${this.tagK}#${this.tagN++}` });
+      return;
+    }
     const tpr = 16; // tiles per sheet row
     for (let py = 0; py < size; py++) {
       for (let px = 0; px < size; px++) {
@@ -588,12 +596,14 @@ export class FightScene {
     }
   }
 
-  render(ctx) {
-    if (this.intro && this.frame < 0) { this.intro.render(ctx, this.clock || 0); return; }
-    const f = this.frame;
-    const img = new ImageData(new Uint8ClampedArray(this.background(Math.max(0, f)).data), W, H);
-    for (const [acts, tiles, row, flip, off] of [[this.left, this.tilesL, 0, true, 0], [this.right, this.tilesR, 3, false, 256]]) {
+  // Sprites of one battle frame drawn onto img (or recorded, in frameState()), each tagged with
+  // the actor or recorded track it belongs to so other renderers can follow it between frames.
+  tagAs(k) { this.tagK = k; this.tagN = 0; }
+
+  compose(img, f) {
+    for (const [acts, tiles, row, flip, off, side] of [[this.left, this.tilesL, 0, true, 0, 'L'], [this.right, this.tilesR, 3, false, 256, 'R']]) {
       acts.forEach((a, i) => {
+        this.tagAs(`${side}${i}`);
         if (a.ship) { this.drawShip(img, a, tiles, off, row, f); return; }
         if (a.struct) {
           // static two-sprite object; captured with h-flip on the right side
@@ -622,7 +632,29 @@ export class FightScene {
         if (fires && !s.boom) this.drawShots(img, a, i, s, tiles, off, flip, row);
       });
     }
+    this.tagAs('fx');
     for (const t of this.melee ? this.melee.fx : this.chargeFx || []) this.drawTrack(img, t, f, this.mirror);
+  }
+
+  // The current frame as data, for renderers other than render() (js/render/fightfx.js): the
+  // sprites render() would draw, in draw order, with stable ids; the two backdrop layers' scroll
+  // ([h1, v1, h2, v2], see background()); and the fade-out brightness. Intro frames return the
+  // info screen's clock instead.
+  frameState() {
+    const f = this.frame;
+    if (this.intro && f < 0) return { intro: true, f, clock: this.clock || 0 };
+    const sprites = [];
+    this.capture = sprites;
+    try { this.compose(null, f); } finally { this.capture = null; }
+    const g = Math.max(0, f);
+    return { intro: false, f, sprites, scroll: [...this.scrollL(g), ...this.scrollR(g)], fade: Math.max(0, Math.min(1, (this.end - f) / FADE)) };
+  }
+
+  render(ctx) {
+    if (this.intro && this.frame < 0) { this.intro.render(ctx, this.clock || 0); return; }
+    const f = this.frame;
+    const img = new ImageData(new Uint8ClampedArray(this.background(Math.max(0, f)).data), W, H);
+    this.compose(img, f);
     // the battle starts at full brightness and fades out over its last frames (captured)
     const fade = Math.min(1, (this.end - f) / FADE);
     if (fade < 1) for (let i = 0; i < img.data.length; i += 4) { img.data[i] *= fade; img.data[i + 1] *= fade; img.data[i + 2] *= fade; }
