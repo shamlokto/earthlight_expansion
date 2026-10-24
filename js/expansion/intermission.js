@@ -17,7 +17,8 @@ const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt
 function icon(type) { const c = document.createElement('canvas'); paint(c, unitIcon(rom, 0, types[type].gfx), pal, { scale: 2 }); return c.outerHTML.replace('<canvas', `<canvas data-icon="${type}"`); }
 function fillIcons() { for (const c of document.querySelectorAll('canvas[data-icon]')) paint(c, unitIcon(rom, 0, types[+c.dataset.icon].gfx), pal, { scale: 2 }); }
 
-const unlocked = () => [...new Set([...(index.start || []), ...index.missions.slice(0, state.next).flatMap((m) => m.unlocks || [])])];
+// late in the campaign (index.json allFrom) every machine type can be built
+const unlocked = () => state.next >= (index.allFrom ?? Infinity) ? C.marketTypes(types).map((t) => t.type) : [...new Set([...(index.start || []), ...index.missions.slice(0, state.next).flatMap((m) => m.unlocks || [])])];
 const entry = () => index.missions[state.next] || null;
 
 async function loadNext() {
@@ -62,7 +63,7 @@ function render() {
   html += `</table><div class="row"><label><input type="radio" name="general" data-general="none" ${state.general === null ? 'checked' : ''}> General stays home</label>
     <span class="muted">Aboard: evasion ×2 (max 96), power ×2, level 9. If that unit is destroyed, the game is over.</span></div></div>`;
 
-  html += `<div class="two"><div class="box"><h2>Production</h2><p class="muted">${beta ? 'Beta: every machine type, free and without limit.' : `Up to ${C.MAX_BUILDS} machines per intermission, paid with supply.`} Each comes with a new pilot at level 0.</p><div class="shop">`;
+  html += `<div class="two"><div class="box"><h2>Production</h2><p class="muted">${beta ? 'Beta: every machine type, free and without limit.' : `Up to ${C.MAX_BUILDS} machines per intermission, paid with supply. ${state.next >= (index.allFrom ?? Infinity) ? 'Every machine type is now available.' : `More types unlock as the campaign goes on; all of them from mission ${(index.allFrom ?? 0) + 1}.`}`} Each comes with a new pilot at level 0.</p><div class="shop">`;
   for (const t of beta ? C.marketTypes(types) : unlocked().map((k) => types[k])) {
     const cost = C.price(types, t.type), ok = beta || (state.supply >= cost && state.builds < C.MAX_BUILDS);
     html += `<button class="btn" data-build="${t.type}" ${ok ? '' : 'disabled'}>${icon(t.type)}<span>${esc(name(t.type))}<br><span class="muted">${cost} supply</span></span></button>`;

@@ -1,4 +1,4 @@
-{"start":[0,1],"missions":[
+{"start":[0,1],"allFrom":7,"missions":[
 {"no":1,"title":"Betrayal","file":"missions/asimov.json","unlocks":[]},
 {"no":2,"title":"Old Enemies","file":"missions/lem.json","unlocks":[8,9],"hint":"Beam weapons: the enemy hides in meteoroid fields, where missiles lose 40%."},
 {"no":3,"title":"Shipyard","file":"missions/herbert.json","unlocks":[0,1,2,3,34,38],"hint":"Mecha and railguns: fortress decks give almost no cover."},

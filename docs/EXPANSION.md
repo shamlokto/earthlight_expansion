@@ -83,7 +83,8 @@ Consequences for the engine:
   objective and for finishing under par turns, minus the value of units lost.
 * **Production: 1–3 new units per mission** (decided). The score buys them, so a good battle means
   real reinforcements; it must matter, not be a token. You choose from a list that the story
-  unlocks (whichever shipyards the remnant holds).
+  unlocks (whichever shipyards the remnant holds). From mission 8 on (`allFrom` in
+  `missions/index.json`, owner 2026-10-24) every machine type can be built.
 * **Trade is a core system** (decided). A unit is worth a different amount to different people at
   different times, and that difference is the game:
   * **No trader characters** (decided): trade is an abstract exchange at fixed rates from each
