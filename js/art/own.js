@@ -14,6 +14,12 @@ import { NAGA } from './naga.js';
 const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS, azoras: AZORAS,
   pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT, naga: NAGA };
 export const ownArt = (types, type) => SETS[types?.[type]?.ownArt] || null;
+// A type drawn in its own picture's colours everywhere (units.json `ownColors`; the unique
+// Azoras, Leviathan and Directorate Talos): its set, when the set has the full-colour versions.
+export const ownColors = (types, type) => (types?.[type]?.ownColors && ownArt(types, type)?.iconArt ? ownArt(types, type) : null);
+export const ARMY_RGB = [[255, 90, 200], [90, 222, 70]];   // the army marks on full-colour icons
+const rgbOf = (pal) => pal.map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+
 
 const decoded = new WeakMap();
 function pixels(e) {
@@ -43,6 +49,38 @@ export function ownIcon(set, army) {
     if (v) { img.px[i] = hi | v; img.opaque[i] = 1; }
   }
   return img;
+}
+
+// The map icon in the picture's own colours (ownColors): an Indexed image (all colour numbers 0)
+// with `rgba` for gfx.paint and the fight info screen, facing right for army A and left for army
+// B, and a small army-colour mark in the lower left corner so the side stays readable.
+export function ownIconColors(set, army) {
+  const e = set.iconArt, px = pixels(e), pal = rgbOf(e.palette), img = new Indexed(e.w, e.h);
+  img.opaque = new Uint8Array(e.w * e.h); img.rgba = new Uint8ClampedArray(e.w * e.h * 4);
+  const put = (i, c) => { img.opaque[i] = 1; img.rgba[i * 4] = c[0]; img.rgba[i * 4 + 1] = c[1]; img.rgba[i * 4 + 2] = c[2]; img.rgba[i * 4 + 3] = 255; };
+  for (let y = 0; y < e.h; y++) for (let x = 0; x < e.w; x++) {
+    const v = px[y * e.w + (army ? e.w - 1 - x : x)];
+    if (v) put(y * e.w + x, pal[v]);
+  }
+  const mark = ARMY_RGB[army ? 1 : 0];
+  for (const [x, y, dark] of [[0, 12, 1], [0, 13, 0], [1, 13, 1], [0, 14, 0], [1, 14, 0], [2, 14, 1], [0, 15, 0], [1, 15, 0], [2, 15, 0], [3, 15, 1]]) put(y * e.w + x, dark ? [16, 16, 24] : mark);
+  return img;
+}
+
+// The modern board's token in the picture's own colours: { w, h, rgb } with rgb [r, g, b] or null
+// per pixel, facing right for army A and left for army B.
+export function ownTokenColors(set, army) {
+  const e = set.tokenArt, px = pixels(e), pal = rgbOf(e.palette), out = new Array(e.w * e.h).fill(null);
+  const flip = (army ? 1 : 0) ^ (e.faces === 'left' ? 1 : 0);
+  for (let y = 0; y < e.h; y++) for (let x = 0; x < e.w; x++) { const v = px[y * e.w + (flip ? e.w - 1 - x : x)]; if (v) out[y * e.w + x] = pal[v]; }
+  return { w: e.w, h: e.h, rgb: out };
+}
+
+// A full-colour picture (hullArt, posesArt) as RGBA.
+export function ownRgba(e) {
+  const px = pixels(e), pal = rgbOf(e.palette), data = new Uint8ClampedArray(e.w * e.h * 4);
+  for (let i = 0; i < px.length; i++) if (px[i]) { const c = pal[px[i]]; data[i * 4] = c[0]; data[i * 4 + 1] = c[1]; data[i * 4 + 2] = c[2]; data[i * 4 + 3] = 255; }
+  return { w: e.w, h: e.h, data };
 }
 
 // The modern board's token: colour numbers of the ships' fight palette row, facing right (army B's
@@ -105,7 +143,7 @@ export function ownPoseTiles(set, tiles) {
     const at = new Map();   // sheet tile (0-255) -> [pose pixels, tile x, tile y]
     for (const b of ownPoseBases(set)) for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) at.set((b + r * 16 + c) & 255, [pixels(set.poses[b]), c, r]);
     const cache = new Map();
-    poseTiles.set(tiles, (n) => {
+    const fn = (n) => {
       const hit = at.get(n & 255);
       if (!hit) return tiles(n);
       if (!cache.has(n & 255)) {
@@ -114,7 +152,9 @@ export function ownPoseTiles(set, tiles) {
         cache.set(n & 255, t);
       }
       return cache.get(n & 255);
-    });
+    };
+    fn.posesArt = set.posesArt || null;   // full-colour poses for the modern fight renderer (ownColors)
+    poseTiles.set(tiles, fn);
   }
   return poseTiles.get(tiles);
 }

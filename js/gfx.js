@@ -58,7 +58,8 @@ export function paint(canvas, img, pal, { scale = 1, zeroTransparent = false, bg
   const ctx = canvas.getContext('2d');
   const id = ctx.createImageData(img.w, img.h);
   const d = id.data;
-  for (let i = 0; i < img.w * img.h; i++) {
+  if (img.rgba) d.set(img.rgba);   // a full-colour picture (js/art/own.js ownIconColors)
+  else for (let i = 0; i < img.w * img.h; i++) {
     const v = img.px[i];
     if ((zeroTransparent && v === 0) || (img.opaque && !img.opaque[i])) {
       if (bg) { d[i * 4] = bg[0]; d[i * 4 + 1] = bg[1]; d[i * 4 + 2] = bg[2]; d[i * 4 + 3] = 255; }

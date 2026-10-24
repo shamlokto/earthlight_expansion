@@ -11,9 +11,9 @@
 import { cellOrigin, cellAt, HEX_POINTS } from '../maps.js';
 import { neighbours } from '../game/rules.js';
 import { scale3x, indexedToRgba } from './upscale.js';
-import { tokenPixels, ownTokenPixels } from './tokens.js';
+import { tokenPixels, ownTokenPixels, ownColorTokenPixels } from './tokens.js';
 import { lookOf } from '../look.js';
-import { ownArt, ownToken, ownIcon } from '../art/own.js';
+import { ownArt, ownToken, ownIcon, ownColors, ownTokenColors } from '../art/own.js';
 
 export const S = 3;                  // internal pixels per ROM pixel
 const OFF = 16;                      // the playfield starts at cell (1, 1)
@@ -324,9 +324,9 @@ export class Board {
   }
 
   modernToken(type, army) {
-    const types = this.state && this.state.battle.types, own = ownArt(types, type);
+    const types = this.state && this.state.battle.types, own = ownArt(types, type), col = ownColors(types, type);
     type = lookOf(types, type);   // borrowed graphics (js/look.js), or the type's own token/icon/poses (js/art/own.js)
-    const p = own && own.token ? ownTokenPixels(this.rom, ownToken(own, army === 1 ? 1 : 0), army === 1 ? 1 : 0)
+    const p = col && col.tokenArt ? ownColorTokenPixels(ownTokenColors(col, army === 1 ? 1 : 0)) : own && own.token ? ownTokenPixels(this.rom, ownToken(own, army === 1 ? 1 : 0), army === 1 ? 1 : 0)
       : tokenPixels(this.rom, type, army, own && ownIcon(own, army === 1 ? 1 : 0), own), up = scale3x(p.px, p.w, p.h);
     const src = canvas(up.w, up.h), sg = src.getContext('2d'), id = sg.createImageData(up.w, up.h);
     new Uint32Array(id.data.buffer).set(up.px); sg.putImageData(id, 0, 0);

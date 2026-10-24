@@ -57,16 +57,19 @@ export function infoArt() {
 
 // ---------------------------------------------------------------- map icon (facing right)
 // colour numbers of the icon rows: 1 white, 2-6 light to dark, 7 near black
-export function mapIcon() {
+// `colors`: the picture's own palette (iconArt, js/art/own.js ownColors) instead of the icon rows
+const ICON_ROWS = { WING: [5, 4, 3], POD: [6, 5, 4], NOZ: [4, 3], BODY: [6, 5, 4, 3, 2], DOT: 1, GUN: [3, 2], out: 7 };
+const ICON_FULL = { WING: [3, 4, 5, 6], POD: [3, 4, 5, 6], NOZ: [1, 2, 15], BODY: [2, 3, 4, 5, 6], DOT: 10, GUN: [17, 8, 7], out: 1 };
+export function mapIcon(P = ICON_ROWS) {
   const parts = [
-    { shape: union(poly([[6, 6], [11, 6], [17, 2], [15, 1], [10, 1.5]]), poly([[6, 10], [11, 10], [17, 14], [15, 15], [10, 14.5]])), ramp: [5, 4, 3], bevel: 1, dome: 1 },
-    { shape: union(capsule(9, 1.6, 17, 1.6, 1.2), capsule(9, 14.4, 17, 14.4, 1.2)), ramp: [6, 5, 4], bevel: 1 },
-    { shape: union(capsule(1.5, 6, 4, 6, 1.3), capsule(1.5, 10, 4, 10, 1.3)), ramp: [4, 3], bevel: 1 },
-    { shape: union(capsule(6, 8, 13, 8, 4), poly([[23.5, 8], [15, 6.4], [12, 4.5], [12, 11.5], [15, 9.6]])), ramp: [6, 5, 4, 3, 2], bevel: 2, dome: 1 },
-    { shape: union(...[6, 9, 12].map((x) => ellipse(x, 5, 0.9, 0.9))), ramp: [1], flat: 1, line: false },
-    { shape: union(capsule(9, 3.6, 19, 3.6, 0.9), capsule(9, 12.4, 19, 12.4, 0.9)), ramp: [3, 2], bevel: 1 },
+    { shape: union(poly([[6, 6], [11, 6], [17, 2], [15, 1], [10, 1.5]]), poly([[6, 10], [11, 10], [17, 14], [15, 15], [10, 14.5]])), ramp: P.WING, bevel: 1, dome: 1 },
+    { shape: union(capsule(9, 1.6, 17, 1.6, 1.2), capsule(9, 14.4, 17, 14.4, 1.2)), ramp: P.POD, bevel: 1 },
+    { shape: union(capsule(1.5, 6, 4, 6, 1.3), capsule(1.5, 10, 4, 10, 1.3)), ramp: P.NOZ, bevel: 1 },
+    { shape: union(capsule(6, 8, 13, 8, 4), poly([[23.5, 8], [15, 6.4], [12, 4.5], [12, 11.5], [15, 9.6]])), ramp: P.BODY, bevel: 2, dome: 1 },
+    { shape: union(...[6, 9, 12].map((x) => ellipse(x, 5, 0.9, 0.9))), ramp: [P.DOT], flat: P.DOT, line: false },
+    { shape: union(capsule(9, 3.6, 19, 3.6, 0.9), capsule(9, 12.4, 19, 12.4, 0.9)), ramp: P.GUN, bevel: 1 },
   ];
-  return render(24, 16, parts, { outline: 7, cel: true, smooth: 0 });
+  return render(24, 16, parts, { outline: P.out, cel: true, smooth: 0 });
 }
 
 // ---------------------------------------------------------------- fight hulls (left side, facing right)
@@ -125,27 +128,27 @@ export function fightHull2(P = ROWS, k = 1) {
 }
 
 // ---------------------------------------------------------------- board token (facing right)
-export function boardToken() {
-  const cy = 12, { HULL, METAL, GLOW } = ROWS;
+export function boardToken(P = ROWS) {
+  const cy = 12, { HULL, METAL, GLOW, BARREL, GUN, STRIPE } = P;
   const parts = [
     { shape: union(...[-4, 0, 4].map((d) => poly([[0, cy + d - 1.2], [4, cy + d - 1.8], [4, cy + d + 1.8], [0, cy + d + 1.2]]))), ramp: GLOW, bevel: 1, bias: 0.4, line: false },
     { shape: union(poly([[6, cy - 4], [13, cy - 4], [25, cy - 10], [21, cy - 11.5], [12, cy - 9]]), poly([[6, cy + 4], [13, cy + 4], [25, cy + 10], [21, cy + 11.5], [12, cy + 9]])), ramp: HULL, bevel: 2, dome: 1, bias: -0.05 },
     { shape: union(capsule(13, cy - 10.5, 26, cy - 10.5, 1.8), capsule(13, cy + 10.5, 26, cy + 10.5, 1.8)), ramp: HULL, bevel: 2, dome: 1 },
-    { shape: union(ellipse(12.5, cy - 10.5, 1, 1.4), ellipse(12.5, cy + 10.5, 1, 1.4)), ramp: [10, 11], bevel: 1, bias: 0.4, line: false },
-    { shape: union(...[-4, 0, 4].map((d) => capsule(4, cy + d, 8, cy + d, 1.9))), ramp: METAL, bevel: 1, dome: 1 },
+    { shape: union(ellipse(12.5, cy - 10.5, 1, 1.4), ellipse(12.5, cy + 10.5, 1, 1.4)), ramp: GLOW, bevel: 1, bias: 0.4, line: false },
+    { shape: union(...[-4, 0, 4].map((d) => capsule(4, cy + d, 8, cy + d, 1.9))), ramp: P.NOZ, bevel: 1, dome: 1 },
     { shape: union(capsule(10, cy, 20, cy, 5.5), poly([[35.5, cy], [26, cy - 2], [18, cy - 4.8], [18, cy + 4.8], [26, cy + 2]])), ramp: HULL, bevel: 3, dome: 1, height: 1.35, spec: 0.9 },
-    { shape: union(...[10, 13.5, 17].map((x) => ellipse(x, cy - 3.6, 1.1, 1.1))), ramp: [10, 11], bevel: 1, line: false },
-    { shape: capsule(8, cy + 0.5, 33, cy + 0.5, 0.5), ramp: [4], flat: 4, line: false },
-    { shape: union(capsule(13, cy - 7, 29, cy - 7, 1.2), capsule(13, cy + 7, 29, cy + 7, 1.2)), ramp: [8, 9, 10, 11], bevel: 1, dome: 1 },
-    { shape: union(ellipse(13, cy - 7, 2.6, 2.4), ellipse(13, cy + 7, 2.6, 2.4)), ramp: [7, 6, 5, 4], bevel: 1, dome: 1 },
+    { shape: union(...[10, 13.5, 17].map((x) => ellipse(x, cy - 3.6, 1.1, 1.1))), ramp: P.METAL, bevel: 1, line: false },
+    { shape: capsule(8, cy + 0.5, 33, cy + 0.5, 0.5), ramp: STRIPE, bevel: 1, line: false },
+    { shape: union(capsule(13, cy - 7, 29, cy - 7, 1.2), capsule(13, cy + 7, 29, cy + 7, 1.2)), ramp: BARREL, bevel: 1, dome: 1 },
+    { shape: union(ellipse(13, cy - 7, 2.6, 2.4), ellipse(13, cy + 7, 2.6, 2.4)), ramp: GUN, bevel: 1, dome: 1 },
   ];
-  return render(36, 24, parts, { outline: 7, ...CEL });
+  return render(36, 24, parts, { outline: P.out, ...CEL });
 }
 
 function norm(v) { const l = Math.hypot(...v); return v.map((x) => x / l); }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const art = infoArt(), icon = mapIcon(), hull = fightHull(), hull2 = fightHull2(), token = boardToken(), hullArt = fightHull(FULL, 3), hull2Art = fightHull2(FULL, 3);
+  const art = infoArt(), icon = mapIcon(), hull = fightHull(), hull2 = fightHull2(), token = boardToken(), hullArt = fightHull(FULL, 3), hull2Art = fightHull2(FULL, 3), iconArt = mapIcon(ICON_FULL), tokenArt = boardToken(FULL);
   const rows = (img) => JSON.stringify(encode(img)).replace(/","/g, '",\n      "');
   writeFileSync(new URL('../../js/art/azoras.js', import.meta.url), `// The Azoras's own art (expansion type 61), drawn by tools/art/azoras.mjs; original art, not
 // from the ROM. Rows of base-36 colour numbers: the picture's own palette; the map icon's numbers
@@ -167,6 +170,11 @@ export const AZORAS = {
     rows: ${rows(hullArt)} },
   hull2Art: { w: ${hull2Art.w}, h: ${hull2Art.h}, palette: ${JSON.stringify(ART_PALETTE)},
     rows: ${rows(hull2Art)} },
+  // the map icon and the board token in the picture's own colours (units.json ownColors)
+  iconArt: { w: ${iconArt.w}, h: ${iconArt.h}, palette: ${JSON.stringify(ART_PALETTE)},
+    rows: ${rows(iconArt)} },
+  tokenArt: { w: ${tokenArt.w}, h: ${tokenArt.h}, palette: ${JSON.stringify(ART_PALETTE)},
+    rows: ${rows(tokenArt)} },
   // how the modern renderer draws its shots, per weapon slot (visual only)
   shots: { 0: 'missile', 1: 'redBeam' },
 };

@@ -632,6 +632,15 @@ shots, slot 1 a thick red beam from the wing cannons to the target (fightfx.js `
 `drawMissile`). The classic renderer recolours its effect row red when it fires slot 1
 (fightscene.js `buildSprites`). Visual only: the recorded timings and hits are unchanged.
 
+**Own colours** (`ownColors: true` in units.json; owner 2026-10-24: the Azoras, the Leviathan and the
+Directorate Talos): unique units drawn in their own picture's colours instead of the army palette
+rows. Their art sets carry full-colour versions (`iconArt`, `tokenArt`, `hullArt` or `posesArt`, with
+the picture's palette); js/art/own.js `ownColors`, `ownIconColors` (an Indexed image with `rgba`,
+honoured by gfx.paint and the fight info screen, with a small army-colour corner mark so the side
+stays readable on the classic board), `ownTokenColors` (the modern board token; the board's army
+rim and glow mark the side). The modern fight renderer draws full-colour hulls and poses
+(fightfx.js `fullColour`; the pose tiles carry `posesArt`); the classic fights keep the palette.
+
 **Pallas** (types 62-65, owner 2026-10-24): the Athena's successor, with the same four forms and
 rules (62 fighter-bomber CHU-05F, 63 its spent form, 64 hunter CHU-05R, 65 its spent form: units.js
 TRANSFORM/SPENT, rules.js REARM, ai.js SPENT_FORMS and `athenaBase`). Galt, `GENERAL_SHIPS`,

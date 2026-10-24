@@ -35,6 +35,13 @@ export function ownTokenPixels(rom, tok, side) {
   return trim({ w: tok.w, h: tok.h, px });
 }
 
+// A unique unit's token in its own colours (js/art/own.js ownTokenColors).
+export function ownColorTokenPixels(t) {
+  const px = new Uint32Array(t.w * t.h);
+  for (let i = 0; i < px.length; i++) if (t.rgb[i]) px[i] = rgba(t.rgb[i]);
+  return trim({ w: t.w, h: t.h, px });
+}
+
 function craftSprite(rom, type, side, own) {
   const pal = paletteFromBytes(rom.body(PALS.craft[side])).slice(0, 16).map((c) => rgba(c));
   const sheet = tileCache(spriteBank(rom, type, 0)), tiles = own ? ownPoseTiles(own, sheet) : sheet;

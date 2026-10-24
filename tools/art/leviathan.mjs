@@ -42,8 +42,10 @@ function ship(C) {
 // ---------------------------------------------------------------- unit-info picture
 export const ART_PALETTE = ['#4a3a5a', '#000000', '#14141c', '#26262f', '#3a3a48', '#565668', '#7e7e94',
   '#4a0000', '#8c0000', '#d61818', '#ff5a39', '#ffbd9c', '#ff3900', '#ffbd00', '#ffffff', '#c6c6e7'];
+const ART_C = { hull: [2, 3, 4, 5, 6], plate: [2, 3, 4, 5], metal: [3, 4, 5, 6], red: [7, 8, 9, 10], fire: [12, 13, 14], light: [10, 11, 14] };
+const kx = (parts, k) => parts.map((q) => ({ ...q, bevel: (q.bevel ?? 4) * k }));
 export function infoArt() {
-  const C = { hull: [2, 3, 4, 5, 6], plate: [2, 3, 4, 5], metal: [3, 4, 5, 6], red: [7, 8, 9, 10], fire: [12, 13, 14], light: [10, 11, 14] };
+  const C = ART_C;
   // the ship at an angle, bow towards the lower left
   const Cn = [48, 47], F = [-0.78, 0.62], S = [0.62, 0.78];
   const toLocal = (x, y) => { const dx = x - Cn[0], dy = y - Cn[1]; return [(dx * F[0] + dy * F[1]) * 1.28, (dx * S[0] + dy * S[1]) * 1.05]; };
@@ -52,10 +54,20 @@ export function infoArt() {
 
 // ---------------------------------------------------------------- map icon (facing right)
 // colour numbers of the icon rows: 1 white, 2-6 light to dark, 7 near black
-export function mapIcon() {
-  const C = { hull: [6, 5, 4], plate: [6, 5, 4], metal: [5, 4], red: [3, 2], fire: [2, 1], light: [1] };
+export function mapIcon(colors = false) {
+  const C = colors ? ART_C : { hull: [6, 5, 4], plate: [6, 5, 4], metal: [5, 4], red: [3, 2], fire: [2, 1], light: [1] };
   const toLocal = (x, y) => [(x - 12) * 4.3, (y - 8) * 3.3];
-  return render(24, 16, ship(C), { toLocal, outline: 7 });
+  return render(24, 16, ship(C), { toLocal, outline: colors ? 1 : 7 });
+}
+// the modern board's token in the picture's own colours (units.json ownColors)
+export function tokenArt() {
+  const toLocal = (x, y) => [(x - 20) * 2.6, (y - 12) * 2.15];
+  return render(40, 24, ship(ART_C), { toLocal, outline: 1 });
+}
+// the fight hull in the picture's own colours, three times larger (the modern fight renderer)
+export function fightHullArt(k = 3) {
+  const toLocal = (x, y) => [(x / k - 49) * 1.14, (y / k - 64) * 0.42];
+  return render(96 * k, 128 * k, kx(ship(ART_C), k), { toLocal, outline: 1 });
 }
 
 // ---------------------------------------------------------------- fight hull (left side, facing right)
@@ -69,7 +81,7 @@ export function fightHull() {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const rows = (img) => JSON.stringify(encode(img)).replace(/","/g, '",\n      "');
-  const art = infoArt(), icon = mapIcon(), hull = fightHull();
+  const art = infoArt(), icon = mapIcon(), hull = fightHull(), iconArt = mapIcon(true), tokArt = tokenArt(), hullArt = fightHullArt();
   const out = `// The Leviathan's own art (expansion type 59), drawn by tools/art/leviathan.mjs; original art,
 // not from the ROM. Rows of base-36 colour numbers: the picture's own palette; the map icon's
 // numbers in the map icons' army rows (1-7); the fight hull's in the ships' fight rows.
@@ -80,6 +92,14 @@ export const LEVIATHAN = {
     rows: ${rows(icon)} },
   hull: { w: ${hull.w}, h: ${hull.h},
     rows: ${rows(hull)} },
+  // in the picture's own colours (units.json ownColors): map icon, board token, and the fight hull
+  // three times larger for the modern fight renderer
+  iconArt: { w: ${iconArt.w}, h: ${iconArt.h}, palette: ${JSON.stringify(ART_PALETTE)},
+    rows: ${rows(iconArt)} },
+  tokenArt: { w: ${tokArt.w}, h: ${tokArt.h}, palette: ${JSON.stringify(ART_PALETTE)},
+    rows: ${rows(tokArt)} },
+  hullArt: { w: ${hullArt.w}, h: ${hullArt.h}, palette: ${JSON.stringify(ART_PALETTE)},
+    rows: ${rows(hullArt)} },
 };
 `;
   writeFileSync(new URL('../../js/art/leviathan.js', import.meta.url), out);

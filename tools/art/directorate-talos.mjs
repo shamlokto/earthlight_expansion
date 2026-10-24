@@ -70,22 +70,29 @@ export const POSES = {
   128: { sword: 45, lean: 14, dx: 2, legs: stride(-1), spark: [5, 11] },  // struck, reeling back
 };
 export function poseSprite(base) { return render(32, 32, machine(POSES[base], FIGHT), { outline: 1 }); }
+// a pose in the picture's own colours, k times larger (units.json ownColors; the modern fight
+// renderer and, at k = 1, the board token)
+export function poseArt(base, k = 3) {
+  const parts = machine(POSES[base], ART_C, k).map((q) => ({ ...q, bevel: (q.bevel ?? 4) * k }));
+  return render(32 * k, 32 * k, parts, { outline: 1 });
+}
 
 // ---------------------------------------------------------------- unit-info picture
 export const ART_PALETTE = ['#6b5a7b', '#000000', '#21212e', '#393a4e', '#55566e', '#7b7c95', '#a5a6bd',
   '#5a0000', '#a50000', '#e72121', '#ff7b5a', '#ffd6bd', '#ff3900', '#ffbd00', '#ffffff', '#00639c', '#00b5ff', '#9cefff'];
+const ART_C = { armour: [2, 3, 4, 5, 6], dark: [2, 3, 4], red: [7, 8, 9, 10], glow: [12, 13, 14], eye: [8, 10, 11, 14], beam: [15, 16, 17, 14] };
 export function infoArt() {
-  const C = { armour: [2, 3, 4, 5, 6], dark: [2, 3, 4], red: [7, 8, 9, 10], glow: [12, 13, 14], eye: [8, 10, 11, 14], beam: [15, 16, 17, 14] };
+  const C = ART_C;
   const parts = machine({ sword: -28, lean: -6, hand: [6, 14.5], legs: stride(1.5) }, C, 2.75, 3, 6);
   return render(96, 96, parts, { bg: 0, outline: 1 });
 }
 
 // ---------------------------------------------------------------- map icon (facing right)
 // colour numbers of the icon rows: 1 white, 2-6 light to dark, 7 near black
-export function mapIcon() {
-  const C = { armour: [6, 5, 4, 3], dark: [6, 5], red: [3, 2], glow: [2, 1], eye: [1], beam: [2, 1] };
+export function mapIcon(colors = false) {
+  const C = colors ? ART_C : { armour: [6, 5, 4, 3], dark: [6, 5], red: [3, 2], glow: [2, 1], eye: [1], beam: [2, 1] };
   const parts = machine({ sword: -20, legs: stride(1) }, C, 0.52, 3.5, -0.2);
-  const img = render(24, 16, parts, { outline: 7 });
+  const img = render(24, 16, parts, { outline: colors ? 1 : 7 });
   // facing right: mirror the left-facing frame
   const px = new Uint8Array(img.px.length);
   for (let y = 0; y < 16; y++) for (let x = 0; x < 24; x++) px[y * 24 + x] = img.px[y * 24 + 23 - x];
@@ -94,7 +101,7 @@ export function mapIcon() {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const rows = (img) => JSON.stringify(encode(img)).replace(/","/g, '",\n      "');
-  const art = infoArt(), icon = mapIcon(), poses = Object.keys(POSES).map(Number);
+  const art = infoArt(), icon = mapIcon(), poses = Object.keys(POSES).map(Number), iconArt = mapIcon(true), tokArt = poseArt(0, 1);
   const out = `// The Directorate Talos's own art (expansion type 60), drawn by tools/art/directorate-talos.mjs;
 // original art, not from the ROM. Rows of base-36 colour numbers: the picture's own palette; the
 // map icon's numbers in the map icons' army rows (1-7); each fight pose's in the small craft's
@@ -106,6 +113,16 @@ export const DIRECTORATE_TALOS = {
     rows: ${rows(icon)} },
   poses: {
 ${poses.map((b) => `    ${b}: { w: 32, h: 32,\n      rows: ${rows(poseSprite(b))} },`).join('\n')}
+  },
+  // in the picture's own colours (units.json ownColors): map icon, board token (the rest pose,
+  // facing left like the poses), and each pose three times larger for the modern fight renderer
+  palette: ${JSON.stringify(ART_PALETTE)},
+  iconArt: { w: ${iconArt.w}, h: ${iconArt.h}, palette: ${JSON.stringify(ART_PALETTE)},
+    rows: ${rows(iconArt)} },
+  tokenArt: { w: ${tokArt.w}, h: ${tokArt.h}, palette: ${JSON.stringify(ART_PALETTE)}, faces: 'left',
+    rows: ${rows(tokArt)} },
+  posesArt: {
+${poses.map((b) => `    ${b}: { w: 96, h: 96, palette: ${JSON.stringify(ART_PALETTE)},\n      rows: ${rows(poseArt(b))} },`).join('\n')}
   },
 };
 `;

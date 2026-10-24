@@ -4,7 +4,7 @@
 // token and fight choreography; the base game has no looks, so all of this is a no-op there.
 import { paintUnitArt } from './unitart.js';
 import { unitIcon } from './maps.js';
-import { ownArt, ownInfoArt, ownIcon } from './art/own.js';
+import { ownArt, ownInfoArt, ownIcon, ownColors, ownIconColors } from './art/own.js';
 
 export const lookOf = (types, type) => types?.[type]?.look ?? type;
 
@@ -41,6 +41,8 @@ export function paintLookArt(canvas, rom, types, type, zoom = 2) {
 
 // A type's map icon for an army (0 or 1): its own (js/art/own.js), or the ROM's for its graphics.
 export function typeIcon(rom, types, type, army, frame = 0) {
+  const col = ownColors(types, type);
+  if (col) return ownIconColors(col, army ? 1 : 0);   // unique units in their own colours
   const own = ownArt(types, type);
   return own ? ownIcon(own, army ? 1 : 0) : unitIcon(rom, army ? 1 : 0, types[type].gfx, frame);
 }

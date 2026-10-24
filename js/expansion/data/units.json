@@ -4297,6 +4297,7 @@
   },
   {
    "type": 59,
+   "ownColors": true,
    "name": "Leviathan",
    "nameJp": "リヴァイアサン",
    "code": "BB-LV0",
@@ -4363,6 +4364,7 @@
   },
   {
    "type": 60,
+   "ownColors": true,
    "name": "Directorate Talos",
    "nameJp": "タロス親衛隊",
    "code": "HU-AX5D",
@@ -4423,6 +4425,7 @@
   },
   {
    "type": 61,
+   "ownColors": true,
    "unique": true,
    "name": "Azoras",
    "nameJp": "アゾラス",

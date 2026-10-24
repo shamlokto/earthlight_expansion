@@ -166,7 +166,7 @@ export class InfoScreen {
       for (let y = 0; y < 16; y++) for (let x = 0; x < 24; x++) {
         const i = y * 24 + x;
         if (!icon.opaque[i]) continue;
-        const c = this.objPal[(u.army ? 32 : 0) + (icon.px[i] & 15)], o = ((Y + y) * W + X + x) * 4;
+        const c = icon.rgba ? icon.rgba.subarray(i * 4, i * 4 + 3) : this.objPal[(u.army ? 32 : 0) + (icon.px[i] & 15)], o = ((Y + y) * W + X + x) * 4;
         if (X + x >= 0 && X + x < W && Y + y < H) { d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; }
       }
     }

@@ -392,7 +392,7 @@ function runFight(e) {
     cls: clsOf(u, i), slot: lookSlot(types, u.type, w?.slot), own: ownArt(types, u.type), ...label(u) });
   const seen = new Map(), v = (u) => {   // the same stand-in for a unit wherever the info screen meets it
     if (!u || types[u.type].look === undefined) return u;
-    if (!seen.has(u)) { const own = ownArt(types, u.type); seen.set(u, { ...u, type: lookOf(types, u.type), ...label(u), ...(own ? { icon: ownIcon(own, u.army === 1 ? 1 : 0) } : {}) }); }
+    if (!seen.has(u)) { const own = ownArt(types, u.type); seen.set(u, { ...u, type: lookOf(types, u.type), ...label(u), ...(own ? { icon: typeIcon(rom, types, u.type, u.army === 1 ? 1 : 0) } : {}) }); }
     return seen.get(u);
   };
   const ring = (r) => ({ centre: v(r.centre), around: r.around.map((n) => ({ ...n, u: v(n.u) })) });

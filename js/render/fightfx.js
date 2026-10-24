@@ -248,6 +248,8 @@ export class FightRenderer {
     }
   }
   sprite(sp) {
+    const art = sp.size === 32 && sp.tiles && sp.tiles.posesArt && sp.tiles.posesArt[sp.base & 255];
+    if (art) return this.fullColour(art, 32, 32, sp.flip);   // a unique craft's own pose in its own colours
     const key = this.spriteKey(sp);
     let e = this.sprites.get(key);
     if (e !== undefined) return e;
@@ -404,25 +406,32 @@ export class FightRenderer {
     if (!m) return null;
     const a = (m[1] === 'L' ? this.scene.left : this.scene.right)[+m[2]], set = a && a.own;
     if (!set || !set.hullArt) return null;
-    const key = `${set.hull.w}:${sp.flip}:${set.hullArt.rows[0].length}:${set.hullArt.rows.length}`;
-    this.ownArt = this.ownArt || new WeakMap();
-    let per = this.ownArt.get(set);
-    if (!per) { per = new Map(); this.ownArt.set(set, per); }
+    const e = this.fullColour(set.hullArt, set.hull.w, set.hull.h, sp.flip);
+    return { e, sp, ox: sp.flip ? 128 - set.hull.w : 0, oy: 0 };
+  }
+  // A full-colour picture (js/art/own.js hullArt, posesArt; drawn larger than the classic sprite)
+  // as a body entry like remastered()'s, w x h classic pixels, mirrored when `flip`.
+  fullColour(A, w, h, flip) {
+    this.fullArt = this.fullArt || new WeakMap();
+    let per = this.fullArt.get(A);
+    if (!per) { per = new Map(); this.fullArt.set(A, per); }
+    const key = `${w}:${h}:${flip ? 1 : 0}`;
     if (!per.has(key)) {
-      const A = set.hullArt, src = canvasOf(A.w, A.h), g = src.getContext('2d'), im = g.createImageData(A.w, A.h);
-      const pal = A.palette.map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+      const src = canvasOf(A.w, A.h), g = src.getContext('2d'), im = g.createImageData(A.w, A.h);
+      const pal = A.palette.map((x) => [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16)));
       A.rows.forEach((r, y) => { for (let x = 0; x < A.w; x++) { const v = parseInt(r[x], 36); if (!v) continue; const o = (y * A.w + x) * 4; [im.data[o], im.data[o + 1], im.data[o + 2]] = pal[v]; im.data[o + 3] = 255; } });
       g.putImageData(im, 0, 0);
-      const w = set.hull.w, h = set.hull.h, c = canvasOf(w * UP, h * UP), cg = c.getContext('2d');
+      const c = canvasOf(w * UP, h * UP), cg = c.getContext('2d');
       cg.imageSmoothingEnabled = true; cg.imageSmoothingQuality = 'high';
-      if (sp.flip) { cg.translate(w * UP, 0); cg.scale(-1, 1); }
+      if (flip) { cg.translate(w * UP, 0); cg.scale(-1, 1); }
       cg.drawImage(src, 0, 0, w * UP, h * UP);
       const sc = canvasOf(w * 2, h * 2), sg = sc.getContext('2d');
       sg.drawImage(c, 0, 0, w * 2, h * 2); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = 'rgba(0,0,12,0.62)'; sg.fillRect(0, 0, w * 2, h * 2);
       per.set(key, { c, pad: 0, fx: false, shadow: sc, glowC: null, glow: [255, 220, 200] });
     }
-    return { e: per.get(key), sp, ox: sp.flip ? 128 - set.hull.w : 0, oy: 0 };
+    return per.get(key);
   }
+
   // How a shot sprite is drawn: 'missile' or 'redBeam' when its side's own art asks for it for the
   // weapon slot in use (js/art/own.js `shots`), else null (the shot as recorded).
   shotKind(sp) {
