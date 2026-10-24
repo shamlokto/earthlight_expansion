@@ -3,7 +3,10 @@
 // the next mission's briefing. State lives in campaign.js; battles run in game.html.
 import { paint } from '../gfx.js';
 import { paintUnitArt } from '../unitart.js';
-import { battlePalette, unitIcon } from '../maps.js';
+import { battlePalette, unitIcon, renderMap } from '../maps.js';
+import { romView } from './mission.js';
+import { drawOverview } from './briefing.js';
+import { VILLAIN, villainPortrait } from './villain.js';
 import { loadExpansionData } from './data.js';
 import * as C from './campaign.js';
 import { ensurePack } from './pack.js';
@@ -16,6 +19,20 @@ let rom, pal, types, en = null, index, state, next = null, picked = new Set();
 const name = (t) => (en ? en.unitNames[t] : types[t].name);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 function icon(type) { const c = document.createElement('canvas'); paint(c, unitIcon(rom, 0, types[type].gfx), pal, { scale: 2 }); return c.outerHTML.replace('<canvas', `<canvas data-icon="${type}"`); }
+// the next mission's map with its units and the suggested plan (briefing.js), as in game.html's briefing
+function drawBriefMap() {
+  if (!next || !$('briefMap')) return;
+  try {
+    const { rom: view, info } = romView(rom, next), terr = document.createElement('canvas');
+    paint(terr, renderMap(view, info, { units: false }).img, pal, { scale: 1 });
+    const icons = new Map(), icon = ({ type, army }) => {
+      const k = `${army}:${type}`;
+      if (!icons.has(k)) { const c = document.createElement('canvas'); paint(c, unitIcon(rom, army === 1 ? 1 : 0, types[type].gfx, 0), pal, { scale: 1 }); icons.set(k, c); }
+      return icons.get(k);
+    };
+    drawOverview($('briefMap'), { terrain: terr, mission: next, types, icon });
+  } catch (err) { console.warn('briefing map', err); }
+}
 function fillIcons() { for (const c of document.querySelectorAll('canvas[data-icon]')) paint(c, unitIcon(rom, 0, types[+c.dataset.icon].gfx), pal, { scale: 2 }); }
 
 // late in the campaign (index.json allFrom) every machine type can be built
@@ -59,7 +76,14 @@ function render() {
       <div class="eyebrow">Intermission · next: mission ${e.no} of ${total}</div><h1>${esc(e.title)}</h1>`;
     if (!next) html += `<p class="muted">This mission isn't built yet: paint it in the map editor and add its file to missions/index.json.</p>`;
     else {
-      html += `<p class="brief">${esc(next.briefing || '')}</p>
+      const story = (next.briefing || '').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+      html += `<div class="bTop"><article class="bStory">${story.map((p) => `<p>${esc(p)}</p>`).join('')}</article>
+        ${next.transmission ? `<aside class="bTx"><div class="txHead"><span class="rec"></span>Incoming transmission · Union Security Directorate</div>
+          <div class="txFace">${villainPortrait()}<div class="txScan"></div></div><div class="txWho"><b>${esc(VILLAIN.name)}</b><span>${esc(VILLAIN.rank)}</span></div>
+          <blockquote>${esc(next.transmission)}</blockquote></aside>` : ''}</div>
+        <section class="bMap"><h2>Theatre map</h2><div class="mapWrap"><canvas id="briefMap"></canvas></div>
+          <div class="legend"><span><i class="lg own"></i>Your forces</span><span><i class="lg foe"></i>Union</span><span><i class="lg grey"></i>Grey dock (capture)</span><span><i class="lg tgt"></i>Objective</span><span><i class="lg arr"></i>Plan, numbered as below</span><span><i class="lg rein"></i>Reinforcements (turn)</span></div></section>
+        ${(next.strategy || []).length ? `<section class="bPlan"><h2>Suggested strategy</h2><ol>${next.strategy.map((t) => `<li>${esc(t)}</li>`).join('')}</ol></section>` : ''}
         <div class="chips">${e.hint ? `<span class="chip cyan">Next map wants: ${esc(e.hint)}</span>` : ''}<span class="chip ${deployed.size ? 'gold' : ''}">Deploy ${deployed.size} / ${cap}</span>${next.turnLimit ? `<span class="chip">Turn limit ${next.turnLimit}</span>` : ''}</div>
         <div class="row launchrow"><button class="btn primary big" id="launch" ${deployed.size ? '' : 'disabled'}>Launch mission</button>${resumable() ? `<button class="btn" id="resume">Resume saved battle (turn ${resumable().turn})</button>` : ''}</div>`;
     }
@@ -103,6 +127,7 @@ function render() {
     <div class="row"><button class="btn" id="restart">Start a new campaign</button></div></section>`;
   $('app').innerHTML = html;
   fillIcons();
+  drawBriefMap();
   wire(cap);
 }
 
