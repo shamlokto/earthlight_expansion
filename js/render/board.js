@@ -288,7 +288,7 @@ export class Board {
   modernToken(type, army) {
     const types = this.state && this.state.battle.types, own = ownArt(types, type);
     type = lookOf(types, type);   // borrowed graphics (js/look.js), or the type's own icon (js/art/own.js)
-    const p = tokenPixels(this.rom, type, army, own && ownIcon(own, army === 1 ? 1 : 0)), up = scale3x(p.px, p.w, p.h);
+    const p = tokenPixels(this.rom, type, army, own && ownIcon(own, army === 1 ? 1 : 0), own), up = scale3x(p.px, p.w, p.h);
     const src = canvas(up.w, up.h), sg = src.getContext('2d'), id = sg.createImageData(up.w, up.h);
     new Uint32Array(id.data.buffer).set(up.px); sg.putImageData(id, 0, 0);
     // fit: craft about 58 px tall, ships and structures a little larger than a hex

@@ -4295,6 +4295,132 @@
    "ownArt": "seleneKai",
    "tag": "KAI",
    "tint": 300
+  },
+  {
+   "type": 59,
+   "name": "Leviathan",
+   "nameJp": "リヴァイアサン",
+   "code": "BB-LV0",
+   "category": 2,
+   "startLevel": 4,
+   "hp": 40,
+   "move": 3,
+   "evasion": 64,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 154
+    },
+    {
+     "slot": 1,
+     "mode": 2,
+     "min": 2,
+     "max": 5,
+     "power": 255
+    },
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 3,
+     "power": 115
+    },
+    null
+   ],
+   "aiValue": 40,
+   "info": {
+    "attack": [
+     120,
+     199,
+     90,
+     0
+    ],
+    "defence": 50,
+    "minRange": [
+     1,
+     2,
+     1,
+     0
+    ]
+   },
+   "gfx": 21,
+   "art": {
+    "fightSheet": 30,
+    "tiles": 245,
+    "palette": 246,
+    "frame": 22
+   },
+   "look": 32,
+   "ownArt": "leviathan",
+   "tag": "LVT",
+   "fightName": "Leviathan",
+   "unionOnly": true
+  },
+  {
+   "type": 60,
+   "name": "Directorate Talos",
+   "nameJp": "タロス親衛隊",
+   "code": "HU-AX5D",
+   "category": 8,
+   "startLevel": 6,
+   "hp": 8,
+   "move": 5,
+   "evasion": 83,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 26
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 140
+    },
+    null
+   ],
+   "aiValue": 16,
+   "info": {
+    "attack": [
+     20,
+     0,
+     109,
+     0
+    ],
+    "defence": 65,
+    "minRange": [
+     1,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 2,
+   "art": {
+    "fightSheet": 6,
+    "tiles": 211,
+    "palette": 212,
+    "frame": 3
+   },
+   "look": 2,
+   "ownArt": "directorateTalos",
+   "tag": "TLD",
+   "fightName": "D-Talos",
+   "unionOnly": true
   }
  ]
 }

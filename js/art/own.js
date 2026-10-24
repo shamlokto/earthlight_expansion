@@ -1,11 +1,14 @@
 // The expansion's own unit art (original pictures, not from the ROM), for types whose unit data
 // names one (`ownArt`, js/expansion/data/units.json). Each set has a unit-info picture, a map icon
-// and a fight hull (js/art/selenekai.js); everything else about the type (choreography, sounds)
-// still comes from its `look` (js/look.js).
+// and either a fight hull (ships: js/art/selenekai.js, js/art/leviathan.js) or fight poses (small
+// craft: js/art/dirtalos.js); everything else about the type (choreography, sounds) still comes
+// from its `look` (js/look.js).
 import { Indexed } from '../gfx.js';
 import { SELENE_KAI } from './selenekai.js';
+import { LEVIATHAN } from './leviathan.js';
+import { DIRECTORATE_TALOS } from './dirtalos.js';
 
-const SETS = { seleneKai: SELENE_KAI };
+const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS };
 export const ownArt = (types, type) => SETS[types?.[type]?.ownArt] || null;
 
 const decoded = new WeakMap();
@@ -56,4 +59,33 @@ export function ownHullTiles(set) {
     });
   }
   return hullTiles.get(set);
+}
+
+// A small craft's own fight poses: `set.poses` maps a sheet tile of its look (the top left of a
+// 32x32 pose, 16 tiles to a row) to a 32x32 picture in the colour numbers of the craft fight
+// rows. ownPoseTiles(set, tiles) is `tiles` (a fightscene.js tile cache) with those poses' 16
+// tiles each replaced; ownPoseBases(set) the pose tiles.
+const poseBases = new WeakMap();
+export function ownPoseBases(set) {
+  if (!poseBases.has(set)) poseBases.set(set, new Set(Object.keys(set.poses || {}).map(Number)));
+  return poseBases.get(set);
+}
+const poseTiles = new WeakMap();
+export function ownPoseTiles(set, tiles) {
+  if (!poseTiles.has(tiles)) {
+    const at = new Map();   // sheet tile (0-255) -> [pose pixels, tile x, tile y]
+    for (const b of ownPoseBases(set)) for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) at.set((b + r * 16 + c) & 255, [pixels(set.poses[b]), c, r]);
+    const cache = new Map();
+    poseTiles.set(tiles, (n) => {
+      const hit = at.get(n & 255);
+      if (!hit) return tiles(n);
+      if (!cache.has(n & 255)) {
+        const [px, c, r] = hit, t = new Uint8Array(64);
+        for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) t[y * 8 + x] = px[(r * 8 + y) * 32 + c * 8 + x];
+        cache.set(n & 255, t);
+      }
+      return cache.get(n & 255);
+    });
+  }
+  return poseTiles.get(tiles);
 }

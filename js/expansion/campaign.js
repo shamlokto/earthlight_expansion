@@ -21,7 +21,7 @@ export const price = (types, type) => Math.max(1, types[type].value) * types[typ
 // intermission and sets it down on bedrock, asteroid, deck or railway.
 const BATTERIES = [23, 24], CRAB_EMPTY = 26;
 export function marketTypes(types) {
-  return types.filter((t) => !t.cut && (t.move > 0 || BATTERIES.includes(t.type)) && !isStructure(t.type) && t.armed === undefined && t.formOf === undefined && t.empty === undefined);
+  return types.filter((t) => !t.cut && !t.unionOnly && (t.move > 0 || BATTERIES.includes(t.type)) && !isStructure(t.type) && t.armed === undefined && t.formOf === undefined && t.empty === undefined);
 }
 
 export function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }

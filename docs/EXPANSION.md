@@ -603,3 +603,18 @@ picture (its own palette), a map icon (the icon rows' colours 1–7, pink or gre
 for army B; also the modern board's token and the info screen's icon) and a fight hull (the ships'
 fight-palette colours) drawn as one 128 px sprite over the box the Selene's hull would fill, so the
 Selene's choreography, shots and timings are unchanged. Re-run the tool after changing a shape.
+
+**Leviathan and Directorate Talos** (owner, 2026-10-24; the new campaign's Union units, docs/STORY.md).
+Both are `unionOnly` (never in the market) and have their own art, drawn the same way:
+
+| type | unit | look (choreography) | stats | art |
+|---|---|---|---|---|
+| 59 | Leviathan BB-LV0, Kessrin's flagship | Nodens | HP 40, move 3, evasion 64 (50%), start level 4; beam 154 at 1, missile 255 at 2–5, railgun 115 at 1–3 | `tools/art/leviathan.mjs` → `js/art/leviathan.js`: picture, icon, a 96x128 fight hull |
+| 60 | Directorate Talos HU-AX5D, Vane's machine and Kessrin's guard | Talos | HP 8, move 5, evasion 83 (65%), start level 6; beam 26 and beamsaber 140 at 1 | `tools/art/directorate-talos.mjs` → `js/art/dirtalos.js`: picture, icon, fight poses |
+
+A small craft's own art has **fight poses** instead of a hull: 32x32 pictures in the craft fight
+rows' colours, keyed by the look's sheet tile each one stands in for (the Talos draws poses at tiles
+0, 4, 8, 12, 64, 68, 72, 76 and 128). `ownPoseTiles` (js/art/own.js) swaps those 16-tile blocks into
+the fight scene's tile cache for 32x32 body sprites only (fightscene.js `drawSprite`), so shots,
+flames and explosions still come from the sheet and the choreography is untouched; the modern board's
+token takes the rest pose. `fightName` is the name the fight scenes show (up to 9 letters).

@@ -8,13 +8,15 @@ import { kindOf, PALS, spriteBank, tileCache, poseOf } from '../game/fightscene.
 import { battlePalette, unitIcon, unitTypeGfx } from '../maps.js';
 import { artSprites } from '../unitart.js';
 import { rgba, indexedToRgba } from './upscale.js';
+import { ownPoseTiles } from '../art/own.js';
 
 // { w, h, px: Uint32Array } for a unit type and army (2 = neutral: drawn in army A's colours,
-// greyed by the board). `icon`: a ship's own map icon (js/art/own.js) in place of the ROM's.
-export function tokenPixels(rom, type, army, icon = null) {
+// greyed by the board). `icon`: a ship's own map icon (js/art/own.js) in place of the ROM's;
+// `own`: a type's own art set, whose fight poses replace a small craft's (js/art/own.js).
+export function tokenPixels(rom, type, army, icon = null, own = null) {
   const kind = kindOf(type), side = army === 1 ? 1 : 0;
   let t;
-  if (kind === 'craft') t = craftSprite(rom, type, side);
+  if (kind === 'craft') t = craftSprite(rom, type, side, own && own.poses ? own : null);
   else if (kind === 'ship') { const ic = icon || unitIcon(rom, side, unitTypeGfx(rom, type)); t = { w: ic.w, h: ic.h, px: indexedToRgba(ic, palOf(rom)) }; }
   else t = structArt(rom, type);
   // the enemy faces the other way (the map icons already do)
@@ -25,9 +27,10 @@ export function tokenPixels(rom, type, army, icon = null) {
 let palCache = null, palRom = null;
 const palOf = (rom) => (palRom === rom ? palCache : (palRom = rom, palCache = battlePalette(rom)));
 
-function craftSprite(rom, type, side) {
+function craftSprite(rom, type, side, own) {
   const pal = paletteFromBytes(rom.body(PALS.craft[side])).slice(0, 16).map((c) => rgba(c));
-  const tiles = tileCache(spriteBank(rom, type, 0)), base = poseOf(type).idle, px = new Uint32Array(32 * 32);
+  const sheet = tileCache(spriteBank(rom, type, 0)), tiles = own ? ownPoseTiles(own, sheet) : sheet;
+  const base = poseOf(type).idle, px = new Uint32Array(32 * 32);
   for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
     const sx = 31 - x;   // the sheets face left: flipped so army A faces right
     const c = tiles(base + (y >> 3) * 16 + (sx >> 3))[(y & 7) * 8 + (sx & 7)];

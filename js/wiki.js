@@ -312,7 +312,8 @@ function expansionUnitsHtml() {
   const extra = [23, 24].filter((t) => T[t] && !T[t].cut);   // ROM units the expansion makes buildable
   const range = (w) => (w.max > w.min ? `${w.min}–${w.max}` : w.min);
   const wtxt = (u) => u.weapons.filter((w) => w && w.power).map((w) => `${MODES[w.mode][0]}${w.power} @${range(w)}`).join(', ') || '—';
-  const sideOf = (src) => [src.buy ? `Galt (build from mission ${src.buy})` : '', src.union.length ? `Union (missions ${src.union.join(', ')})` : ''].filter(Boolean).join(' · ') || 'not fielded';
+  const sideOf = (src, u) => [src.buy ? `Galt (build from mission ${src.buy})` : '', src.union.length ? `Union (missions ${src.union.join(', ')})` : ''].filter(Boolean).join(' · ')
+    || (u && u.unionOnly ? 'Union only (the new campaign)' : 'not fielded');
   let html = `<h2 id="expansion-units">Expansion units <small>Galt remnant</small></h2>
     <p class="lede">Units the original ROM defines but never uses, brought back by the expansion, its new machines, and ROM units the
     expansion lets you build. The ROM gives the cut units no graphics of their own, so each one borrows another unit's art, recoloured, and is tagged with its model on the map.
@@ -322,7 +323,7 @@ function expansionUnitsHtml() {
   for (const u of [...list, ...extra.map((t) => T[t])]) {
     const src = xpSources(u.type), anchor = list.includes(u) ? `xunit-${u.type}` : `unit-${u.type}`;
     html += `<tr><td data-v="${esc(xname(u.type))}"><a href="#${anchor}">${esc(xname(u.type))}</a> <span class="mono dim">${esc(u.code)}</span></td>
-      <td data-v="${src.buy ? 'a' : 'b'}${esc(sideOf(src))}">${esc(sideOf(src))}</td><td data-v="${price(T, u.type)}">${price(T, u.type)}</td><td data-v="${u.hp}">${u.hp}</td>
+      <td data-v="${src.buy ? 'a' : 'b'}${esc(sideOf(src, u))}">${esc(sideOf(src, u))}</td><td data-v="${price(T, u.type)}">${price(T, u.type)}</td><td data-v="${u.hp}">${u.hp}</td>
       <td data-v="${u.move}">${u.move}</td><td data-v="${u.evasion}">${Math.round(u.evasion * 100 / 128)}%</td><td data-v="${esc(wtxt(u))}" class="mono">${esc(wtxt(u))}</td></tr>`;
   }
   html += `</tbody></table><p class="note">Expansion rules on ROM units: ${[34, 26, 23, 24].map((t) => `<a href="#unit-${t}">${esc(nameOf(t))}</a>`).join(', ')} (see the notes on their entries).</p><div class="grid">`;
@@ -333,11 +334,11 @@ function expansionUnitsHtml() {
       <h3>${esc(xname(u.type))}</h3><div class="role"><span class="mono">${esc(u.code)}</span>${tx?.short ? ` · ${esc(tx.short)}` : ''}</div>
       <span class="icons" data-xicons="${u.type}"></span></div></header>
       <div class="stats"><span>HP <b>${u.hp}</b></span><span>Move <b>${u.move}</b></span><span>Evasion <b>${Math.round(u.evasion * 100 / 128)}%</b></span><span>Price <b>${price(T, u.type)}</b></span></div>
-      <p class="note">${esc(sideOf(src))}</p>`;
+      <p class="note">${esc(sideOf(src, u))}</p>`;
     html += weapons.length ? `<table><tr><th>Slot</th><th>Type</th><th>Range</th><th>Power</th></tr>${weapons.map((w) =>
       `<tr><td>W${w.slot + 1}</td><td>${MODES[w.mode]}</td><td>${range(w)}</td><td>${w.power}</td></tr>`).join('')}</table>` : '<p class="note">Unarmed.</p>';
     if (tx?.info) html += `<p>${esc(prose(tx.info[1]))}</p><p>${esc(prose(tx.info[2]))}</p>`;
-    const notes = [u.ownArt ? `Its own art (picture, map icon and fight hull, drawn for the expansion); it fights with the <a href="#unit-${u.look}">${esc(nameOf(u.look))}</a>'s moves. Map tag <span class="mono">${esc(u.tag || '')}</span>.`
+    const notes = [u.ownArt ? `Its own art (picture, map icon and ${u.type >= 59 && T[u.look] && T[u.look].category >= 8 ? 'fight poses' : 'fight hull'}, drawn for the expansion); it fights with the <a href="#unit-${u.look}">${esc(nameOf(u.look))}</a>'s moves. Map tag <span class="mono">${esc(u.tag || '')}</span>.`
       : `Borrows the <a href="#unit-${u.look}">${esc(nameOf(u.look))}</a>'s graphics; map tag <span class="mono">${esc(u.tag || '')}</span>.`];
     if (u.type < types.length) notes.push(`Cut from the original: <a href="#unit-${u.type}">ROM entry</a>.`);
     else notes.push('New in the expansion.');
