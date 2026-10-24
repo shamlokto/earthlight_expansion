@@ -153,6 +153,7 @@ function build(spec) {
     if (u.neutral) o.neutral = true;
     if (u.joiner) o.joiner = true;
     if (u.cargo) o.cargo = u.cargo;
+    if (u.level !== undefined) o.level = u.level;   // a named enemy ace (deployList passes it on)
     return o;
   });
   const g = units.find((u) => u.general);
@@ -167,6 +168,8 @@ function build(spec) {
     // suggested strategy steps and the map annotations that go with them
     ...(spec.chapter ? { chapter: spec.chapter } : {}), ...(spec.transmission ? { transmission: spec.transmission.trim() } : {}),
     ...(spec.strategy ? { strategy: spec.strategy } : {}), ...(spec.plan ? { plan: spec.plan } : {}),
+    // briefing dialogue with portraits (docs/STORY.md): [{ speaker, text }]
+    ...(spec.comms ? { comms: spec.comms } : {}),
   });
   return { mission: m, view };
 }
@@ -194,8 +197,10 @@ if (previewDir) mkdirSync(previewDir, { recursive: true });
 for (const name of wanted) {
   const spec = (await import(pathToFileURL(join(dir, `${name}.mjs`)).href)).default;
   const { mission, view } = build(spec);
+  // a name with a folder (remnant/knives) builds tools/missions/remnant/knives.mjs into missions/remnant/
+  mkdirSync(dirname(join(root, 'missions', `${spec.file || name}.json`)), { recursive: true });
   writeFileSync(join(root, 'missions', `${spec.file || name}.json`), JSON.stringify(mission));
   const counts = [0, 1].map((a) => mission.units.filter((u) => u.army === a && !u.neutral).length);
   console.log(`${name}: ${spec.screens.join('x')} screens, ${mission.pairs.length} graphics, units ${counts[0]} vs ${counts[1]}${mission.units.some((u) => u.neutral) ? ', neutral docks' : ''}, ${(mission.arrivals || []).length} arrival events`);
-  if (previewDir) await preview(mission, view, join(previewDir, `${name}.png`));
+  if (previewDir) await preview(mission, view, join(previewDir, `${basename(name)}.png`));
 }
