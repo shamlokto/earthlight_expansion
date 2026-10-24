@@ -152,6 +152,7 @@ function build(spec) {
     const o = { type: u.type, army: u.neutral ? 0 : u.army, x: u.x, y: u.y };
     if (u.neutral) o.neutral = true;
     if (u.joiner) o.joiner = true;
+    if (u.level !== undefined) o.level = u.level;
     if (u.cargo) o.cargo = u.cargo;
     return o;
   });
@@ -167,6 +168,8 @@ function build(spec) {
     // suggested strategy steps and the map annotations that go with them
     ...(spec.chapter ? { chapter: spec.chapter } : {}), ...(spec.transmission ? { transmission: spec.transmission.trim() } : {}),
     ...(spec.strategy ? { strategy: spec.strategy } : {}), ...(spec.plan ? { plan: spec.plan } : {}),
+    // the new campaign (docs/STORY.md): briefing dialogue with portraits, and per-choice epilogues
+    ...(spec.comms ? { comms: spec.comms } : {}), ...(spec.endings ? { endings: spec.endings } : {}),
   });
   return { mission: m, view };
 }
