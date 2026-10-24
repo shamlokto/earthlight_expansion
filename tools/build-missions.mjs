@@ -29,7 +29,10 @@ if (!romPath) { console.error('usage: node tools/build-missions.mjs --rom ROM [-
 const romFile = readFileSync(romPath);
 const rom = new Rom(await readRomFile({ arrayBuffer: async () => romFile.buffer.slice(romFile.byteOffset, romFile.byteOffset + romFile.length) }));
 if (!rom.isEarthLight()) throw new Error('not Earth Light (Japan)');
-const types = allUnitTypes(rom);
+const romTypes = allUnitTypes(rom);
+// the expansion's own types (58+, e.g. the Selene Kai) come from its unit data
+const xpTypes = JSON.parse(readFileSync(join(root, 'js/expansion/data/units.json'), 'utf8')).units;
+const types = Object.assign([...romTypes], ...xpTypes.map((t) => (romTypes[t.type] ? {} : { [t.type]: t })));
 
 // ------------------------------------------------------------------ terrain characters
 export const TERRAIN = { '.': 0, m: 1, ':': 2, a: 3, p: 4, g: 5, '~': 6, '#': 7, d: 8, '=': 9, W: 10, t: 11, _: 12, H: 13 };
@@ -170,6 +173,8 @@ function build(spec) {
     ...(spec.strategy ? { strategy: spec.strategy } : {}), ...(spec.plan ? { plan: spec.plan } : {}),
     // briefing dialogue with portraits (docs/STORY.md): [{ speaker, text }]
     ...(spec.comms ? { comms: spec.comms } : {}),
+    // the finale's epilogues by the campaign's choice (docs/STORY.md), falling back to `ending`
+    ...(spec.endings ? { endings: Object.fromEntries(Object.entries(spec.endings).map(([k, v]) => [k, v.trim()])) } : {}),
   });
   return { mission: m, view };
 }

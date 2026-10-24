@@ -1,0 +1,7 @@
+{"campaign":"remnant","act":3,"note":"Act III entries for missions/remnant/index.json (docs/STORY.md); unlocks apply once the mission is won.","missions":[
+{"no":8,"title":"The Gate","file":"missions/remnant/gate.json","unlocks":[42],"hint":"Beam-proof lanes: the magnetic corridor leads to the north gate past the Dragon turrets."},
+{"no":9,"title":"Vane's Last Stand","file":"missions/remnant/laststand.json","unlocks":[31],"hint":"Many attackers: Vane's Talos is level 8; surround it in open space, away from the comet's tail."},
+{"no":10,"title":"Atmosphere","file":"missions/remnant/atmosphere.json","unlocks":[43],"hint":"Fighters and the captured Abaddon: four carriers in an asteroid ring, a strike group hidden in the atmosphere."},
+{"no":11,"title":"Olympos Again","file":"missions/remnant/olympos.json","unlocks":[32],"hint":"Fighters first: three Abaddons wait for your capital ships around the citadel."},
+{"no":12,"title":"Kessrin","file":"missions/remnant/kessrin.json","unlocks":[],"hint":"Magnetic belts lead to the gravity ring's west opening; your Abaddon can end the Leviathan from four hexes."}
+]}
