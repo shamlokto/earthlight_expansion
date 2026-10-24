@@ -13,7 +13,7 @@ import { decodeTile, paletteFromBytes, bgr555 } from '../gfx.js';
 import { InfoScreen } from './infoscreen.js';
 import { SFX, fireSfx } from '../audio/fightsfx.js';
 import { SHIP_ATTACKS, MELEE } from './fightdata.js';
-import { ownHullTiles, ownPoseBases, ownPoseTiles, ownPoseSet } from '../art/own.js';
+import { ownHullTiles, ownPoseBases, ownPoseTiles, ownPoseSet, ownHullSet } from '../art/own.js';
 
 const W = 256, H = 224;
 const T_BG = 0x04cce0, T_BGPAL = 0x04cd78, T_BGMAP1 = 0x04cd06, T_BGMAP = 0x04cd2c, T_SHEET = 0x04d038, T_SHEET2 = 0x04d072;
@@ -352,8 +352,9 @@ export class FightScene {
         const [hx, parts] = HULLS[side.type] || [HULL_X, HULL];
         // a ship under attack starts rocking when the first blow lands
         const bob = !otherFires ? null : this.melee ? MELEE_BOB : foe && foe.bob !== null ? foe.bob : T_FIRE + variant(other.type).hit;
-        return [{ right, ship: true, hx, parts, type: side.type, y0: 0, alive: true, dies: side.hpAfter === 0, seed: 0, own: side.own || null,
-          hits: Math.min(6, side.hp - side.hpAfter), rec, hull: rec || shipHull(rom, side.type, sheetOf(rom, side.type, this.slotOf(side), other.type)), bob,
+        const sheet = sheetOf(rom, side.type, this.slotOf(side), other.type), second = sheet !== sheetOf(rom, side.type, 0, other.type);
+        return [{ right, ship: true, hx, parts, type: side.type, y0: 0, alive: true, dies: side.hpAfter === 0, seed: 0, own: side.own ? ownHullSet(side.own, second) : null,
+          hits: Math.min(6, side.hp - side.hpAfter), rec, hull: rec || shipHull(rom, side.type, sheet), bob,
           modelledHits: !this.melee && !foe && !(rec && rec.R && otherFires) }];   // charging craft bring their own hits
       }
       const n = Math.min(8, side.hp), lost = Math.min(n, side.hp - side.hpAfter);

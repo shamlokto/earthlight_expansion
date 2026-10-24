@@ -7,11 +7,11 @@ import { Indexed } from '../gfx.js';
 import { SELENE_KAI } from './selenekai.js';
 import { LEVIATHAN } from './leviathan.js';
 import { DIRECTORATE_TALOS } from './dirtalos.js';
-import { PEGASUS } from './pegasus.js';
+import { AZORAS } from './azoras.js';
 import { PALLAS_JET, PALLAS_JET_SPENT, PALLAS_ROBOT } from './pallas.js';
 import { NAGA } from './naga.js';
 
-const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS, pegasus: PEGASUS,
+const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS, azoras: AZORAS,
   pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT, naga: NAGA };
 export const ownArt = (types, type) => SETS[types?.[type]?.ownArt] || null;
 
@@ -77,6 +77,15 @@ export function ownHullTiles(set) {
 // 32x32 pose, 16 tiles to a row) to a 32x32 picture in the colour numbers of the craft fight
 // rows. ownPoseTiles(set, tiles) is `tiles` (a fightscene.js tile cache) with those poses' 16
 // tiles each replaced; ownPoseBases(set) the pose tiles.
+// A ship's hull for the fight sheet in use: `hull2` (if any) stands in on the second sheet, as
+// the look's own second hull does (the Azoras: the Tiamat's top-down hull against ships).
+const secondHull = new WeakMap();
+export function ownHullSet(set, second) {
+  if (!second || !set.hull2) return set;
+  if (!secondHull.has(set)) secondHull.set(set, { ...set, hull: set.hull2 });
+  return secondHull.get(set);
+}
+
 // A set's poses for the fight sheet in use: `poses2` (if any) stand in on the second sheet, the one
 // weapon slots 1-3 load (fightscene.js sheetOf; the Pallas's sabre poses), `poses` on the first.
 const second = new WeakMap();
