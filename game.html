@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Earth Light</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="css/style.css">
   <style>
     .screen { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -83,6 +85,7 @@
     .points .grade { color: #ffd84a; letter-spacing: 2px; }
     .result { font-size: 18px; white-space: pre-line; max-width: 560px; }
   </style>
+  <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
   <header class="top">
@@ -117,7 +120,7 @@
         <button class="btn" id="bLoad" hidden></button>
         <button class="btn" id="bNew">New campaign</button>
         <button class="btn" id="bSelect">Mission select</button>
-        <a class="btn" href="expansion.html" style="text-align:center;text-decoration:none">Expansion: Galt remnant</a>
+        <a class="btn" href="expansion.html">Expansion: Galt remnant</a>
         <label class="row" style="justify-content:center"><input type="checkbox" id="optFights" checked> Fight scenes</label>
         <label class="row" style="justify-content:center" id="hardRow" hidden><input type="checkbox" id="optHard"> Hard mode (attack ×2)</label>
       </div>
