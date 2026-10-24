@@ -90,8 +90,17 @@ export function ensureAthena(s) {
 // price, so every unit can be tried. Turning it off (s.beta = false) restores the earned supply.
 export const beta = (s) => s.beta !== false;
 
+// Unique machines (owner, 2026-10-24: too strong to field more than one): a type marked `unique`
+// may be in the roster once, counting all its forms (spent, loaded, transformed).
+const family = (types, t) => { let x = t; for (let i = 0; i < 4; i++) { const u = types[x]; const n = u.armed ?? u.empty ?? u.formOf; if (n === undefined) break; x = n; } return x; };
+export const isUnique = (types, type) => !!types[family(types, type)].unique || !!types[type].unique;
+export function ownsUnique(s, types, type, except = []) {
+  return isUnique(types, type) && s.roster.some((r) => !except.includes(r.id) && family(types, r.type) === family(types, type));
+}
+
 export function build(s, types, type) {
   const cost = price(types, type);
+  if (ownsUnique(s, types, type)) return false;
   if (!beta(s) && (s.builds >= MAX_BUILDS || s.supply < cost)) return false;
   if (!beta(s)) s.supply -= cost;
   s.builds++;
@@ -106,7 +115,7 @@ export const tradeCost = (s, types, giveIds, type) =>
   Math.max(0, price(types, type) - s.roster.filter((r) => giveIds.includes(r.id)).reduce((t, r) => t + price(types, r.type), 0));
 export function trade(s, types, giveIds, type) {
   const give = s.roster.filter((r) => giveIds.includes(r.id)), cost = tradeCost(s, types, giveIds, type);
-  if (!give.length || (!beta(s) && s.supply < cost)) return false;
+  if (!give.length || (!beta(s) && s.supply < cost) || ownsUnique(s, types, type, giveIds)) return false;
   if (!beta(s)) s.supply -= cost;
   const best = give.reduce((a, b) => (b.level > a.level ? b : a));
   s.roster = s.roster.filter((r) => !giveIds.includes(r.id) || r === best);

@@ -105,7 +105,8 @@ function confirmBuild(type) {
     <ul class="buyweap">${weapons}</ul>${info ? `<p class="buyinfo">${esc(info)}</p>` : ''}
     ${t.move === 0 ? '<p class="muted">Fixed battery: it cannot move. Load it into a Crab on the roster (its Carries menu) and deploy the Crab: in battle it sets the battery down on bedrock, an asteroid, a fortress deck or a turret railway.</p>' : ''}
     <p><a href="wiki.html#${anchor}" target="_blank" rel="noopener">Full wiki entry →</a></p>
-    <div class="row"><button class="btn primary" id="buyYes" ${beta || (state.supply >= cost && state.builds < C.MAX_BUILDS) ? '' : 'disabled'}>Buy${beta ? ' (free, beta)' : ` for ${cost} supply`}</button><button class="btn" id="buyNo">Cancel</button></div>`;
+    ${C.isUnique(types, type) ? `<p class="muted">${C.ownsUnique(state, types, type) ? 'You already have one: only one may serve at a time.' : 'Unique: only one may serve at a time.'}</p>` : ''}
+    <div class="row"><button class="btn primary" id="buyYes" ${!C.ownsUnique(state, types, type) && (beta || (state.supply >= cost && state.builds < C.MAX_BUILDS)) ? '' : 'disabled'}>Buy${beta ? ' (free, beta)' : ` for ${cost} supply`}</button><button class="btn" id="buyNo">Cancel</button></div>`;
   $('buyNo').onclick = () => d.close();
   $('buyYes').onclick = () => { d.close(); if (C.build(state, types, type)) { save(); render(); } };
   d.showModal();
@@ -186,12 +187,12 @@ function render() {
     <p class="muted">Each machine comes with a new pilot at level 0.${beta ? '' : state.next >= (index.allFrom ?? Infinity) ? ' Every machine type is now available.' : ` More types unlock as the campaign goes on; all of them from mission ${(index.allFrom ?? 0) + 1}.`}</p><div class="shop">`;
   const shopKey = { supply: byPrice, type: byType, name: byName, new: (a, b) => b - a }[sorting.shop];
   for (const t of (beta ? C.marketTypes(types) : unlocked().map((k) => types[k])).sort((a, b) => shopKey(a.type, b.type))) {
-    const cost = C.price(types, t.type), ok = beta || (state.supply >= cost && state.builds < C.MAX_BUILDS);
+    const cost = C.price(types, t.type), ok = !C.ownsUnique(state, types, t.type) && (beta || (state.supply >= cost && state.builds < C.MAX_BUILDS));
     html += `<button class="btn shopitem" data-build="${t.type}" ${ok ? '' : 'disabled'}>${art(t.type) ? `<img src="${art(t.type)}" alt="">` : icon(t.type)}<span><b>${esc(name(t.type))}</b><small>${cost} supply${beta ? ' · free' : ''}</small></span></button>`;
   }
   html += `</div></section><section class="box"><h2>Trade <small>giving ${picked.size} · worth ${tradeValue}</small></h2>
     <p class="muted">Tick <b>Trade</b> on machines in the roster to give them. You get one machine ${beta ? 'of any type (beta)' : `worth up to their total plus your supply (${state.supply})`}; the best pilot moves to it and keeps their level, so veterans step up to stronger machines.</p>
-    <div class="row"><select id="tradeFor">${C.marketTypes(types).map((t) => `<option value="${t.type}" ${!beta && C.price(types, t.type) > tradeValue + state.supply ? 'disabled' : ''}>${esc(name(t.type))} · ${C.price(types, t.type)}${!beta && picked.size && C.price(types, t.type) > tradeValue ? ` (+${C.price(types, t.type) - tradeValue} supply)` : ''}</option>`).join('')}</select>
+    <div class="row"><select id="tradeFor">${C.marketTypes(types).map((t) => `<option value="${t.type}" ${(!beta && C.price(types, t.type) > tradeValue + state.supply) || C.ownsUnique(state, types, t.type, [...picked]) ? 'disabled' : ''}>${esc(name(t.type))} · ${C.price(types, t.type)}${!beta && picked.size && C.price(types, t.type) > tradeValue ? ` (+${C.price(types, t.type) - tradeValue} supply)` : ''}</option>`).join('')}</select>
     <button class="btn" id="tradeBtn" ${picked.size ? '' : 'disabled'}>Trade</button>
     <button class="btn" id="sellBtn" ${picked.size && picked.size < state.roster.length ? '' : 'disabled'}>Sell for ${tradeValue}</button></div>
     <p class="muted">Sell turns the ticked machines into supply at the same price; their pilots leave with them.</p></section></div>`;

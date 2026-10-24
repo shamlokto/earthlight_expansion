@@ -4424,6 +4424,7 @@
   },
   {
    "type": 61,
+   "unique": true,
    "name": "Pegasus",
    "nameJp": "ペガサス",
    "code": "GX-01",
