@@ -558,8 +558,29 @@ music (`$02:9B70` sets `$06EC/$06ED` when a reinforcement key matches), reinforc
 * **Quantum Decimator** (`$01:A064`): after a fight where the attacker is type 43 (Abaddon) and
   the slot `$06B8` is 3, the normal defeat handling is skipped and `$02:E05E` runs on the target
   cell (`$06D3/$06D5`): explosions on the cell and its six neighbours (ring `$01:B942`), and
-  `$02:E10E` clears each one (`$7E:2352/2DD2/3852` = 0, open space) and destroys its unit. The
-  remake fires it at any hex in range 2–4 without a fight scene.
+  `$02:E10E` clears each one (`$7E:2352/2DD2/3852` = 0, open space) and destroys its unit.
+  Traced in the emulator (research/emu.py: `$02:E05E` run on a map-0 battle state, then 120
+  frames of the main loop):
+  * **Before the map effect** the fight scene plays as for any attack: the Abaddon's slot 3
+    launches its warhead (a large sphere with an engine flame) off to the right; the target is
+    not hit in the fight (no explosion recorded on a ship; small craft die as usual) and the
+    damage roll only shows on the info screen. Fight sound: command `$33` at the launch.
+    Recorded into fightdata.js as `43/3/c` and `43/3/s`.
+  * `$02:E05E` loads asset 200 (`$0FD7` = `$C8`, `$0FD9` = 2) to VRAM `$7800` with `$00:CFDE`,
+    spawns sprite object `$3F` (`$00:A94F`, `$0D2F` = 6) placed at the target cell's origin +
+    `$14` px (`$02:E380`), starts its animation script (`$02:E3E5` via `$00:8000`), sends sound
+    command **`$19`** (`$0A51`), sets the busy counter `$1E12` and starts task `$02:E0C9` with a
+    timer of **20 frames** (`$1424`).
+  * The fireball (60 fps frames from the call): nothing at frame 0–1; an ellipse about 23x18 px
+    at frame 2, 30x24 at 4, 44x32 at 6–9, 60x48 from frame 10 (flickering ±2 px every other
+    frame), white with a yellow, orange and red rim. At frame 20 the task clears the centre cell
+    (`$01:B942` → `$0722/$0724`) and its six neighbours (`$01:B962`, skipping cells off the map),
+    destroying their units, all hidden under the fireball. From frame 40 the sprite turns into an
+    orange ring, from 44 a thin dark red ring; it is gone at 50, when `$1E12` drops back to 0.
+    No palette effect or screen shake.
+  The remake plays it the same way (gameapp.js `detonate`, board.js `nuke`: the Classic board
+  draws this timeline; the modern board adds a white-out, shockwaves, debris and a plasma cloud).
+  The remake also lets the Decimator clear an empty hex in range 2–4; that has no fight scene.
 * **Mines**: Wisp (18), Pandora (17) and Remora (19) are category-15 units, no special code.
 * **Comet** (map 23): Comet Tail / Comet Body cells are part of the map; no code moves them.
 

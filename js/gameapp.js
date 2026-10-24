@@ -18,7 +18,8 @@ import { scenario } from './game/scenario.js';
 import { WIN_LINE, scriptFor } from './game/scripts.js';
 import { aiTurn } from './game/ai.js';
 import { mapPoints, rankOf, rankName } from './game/points.js';
-import { LABEL as EV, COMET_MAP, inLane, detachBurner, decimator, blast } from './game/events.js';
+import { LABEL as EV, COMET_MAP, inLane, detachBurner, decimator, blast, blastArea } from './game/events.js';
+import { SFX } from './audio/fightsfx.js';
 import { FightScene } from './game/fightscene.js';
 import { FightRenderer, fightScale } from './render/fightfx.js';
 import { Sound, mapMusic, SONGS, briefingSong } from './audio/sound.js';
@@ -38,6 +39,7 @@ const ALERT_GALT = 87, ALERT_UNION = 88, BABYLON_ALERT = 94;
 
 let rom, romEn = null, en = null, pal, types, battle, mission = 0;
 let sel = null, reach = null, targets = [], hosts = [], launching = null, busy = false, blastCells = null;
+let blastAim = null;   // the Decimator hex under the pointer: { x, y, cells, hit } (its blast preview)
 let range = null;   // your selected unit's fire range: every hex it could attack this turn (Set of 'x,y')
 let threat = null;   // an enemy unit's reach, shown when it is clicked: { u, move: Map, fire: Set }
 let cursor = null;   // keyboard cursor hex [x, y]
@@ -233,6 +235,7 @@ function wire() {
   // an expansion battle leaves for its own pages, so the base title never runs with `custom` set
   $('bRetreat').onclick = () => { if (busy) return; if (custom) location.href = custom.campaign ? interUrl() : 'game.html'; else showTitle({ menu: true }); };
   $('cv').addEventListener('click', onClick);
+  $('cv').addEventListener('mousemove', aimDecimator);
   document.addEventListener('keydown', onKey);
   $('mSetup').onclick = (e) => { e.preventDefault(); e.target.closest('details').open = false; if (!busy) setup('', true); };
   const start = () => { if ($('menuBox').hidden) showTitle({ menu: true }); };
@@ -316,7 +319,7 @@ function setupBoard(m) {
   const terr = renderMap(custom ? custom.rom : rom, info, { units: false });
   if (!board) { board = new Board($('board'), $('cv'), { rom, icon: maskedIcon }); board.active = () => !$('sBattle').hidden; }
   board.setTerrain(terr.img, pal);   // terrain classes come with the battle (board.update)
-  sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; blastCells = null; threat = null; range = null; $('log').innerHTML = '';
+  sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; blastCells = null; blastAim = null; threat = null; range = null; $('log').innerHTML = '';
   show('sBattle'); $('where').textContent = custom ? `expansion · ${custom.mission.title || custom.mission.name}` : `mission ${m + 1} · ${missionTitle(m)}`;
   return info;
 }
@@ -382,8 +385,10 @@ function runFight(e) {
   if (!$('optFights').checked) return Promise.resolve();
   // units with a borrowed look (js/look.js) fight with that type's sprites, under their own name
   const label = (u) => (types[u.type].look !== undefined ? { label: en ? en.unitNames[u.type] : types[u.type].name, code: types[u.type].code } : {});
-  const sideOf = (u, before, after, other, w) => ({ type: lookOf(types, u.type), army: u.army === NEUTRAL ? 1 - other.army : u.army, hp: before, hpAfter: after,
-    cls: battle.cls(u.x, u.y), slot: lookSlot(types, u.type, w?.slot), own: ownArt(types, u.type), ...label(u) });
+  // terrain under each side: the Decimator's fight was set up before its blast cleared the hexes (e.cls)
+  const clsOf = (u, i) => (e.cls ? e.cls[i] : battle.cls(u.x, u.y));
+  const sideOf = (u, before, after, other, w, i) => ({ type: lookOf(types, u.type), army: u.army === NEUTRAL ? 1 - other.army : u.army, hp: before, hpAfter: after,
+    cls: clsOf(u, i), slot: lookSlot(types, u.type, w?.slot), own: ownArt(types, u.type), ...label(u) });
   const seen = new Map(), v = (u) => {   // the same stand-in for a unit wherever the info screen meets it
     if (!u || types[u.type].look === undefined) return u;
     if (!seen.has(u)) { const own = ownArt(types, u.type); seen.set(u, { ...u, type: lookOf(types, u.type), ...label(u), ...(own ? { icon: ownIcon(own, u.army === 1 ? 1 : 0) } : {}) }); }
@@ -392,9 +397,9 @@ function runFight(e) {
   const ring = (r) => ({ centre: v(r.centre), around: r.around.map((n) => ({ ...n, u: v(n.u) })) });
   const info = e.info && { ...e.info, att: { ...e.info.att, unit: v(e.info.att.unit) }, def: { ...e.info.def, unit: v(e.info.def.unit) },
     encircle: ring(e.info.encircle), support: e.info.support.map(ring) };
-  const scene = new FightScene(rom, sideOf(e.att, e.before[0], e.after[0], e.def, e.w), sideOf(e.def, e.before[1], e.after[1], e.att, e.cw),
+  const scene = new FightScene(rom, sideOf(e.att, e.before[0], e.after[0], e.def, e.w, 0), sideOf(e.def, e.before[1], e.after[1], e.att, e.cw, 1),
     { counter: !!e.cw, info, textRom: romEn, names: en ? en.unitNames : null });
-  scene.att.cls = battle.cls(e.att.x, e.att.y);
+  scene.att.cls = clsOf(e.att, 0);
   const ov = $('fight'), cv = $('fightCv'), classic = classicFights();
   ov.hidden = false;
   const S = classic ? 1 : fightScale(cv.clientWidth || 768);
@@ -437,7 +442,7 @@ function maskedIcon(u) {
 // The board draws itself every frame from this state (js/render/board.js).
 function draw() {
   music();
-  board.update({ battle, reach, range, launching, targets, hosts, threat, blastCells, sel, cursor, inLane });
+  board.update({ battle, reach, range, launching, targets, hosts, threat, blastCells, blastAim, sel, cursor, inLane });
 }
 
 function hud(msg) {
@@ -531,8 +536,8 @@ function select(u) {
   const legend = `<p class="dim">Blue: move${hosts.length ? ' · yellow: board (full repair, re-arm)' : ''} · faint red: fire range · red: attack.</p>`;
   draw(); hud(unitCard(u, cargoPanel(u) + again + legend + (tf || det ? `<div class="row">${tf}${det}</div>` : '')));
   if (dec.length) $('bDecimator').onclick = () => {
-    reach = null; range = null; targets = []; hosts = []; blastCells = dec;
-    draw(); hud(unitCard(u, '<p>Click a purple hex: the Decimator clears it and the six hexes around it, destroying whatever is there.</p>'));
+    reach = null; range = null; targets = []; hosts = []; blastCells = dec; blastAim = null;
+    draw(); hud(unitCard(u, decimatorHelp()));
   };
   if (u.burner && u.army === 0) $('bDetach').onclick = async () => { detachBurner(battle, u); log(`<span class="armyA">${nameOf(u)}</span> detached its afterburner`); await alerts([EV.burner]); select(u); };
   for (const b of $('info').querySelectorAll('[data-launch]')) b.onclick = () => startLaunch(battle.units[+b.dataset.launch]);
@@ -545,7 +550,7 @@ function startLaunch(u) {
   draw(); hud(unitCard(u, '<p>Click a green hex to launch.</p>'));
 }
 
-function clearSel() { sel = null; reach = null; range = null; targets = []; hosts = []; launching = null; blastCells = null; threat = null; draw(); }
+function clearSel() { sel = null; reach = null; range = null; targets = []; hosts = []; launching = null; blastCells = null; blastAim = null; threat = null; draw(); }
 
 // Where an enemy unit can move this turn (its full movement, held up by your zones of control) and
 // every hex it could fire on from there: each armed weapon's range, from every hex it can reach, or
@@ -657,13 +662,42 @@ function forecastHtml(a, d) {
   return `<p>Forecast: deal ≈${f.dealt.toFixed(1)}, take ≈${f.taken.toFixed(1)}</p>`;
 }
 
+// Decimator aiming: hovering a purple hex previews the seven hexes it would clear and lists
+// the units on them (your own in red).
+const DECIMATOR_HELP = '<p>Click a purple hex: the Decimator clears it and the six hexes around it to open space, destroying whatever is there.</p>';
+function decimatorHelp() {
+  if (!blastAim) return DECIMATOR_HELP;
+  const list = blastAim.hit.map((u) => `<li class="${u.army === battle.army ? 'warn' : ''}">${u.army === battle.army ? '⚠ ' : ''}<span class="${side(u.army)}">${nameOf(u)}</span>${battle.cargo(u).length ? ` (+${battle.cargo(u).length} aboard)` : ''}</li>`).join('');
+  const own = blastAim.hit.some((u) => u.army === battle.army);
+  return `${DECIMATOR_HELP}<p><b>Ground zero (${blastAim.x}, ${blastAim.y})</b>: ${blastAim.hit.length ? `destroys <ul class="blastlist">${list}</ul>` : 'no units, clears the hexes.'}</p>${own ? '<p class="warn"><b>Your own units are in the blast.</b></p>' : ''}`;
+}
+function aimDecimator(ev) {
+  if (!blastCells || busy || !sel) { if (blastAim) { blastAim = null; draw(); } return; }
+  const [x, y] = board.cellAt(ev);
+  const on = blastCells.some(([cx, cy]) => cx === x && cy === y);
+  if (on && blastAim && blastAim.x === x && blastAim.y === y) return;
+  if (!on && !blastAim) return;
+  blastAim = on ? (() => { const cells = blastArea(battle, x, y); return { x, y, cells, hit: cells.map(([cx, cy]) => battle.unitAt(cx, cy)).filter(Boolean) }; })() : null;
+  draw(); hud(unitCard(sel, decimatorHelp()));
+}
+
+// The Decimator going off (the player's or the AI's, after events.blast): as in the original,
+// a fight scene when it was fired at a unit (the Abaddon's slot 3 launching its warhead), then
+// the detonation on the map; the hexes are repainted as open space when the fireball clears them.
+async function detonate(e) {
+  board.holdBlast(e);
+  if (e.fight) await runFight(e.fight);
+  draw();
+  if (sound) sound.playSfx(SFX.NUKE);
+  await board.nuke(e, () => { paintTerrain(); draw(); });
+  draw();
+}
+
 async function fireDecimator(a, x, y) {
   const e = blast(battle, a, x, y);
   log(`<span class="armyA">${nameOf(a)}</span> fired the Quantum Decimator: ${e.hit.length ? e.hit.map((u) => `<span class="${side(u.army)}">${nameOf(u)}</span>`).join(', ') + ' destroyed' : 'path cleared'}`);
-  sel = null; reach = null; range = null; targets = []; hosts = []; blastCells = null; busy = true;
-  if (sound) sound.playSfx(0x3F);   // explosion
-  await flash(e.cells, 'rgba(255,255,255,.8)');
-  paintTerrain();
+  sel = null; reach = null; range = null; targets = []; hosts = []; blastCells = null; blastAim = null; busy = true;
+  await detonate(e);
   busy = false;
   if (checkEnd()) { draw(); return; }
   if (a.hp && a.reMove) select(a); else { draw(); hud(unitCard(a)); }
@@ -734,13 +768,12 @@ async function enemyTurn() {
   if (battle.army !== 1 || checkEnd()) return;
   busy = true;
   for (const step of aiTurn(battle)) {
+    if (step.kind === 'blast') board.holdBlast(step);   // its victims stay drawn until the fireball
     draw(); hud();
     if (step.kind === 'attack') { logAttack(step); await runFight(step); draw(); }
-    else if (step.kind === 'blast') {   // Galt Abaddon fired the Quantum Decimator
+    else if (step.kind === 'blast') {   // the Union's Abaddon fired the Quantum Decimator
       log(`<span class="armyB">${nameOf(step.att)}</span> fired the Quantum Decimator${step.hit.length ? ': ' + step.hit.map((u) => `<span class="${side(u.army)}">${nameOf(u)}</span>`).join(', ') + ' destroyed' : ''}`);
-      if (sound) sound.playSfx(0x3F);
-      await flash(step.cells, 'rgba(255,255,255,.8)');
-      paintTerrain(); draw();
+      await detonate(step);
     }
     else await new Promise((r) => setTimeout(r, 120));
     if (battle.winner() !== null) break;
