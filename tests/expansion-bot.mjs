@@ -140,6 +140,8 @@ for (let r = 0; r < runs; r++) {
     if (b.winner() !== null) break;
     b.endTurn();
   }
+  if (process.env.KILLS) { const k = {}; for (const e of b.log) if (e.def && e.after && e.def.army === 0 && e.after[1] === 0) k[types[e.att.type].code] = (k[types[e.att.type].code] || 0) + 1; for (const e of b.log) if (e.att && e.after && e.att.army === 0 && e.after[0] === 0) k["counter:" + types[e.def.type].code] = (k["counter:" + types[e.def.type].code] || 0) + 1; console.log("kills of player units", JSON.stringify(k)); }
+  if (process.env.ENDSTATE) console.log("end", b.turn, b.result?.reason, "player", b.forces(0).filter((u) => b.type(u).move > 0).length, "union", b.alive(1).filter((u) => u.type !== 18).length, "cortex", b.units.filter((u) => u.type === 56).map((u) => u.hp).join("/"), "crabs", b.units.filter((u) => u.type === 26 || u.type === 27).map((u) => u.hp + "@" + u.x).join(" "));
   if (process.env.TRACE && r === 0) console.log("end", b.turn, b.army, b.result, b.units.filter((u) => u.army === 0).map((u) => `${types[u.type].code}:${u.hp}${u.carrier ? "@" + (u.carrier.id ?? "x") : ""}${u.escaped ? "!" : ""}`).join(" "));
   if (process.env.KILLS && r === 0) {   // who destroyed what, from the battle log
     const k = {}; for (const e of b.log) if (e.after) for (const [u, i] of [[e.def, 1], [e.att, 0]]) if (e.before[i] > 0 && e.after[i] === 0) { const by = i ? e.att : e.def; const key = `${by.army ? 'U' : 'P'}:${types[by.type].code}->${types[u.type].code}`; k[key] = (k[key] || 0) + 1; }
