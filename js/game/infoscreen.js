@@ -115,7 +115,7 @@ export class InfoScreen {
     for (const [s, col, kcol, ncol] of sides) {
       const u = s.unit;
       // (u.label / u.code: an expansion unit drawn with another type's graphics, js/look.js)
-      if (u.label || this.english) text(19, col - (col === 2 ? 1 : 0), (u.label || this.names[u.type]).toUpperCase().slice(0, 8));
+      if (u.label || this.english) text(19, col - (col === 2 ? 1 : 0), (u.label || this.names[u.type]).toUpperCase().slice(0, u.label ? 9 : 8));   // a label may use the ninth column
       else bytes(19, col, NAMES + u.type * 8, 8);
       if (u.code) text(20, col - (col === 2 ? 1 : 0), u.code.toUpperCase().slice(0, 7));
       else bytes(20, col - (this.english && col === 2 ? 1 : 0), CODES + u.type * 8, 7);

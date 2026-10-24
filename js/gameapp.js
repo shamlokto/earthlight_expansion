@@ -384,7 +384,7 @@ if ($('optClassicFights')) {
 function runFight(e) {
   if (!$('optFights').checked) return Promise.resolve();
   // units with a borrowed look (js/look.js) fight with that type's sprites, under their own name
-  const label = (u) => (types[u.type].look !== undefined ? { label: en ? en.unitNames[u.type] : types[u.type].name, code: types[u.type].code } : {});
+  const label = (u) => (types[u.type].look !== undefined ? { label: types[u.type].fightName || (en ? en.unitNames[u.type] : types[u.type].name), code: types[u.type].code } : {});
   // terrain under each side: the Decimator's fight was set up before its blast cleared the hexes (e.cls)
   const clsOf = (u, i) => (e.cls ? e.cls[i] : battle.cls(u.x, u.y));
   const sideOf = (u, before, after, other, w, i) => ({ type: lookOf(types, u.type), army: u.army === NEUTRAL ? 1 - other.army : u.army, hp: before, hpAfter: after,

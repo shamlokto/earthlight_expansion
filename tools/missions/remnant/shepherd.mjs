@@ -1,7 +1,7 @@
 // Remnant 3, The Shepherd (docs/STORY.md): Prof. Ruess's convoy of Crabs, each carrying a Dragon
 // or Hydra battery, must cross the Hestia asteroid belt to the mining moon (mission 4). The
 // convoy's Crabs join the remnant (`joiner`), so whatever gets through is yours. Commander Lysa
-// Vane waits in the belt in her Directorate Talos (a level-8 Talos, standin for type 60) with a
+// Vane waits in the belt in her Directorate Talos (type 60, level 8) with a
 // hunter screen, and her second wing comes in behind the convoy on turn 5, hunting the Selene.
 // Escape: the General and four more units off the east edge.
 const COLS = 59, ROWS = 20;
@@ -90,7 +90,7 @@ The Crabs are slow in the rocks. Shepherd them.`,
     M: { type: 0, army: 0 }, T: { type: 1, army: 0 }, C: { type: 9, army: 0 }, L: { type: 8, army: 0 }, A: { type: 3, army: 0 },
     // Ruess's convoy: loaded Crabs that join the remnant if they survive
     K: { type: 27, army: 0, joiner: true }, H: { type: 27, army: 0, joiner: true },
-    V: { type: 2, army: 1, level: 8 },        // standin: 60 (Directorate Talos), Commander Vane
+    V: { type: 60, army: 1, level: 8 },       // Commander Vane's Directorate Talos
     t: { type: 2, army: 1 }, m: { type: 0, army: 1 }, e: { type: 3, army: 1 }, l: { type: 8, army: 1 },
     b: { type: 50, army: 1 }, f: { type: 49, army: 1 }, h: { type: 39, army: 1 }, c: { type: 9, army: 1 },
   },

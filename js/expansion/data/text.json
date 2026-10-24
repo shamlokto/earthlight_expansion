@@ -63,7 +63,9 @@
   "Goliath",
   "Cortex",
   "Adzam",
-  "Selene Kai"
+  "Selene Kai",
+  "Leviathan",
+  "Directorate Talos"
  ],
  "unitInfo": [
   {
@@ -638,6 +640,26 @@
     "   Carrier\n   Large",
     "Fast Carrier\n\nThe Selene rebuilt with new\nengines and a beam turret.\nFaster than any warship.",
     "The Kai outruns everything in\nthe Union fleet. It drops\nfighters deep behind the line\nand is gone before the\ncruisers can turn."
+   ]
+  },
+  {
+   "type": 59,
+   "name": "Leviathan",
+   "short": "Directorate Flagship",
+   "info": [
+    "   Large\n   Warship",
+    "Directorate Flagship\n\nArmed with three heavy beam\nturrets, flank missile cells\nand twin railgun batteries.",
+    "Marshal Kessrin's own ship.\nIts black armour shrugs off\nwhat would sink a Nodens.\nKill its escort first, then\ncome at it from every side."
+   ]
+  },
+  {
+   "type": 60,
+   "name": "Directorate Talos",
+   "short": "Elite Close Combat Hunter",
+   "info": [
+    "   Melee\n   Elite",
+    "Elite Close Combat Hunter\n\nA rebuilt Talos with heavier\narmour, uprated thrusters and\na longer beamsaber.",
+    "Flown only by the Security\nDirectorate's picked pilots.\nFaster and harder to hit than\nany Talos, and just as useless\nin magnetic fields."
    ]
   }
  ],

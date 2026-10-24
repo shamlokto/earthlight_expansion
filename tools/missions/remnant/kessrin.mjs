@@ -1,6 +1,6 @@
 // Galt remnant, mission 12, Kessrin (docs/STORY.md, Act III, the finale). Kessrin's fleet in low
 // Earth orbit, drawn up around his flagship, the Leviathan, above the atmosphere.
-//   * the Leviathan (a Nodens until the new unit lands; the only one in his fleet) must be sunk;
+//   * the Leviathan (type 59, the only one in his fleet) must be sunk;
 //   * a gravity ring around the flagship opens to the west and the north-east; magnetic belts
 //     are the beam-proof lanes in; asteroid fields give the mecha cover;
 //   * Kessrin's guard: Directorate Talos (level-6 Talos), two Abaddons, two battleships, cruisers;
@@ -66,7 +66,7 @@ const units = rows.map((_, j) => Array.from({ length: COLS }, (_, i) => U[`${i +
 
 export default {
   name: 'KESSRIN', title: 'Kessrin', file: 'remnant/kessrin', screens: [4, 4],
-  objective: { kind: 'flagship', type: 32 }, turnLimit: 28, cap: 20, music: 29,
+  objective: { kind: 'flagship', type: 59 }, turnLimit: 28, cap: 20, music: 29,
   goal: "Sink Marshal Kessrin's flagship, the Leviathan, within 28 turns. If the general falls, it is over.",
   chapter: 'Chapter 12 · Low Earth orbit',
   transmission: "I gave the Union a victory, General, and you gave it a conscience. Only one of those was ever going to fit on a battleship.",
@@ -148,8 +148,8 @@ The Union comes home, poorer and owing nobody.`,
     H: { type: 39, army: 0 },                 // Hannibal
     R: { type: 40, army: 0 },                 // Regulus
     A: { type: 43, army: 0 },                 // Abaddon, the remnant's last Decimator
-    V: { type: 32, army: 1 },                 // the Leviathan, Kessrin's flagship (the objective) // standin: 59
-    d: { type: 2, army: 1, level: 6 },        // Directorate Talos, the flagship guard // standin: 60
+    V: { type: 59, army: 1 },                 // the Leviathan, Kessrin's flagship (the objective)
+    d: { type: 60, army: 1, level: 6 },       // Directorate Talos, the flagship guard
     X: { type: 43, army: 1 },                 // Abaddon (Quantum Decimator)
     Q: { type: 30, army: 1 },                 // Tiamat
     W: { type: 31, army: 1 },                 // Asura-II
@@ -159,7 +159,7 @@ The Union comes home, poorer and owing nobody.`,
     k: { type: 34, army: 1 },                 // Artemis carrier
     f: { type: 49, army: 1 },                 // Fenrir
     u: { type: 51, army: 1 },                 // Gulon
-    o: { type: 2, army: 1, level: 6 },        // Directorate Talos, the forward pickets // standin: 60
+    o: { type: 60, army: 1, level: 6 },       // Directorate Talos, the forward pickets
     l: { type: 8, army: 1 },                  // Lobster
     n: { type: 9, army: 1 },                  // Crane
     e: { type: 3, army: 1 },                  // Medusa

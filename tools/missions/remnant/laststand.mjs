@@ -1,7 +1,7 @@
 // Galt remnant, mission 9, Vane's Last Stand (docs/STORY.md, Act III). A comet crossing high
 // Earth orbit: its body in the north-east, its tail sweeping west along the top of the map.
 // Commander Lysa Vane waits in the open with her squadron and calls the duel.
-//   * Vane flies a Directorate Talos (a level-8 Talos; the only Talos on the map) and must be
+//   * Vane flies a Directorate Talos (type 60, level 8; the only one on the map) and must be
 //     destroyed; her squadron is craft, mecha and artillery, no other Talos;
 //   * comet tail: a unit inside it can't be targeted (and stops when it enters); the comet body
 //     can't be entered;
@@ -57,7 +57,7 @@ const units = rows.map((_, j) => Array.from({ length: COLS }, (_, i) => U[`${i +
 
 export default {
   name: 'LASTSTAND', title: "Vane's Last Stand", file: 'remnant/laststand', screens: [3, 3],
-  objective: { kind: 'destroyType', type: 2 }, turnLimit: 20, cap: 14, music: 22,
+  objective: { kind: 'destroyType', type: 60 }, turnLimit: 20, cap: 14, music: 22,
   goal: "Destroy Commander Vane's Directorate Talos within 20 turns. If the general falls, it is over.",
   chapter: 'Chapter 9 · The comet, high Earth orbit',
   comms: [
@@ -104,7 +104,7 @@ Her flagship and its escort are coming up behind her. Destroy her Talos before t
     Y: { type: 16, army: 0 },                 // Cyclops
     S: { type: 38, army: 0 },                 // Selene
     R: { type: 40, army: 0 },                 // Regulus
-    V: { type: 2, army: 1, level: 8 },        // Commander Vane's Directorate Talos // standin: 60
+    V: { type: 60, army: 1, level: 8 },       // Commander Vane's Directorate Talos
     c: { type: 0, army: 1 },                  // Mars
     e: { type: 3, army: 1 },                  // Medusa
     l: { type: 8, army: 1 },                  // Lobster

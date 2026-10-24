@@ -34,7 +34,7 @@ const units = Array.from({ length: ROWS }, (_, j) => Array.from({ length: COLS }
 
 export default {
   name: 'GAMBIT', title: "Vane's Gambit", screens: [3, 2], file: 'remnant/gambit',
-  objective: { kind: 'destroyType', type: 2 }, turnLimit: 16, cap: 13, music: 15,
+  objective: { kind: 'destroyType', type: 60 }, turnLimit: 16, cap: 13, music: 15,
   goal: "Destroy Commander Vane's Directorate Talos within 16 turns.",
   chapter: 'Act II · The Fork · Mission 5',
   briefing: `
@@ -70,7 +70,7 @@ So we come to her, on our terms. The meteoroid banks north and south of the band
     M: { type: 0, army: 0 }, T: { type: 1, army: 0 }, K: { type: 2, army: 0 }, D: { type: 3, army: 0 },
     B: { type: 10, army: 0 }, C: { type: 9, army: 0 }, L: { type: 8, army: 0 }, S: { type: 38, army: 0 },
     H: { type: 39, army: 0 }, Q: { type: 40, army: 0 },
-    v: { type: 2, army: 1, level: 9 },        // Vane's Directorate Talos (standin: 60)
+    v: { type: 60, army: 1, level: 9 },       // Vane's Directorate Talos
     m: { type: 0, army: 1, level: 3 }, u: { type: 3, army: 1, level: 3 }, r: { type: 40, army: 1 }, c: { type: 42, army: 1 },
     h: { type: 39, army: 1 }, y: { type: 16, army: 1 },
     3: { type: 20, army: 1 }, 4: { type: 21, army: 1 },   // Echidna, Naga pods

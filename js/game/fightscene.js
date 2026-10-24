@@ -13,7 +13,7 @@ import { decodeTile, paletteFromBytes, bgr555 } from '../gfx.js';
 import { InfoScreen } from './infoscreen.js';
 import { SFX, fireSfx } from '../audio/fightsfx.js';
 import { SHIP_ATTACKS, MELEE } from './fightdata.js';
-import { ownHullTiles } from '../art/own.js';
+import { ownHullTiles, ownPoseBases, ownPoseTiles } from '../art/own.js';
 
 const W = 256, H = 224;
 const T_BG = 0x04cce0, T_BGPAL = 0x04cd78, T_BGMAP1 = 0x04cd06, T_BGMAP = 0x04cd2c, T_SHEET = 0x04d038, T_SHEET2 = 0x04d072;
@@ -317,6 +317,11 @@ export class FightScene {
     this.obj = obj;
     this.tilesL = tileCache(spriteBank(rom, this.leftSide.type, this.slotOf(this.leftSide), this.rightSide.type));
     this.tilesR = tileCache(spriteBank(rom, this.rightSide.type, this.slotOf(this.rightSide), this.leftSide.type));
+    // a small craft with its own fight poses (js/art/own.js): its 32x32 body sprites come from
+    // them, its shots and effects still from the sheet (drawSprite)
+    for (const [k, side] of [['tilesL', this.leftSide], ['tilesR', this.rightSide]]) {
+      if (side.own && side.own.poses) this[k].ownPoses = { bases: ownPoseBases(side.own), tiles: ownPoseTiles(side.own, this[k]) };
+    }
   }
 
   buildActors() {
@@ -536,7 +541,7 @@ export class FightScene {
     const dy = a.bob !== null && f >= a.bob ? bobAt(f - a.bob) : 0;
     // left-side x of the modelled hull: glides in at 1 px/frame, settling at frame 98
     const lx = a.hx - Math.max(0, HULL_ARRIVE - f);
-    if (a.own) this.drawOwnHull(img, a, f, dy, lx, X);
+    if (a.own && a.own.hull) this.drawOwnHull(img, a, f, dy, lx, X);
     else if (a.hull) for (const t of a.hull.hull) this.drawTrack(img, t, f, a.right, true, dy);
     else for (const [dx, y, t, fl] of a.parts) this.drawSprite(img, tiles, off + t, X(lx + dx), y + dy, 32, a.right ? !(fl & 1) : !!(fl & 1), row, !!(fl & 2));
     if (a.rec) {
@@ -597,6 +602,7 @@ export class FightScene {
   }
 
   drawSprite(img, tiles, base, x, y, size, flip, palRow, vflip = false) {
+    if (size === 32 && tiles && tiles.ownPoses && tiles.ownPoses.bases.has(base & 255)) tiles = tiles.ownPoses.tiles;   // own craft poses
     if (this.capture) {   // frameState(): record the sprite instead of drawing it
       this.capture.push({ tiles, base, x, y, size, flip: !!flip, vflip: !!vflip, row: palRow, id: `${this.tagK}#${this.tagN++}` });
       return;
