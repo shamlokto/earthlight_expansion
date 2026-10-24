@@ -148,7 +148,7 @@ function render() {
     if (!next) html += `<p class="muted">This mission is still being written.</p>`;
     else {
       if (!soundOn() && !$('mute').checked) html += `<button class="btn soundHint" type="button">♪ Click for the briefing music</button>`;
-      html += `<div class="bTop">${storyHtml(next)}${voiceHtml(next)}</div>${commsHtml(next)}${mapHtml()}${strategyHtml(next)}
+      html += `<div class="bTop${voiceHtml(next) ? '' : ' solo'}">${storyHtml(next)}${voiceHtml(next)}</div>${commsHtml(next)}${mapHtml()}${strategyHtml(next)}
         <div class="chips">${e.hint ? `<span class="chip cyan">Next map wants: ${esc(e.hint)}</span>` : ''}<span class="chip ${deployed.size ? 'gold' : ''}">Deploy ${deployed.size} / ${cap}</span>${next.turnLimit ? `<span class="chip">Turn limit ${next.turnLimit}</span>` : ''}</div>
         <div class="row launchrow"><button class="btn primary big" id="launch" ${deployed.size ? '' : 'disabled'}>Launch mission</button>${resumable() ? `<button class="btn" id="resume">Resume saved battle (turn ${resumable().turn})</button>` : ''}</div>`;
     }

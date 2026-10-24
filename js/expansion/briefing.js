@@ -51,7 +51,7 @@ export function briefingHtml(mission, { goal, no = null, total = null }) {
     <h1 data-text="${esc(mission.title || mission.name)}">${esc(mission.title || mission.name)}</h1>
     <div class="chips">${chips.map((c, i) => `<span class="chip" style="--d:${i}">${esc(c)}</span>`).join('')}</div>
   </header>
-  <div class="bTop">
+  <div class="bTop${voiceHtml(mission) ? '' : ' solo'}">
     ${storyHtml(mission)}
     ${voiceHtml(mission)}
   </div>

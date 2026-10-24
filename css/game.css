@@ -429,3 +429,4 @@ input[type=checkbox], input[type=radio] { accent-color: var(--gold); }
 .camp .faces .cFace { width: 64px; }
 @media (max-width: 600px) { .cline { grid-template-columns: 64px minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .cFace svg, .cWho .rec, .cBody .caret { animation: none !important; } .cline, .choice .opt, .camp { transition: none; } }
+.bTop.solo { grid-template-columns: minmax(0, 1fr); }
