@@ -13,6 +13,7 @@ import { decodeTile, paletteFromBytes, bgr555 } from '../gfx.js';
 import { InfoScreen } from './infoscreen.js';
 import { SFX, fireSfx } from '../audio/fightsfx.js';
 import { SHIP_ATTACKS, MELEE } from './fightdata.js';
+import { ownHullTiles } from '../art/own.js';
 
 const W = 256, H = 224;
 const T_BG = 0x04cce0, T_BGPAL = 0x04cd78, T_BGMAP1 = 0x04cd06, T_BGMAP = 0x04cd2c, T_SHEET = 0x04d038, T_SHEET2 = 0x04d072;
@@ -346,7 +347,7 @@ export class FightScene {
         const [hx, parts] = HULLS[side.type] || [HULL_X, HULL];
         // a ship under attack starts rocking when the first blow lands
         const bob = !otherFires ? null : this.melee ? MELEE_BOB : foe && foe.bob !== null ? foe.bob : T_FIRE + variant(other.type).hit;
-        return [{ right, ship: true, hx, parts, type: side.type, y0: 0, alive: true, dies: side.hpAfter === 0, seed: 0,
+        return [{ right, ship: true, hx, parts, type: side.type, y0: 0, alive: true, dies: side.hpAfter === 0, seed: 0, own: side.own || null,
           hits: Math.min(6, side.hp - side.hpAfter), rec, hull: rec || shipHull(rom, side.type, sheetOf(rom, side.type, this.slotOf(side), other.type)), bob,
           modelledHits: !this.melee && !foe && !(rec && rec.R && otherFires) }];   // charging craft bring their own hits
       }
@@ -535,7 +536,8 @@ export class FightScene {
     const dy = a.bob !== null && f >= a.bob ? bobAt(f - a.bob) : 0;
     // left-side x of the modelled hull: glides in at 1 px/frame, settling at frame 98
     const lx = a.hx - Math.max(0, HULL_ARRIVE - f);
-    if (a.hull) for (const t of a.hull.hull) this.drawTrack(img, t, f, a.right, true, dy);
+    if (a.own) this.drawOwnHull(img, a, f, dy, lx, X);
+    else if (a.hull) for (const t of a.hull.hull) this.drawTrack(img, t, f, a.right, true, dy);
     else for (const [dx, y, t, fl] of a.parts) this.drawSprite(img, tiles, off + t, X(lx + dx), y + dy, 32, a.right ? !(fl & 1) : !!(fl & 1), row, !!(fl & 2));
     if (a.rec) {
       // recorded shots; the explosions on a ship or structure only when it is damaged
@@ -548,6 +550,24 @@ export class FightScene {
       const t0 = (a.bob ?? HULL_FLY + 74) + k * 6;
       if (f >= t0 && f < t0 + 30) this.drawSprite(img, tiles, off + BOOM[Math.floor((f - t0) / 10)], X(lx + (k % 2) * 28), 12 + k * 18, 32, false, row + 2);
     }
+  }
+
+  // A ship with its own fight hull (js/art/own.js; the expansion's Selene Kai): drawn as one
+  // 128 px sprite where its look's hull would be this frame (the box around that hull's sprites,
+  // found by recording them without drawing), facing the other side.
+  drawOwnHull(img, a, f, dy, lx, X) {
+    const saved = this.capture, tag = this.tagK;
+    this.capture = [];
+    if (a.hull) for (const t of a.hull.hull) this.drawTrack(img, t, f, a.right, true, dy);
+    else for (const [dx, y, t, fl] of a.parts) this.drawSprite(img, null, t, X(lx + dx), y + dy, 32, false, 0);
+    const box = this.capture;
+    this.capture = saved; this.tagAs(tag);
+    if (!box.length) return;
+    const x0 = Math.min(...box.map((s) => s.x)), x1 = Math.max(...box.map((s) => s.x + s.size)), y0 = Math.min(...box.map((s) => s.y));
+    const w = a.own.hull.w, x = a.right ? x1 - w - (128 - w) : x0;   // flipped, the picture sits at the sheet's right end
+    this.tagAs(`${tag}own`);
+    this.drawSprite(img, ownHullTiles(a.own), 0, x, y0, 128, a.right, a.right ? 3 : 0);
+    this.tagAs(tag);
   }
 
   // Modelled capital-ship fire (types and slots without a recording), and hits on the hull.

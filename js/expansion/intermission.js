@@ -2,8 +2,8 @@
 // roster (machines and their pilots' levels), production, trade, the general, deployment, and
 // the next mission's briefing. State lives in campaign.js; battles run in game.html.
 import { paint } from '../gfx.js';
-import { paintLookArt } from '../look.js';
-import { battlePalette, unitIcon, renderMap } from '../maps.js';
+import { paintLookArt, typeIcon } from '../look.js';
+import { battlePalette, renderMap } from '../maps.js';
 import { romView } from './mission.js';
 import { storyHtml, voiceHtml, commsHtml, mapHtml, strategyHtml, startBriefingFx } from './briefing.js';
 import { SPEAKERS, portrait } from './portraits.js';
@@ -19,7 +19,7 @@ let rom, pal, types, en = null, index, state, next = null, picked = new Set();
 
 const name = (t) => (en ? en.unitNames[t] : types[t].name);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
-function icon(type) { const c = document.createElement('canvas'); paint(c, unitIcon(rom, 0, types[type].gfx), pal, { scale: 2 }); return c.outerHTML.replace('<canvas', `<canvas data-icon="${type}"`); }
+function icon(type) { const c = document.createElement('canvas'); paint(c, typeIcon(rom, types, type, 0), pal, { scale: 2 }); return c.outerHTML.replace('<canvas', `<canvas data-icon="${type}"`); }
 // the next mission's map with its units and the suggested plan (briefing.js), as in game.html's briefing
 // Its animations (briefing.js) run on one clock per mission, so the page's re-renders (every
 // roster click) carry on where they were instead of starting over.
@@ -42,7 +42,7 @@ function drawBriefMap() {
 const mapIcons = new Map();
 function mapIcon({ type, army }) {
   const k = `${army}:${type}`;
-  if (!mapIcons.has(k)) { const c = document.createElement('canvas'); paint(c, unitIcon(rom, army === 1 ? 1 : 0, types[type].gfx, 0), pal, { scale: 1 }); mapIcons.set(k, c); }
+  if (!mapIcons.has(k)) { const c = document.createElement('canvas'); paint(c, typeIcon(rom, types, type, army === 1 ? 1 : 0), pal, { scale: 1 }); mapIcons.set(k, c); }
   return mapIcons.get(k);
 }
 
@@ -59,7 +59,7 @@ function startSound() {
 function playBriefing() { if (sound && next) sound.playSong(briefingSong(next.music ?? 0)); }
 document.addEventListener('pointerdown', startSound, { capture: true });
 document.addEventListener('keydown', startSound, { capture: true });
-function fillIcons() { for (const c of document.querySelectorAll('canvas[data-icon]')) paint(c, unitIcon(rom, 0, types[+c.dataset.icon].gfx), pal, { scale: 2 }); }
+function fillIcons() { for (const c of document.querySelectorAll('canvas[data-icon]')) paint(c, typeIcon(rom, types, +c.dataset.icon, 0), pal, { scale: 2 }); }
 
 // late in the campaign (index.json allFrom) every machine type can be built
 const unlocked = () => state.next >= (index.allFrom ?? Infinity) ? C.marketTypes(types).map((t) => t.type) : [...new Set([...(index.start || []), ...list().slice(0, state.next).flatMap((m) => m.unlocks || [])])];

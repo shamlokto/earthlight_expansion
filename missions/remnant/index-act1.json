@@ -1,0 +1,6 @@
+{"start":[0,1,3],"missions":[
+{"no":1,"title":"Night of Knives","file":"missions/remnant/knives.json","unlocks":[],"hint":"Break out: go through both gates at once and run for the magnetic band."},
+{"no":2,"title":"Salvage Rights","file":"missions/remnant/salvage.json","unlocks":[8,9],"hint":"Grey docks: bring one to zero and it joins you with its machines."},
+{"no":3,"title":"The Shepherd","file":"missions/remnant/shepherd.json","unlocks":[26],"hint":"Crabs cross asteroids cheaply but crawl through meteoroids and flux."},
+{"no":4,"title":"Iron Garden","file":"missions/remnant/garden.json","unlocks":[23,24,10],"hint":"Batteries: a Crab sets a Dragon or Hydra down on bedrock, and it never moves again."}
+]}
