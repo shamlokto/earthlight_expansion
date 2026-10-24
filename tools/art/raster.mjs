@@ -21,7 +21,9 @@ export const capsule = (x0, y0, x1, y1, r) => (x, y) => {
 export const union = (...s) => (x, y) => s.some((f) => f(x, y));
 export const minus = (a, b) => (x, y) => a(x, y) && !b(x, y);
 
-// render(w, h, parts, { toLocal, light, outline, bg })
+// render(w, h, parts, { toLocal, light, outline, bg, cel, smooth })
+//   cel: hard 3-4 tone bands per part instead of an even spread (crisp hand-pixelled look), at the
+//   thresholds `bands` (4 tones) / `bands3` (3 tones); smooth: height-field blur passes (2)
 //   part: { shape(x, y) in local coords, ramp: [index...], bevel: px, dome: 0..1, flat: index (no shading),
 //           bias: brightness offset, edge: outline index for this part's border (default: ramp[0]) }
 export function render(w, h, parts, opt = {}) {
@@ -43,7 +45,7 @@ export function render(w, h, parts, opt = {}) {
     const m = masks[k], d = dist(m, w, h), R = p.bevel ?? 4;
     const H = new Float32Array(w * h);
     for (let i = 0; i < H.length; i++) if (m[i]) { const t = Math.min(d[i], R) / R; H[i] = R * (p.dome ? Math.sqrt(1 - (1 - t) ** 2) : t) * (p.height ?? 1); }
-    smooth(H, m, w, h, 2);
+    smooth(H, m, w, h, opt.smooth ?? 2);
     // light every pixel, then spread the part's light range (2nd-98th percentile) over its whole
     // ramp, so each part runs from its darkest shade to its lightest like hand-shaded pixel art
     const lit = new Map();
@@ -60,7 +62,9 @@ export function render(w, h, parts, opt = {}) {
     const v = [...lit.values()].sort((a, b) => a - b), lo = v[Math.floor(v.length * 0.02)], hi = v[Math.floor(v.length * 0.98)], r = p.ramp;
     for (const [i, l] of lit) {
       const t = (hi > lo ? (l - lo) / (hi - lo) : 0.6) + (p.bias || 0);
-      out[i] = r[Math.max(0, Math.min(r.length - 1, Math.floor(t * r.length)))];
+      // cel mode: hard bands, mostly mid tone, a thin highlight and a few specular pixels at the top
+      const cel = opt.cel && r.length >= 3 ? (r.length === 3 ? (opt.bands3 || [0.2, 0.72]) : (opt.bands || [0.16, 0.6, 0.9])) : null;
+      out[i] = cel ? r[cel.filter((c) => t >= c).length] : r[Math.max(0, Math.min(r.length - 1, Math.floor(t * r.length)))];
     }
   });
   // outlines: the silhouette, and a part's border where it sits over another part
