@@ -22,7 +22,7 @@
 // AI plays the Union (army 0, test mode) it has no routes or scripts: it advances on the
 // enemy units, using their priority as the waypoint value. Guards (scripts.js) keep their
 // post: they only fire at units within GUARD_ZONE of what they guard and never advance.
-import { distance, neighbours, hexRing } from './rules.js';
+import { distance, neighbours, hexRing, NEUTRAL } from './rules.js';
 import { inLane, decimator, blast } from './events.js';
 
 const ROUTES = 0x0289b1, SCRIPTS = 0x00e900, VIP_UNION = 0x02e64f, VIP_GALT = 0x02e631;
@@ -112,6 +112,12 @@ class Brain {
         for (let s = 0; s < 4; s++) if (this.evaluate(e, o, s)) { threat = prio.get(o); break; }
       }
       prio.set(e, Math.min(255, prio.get(e) + threat));
+    }
+    // expansion maps (owner, 2026-10-24): the Union goes all out for the grey docks and the
+    // enemy general; the base game keeps the ROM's priorities
+    if (b.info.custom) for (const e of foes) {
+      if (e.army === NEUTRAL && b.type(e).category === DOCK_CAT) prio.set(e, Math.max(prio.get(e), 0xC0));
+      if (e.general) prio.set(e, 255);
     }
     this.prio = prio;
   }
@@ -263,6 +269,17 @@ class Brain {
   }
 
   // ---------------------------------------------------------------- docks ($01:8C10)
+  // Expansion: what a unit with nothing in reach closes in on: the nearest grey dock or the enemy
+  // general (whichever is nearer), else every enemy.
+  huntTargets(u) {
+    const b = this.b, foes = b.alive().filter((e) => e.army !== this.army && !e.carrier && e.x > 0);
+    const key = foes.filter((e) => e.general || (e.army === NEUTRAL && b.type(e).category === DOCK_CAT));
+    const list = key.length ? key : foes;
+    if (!list.length) return [];
+    const d = (e) => distance(u, e), best = list.reduce((a, e) => (d(e) < d(a) ? e : a));
+    return [{ x: best.x, y: best.y }];
+  }
+
   wantsDock(u) {
     return SPENT_FORMS.has(u.type) || u.hp <= this.b.type(u).hp >> 2;
   }
@@ -420,9 +437,12 @@ class Brain {
           gp = g.prio; gv = v; goal = g;
         }
         goal = goal && this.stepToward(u, f, goal.x, goal.y);
+        // expansion maps without routes: units beyond the original's ~12-point planning range don't
+        // sit idle; they head for the nearest grey dock or the enemy general, else the nearest enemy
+        const hunt = prey.length ? prey : !goal && !goals && b.info.custom ? this.huntTargets(u) : [];
         // a hunted carrier beyond the original's ~12-point planning range: close in as far as this turn allows
-        if (!goal && prey.length) {
-          const far = (x, y) => Math.min(...prey.map((p) => distance({ x, y }, p)));
+        if (!goal && hunt.length) {
+          const far = (x, y) => Math.min(...hunt.map((p) => distance({ x, y }, p)));
           let bd = far(u.x, u.y);
           for (const k of this.reachable(u).keys()) {
             const [x, y] = k.split(',').map(Number), d = far(x, y);
