@@ -64,8 +64,9 @@ export function unitType(rom, t) {
 //   payload ($01:A00A on firing slot 3, undone on boarding $01:A5F2): armed type -> spent
 //     type + 1, with more movement (4/5, 10/11, 12/13, 43/44, 45/46, 47/48; 6/7 likewise);
 //   cargo ($01:A5AF): CR-1 26 empty -> 27 loaded (CR-61II 28/29 likewise).
-export const TRANSFORM = { 4: 6, 6: 4, 5: 7, 7: 5, 36: 37, 37: 36 };
-export const SPENT = { 4: 5, 6: 7, 10: 11, 12: 13, 43: 44, 45: 46, 47: 48 };
+// 62-65: the expansion's Pallas, the Athena's successor, with the same four forms
+export const TRANSFORM = { 4: 6, 6: 4, 5: 7, 7: 5, 36: 37, 37: 36, 62: 64, 64: 62, 63: 65, 65: 63 };
+export const SPENT = { 4: 5, 6: 7, 10: 11, 12: 13, 43: 44, 45: 46, 47: 48, 62: 63, 64: 65 };
 export const LOADED = { 26: 27, 28: 29 };
 
 export function allUnitTypes(rom) {
@@ -73,10 +74,10 @@ export function allUnitTypes(rom) {
   for (let t = 0; t < UNIT_TYPES; t++) list.push(unitType(rom, t));
   // form/otherForm/formOf: the two forms of a transforming unit (form 1 = the lower type).
   for (const [a, b] of Object.entries(TRANSFORM)) {
-    if (+a > b) continue;
+    if (+a > b || !list[a]) continue;   // expansion types past the ROM's 58 carry these in their own data
     list[a].form = 1; list[b].form = 2; list[a].otherForm = b; list[b].formOf = +a;
   }
-  for (const [a, b] of Object.entries(SPENT)) { list[a].spent = b; list[b].armed = +a; }
+  for (const [a, b] of Object.entries(SPENT)) { if (list[a]) { list[a].spent = b; list[b].armed = +a; } }
   for (const [a, b] of Object.entries(LOADED)) { list[a].loaded = b; list[b].empty = +a; }
   // Cut units: map icon 0 (Mars's) on another type, and never placed by any map:
   // 12/13 FB-33, 17/19 mines, 20-22 BS-*, 28/29 CR-61II, 41 SCG-OL, 45-48 MSNP-II/MSFB-5.

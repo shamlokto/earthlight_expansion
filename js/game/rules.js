@@ -21,7 +21,7 @@ const DOCK_CAT = 7, CARRIER_CAT = 1, CRAB = 26, ARTEMIS = 34, BATTERY_GROUND = [
 // one-unit transports, empty form -> loaded form: the CR-1, and the expansion's revived CR-61II (28/29)
 const TRANSPORT = { [CRAB]: CRAB + 1, 28: 29 }, UNLOADED = { [CRAB + 1]: CRAB, 29: 28 };
 export { TRANSFORM };   // form tables live in units.js
-const REARM = { 5: 4, 7: 6, 11: 10, 44: 43, 13: 12, 46: 45, 48: 47 };   // $01:A60C re-arms 5/7/11/44 on boarding; 13/46/48: the expansion's revived bombers
+const REARM = { 5: 4, 7: 6, 11: 10, 44: 43, 13: 12, 46: 45, 48: 47, 63: 62, 65: 64 };   // $01:A60C re-arms 5/7/11/44 on boarding; 13/46/48: the expansion's revived bombers
 const DESTROYERS = new Set([49, 50, 51]);   // may move again with what is left after firing
 
 // ---------------------------------------------------------------- hex grid

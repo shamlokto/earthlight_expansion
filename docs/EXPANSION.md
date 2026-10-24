@@ -617,6 +617,19 @@ streamlined blended-wing ship, needle prow, forward-swept wings to two wingtip p
 the broadside ports on the wing leading edges and the beam emitters on the pods where the Hastur's
 recorded shots start (box x 39–56; y 36–100 broadside, y 17 and 101 beams).
 
+**Pallas** (types 62-65, owner 2026-10-24): the Athena's successor, with the same four forms and
+rules (62 fighter-bomber CHU-05F, 63 its spent form, 64 hunter CHU-05R, 65 its spent form: units.js
+TRANSFORM/SPENT, rules.js REARM, ai.js SPENT_FORMS and `athenaBase`). Galt, `GENERAL_SHIPS`,
+`unique` (one at a time outside beta), price 96, built from the intermission before mission 7 in both
+campaigns (index `unlocks` of mission 6). Fighter forms: beam 48 at 1 (Mars level), torpedo 255 at 2
+on 62, evasion 64 (50%), move 10. Hunter forms: railgun 102 at 1–3 (min 1, so it is the slot-0
+counter against adjacent craft), beamsaber 140 at 1 (the slot-2 counter in melee), evasion 90 (70%;
+the General aboard caps at 96), move 5. Fights with the Athena's moves (`look` 4-7, `keepSlots` so
+each weapon keeps its slot's choreography). Own art, `tools/art/pallas.mjs` → `js/art/pallas.js`:
+three sets (jet, spent jet, robot), each with a picture, map icon and fight poses for the Athena
+sheet tiles its choreography draws (jet 0; spent jet 0, 64; robot 0/4/8/12/64 on the slot-0 sheet
+and, as `poses2`, 0-12/64/68/72/76/128 on the sabre sheet the other slots load).
+
 **Leviathan and Directorate Talos** (owner, 2026-10-24; the new campaign's Union units, docs/STORY.md).
 Both are `unionOnly` (never in the market) and have their own art, drawn the same way:
 

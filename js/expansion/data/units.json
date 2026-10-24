@@ -4487,6 +4487,333 @@
    "ownArt": "pegasus",
    "tag": "PGS",
    "fightName": "Pegasus"
+  },
+  {
+   "type": 62,
+   "unique": true,
+   "name": "Pallas",
+   "nameJp": "パラス",
+   "code": "CHU-05F",
+   "category": 10,
+   "startLevel": 2,
+   "hp": 8,
+   "move": 10,
+   "evasion": 64,
+   "value": 12,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 48
+    },
+    null,
+    null,
+    {
+     "slot": 3,
+     "mode": 2,
+     "min": 2,
+     "max": 2,
+     "power": 255
+    }
+   ],
+   "aiValue": 28,
+   "info": {
+    "attack": [
+     37,
+     0,
+     0,
+     199
+    ],
+    "defence": 50,
+    "minRange": [
+     1,
+     0,
+     0,
+     2
+    ]
+   },
+   "gfx": 4,
+   "art": {
+    "fightSheet": 10,
+    "tiles": 215,
+    "palette": 216,
+    "frame": 5
+   },
+   "nameBytes": [
+    177,
+    195,
+    197,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    72,
+    85,
+    45,
+    48,
+    51,
+    70,
+    0
+   ],
+   "form": 1,
+   "otherForm": 64,
+   "spent": 63,
+   "ownArt": "pallasJet",
+   "look": 4,
+   "tag": "PLS",
+   "fightName": "Pallas",
+   "keepSlots": true
+  },
+  {
+   "type": 63,
+   "name": "Pallas",
+   "nameJp": "パラス",
+   "code": "CHU-05F",
+   "category": 9,
+   "startLevel": 2,
+   "hp": 8,
+   "move": 10,
+   "evasion": 64,
+   "value": 12,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 48
+    },
+    null,
+    null,
+    null
+   ],
+   "aiValue": 28,
+   "info": {
+    "attack": [
+     37,
+     0,
+     0,
+     0
+    ],
+    "defence": 50,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 5,
+   "art": {
+    "fightSheet": 11,
+    "tiles": 215,
+    "palette": 216,
+    "frame": 5
+   },
+   "nameBytes": [
+    177,
+    195,
+    197,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    72,
+    85,
+    45,
+    48,
+    51,
+    70,
+    0
+   ],
+   "form": 1,
+   "otherForm": 65,
+   "armed": 62,
+   "ownArt": "pallasJetSpent",
+   "look": 5,
+   "tag": "PLS",
+   "fightName": "Pallas",
+   "keepSlots": true
+  },
+  {
+   "type": 64,
+   "name": "Pallas",
+   "nameJp": "パラス",
+   "code": "CHU-05R",
+   "category": 8,
+   "startLevel": 2,
+   "hp": 8,
+   "move": 5,
+   "evasion": 90,
+   "value": 12,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 3,
+     "power": 102
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 140
+    },
+    null
+   ],
+   "aiValue": 28,
+   "info": {
+    "attack": [
+     80,
+     0,
+     109,
+     0
+    ],
+    "defence": 70,
+    "minRange": [
+     1,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 6,
+   "art": {
+    "fightSheet": 12,
+    "tiles": 217,
+    "palette": 218,
+    "frame": 6
+   },
+   "nameBytes": [
+    177,
+    195,
+    197,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    72,
+    85,
+    45,
+    48,
+    51,
+    82,
+    0
+   ],
+   "form": 2,
+   "formOf": 62,
+   "spent": 65,
+   "ownArt": "pallasRobot",
+   "look": 6,
+   "tag": "PLS",
+   "fightName": "Pallas",
+   "keepSlots": true
+  },
+  {
+   "type": 65,
+   "name": "Pallas",
+   "nameJp": "パラス",
+   "code": "CHU-05R",
+   "category": 8,
+   "startLevel": 2,
+   "hp": 8,
+   "move": 5,
+   "evasion": 90,
+   "value": 12,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 3,
+     "power": 102
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 140
+    },
+    null
+   ],
+   "aiValue": 28,
+   "info": {
+    "attack": [
+     80,
+     0,
+     109,
+     0
+    ],
+    "defence": 70,
+    "minRange": [
+     1,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 6,
+   "art": {
+    "fightSheet": 12,
+    "tiles": 217,
+    "palette": 218,
+    "frame": 6
+   },
+   "nameBytes": [
+    177,
+    195,
+    197,
+    32,
+    32,
+    32,
+    32,
+    0
+   ],
+   "codeBytes": [
+    67,
+    72,
+    85,
+    45,
+    48,
+    51,
+    82,
+    0
+   ],
+   "form": 2,
+   "formOf": 63,
+   "armed": 64,
+   "ownArt": "pallasRobot",
+   "look": 7,
+   "tag": "PLS",
+   "fightName": "Pallas",
+   "keepSlots": true
   }
  ]
 }

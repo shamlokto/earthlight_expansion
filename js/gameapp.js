@@ -541,7 +541,10 @@ function select(u) {
   };
   if (u.burner && u.army === 0) $('bDetach').onclick = async () => { detachBurner(battle, u); log(`<span class="armyA">${nameOf(u)}</span> detached its afterburner`); await alerts([EV.burner]); select(u); };
   for (const b of $('info').querySelectorAll('[data-launch]')) b.onclick = () => startLaunch(battle.units[+b.dataset.launch]);
-  if (tf) $('bTransform').onclick = () => { battle.transform(u); log(`<span class="armyA">${nameOf(u)}</span> transformed (${types[u.type].code})`); select(u); };
+  if (tf) $('bTransform').onclick = () => {
+    battle.transform(u); log(`<span class="armyA">${nameOf(u)}</span> transformed (${types[u.type].code})`); select(u);
+    if (types[u.type].ownArt) flash([[u.x, u.y]], 'rgba(150,225,255,.8)');   // the expansion's own transforming machines (Pallas): a brief flare, visual only
+  };
 }
 
 function startLaunch(u) {

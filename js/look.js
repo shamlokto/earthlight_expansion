@@ -13,6 +13,7 @@ export const lookOf = (types, type) => types?.[type]?.look ?? type;
 export function lookSlot(types, type, slot) {
   const t = types?.[type];
   if (!t || t.look === undefined || slot === undefined || slot === null) return slot;
+  if (t.keepSlots && types[t.look].weapons[slot]) return slot;   // a successor fighting with its predecessor's moves (Pallas)
   const mode = t.weapons[slot]?.mode, lw = types[t.look].weapons;
   const same = lw.findIndex((w) => w && w.mode === mode);
   return same >= 0 ? same : Math.max(0, lw.findIndex((w) => w));
