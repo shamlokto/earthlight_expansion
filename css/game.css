@@ -1,0 +1,257 @@
+/* Earth Light game UI: a holographic command deck in orbit. A slow starfield drifts behind the
+   page and the blue limb of the Earth glows along the bottom edge (the game's title, made
+   literal). Panels are glass instruments with corner brackets; gold is command, cyan is
+   information, pink and green are the two armies. The ROM's own screens (title, menu, mission
+   header, points frame) stay pixel-exact inside this frame.
+   Used by game.html, expansion.html and editor.html, after css/style.css. */
+:root {
+  --void: #03051a;
+  --deep: #0a1033;
+  --glass: rgba(14, 22, 64, .62);
+  --glass-2: rgba(30, 44, 108, .55);
+  --edge: rgba(111, 211, 255, .26);
+  --edge-hi: rgba(111, 211, 255, .7);
+  --gold: #f5c542;
+  --gold-hi: #fff2b8;
+  --gold-lo: #b46b12;
+  --cyan: #6fd3ff;
+  --ink: #eef1ff;
+  --dim: #8f9acf;
+  --a: #ff8fd8;
+  --b: #8fe38a;
+  --earth: 46, 120, 255;
+  --f-display: "Chakra Petch", "Eurostile", "Bank Gothic", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  /* the tokens style.css components read */
+  --bg: var(--void); --panel: var(--glass); --panel-2: var(--glass-2); --line: var(--edge);
+  --text: var(--ink); --muted: var(--dim); --accent: var(--gold); --accent-2: var(--cyan);
+  color-scheme: dark;
+}
+
+/* ------------------------------------------------------------------ space */
+html { background: var(--void); }
+body {
+  background: transparent;
+  font: 15px/1.5 var(--f-body);
+  color: var(--ink);
+  position: relative;
+  isolation: isolate;
+}
+html::before, html::after { content: ""; position: fixed; inset: -50% -50%; z-index: -2; pointer-events: none; }
+/* two layers of stars at different sizes, drifting at different speeds */
+html::before {
+  background:
+    radial-gradient(1px 1px at 20px 30px, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 120px 80px, #cfe3ff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 170px 150px, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 60px 190px, #ffe9b0 50%, transparent 51%);
+  background-size: 210px 210px;
+  opacity: .55;
+  animation: drift 240s linear infinite;
+}
+html::after {
+  background:
+    radial-gradient(2px 2px at 40px 60px, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 260px 220px, #bfe0ff 50%, transparent 51%),
+    radial-gradient(2px 2px at 330px 40px, #fff4cc 50%, transparent 51%);
+  background-size: 380px 380px;
+  opacity: .4;
+  animation: drift 150s linear infinite reverse;
+}
+@keyframes drift { to { transform: translate(210px, 105px); } }
+/* the battle board redraws often: hold the stars still behind it */
+html:has(#sBattle:not([hidden]))::before, html:has(#sBattle:not([hidden]))::after, html:has(#fight:not([hidden]))::before { animation-play-state: paused; }
+/* nebula wash and the Earth's limb */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(120% 60% at 50% 135%, rgba(var(--earth), .55) 0, rgba(var(--earth), .18) 38%, transparent 62%),
+    radial-gradient(60% 40% at 50% 112%, rgba(160, 220, 255, .35) 0, transparent 70%),
+    radial-gradient(50% 45% at 12% 0%, rgba(120, 70, 200, .22) 0, transparent 70%),
+    radial-gradient(45% 40% at 95% 20%, rgba(40, 90, 200, .18) 0, transparent 70%);
+}
+
+/* ------------------------------------------------------------------ type */
+h1, h2, h3, .logo, .briefTitle, #turn, .eyebrow, .btn { font-family: var(--f-display); }
+.mono, code, pre, .log, .num, .ustats, .uweap, .points table { font-family: var(--f-data); }
+.logo {
+  font-weight: 700; font-size: 22px; letter-spacing: .22em;
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold) 52%, var(--gold-lo));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 10px rgba(245, 197, 66, .35));
+}
+.sub { font-family: var(--f-display); letter-spacing: .14em; text-transform: uppercase; font-size: 11px; color: var(--cyan); opacity: .85; }
+.dim, small, .muted { color: var(--dim); }
+a { color: var(--cyan); }
+
+/* ------------------------------------------------------------------ glass instruments */
+/* corner brackets drawn with gradients over a glass fill */
+.win, .card, .box, .board, .alertov > div, .fightov canvas, .setup {
+  --br: var(--edge-hi); --bl: 14px;
+  background:
+    linear-gradient(var(--br), var(--br)) top left / var(--bl) 2px no-repeat,
+    linear-gradient(var(--br), var(--br)) top left / 2px var(--bl) no-repeat,
+    linear-gradient(var(--br), var(--br)) top right / var(--bl) 2px no-repeat,
+    linear-gradient(var(--br), var(--br)) top right / 2px var(--bl) no-repeat,
+    linear-gradient(var(--br), var(--br)) bottom left / var(--bl) 2px no-repeat,
+    linear-gradient(var(--br), var(--br)) bottom left / 2px var(--bl) no-repeat,
+    linear-gradient(var(--br), var(--br)) bottom right / var(--bl) 2px no-repeat,
+    linear-gradient(var(--br), var(--br)) bottom right / 2px var(--bl) no-repeat,
+    linear-gradient(180deg, rgba(255, 255, 255, .05), transparent 40%),
+    var(--glass);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .45), inset 0 0 30px rgba(111, 211, 255, .05);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2); backdrop-filter: blur(10px) saturate(1.2);
+}
+
+/* ------------------------------------------------------------------ header */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30;
+  background: linear-gradient(180deg, rgba(3, 5, 26, .92), rgba(3, 5, 26, .7));
+  border-bottom: 1px solid var(--edge);
+  box-shadow: 0 1px 0 rgba(245, 197, 66, .12), 0 8px 30px rgba(0, 0, 0, .35);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.top label { font-family: var(--f-display); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); display: inline-flex; gap: 6px; align-items: center; }
+.romstatus { font-family: var(--f-display); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.pages nav {
+  background: rgba(8, 14, 46, .95); border: 1px solid var(--edge-hi); border-radius: 4px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .6), 0 0 0 1px rgba(245, 197, 66, .08);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  animation: pop .18s var(--ease);
+}
+.pages nav a { font-family: var(--f-display); letter-spacing: .04em; }
+.pages nav a:hover, .pages nav a:focus { background: rgba(111, 211, 255, .12); color: var(--gold-hi); }
+
+/* ------------------------------------------------------------------ buttons */
+.btn {
+  position: relative;
+  font-family: var(--f-display); font-weight: 600; font-size: 13px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink); background: linear-gradient(180deg, rgba(111, 211, 255, .12), rgba(111, 211, 255, .03));
+  border: 1px solid var(--edge); border-radius: 3px; padding: 8px 14px;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  transition: border-color .15s, background .15s, color .15s, box-shadow .15s, transform .1s;
+  text-decoration: none;
+}
+.btn:hover:not(:disabled) { border-color: var(--edge-hi); background: linear-gradient(180deg, rgba(111, 211, 255, .26), rgba(111, 211, 255, .06)); color: #fff; box-shadow: 0 0 18px rgba(111, 211, 255, .25); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .38; cursor: not-allowed; }
+.btn.primary {
+  color: #1d1300; border-color: var(--gold);
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold) 45%, #d99a1c);
+  box-shadow: 0 0 22px rgba(245, 197, 66, .3);
+}
+.btn.primary:hover:not(:disabled) { color: #1d1300; background: linear-gradient(180deg, #fff8d6, #ffd35a 45%, #e8a92a); box-shadow: 0 0 30px rgba(245, 197, 66, .55); }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--void), 0 0 0 4px var(--gold); }
+input[type=checkbox], input[type=radio] { accent-color: var(--gold); }
+
+/* ------------------------------------------------------------------ screens */
+.screen:not([hidden]) { animation: screen-in .5s var(--ease) both; }
+@keyframes screen-in { from { opacity: 0; transform: translateY(14px) scale(.99); filter: blur(6px); } }
+@keyframes pop { from { opacity: 0; transform: translateY(-6px) scale(.98); } }
+.center { padding-block: 28px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* ROM pictures: a monitor bezel with a faint scanline glass */
+.scr { border-radius: 6px; box-shadow: 0 0 0 1px var(--edge), 0 0 0 6px rgba(8, 14, 46, .8), 0 0 0 7px var(--edge), 0 20px 60px rgba(0, 0, 0, .6), 0 0 80px rgba(var(--earth), .18); }
+.scr canvas { border-radius: 6px; }
+.scr::after { content: ""; position: absolute; inset: 0; border-radius: 6px; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .12) 0 1px, transparent 1px 3px), linear-gradient(160deg, rgba(255, 255, 255, .07), transparent 35%); }
+#pressStart { animation: breathe 4s ease-in-out infinite; }
+@keyframes breathe { 50% { box-shadow: 0 0 0 1px var(--edge-hi), 0 0 0 6px rgba(8, 14, 46, .8), 0 0 0 7px var(--edge-hi), 0 20px 60px rgba(0, 0, 0, .6), 0 0 120px rgba(var(--earth), .35); } }
+
+/* game menu: SFC-style items with a cursor that slides in */
+.menu.win { min-width: min(380px, 92vw); padding: 18px; gap: 8px; }
+.menu .btn {
+  display: flex; align-items: center; gap: 12px; justify-content: flex-start; text-align: left;
+  font-size: 15px; letter-spacing: .14em; padding: 12px 18px 12px 34px; width: 100%;
+}
+.menu .btn::before {
+  content: "▶"; position: absolute; left: 12px; font-size: 11px; color: var(--gold);
+  opacity: 0; transform: translateX(-6px); transition: opacity .15s, transform .2s var(--ease);
+}
+.menu .btn.primary::before { color: #1d1300; }
+.menu .btn:hover::before, .menu .btn:focus-visible::before { opacity: 1; transform: none; }
+.menu label { font-family: var(--f-display); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.missions .btn { font-size: 11px; letter-spacing: .06em; text-transform: none; padding: 10px 12px; }
+
+/* first-run setup */
+.setup { padding: 22px 24px; max-width: 600px; }
+.setup h2 { font-size: 26px; letter-spacing: .14em; }
+.setup input[type=file] { color: var(--dim); font-family: var(--f-body); }
+.setup input[type=file]::file-selector-button { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .1em; background: rgba(111, 211, 255, .12); color: var(--ink); border: 1px solid var(--edge-hi); padding: 6px 12px; margin-right: 10px; cursor: pointer; }
+
+/* story and briefings */
+.briefTitle {
+  font-size: clamp(26px, 5vw, 40px); font-weight: 700; letter-spacing: .08em; line-height: 1.15; text-transform: uppercase;
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold) 55%, var(--gold-lo));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 18px rgba(245, 197, 66, .25)); text-wrap: balance;
+}
+.story {
+  max-width: 64ch; font-size: 18px; line-height: 1.7; text-align: left; padding: 20px 24px;
+  background: linear-gradient(90deg, rgba(111, 211, 255, .08), transparent 70%); border-left: 2px solid var(--cyan);
+  text-shadow: 0 0 20px rgba(111, 211, 255, .15);
+}
+
+/* ------------------------------------------------------------------ battle */
+.play { gap: 16px; padding-block: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.board { --bl: 22px; --br: var(--gold); padding: 6px; border-color: rgba(245, 197, 66, .25); box-shadow: 0 20px 60px rgba(0, 0, 0, .55), 0 0 60px rgba(var(--earth), .12); }
+.hud { width: 360px; gap: 12px; }
+.hud .card { padding: 14px 16px; }
+.hud .card:first-child { --br: var(--gold); border-left: 3px solid var(--gold); }
+#turn { font-size: 20px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px; }
+#turn small { font-family: var(--f-data); font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--dim); }
+#turn .small, #turn .dim { font-family: var(--f-body); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 13px; line-height: 1.45; margin-top: 4px; }
+.hud .card:first-child .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.hud .card:first-child .row #endTurn { grid-column: 1 / -1; font-size: 15px; padding: 11px; }
+.hud .card:first-child .row .btn { padding: 8px 6px; font-size: 11px; text-align: center; }
+.hud .card h3 { font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--cyan); }
+#info:empty { display: none; }
+.log { max-height: 240px; font-size: 11.5px; line-height: 1.5; color: var(--dim); }
+.log div { padding: 4px 0 4px 10px; border-bottom: 1px solid rgba(111, 211, 255, .1); position: relative; animation: pop .25s var(--ease); }
+.log div::before { content: ""; position: absolute; left: 0; top: 10px; width: 4px; height: 4px; background: var(--cyan); opacity: .6; }
+.log b { color: var(--ink); }
+
+/* unit card: art in a holo frame */
+.uart { border-radius: 3px !important; box-shadow: 0 0 0 1px var(--tint), 0 0 24px color-mix(in srgb, var(--tint) 35%, transparent) !important; }
+.uid h3 { font-family: var(--f-display); font-size: 21px !important; font-weight: 700; letter-spacing: .06em !important; text-transform: uppercase; text-shadow: 0 0 16px color-mix(in srgb, var(--tint) 45%, transparent); }
+.ucode { font-family: var(--f-data); }
+.mode { font-family: var(--f-display); letter-spacing: .06em; text-transform: uppercase; font-size: 10px !important; padding: 1px 6px !important; }
+
+/* fight cut-in: cinematic letterbox */
+.fightov { background: radial-gradient(ellipse at center, rgba(4, 8, 30, .85), rgba(0, 0, 0, .97) 70%); animation: fight-in .3s var(--ease); }
+.fightov::before, .fightov::after { content: ""; position: absolute; left: 0; right: 0; height: 9vh; background: #000; box-shadow: 0 0 30px #000; }
+.fightov::before { top: 0; } .fightov::after { bottom: 0; }
+.fightov canvas { --bl: 28px; --br: var(--gold); padding: 0; border: 1px solid rgba(245, 197, 66, .35); box-shadow: 0 0 0 6px rgba(0, 0, 0, .6), 0 0 80px rgba(var(--earth), .3); position: relative; z-index: 1; }
+.fightov p { position: relative; z-index: 1; font-family: var(--f-display); letter-spacing: .3em; text-transform: uppercase; font-size: 11px; color: var(--dim); }
+@keyframes fight-in { from { opacity: 0; } }
+
+/* map-event alert: a holo window with a scan sweep */
+.alertov { background: rgba(0, 0, 0, .35); animation: fight-in .2s var(--ease); }
+.alertov > div {
+  --br: var(--gold); padding: 22px 30px !important; font: 600 19px/1.45 var(--f-display) !important; letter-spacing: .06em;
+  color: var(--gold-hi) !important; text-transform: uppercase; overflow: hidden; position: relative; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .4), 0 0 60px rgba(245, 197, 66, .2) !important;
+  animation: pop .25s var(--ease);
+}
+.alertov > div::after { content: ""; position: absolute; left: 0; right: 0; height: 40%; top: -40%; background: linear-gradient(180deg, transparent, rgba(111, 211, 255, .18), transparent); animation: sweep 2.2s linear infinite; }
+@keyframes sweep { to { top: 100%; } }
+
+/* results */
+#sResult .briefTitle { font-size: clamp(30px, 6vw, 52px); }
+.result { font-size: 18px; line-height: 1.6; color: var(--ink); text-shadow: 0 0 20px rgba(111, 211, 255, .2); }
+.points .vprank b { font-family: var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
+
+@media (max-width: 760px) {
+  .hud { width: 100%; }
+  .logo { font-size: 18px; letter-spacing: .16em; }
+  .story { font-size: 16px; padding: 14px 16px; }
+  .fightov::before, .fightov::after { height: 6vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html::before, html::after, #pressStart, .alertov > div::after { animation: none !important; }
+  .screen:not([hidden]), .log div, .pages nav, .fightov, .alertov, .alertov > div { animation: none !important; }
+}
