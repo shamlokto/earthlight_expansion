@@ -1562,29 +1562,29 @@
    "cut": false,
    "weapons": [
     null,
-    null,
     {
-     "slot": 2,
+     "slot": 1,
      "mode": 1,
      "min": 1,
      "max": 3,
      "power": 77
     },
+    null,
     null
    ],
    "aiValue": 10,
    "info": {
     "attack": [
      0,
-     0,
      60,
+     0,
      0
     ],
     "defence": 35,
     "minRange": [
      0,
-     0,
      1,
+     0,
      0
     ]
    },
