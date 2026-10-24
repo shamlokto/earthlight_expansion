@@ -199,6 +199,7 @@ function render() {
 
   html += `<section class="box"><h2>Campaign</h2><p class="muted">Progress saves automatically in this browser. Repairs between battles are free.</p>
     <div class="row"><label class="switch"><input type="checkbox" id="beta" ${beta ? 'checked' : ''}><span></span>Beta testing: unlimited supply, every machine, trades at any price</label></div>
+    ${beta || !e ? `<div class="row"><label>${e ? 'Beta: play' : 'The war is over. Replay'} any mission <select id="jumpTo">${index.missions.map((m, i) => `<option value="${i}" ${list()[state.next] === m ? 'selected' : ''}>${m.no ?? i + 1}. ${esc(m.title)}${m.when ? ` (${esc(m.when.choice)})` : ''}</option>`).join('')}</select></label><button class="btn" id="jumpGo">Go</button></div>` : ''}
     <div class="row"><button class="btn" id="restart">Start this campaign over</button><a class="btn" href="expansion.html?select=1">Switch campaign</a></div></section>`;
   $('app').innerHTML = html;
   fillIcons();
@@ -238,6 +239,16 @@ function wire(cap) {
   // a battle saved mid-mission (Save in the battle screen): game.html offers to resume it
   if ($('resume')) $('resume').onclick = () => { sound?.stop(); location.href = battleUrl(); };
   $('beta').onchange = (ev) => { state.beta = ev.target.checked; save(); render(); };
+  // beta testing, or once the campaign is won (owner, 2026-10-24): jump to any mission, back or
+  // forward, keeping the roster; a
+  // branch mission sets the choice it belongs to
+  if ($('jumpGo')) $('jumpGo').onclick = async () => {
+    const m = index.missions[+$('jumpTo').value];
+    if (m.when) state.choice = m.when.choice;
+    const i = C.missionList(index, state).indexOf(m);
+    if (i < 0) return;
+    state.next = i; state.deploy = null; save(); await loadNext(); render(); window.scrollTo(0, 0);
+  };
   // two clicks to start over (embedded viewers can suppress confirm() dialogs)
   $('restart').onclick = async () => {
     if ($('restart').dataset.armed !== '1') { $('restart').dataset.armed = '1'; $('restart').textContent = 'Click again to start over from mission 1'; return; }
