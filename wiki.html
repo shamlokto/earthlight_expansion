@@ -62,7 +62,12 @@
       .toc .h { width: 100%; margin-top: 4px; }
       .grid { grid-template-columns: minmax(0, 1fr); }
     }
-  </style>
+      .xtable { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+    .xtable th { cursor: pointer; text-align: left; user-select: none; border-bottom: 1px solid var(--line); padding: 4px 6px; }
+    .xtable th[data-dir="asc"]::after { content: ' ▲'; } .xtable th[data-dir="desc"]::after { content: ' ▼'; }
+    .xtable td { padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .unit .icons canvas { image-rendering: pixelated; }
+</style>
 </head>
 <body>
   <header class="top">
