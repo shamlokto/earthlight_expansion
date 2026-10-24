@@ -8,8 +8,10 @@ import { SELENE_KAI } from './selenekai.js';
 import { LEVIATHAN } from './leviathan.js';
 import { DIRECTORATE_TALOS } from './dirtalos.js';
 import { PEGASUS } from './pegasus.js';
+import { PALLAS_JET, PALLAS_JET_SPENT, PALLAS_ROBOT } from './pallas.js';
 
-const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS, pegasus: PEGASUS };
+const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS, pegasus: PEGASUS,
+  pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT };
 export const ownArt = (types, type) => SETS[types?.[type]?.ownArt] || null;
 
 const decoded = new WeakMap();
@@ -74,6 +76,14 @@ export function ownHullTiles(set) {
 // 32x32 pose, 16 tiles to a row) to a 32x32 picture in the colour numbers of the craft fight
 // rows. ownPoseTiles(set, tiles) is `tiles` (a fightscene.js tile cache) with those poses' 16
 // tiles each replaced; ownPoseBases(set) the pose tiles.
+// A set's poses for the fight sheet in use: `poses2` (if any) stand in on the second sheet, the one
+// weapon slots 1-3 load (fightscene.js sheetOf; the Pallas's sabre poses), `poses` on the first.
+const second = new WeakMap();
+export function ownPoseSet(set, slot) {
+  if (!slot || !set.poses2) return set;
+  if (!second.has(set)) second.set(set, { poses: set.poses2 });
+  return second.get(set);
+}
 const poseBases = new WeakMap();
 export function ownPoseBases(set) {
   if (!poseBases.has(set)) poseBases.set(set, new Set(Object.keys(set.poses || {}).map(Number)));

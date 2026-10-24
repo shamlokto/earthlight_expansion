@@ -66,7 +66,11 @@
   "Selene Kai",
   "Leviathan",
   "Directorate Talos",
-  "Pegasus"
+  "Pegasus",
+  "Pallas",
+  "Pallas",
+  "Pallas",
+  "Pallas"
  ],
  "unitInfo": [
   {
@@ -671,6 +675,46 @@
     "   Carrier\n   Large",
     "General's Flagship\n\nWingtip beam emitters, a\nrailgun broadside and a\nclose-in railgun turret.",
     "The fastest capital ship ever\nbuilt. It dances clear of\nfire, carries the General's\nwing, and outguns anything\nthat can keep up with it."
+   ]
+  },
+  {
+   "type": 62,
+   "name": "Pallas",
+   "short": "Transforming Ace",
+   "info": [
+    "   Convert\n   Bomb",
+    "Transforming Ace\n(Fighter-Bomber Mode)\n\nBeam guns in the nose and\none anti-ship torpedo",
+    "The Athena's successor. A\nnew frame from nose to heel;\none machine in two shapes.\nUnique: one at a time."
+   ]
+  },
+  {
+   "type": 63,
+   "name": "Pallas",
+   "short": null,
+   "info": [
+    "   Convert\n   Fighter",
+    "Transforming Ace\n(Fighter Mode)\n\nBeam guns in the nose; the\ntorpedo is spent",
+    "The Athena's successor. A\nnew frame from nose to heel;\none machine in two shapes.\nUnique: one at a time."
+   ]
+  },
+  {
+   "type": 64,
+   "name": "Pallas",
+   "short": null,
+   "info": [
+    "   Convert\n   Melee",
+    "Transforming Ace\n(Hunter Mode)\n\nA railgun that answers fire\nat close range, and a\nbeamsaber for melee combat",
+    "The Athena's successor. A\nnew frame from nose to heel;\none machine in two shapes.\nUnique: one at a time."
+   ]
+  },
+  {
+   "type": 65,
+   "name": "Pallas",
+   "short": null,
+   "info": [
+    "   Convert\n   Melee",
+    "Transforming Ace\n(Hunter Mode)\n\nA railgun that answers fire\nat close range, and a\nbeamsaber for melee combat",
+    "The Athena's successor. A\nnew frame from nose to heel;\none machine in two shapes.\nUnique: one at a time."
    ]
   }
  ],

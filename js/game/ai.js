@@ -26,7 +26,9 @@ import { distance, neighbours, hexRing, NEUTRAL } from './rules.js';
 import { inLane, decimator, blast } from './events.js';
 
 const ROUTES = 0x0289b1, SCRIPTS = 0x00e900, VIP_UNION = 0x02e64f, VIP_GALT = 0x02e631;
-const SPENT_FORMS = new Set([5, 7, 11, 44]);     // $01:8C10
+const SPENT_FORMS = new Set([5, 7, 11, 44, 63, 65]);     // $01:8C10 (63/65: the expansion's Pallas)
+// The Athena's four forms (4-7) and the Pallas's (62-65, the expansion's successor): the lowest type
+const athenaBase = (t) => (t >= 4 && t <= 7 ? 4 : t >= 62 && t <= 65 ? 62 : null);
 const ABADDON = 43, SIREN = 36, ERINYES = 34;
 const DOCK_CAT = 7, CARRIER_CAT = 1, GUARD_ZONE = 3;
 
@@ -126,10 +128,11 @@ class Brain {
   // Form a unit fights slot s in ($01:84E0), or null when it can't use that slot.
   form(u, s) {
     const t = u.type;
-    if (t >= 4 && t <= 7) {        // Athena: slots 0/2 as HU, slot 3 (bomb) as fighter, slot 1 never
+    const a0 = athenaBase(t);
+    if (a0 !== null) {        // Athena (and Pallas): slots 0/2 as HU, slot 3 (bomb) as fighter, slot 1 never
       if (s === 1) return null;
-      if (s === 3) return t === 6 || t === 4 ? 4 : null;
-      return t < 6 ? t + 2 : t;
+      if (s === 3) return t === a0 + 2 || t === a0 ? a0 : null;
+      return t < a0 + 2 ? t + 2 : t;
     }
     if (t === SIREN) return this.b.tables.hasWeapon(37, s) ? 37 : null;
     return this.b.types[t].weapons[s] ? t : null;
@@ -422,7 +425,7 @@ class Brain {
     const goals = this.army !== 1 ? null : b.info.custom ? b.info.routes : routes(this.rom, b.info.index);
     for (const u of b.units) {
       if (!this.mobile(u) || !this.free(u) || u.aiScripted || u.guard || this.passive.has(u)) continue;
-      const t0 = u.type, athena = t0 === 6 || t0 === 7;
+      const t0 = u.type, athena = athenaBase(t0) !== null && t0 >= athenaBase(t0) + 2;
       if (athena && !u.burner && b.canTransform(u)) u.type -= 2;   // moves in fighter form, unless it has an afterburner ($01:880D)
       const mp0 = b.movePoints(u);
       let goal = null;

@@ -322,14 +322,14 @@ function expansionUnitsHtml() {
   // compact table, sortable by clicking a header
   html += `<table class="xtable" id="xtable"><thead><tr>${['Unit', 'Side', 'Price', 'HP', 'Move', 'Evasion', 'Weapons'].map((h, i) => `<th data-col="${i}">${h}</th>`).join('')}</tr></thead><tbody>`;
   for (const u of [...list, ...extra.map((t) => T[t])]) {
-    const src = xpSources(u.type), anchor = list.includes(u) ? `xunit-${u.type}` : `unit-${u.type}`;
+    const src = xpSources(u.formOf ?? u.type), anchor = list.includes(u) ? `xunit-${u.type}` : `unit-${u.type}`;   // a second form is fielded as its first
     html += `<tr><td data-v="${esc(xname(u.type))}"><a href="#${anchor}">${esc(xname(u.type))}</a> <span class="mono dim">${esc(u.code)}</span></td>
       <td data-v="${src.buy ? 'a' : 'b'}${esc(sideOf(src, u))}">${esc(sideOf(src, u))}</td><td data-v="${price(T, u.type)}">${price(T, u.type)}</td><td data-v="${u.hp}">${u.hp}</td>
       <td data-v="${u.move}">${u.move}</td><td data-v="${u.evasion}">${Math.round(u.evasion * 100 / 128)}%</td><td data-v="${esc(wtxt(u))}" class="mono">${esc(wtxt(u))}</td></tr>`;
   }
   html += `</tbody></table><p class="note">Expansion rules on ROM units: ${[34, 26, 23, 24].map((t) => `<a href="#unit-${t}">${esc(nameOf(t))}</a>`).join(', ')} (see the notes on their entries).</p><div class="grid">`;
   for (const u of list) {
-    const tx = xp.text.unitInfo.find((e) => e.type === u.type), weapons = u.weapons.filter(Boolean), src = xpSources(u.type);
+    const tx = xp.text.unitInfo.find((e) => e.type === u.type), weapons = u.weapons.filter(Boolean), src = xpSources(u.formOf ?? u.type);
     const spent = T.find((v) => v && v.armed === u.type), loaded = T.find((v) => v && v.empty === u.type);
     html += `<section class="unit" id="xunit-${u.type}"><header><canvas data-xart="${u.type}" style="width:64px;height:64px;image-rendering:pixelated"></canvas><div>
       <h3>${esc(xname(u.type))}</h3><div class="role"><span class="mono">${esc(u.code)}</span>${tx?.short ? ` · ${esc(tx.short)}` : ''}</div>
@@ -343,7 +343,9 @@ function expansionUnitsHtml() {
       : `Borrows the <a href="#unit-${u.look}">${esc(nameOf(u.look))}</a>'s graphics; map tag <span class="mono">${esc(u.tag || '')}</span>.`];
     if (u.type < types.length) notes.push(`Cut from the original: <a href="#unit-${u.type}">ROM entry</a>.`);
     else notes.push('New in the expansion.');
-    if (spent) notes.push(`After firing its one-shot W4 it becomes its spent form (type ${spent.type}); re-armed on boarding.`);
+    if (u.otherForm !== undefined || u.formOf !== undefined) notes.push(`Transforms between <a href="#xunit-${u.formOf ?? u.type}">fighter-bomber</a> and <a href="#xunit-${u.otherForm ?? u.type}">hunter</a> form at the start of its move.`);
+    if (spent) notes.push(u.weapons[3] ? `After firing its one-shot W4 it becomes its spent form (type ${spent.type}); re-armed on boarding.` : `Its spent form (type ${spent.type}, after the fighter-bomber's torpedo) looks and fights the same; re-armed on boarding.`);
+    if (T[u.formOf ?? u.type].unique) notes.push('Unique: only one may serve at a time (no limit in beta testing).');
     if (loaded) notes.push('A one-unit transport like the Crab: carries one small unit, and can set down a Dragon or Hydra.');
     if (T[u.type].category === 1) notes.push('Carrier: launches small craft next to itself; the general can ride it.');
     html += `<p class="note">${notes.join(' ')}</p></section>`;

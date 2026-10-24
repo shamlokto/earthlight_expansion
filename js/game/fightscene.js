@@ -13,7 +13,7 @@ import { decodeTile, paletteFromBytes, bgr555 } from '../gfx.js';
 import { InfoScreen } from './infoscreen.js';
 import { SFX, fireSfx } from '../audio/fightsfx.js';
 import { SHIP_ATTACKS, MELEE } from './fightdata.js';
-import { ownHullTiles, ownPoseBases, ownPoseTiles } from '../art/own.js';
+import { ownHullTiles, ownPoseBases, ownPoseTiles, ownPoseSet } from '../art/own.js';
 
 const W = 256, H = 224;
 const T_BG = 0x04cce0, T_BGPAL = 0x04cd78, T_BGMAP1 = 0x04cd06, T_BGMAP = 0x04cd2c, T_SHEET = 0x04d038, T_SHEET2 = 0x04d072;
@@ -320,7 +320,7 @@ export class FightScene {
     // a small craft with its own fight poses (js/art/own.js): its 32x32 body sprites come from
     // them, its shots and effects still from the sheet (drawSprite)
     for (const [k, side] of [['tilesL', this.leftSide], ['tilesR', this.rightSide]]) {
-      if (side.own && side.own.poses) this[k].ownPoses = { bases: ownPoseBases(side.own), tiles: ownPoseTiles(side.own, this[k]) };
+      if (side.own && side.own.poses) { const set = ownPoseSet(side.own, this.slotOf(side)); this[k].ownPoses = { bases: ownPoseBases(set), tiles: ownPoseTiles(set, this[k]) }; }
     }
   }
 

@@ -4,7 +4,7 @@
 {"no":3,"title":"Shipyard","file":"missions/herbert.json","unlocks":[0,1,2,3,34,38,12,28],"hint":"Mecha and railguns: fortress decks give almost no cover."},
 {"no":4,"title":"Le Guin Again","file":"missions/gibson.json","unlocks":[41],"hint":"Fast strikers: the flagship runs for the edge."},
 {"no":5,"title":"Foundry","file":"missions/banks.json","unlocks":[39,40,42,58],"hint":"Cruisers, and units that can take docks."},
-{"no":6,"title":"Decimators","file":"missions/niven.json","unlocks":[],"hint":"Speed: three transports race for the east edge; hold the lanes."},
+{"no":6,"title":"Decimators","file":"missions/niven.json","unlocks":[62],"hint":"Speed: three transports race for the east edge; hold the lanes."},
 {"no":7,"title":"The Wreck","file":"missions/simak.json","unlocks":[30,31,33],"hint":"Carriers and range: a wide Earth orbit full of carriers."},
 {"no":8,"title":"Gate","file":"missions/zelazny.json","unlocks":[61],"hint":"Beam-proof routes: magnetic fields shelter you from Talos beams."},
 {"no":9,"title":"Line","file":"missions/butler.json","unlocks":[],"hint":"Long range: an artillery line behind meteoroid ridges."},
