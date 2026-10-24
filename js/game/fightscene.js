@@ -629,3 +629,7 @@ export class FightScene {
     ctx.putImageData(img, 0, 0);
   }
 }
+
+// For the battle board's unit tokens (js/render/tokens.js): the same sprites, palettes and
+// poses the fight scene uses.
+export { kindOf, PALS, HULL, HULL_X, HULLS, STRUCT, spriteBank, tileCache, variant as poseOf };
