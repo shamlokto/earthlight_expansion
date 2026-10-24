@@ -4450,7 +4450,13 @@
      "max": 4,
      "power": 120
     },
-    null,
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 70
+    },
     null
    ],
    "aiValue": 30,
@@ -4458,14 +4464,14 @@
     "attack": [
      72,
      96,
-     0,
+     55,
      0
     ],
     "defence": 35,
     "minRange": [
      1,
      2,
-     0,
+     1,
      0
     ]
    },
