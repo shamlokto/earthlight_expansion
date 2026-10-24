@@ -37,6 +37,7 @@ const ALERT_GALT = 87, ALERT_UNION = 88, BABYLON_ALERT = 94;
 
 let rom, romEn = null, en = null, pal, types, battle, mission = 0;
 let sel = null, reach = null, targets = [], hosts = [], launching = null, busy = false, blastCells = null;
+let range = null;   // your selected unit's fire range: every hex it could attack this turn (Set of 'x,y')
 let threat = null;   // an enemy unit's reach, shown when it is clicked: { u, move: Map, fire: Set }
 let cursor = null;   // keyboard cursor hex [x, y]
 let startLevels = new Map();   // unit id -> level when the battle began (the results screen's level gains)
@@ -312,7 +313,7 @@ function setupBoard(m) {
   const terr = renderMap(custom ? custom.rom : rom, info, { units: false });
   if (!board) { board = new Board($('board'), $('cv'), { rom, icon: maskedIcon }); board.active = () => !$('sBattle').hidden; }
   board.setTerrain(terr.img, pal);   // terrain classes come with the battle (board.update)
-  sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; blastCells = null; threat = null; $('log').innerHTML = '';
+  sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; blastCells = null; threat = null; range = null; $('log').innerHTML = '';
   show('sBattle'); $('where').textContent = custom ? `expansion · ${custom.mission.title || custom.mission.name}` : `mission ${m + 1} · ${missionTitle(m)}`;
   return info;
 }
@@ -422,7 +423,7 @@ function maskedIcon(u) {
 // The board draws itself every frame from this state (js/render/board.js).
 function draw() {
   music();
-  board.update({ battle, reach, launching, targets, hosts, threat, blastCells, sel, cursor, inLane });
+  board.update({ battle, reach, range, launching, targets, hosts, threat, blastCells, sel, cursor, inLane });
 }
 
 function hud(msg) {
@@ -504,6 +505,7 @@ function logAttack(e) {
 function select(u) {
   sel = u; launching = null; threat = null;
   reach = battle.movePoints(u) ? battle.reachable(u) : null;
+  range = u.army === battle.army && !u.acted ? threatOf(u).fire : null;
   targets = battle.targets(u); hosts = battle.boardable(u);
   blastCells = null;
   const dec = u.army === 0 ? decimator(battle, u) : [];
@@ -512,10 +514,10 @@ function select(u) {
   const again = u.acted && u.reMove ? '<p>Move again (optional), or click elsewhere to finish.</p>' : '';
   const det = (u.burner && u.army === 0 ? '<button class="btn" id="bDetach">Detach burner</button>' : '')
     + (dec.length ? '<button class="btn" id="bDecimator">Quantum Decimator</button>' : '');
-  const legend = `<p class="dim">Blue: move${hosts.length ? ' · yellow: board (full repair, re-arm)' : ''} · red: attack.</p>`;
+  const legend = `<p class="dim">Blue: move${hosts.length ? ' · yellow: board (full repair, re-arm)' : ''} · faint red: fire range · red: attack.</p>`;
   draw(); hud(unitCard(u, cargoPanel(u) + again + legend + (tf || det ? `<div class="row">${tf}${det}</div>` : '')));
   if (dec.length) $('bDecimator').onclick = () => {
-    reach = null; targets = []; hosts = []; blastCells = dec;
+    reach = null; range = null; targets = []; hosts = []; blastCells = dec;
     draw(); hud(unitCard(u, '<p>Click a purple hex: the Decimator clears it and the six hexes around it, destroying whatever is there.</p>'));
   };
   if (u.burner && u.army === 0) $('bDetach').onclick = async () => { detachBurner(battle, u); log(`<span class="armyA">${nameOf(u)}</span> detached its afterburner`); await alerts([EV.burner]); select(u); };
@@ -524,12 +526,12 @@ function select(u) {
 }
 
 function startLaunch(u) {
-  launching = u; sel = u.carrier; targets = []; hosts = [];
+  launching = u; sel = u.carrier; targets = []; hosts = []; range = null;
   reach = new Map(battle.launchCells(u).map(([x, y]) => [`${x},${y}`, 0]));
   draw(); hud(unitCard(u, '<p>Click a green hex to launch.</p>'));
 }
 
-function clearSel() { sel = null; reach = null; targets = []; hosts = []; launching = null; blastCells = null; threat = null; draw(); }
+function clearSel() { sel = null; reach = null; range = null; targets = []; hosts = []; launching = null; blastCells = null; threat = null; draw(); }
 
 // Where an enemy unit can move this turn (its full movement, held up by your zones of control) and
 // every hex it could fire on from there: each armed weapon's range, from every hex it can reach, or
@@ -590,7 +592,7 @@ function act(cx, cy) {
   if (launching && reach && reach.has(key)) {
     const l = launching;
     battle.launch(l, cx, cy); log(`<span class="armyA">${nameOf(l)}</span> launched`);
-    sel = l; launching = null; reach = null; hosts = []; targets = battle.targets(l);
+    sel = l; launching = null; reach = null; range = null; hosts = []; targets = battle.targets(l);
     draw(); hud(unitCard(l, targets.length ? '<p>Click a red hex to attack.</p>' : ''));
     if (!targets.length) { l.acted = true; clearSel(); }
     return;
@@ -608,7 +610,7 @@ function act(cx, cy) {
     battle.move(sel, cx, cy);
     if (checkEnd()) { clearSel(); return; }   // expansion: a unit leaving by the exit edge can win the map
     if (again) { const s = sel; clearSel(); hud(unitCard(s)); return; }
-    reach = null; targets = battle.targets(sel); hosts = [];
+    reach = null; range = null; targets = battle.targets(sel); hosts = [];
     draw(); hud(unitCard(sel, targets.length ? '<p>Click a red hex to attack.</p>' : '<p>No targets in range.</p>'));
     if (!targets.length) { sel.acted = true; clearSel(); }
     return;
@@ -644,7 +646,7 @@ function forecastHtml(a, d) {
 async function fireDecimator(a, x, y) {
   const e = blast(battle, a, x, y);
   log(`<span class="armyA">${nameOf(a)}</span> fired the Quantum Decimator: ${e.hit.length ? e.hit.map((u) => `<span class="${side(u.army)}">${nameOf(u)}</span>`).join(', ') + ' destroyed' : 'path cleared'}`);
-  sel = null; reach = null; targets = []; hosts = []; blastCells = null; busy = true;
+  sel = null; reach = null; range = null; targets = []; hosts = []; blastCells = null; busy = true;
   if (sound) sound.playSfx(0x3F);   // explosion
   await flash(e.cells, 'rgba(255,255,255,.8)');
   paintTerrain();
@@ -681,7 +683,7 @@ function alerts(ids) {
 async function attack(a, d) {
   const e = battle.attack(a, d, bestWeapon(a, d));
   logAttack(e);
-  sel = null; reach = null; targets = []; hosts = []; busy = true;
+  sel = null; reach = null; range = null; targets = []; hosts = []; busy = true;
   await runFight(e);
   busy = false;
   if (checkEnd()) { draw(); return; }

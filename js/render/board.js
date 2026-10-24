@@ -428,6 +428,7 @@ export class Board {
       area([...st.threat.move.keys()].map(key), 'rgba(255,165,60,.28)', 'rgba(255,190,90,.5)');
       this.ring(ctx, st.threat.u.x, st.threat.u.y, '#ff6a3d', sec, 3);
     }
+    if (st.range) area([...st.range].filter((k) => !(st.reach && st.reach.has(k))).map(key), 'rgba(255,70,90,.13)', 'rgba(255,110,120,.3)');
     if (st.reach) area([...st.reach.keys()].map(key), st.launching ? 'rgba(110,255,160,.28)' : 'rgba(80,165,255,.26)', st.launching ? 'rgba(150,255,190,.6)' : 'rgba(130,200,255,.55)');
     if (st.blastCells) area(st.blastCells, `rgba(200,90,255,${0.25 + 0.1 * Math.sin(sec * 5)})`, 'rgba(230,160,255,.7)');
     if (st.hosts && st.hosts.length) area(st.hosts.map((h) => [h.x, h.y]), 'rgba(255,214,74,.3)', 'rgba(255,230,120,.8)');
