@@ -433,6 +433,7 @@ class Brain {
     const goals = this.army !== 1 ? null : b.info.custom ? b.info.routes : routes(this.rom, b.info.index);
     for (const u of b.units) {
       if (!this.mobile(u) || !this.free(u) || u.aiScripted || u.guard || this.passive.has(u)) continue;
+      if (u.hold && b.turn < u.hold) continue;   // expansion: holds its post until that turn (it still fires at what comes in range)
       const t0 = u.type, athena = athenaBase(t0) !== null && t0 >= athenaBase(t0) + 2;
       if (athena && !u.burner && b.canTransform(u)) u.type -= 2;   // moves in fighter form, unless it has an afterburner ($01:880D)
       const mp0 = b.movePoints(u);

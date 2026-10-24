@@ -150,6 +150,9 @@ export class Battle {
         const [x, y] = this.freeNear(a.x, a.y, a.type);
         const u = this.spawn(a.type, this.army, x, y);
         if (a.chase) u.chase = a.chase;   // expansion: an order for the AI (ai.js), e.g. 'carriers'
+        if (a.level !== undefined) u.level = a.level;   // expansion: a named ace or elite guard
+        // expansion: a flagship that arrives late becomes the objective then (scripts.js stakes)
+        if (this.stakes && this.army === 1 && this.script?.win?.flagship === a.type && !this.stakes[1].flagship) this.stakes[1].flagship = u;
         for (const t of a.cargo) this.spawn(t, this.army, x, y, u);
         out.push(u);
       }

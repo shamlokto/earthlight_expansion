@@ -158,6 +158,7 @@ function build(spec) {
     if (u.neutral) o.neutral = true;
     if (u.joiner) o.joiner = true;
     if (u.level !== undefined) o.level = u.level;
+    if (u.hold) o.hold = u.hold;   // the AI keeps it in place until that battle turn (ai.js)
     if (u.cargo) o.cargo = u.cargo;
     return o;
   });

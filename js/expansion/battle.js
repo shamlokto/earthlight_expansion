@@ -49,7 +49,7 @@ export class ExpansionBattle extends Battle {
     super(view, info, types, list, arrivalList(mission), { script: scriptOf(mission), hard: opts.hard, tables: opts.tables });
     this.mission = mission;
     // campaign machines bring their pilot's level and their roster id (Battle spawns in list order)
-    list.forEach((d, i) => { if (d.level !== undefined) this.units[i].level = d.level; if (d.rosterId !== undefined) this.units[i].rosterId = d.rosterId; });
+    list.forEach((d, i) => { if (d.level !== undefined) this.units[i].level = d.level; if (d.rosterId !== undefined) this.units[i].rosterId = d.rosterId; if (d.hold) this.units[i].hold = d.hold; });
     this.escaped = [];
     const g = mission.general && this.units.find((u) => u.army === 0 && u.x === mission.general.x && u.y === mission.general.y && !u.carrier);
     this.general = g || null;

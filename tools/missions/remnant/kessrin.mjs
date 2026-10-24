@@ -7,7 +7,7 @@
 //     two carriers put out fighters on the first turn;
 //   * the atmosphere and Earth along the south edge (nothing inside the atmosphere can be
 //     targeted); Directorate reserves on turns 6 and 11; the Olympos garrison joins on turn 7.
-// Objective: sink the Leviathan within 28 turns. Epilogue by the campaign's choice (deal/refuse).
+// Objective: sink the Leviathan within 30 turns. It arrives on turn 14. Epilogue by the campaign's choice (deal/refuse).
 const COLS = 59, ROWS = 40;
 const g = Array.from({ length: ROWS }, () => new Array(COLS).fill('.'));
 const set = (x, y, c) => { if (x >= 1 && y >= 1 && x <= COLS && y <= ROWS) g[y - 1][x - 1] = c; };
@@ -47,8 +47,7 @@ place('H', [[2, 5]]);
 place('R', [[4, 33]]);
 place('A', [[5, 21]]);
 // Kessrin's fleet: the Leviathan, its guard, the line, the carriers
-place('V', [[LX, LY]]);
-place('d', [[44, 16], [44, 20], [48, 16], [48, 20], [43, 18], [49, 18]]);
+// the Leviathan and its Directorate guard arrive last, on turn 14 (arrivals below)
 place('X', [[37, 14], [37, 22]]);
 place('Q', [[41, 13]]);
 place('W', [[41, 23]]);
@@ -58,7 +57,11 @@ place('k', [[53, 12], [53, 24]]);
 place('f', [[31, 12], [31, 23], [40, 5], [42, 32]]);
 place('u', [[24, 13], [24, 22]]);
 place('o', [[26, 9], [26, 26]]);
-place('l', [[33, 13], [33, 24], [39, 7], [39, 33], [50, 9], [50, 27]]);
+place('l', [[33, 13], [33, 24]]);
+// the grand armada (owner, 2026-10-24): more battleships in place of light craft; they hold the
+// ring until the Leviathan arrives
+place('Q', [[39, 7], [50, 27]]);
+place('W', [[39, 33], [50, 9]]);
 place('n', [[36, 10], [36, 25]]);
 place('e', [[30, 21], [32, 15]]);
 place('h', [[35, 17], [36, 27], [33, 6], [52, 18], [45, 30]]);
@@ -66,13 +69,13 @@ const units = rows.map((_, j) => Array.from({ length: COLS }, (_, i) => U[`${i +
 
 export default {
   name: 'KESSRIN', title: 'Kessrin', file: 'remnant/kessrin', screens: [4, 4],
-  objective: { kind: 'flagship', type: 59 }, turnLimit: 28, cap: 20, music: 29,
+  objective: { kind: 'flagship', type: 59 }, turnLimit: 30, cap: 20, chaseGeneral: true, music: 29,
   goal: "Sink Marshal Kessrin's flagship, the Leviathan, within 28 turns. If the general falls, it is over.",
   chapter: 'Chapter 12 · Low Earth orbit',
   transmission: "I gave the Union a victory, General, and you gave it a conscience. Only one of those was ever going to fit on a battleship.",
   comms: [
     { speaker: 'kessrin', text: "I gave the Union a victory, General, and you gave it a conscience. Only one of those was ever going to fit on a battleship." },
-    { speaker: 'sato', text: "The Leviathan sits inside a gravity ring. It opens to the west and to the north-east. The magnetic belts get us to the west opening without his beams finding us." },
+    { speaker: 'sato', text: "His whole line is coming for you, General, not for the ring. The Leviathan isn't on the plot yet; when it comes, it comes from the east. The ring opens to the west and to the north-east. The magnetic belts get us to the west opening without his beams finding us." },
     { speaker: 'ruess', text: "Two Abaddons in front of the ring, and his guard is Directorate Talos. Ours is the last Decimator on our side. If it reaches four hexes of that ship, the war is over." },
     { speaker: 'moraine', text: "Every Union captain in orbit is listening to this battle. Win it loudly, General." },
     { speaker: 'kessrin', text: "Lysa thought you were worth a duel. I think you are worth exactly one missile." },
@@ -82,7 +85,8 @@ export default {
     "Kill the two Abaddons in front of the gravity ring with fighters before any of your capital ships comes within four hexes of them.",
     "The gravity ring opens to the west and the north-east. Hold the west opening with the mecha while a fast group swings around to the north-east.",
     "Bring your own Abaddon up behind the mecha. From four hexes away its Decimator ends the Leviathan and everything next to it. Don't move it on the turn it fires.",
-    "Reserves arrive from the east on turns 6 and 11; the Olympos garrison joins you from the north-west on turn 7. Only the Leviathan matters.",
+    "His fast units come for the general at once: keep that machine in the second line and let them break on your mecha. His battleships, cruisers and Abaddons hold the ring until the Leviathan comes. Reserves arrive from the east on turns 6 and 11; the Olympos garrison joins you on turn 7.",
+    "Kessrin holds the Leviathan back until turn 14, then brings it in from the east with six Directorate Talos. Have your Abaddon and your best guns ready for it.",
   ],
   plan: [
     { n: 1, path: [[8, 9], [22, 9], [34, 10]] },
@@ -98,7 +102,7 @@ export default {
   briefing: `
 Low Earth orbit. The end of it.
 
-Kessrin has nowhere left to go but down. He has drawn up everything that still answers to him above the atmosphere: two battleships, cruisers, two carriers, his Directorate guard, and at the centre, inside a ring of gravity flux, his flagship. The Leviathan was laid down to end the Galt war. He means it to end ours.
+Kessrin has nowhere left to go but down. He has drawn up everything that still answers to him above the atmosphere: two battleships, cruisers, two carriers, and a ring of gravity flux where his flagship will make its stand. The Leviathan was laid down to end the Galt war. He is holding it back with his Directorate guard until we have bled on his line, and he means it to end ours.
 
 Every Union captain in orbit is watching. Most of them have not chosen a side yet; they are waiting to see who is still flying tomorrow.
 
@@ -150,11 +154,11 @@ The Union comes home, poorer and owing nobody.`,
     A: { type: 43, army: 0 },                 // Abaddon, the remnant's last Decimator
     V: { type: 59, army: 1 },                 // the Leviathan, Kessrin's flagship (the objective)
     d: { type: 60, army: 1, level: 6 },       // Directorate Talos, the flagship guard
-    X: { type: 43, army: 1 },                 // Abaddon (Quantum Decimator)
-    Q: { type: 30, army: 1 },                 // Tiamat
-    W: { type: 31, army: 1 },                 // Asura-II
+    X: { type: 43, army: 1, hold: 14 },                 // Abaddon (Quantum Decimator)
+    Q: { type: 30, army: 1, hold: 14 },                 // Tiamat
+    W: { type: 31, army: 1, hold: 14 },                 // Asura-II
     c: { type: 42, army: 1 },                 // Corvus
-    h: { type: 39, army: 1 },                 // Hannibal
+    h: { type: 39, army: 1, hold: 14 },                 // Hannibal
     r: { type: 40, army: 1 },                 // Regulus
     k: { type: 34, army: 1 },                 // Artemis carrier
     f: { type: 49, army: 1 },                 // Fenrir
@@ -165,9 +169,12 @@ The Union comes home, poorer and owing nobody.`,
     e: { type: 3, army: 1 },                  // Medusa
   },
   cargo: { '53,12': [8, 9, 10], '53,24': [8, 9, 10] },
-  // the line holds in front of the ring; the guard stays by the flagship
+  // the light units hunt the general (chaseGeneral); battleships, cruisers and Abaddons hold until
+  // turn 14 (hold); the carriers keep to the ring
   routes: [[37, 16], [37, 20], [40, 11], [40, 25], [34, 14], [34, 22], [51, 10], [51, 26], [42, 18]].map(([x, y]) => ({ prio: 1, x, y })),
   arrivals: [
+    // the boss: the Leviathan and its Directorate guard, from the east on turn 14
+    { turn: 13, army: 1, units: [{ type: 59, x: LX + 10, y: LY }, ...[[-2, 0], [2, 0], [-1, -2], [1, -2], [-1, 2], [1, 2]].map(([dx, dy]) => ({ type: 60, x: LX + 10 + dx, y: LY + dy, level: 6 }))] },
     // Directorate reserves from the east, turns 6 and 11
     { turn: 5, army: 1, units: [{ type: 39, x: 59, y: 14 }, { type: 39, x: 59, y: 22 }, { type: 49, x: 58, y: 10 }, { type: 2, x: 59, y: 18 }, { type: 3, x: 58, y: 26 }] },
     { turn: 10, army: 1, units: [{ type: 31, x: 59, y: 18 }, { type: 42, x: 58, y: 12 }, { type: 42, x: 58, y: 24 }, { type: 49, x: 59, y: 30 }, { type: 51, x: 59, y: 6 }] },
