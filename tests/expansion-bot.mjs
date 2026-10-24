@@ -17,7 +17,7 @@ const { ExpansionBattle } = await imp('js/expansion/battle.js');
 const { aiTurn } = await imp('js/game/ai.js');
 const { loadExpansionData } = await imp('js/expansion/data.js');
 const { createHash } = await import('node:crypto');
-const { distance } = await imp('js/game/rules.js');
+const { distance, neighbours } = await imp('js/game/rules.js');
 
 const f = readFileSync(process.env.EARTHLIGHT_ROM);
 const rom = new Rom(await readRomFile({ arrayBuffer: async () => f.buffer.slice(f.byteOffset, f.byteOffset + f.length) }));
@@ -59,6 +59,27 @@ function launchAll(b) {
   }
 }
 
+// PATH=1: distances to the objective measured along terrain the unit's category can cross
+// (breadth-first from the targets, ignoring units), so units walk around walls and hulls.
+const pathCache = new Map();
+function pathDist(b, cat, goal) {
+  const key = `${b.turn}:${cat}:${goal.map((e) => e.id).join(',')}`;
+  if (!pathCache.has(key)) {
+    const d = new Map(), q = [];
+    for (const e of goal) { d.set(`${e.x},${e.y}`, 0); q.push([e.x, e.y]); }
+    for (let i = 0; i < q.length; i++) {
+      const [x, y] = q[i], n = d.get(`${x},${y}`);
+      for (const [a, c] of neighbours(x, y)) {
+        const k = `${a},${c}`;
+        if (d.has(k) || !b.inBounds(a, c) || b.tables.moveCost(cat, b.cls(a, c)) === 0) continue;
+        d.set(k, n + 1); q.push([a, c]);
+      }
+    }
+    pathCache.clear(); pathCache.set(key, d);
+  }
+  return pathCache.get(key);
+}
+
 function playerTurn(b) {
   launchAll(b);
   const o = mission.objective || {}, escape = o.kind === 'escape';
@@ -71,6 +92,13 @@ function playerTurn(b) {
     if (host) b.board(u, host);
   }
   const isHost = (u) => b.type(u).category === 1;
+  // GROUP=n: the army advances as one body; no unit ends a move more than n hexes ahead of its
+  // rear (the 70th-percentile distance to the objective at the start of the turn)
+  let rear = 0;
+  if (process.env.GROUP && !escape) {
+    const ds = mine().map((u) => Math.min(...targets(b.hostiles(u)).map((e) => distance(e, u)), 99)).sort((p, q) => p - q);
+    rear = ds[Math.floor(ds.length * 0.7)] ?? 0;
+  }
   const order = mine().sort((p, q) => (isHost(p) ? 1 : 0) - (isHost(q) ? 1 : 0) || (q.general ? 1 : 0) - (p.general ? 1 : 0) || q.x - p.x);
   for (const u of order) {
     if (u.hp <= 0 || u.carrier || b.winner() !== null) continue;
@@ -83,16 +111,17 @@ function playerTurn(b) {
       }
       // close in on the objective's targets (the Cortex, the marked type, or everyone)
       const goal = targets(foes);
-      const d = Math.min(...goal.map((e) => distance(e, { x, y })), 99);
+      const d = process.env.PATH_BOT ? (pathDist(b, b.type(u).category, goal).get(`${x},${y}`) ?? 99) : Math.min(...goal.map((e) => distance(e, { x, y })), 99);
       const danger = u.general ? foes.filter((e) => distance(e, { x, y }) <= b.type(e).move + 1).length : 0;
-      return -d * 10 - danger * +(process.env.WV ?? 15);
+      const ahead = process.env.GROUP ? Math.max(0, rear - +process.env.GROUP - d) : 0;
+      return -d * 10 - danger * +(process.env.WV ?? 15) - ahead * 40;
     };
     const reach = b.reachable(u);
     let best = null, bs = -Infinity;
     for (const k of reach.keys()) { const [x, y] = k.split(',').map(Number); const s = score(x, y); if (s > bs) { bs = s; best = [x, y]; } }
     if (best && (best[0] !== u.x || best[1] !== u.y)) b.move(u, ...best);
     if (u.escaped || b.winner() !== null) continue;
-    let pick = null, ps = 0;
+    let pick = null, ps = -(+process.env.AGGR || 0);   // AGGR=n also takes trades losing up to n HP
     for (const e of b.targets(u)) for (const w of b.weaponsAgainst(u, e)) {
       const fc = b.forecast(u, e, w), s = fc.dealt - fc.taken * (u.general ? 2 : 1);
       if (s > ps) { ps = s; pick = [e, w]; }
@@ -112,6 +141,10 @@ for (let r = 0; r < runs; r++) {
     b.endTurn();
   }
   if (process.env.TRACE && r === 0) console.log("end", b.turn, b.army, b.result, b.units.filter((u) => u.army === 0).map((u) => `${types[u.type].code}:${u.hp}${u.carrier ? "@" + (u.carrier.id ?? "x") : ""}${u.escaped ? "!" : ""}`).join(" "));
+  if (process.env.KILLS && r === 0) {   // who destroyed what, from the battle log
+    const k = {}; for (const e of b.log) if (e.after) for (const [u, i] of [[e.def, 1], [e.att, 0]]) if (e.before[i] > 0 && e.after[i] === 0) { const by = i ? e.att : e.def; const key = `${by.army ? 'U' : 'P'}:${types[by.type].code}->${types[u.type].code}`; k[key] = (k[key] || 0) + 1; }
+    console.log(JSON.stringify(k), "left:", b.units.filter((u) => u.hp > 0 && u.army === 1 && [53, 54, 55, 56].includes(u.type)).map((u) => `${types[u.type].code}@${u.x},${u.y}`).join(" "), "player", b.forces(0).map((u) => `${types[u.type].code}@${u.x},${u.y}`).join(" "));
+  }
   const k = `${b.winner() === 0 ? 'win' : b.winner() === 1 ? 'loss' : 'none'}:${b.result?.reason}`;
   tally.set(k, (tally.get(k) || 0) + 1); turns += b.turn;
   runHash.update(b.units.map((u) => [u.id, u.type, u.x, u.y, u.hp, u.level, u.escaped ? 1 : 0].join(',')).join(';') + k + b.turn);
