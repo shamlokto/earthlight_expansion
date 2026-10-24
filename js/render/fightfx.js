@@ -1,78 +1,88 @@
 // Modern renderer for the fight cut-ins. The choreography stays the original's: FightScene
 // (js/game/fightscene.js) decides every frame what is where, and frameState() hands this renderer
-// the sprites it would draw. Here they are drawn at high resolution: the ROM's own sprites and
-// backdrops upscaled with Scale2x applied twice (a pixel-art filter that rounds diagonals instead
-// of blowing pixels up into blocks), lit and shadowed, over a deep starfield, with additive glow
-// on shots, trails, muzzle flashes, particle explosions with debris and smoke, screen shake on
-// heavy hits (not with prefers-reduced-motion), motion interpolated between the game's 60 fps
-// frames, and eased transitions around the info screen.
+// the sprites it would draw; timing, hits, losses and sounds are untouched. What changes is how
+// it looks:
+//   * machines remastered at 4x (js/render/fightart.js): smooth outlines, normal-mapped lighting,
+//     metal highlights, army-coloured rim light, glowing engines and sensors, and dynamic light
+//     from every shot and explosion near them; motion blur on fast moves
+//   * weapons as light: hot-core beams and tracers with bloom, missiles trailing smoke, muzzle
+//     flares, impact sparks
+//   * multi-stage explosions: flash, fireball, shockwave, embers, tumbling debris, rising smoke,
+//     scorch glow; heavy hits punch the camera in and shake it (not with reduced motion)
+//   * a cinematic frame: a painted deep-space backdrop (nebula and planet in the terrain's
+//     colours) behind the original terrain layers, which are set back with depth of field; light
+//     shafts, colour grading, letterbox bars and a HUD with each side's name and HP
 //
 //   const fx = new FightRenderer(scene, canvas);   // after each scene.step(): fx.update();
 //   fx.render(alpha);                              // alpha: 0..1 between the last two steps
-const W = 256, H = 224, UP = 4;   // the scene's coordinates; sprites are cached at 4x
-const BOOM_TILES = new Set([192, 196, 200]);
+import { remastered, UP, canvasOf, scale2x } from './fightart.js';
 
-// ------------------------------------------------------------------ Scale2x / Scale4x
-// Scale2x (EPX) on an array of colour keys (palette indices or packed RGBA): each pixel becomes
-// 2x2, taking a neighbour's colour on a corner where two neighbours agree and the others don't.
-function scale2x(src, w, h) {
-  const out = new (src.constructor)(w * h * 4), W2 = w * 2;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const p = src[y * w + x];
-      const a = y > 0 ? src[(y - 1) * w + x] : p, b = x < w - 1 ? src[y * w + x + 1] : p;
-      const c = x > 0 ? src[y * w + x - 1] : p, d = y < h - 1 ? src[(y + 1) * w + x] : p;
-      let e0 = p, e1 = p, e2 = p, e3 = p;
-      if (c === a && c !== d && a !== b) e0 = a;
-      if (a === b && a !== c && b !== d) e1 = b;
-      if (d === c && d !== b && c !== a) e2 = c;
-      if (b === d && b !== a && d !== c) e3 = d;
-      const o = y * 2 * W2 + x * 2;
-      out[o] = e0; out[o + 1] = e1; out[o + W2] = e2; out[o + W2 + 1] = e3;
-    }
-  }
-  return out;
-}
+const W = 256, H = 224;
+const BOOM_TILES = new Set([192, 196, 200]);
+const ARMY = [[255, 96, 210], [96, 255, 150]];   // rim and HUD colours: army A pink, army B green
+const BAR = 9;                                    // letterbox bar height (scene px)
+
+// ------------------------------------------------------------------ helpers
 const scale4x = (src, w, h) => scale2x(scale2x(src, w, h), w * 2, h * 2);
 
-// Document canvases where there is a document: drawing an OffscreenCanvas onto the page canvas
-// forces a readback on software-rendered browsers (seconds per frame in headless Chromium).
-function canvasOf(w, h) {
-  if (typeof document !== 'undefined') return Object.assign(document.createElement('canvas'), { width: w, height: h });
-  return new OffscreenCanvas(w, h);
-}
-
-// A soft round blob of one colour (centre alpha 1 fading to 0), cached by colour: particles
-// draw it scaled with globalAlpha instead of building a radial gradient each frame.
+// A soft round blob of one colour, cached: particles draw it scaled instead of building a
+// gradient each frame.
 const BLOBS = new Map();
-function blob(r, g, b) {
-  const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+function blob(r, g, b, hard = false) {
+  const key = (((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4)) * 2 + (hard ? 1 : 0);
   let c = BLOBS.get(key);
   if (!c) {
     c = canvasOf(64, 64);
     const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
     const col = `${(r >> 4) * 17},${(g >> 4) * 17},${(b >> 4) * 17}`;
-    gr.addColorStop(0, `rgba(${col},1)`); gr.addColorStop(0.35, `rgba(${col},0.55)`); gr.addColorStop(1, `rgba(${col},0)`);
+    if (hard) { gr.addColorStop(0, `rgba(${col},1)`); gr.addColorStop(0.6, `rgba(${col},0.85)`); gr.addColorStop(1, `rgba(${col},0)`); }
+    else { gr.addColorStop(0, `rgba(${col},1)`); gr.addColorStop(0.3, `rgba(${col},0.5)`); gr.addColorStop(1, `rgba(${col},0)`); }
     x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
     BLOBS.set(key, c);
   }
   return c;
 }
+// A lumpy smoke puff (a few overlapping blobs), cached per shade.
+const PUFFS = new Map();
+function puff(shade, v = 0) {
+  const k = (shade >> 3) * 4 + (v & 3);
+  let c = PUFFS.get(k);
+  if (!c) {
+    c = canvasOf(64, 64);
+    const x = c.getContext('2d'); let s = k * 7919 + 1; shade = (k >> 2) * 8;
+    const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    for (let i = 0; i < 7; i++) {
+      const rad = 12 + r() * 12, px = 32 + (r() - 0.5) * 22, py = 32 + (r() - 0.5) * 22, v = shade + (r() * 30 | 0);
+      const gr = x.createRadialGradient(px, py, 0, px, py, rad);
+      gr.addColorStop(0, `rgba(${v},${v},${v + 8},0.55)`); gr.addColorStop(1, `rgba(${v},${v},${v + 8},0)`);
+      x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+    }
+    PUFFS.set(k, c);
+  }
+  return c;
+}
+
+const lerp = (a, b, t) => a + (b - a) * t;
+const mix = (c1, c2, t) => [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)];
+const rgbStr = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a.toFixed(3)})`;
 
 // ------------------------------------------------------------------ the renderer
 export class FightRenderer {
   constructor(scene, canvas, opts = {}) {
     this.scene = scene; this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.S = canvas.width / W;                     // screen pixels per scene pixel
+    this.S = canvas.width / W;
     this.reduced = opts.reducedMotion ?? (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches);
-    this.sprites = new Map();                      // cache key -> { c: canvas, glow: [r,g,b], lit }
+    this.sprites = new Map();
     this.tilesId = new WeakMap(); this.nTiles = 0;
-    this.particles = [];
-    this.trails = new Map();                       // shot id -> recent centres
-    this.shake = 0; this.seed = 1;
-    this.prev = null; this.cur = scene.frameState(); this.hulls = [];
+    this.particles = []; this.lights = []; this.decals = [];
+    this.trails = new Map(); this.shotAge = new Map(); this.lastShot = new Map();
+    this.shake = 0; this.seed = 7; this.punch = null; this.whiteout = 0;
+    this.prev = null; this.cur = scene.frameState(); this.hulls = []; this.hullGroups = [];
     this.introImg = null; this.introCanvas = null; this.lastIntro = null; this.introEnd = null;
+    this.hpShown = [this.scene.leftSide.hp, this.scene.rightSide.hp]; this.drain = [null, null];
+    const names = scene.intro && scene.intro.names;
+    this.labels = [scene.leftSide, scene.rightSide].map((s) => (names && names[s.type] ? String(names[s.type]).toUpperCase() : ''));
     this.stars = this.makeStars();
     this.buildBackdrop();
   }
@@ -80,69 +90,133 @@ export class FightRenderer {
   rnd() { this.seed = (this.seed * 1103515245 + 12345) & 0x7fffffff; return this.seed / 0x80000000; }
 
   // ---------------------------------------------------------------- backdrop
-  // The two terrain layers of the original (left side's terrain over the right side's), upscaled
-  // once, transparent where the original shows the backdrop colour, so a starfield shows through.
   buildBackdrop() {
-    const s = this.scene;
+    const s = this.scene, S = this.S;
+    // the terrains' own colours tint the painted sky
+    const tint = (L) => {
+      if (!L.pal.length) return null;
+      const cnt = new Map();
+      for (let i = 0; i < L.px.length; i += 37) { const k = L.px[i]; if (k) cnt.set(k, (cnt.get(k) || 0) + 1); }
+      const top = [...cnt].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => L.pal[k]);
+      return top.length ? top : null;
+    };
+    this.hues = [...(tint(s.bgL) || []), ...(tint(s.bgR) || [])];
+    if (!this.hues.length) this.hues = [[60, 80, 200], [140, 60, 180]];
     const layer = (L) => {
       if (!L.pal.length) return null;
+      // a dark colour filling most of the layer is empty space: the painted sky shows through it
+      const cnt = new Map();
+      for (let i = 0; i < L.px.length; i += 5) cnt.set(L.px[i], (cnt.get(L.px[i]) || 0) + 1);
+      const [top, topN] = [...cnt].sort((a, b) => b[1] - a[1])[0], tc = L.pal[top];
+      const keyed = top && tc && topN > L.px.length / 5 * 0.35 && tc[0] * 0.3 + tc[1] * 0.55 + tc[2] * 0.15 < 48 ? top : -1;
       const up = scale4x(L.px, 256, 256), n = 256 * UP, c = canvasOf(n, n), g = c.getContext('2d');
       const img = g.createImageData(n, n), d = img.data;
       for (let i = 0; i < up.length; i++) {
         const k = up[i];
-        if (!k) continue;
+        if (!k || k === keyed) continue;
         const col = L.pal[k], o = i * 4;
         d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = 255;
       }
       g.putImageData(img, 0, 0);
-      if (this.S === UP) return c;
-      // resampled once to screen resolution, so each frame's blits are 1:1
-      const m = 256 * this.S, o = canvasOf(m, m), og = o.getContext('2d');
-      og.imageSmoothingQuality = 'high'; og.drawImage(c, 0, 0, m, m);
+      let holes = 0;
+      for (let i = 0; i < L.px.length; i += 3) if (!L.px[i] || L.px[i] === keyed) { holes++; if (holes > 40) break; }
+      c.opaque = holes <= 40;
+      // set back: depth-of-field blur, darker and cooler, a little more contrast
+      const m = 256 * S, o = canvasOf(m, m), og = o.getContext('2d');
+      og.imageSmoothingQuality = 'high';
+      og.filter = `blur(${(S * 0.9).toFixed(1)}px) brightness(0.62) saturate(0.85) contrast(1.12)`;
+      og.drawImage(c, 0, 0, m, m);
+      og.filter = 'none';
+      // cool haze from above
+      og.globalCompositeOperation = 'source-atop';
+      const gr = og.createLinearGradient(0, 0, 0, m);
+      gr.addColorStop(0, 'rgba(70,110,200,0.18)'); gr.addColorStop(1, 'rgba(10,10,40,0.25)');
+      og.fillStyle = gr; og.fillRect(0, 0, m, m);
+      o.opaque = c.opaque;
       return o;
     };
     this.bgL = layer(s.bgL); this.bgR = layer(s.bgR);
+    // the left layer only covers its half; the right one, scrolled, fills the screen
+    this.sky = !(this.bgR && this.bgR.opaque);
+    this.buildSpace();
     this.buildOverlays();
   }
-  // The full-screen gradients never change, so they are drawn once: deep space under everything,
-  // and one overlay on top (light from above, atmosphere below, a vignette).
+
+  // A painted sky, once per fight: deep gradient, nebula clouds in the terrain's hues, a distant
+  // planet with its atmosphere, and a dense static star layer.
+  buildSpace() {
+    const S = this.S, w = (W + 16) * S, h = (H + 16) * S;
+    const c = canvasOf(w, h), g = c.getContext('2d');
+    let gr = g.createLinearGradient(0, 0, w, h);
+    gr.addColorStop(0, '#05081c'); gr.addColorStop(0.5, '#0a0f30'); gr.addColorStop(1, '#03040f');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 46; i++) {
+      const hue = this.hues[i % this.hues.length], cx = this.rnd() * w, cy = this.rnd() * h * 0.9, r = (30 + this.rnd() * 90) * S;
+      const col = mix(hue, [90, 60, 200], 0.35);
+      g.globalAlpha = 0.05 + this.rnd() * 0.07;
+      g.drawImage(blob(col[0] | 0, col[1] | 0, col[2] | 0), cx - r, cy - r, r * 2, r * 2);
+    }
+    g.globalAlpha = 1;
+    for (let i = 0; i < 420; i++) {
+      const x = this.rnd() * w, y = this.rnd() * h, b = this.rnd(), r = (0.25 + b * b * 0.8) * S * 0.5;
+      g.fillStyle = `rgba(${200 + b * 55 | 0},${210 + b * 45 | 0},255,${(0.25 + b * 0.6).toFixed(2)})`;
+      g.fillRect(x, y, r * 2, r * 2);
+    }
+    // the planet: lit from the top left like everything else
+    const px = w * 0.82, py = h * 0.2, pr = 44 * S, base = mix(this.hues[0], [80, 120, 220], 0.5);
+    g.globalCompositeOperation = 'source-over';
+    gr = g.createRadialGradient(px - pr * 0.45, py - pr * 0.45, pr * 0.1, px, py, pr);
+    gr.addColorStop(0, rgbStr(mix(base, [255, 255, 255], 0.35))); gr.addColorStop(0.55, rgbStr(base)); gr.addColorStop(1, rgbStr(mix(base, [0, 0, 10], 0.85)));
+    g.fillStyle = gr; g.beginPath(); g.arc(px, py, pr, 0, Math.PI * 2); g.fill();
+    g.globalCompositeOperation = 'lighter';
+    gr = g.createRadialGradient(px, py, pr * 0.92, px, py, pr * 1.25);
+    gr.addColorStop(0, 'rgba(120,180,255,0.45)'); gr.addColorStop(1, 'rgba(120,180,255,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(px, py, pr * 1.25, 0, Math.PI * 2); g.fill();
+    g.globalCompositeOperation = 'source-over';
+    this.space = c;
+  }
+
+  // Light shafts from the key light (drawn additively over the backdrop), and the grading on top
+  // of everything (warm highlights, cool shadows, vignette).
   buildOverlays() {
-    const w = W * this.S, h = H * this.S;
-    this.space = canvasOf(w, h);
-    let g = this.space.getContext('2d'), gr = g.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, w * 0.75);
-    gr.addColorStop(0, '#1a2a6c'); gr.addColorStop(0.55, '#0c1440'); gr.addColorStop(1, '#03051a');
-    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    const S = this.S, w = W * S, h = H * S;
     this.overlay = canvasOf(w, h);
-    g = this.overlay.getContext('2d');
-    gr = g.createLinearGradient(0, 0, 0, h);
-    gr.addColorStop(0, 'rgba(120,160,255,0.10)'); gr.addColorStop(0.5, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,20,0.30)');
+    const g = this.overlay.getContext('2d');
+    g.save(); g.translate(-w * 0.1, -h * 0.15); g.rotate(-0.55);
+    for (let i = 0; i < 7; i++) {
+      const x = (i * 0.17 + this.rnd() * 0.08) * w * 1.3, bw = (6 + this.rnd() * 18) * S;
+      const sg = g.createLinearGradient(0, 0, 0, h * 1.6);
+      sg.addColorStop(0, 'rgba(255,232,196,0.06)'); sg.addColorStop(1, 'rgba(255,232,196,0)');
+      g.fillStyle = sg; g.fillRect(x, 0, bw, h * 1.6);
+    }
+    g.restore();
+    let gr = g.createLinearGradient(0, 0, w, h);
+    gr.addColorStop(0, 'rgba(255,200,140,0.07)'); gr.addColorStop(0.5, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(20,40,120,0.14)');
     g.fillStyle = gr; g.fillRect(0, 0, w, h);
-    gr = g.createRadialGradient(w / 2, h / 2, h * 0.35, w / 2, h / 2, w * 0.72);
-    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,8,0.45)');
+    gr = g.createRadialGradient(w / 2, h / 2, h * 0.32, w / 2, h / 2, w * 0.74);
+    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,10,0.62)');
     g.fillStyle = gr; g.fillRect(0, 0, w, h);
   }
 
   makeStars() {
     const out = [];
-    for (let i = 0; i < 160; i++) out.push({ x: this.rnd() * W, y: this.rnd() * H, z: 0.2 + this.rnd() * 0.8, tw: this.rnd() * 6.28 });
+    for (let i = 0; i < 90; i++) out.push({ x: this.rnd() * W, y: this.rnd() * H, z: 0.2 + this.rnd() * 0.8, tw: this.rnd() * 6.28 });
     return out;
   }
 
   drawBackdrop(ctx, st, t) {
     const S = this.S, [h1, v1, h2, v2] = st.scroll;
-    // deep space: a navy gradient around the original's backdrop colour, with parallax stars
-    ctx.drawImage(this.space, -S * 4, -S * 4, (W + 8) * S, (H + 8) * S);   // a margin for the shake
-    const drift = (h1 - h2) * 0.25;
-    for (const p of this.stars) {
-      const x = ((p.x + drift * p.z + t * 0.05 * p.z) % W + W) % W, y = p.y;
-      const a = 0.35 + 0.65 * p.z * (0.6 + 0.4 * Math.sin(t * 0.08 + p.tw));
-      ctx.fillStyle = `rgba(200,220,255,${a.toFixed(3)})`;
-      const r = (0.4 + p.z * 0.9) * S * 0.5;
+    const drift = (h1 - h2) * 0.08;
+    if (this.sky) ctx.drawImage(this.space, (-8 - (((drift * 0.3) % 8) + 8) % 8) * S, -8 * S);
+    else { ctx.fillStyle = '#05081c'; ctx.fillRect(-8 * S, -8 * S, (W + 16) * S, (H + 16) * S); }
+    if (this.sky) for (const p of this.stars) {
+      const x = ((p.x + drift * p.z * 3 + t * 0.04 * p.z) % W + W) % W, y = p.y;
+      const a = 0.3 + 0.7 * p.z * (0.55 + 0.45 * Math.sin(t * 0.09 + p.tw));
+      ctx.fillStyle = `rgba(210,225,255,${a.toFixed(3)})`;
+      const r = (0.4 + p.z * 0.8) * S * 0.5;
       ctx.fillRect(x * S - r, y * S - r, r * 2, r * 2);
     }
-    // the terrain layers, scrolled as in the original (BG2 under BG1, both 8 px down)
-    // each layer wraps at 256 px: drawn as up to four plain blits rather than a pattern fill,
-    // which software canvases rasterise slowly
     const m = 256 * S;
     const draw = (c, hx, vy) => {
       if (!c) return;
@@ -156,57 +230,45 @@ export class FightRenderer {
   // ---------------------------------------------------------------- sprites
   isFx(sp) { return sp.row % 3 === 2; }
   isBoom(sp) { return this.isFx(sp) && sp.size === 32 && BOOM_TILES.has(sp.base & 255); }
+  sideOf(sp) { return sp.row < 3 ? 0 : 1; }
 
-  sprite(sp, lit = true) {
+  spriteKey(sp) {
     if (!this.tilesId.has(sp.tiles)) this.tilesId.set(sp.tiles, ++this.nTiles);
-    const key = `${this.tilesId.get(sp.tiles)}:${sp.base}:${sp.size}:${sp.flip}:${sp.vflip}:${sp.row}:${lit}`;
-    let e = this.sprites.get(key);
-    if (e) return e;
-    const n = sp.size, idx = new Uint8Array(n * n), obj = this.scene.obj;
+    return `${this.tilesId.get(sp.tiles)}:${sp.base}:${sp.size}:${sp.flip}:${sp.vflip}:${sp.row}`;
+  }
+  // The sprite's colour numbers (palette row * 16 + index, 0 transparent) into scene.obj.
+  pixels(sp, out, ow, ox, oy) {
+    const n = sp.size, base = sp.row * 16;
     for (let py = 0; py < n; py++) {
       for (let px = 0; px < n; px++) {
         const sx = sp.flip ? n - 1 - px : px, sy = sp.vflip ? n - 1 - py : py;
-        idx[py * n + px] = sp.tiles(sp.base + (sy >> 3) * 16 + (sx >> 3))[(sy & 7) * 8 + (sx & 7)];
+        const k = sp.tiles(sp.base + (sy >> 3) * 16 + (sx >> 3))[(sy & 7) * 8 + (sx & 7)];
+        if (k) out[(oy + py) * ow + ox + px] = base + k;
       }
     }
-    const up = scale4x(idx, n, n), m = n * UP, c = canvasOf(m, m), g = c.getContext('2d');
-    const img = g.createImageData(m, m), d = img.data;
-    let r = 0, gg = 0, b = 0, cnt = 0, any = false;
-    for (let i = 0; i < up.length; i++) {
-      const k = up[i];
-      if (!k) continue;
-      const col = obj[sp.row * 16 + k], o = i * 4;
-      d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = 255; any = true;
-      const lum = col[0] + col[1] + col[2];
-      if (lum > 300) { r += col[0]; gg += col[1]; b += col[2]; cnt++; }
-    }
-    g.putImageData(img, 0, 0);
-    const fx = this.isFx(sp);
-    if (!fx && any && lit !== false) {
-      g.globalCompositeOperation = 'source-atop';
-      let lg;
-      if (lit === true) {   // small craft: light from the top left, shade towards the bottom right
-        lg = g.createLinearGradient(0, 0, m, m);
-        lg.addColorStop(0, 'rgba(255,255,255,0.22)'); lg.addColorStop(0.45, 'rgba(255,255,255,0)'); lg.addColorStop(1, 'rgba(0,0,30,0.32)');
-      } else {              // a hull part at screen height `lit`: one gradient down the whole screen
-        lg = g.createLinearGradient(0, -lit * UP, 0, (H - lit) * UP);
-        lg.addColorStop(0, 'rgba(255,255,255,0.24)'); lg.addColorStop(0.35, 'rgba(255,255,255,0.04)'); lg.addColorStop(0.7, 'rgba(0,0,20,0.12)'); lg.addColorStop(1, 'rgba(60,110,255,0.26)');
-      }
-      g.fillStyle = lg; g.fillRect(0, 0, m, m);
-      g.globalCompositeOperation = 'source-over';
-    }
-    // a soft shadow: the silhouette drawn tiny and scaled back up (smoothing blurs it)
-    let shadow = null;
-    if (!fx && any) {
-      const q = Math.max(4, n / 2), sc = canvasOf(q, q), sg = sc.getContext('2d');
-      sg.drawImage(c, 0, 0, q, q);
-      sg.globalCompositeOperation = 'source-in'; sg.fillStyle = 'rgba(0,0,10,0.55)'; sg.fillRect(0, 0, q, q);
-      shadow = sc;
-    }
-    const glow = cnt ? [r / cnt, gg / cnt, b / cnt] : [255, 220, 160];
-    e = { c, glow, shadow, any };
+  }
+  sprite(sp) {
+    const key = this.spriteKey(sp);
+    let e = this.sprites.get(key);
+    if (e !== undefined) return e;
+    const n = sp.size, idx = new Uint8Array(n * n);
+    this.pixels(sp, idx, n, 0, 0);
+    e = remastered(idx, n, n, this.scene.obj, { fx: this.isFx(sp), rim: ARMY[this.sideOf(sp)] });
     this.sprites.set(key, e);
     return e;
+  }
+  // A capital ship or structure: its parts put together and remastered as one picture.
+  group(parts) {
+    const x0 = Math.min(...parts.map((p) => p.x)), y0 = Math.min(...parts.map((p) => p.y));
+    const key = parts.map((p) => `${this.spriteKey(p)}@${p.x - x0},${p.y - y0}`).join('|');
+    let e = this.sprites.get(key);
+    if (e === undefined) {
+      const w = Math.max(...parts.map((p) => p.x + p.size)) - x0, h = Math.max(...parts.map((p) => p.y + p.size)) - y0, idx = new Uint8Array(w * h);
+      for (const p of parts) this.pixels(p, idx, w, p.x - x0, p.y - y0);
+      e = remastered(idx, w, h, this.scene.obj, { rim: ARMY[this.sideOf(parts[0])] });
+      this.sprites.set(key, e);
+    }
+    return { e, x0, y0, first: parts[0] };
   }
 
   // ---------------------------------------------------------------- simulation (once per game frame)
@@ -216,65 +278,152 @@ export class FightRenderer {
     const cur = this.cur, prev = this.prev;
     if (cur.intro) { this.particles.length = 0; return; }
     if (prev && prev.intro && this.introEnd === null) this.introEnd = cur.f;
-    const before = new Set(prev && !prev.intro ? prev.sprites.map((sp) => sp.id) : []);
+    const before = prev && !prev.intro ? new Map(prev.sprites.map((sp) => [sp.id, sp])) : new Map();
     this.hulls = this.findHulls(cur);
     const seen = new Set();
+    this.booms = 0;
     for (const sp of cur.sprites) {
       seen.add(sp.id);
-      if (!this.isFx(sp)) continue;
       const cx = sp.x + sp.size / 2, cy = sp.y + sp.size / 2;
-      if (this.isBoom(sp)) {
-        if (!before.has(sp.id)) this.explode(cx, cy, this.sprite(sp).glow, sp);
-      } else {
-        if (!before.has(sp.id)) this.flash(cx, cy, this.sprite(sp).glow, sp.size);
-        const tr = this.trails.get(sp.id) || [];
-        tr.push([cx, cy]); if (tr.length > 7) tr.shift();
-        this.trails.set(sp.id, tr);
+      if (!this.isFx(sp)) {
+        // thrusters: small bright body sprites (the flames) shed hot particles
+        if (sp.size === 8 && !this.reduced && (cur.f & 1)) {
+          const e = this.sprite(sp);
+          if (e && e.glowC) {
+            const dir = this.sideOf(sp) === 0 ? -1 : 1;
+            this.particles.push({ kind: 'ember', x: cx + dir * 3, y: cy + (this.rnd() - 0.5) * 4, vx: dir * (0.8 + this.rnd()), vy: (this.rnd() - 0.5) * 0.3, drag: 0.9, g: 0, life: 8, max: 8, col: e.glow, r: 1.4 });
+          }
+        }
+        continue;
       }
+      const e = this.sprite(sp);
+      if (!e) continue;
+      if (this.isBoom(sp)) {
+        if (!before.has(sp.id)) this.explode(cx, cy, e.glow, sp);
+        continue;
+      }
+      const age = (this.shotAge.get(sp.id) || 0) + 1;
+      this.shotAge.set(sp.id, age);
+      // melee effects are numbered afresh every frame: no muzzle flashes, and a trail only while
+      // the sprite with that number keeps moving smoothly
+      const melee = sp.id.startsWith('fx');
+      if (!before.has(sp.id) && !melee) this.muzzle(cx, cy, e.glow, sp.size);
+      let tr = this.trails.get(sp.id) || [];
+      const last = tr[tr.length - 1];
+      if (last && Math.hypot(last[0] - cx, last[1] - cy) > (melee ? 10 : 28)) tr = [];
+      tr.push([cx, cy]); if (tr.length > 12) tr.shift();
+      this.trails.set(sp.id, tr);
+      this.lastShot.set(sp.id, { x: cx, y: cy, col: e.glow, size: sp.size, moved: tr.length > 2 && Math.hypot(tr[tr.length - 1][0] - tr[0][0], tr[tr.length - 1][1] - tr[0][1]) > 6 });
+      // a slow, long-lived shot is a missile: it smokes
+      const sp1 = tr.length > 1 ? Math.hypot(tr[tr.length - 1][0] - tr[tr.length - 2][0], tr[tr.length - 1][1] - tr[tr.length - 2][1]) : 0;
+      if (sp1 > 0.4 && sp1 < 2.2 && age > 3 && !this.reduced) {
+        const [tx, ty] = tr[tr.length - 2];
+        this.particles.push({ kind: 'smoke', x: tx, y: ty, vx: (this.rnd() - 0.5) * 0.2, vy: -0.05 - this.rnd() * 0.1, drag: 0.96, g: 0, r: 1.5 + this.rnd(), grow: 0.16, life: 26, max: 26, shade: 150, rot: this.rnd() * 6, vr: 0.02 });
+      }
+      this.lights.push({ x: cx, y: cy, col: e.glow, i: 0.35, r: 34, life: 1, max: 1 });
     }
-    for (const id of this.trails.keys()) if (!seen.has(id)) this.trails.delete(id);
-    // particles
+    // shots that vanished without exploding hit something: sparks
+    for (const id of [...this.trails.keys()]) {
+      if (seen.has(id)) continue;
+      const s = this.lastShot.get(id);
+      if (s && s.moved) this.impact(s.x, s.y, s.col);
+      this.trails.delete(id); this.shotAge.delete(id); this.lastShot.delete(id);
+    }
     for (const p of this.particles) {
-      p.x += p.vx; p.y += p.vy; p.vx *= p.drag; p.vy = p.vy * p.drag + p.g; p.life--; p.rot += p.vr;
-      if (p.kind === 'smoke') p.r += 0.18;
-      if (p.kind === 'ring') p.r += p.vr;
+      p.x += p.vx; p.y += p.vy; p.vx *= p.drag; p.vy = p.vy * p.drag + p.g; p.life--;
+      if (p.vr) p.rot += p.vr;
+      if (p.grow) p.r += p.grow;
+      if (p.kind === 'ring') p.r += p.speed;
+      if (p.kind === 'fire') { p.r += p.grow2; }
     }
     this.particles = this.particles.filter((p) => p.life > 0);
-    this.shake *= 0.86;
+    for (const l of this.lights) l.life--;
+    this.lights = this.lights.filter((l) => l.life > 0);
+    for (const d of this.decals) d.life--;
+    this.decals = this.decals.filter((d) => d.life > 0);
+    this.shake *= 0.85; this.whiteout *= 0.8;
+    if (this.punch) { this.punch.t++; if (this.punch.t > 40) this.punch = null; }
+    this.updateHud(cur.f);
   }
 
-  flash(x, y, glow, size) {
-    this.particles.push({ kind: 'flash', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: size * 0.9, life: 6, max: 6, col: glow, rot: 0, vr: 0 });
+  muzzle(x, y, glow, size) {
+    this.particles.push({ kind: 'flare', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: Math.min(16, size * 1.4 + 6), life: 7, max: 7, col: glow, rot: this.rnd() * 3 });
+    this.lights.push({ x, y, col: glow, i: 1.1, r: 60, life: 7, max: 7 });
+  }
+
+  impact(x, y, col) {
+    const n = this.reduced ? 4 : 12;
+    for (let i = 0; i < n; i++) {
+      const a = this.rnd() * Math.PI * 2, v = 0.8 + this.rnd() * 2.8;
+      this.particles.push({ kind: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.88, g: 0.05, life: 8 + (this.rnd() * 10 | 0), max: 18, col: mix(col, [255, 255, 220], 0.5) });
+    }
+    this.particles.push({ kind: 'flash', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 14, life: 6, max: 6, col: mix(col, [255, 255, 255], 0.4) });
+    this.lights.push({ x, y, col, i: 1.0, r: 50, life: 8, max: 8 });
   }
 
   explode(x, y, glow, sp) {
-    const big = this.isBig(sp), n = this.reduced ? 10 : big ? 34 : 22;
-    const col = [Math.min(255, glow[0] * 1.1), Math.min(255, glow[1]), Math.min(255, glow[2] * 0.8)];
-    this.particles.push({ kind: 'ring', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 4, vr: big ? 2.2 : 1.6, life: 16, max: 16, col, rot: 0 });
-    this.particles.push({ kind: 'flash', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: big ? 46 : 32, life: 9, max: 9, col: [255, 240, 200], rot: 0, vr: 0 });
-    for (let i = 0; i < n; i++) {
-      const a = this.rnd() * Math.PI * 2, v = (0.6 + this.rnd() * 2.6) * (big ? 1.3 : 1);
-      this.particles.push({ kind: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.93, g: 0.02, life: 14 + (this.rnd() * 18 | 0), max: 32, col, rot: 0, vr: 0, r: 1 });
+    // a salvo sets off many at once: each gets fewer particles so the whole stays readable
+    const crowd = ++this.booms, big = this.isBig(sp), k = big ? 1.4 : 1, few = this.reduced || crowd > 3;
+    const hot = [255, 226, 170], fire = mix(glow, [255, 120, 30], 0.7);
+    if (crowd <= 3) this.particles.push({ kind: 'flash', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 26 * k, life: 7, max: 7, col: hot });
+    if (crowd <= 2) this.particles.push({ kind: 'ring', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 3, speed: 2.6 * k, life: 16, max: 16, col: mix(glow, [200, 230, 255], 0.5) });
+    for (let i = 0; i < (few ? 3 : big ? 9 : 6); i++) {   // the fireball: hot cores that swell and cool
+      const a = this.rnd() * Math.PI * 2, v = this.rnd() * 0.9 * k;
+      this.particles.push({ kind: 'fire', x: x + Math.cos(a) * 3, y: y + Math.sin(a) * 3, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.1, drag: 0.9, g: -0.01, r: (3 + this.rnd() * 4) * k, grow2: 0.35 * k, life: 18 + (this.rnd() * 10 | 0), max: 28, col: fire });
     }
-    for (let i = 0; i < (this.reduced ? 3 : 8); i++) {
-      const a = this.rnd() * Math.PI * 2, v = 0.4 + this.rnd() * 1.6;
-      this.particles.push({ kind: 'debris', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.3, drag: 0.97, g: 0.03, life: 30 + (this.rnd() * 20 | 0), max: 50, col: [120 + this.rnd() * 60, 110, 100], rot: this.rnd() * 6, vr: (this.rnd() - 0.5) * 0.4, r: 1 + this.rnd() * 1.6 });
+    for (let i = 0; i < (few ? 6 : big ? 22 : 16); i++) {
+      const a = this.rnd() * Math.PI * 2, v = (0.8 + this.rnd() * 3.2) * k;
+      this.particles.push({ kind: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.92, g: 0.03, life: 12 + (this.rnd() * 22 | 0), max: 34, col: mix(fire, hot, this.rnd()) });
     }
-    for (let i = 0; i < (this.reduced ? 2 : 5); i++) {
-      this.particles.push({ kind: 'smoke', x: x + (this.rnd() - 0.5) * 10, y: y + (this.rnd() - 0.5) * 10, vx: (this.rnd() - 0.5) * 0.3, vy: -0.15 - this.rnd() * 0.25, drag: 0.98, g: 0, r: 4 + this.rnd() * 4, life: 40 + (this.rnd() * 30 | 0), max: 70, col: [40, 40, 55], rot: 0, vr: 0 });
+    for (let i = 0; i < (few ? 2 : big ? 12 : 7); i++) {
+      const a = this.rnd() * Math.PI * 2, v = 0.5 + this.rnd() * 2;
+      this.particles.push({ kind: 'debris', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.4, drag: 0.975, g: 0.045, life: 34 + (this.rnd() * 26 | 0), max: 60, col: [110 + this.rnd() * 70, 105 + this.rnd() * 40, 100], rot: this.rnd() * 6, vr: (this.rnd() - 0.5) * 0.5, r: 1 + this.rnd() * 2, hot: this.rnd() < 0.5 });
     }
-    if (!this.reduced) this.shake = Math.min(6, this.shake + (big ? 3.2 : 1.4));
+    for (let i = 0; i < (few ? 2 : big ? 9 : 5); i++) {
+      this.particles.push({ kind: 'smoke', x: x + (this.rnd() - 0.5) * 12 * k, y: y + (this.rnd() - 0.5) * 12 * k, vx: (this.rnd() - 0.5) * 0.3, vy: -0.12 - this.rnd() * 0.25, drag: 0.985, g: 0, r: (5 + this.rnd() * 5) * k, grow: 0.22, life: 50 + (this.rnd() * 40 | 0), max: 90, shade: 40 + (this.rnd() * 40 | 0), rot: this.rnd() * 6, vr: (this.rnd() - 0.5) * 0.03, delay: 6 });
+    }
+    this.lights.push({ x, y, col: fire, i: big ? 2.2 : 1.6, r: big ? 120 : 80, life: 22, max: 22 });
+    this.decals.push({ x: x + (this.rnd() - 0.5) * 6, y: y + (this.rnd() - 0.5) * 6, r: (7 + this.rnd() * 5) * k, life: 90, max: 90 });
+    if (!this.reduced) {
+      this.shake = Math.min(7, this.shake + (big ? 3.6 : 1.5));
+      if (big && crowd === 1) { this.punch = { x, y, t: 0 }; this.whiteout = Math.min(0.22, this.whiteout + 0.14); }
+    }
   }
 
-  // explosions on a capital ship or structure (an actor or track drawn from several 32 px body
-  // sprites) are bigger and shake harder
   isBig(sp) {
     return this.hulls.some((o) => Math.abs(o.x - sp.x) < 36 && Math.abs(o.y - sp.y) < 36);
   }
+  // The 32 px body sprites of each side's capital ship or structure (its own parts and its
+  // recorded tracks), grouped per side.
   findHulls(st) {
-    const groups = new Map();
-    for (const sp of st.sprites) if (!this.isFx(sp) && sp.size === 32) { const g = sp.id.split('#')[0]; (groups.get(g) || groups.set(g, []).get(g)).push(sp); }
-    return [...groups.values()].filter((g) => g.length >= 2 || g[0].id.startsWith('t')).flat();
+    const groups = [[], []], sc = this.scene;
+    for (const sp of st.sprites) {
+      if (this.isFx(sp) || sp.size !== 32) continue;
+      const g = sp.id.split('#')[0], side = this.sideOf(sp);
+      const a = g[0] === 'L' ? sc.left[+g.slice(1)] : g[0] === 'R' ? sc.right[+g.slice(1)] : null;
+      const own = (side ? sc.right : sc.left)[0];
+      if (g[0] === 't' ? own && (own.ship || own.struct) : a && (a.ship || a.struct)) groups[side].push(sp);
+    }
+    this.hullGroups = groups.filter((g) => g.length >= 2);
+    return groups.flat();
+  }
+
+  // HP shown in the HUD: a craft formation loses a machine as each one explodes; a ship or
+  // structure drains from its first explosion on.
+  updateHud(f) {
+    const sc = this.scene;
+    [[sc.leftSide, sc.left], [sc.rightSide, sc.right]].forEach(([side, acts], i) => {
+      if (!acts.length) return;
+      if (!acts[0].ship && !acts[0].struct) {
+        const dead = acts.filter((a) => a.dies && a.tDie !== undefined && f >= a.tDie).length;
+        this.hpShown[i] = Math.max(side.hpAfter, side.hp - dead);
+        if (f >= sc.end - 2) this.hpShown[i] = side.hpAfter;
+        return;
+      }
+      if (this.drain[i] === null && side.hp > side.hpAfter && this.particles.some((p) => p.kind === 'ring' && p.life === p.max - 1 && (p.x < 128) === (i === 0))) this.drain[i] = f;
+      if (this.drain[i] !== null) this.hpShown[i] = lerp(side.hp, side.hpAfter, Math.min(1, (f - this.drain[i]) / 50));
+      if (f >= sc.end - 2) this.hpShown[i] = side.hpAfter;
+    });
   }
 
   // ---------------------------------------------------------------- drawing
@@ -283,11 +432,15 @@ export class FightRenderer {
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (st.intro) { this.renderIntro(ctx, st); ctx.restore(); return; }
-    // camera: a slow drift, shake on heavy hits
-    const sx = this.shake ? Math.round((this.rnd() - 0.5) * this.shake * S) : 0, sy = this.shake ? Math.round((this.rnd() - 0.5) * this.shake * S) : 0;
-    ctx.translate(sx, sy);
+    // camera: shake, and a punch-in towards a heavy hit
+    const sx = this.shake ? (this.rnd() - 0.5) * this.shake * S : 0, sy = this.shake ? (this.rnd() - 0.5) * this.shake * S : 0;
+    let zoom = 1, fx0 = W / 2, fy0 = H / 2;
+    if (this.punch) {
+      const u = (this.punch.t + alpha) / 40, e = u < 0.15 ? u / 0.15 : 1 - (u - 0.15) / 0.85;
+      zoom = 1 + 0.07 * Math.max(0, e) ** 1.5; fx0 = this.punch.x; fy0 = this.punch.y;
+    }
+    ctx.translate(sx + fx0 * S, sy + fy0 * S); ctx.scale(zoom, zoom); ctx.translate(-fx0 * S, -fy0 * S);
     this.drawBackdrop(ctx, st, t);
-    // shadows, then bodies (interpolated), then effects
     const prev = this.prev && !this.prev.intro ? new Map(this.prev.sprites.map((sp) => [sp.id, sp])) : new Map();
     const pos = (sp) => {
       const p = prev.get(sp.id);
@@ -295,44 +448,75 @@ export class FightRenderer {
       return [p.x + (sp.x - p.x) * alpha, p.y + (sp.y - p.y) * alpha];
     };
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
-    for (const sp of st.sprites) {
-      if (this.isFx(sp)) continue;
-      const e = this.sprite(sp, false);
-      if (!e.shadow) continue;
-      const [x, y] = pos(sp);
-      ctx.drawImage(e.shadow, (x + 3) * S, (y + 5) * S, sp.size * S, sp.size * S);
+    // scorched ground glow under the smoke
+    ctx.globalCompositeOperation = 'lighter';
+    for (const d of this.decals) {
+      const a = d.life / d.max;
+      ctx.globalAlpha = 0.35 * a * a;
+      ctx.drawImage(blob(255, 90, 20), (d.x - d.r) * S, (d.y - d.r) * S, d.r * 2 * S, d.r * 2 * S);
     }
-    const hull = new Set(this.hulls);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    // what to draw: effects, single machines, and whole hulls (their parts as one picture)
+    const groupOf = new Map();
+    for (const g of this.hullGroups) for (const sp of g) groupOf.set(sp.id, g);
+    const items = [], done = new Set();
     for (const sp of st.sprites) {
-      const [x, y] = pos(sp), e = this.sprite(sp, hull.has(sp) ? Math.round(y) : true);
-      if (this.isFx(sp)) {
-        // trails and glow behind the shot, the sprite itself added on top
-        const tr = this.trails.get(sp.id);
-        ctx.globalCompositeOperation = 'lighter';
-        const [r, g, b] = e.glow;
-        if (tr && tr.length > 1 && !this.isBoom(sp)) {
-          ctx.lineCap = 'round';
-          for (let i = 1; i < tr.length; i++) {
-            const a = i / tr.length;
-            ctx.strokeStyle = `rgba(${r | 0},${g | 0},${b | 0},${(a * 0.35).toFixed(3)})`;
-            ctx.lineWidth = Math.max(1, sp.size * 0.35 * a) * S;
-            ctx.beginPath(); ctx.moveTo(tr[i - 1][0] * S, tr[i - 1][1] * S); ctx.lineTo(tr[i][0] * S, tr[i][1] * S); ctx.stroke();
-          }
+      if (this.isFx(sp)) { items.push({ fx: sp }); continue; }
+      const g = groupOf.get(sp.id);
+      if (!g) { const e = this.sprite(sp); if (e) items.push({ e, sp, ox: 0, oy: 0 }); continue; }
+      if (done.has(g)) continue;
+      done.add(g);
+      const G = this.group(g);
+      if (G.e) items.push({ e: G.e, sp: G.first, ox: G.x0 - G.first.x, oy: G.y0 - G.first.y });
+    }
+    const place = (it) => { const [x, y] = pos(it.sp); return [x + it.ox, y + it.oy]; };
+    const blit = (c, x, y, pad) => ctx.drawImage(c, (x - pad) * S, (y - pad) * S, (c.width / UP) * S, (c.height / UP) * S);
+    // shadows
+    for (const it of items) {
+      if (it.fx || !it.e.shadow) continue;
+      const [x, y] = place(it), e = it.e;
+      ctx.drawImage(e.shadow, (x - e.pad + 4) * S, (y - e.pad + 7) * S, (e.c.width / UP) * S, (e.c.height / UP) * S);
+    }
+    // bodies, with motion blur, dynamic light and emissive glow
+    for (const it of items) {
+      if (it.fx) { this.drawShot(ctx, it.fx, pos(it.fx)); continue; }
+      const { e, sp } = it, [x, y] = place(it), p = prev.get(sp.id);
+      const bw = e.c.width / UP, bh = e.c.height / UP;
+      if (p && !this.reduced) {
+        const dx = sp.x - p.x, dy = sp.y - p.y, v = Math.hypot(dx, dy);
+        if (v > 2.2 && v < 24) for (let k = 3; k >= 1; k--) {
+          ctx.globalAlpha = 0.1 * (4 - k);
+          blit(e.c, x - dx * k * 0.45, y - dy * k * 0.45, e.pad);
         }
-        const cx = (x + sp.size / 2) * S, cy = (y + sp.size / 2) * S, rad = sp.size * (this.isBoom(sp) ? 1.3 : 1.1) * S;
-        ctx.globalAlpha = 0.55;
-        ctx.drawImage(blob(r | 0, g | 0, b | 0), cx - rad, cy - rad, rad * 2, rad * 2);
         ctx.globalAlpha = 1;
-        ctx.drawImage(e.c, x * S, y * S, sp.size * S, sp.size * S);
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.drawImage(e.c, x * S, y * S, sp.size * S, sp.size * S);
-      } else ctx.drawImage(e.c, x * S, y * S, sp.size * S, sp.size * S);
+      }
+      blit(e.c, x, y, e.pad);
+      if (e.litL && this.lights.length) {
+        let wl = 0, wr = 0;
+        const cx = x - e.pad + bw / 2, cy = y - e.pad + bh / 2, ext = Math.max(bw, bh) / 2;
+        for (const l of this.lights) {
+          const d = Math.max(0, Math.hypot(l.x - cx, l.y - cy) - ext * 0.6);
+          if (d > l.r) continue;
+          const w = l.i * (l.life / l.max) * (1 - d / l.r) ** 2;
+          if (l.x < cx - 2) wl += w; else if (l.x > cx + 2) wr += w; else { wl += w * 0.6; wr += w * 0.6; }
+        }
+        ctx.globalCompositeOperation = 'lighter';
+        if (wl > 0.03) { ctx.globalAlpha = Math.min(0.7, wl); blit(e.litL, x, y, e.pad); }
+        if (wr > 0.03) { ctx.globalAlpha = Math.min(0.7, wr); blit(e.litR, x, y, e.pad); }
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+      }
+      if (e.glowC) {
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.7 + 0.3 * Math.sin(t * 0.5 + sp.x);
+        blit(e.glowC.c, x, y, e.glowC.pad);
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+      }
     }
-    this.drawParticles(ctx, S);
+    this.drawParticles(ctx, S, t);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    // lighting and vignette, then the original's fade-out
     ctx.drawImage(this.overlay, 0, 0);
-    // the info screen dissolves into the battle
+    if (this.whiteout > 0.02) { ctx.fillStyle = `rgba(255,245,230,${this.whiteout.toFixed(3)})`; ctx.fillRect(0, 0, W * S, H * S); }
+    this.drawFrame(ctx, st, alpha);
     if (this.lastIntro && this.introEnd !== null) {
       const k = (st.f - this.introEnd + alpha) / 14;
       if (k < 1) { ctx.globalAlpha = 1 - k; this.blitIntro(ctx, 1 + k * 0.08); ctx.globalAlpha = 1; }
@@ -341,45 +525,162 @@ export class FightRenderer {
     ctx.restore();
   }
 
-  drawParticles(ctx, S) {
-    ctx.globalCompositeOperation = 'source-over';
-    for (const p of this.particles) {
-      if (p.kind !== 'smoke' && p.kind !== 'debris') continue;
-      const a = p.life / p.max;
-      if (p.kind === 'smoke') {
-        ctx.globalAlpha = a * 0.45;
-        ctx.drawImage(blob(p.col[0] | 0, p.col[1] | 0, p.col[2] | 0), (p.x - p.r) * S, (p.y - p.r) * S, p.r * 2 * S, p.r * 2 * S);
-        ctx.globalAlpha = 1;
-      } else {
-        ctx.save(); ctx.translate(p.x * S, p.y * S); ctx.rotate(p.rot);
-        ctx.fillStyle = `rgba(${p.col[0] | 0},${p.col[1] | 0},${p.col[2] | 0},${Math.min(1, a * 1.5).toFixed(3)})`;
-        ctx.fillRect(-p.r * S, -p.r * 0.6 * S, p.r * 2 * S, p.r * 1.2 * S);
-        ctx.restore();
+  // A shot as light: a long bloom streak along its path with a white-hot core, then the sprite
+  // itself on top; still shots (muzzle blasts at the gun ports) flare instead.
+  drawShot(ctx, sp, [x, y]) {
+    const S = this.S, e = this.sprite(sp);
+    if (!e) return;
+    const [r, g, b] = e.glow, n = sp.size * S;
+    const cx = (x + sp.size / 2) * S, cy = (y + sp.size / 2) * S;
+    ctx.globalCompositeOperation = 'lighter';
+    if (!this.isBoom(sp)) {
+      const tr = this.trails.get(sp.id);
+      if (tr && tr.length > 1) {
+        const [tx, ty] = tr[0], len = Math.hypot(tr[tr.length - 1][0] - tx, tr[tr.length - 1][1] - ty);
+        if (len > 3) {
+          ctx.lineCap = 'round';
+          const pts = tr.map(([px, py]) => [px * S, py * S]); pts[pts.length - 1] = [cx, cy];
+          const stroke = (wd, col, a) => {
+            for (let i = 1; i < pts.length; i++) {
+              const f = i / (pts.length - 1);
+              ctx.strokeStyle = rgbStr(col, a * f); ctx.lineWidth = Math.max(1, wd * (0.35 + 0.65 * f));
+              ctx.beginPath(); ctx.moveTo(pts[i - 1][0], pts[i - 1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+            }
+          };
+          stroke(sp.size * 0.9 * S, e.glow, 0.16);
+          stroke(sp.size * 0.42 * S, e.glow, 0.42);
+          stroke(sp.size * 0.14 * S, [255, 255, 245], 0.85);
+        }
       }
     }
-    ctx.globalCompositeOperation = 'lighter';
+    const q = (sp.size + 2 * e.pad) * S;
+    if (this.isBoom(sp)) {
+      // the ROM's explosion sprite becomes the fireball's shape, under the particle fire
+      const rad = sp.size * 1.1 * S;
+      ctx.globalAlpha = 0.35;
+      ctx.drawImage(blob(255, 150, 60), cx - rad, cy - rad, rad * 2, rad * 2);
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 0.55;
+      ctx.drawImage(e.c, (x - e.pad) * S, (y - e.pad) * S, q, q);
+      ctx.globalAlpha = 1;
+      return;
+    }
+    const rad = Math.min(14, sp.size * 1.5) * S;
+    ctx.globalAlpha = sp.size > 16 ? 0.4 : 0.7;
+    ctx.drawImage(blob(r | 0, g | 0, b | 0), cx - rad, cy - rad, rad * 2, rad * 2);
+    ctx.globalAlpha = 0.9;
+    ctx.drawImage(blob(255, 255, 240), cx - rad * 0.25, cy - rad * 0.25, rad * 0.5, rad * 0.5);
+    ctx.globalAlpha = 1;
+    ctx.drawImage(e.c, (x - e.pad) * S, (y - e.pad) * S, q, q);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(e.c, (x - e.pad) * S, (y - e.pad) * S, q, q);
+  }
+
+  drawParticles(ctx, S, t) {
+    // smoke and debris first (they block light), then everything that glows
     for (const p of this.particles) {
-      const a = p.life / p.max, [r, g, b] = p.col;
-      if (p.kind === 'spark') {
-        ctx.strokeStyle = `rgba(${r | 0},${g | 0},${b | 0},${a.toFixed(3)})`; ctx.lineWidth = 1.2 * S;
-        ctx.beginPath(); ctx.moveTo(p.x * S, p.y * S); ctx.lineTo((p.x - p.vx * 2.5) * S, (p.y - p.vy * 2.5) * S); ctx.stroke();
+      const a = p.life / p.max;
+      if (p.kind === 'smoke') {
+        const age = p.max - p.life, fadeIn = Math.min(1, age / 6);
+        ctx.globalAlpha = Math.min(1, a * 1.4) * fadeIn * 0.85;
+        ctx.drawImage(puff(p.shade, (p.rot * 3) | 0), (p.x - p.r) * S, (p.y - p.r) * S, p.r * 2 * S, p.r * 2 * S);
+      } else if (p.kind === 'fire') {
+        // hot yellow cooling to orange, then dark red as it swells
+        const col = a > 0.7 ? mix([255, 160, 50], [255, 236, 160], (a - 0.7) / 0.3) : mix([110, 25, 10], [255, 160, 50], a / 0.7);
+        const rad = p.r * S;
+        ctx.globalAlpha = Math.min(1, a * 1.2);
+        ctx.drawImage(blob(col[0] | 0, col[1] | 0, col[2] | 0, true), p.x * S - rad, p.y * S - rad, rad * 2, rad * 2);
+      } else if (p.kind === 'debris') {
+        // tumbling: the chip's width and height swap as it turns
+        const cw = p.r * (0.4 + 1.6 * Math.abs(Math.cos(p.rot))), ch = p.r * (0.4 + 0.9 * Math.abs(Math.sin(p.rot)));
+        ctx.globalAlpha = Math.min(1, a * 1.6);
+        ctx.fillStyle = rgbStr(p.col); ctx.fillRect((p.x - cw / 2) * S, (p.y - ch / 2) * S, cw * S, ch * S);
+        if (p.hot) { ctx.fillStyle = `rgba(255,150,60,${(a * 0.9).toFixed(3)})`; ctx.fillRect((p.x - cw / 4) * S, (p.y - ch / 4) * S, cw * 0.5 * S, ch * 0.5 * S); }
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'lighter';
+    const sparks = new Map();
+    for (const p of this.particles) {
+      const a = p.life / p.max, c = p.col;
+      if (p.kind === 'spark' || p.kind === 'ember') {
+        // batched: one path per colour and brightness step
+        const key = `${c[0] >> 5},${c[1] >> 5},${c[2] >> 5},${(a * 4) | 0},${p.kind}`;
+        (sparks.get(key) || sparks.set(key, { c, a: ((a * 4) | 0) / 4 + 0.125, w: p.kind === 'ember' ? 1.6 : 1.1, pts: [] }).get(key)).pts.push(p);
       } else if (p.kind === 'flash') {
-        const rad = p.r * S * (0.6 + 0.4 * a);
-        ctx.globalAlpha = a * 0.9;
-        ctx.drawImage(blob(r | 0, g | 0, b | 0), p.x * S - rad, p.y * S - rad, rad * 2, rad * 2);
-        ctx.drawImage(blob(255, 255, 240), p.x * S - rad * 0.45, p.y * S - rad * 0.45, rad * 0.9, rad * 0.9);
+        const rad = p.r * S * (0.5 + 0.5 * a);
+        ctx.globalAlpha = a * 0.75;
+        ctx.drawImage(blob(c[0] | 0, c[1] | 0, c[2] | 0), p.x * S - rad, p.y * S - rad, rad * 2, rad * 2);
+        ctx.drawImage(blob(255, 255, 255, true), p.x * S - rad * 0.3, p.y * S - rad * 0.3, rad * 0.6, rad * 0.6);
+        ctx.globalAlpha = 1;
+      } else if (p.kind === 'flare') {
+        const rad = p.r * S * (0.4 + 0.6 * a);
+        ctx.globalAlpha = a;
+        ctx.drawImage(blob(c[0] | 0, c[1] | 0, c[2] | 0), p.x * S - rad * 0.6, p.y * S - rad * 0.6, rad * 1.2, rad * 1.2);
+        // anamorphic streak: a long thin horizontal glint and a short vertical one
+        const hb = blob(255, 250, 235), wl = rad * 2.6, hl = rad * 0.12;
+        ctx.drawImage(hb, p.x * S - wl, p.y * S - hl, wl * 2, hl * 2);
+        ctx.drawImage(hb, p.x * S - hl * 0.8, p.y * S - rad * 0.9, hl * 1.6, rad * 1.8);
         ctx.globalAlpha = 1;
       } else if (p.kind === 'ring') {
-        ctx.strokeStyle = `rgba(${r | 0},${g | 0},${b | 0},${(a * 0.6).toFixed(3)})`; ctx.lineWidth = 2 * S * a;
+        ctx.strokeStyle = rgbStr(mix(c, [255, 190, 120], 0.5), a * 0.4); ctx.lineWidth = 2 * S * a;
         ctx.beginPath(); ctx.arc(p.x * S, p.y * S, p.r * S, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = rgbStr([255, 255, 255], a * 0.4); ctx.lineWidth = 1 * S * a;
+        ctx.beginPath(); ctx.arc(p.x * S, p.y * S, p.r * S * 0.96, 0, Math.PI * 2); ctx.stroke();
+      } else if (p.kind === 'fire') {
+        // a little light of its own on top of the (normally blended) fireball
+        const rad = p.r * S * 1.6;
+        ctx.globalAlpha = a * 0.25;
+        ctx.drawImage(blob(255, 150, 60), p.x * S - rad, p.y * S - rad, rad * 2, rad * 2);
+        ctx.globalAlpha = 1;
       }
+    }
+    ctx.lineCap = 'round';
+    for (const b of sparks.values()) {
+      ctx.strokeStyle = rgbStr(b.c, b.a); ctx.lineWidth = b.w * S;
+      ctx.beginPath();
+      for (const p of b.pts) { ctx.moveTo(p.x * S, p.y * S); ctx.lineTo((p.x - p.vx * 2.2) * S, (p.y - p.vy * 2.2) * S); }
+      ctx.stroke();
     }
     ctx.globalCompositeOperation = 'source-over';
   }
 
+  // Letterbox bars that close in as the battle starts, and the HUD inside them: each side's name
+  // and HP, in its army's colour.
+  drawFrame(ctx, st, alpha) {
+    const S = this.S, f = Math.max(0, st.f + alpha), k = Math.min(1, f / 20), e = 1 - (1 - k) ** 3, bh = BAR * S * e;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W * S, bh); ctx.fillRect(0, H * S - bh, W * S, bh);
+    if (k < 0.3) return;
+    ctx.globalAlpha = Math.min(1, (k - 0.3) / 0.4);
+    const sc = this.scene, fs = Math.max(8, Math.round(4.2 * S));
+    ctx.font = `700 ${fs}px "Chakra Petch", "Rajdhani", system-ui, sans-serif`;
+    ctx.textBaseline = 'middle';
+    [sc.leftSide, sc.rightSide].forEach((side, i) => {
+      const col = ARMY[side.army === 1 ? 1 : 0], right = i === 1, y = H * S - bh / 2;
+      const hp = this.hpShown[i], max = Math.max(1, side.hp), bw = 64 * S, x0 = right ? W * S - 8 * S - bw : 8 * S;
+      // name
+      ctx.fillStyle = rgbStr(col); ctx.textAlign = right ? 'right' : 'left';
+      const label = this.labels[i] || (right ? 'TARGET' : 'UNIT');
+      ctx.fillText(label, right ? W * S - 8 * S : 8 * S, bh / 2);
+      // hp: segmented bar with the number
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(x0, y - 1.4 * S, bw, 2.8 * S);
+      const segs = Math.min(16, max), gap = 0.6 * S, sw = (bw - gap * (segs - 1)) / segs, frac = hp / max;
+      for (let s = 0; s < segs; s++) {
+        const on = Math.min(1, Math.max(0, frac * segs - s));
+        if (on <= 0) continue;
+        const sx = right ? x0 + bw - (s + 1) * sw - s * gap : x0 + s * (sw + gap);
+        ctx.fillStyle = rgbStr(mix(col, [255, 255, 255], 0.15), 0.95);
+        ctx.fillRect(right ? sx + sw * (1 - on) : sx, y - 1.4 * S, sw * on, 2.8 * S);
+      }
+      ctx.fillStyle = '#fff'; ctx.textAlign = right ? 'right' : 'left';
+      ctx.font = `600 ${Math.round(fs * 0.9)}px "IBM Plex Mono", ui-monospace, monospace`;
+      ctx.fillText(`HP ${Math.round(hp)}`, right ? x0 - 3 * S : x0 + bw + 3 * S, y);
+      ctx.font = `700 ${fs}px "Chakra Petch", "Rajdhani", system-ui, sans-serif`;
+    });
+    ctx.globalAlpha = 1;
+  }
+
   // ---------------------------------------------------------------- the info screen
-  // The original info screen (js/game/infoscreen.js) rendered at 256x224, upscaled with the same
-  // filter, eased in with a slight zoom; it dissolves into the battle when the fight starts.
   renderIntro(ctx, st) {
     const I = this.scene.intro, S = this.S;
     if (!this.introCanvas) { this.introCanvas = canvasOf(W, H); this.introCanvas.width = W; this.introCanvas.height = H; }
@@ -412,5 +713,5 @@ export class FightRenderer {
 // Screen pixels per scene pixel for a canvas shown `cssWidth` px wide on this display.
 export function fightScale(cssWidth = 768) {
   const dpr = typeof devicePixelRatio === 'number' ? devicePixelRatio : 1;
-  return Math.max(2, Math.min(4, Math.round((cssWidth * dpr) / W)));   // the sprites are upscaled 4x, more buys nothing
+  return Math.max(2, Math.min(4, Math.round((cssWidth * dpr) / W)));
 }
