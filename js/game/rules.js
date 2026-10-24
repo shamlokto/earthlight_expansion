@@ -151,6 +151,7 @@ export class Battle {
         const u = this.spawn(a.type, this.army, x, y);
         if (a.chase) u.chase = a.chase;   // expansion: an order for the AI (ai.js), e.g. 'carriers'
         if (a.level !== undefined) u.level = a.level;   // expansion: a named ace or elite guard
+        if (a.burner) u.burner = true;   // expansion: arrives wearing an afterburner (events.js)
         // expansion: a flagship that arrives late becomes the objective then (scripts.js stakes)
         if (this.stakes && this.army === 1 && this.script?.win?.flagship === a.type && !this.stakes[1].flagship) this.stakes[1].flagship = u;
         for (const t of a.cargo) this.spawn(t, this.army, x, y, u);
@@ -263,6 +264,7 @@ export class Battle {
 
   targets(u) {
     if (u.acted || u.carrier) return [];
+    if (u.burner && this.info.custom) return [];   // expansion (owner): a unit still wearing its afterburner can't attack; detach it first
     return this.hostiles(u).filter((e) => this.weaponsAgainst(u, e).length);
   }
 

@@ -635,7 +635,7 @@ Both are `unionOnly` (never in the market) and have their own art, drawn the sam
 
 | type | unit | look (choreography) | stats | art |
 |---|---|---|---|---|
-| 59 | Leviathan BB-LV0, Kessrin's flagship | Nodens | HP 40, move 3, evasion 64 (50%), start level 4; beam 154 at 1, missile 255 at 2–5, railgun 115 at 1–3 | `tools/art/leviathan.mjs` → `js/art/leviathan.js`: picture, icon, a 96x128 fight hull |
+| 59 | Leviathan BB-LV0, Kessrin's flagship | Nodens | HP 60, move 4 (owner: the finale boss; tougher, slower than the Azoras so the General can still run), evasion 64 (50%), start level 4; beam 154 at 1, missile 255 at 2–5, railgun 115 at 1–3 | `tools/art/leviathan.mjs` → `js/art/leviathan.js`: picture, icon, a 96x128 fight hull |
 | 60 | Directorate Talos HU-AX5D, Vane's machine and Kessrin's guard | Talos | HP 8, move 5, evasion 83 (65%), start level 6; beam 26 and beamsaber 140 at 1 | `tools/art/directorate-talos.mjs` → `js/art/dirtalos.js`: picture, icon, fight poses |
 
 A small craft's own art has **fight poses** instead of a hull: 32x32 pictures in the craft fight

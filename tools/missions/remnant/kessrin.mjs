@@ -6,7 +6,7 @@
 //   * Kessrin's guard: Directorate Talos (level-6 Talos), two Abaddons, two battleships, cruisers;
 //     two carriers put out fighters on the first turn;
 //   * the atmosphere and Earth along the south edge (nothing inside the atmosphere can be
-//     targeted); Directorate reserves on turns 6 and 11; the Olympos garrison joins on turn 7.
+//     targeted); Directorate reserves on turns 6 and 11; the Olympos garrison joins on turn 13, on afterburners.
 // Objective: sink the Leviathan within 30 turns. It arrives on turn 14. Epilogue by the campaign's choice (deal/refuse).
 const COLS = 59, ROWS = 40;
 const g = Array.from({ length: ROWS }, () => new Array(COLS).fill('.'));
@@ -85,7 +85,7 @@ export default {
     "Kill the two Abaddons in front of the gravity ring with fighters before any of your capital ships comes within four hexes of them.",
     "The gravity ring opens to the west and the north-east. Hold the west opening with the mecha while a fast group swings around to the north-east.",
     "Bring your own Abaddon up behind the mecha. From four hexes away its Decimator ends the Leviathan and everything next to it. Don't move it on the turn it fires.",
-    "His fast units come for the general at once: keep that machine in the second line and let them break on your mecha. His battleships, cruisers and Abaddons hold the ring until the Leviathan comes. Reserves arrive from the east on turns 6 and 11; the Olympos garrison joins you on turn 7.",
+    "His fast units come for the general at once: keep that machine in the second line and let them break on your mecha. His battleships, cruisers and Abaddons hold the ring until the Leviathan comes. Reserves arrive from the east on turns 6 and 11. Hold on: the Olympos garrison joins you on turn 13 on afterburners (detach them to fight).",
     "Kessrin holds the Leviathan back until turn 14, then brings it in from the east with six Directorate Talos. Have your Abaddon and your best guns ready for it.",
   ],
   plan: [
@@ -178,7 +178,9 @@ The Union comes home, poorer and owing nobody.`,
     // Directorate reserves from the east, turns 6 and 11
     { turn: 5, army: 1, units: [{ type: 39, x: 59, y: 14 }, { type: 39, x: 59, y: 22 }, { type: 49, x: 58, y: 10 }, { type: 2, x: 59, y: 18 }, { type: 3, x: 58, y: 26 }] },
     { turn: 10, army: 1, units: [{ type: 31, x: 59, y: 18 }, { type: 42, x: 58, y: 12 }, { type: 42, x: 58, y: 24 }, { type: 49, x: 59, y: 30 }, { type: 51, x: 59, y: 6 }] },
-    // the Olympos garrison joins the remnant from the north-west on turn 7
-    { turn: 6, army: 0, units: [{ type: 31, x: 3, y: 1 }, { type: 42, x: 6, y: 1 }, { type: 39, x: 1, y: 3 }, { type: 0, x: 8, y: 2 }] },
+    // the Olympos garrison joins the remnant from the north-west on turn 13, just before the
+    // Leviathan: a strong group on afterburners (fast, but they must detach them to fight)
+    { turn: 12, army: 0, units: [{ type: 30, x: 3, y: 1 }, { type: 31, x: 6, y: 1 }, { type: 31, x: 1, y: 4 }, { type: 42, x: 9, y: 1 }, { type: 42, x: 1, y: 7 },
+      { type: 2, x: 4, y: 3 }, { type: 2, x: 7, y: 3 }, { type: 1, x: 3, y: 5 }, { type: 16, x: 10, y: 2 }].map((u) => ({ ...u, burner: true })) },
   ],
 };

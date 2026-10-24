@@ -87,6 +87,6 @@ export function deployList(mission) {
 export function arrivalList(mission) {
   return (mission.arrivals || []).map((e) => ({
     turn: e.turn, army: e.army, screen: [0, 0],
-    units: e.units.map((u) => ({ type: u.type, flag40: false, x: u.x, y: u.y, cargo: u.cargo || [], ...(u.chase ? { chase: u.chase } : {}), ...(u.level !== undefined ? { level: u.level } : {}) })),
+    units: e.units.map((u) => ({ type: u.type, flag40: false, x: u.x, y: u.y, cargo: u.cargo || [], ...(u.chase ? { chase: u.chase } : {}), ...(u.level !== undefined ? { level: u.level } : {}), ...(u.burner ? { burner: true } : {}) })),
   }));
 }
