@@ -67,6 +67,10 @@ const during = (section, fn) => { rec.section = recEn.section = section; fn(); r
 const types = allUnitTypes(realRom), T = types.length;
 
 // ------------------------------------------------------------------ render: maps, icons, palette
+// the battle board's unit tokens (js/render/tokens.js), every type in every army
+const { tokenPixels } = await imp('js/render/tokens.js');
+during('render', () => { for (let t = 0; t < 58; t++) for (const a of [0, 1, 2]) tokenPixels(rec, t, a); });
+
 during('render', () => {
   maps.battlePalette(rec);
   for (let m = 0; m < maps.MAP_COUNT; m++) maps.renderMap(rec, maps.mapInfo(rec, m), { units: true });   // editor: ROM maps to copy from

@@ -4,7 +4,7 @@
 // every mission starts from the ROM's own deployment.
 import { Rom } from './rom.js';
 import { paint } from './gfx.js';
-import { MAP_COUNT, mapInfo, battlePalette, renderMap, unitIcon, cellOrigin, cellAt, HEX_POINTS } from './maps.js';
+import { MAP_COUNT, mapInfo, battlePalette, renderMap, unitIcon } from './maps.js';
 import { allUnitTypes } from './units.js';
 import { applyBps } from './bps.js';
 import { readEnglish, LAYOUT, unitText } from './text.js';
@@ -21,17 +21,19 @@ import { LABEL as EV, COMET_MAP, inLane, detachBurner, decimator, blast } from '
 import { FightScene } from './game/fightscene.js';
 import { Sound, mapMusic, SONGS, briefingSong } from './audio/sound.js';
 import { drawScreen } from './screens.js';
+import { Board } from './render/board.js';
 import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle, EXPANSION_BATTLE } from './game/savegame.js';
 import { expansionFromUrl } from './expansion/battle.js';
 
 const $ = (id) => document.getElementById(id);
-const Z = 2, OFF = 16;          // board zoom; render crop offset (playfield starts at cell 1,1)
+// the battle board (js/render/board.js): terrain, units, overlays and effects drawn from the ROM's art
+let board = null;
 // Defeat text (labels 68-86) by campaign stage: Hercules, Erebos, the Basilisk counterattack,
 // Ragnarok, Yahweh (Babylon).
 const LOST_LINES = [[0, [68, 69, 70, 71]], [10, [72, 73, 76]], [20, [74, 75]], [22, [77, 78, 79, 80, 81]], [28, [82, 83, 84, 85, 86]]];
 const ALERT_GALT = 87, ALERT_UNION = 88, BABYLON_ALERT = 94;
 
-let rom, romEn = null, en = null, pal, types, battle, mission = 0, terrainCanvas;
+let rom, romEn = null, en = null, pal, types, battle, mission = 0;
 let sel = null, reach = null, targets = [], hosts = [], launching = null, busy = false, blastCells = null;
 let threat = null;   // an enemy unit's reach, shown when it is clicked: { u, move: Map, fire: Set }
 let cursor = null;   // keyboard cursor hex [x, y]
@@ -272,8 +274,8 @@ function setupBoard(m) {
   mission = m;
   const info = custom ? custom.info : mapInfo(rom, m);
   const terr = renderMap(custom ? custom.rom : rom, info, { units: false });
-  terrainCanvas = document.createElement('canvas');
-  paint(terrainCanvas, terr.img, pal, { scale: Z });
+  if (!board) { board = new Board($('board'), $('cv'), { rom, icon: maskedIcon }); board.active = () => !$('sBattle').hidden; }
+  board.setTerrain(terr.img, pal);   // terrain classes come with the battle (board.update)
   sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; blastCells = null; threat = null; $('log').innerHTML = '';
   show('sBattle'); $('where').textContent = custom ? `expansion · ${custom.mission.title || custom.mission.name}` : `mission ${m + 1} · ${missionTitle(m)}`;
   return info;
@@ -282,8 +284,7 @@ function setupBoard(m) {
 // The board's terrain, redrawn from the battle's own cells (the Decimator clears them).
 function paintTerrain() {
   const terr = renderMap(battle.rom, battle.info, { units: false, grid: battle.grid });
-  terrainCanvas = document.createElement('canvas');
-  paint(terrainCanvas, terr.img, pal, { scale: Z });
+  board.setTerrain(terr.img, pal, (x, y) => battle.cls(x, y));
 }
 
 function newBattle(m) {
@@ -324,7 +325,7 @@ function begin() {
   draw(); hud(`<p><b>Objective:</b> ${battle.script.goal}</p><span class="dim">Click one of your units; click an enemy to see where it can move and fire. Docks and carriers hold more units: click them to launch.
     Neutral docks (grey) can be captured, with the units inside, by bringing them down to 0 HP.</span>`);
   const first = battle.alive(0)[0];
-  if (first) { const [X, Y] = px(first.x, first.y); $('board').scrollTo(X - 200, Y - 150); }
+  if (first) board.centerOn(first.x, first.y);
 }
 
 function runFight(e) {
@@ -352,21 +353,13 @@ function runFight(e) {
   });
 }
 
-function px(x, y) { const [X, Y] = cellOrigin(x, y); return [(X - OFF) * Z, (Y - OFF) * Z]; }
-function hexPath(ctx, x, y) {
-  const [X, Y] = px(x, y);
-  ctx.beginPath();
-  HEX_POINTS.forEach(([a, b], i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, X + a * Z, Y + b * Z));
-  ctx.closePath();
-}
-
 // Neutral docks use the Union icon drawn in grey.
 const iconCache = new Map();
 function maskedIcon(u) {
   const key = `${u.army}:${u.type}`;
   if (!iconCache.has(key)) {
     const c = document.createElement('canvas');
-    paint(c, unitIcon(rom, u.army === NEUTRAL ? 0 : u.army, types[u.type].gfx, 0), pal, { scale: Z });
+    paint(c, unitIcon(rom, u.army === NEUTRAL ? 0 : u.army, types[u.type].gfx, 0), pal, { scale: 1 });
     if (u.army === NEUTRAL) {
       const g = document.createElement('canvas'); g.width = c.width; g.height = c.height;
       const gx = g.getContext('2d'); gx.filter = 'grayscale(1) brightness(1.1)'; gx.drawImage(c, 0, 0);
@@ -376,49 +369,10 @@ function maskedIcon(u) {
   return iconCache.get(key);
 }
 
-const HP_COLOUR = ['#ff8fd8', '#8fe38a', '#d0d0d0'];
+// The board draws itself every frame from this state (js/render/board.js).
 function draw() {
   music();
-  const cv = $('cv'), ctx = cv.getContext('2d');
-  cv.width = terrainCanvas.width; cv.height = terrainCanvas.height;
-  ctx.drawImage(terrainCanvas, 0, 0);
-  if (threat) {   // an enemy's reach: where it can fire on (red) and move to (orange) this turn
-    ctx.fillStyle = 'rgba(255,60,60,.28)';
-    for (const key of threat.fire) if (!threat.move.has(key)) { const [x, y] = key.split(',').map(Number); hexPath(ctx, x, y); ctx.fill(); }
-    ctx.fillStyle = 'rgba(255,170,60,.38)';
-    for (const key of threat.move.keys()) { const [x, y] = key.split(',').map(Number); hexPath(ctx, x, y); ctx.fill(); }
-    ctx.strokeStyle = '#ff6a3d'; ctx.lineWidth = 2; hexPath(ctx, threat.u.x, threat.u.y); ctx.stroke();
-  }
-  if (reach) {
-    ctx.fillStyle = launching ? 'rgba(120,255,160,.4)' : 'rgba(80,160,255,.35)';
-    for (const key of reach.keys()) { const [x, y] = key.split(',').map(Number); hexPath(ctx, x, y); ctx.fill(); }
-  }
-  if (battle.cannons.length) {   // Buccaneer lanes (map 19): everything here is destroyed at the next phase change
-    ctx.fillStyle = 'rgba(255,120,40,.18)';
-    for (const c of battle.cannons) for (let y = c.y; y <= battle.info.rows; y++) if (inLane(battle, c.x, y)) { hexPath(ctx, c.x, y); ctx.fill(); }
-  }
-  if (blastCells) {
-    ctx.fillStyle = 'rgba(200,90,255,.35)';
-    for (const [x, y] of blastCells) { hexPath(ctx, x, y); ctx.fill(); }
-  }
-  ctx.fillStyle = 'rgba(255,60,60,.45)';
-  for (const t of targets) { hexPath(ctx, t.x, t.y); ctx.fill(); }
-  ctx.fillStyle = 'rgba(255,214,74,.45)';
-  for (const h of hosts) { hexPath(ctx, h.x, h.y); ctx.fill(); }
-  for (const u of battle.alive()) {
-    const [X, Y] = px(u.x, u.y);
-    ctx.globalAlpha = u.acted && !u.reMove && u.army === battle.army ? 0.55 : 1;
-    ctx.drawImage(maskedIcon(u), X, Y);
-    ctx.globalAlpha = 1;
-    const n = battle.cargo(u).length, txt = n ? `${u.hp}+${n}` : `${u.hp}`;
-    ctx.font = 'bold 13px system-ui'; ctx.fillStyle = '#000'; ctx.fillText(txt, X + 33, Y + 31);
-    ctx.fillStyle = HP_COLOUR[u.army]; ctx.fillText(txt, X + 32, Y + 30);
-    if (u.burner) { ctx.font = 'bold 10px system-ui'; ctx.fillStyle = '#000'; ctx.fillText('AB', X + 1, Y + 31); ctx.fillStyle = '#ffa040'; ctx.fillText('AB', X, Y + 30); }
-    if (u.general) { ctx.font = 'bold 14px system-ui'; ctx.fillStyle = '#000'; ctx.fillText('★', X + 35, Y + 13); ctx.fillStyle = '#ffd84a'; ctx.fillText('★', X + 34, Y + 12); }   // expansion: the general's unit
-    if (u.level) { ctx.font = 'bold 10px system-ui'; ctx.fillStyle = '#000'; ctx.fillText(`L${u.level}`, X + 1, Y + 9); ctx.fillStyle = '#ffd84a'; ctx.fillText(`L${u.level}`, X, Y + 8); }
-  }
-  if (sel) { ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2; hexPath(ctx, sel.x, sel.y); ctx.stroke(); }
-  if (cursor) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); hexPath(ctx, ...cursor); ctx.stroke(); ctx.setLineDash([]); }
+  board.update({ battle, reach, launching, targets, hosts, threat, blastCells, sel, cursor, inLane });
 }
 
 function hud(msg) {
@@ -549,8 +503,7 @@ function threatOf(u) {
 }
 
 function onClick(ev) {
-  const r = ev.target.getBoundingClientRect(), k = ev.target.width / r.width;   // the board may be scaled down on phones
-  const [cx, cy] = cellAt(((ev.clientX - r.left) * k) / Z + OFF, ((ev.clientY - r.top) * k) / Z + OFF);
+  const [cx, cy] = board.cellAt(ev);   // the board may be zoomed or scaled down on phones
   cursor = null;
   act(cx, cy);
 }
@@ -572,8 +525,7 @@ function onKey(e) {
     e.preventDefault();
     if (!cursor) { const u = sel || battle.alive(0)[0] || { x: 1, y: 1 }; cursor = [u.x, u.y]; }
     cursor = [Math.min(battle.info.cols - 1, Math.max(1, cursor[0] + moves[k][0])), Math.min(battle.info.rows, Math.max(1, cursor[1] + moves[k][1]))];
-    const [X, Y] = px(...cursor), b = $('board');
-    if (X < b.scrollLeft || X > b.scrollLeft + b.clientWidth - 48 || Y < b.scrollTop || Y > b.scrollTop + b.clientHeight - 32) b.scrollTo(X - b.clientWidth / 2, Y - b.clientHeight / 2);
+    board.ensureVisible(...cursor);
     draw();
     const u = battle.unitAt(...cursor);
     if (u && !sel) hud(unitCard(u));
@@ -653,15 +605,8 @@ async function fireDecimator(a, x, y) {
 
 // Brief highlight of some hexes (cannon fire, Decimator blast).
 function flash(cells, colour) {
-  return new Promise((done) => {
-    let n = 0;
-    const tick = () => {
-      draw();
-      if (n % 2 === 0) { const ctx = $('cv').getContext('2d'); ctx.fillStyle = colour; for (const [x, y] of cells) { hexPath(ctx, x, y); ctx.fill(); } }
-      if (++n < 6) setTimeout(tick, 110); else { draw(); done(); }
-    };
-    tick();
-  });
+  draw();
+  return board.flash(cells, colour);
 }
 
 // The map-event windows (labels block), one after the other; click or wait to go on.
