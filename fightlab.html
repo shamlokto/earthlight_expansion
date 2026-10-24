@@ -18,9 +18,12 @@
   frame <input id="fr" type="number" value="200"> <label><input id="en" type="checkbox"> English</label>
   <label><input id="ally" type="checkbox"> ally next to defender</label>
   <label><input id="lv" type="checkbox"> attacker level 3</label>
+  slot <input id="as" type="number" value="-1" title="attacker weapon slot (-1: first armed)"> counter slot <input id="ds" type="number" value="-1" title="-1: no counter">
+  <label><input id="modern" type="checkbox" checked> modern</label>
   <button id="play">play</button> <span id="st"></span>
 </div>
 <canvas id="cv" width="256" height="224"></canvas>
+<canvas id="cvx" width="1024" height="896" style="image-rendering:auto"></canvas>
 <script type="module">
 import { Rom } from './js/rom.js';
 import { readRomFile, readPatchFile } from './js/romfile.js';
@@ -30,6 +33,7 @@ import { MAP_COUNT, mapInfo, deployment } from './js/maps.js';
 import { allUnitTypes } from './js/units.js';
 import { Battle } from './js/game/rules.js';
 import { FightScene } from './js/game/fightscene.js';
+import { FightRenderer } from './js/render/fightfx.js';
 
 const $ = (id) => document.getElementById(id);
 const get = async (u, rd) => { const r = await fetch(u); if (!r.ok) return null; return rd(new File([await r.arrayBuffer()], 'x')); };
@@ -60,24 +64,26 @@ function scene() {
   place(1, 0, 9, 1); place(1, 2, 11, 3);
   if ($('ally').checked) place(0, 0, 10, 1);
   if ($('lv').checked) att.level = 3;
-  const w = b.type(att).weapons.find((x) => x && x.power);
+  const ws = b.type(att).weapons, w = +$('as').value >= 0 && ws[+$('as').value] ? ws[+$('as').value] : ws.find((x) => x && x.power);
   const fi = b.fightInfo(att, def, w);
-  const side = (u, hpAfter) => ({ type: u.type, army: u.army, hp: u.hp, hpAfter, cls: b.cls(att.x, att.y) });
-  const s = new FightScene(rom, side(att, Math.max(0, att.hp - 2)), side(def, Math.max(0, def.hp - 3)),
-    { counter: true, info: fi, textRom: $('en').checked ? romEn : null, names: $('en').checked ? names : null });
+  const side = (u, hpAfter, slot) => ({ type: u.type, army: u.army, hp: u.hp, hpAfter, cls: b.cls(att.x, att.y), slot });
+  const s = new FightScene(rom, side(att, Math.max(0, att.hp - 2), w.slot), side(def, Math.max(0, def.hp - 3), Math.max(0, +$('ds').value)),
+    { counter: +$('ds').value >= 0, info: fi, textRom: $('en').checked ? romEn : null, names: $('en').checked ? names : null });
   $('st').textContent = `atk ${fi.att.atk} def ${fi.att.def} | ${fi.def.atk} ${fi.def.def} | pct ${fi.att.pct}/${fi.def.pct} | intro ${s.introLen}`;
   return s;
 }
 function show() {
-  const s = scene(), n = +$('fr').value;
-  for (let i = 0; i < n; i++) s.step();
+  const s = scene(), n = +$('fr').value, fx = $('modern').checked ? new FightRenderer(s, $('cvx')) : null;
+  for (let i = 0; i < n; i++) { s.step(); if (fx) fx.update(); }
   window.scene = s;
   s.render($('cv').getContext('2d'));
+  if (fx) fx.render(1);
+  $('cvx').hidden = !fx;
 }
-for (const k of ['at', 'dt', 'fr', 'en', 'ally', 'lv']) $(k).onchange = show;
+for (const k of ['at', 'dt', 'fr', 'en', 'ally', 'lv', 'as', 'ds', 'modern']) $(k).onchange = show;
 $('play').onclick = () => {
-  const s = scene(), ctx = $('cv').getContext('2d');
-  const tick = () => { s.step(); s.render(ctx); if (!s.done) requestAnimationFrame(tick); };
+  const s = scene(), ctx = $('cv').getContext('2d'), fx = $('modern').checked ? new FightRenderer(s, $('cvx')) : null;
+  const tick = () => { s.step(); s.render(ctx); if (fx) { fx.update(); fx.render(1); } if (!s.done) requestAnimationFrame(tick); };
   tick();
 };
 show();

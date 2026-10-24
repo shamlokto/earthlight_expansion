@@ -17,6 +17,7 @@ import { aiTurn } from './game/ai.js';
 import { mapPoints, rankOf, rankName } from './game/points.js';
 import { LABEL as EV, COMET_MAP, inLane, detachBurner, decimator, blast } from './game/events.js';
 import { FightScene } from './game/fightscene.js';
+import { FightRenderer, fightScale } from './render/fightfx.js';
 import { Sound, mapMusic, SONGS, briefingSong } from './audio/sound.js';
 import { drawScreen } from './screens.js';
 import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle, EXPANSION_BATTLE } from './game/savegame.js';
@@ -325,14 +326,26 @@ function begin() {
   if (first) { const [X, Y] = px(first.x, first.y); $('board').scrollTo(X - 200, Y - 150); }
 }
 
+// Fight cut-ins use the modern renderer (js/render/fightfx.js) unless "Classic fights" is ticked
+// (the original 256x224 picture); the choice is remembered in this browser.
+const CLASSIC_FIGHTS = 'earthlight-classic-fights';
+const classicFights = () => { try { return localStorage.getItem(CLASSIC_FIGHTS) === '1'; } catch { return false; } };
+if ($('optClassicFights')) {
+  $('optClassicFights').checked = classicFights();
+  $('optClassicFights').onchange = (ev) => { try { localStorage.setItem(CLASSIC_FIGHTS, ev.target.checked ? '1' : '0'); } catch { /* no storage */ } };
+}
+
 function runFight(e) {
   if (!$('optFights').checked) return Promise.resolve();
   const sideOf = (u, before, after, other, w) => ({ type: u.type, army: u.army === NEUTRAL ? 1 - other.army : u.army, hp: before, hpAfter: after, cls: battle.cls(u.x, u.y), slot: w?.slot });
   const scene = new FightScene(rom, sideOf(e.att, e.before[0], e.after[0], e.def, e.w), sideOf(e.def, e.before[1], e.after[1], e.att, e.cw),
     { counter: !!e.cw, info: e.info, textRom: romEn, names: en ? en.unitNames : null });
   scene.att.cls = battle.cls(e.att.x, e.att.y);
-  const ov = $('fight'), ctx = $('fightCv').getContext('2d');
+  const ov = $('fight'), cv = $('fightCv'), classic = classicFights();
   ov.hidden = false;
+  const S = classic ? 1 : fightScale(cv.clientWidth || 768);
+  cv.width = 256 * S; cv.height = 224 * S; cv.style.imageRendering = classic ? 'pixelated' : 'auto';
+  const ctx = cv.getContext('2d'), fx = classic ? null : new FightRenderer(scene, cv);
   return new Promise((resolve) => {
     let last = null, skip = false;
     ov.onclick = () => { skip = true; };
@@ -340,9 +353,10 @@ function runFight(e) {
       if (last === null) last = t;
       while (t - last >= 1000 / 60 && !scene.done) {
         scene.step(); last += 1000 / 60;
+        if (fx) fx.update();
         if (sound) new Set(scene.sounds()).forEach((id) => sound.playSfx(id));
       }
-      scene.render(ctx);
+      if (fx) fx.render(Math.min(1, (t - last) / (1000 / 60))); else scene.render(ctx);
       if (skip && sound) sound.playSfx(3);   // stop the fight's effects, as the fight end does
       if (scene.done || skip) { ov.hidden = true; resolve(); } else requestAnimationFrame(tick);
     };

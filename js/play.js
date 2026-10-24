@@ -7,6 +7,7 @@ import { readEnglish } from './text.js';
 import { Battle } from './game/rules.js';
 import { aiTurn } from './game/ai.js';
 import { FightScene } from './game/fightscene.js';
+import { FightRenderer, fightScale } from './render/fightfx.js';
 import { Sound, mapMusic } from './audio/sound.js';
 import { showUnitInfo } from './unitinfo.js';
 
@@ -17,9 +18,13 @@ function runFight(e) {
   const scene = new FightScene(rom, side(e.att, e.before[0], e.after[0], e.w), side(e.def, e.before[1], e.after[1], e.cw),
     { counter: !!e.cw, info: e.info, textRom: romEn, names });
   scene.att.cls = battle.cls(e.att.x, e.att.y);
-  const ov = $('fight'), cv = $('fightCv'), ctx = cv.getContext('2d');
+  const ov = $('fight'), cv = $('fightCv');
+  let classic = false; try { classic = localStorage.getItem('earthlight-classic-fights') === '1'; } catch { /* no storage */ }
   $('fightCap').textContent = `${nameOf(e.att)} ${e.before[0]}→${e.after[0]}  vs  ${nameOf(e.def)} ${e.before[1]}→${e.after[1]}`;
   ov.hidden = false;
+  const S = classic ? 1 : fightScale(cv.clientWidth || 768);
+  cv.width = 256 * S; cv.height = 224 * S; cv.style.imageRendering = classic ? 'pixelated' : 'auto';
+  const ctx = cv.getContext('2d'), fx = classic ? null : new FightRenderer(scene, cv);
   return new Promise((resolve) => {
     let last = null, skip = false;
     ov.onclick = () => { skip = true; };
@@ -28,9 +33,10 @@ function runFight(e) {
       // fixed 60 fps timestep, like the SNES frame
       while (t - last >= 1000 / 60 && !scene.done) {
         scene.step(); last += 1000 / 60;
+        if (fx) fx.update();
         if (sound) new Set(scene.sounds()).forEach((id) => sound.playSfx(id));
       }
-      scene.render(ctx);
+      if (fx) fx.render(Math.min(1, (t - last) / (1000 / 60))); else scene.render(ctx);
       if (scene.done || skip) {
         if (skip && sound) sound.playSfx(3);   // stop the fight's effects, as the fight end does
         ov.hidden = true; resolve();
