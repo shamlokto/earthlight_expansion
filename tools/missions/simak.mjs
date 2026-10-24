@@ -61,7 +61,7 @@ export default {
   goal: "Destroy the three Cortex command centres inside Babylon's hull.",
   chapter: "Chapter 7 · Earth orbit, the wreck of Babylon",
   transmission: "Babylon never fired. That is the trouble with emperors, General: they hesitate. I won't.",
-  strategy: ["Your northwest group rides the magnetic belt down to the hull's west end: the Dragons' beams can't touch a ship inside it.", "The north group drops straight onto the hull. Don't trade with the carriers: kill fighters only when they block your way.", "The west group crosses the plasma lake and the meteoroids to the southern Cortex.", "A wave of fighters launches from the atmosphere on turn 4. Be inside the hull by then.", "Three Cortex centres: kill them all. The home fleet behind the eastern asteroids will come once you're committed.", "A Naga rail pod watches the hull's west end and an Msfb-5 strike bomber flies with the home fleet: kill the bomber before it reaches missile range."],
+  strategy: ["Your northwest group rides the magnetic belt down to the hull's west end: the Dragons' beams can't touch a ship inside it.", "The north group drops straight onto the hull. Don't trade with the carriers: kill fighters only when they block your way.", "The west group crosses the plasma lake and the meteoroids to the southern Cortex.", "A wave of fighters launches from the atmosphere on turn 4. Be inside the hull by then.", "Three Cortex centres: kill them all. The home fleet behind the eastern asteroids will come once you're committed.", "A Naga rail pod watches the hull's west end."],
   plan: [{"n": 1, "path": [[3, 5], [9, 9], [16, 12]]}, {"n": 2, "path": [[24, 2], [26, 5], [28, 8]]}, {"n": 3, "path": [[3, 15], [11, 17], [19, 17]]}, {"n": 4, "at": [30, 23], "note": "Fighter wave T4"}],
   briefing: `
 Earth orbit. Babylon.
@@ -76,7 +76,7 @@ We come down from high orbit on three fronts. In the northwest the magnetic belt
     { map: 30, from: [33, 2], to: [57, 17], at: [17, 6] },   // Babylon's hull
     { map: 30, from: [1, 35], to: [59, 40], at: [1, 25] },   // atmosphere and Earth
   ],
-  units: '\n' + revive(units, [['w', '1', [1, 4]], ['t', '4', [0]], ['h', '7', [1]]]),
+  units: '\n' + revive(units, [['w', '1', [1, 4]], ['t', '4', [0]]]),
   legend: {
     ...REVIVED,   // cut ROM units, revived (revive.mjs)
     G: { type: 4, army: 0, general: true },   // Athena, the general's machine

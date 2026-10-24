@@ -86,6 +86,35 @@ function art(type) {
 }
 const pips = (level) => `<span class="pips" title="Pilot level ${level}">${Array.from({ length: 9 }, (_, i) => `<i${i < level ? ' class="on"' : ''}></i>`).join('')}</span>`;
 
+// Production asks first: the machine's wiki card (picture, role, stats, weapons, description),
+// a link to its full wiki entry, then Buy or Cancel.
+const MODES = ['Beam', 'Railgun', 'Missile'];
+function confirmBuild(type) {
+  const t = types[type], tx = en?.unitInfo?.find((e) => e.type === type), cost = C.price(types, type), beta = C.beta(state);
+  const info = tx ? tx.info.slice(1).join('\n\n').replace(/-\n/g, '').replace(/\n(?!\n)/g, ' ') : '';
+  const weapons = t.weapons.filter((w) => w && w.power).map((w) => `<li>${MODES[w.mode]} · power ${w.power} · range ${w.max > w.min ? `${w.min}–${w.max}` : w.min}</li>`).join('') || '<li>Unarmed</li>';
+  const anchor = t.look !== undefined ? `xunit-${type}` : `unit-${type}`;
+  let d = $('buyDlg');
+  if (!d) { d = document.createElement('dialog'); d.id = 'buyDlg'; d.className = 'box buydlg'; document.body.append(d); }
+  d.innerHTML = `<div class="buyhead">${art(type) ? `<img src="${art(type)}" alt="">` : ''}<div><h2>${esc(name(type))}</h2><div class="muted">${esc(t.code)}${tx?.short ? ` · ${esc(tx.short)}` : ''}</div></div></div>
+    <div class="buystats"><span><em>HP</em><b>${t.hp}</b></span><span><em>Move</em><b>${t.move}</b></span><span><em>Evasion</em><b>${Math.round((t.evasion * 100) / 128)}%</b></span><span><em>Price</em><b>${cost}</b></span></div>
+    <ul class="buyweap">${weapons}</ul>${info ? `<p class="buyinfo">${esc(info)}</p>` : ''}
+    ${t.move === 0 ? '<p class="muted">Fixed battery: it cannot move. Deploy it with an empty Crab, which carries it and sets it down on bedrock, an asteroid, a fortress deck or a turret railway.</p>' : ''}
+    <p><a href="wiki.html#${anchor}" target="_blank" rel="noopener">Full wiki entry →</a></p>
+    <div class="row"><button class="btn primary" id="buyYes" ${beta || (state.supply >= cost && state.builds < C.MAX_BUILDS) ? '' : 'disabled'}>Buy${beta ? ' (free, beta)' : ` for ${cost} supply`}</button><button class="btn" id="buyNo">Cancel</button></div>`;
+  $('buyNo').onclick = () => d.close();
+  $('buyYes').onclick = () => { d.close(); if (C.build(state, types, type)) { save(); render(); } };
+  d.showModal();
+}
+
+// Sorting (remembered in this browser): supply price, newest, unit type, pilot level, name.
+const SORT_LABELS = { supply: 'supply', new: 'newest', type: 'type', level: 'pilot level', name: 'name' };
+const sorting = (() => { try { return { roster: 'supply', shop: 'supply', ...JSON.parse(localStorage.getItem('el-expansion-sort')) }; } catch { return { roster: 'supply', shop: 'supply' }; } })();
+const byPrice = (a, b) => C.price(types, a) - C.price(types, b) || name(a).localeCompare(name(b));
+const byName = (a, b) => name(a).localeCompare(name(b)) || a - b;
+// type: the machine's class (category: ships first, then craft), then price
+const byType = (a, b) => types[a].category - types[b].category || byPrice(a, b);
+
 function render() {
   const e = entry(), cap = next ? C.deployCap(next) : 0;
   if (!state.deploy) state.deploy = state.roster.slice(0, cap).map((r) => r.id);
@@ -114,8 +143,12 @@ function render() {
     <span><em>Built</em><b>${state.builds}${beta ? '' : ` / ${C.MAX_BUILDS}`}</b></span><span><em>Machines</em><b>${state.roster.length}</b></span>
     <span><em>Mission</em><b>${e ? e.no : '—'} / ${total}</b></span></div>`;
 
-  html += `<section class="box"><h2>Roster <small>${deployed.size} of ${cap || '—'} deploying</small></h2><div class="roster">`;
-  for (const r of state.roster) {
+  const sortBox = (id, cur, keys) => `<select class="sortsel" id="${id}" title="Sort">${keys.map((k) => `<option value="${k}" ${k === cur ? 'selected' : ''}>Sort: ${SORT_LABELS[k]}</option>`).join('')}</select>`;
+  html += `<section class="box"><h2>Roster <small>${deployed.size} of ${cap || '—'} deploying</small>${sortBox('rosterSort', sorting.roster, ['supply', 'new', 'type', 'level', 'name'])}</h2><div class="roster">`;
+  // the general's machine always comes first; the rest by the chosen order
+  const rosterKey = { supply: (a, b) => byPrice(a.type, b.type) || b.level - a.level, new: (a, b) => b.id - a.id,
+    type: (a, b) => byType(a.type, b.type) || b.level - a.level, level: (a, b) => b.level - a.level || byPrice(a.type, b.type), name: (a, b) => byName(a.type, b.type) || b.level - a.level }[sorting.roster];
+  for (const r of [...state.roster].sort((a, b) => (b.id === state.general) - (a.id === state.general) || rosterKey(a, b))) {
     const t = types[r.type], can = C.GENERAL_SHIPS.has(r.type), on = deployed.has(r.id), gen = state.general === r.id;
     html += `<article class="rcard${on ? ' on' : ''}${gen ? ' gen' : ''}${picked.has(r.id) ? ' pick' : ''}">
       ${art(r.type) ? `<img class="rart" src="${art(r.type)}" alt="">` : ''}
@@ -129,11 +162,12 @@ function render() {
   html += `</div><div class="row genrow"><label class="tog gold"><input type="radio" name="general" data-general="none" ${state.general === null ? 'checked' : ''}><span>General stays home</span></label>
     <span class="muted">Aboard: evasion ×2 (max 96), power ×2, level 9. If that unit is destroyed, the game is over.</span></div></section>`;
 
-  html += `<div class="two"><section class="box"><h2>Production <small>${beta ? 'beta: every machine, free' : `up to ${C.MAX_BUILDS} per intermission`}</small></h2>
+  html += `<div class="two"><section class="box"><h2>Production <small>${beta ? 'beta: every machine, free' : `up to ${C.MAX_BUILDS} per intermission`}</small>${sortBox('shopSort', sorting.shop, ['supply', 'type', 'name', 'new'])}</h2>
     <p class="muted">Each machine comes with a new pilot at level 0.${beta ? '' : state.next >= (index.allFrom ?? Infinity) ? ' Every machine type is now available.' : ` More types unlock as the campaign goes on; all of them from mission ${(index.allFrom ?? 0) + 1}.`}</p><div class="shop">`;
-  for (const t of beta ? C.marketTypes(types) : unlocked().map((k) => types[k])) {
+  const shopKey = { supply: byPrice, type: byType, name: byName, new: (a, b) => b - a }[sorting.shop];
+  for (const t of (beta ? C.marketTypes(types) : unlocked().map((k) => types[k])).sort((a, b) => shopKey(a.type, b.type))) {
     const cost = C.price(types, t.type), ok = beta || (state.supply >= cost && state.builds < C.MAX_BUILDS);
-    html += `<button class="btn shopitem" data-build="${t.type}" ${ok ? '' : 'disabled'}>${art(t.type) ? `<img src="${art(t.type)}" alt="">` : icon(t.type)}<span><b>${esc(name(t.type))}</b><small>${beta ? 'free' : `${cost} supply`}</small></span></button>`;
+    html += `<button class="btn shopitem" data-build="${t.type}" ${ok ? '' : 'disabled'}>${art(t.type) ? `<img src="${art(t.type)}" alt="">` : icon(t.type)}<span><b>${esc(name(t.type))}</b><small>${cost} supply${beta ? ' · free' : ''}</small></span></button>`;
   }
   html += `</div></section><section class="box"><h2>Trade <small>giving ${picked.size} · worth ${tradeValue}</small></h2>
     <p class="muted">Tick <b>Trade</b> on machines in the roster to give them. You get one machine ${beta ? 'of any type (beta)' : `worth up to their total plus your supply (${state.supply})`}; the best pilot moves to it and keeps their level, so veterans step up to stronger machines.</p>
@@ -152,7 +186,8 @@ function render() {
 }
 
 function wire(cap) {
-  for (const b of document.querySelectorAll('[data-build]')) b.onclick = () => { if (C.build(state, types, +b.dataset.build)) { save(); render(); } };
+  for (const [id, k] of [['rosterSort', 'roster'], ['shopSort', 'shop']]) if ($(id)) $(id).onchange = () => { sorting[k] = $(id).value; try { localStorage.setItem('el-expansion-sort', JSON.stringify(sorting)); } catch { } render(); };
+  for (const b of document.querySelectorAll('[data-build]')) b.onclick = () => confirmBuild(+b.dataset.build);
   for (const c of document.querySelectorAll('[data-deploy]')) c.onchange = () => {
     const id = +c.dataset.deploy;
     state.deploy = c.checked ? [...state.deploy, id].slice(0, cap) : state.deploy.filter((d) => d !== id);

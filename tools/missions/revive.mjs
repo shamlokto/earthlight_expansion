@@ -7,7 +7,6 @@ export const REVIVED = {
   3: { type: 20, army: 1 },   // Echidna beam pod
   4: { type: 21, army: 1 },   // Naga rail pod
   5: { type: 22, army: 1 },   // Rockeye twin rail pod
-  7: { type: 47, army: 1 },   // Msfb-5 strike bomber
 };
 
 export function revive(units, swaps) {

@@ -3300,7 +3300,7 @@
    "evasion": 58,
    "value": 2,
    "moveOrFire": false,
-   "cut": false,
+   "cut": true,
    "weapons": [
     {
      "slot": 0,
@@ -3379,7 +3379,7 @@
    "evasion": 58,
    "value": 2,
    "moveOrFire": false,
-   "cut": false,
+   "cut": true,
    "weapons": [
     {
      "slot": 0,
@@ -3452,7 +3452,7 @@
    "evasion": 77,
    "value": 2,
    "moveOrFire": false,
-   "cut": false,
+   "cut": true,
    "weapons": [
     {
      "slot": 0,
@@ -3531,7 +3531,7 @@
    "evasion": 77,
    "value": 2,
    "moveOrFire": false,
-   "cut": false,
+   "cut": true,
    "weapons": [
     {
      "slot": 0,

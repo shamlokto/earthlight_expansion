@@ -264,7 +264,7 @@ function unitHtml(t) {
 // The cut units the expansion revives and its new machines (js/expansion/data): they have no
 // graphics of their own, so each borrows another type's (its `look`, js/look.js), hue-shifted.
 function expansionUnitsHtml() {
-  const T = xp.types, list = T.filter((u) => u && u.look !== undefined && u.armed === undefined && u.empty === undefined);
+  const T = xp.types, list = T.filter((u) => u && !u.cut && u.look !== undefined && u.armed === undefined && u.empty === undefined);
   const range = (w) => (w.max > w.min ? `${w.min}–${w.max}` : w.min);
   let html = `<h2 id="expansion-units">Expansion units <small>Galt remnant</small></h2>
     <p class="lede">Units the original ROM defines but never uses, brought back by the expansion, and the expansion's new machines.

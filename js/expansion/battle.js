@@ -164,7 +164,7 @@ export async function expansionFromUrl(rom) {
   const data = await loadExpansionData(), { types, tables } = data;
   let mission = await (await fetch(url)).json(), state = null;
   const missionNo = +(q.get('no') || 0);
-  if (q.get('campaign')) { state = campaign.load(); if (state) mission = campaign.applyRoster(mission, state, standChecker(rom, mission, types, tables)); }
+  if (q.get('campaign')) { state = campaign.load(); if (state) mission = campaign.applyRoster(mission, state, standChecker(rom, mission, types, tables), types); }
   const { rom: view, info } = romView(rom, mission);
   return {
     url, mission, rom: view, info, musicMap: mission.music ?? 0, names: ARMY_NAMES, campaign: !!state,

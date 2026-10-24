@@ -90,7 +90,7 @@ export default {
   goal: 'Sink the Tiamat, flagship of the Union home fleet.',
   chapter: "Chapter 9 · The Derleth line",
   transmission: "The home fleet is the Union, General. Every gun on that line was paid for by the Foundries you claim to defend. Sink the Tiamat, and you sink what you swore to protect.",
-  strategy: ["Mecha cross the gravity river only at the three fords: rows 4-5, 10-11 and 16-17. Ships and craft can fly over.", "The centre lane is mined. Push the north and south lanes, where the ridges keep their capital ships from swinging around.", "Long-range railguns win the artillery duel. Send Hunters at the guns on the ridges.", "The Galt squadron comes in from the north on turn 6: two Corvus, an Asura-II and Lobsters. Time the north push to meet them.", "Then drive for the Tiamat. When it sinks, the line breaks.", "Pandora mines cover the north lane, a Remora drone screens the centre, and a Naga pod sits with the ridge guns. The turn 9 wave brings an Msfb-5 bomber."],
+  strategy: ["Mecha cross the gravity river only at the three fords: rows 4-5, 10-11 and 16-17. Ships and craft can fly over.", "The centre lane is mined. Push the north and south lanes, where the ridges keep their capital ships from swinging around.", "Long-range railguns win the artillery duel. Send Hunters at the guns on the ridges.", "The Galt squadron comes in from the north on turn 6: two Corvus, an Asura-II and Lobsters. Time the north push to meet them.", "Then drive for the Tiamat. When it sinks, the line breaks.", "Pandora mines cover the north lane, a Remora drone screens the centre, and a Naga pod sits with the ridge guns."],
   plan: [{"n": 1, "path": [[6, 5], [13, 5]]}, {"n": 1, "path": [[6, 11], [13, 11]]}, {"n": 1, "path": [[6, 17], [13, 17]]}, {"n": 5, "path": [[16, 5], [30, 4], [42, 6]]}, {"n": 4, "at": [24, 1], "note": "Galt squadron T6"}, {"n": 2, "at": [30, 10], "note": "Mined centre lane"}],
   briefing: `
 The Derleth line. Everything the Union has left is here.
@@ -152,6 +152,6 @@ Sink the Tiamat and the line breaks.`,
     { turn: 5, army: 0, units: [{ type: 42, x: 22, y: 1 }, { type: 42, x: 26, y: 1 }, { type: 31, x: 24, y: 1 }, { type: 8, x: 21, y: 2 }, { type: 8, x: 25, y: 2 }, { type: 8, x: 27, y: 2 }] },
     // the fleet base sends its reserve every few turns
     { turn: 4, army: 1, units: [{ type: 49, x: 50, y: 12 }, { type: 51, x: 52, y: 14 }, { type: 2, x: 51, y: 17 }, { type: 2, x: 53, y: 18 }] },
-    { turn: 8, army: 1, units: [{ type: 47, x: 46, y: 6 }, { type: 49, x: 50, y: 12 }, { type: 3, x: 51, y: 17 }, { type: 0, x: 53, y: 18 }] },
+    { turn: 8, army: 1, units: [{ type: 40, x: 46, y: 6 }, { type: 49, x: 50, y: 12 }, { type: 3, x: 51, y: 17 }, { type: 0, x: 53, y: 18 }] },
   ],
 };

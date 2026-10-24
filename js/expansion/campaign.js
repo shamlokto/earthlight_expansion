@@ -17,8 +17,11 @@ const isStructure = (type) => type >= STRUCTURE && type < 58;
 export const price = (types, type) => Math.max(1, types[type].value) * types[type].hp;
 
 // Machines that can be bought or traded for: mobile, not cut, not structures or mines.
+// The Dragon and Hydra batteries (owner's request) can't move: a Crab carries one and sets it
+// down on bedrock, asteroid, deck or railway.
+const BATTERIES = [23, 24], CRAB_EMPTY = 26;
 export function marketTypes(types) {
-  return types.filter((t) => !t.cut && t.move > 0 && !isStructure(t.type) && t.armed === undefined && t.formOf === undefined && t.empty === undefined);
+  return types.filter((t) => !t.cut && (t.move > 0 || BATTERIES.includes(t.type)) && !isStructure(t.type) && t.armed === undefined && t.formOf === undefined && t.empty === undefined);
 }
 
 export function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
@@ -93,14 +96,19 @@ export function sell(s, types, ids) {
 // takes a slot whose terrain it can enter (`canStand`, from battle.js): the general's machine
 // first, then those with the fewest usable slots; one with no usable slot left stays home.
 // Units marked `joiner` stay as they are and join the roster if they survive.
-export function applyRoster(mission, s, canStand = () => true) {
+export function applyRoster(mission, s, canStand = () => true, types = null) {
   const slots = mission.units.filter((u) => u.army === 0 && !u.neutral && !u.joiner);
   const chosen = (s.deploy || s.roster.map((r) => r.id)).map((id) => s.roster.find((r) => r.id === id)).filter(Boolean).slice(0, slots.length);
   const others = mission.units.filter((u) => !slots.includes(u));
   const usable = new Map(chosen.map((r) => [r, slots.filter((sl) => canStand(r.type, sl.x, sl.y)).length]));
   const order = [...chosen].sort((a, b) => (b.id === s.general) - (a.id === s.general) || usable.get(a) - usable.get(b));
+  if (types) order.sort((a, b) => (types[a.type].move === 0) - (types[b.type].move === 0));   // batteries last, after the carriers
   const free = [...slots], placed = [];
+  // a fixed battery (Dragon, Hydra) starts aboard an empty deployed Crab, which carries it and sets
+  // it down on solid ground; with no free Crab it stays home
+  const crab = () => placed.find((u) => u.type === CRAB_EMPTY && !u.cargo.length);
   for (const r of order) {
+    if (types && types[r.type].move === 0) { const c = crab(); if (c) { c.cargo.push({ type: r.type, level: r.level, rosterId: r.id }); c.type = CRAB_EMPTY + 1; } continue; }
     const i = free.findIndex((sl) => canStand(r.type, sl.x, sl.y));
     if (i < 0) continue;
     placed.push({ ...free[i], type: r.type, level: r.level, rosterId: r.id, cargo: [] });

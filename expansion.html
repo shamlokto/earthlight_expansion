@@ -95,7 +95,17 @@
     .hero .soundHint { position: relative; z-index: 1; margin: 0 0 16px; }
     @media (max-width: 820px) { .two { grid-template-columns: minmax(0, 1fr); } .hero { padding: 22px 18px; } }
     @media (prefers-reduced-motion: reduce) { .box, .two { animation: none; } .rcard, .shopitem img { transition: none; } }
-  </style>
+      .buydlg { max-width: 560px; width: calc(100% - 32px); color: var(--ink); padding: 20px; }
+    .buydlg::backdrop { background: rgba(2, 4, 12, .72); backdrop-filter: blur(3px); }
+    .buyhead { display: flex; gap: 16px; align-items: center; }
+    .buyhead img { width: 112px; height: 112px; image-rendering: pixelated; border: 1px solid var(--edge-hi); }
+    .buyhead h2 { margin: 0 0 4px; }
+    .buystats { display: flex; gap: 18px; margin: 14px 0 8px; flex-wrap: wrap; }
+    .buystats em { display: block; font-style: normal; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+    .buyweap { margin: 6px 0; padding-left: 18px; }
+    .buyinfo { white-space: pre-wrap; line-height: 1.55; }
+    .sortsel { margin-left: auto; float: right; font: 12px var(--f-body, inherit); background: rgba(10, 16, 40, .8); color: var(--ink); border: 1px solid var(--edge-hi); padding: 3px 6px; text-transform: none; letter-spacing: 0; }
+</style>
   <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
