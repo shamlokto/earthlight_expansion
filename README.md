@@ -1,3 +1,17 @@
+# Earth Light remake and expansion
+
+**Play: https://shamlokto.github.io/earthlight_expansion/** (the first time, each browser asks for
+your own `Earth Light (Japan)` ROM and, optionally, Nezz's English patch; nothing is uploaded).
+
+* **The original campaign** (`game.html`, the front page): a faithful remake of all 30 missions.
+* **The expansion, *Galt remnant*** (`expansion.html`, the **Expansion** button on the main menu):
+  ten new missions after Babylon falls. The player leads Galt remnants against a corrupt Union,
+  with a carried-over roster, production, trade and the general (design: `docs/EXPANSION.md`).
+  It runs on its own data (`js/expansion/data/`) and a graphics-and-sound pack copied once from
+  your ROM, so after the first run it needs no ROM. Beta testing is on: unlimited supply, every
+  machine, trades at any price (switch in the intermission's Campaign box).
+* Missions are built from text layouts: `node tools/build-missions.mjs --rom ROM` (`tools/missions/`).
+
 # Earth Light remake lab
 
 A faithful remake of Hudson Soft's *Earth Light* (Super Famicom, 1992), built by
