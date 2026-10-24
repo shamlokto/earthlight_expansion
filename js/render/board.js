@@ -11,9 +11,9 @@
 import { cellOrigin, cellAt, HEX_POINTS } from '../maps.js';
 import { neighbours } from '../game/rules.js';
 import { scale3x, indexedToRgba } from './upscale.js';
-import { tokenPixels } from './tokens.js';
+import { tokenPixels, ownTokenPixels } from './tokens.js';
 import { lookOf } from '../look.js';
-import { ownArt, ownIcon } from '../art/own.js';
+import { ownArt, ownToken } from '../art/own.js';
 
 export const S = 3;                  // internal pixels per ROM pixel
 const OFF = 16;                      // the playfield starts at cell (1, 1)
@@ -287,12 +287,12 @@ export class Board {
 
   modernToken(type, army) {
     const types = this.state && this.state.battle.types, own = ownArt(types, type);
-    type = lookOf(types, type);   // borrowed graphics (js/look.js), or the type's own icon (js/art/own.js)
-    const p = tokenPixels(this.rom, type, army, own && ownIcon(own, army === 1 ? 1 : 0)), up = scale3x(p.px, p.w, p.h);
+    type = lookOf(types, type);   // borrowed graphics (js/look.js), or the type's own token (js/art/own.js)
+    const p = own ? ownTokenPixels(this.rom, ownToken(own, army === 1 ? 1 : 0), army === 1 ? 1 : 0) : tokenPixels(this.rom, type, army), up = scale3x(p.px, p.w, p.h);
     const src = canvas(up.w, up.h), sg = src.getContext('2d'), id = sg.createImageData(up.w, up.h);
     new Uint32Array(id.data.buffer).set(up.px); sg.putImageData(id, 0, 0);
     // fit: craft about 58 px tall, ships and structures a little larger than a hex
-    const kindShip = type >= 30, maxW = kindShip ? 84 : 66, maxH = kindShip ? 58 : 58;
+    const kindShip = type >= 30, maxW = own ? 78 : kindShip ? 84 : 66, maxH = own ? 52 : 58;   // an own token: about a ROM ship's size
     const k = Math.min(maxW / up.w, maxH / up.h, 1), w = Math.round(up.w * k), h = Math.round(up.h * k), pad = 6;
     const fit = canvas(w, h), fg = fit.getContext('2d');
     fg.imageSmoothingQuality = 'high'; fg.drawImage(src, 0, 0, w, h);

@@ -10,12 +10,12 @@ import { artSprites } from '../unitart.js';
 import { rgba, indexedToRgba } from './upscale.js';
 
 // { w, h, px: Uint32Array } for a unit type and army (2 = neutral: drawn in army A's colours,
-// greyed by the board). `icon`: a ship's own map icon (js/art/own.js) in place of the ROM's.
-export function tokenPixels(rom, type, army, icon = null) {
+// greyed by the board)
+export function tokenPixels(rom, type, army) {
   const kind = kindOf(type), side = army === 1 ? 1 : 0;
   let t;
   if (kind === 'craft') t = craftSprite(rom, type, side);
-  else if (kind === 'ship') { const ic = icon || unitIcon(rom, side, unitTypeGfx(rom, type)); t = { w: ic.w, h: ic.h, px: indexedToRgba(ic, palOf(rom)) }; }
+  else if (kind === 'ship') { const ic = unitIcon(rom, side, unitTypeGfx(rom, type)); t = { w: ic.w, h: ic.h, px: indexedToRgba(ic, palOf(rom)) }; }
   else t = structArt(rom, type);
   // the enemy faces the other way (the map icons already do)
   if (side === 1 && kind !== 'ship') for (let y = 0; y < t.h; y++) t.px.subarray(y * t.w, y * t.w + t.w).reverse();
@@ -24,6 +24,14 @@ export function tokenPixels(rom, type, army, icon = null) {
 
 let palCache = null, palRom = null;
 const palOf = (rom) => (palRom === rom ? palCache : (palRom = rom, palCache = battlePalette(rom)));
+
+// A type's own board token (js/art/own.js): its colour numbers in the side's capital-ship fight
+// palette, as the fight scene paints the hull.
+export function ownTokenPixels(rom, tok, side) {
+  const pal = paletteFromBytes(rom.body(PALS.ship[side])).slice(0, 16).map((c) => rgba(c)), px = new Uint32Array(tok.w * tok.h);
+  for (let i = 0; i < px.length; i++) if (tok.px[i]) px[i] = pal[tok.px[i]];
+  return trim({ w: tok.w, h: tok.h, px });
+}
 
 function craftSprite(rom, type, side) {
   const pal = paletteFromBytes(rom.body(PALS.craft[side])).slice(0, 16).map((c) => rgba(c));

@@ -65,16 +65,17 @@ export function mapIcon() {
 // colour numbers of the ships' fight rows: 2-7 hull (light to dark), 8-11 metal (dark to light)
 export function fightHull() {
   const HULL = [7, 6, 5, 4, 3, 2], METAL2 = [8, 9, 10, 11];
-  const side = (f) => union(f(1), f(-1)), cy = 64;
+  const side = (f) => union(f(1), f(-1)), cy = 64, RAILS = [11, 121];
   const parts = [
     // engine nacelles at the stern
     { shape: side((s) => capsule(2, cy + 30 * s, 22, cy + 30 * s, 8)), ramp: HULL, bevel: 5, dome: 1 },
     { shape: side((s) => ellipse(2, cy + 30 * s, 3, 6)), ramp: [9, 10, 11], bevel: 2, dome: 1, bias: 0.4 },
-    // launch rails, above and below
-    { shape: side((s) => poly([[8, cy + 46 * s], [60, cy + 47 * s], [63, cy + 51 * s], [60, cy + 57 * s], [10, cy + 58 * s]])), ramp: METAL2, bevel: 3, dome: 1 },
-    { shape: side((s) => rect(14, cy + Math.min(49 * s, 55 * s), 22, cy + Math.max(49 * s, 55 * s))), ramp: HULL, bevel: 2 },
-    // swept fins
-    { shape: side((s) => poly([[18, cy + 20 * s], [44, cy + 30 * s], [30, cy + 46 * s], [6, cy + 48 * s]])), ramp: HULL, bevel: 4, dome: 1, bias: -0.05 },
+    // launch rails, above and below, centred where the Selene's barrels fire from (y 11 and 121
+    // of the hull's box), so the recorded shots leave from the Kai's rails
+    { shape: union(...RAILS.map((c) => poly([[8, c - 6], [60, c - 5], [64, c], [60, c + 5], [10, c + 6]]))), ramp: METAL2, bevel: 3, dome: 1 },
+    { shape: union(...RAILS.map((c) => rect(14, c - 3, 22, c + 3))), ramp: HULL, bevel: 2 },
+    // swept fins from the hull out to the rails
+    { shape: union(...RAILS.map((c) => { const s = Math.sign(c - cy); return poly([[18, cy + 20 * s], [44, cy + 30 * s], [30, c - 2 * s], [6, c]]); })), ramp: HULL, bevel: 4, dome: 1, bias: -0.05 },
     // the arrowhead hull
     { shape: poly([[63, cy], [40, cy - 22], [14, cy - 28], [8, cy], [14, cy + 28], [40, cy + 22]]), ramp: HULL, bevel: 22, dome: 1 },
     // Galt stripe
@@ -88,16 +89,38 @@ export function fightHull() {
   return render(64, 128, parts, { outline: 7 });
 }
 
+// ---------------------------------------------------------------- board token (facing right)
+// The modern board's token: a larger, more detailed side view than the map icon, in the same
+// fight-palette colour numbers as the hull.
+export function boardToken() {
+  const HULL = [7, 6, 5, 4, 3, 2], METAL2 = [8, 9, 10, 11], cy = 10.5;
+  const parts = [
+    // nacelles with their glow, the rails on struts, the hull, the bridge dome, window and turret
+    { shape: union(capsule(2, cy - 4.5, 9, cy - 4.5, 2.4), capsule(2, cy + 4.5, 9, cy + 4.5, 2.4)), ramp: HULL, bevel: 2, dome: 1 },
+    { shape: union(ellipse(1, cy - 4.5, 1.3, 1.9), ellipse(1, cy + 4.5, 1.3, 1.9)), ramp: [10, 11], bevel: 1, bias: 0.4, line: false },
+    { shape: union(rect(11, cy - 8.5, 14, cy - 5), rect(11, cy + 5, 14, cy + 8.5)), ramp: HULL, bevel: 1 },
+    { shape: union(...[cy - 8.5, cy + 8.5].map((c) => poly([[6, c - 1.8], [28, c - 1.6], [31.6, c], [28, c + 1.6], [7, c + 1.8]]))), ramp: METAL2, bevel: 2, dome: 1 },
+    { shape: poly([[31, cy], [21, cy - 6], [9, cy - 6.5], [6, cy], [9, cy + 6.5], [21, cy + 6]]), ramp: HULL, bevel: 6, dome: 1 },
+    { shape: ellipse(15, cy + 0.5, 6, 4.8), ramp: HULL, bevel: 5, dome: 1, height: 1.3, spec: 0.8 },
+    { shape: ellipse(20, cy + 0.5, 1.8, 2.4), ramp: [8, 10, 11], bevel: 2, dome: 1, bias: 0.2 },
+    { shape: capsule(12, cy - 3.4, 27, cy - 3.4, 0.7), ramp: [11], flat: 11, line: false },
+  ];
+  return render(32, 21, parts, { outline: 7 });
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const art = infoArt(), icon = mapIcon(), hull = fightHull();
+  const art = infoArt(), icon = mapIcon(), hull = fightHull(), token = boardToken();
   const out = `// The Selene Kai's own art (expansion type 58), drawn by tools/art/selene-kai.mjs; original art,
 // not from the ROM. Rows of base-36 colour numbers: the picture's own palette; the map icon's
-// numbers in the map icons' army rows (1-7); the fight hull's in the ships' fight rows.
+// numbers in the map icons' army rows (1-7); the board token's and the fight hull's in the ships'
+// fight rows.
 export const SELENE_KAI = {
   art: { w: ${art.w}, h: ${art.h}, palette: ${JSON.stringify(ART_PALETTE)},
     rows: ${JSON.stringify(encode(art), null, 0).replace(/","/g, '",\n      "')} },
   icon: { w: ${icon.w}, h: ${icon.h},
     rows: ${JSON.stringify(encode(icon)).replace(/","/g, '",\n      "')} },
+  token: { w: ${token.w}, h: ${token.h},
+    rows: ${JSON.stringify(encode(token)).replace(/","/g, '",\n      "')} },
   hull: { w: ${hull.w}, h: ${hull.h},
     rows: ${JSON.stringify(encode(hull)).replace(/","/g, '",\n      "')} },
 };

@@ -602,4 +602,7 @@ few Wisps and guns on missions 5–10 (`tools/missions/revive.mjs`); missions 1�
 picture (its own palette), a map icon (the icon rows' colours 1–7, pink or green by army, mirrored
 for army B; also the modern board's token and the info screen's icon) and a fight hull (the ships'
 fight-palette colours) drawn as one 128 px sprite over the box the Selene's hull would fill, so the
-Selene's choreography, shots and timings are unchanged. Re-run the tool after changing a shape.
+Selene's choreography, shots and timings are unchanged; its launch rails sit where the Selene's
+barrels fire from (y 11 and 121 of the hull's box), so the recorded broadsides leave from the rails.
+The modern board uses a dedicated 32x21 token (fight-palette colours, `ownToken`), not the icon.
+Re-run the tool after changing a shape.

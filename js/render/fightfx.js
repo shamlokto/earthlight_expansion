@@ -405,7 +405,13 @@ export class FightRenderer {
       if (g[0] === 't' ? own && (own.ship || own.struct) : a && (a.ship || a.struct)) groups[side].push(sp);
     }
     this.hullGroups = groups.filter((g) => g.length >= 2);
-    return groups.flat();
+    // a ship's own hull (js/art/own.js) is one 128 px sprite holding a 64 px wide picture: it
+    // counts as the 32 px blocks it covers, so explosions on it are drawn as big as on a hull
+    const own = st.sprites.filter((sp) => /^[LR]\d+own#/.test(sp.id)).flatMap((sp) => {
+      const x = sp.flip ? sp.x + 64 : sp.x;
+      return [0, 1].flatMap((i) => [0, 1, 2, 3].map((j) => ({ x: x + i * 32, y: sp.y + j * 32 })));
+    });
+    return [...groups.flat(), ...own];
   }
 
   // HP shown in the HUD: a craft formation loses a machine as each one explodes; a ship or
