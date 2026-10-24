@@ -361,6 +361,9 @@ export class Board {
     this.overlays(ctx, st, sec);
     // units, back to front
     const units = [...b.alive(), ...this.held].sort((p, q) => p.y - q.y || p.x - q.x);
+    // the General's machine (or the carrier the General rides in) glows gold under every unit, so
+    // neighbours never hide it
+    for (const u of units) if (u.general || b.cargo(u).some((v) => v.general)) { const [X, Y] = this.position(u, t); this.generalGlow(ctx, X + 36, Y + 24, sec); }
     for (const u of units) {
       const [X, Y] = this.position(u, t);
       if (!inView(X + 36, Y + 24)) continue;
@@ -407,6 +410,18 @@ export class Board {
     ctx.filter = 'none';
     ctx.restore();
     this.badges(ctx, u, X, Y, b);
+  }
+
+  generalGlow(ctx, cx, cy, sec) {
+    const p = reduced ? 0.85 : 0.75 + 0.25 * Math.sin(sec * 3), R = 64;
+    ctx.save();
+    const g = ctx.createRadialGradient(cx, cy, 6, cx, cy, R);
+    g.addColorStop(0, `rgba(255,236,140,${0.95 * p})`); g.addColorStop(0.45, `rgba(255,190,20,${0.6 * p})`); g.addColorStop(1, 'rgba(255,170,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `rgba(255,224,100,${0.6 + 0.4 * p})`; ctx.lineWidth = 4; ctx.shadowColor = '#ffb800'; ctx.shadowBlur = 20;
+    ctx.setLineDash([12, 5]); ctx.lineDashOffset = reduced ? 0 : -sec * 20;
+    ctx.beginPath(); ctx.arc(cx, cy, 44 + 3 * p, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
   }
 
   badges(ctx, u, X, Y, b) {
