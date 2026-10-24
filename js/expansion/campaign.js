@@ -94,8 +94,9 @@ export const beta = (s) => s.beta !== false;
 // may be in the roster once, counting all its forms (spent, loaded, transformed).
 const family = (types, t) => { let x = t; for (let i = 0; i < 4; i++) { const u = types[x]; const n = u.armed ?? u.empty ?? u.formOf; if (n === undefined) break; x = n; } return x; };
 export const isUnique = (types, type) => !!types[family(types, type)].unique || !!types[type].unique;
+// (beta testing lifts the limit, like every other limit)
 export function ownsUnique(s, types, type, except = []) {
-  return isUnique(types, type) && s.roster.some((r) => !except.includes(r.id) && family(types, r.type) === family(types, type));
+  return !beta(s) && isUnique(types, type) && s.roster.some((r) => !except.includes(r.id) && family(types, r.type) === family(types, type));
 }
 
 export function build(s, types, type) {
