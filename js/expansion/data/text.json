@@ -65,7 +65,8 @@
   "Adzam",
   "Selene Kai",
   "Leviathan",
-  "Directorate Talos"
+  "Directorate Talos",
+  "Pegasus"
  ],
  "unitInfo": [
   {
@@ -660,6 +661,16 @@
     "   Melee\n   Elite",
     "Elite Close Combat Hunter\n\nA rebuilt Talos with heavier\narmour, uprated thrusters and\na longer beamsaber.",
     "Flown only by the Security\nDirectorate's picked pilots.\nFaster and harder to hit than\nany Talos, and just as useless\nin magnetic fields."
+   ]
+  },
+  {
+   "type": 61,
+   "name": "Pegasus",
+   "short": "General's Flagship",
+   "info": [
+    "   Carrier\n   Large",
+    "General's Flagship\n\nWingtip beam emitters, a\nrailgun broadside and a\nclose-in railgun turret.",
+    "The fastest capital ship ever\nbuilt. It dances clear of\nfire, carries the General's\nwing, and outguns anything\nthat can keep up with it."
    ]
   }
  ],

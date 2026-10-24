@@ -7,8 +7,9 @@ import { Indexed } from '../gfx.js';
 import { SELENE_KAI } from './selenekai.js';
 import { LEVIATHAN } from './leviathan.js';
 import { DIRECTORATE_TALOS } from './dirtalos.js';
+import { PEGASUS } from './pegasus.js';
 
-const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS };
+const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS, pegasus: PEGASUS };
 export const ownArt = (types, type) => SETS[types?.[type]?.ownArt] || null;
 
 const decoded = new WeakMap();

@@ -4421,6 +4421,71 @@
    "tag": "TLD",
    "fightName": "D-Talos",
    "unionOnly": true
+  },
+  {
+   "type": 61,
+   "name": "Pegasus",
+   "nameJp": "ペガサス",
+   "code": "GX-01",
+   "category": 1,
+   "startLevel": 0,
+   "hp": 32,
+   "move": 9,
+   "evasion": 77,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 2,
+     "power": 140
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 1,
+     "max": 4,
+     "power": 192
+    },
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 102
+    },
+    null
+   ],
+   "aiValue": 50,
+   "info": {
+    "attack": [
+     109,
+     150,
+     80,
+     0
+    ],
+    "defence": 60,
+    "minRange": [
+     1,
+     1,
+     1,
+     0
+    ]
+   },
+   "gfx": 22,
+   "art": {
+    "fightSheet": 32,
+    "tiles": 247,
+    "palette": 248,
+    "frame": 23
+   },
+   "look": 33,
+   "ownArt": "pegasus",
+   "tag": "PGS",
+   "fightName": "Pegasus"
   }
  ]
 }

@@ -607,6 +607,16 @@ barrels fire from (y 11 and 121 of the hull's box), so the recorded broadsides l
 The modern board uses a dedicated 32x21 token (fight-palette colours, `ownToken`), not the icon.
 Re-run the tool after changing a shape.
 
+**Pegasus** (type 61, owner 2026-10-24): the General's flagship, a Galt carrier (category 1, so
+small craft board it) that the general can ride (`GENERAL_SHIPS`). HP 32, move 9 (the fastest capital
+ship), evasion 77 (60%); beam 140 at 1–2 (slot 0, also its counter against craft), railgun 192 at
+1–4 (slot 1, its counter against ships) and a close-in railgun 102 at 1. Price 96; built from the
+intermission before mission 9 in both campaigns (index `unlocks` of mission 8). Fights with the
+Hastur's recording (`look: 33`). Own art, `tools/art/pegasus.mjs` → `js/art/pegasus.js`: a
+streamlined blended-wing ship, needle prow, forward-swept wings to two wingtip pods; the hull puts
+the broadside ports on the wing leading edges and the beam emitters on the pods where the Hastur's
+recorded shots start (box x 39–56; y 36–100 broadside, y 17 and 101 beams).
+
 **Leviathan and Directorate Talos** (owner, 2026-10-24; the new campaign's Union units, docs/STORY.md).
 Both are `unionOnly` (never in the market) and have their own art, drawn the same way:
 
