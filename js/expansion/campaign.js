@@ -75,6 +75,18 @@ export function trade(s, types, giveIds, type) {
   return true;
 }
 
+// Sell: spare machines go back for their full price in supply (the same rate trade uses); their
+// pilots leave with them. At least one machine always stays.
+export function sell(s, types, ids) {
+  const gone = s.roster.filter((r) => ids.includes(r.id));
+  if (!gone.length || gone.length >= s.roster.length) return 0;
+  const gain = gone.reduce((t, r) => t + price(types, r.type), 0);
+  s.roster = s.roster.filter((r) => !ids.includes(r.id));
+  if (ids.includes(s.general)) s.general = null;
+  s.supply += gain;
+  return gain;
+}
+
 // The mission as game.html should play it: its player units are deployment slots, filled with
 // the deployed roster machines (cap = the mission's cap, or the number of slots). A machine only
 // takes a slot whose terrain it can enter (`canStand`, from battle.js): the general's machine

@@ -94,7 +94,9 @@ function render() {
   html += `</div></section><section class="box"><h2>Trade <small>giving ${picked.size} · worth ${tradeValue}</small></h2>
     <p class="muted">Tick <b>Trade</b> on machines in the roster to give them. You get one machine ${beta ? 'of any type (beta)' : `worth up to their total plus your supply (${state.supply})`}; the best pilot moves to it and keeps their level, so veterans step up to stronger machines.</p>
     <div class="row"><select id="tradeFor">${C.marketTypes(types).map((t) => `<option value="${t.type}" ${!beta && C.price(types, t.type) > tradeValue + state.supply ? 'disabled' : ''}>${esc(name(t.type))} · ${C.price(types, t.type)}${!beta && picked.size && C.price(types, t.type) > tradeValue ? ` (+${C.price(types, t.type) - tradeValue} supply)` : ''}</option>`).join('')}</select>
-    <button class="btn" id="tradeBtn" ${picked.size ? '' : 'disabled'}>Trade</button></div></section></div>`;
+    <button class="btn" id="tradeBtn" ${picked.size ? '' : 'disabled'}>Trade</button>
+    <button class="btn" id="sellBtn" ${picked.size && picked.size < state.roster.length ? '' : 'disabled'}>Sell for ${tradeValue}</button></div>
+    <p class="muted">Sell turns the ticked machines into supply at the same price; their pilots leave with them.</p></section></div>`;
 
   html += `<section class="box"><h2>Campaign</h2><p class="muted">Progress saves automatically in this browser. Repairs between battles are free.</p>
     <div class="row"><label class="switch"><input type="checkbox" id="beta" ${beta ? 'checked' : ''}><span></span>Beta testing: unlimited supply, every machine, trades at any price</label></div>
@@ -115,6 +117,9 @@ function wire(cap) {
   for (const c of document.querySelectorAll('[data-pick]')) c.onchange = () => { c.checked ? picked.add(+c.dataset.pick) : picked.delete(+c.dataset.pick); render(); };
   if ($('tradeBtn')) $('tradeBtn').onclick = () => {
     if (C.trade(state, types, [...picked], +$('tradeFor').value)) { picked.clear(); state.deploy = state.deploy.filter((id) => state.roster.some((r) => r.id === id)); save(); render(); }
+  };
+  if ($('sellBtn')) $('sellBtn').onclick = () => {
+    if (C.sell(state, types, [...picked])) { picked.clear(); state.deploy = state.deploy.filter((id) => state.roster.some((r) => r.id === id)); save(); render(); }
   };
   if ($('launch')) $('launch').onclick = () => {
     // the general's machine must deploy if the general boards
