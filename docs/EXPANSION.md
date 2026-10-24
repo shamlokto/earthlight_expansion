@@ -182,55 +182,47 @@ WWWWWWWWWWWWWWW
   escape objective). Each unit that escapes carries over.
 * **Next map wants**: beam weapons, not missiles (mission 2 is meteoroid fields).
 
-### 2. Old Enemies: LEM (30×20, Aldiss asteroids)
+### 2. Old Enemies: LEM (built 45×20 = 3×2 screens, Aldiss asteroids)
 
-```
-::::  aa   ::::  aa
-:P:   a  .  :: U  a:
-::  .  aa  U  :: (G):
- a  ::   U    aa ::::
-::::  aa  ::  .  ::
-```
-* **Story**: a Union patrol hunts a Galt remnant band hiding in the NE meteoroids (`G`).
-* **Player**: cap 6. **Galt joiners** (Lobster ×2, Crane ×2) become player units on turn 2.
-* **Union**: Cyclops ×2, Medusa ×2, Cerberus ×2, Gulon. They're missile-heavy, but against targets
-  in meteoroids missiles lose 40%.
-* **Objective**: wipe out the patrol. Bonus score if no joiner is lost.
-* **Unlocks**: Galt fighters (Lobster, Crane). **Next map wants**: mecha and railguns (fortress deck).
+Busier than mission 1 (2026-10-24), as built in `tools/missions/lem.mjs`:
+* **Terrain**: two north-south asteroid ridges split the belt into three lanes; meteoroid fields
+  in the west (the player's cover), around the NE Galt hideout and in scattered pockets; a plasma
+  stream across the middle; small magnetic patches.
+* **Player**: cap 8 (Athena with the general, Mars ×2, Titan, Crane, Selene, Medusa, Lobster as
+  slots). **Galt joiners** (Lobster ×2, Crane ×2) arrive in the NE on turn 2.
+* **Union** (10): Cyclops ×2, Medusa ×3, Cerberus ×2, Gulon ×2, Talos. A **grey dock** in the
+  southern rocks holds a Mars and a Crane; the Union will race you for it.
+* **Objective**: wipe out the patrol. Bot (careful general, 8 machines): about 2 wins in 3;
+  with 6 machines it rarely wins.
 
-### 3. Shipyard: HERBERT (30×20, the Asgard shipyards)
+### 3. Shipyard: HERBERT (built 45×20 = 3×2 screens, the Asgard shipyards)
 
-```
-WWWWWWWWWWWWWWWWWWW
-W d D d = = = d D d W
-W d d d d C d d d d W
-W = S = = = = S = = W
->P  .  D  .  .  D  . W
-```
-* **Story**: the remnant's hidden base, held by a Union garrison. Four grey docks hold cargo.
-* **Player**: cap 8. **Union**: Vulcan ×2, Phoibos ×2 (artillery), Talos ×2, Hydra ×2 on the
-  railways, Cortex ×1, Pergamon docks.
-* **Terrain idea**: the deck gives almost no cover (5%). The docks are the only safe hexes, so
-  capturing a dock (bring it to 0 HP, as in the original) is both cover and loot.
-* **Dock cargo** (carries over if captured): Mars ×2, Athena, Selene.
-* **Objective**: destroy the Cortex (existing).
-* **Unlocks**: mecha, carriers. **Next map wants**: fast strikers (a fleeing flagship).
+Busier again (2026-10-24), as built in `tools/missions/herbert.mjs`:
+* **Terrain**: the GOTLIEB station (ROM map 21, columns 41–59, rows 1–13) stamped on columns
+  25–43; the western approach crosses a plasma river, an asteroid ridge (gap in the south), a
+  gravity-flux patch (no mecha) and a two-Wisp minefield; rubble fields south of the station.
+* **Player**: cap 10. **Five grey docks**: Mars and Crane near the start, Medusa + Mars and an
+  Athena in no-man's land, and a Hannibal deep inside the station.
+* **Union** (14): Cortex, Vulcan ×2 guarding it (`guards: 2`), a Hydra and a Dragon turret on the
+  railways (the Dragon only hits ships, so small craft can slip past it), Talos ×3, Mars, Medusa,
+  Hannibal, Fenrir, Wisp ×2. The Union captures grey docks it reaches first.
+* **Objective**: destroy the Cortex. Bot (10 machines): about 3 wins in 5 with a bold general;
+  a cautious bot stalls at the guarded core (no turn limit).
 
-### 4. Le Guin Again: GIBSON (45×20, the Le Guin sector)
+### 4. Le Guin Again: GIBSON (built 60×20 = 4×2 screens, the Le Guin sector)
 
-```
-P .  .  ggg  .  U  ggg  .   .  N>
-P .  .  ggg  U  .  ggg  U   .  .>
-. :: .  ggg  .  U  ggg  .  ::  .>
-```
-* **Story**: the admiral who ordered the killing flies a captured Nodens (BB-MM4, 30 HP, Missile 255
-  at range 2–4): a Galt super-battleship now in Union colours.
-* **Player**: cap 8. **Union**: Nodens `N`, Regulus ×2, Hannibal ×2, Fenrir (built: one Fenrir and no Cranes, after the encirclement rule made the full escort unbeatable for a six-machine force; bot: 6 machines win 1 in 3, 8 machines always).
-* **Terrain idea**: two gravity-flux belts give 50% against railguns. The escorts sit in them, so
-  beams and missiles go through while railgun players get stuck.
-* **Objective**: sink the Nodens (existing flagship objective). It runs for the east edge;
-  if it escapes by turn 14, the mission fails (turn limit, existing).
-* **Next map wants**: cruisers and the strength to take docks (an industrial Foundry).
+The busiest of the first four (2026-10-24), as built in `tools/missions/gibson.mjs`:
+* **Terrain**: the fleet's lane runs through the middle rows; two gravity-flux belts cross the map
+  with gaps north and south of the lane for mecha; a plasma river and a magnetic belt between
+  them; meteoroid and asteroid fields on both flanks; Wisp minefields beside the lane in the east.
+* **Player**: cap 12, including two Brontes bombers as slots (bombs are what sink battleships).
+* **Union** (19 + 2): the Nodens with its close escort (Regulus ×2, Hannibal ×2, Fenrir; a tighter
+  escort is unbeatable under the encirclement rule), forward screens (Mars ×2, Talos ×2, Cerberus,
+  Gulon), Cyclops gunboats in the flank rocks, Medusa ×2, Wisp ×3; Fenrir and Gulon arrive from
+  the east on turn 6. The fleet follows route waypoints east.
+* **Objective**: sink the Nodens before it reaches the east edge (`destroyType` 32 with `edge`),
+  turn limit 22 as a backstop. Bot (bold general): about half its games with 10–12 machines; a
+  cautious bot is too slow and the Nodens escapes.
 
 ### What the ROM's late maps do (measured, 2026-10-23)
 
