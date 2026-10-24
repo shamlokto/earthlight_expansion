@@ -1,0 +1,107 @@
+// The Selene Kai's own art (expansion type 58): original pixel art, drawn from the shapes below
+// with tools/art/raster.mjs and written to js/art/selenekai.js as indexed rows.
+//   node tools/art/selene-kai.mjs
+// Three pictures: the unit-info picture (96x96, its own palette), the map icon (24x16, colour
+// numbers 1-7 of the map icons' army rows, so it comes out pink or green like the ROM's icons),
+// and the fight hull (64x128, colour numbers of the capital ships' fight palette rows; army B's
+// row turns the same numbers green and red, as it does for the ROM's ships).
+// The design: a sleeker, faster Selene. A swept arrowhead hull, a domed bridge with a beam
+// turret on its spine, twin launch rails reaching past the bow, and a pair of engine nacelles.
+import { writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { poly, ellipse, rect, capsule, union, minus, render, encode } from './raster.mjs';
+
+// ---------------------------------------------------------------- unit-info picture
+export const ART_PALETTE = ['#7b7bde', '#000000', '#5a185a', '#9c399c', '#bd5abd', '#de7bde', '#ffb5ff', '#ff5abd', '#bd3984',
+  '#397b5a', '#5a9c5a', '#9cff9c', '#d6ffd6', '#4a4a6b', '#8484a5', '#c6c6e7', '#0063bd', '#00b5ff', '#7bffff',
+  '#ffbd00', '#bd8400', '#ff395a', '#ffffff', '#ff7b00'];
+const BODY = [2, 3, 4, 5, 6], GREEN = [9, 10, 11, 12], METAL = [13, 14, 15], CYAN = [16, 17, 18], PINK = [8, 7], GOLD = [20, 19];
+
+export function infoArt() {
+  // the ship's frame: u forward (down-left on the picture), v to starboard (down-right)
+  const C = [50, 44], F = [-0.8, 0.6], S = [0.6, 0.8];
+  const toLocal = (x, y) => { const dx = x - C[0], dy = y - C[1]; return [dx * F[0] + dy * F[1], dx * S[0] + dy * S[1]]; };
+  const side = (f) => union(f(1), f(-1));
+  const parts = [
+    // engine nacelles and their glow
+    { shape: side((s) => capsule(-35, 13 * s, -12, 13 * s, 6.5)), ramp: METAL, bevel: 4, dome: 1 },
+    { shape: side((s) => ellipse(-39, 13 * s, 3, 5.5)), ramp: [23, 19, 22], bevel: 2, dome: 1, bias: 0.3 },
+    // launch rails, reaching past the bow
+    { shape: side((s) => poly([[-10, 18 * s], [42, 17 * s], [47, 21 * s], [42, 26 * s], [-8, 28 * s]])), ramp: GREEN, bevel: 4, dome: 1 },
+    { shape: side((s) => rect(36, (s > 0 ? 18 : -26), 41, (s > 0 ? 26 : -18))), ramp: GOLD, bevel: 2 },
+    // the swept hull
+    { shape: poly([[38, 0], [10, 18], [-20, 25], [-30, 21], [-20, 0], [-30, -21], [-20, -25], [10, -18]]), ramp: BODY, bevel: 16, dome: 1 },
+    // Galt stripes along the leading edges
+    { shape: side((s) => poly([[32, 3 * s], [8, 15 * s], [-14, 21 * s], [-13, 17.5 * s], [8, 11.5 * s], [30, 1 * s]])), ramp: PINK, bevel: 2, line: false },
+    // wingtip lamps
+    { shape: side((s) => ellipse(-24, 22 * s, 2.4, 2.4)), ramp: [21, 22], bevel: 1 },
+    // the domed bridge, its canopy and the beam turret on the spine
+    { shape: ellipse(-4, 0, 16, 12), ramp: BODY, bevel: 12, dome: 1, height: 1.6, bias: 0.05, spec: 0.8 },
+    { shape: ellipse(7, 0, 5, 5), ramp: CYAN, bevel: 3, dome: 1, bias: 0.15 },
+    { shape: ellipse(-8, 0, 5, 5), ramp: METAL, bevel: 3, dome: 1 },
+    { shape: capsule(-8, 0, 16, 0, 1.6), ramp: [16, 18, 22], bevel: 1, bias: 0.2 },
+    // the Galt emblem: a gold chevron behind the turret
+    { shape: poly([[-14, 0], [-19, -5], [-17, -5], [-13, -1.5], [-13, 1.5], [-17, 5], [-19, 5]]), ramp: GOLD, bevel: 1, line: false },
+  ];
+  return render(96, 96, parts, { toLocal, bg: 0, outline: 1 });
+}
+
+// ---------------------------------------------------------------- map icon (facing right)
+// colour numbers of the icon rows: 1 white, 2-6 light to dark, 7 near black
+export function mapIcon() {
+  const R = [6, 5, 4, 3, 2];
+  const parts = [
+    { shape: capsule(1.5, 4, 7, 4, 1.6), ramp: [6, 5], bevel: 1 },
+    { shape: capsule(1.5, 12, 7, 12, 1.6), ramp: [6, 5], bevel: 1 },
+    { shape: union(rect(5, 1.5, 22, 4), rect(5, 12, 22, 14.5)), ramp: [5, 3, 2], bevel: 1 },
+    { shape: poly([[23.5, 8], [14, 4], [4, 3.5], [7, 8], [4, 12.5], [14, 12]]), ramp: R, bevel: 3, dome: 1 },
+    { shape: ellipse(10, 8, 4.5, 3), ramp: [5, 3, 2, 1], bevel: 2, dome: 1, height: 1.5 },
+    { shape: rect(13, 7.4, 19, 8.4), ramp: [1], flat: 1, line: false },
+  ];
+  return render(24, 16, parts, { outline: 7 });
+}
+
+// ---------------------------------------------------------------- fight hull (left side, facing right)
+// colour numbers of the ships' fight rows: 2-7 hull (light to dark), 8-11 metal (dark to light)
+export function fightHull() {
+  const HULL = [7, 6, 5, 4, 3, 2], METAL2 = [8, 9, 10, 11];
+  const side = (f) => union(f(1), f(-1)), cy = 64;
+  const parts = [
+    // engine nacelles at the stern
+    { shape: side((s) => capsule(2, cy + 30 * s, 22, cy + 30 * s, 8)), ramp: HULL, bevel: 5, dome: 1 },
+    { shape: side((s) => ellipse(2, cy + 30 * s, 3, 6)), ramp: [9, 10, 11], bevel: 2, dome: 1, bias: 0.4 },
+    // launch rails, above and below
+    { shape: side((s) => poly([[8, cy + 46 * s], [60, cy + 47 * s], [63, cy + 51 * s], [60, cy + 57 * s], [10, cy + 58 * s]])), ramp: METAL2, bevel: 3, dome: 1 },
+    { shape: side((s) => rect(14, cy + Math.min(49 * s, 55 * s), 22, cy + Math.max(49 * s, 55 * s))), ramp: HULL, bevel: 2 },
+    // swept fins
+    { shape: side((s) => poly([[18, cy + 20 * s], [44, cy + 30 * s], [30, cy + 46 * s], [6, cy + 48 * s]])), ramp: HULL, bevel: 4, dome: 1, bias: -0.05 },
+    // the arrowhead hull
+    { shape: poly([[63, cy], [40, cy - 22], [14, cy - 28], [8, cy], [14, cy + 28], [40, cy + 22]]), ramp: HULL, bevel: 22, dome: 1 },
+    // Galt stripe
+    { shape: side((s) => poly([[58, cy + 2 * s], [38, cy + 18 * s], [20, cy + 23 * s], [20, cy + 20 * s], [37, cy + 15 * s], [55, cy + 1 * s]])), ramp: [4, 3], bevel: 1, line: false },
+    // bridge dome with its window, and the beam turret
+    { shape: ellipse(30, cy, 15, 17), ramp: HULL, bevel: 15, dome: 1, height: 1.2, spec: 0.8 },
+    { shape: ellipse(39, cy, 5, 7), ramp: [8, 10, 11], bevel: 3, dome: 1, bias: 0.15 },
+    { shape: ellipse(25, cy - 13, 5, 4), ramp: HULL, bevel: 3, dome: 1 },
+    { shape: capsule(25, cy - 13, 58, cy - 13, 1.6), ramp: [9, 11], bevel: 1, bias: 0.3 },
+  ];
+  return render(64, 128, parts, { outline: 7 });
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const art = infoArt(), icon = mapIcon(), hull = fightHull();
+  const out = `// The Selene Kai's own art (expansion type 58), drawn by tools/art/selene-kai.mjs; original art,
+// not from the ROM. Rows of base-36 colour numbers: the picture's own palette; the map icon's
+// numbers in the map icons' army rows (1-7); the fight hull's in the ships' fight rows.
+export const SELENE_KAI = {
+  art: { w: ${art.w}, h: ${art.h}, palette: ${JSON.stringify(ART_PALETTE)},
+    rows: ${JSON.stringify(encode(art), null, 0).replace(/","/g, '",\n      "')} },
+  icon: { w: ${icon.w}, h: ${icon.h},
+    rows: ${JSON.stringify(encode(icon)).replace(/","/g, '",\n      "')} },
+  hull: { w: ${hull.w}, h: ${hull.h},
+    rows: ${JSON.stringify(encode(hull)).replace(/","/g, '",\n      "')} },
+};
+`;
+  writeFileSync(new URL('../../js/art/selenekai.js', import.meta.url), out);
+  console.log('wrote js/art/selenekai.js');
+}
