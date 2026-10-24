@@ -608,10 +608,10 @@ The modern board uses a dedicated 32x21 token (fight-palette colours, `ownToken`
 Re-run the tool after changing a shape.
 
 **Azoras** (type 61, owner 2026-10-24; was the Pegasus): the General's flagship, a Tiamat-class
-battleship (category 2) refitted with oversized engines, that the general can ride (`GENERAL_SHIPS`),
+carrier-battlecruiser (category 1, owner) refitted with oversized engines, that the general can ride (`GENERAL_SHIPS`),
 `unique` (one at a time outside beta). Rebalanced because the Pegasus was overpowering with the
-General aboard: HP 24, move 9 (the fastest capital ship, kept), evasion 38 (×2 with the General →
-76, under the 96 cap); beam 90 at 1–2 (slot 0, against craft) and beam 120 at 2–4 (slot 1, against
+General aboard: HP 32 and evasion 60 (owner's later call; ×2 with the General → the 96 cap),
+move 9 (the fastest capital ship, kept); beam 90 at 1–2 (slot 0, against craft) and beam 120 at 2–4 (slot 1, against
 ships). With the General aboard (level 9, power ×2) it deals about 10 HP to a Talos and 19 to a
 Tiamat at range 2 and takes about 3-4 per enemy shot; the old Pegasus dealt 16 and 31 and took about
 2, and a Tiamat with the General aboard would deal 13 and 25 (node forecasts, open space). Price 72; built from the intermission before mission 9 in both campaigns
