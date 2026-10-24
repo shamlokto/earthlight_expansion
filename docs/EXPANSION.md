@@ -92,6 +92,9 @@ Consequences for the engine:
     trade for what the next map needs: missiles for asteroid fields, carriers for wide maps.
   * Machines are traded, **pilots are not** (decided). The level belongs to the pilot, so a veteran
     pilot keeps their level and moves to the new machine. Prices depend on the machine only.
+  * **Supply tops up a trade** (owner, 2026-10-24): a machine worth more than those given can be
+    had by paying the difference in supply, so veterans step up to stronger machines and the
+    team grows both strong and experienced.
 * **Intermission like Super Robot Wars** (decided), but built as a **plain web page**, not
   SFC-style screens: lists, buttons and the next briefing, which keeps it cheap. Sections: roster
   (machines and their pilots' levels), production, trade, deploy, save. None of this happens during a battle.

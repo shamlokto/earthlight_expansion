@@ -67,8 +67,8 @@ function render() {
     const cost = C.price(types, t.type), ok = beta || (state.supply >= cost && state.builds < C.MAX_BUILDS);
     html += `<button class="btn" data-build="${t.type}" ${ok ? '' : 'disabled'}>${icon(t.type)}<span>${esc(name(t.type))}<br><span class="muted">${cost} supply</span></span></button>`;
   }
-  html += `</div></div><div class="box"><h2>Trade</h2><p class="muted">Tick machines in the roster to give (worth <b>${tradeValue}</b>). You get one machine ${beta ? 'of any type (beta)' : 'worth up to that'}; the best pilot moves to it.</p>
-    <div class="row"><select id="tradeFor">${C.marketTypes(types).map((t) => `<option value="${t.type}" ${!beta && C.price(types, t.type) > tradeValue ? 'disabled' : ''}>${esc(name(t.type))} · ${C.price(types, t.type)}</option>`).join('')}</select>
+  html += `</div></div><div class="box"><h2>Trade</h2><p class="muted">Tick machines in the roster to give (worth <b>${tradeValue}</b>). You get one machine ${beta ? 'of any type (beta)' : `worth up to that plus your supply (${state.supply})`}; the best pilot moves to it and keeps their level, so veterans can step up to stronger machines.</p>
+    <div class="row"><select id="tradeFor">${C.marketTypes(types).map((t) => `<option value="${t.type}" ${!beta && C.price(types, t.type) > tradeValue + state.supply ? 'disabled' : ''}>${esc(name(t.type))} · ${C.price(types, t.type)}${!beta && picked.size && C.price(types, t.type) > tradeValue ? ` (+${C.price(types, t.type) - tradeValue} supply)` : ''}</option>`).join('')}</select>
     <button class="btn" id="tradeBtn" ${picked.size ? '' : 'disabled'}>Trade</button></div></div></div>`;
 
   html += `<div class="box"><h2>Campaign</h2><p class="muted">Progress saves automatically in this browser. Repairs between battles are free.</p>

@@ -59,11 +59,15 @@ export function build(s, types, type) {
   return true;
 }
 
-// Trade: give one or more machines, get one machine whose price is at most theirs combined. The
-// best of the given pilots flies the new machine; the others are gone with their machines.
+// Trade: give one or more machines, get one machine. Whatever its price exceeds theirs combined
+// is paid from supply, so supply can upgrade a veteran's machine. The best of the given pilots
+// flies the new machine and keeps their level; the others are gone with their machines.
+export const tradeCost = (s, types, giveIds, type) =>
+  Math.max(0, price(types, type) - s.roster.filter((r) => giveIds.includes(r.id)).reduce((t, r) => t + price(types, r.type), 0));
 export function trade(s, types, giveIds, type) {
-  const give = s.roster.filter((r) => giveIds.includes(r.id));
-  if (!give.length || (!beta(s) && give.reduce((t, r) => t + price(types, r.type), 0) < price(types, type))) return false;
+  const give = s.roster.filter((r) => giveIds.includes(r.id)), cost = tradeCost(s, types, giveIds, type);
+  if (!give.length || (!beta(s) && s.supply < cost)) return false;
+  if (!beta(s)) s.supply -= cost;
   const best = give.reduce((a, b) => (b.level > a.level ? b : a));
   s.roster = s.roster.filter((r) => !giveIds.includes(r.id) || r === best);
   if (s.general !== null && giveIds.includes(s.general) && (s.general !== best.id || !GENERAL_SHIPS.has(type))) s.general = null;
