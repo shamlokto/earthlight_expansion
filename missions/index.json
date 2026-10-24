@@ -7,6 +7,6 @@
 {"no":6,"title":"Decimators","file":"missions/niven.json","unlocks":[],"hint":"Speed: three transports race for the east edge; hold the lanes."},
 {"no":7,"title":"The Wreck","file":"missions/simak.json","unlocks":[30,31,33],"hint":"Carriers and range: a wide Earth orbit full of carriers."},
 {"no":8,"title":"Gate","file":"missions/zelazny.json","unlocks":[],"hint":"Beam-proof routes: magnetic fields shelter you from Talos beams."},
-{"no":9,"title":"Line","file":null,"unlocks":[],"hint":"Long range: an artillery line behind meteoroid ridges."},
-{"no":10,"title":"Olympos","file":null,"unlocks":[],"hint":"Everything you have. The finale."}
+{"no":9,"title":"Line","file":"missions/butler.json","unlocks":[],"hint":"Long range: an artillery line behind meteoroid ridges."},
+{"no":10,"title":"Olympos","file":"missions/wells.json","unlocks":[],"hint":"Everything you have. The finale."}
 ]}

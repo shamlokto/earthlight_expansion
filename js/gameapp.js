@@ -802,6 +802,10 @@ function expansionResult(w) {
     : r === 'breakthrough' ? 'A marked Union unit got through. The mission has failed.'
     : r === 'timeup' ? label(83) || 'Time is up.' : label(LAYOUT.missionLost);
   $('points').hidden = true; $('bResStory').hidden = true;
+  if (w === 0 && custom.mission.ending) {   // the finale's ending (mission JSON `ending`, pages split by blank lines)
+    $('bResStory').hidden = false;
+    $('bResStory').onclick = () => story(custom.mission.ending.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean), 'EARTH LIGHT', () => { silence(); show('sResult'); }, { song: SONGS.ending });
+  }
   $('bResNext').textContent = 'Retry';
   $('bResNext').onclick = () => startMission(-1);
   $('bResTitle').onclick = () => { location.search = ''; };

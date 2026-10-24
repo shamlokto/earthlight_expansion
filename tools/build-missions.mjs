@@ -162,7 +162,7 @@ function build(spec) {
   Object.assign(m, {
     name: spec.name, title: spec.title, units: out, arrivals: spec.arrivals || [], objective: spec.objective,
     general: g ? { x: g.x, y: g.y } : null, turnLimit: spec.turnLimit || 0, cap: spec.cap || 0, music: spec.music ?? 0,
-    briefing: spec.briefing.trim(), ...(spec.goal ? { goal: spec.goal } : {}), ...(spec.routes ? { routes: spec.routes } : {}), ...(spec.guards ? { guards: spec.guards } : {}),
+    briefing: spec.briefing.trim(), ...(spec.goal ? { goal: spec.goal } : {}), ...(spec.routes ? { routes: spec.routes } : {}), ...(spec.guards ? { guards: spec.guards } : {}), ...(spec.ending ? { ending: spec.ending.trim() } : {}),
   });
   return { mission: m, view };
 }
