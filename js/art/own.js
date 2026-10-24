@@ -9,9 +9,10 @@ import { LEVIATHAN } from './leviathan.js';
 import { DIRECTORATE_TALOS } from './dirtalos.js';
 import { PEGASUS } from './pegasus.js';
 import { PALLAS_JET, PALLAS_JET_SPENT, PALLAS_ROBOT } from './pallas.js';
+import { NAGA } from './naga.js';
 
 const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS, pegasus: PEGASUS,
-  pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT };
+  pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT, naga: NAGA };
 export const ownArt = (types, type) => SETS[types?.[type]?.ownArt] || null;
 
 const decoded = new WeakMap();

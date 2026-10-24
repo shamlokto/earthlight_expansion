@@ -339,7 +339,7 @@ function expansionUnitsHtml() {
     html += weapons.length ? `<table><tr><th>Slot</th><th>Type</th><th>Range</th><th>Power</th></tr>${weapons.map((w) =>
       `<tr><td>W${w.slot + 1}</td><td>${MODES[w.mode]}</td><td>${range(w)}</td><td>${w.power}</td></tr>`).join('')}</table>` : '<p class="note">Unarmed.</p>';
     if (tx?.info) html += `<p>${esc(prose(tx.info[1]))}</p><p>${esc(prose(tx.info[2]))}</p>`;
-    const notes = [u.ownArt ? `Its own art (picture, map icon and ${u.type >= 59 && T[u.look] && T[u.look].category >= 8 ? 'fight poses' : 'fight hull'}, drawn for the expansion); it fights with the <a href="#unit-${u.look}">${esc(nameOf(u.look))}</a>'s moves. Map tag <span class="mono">${esc(u.tag || '')}</span>.`
+    const notes = [u.ownArt ? `Its own art (picture, map icon and ${T[u.look] && T[u.look].category >= 8 ? 'fight poses' : 'fight hull'}, drawn for the expansion); it fights with the <a href="#unit-${u.look}">${esc(nameOf(u.look))}</a>'s moves.${u.tag ? ` Map tag <span class="mono">${esc(u.tag)}</span>.` : ''}`
       : `Borrows the <a href="#unit-${u.look}">${esc(nameOf(u.look))}</a>'s graphics; map tag <span class="mono">${esc(u.tag || '')}</span>.`];
     if (u.type < types.length) notes.push(`Cut from the original: <a href="#unit-${u.type}">ROM entry</a>.`);
     else notes.push('New in the expansion.');

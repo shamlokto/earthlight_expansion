@@ -1616,8 +1616,7 @@
     0
    ],
    "look": 15,
-   "tag": "NAG",
-   "tint": 160
+   "ownArt": "naga"
   },
   {
    "type": 22,

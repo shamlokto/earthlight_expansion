@@ -584,7 +584,7 @@ screen keep the unit's own name and code. The base game has no looks and is unch
 | 17 | Pandora, armed mine | Wisp | — | Union, missions 5–10 |
 | 19 | Remora, decoy drone | Wisp | — | Union, missions 6, 9, 10 |
 | 20 | Echidna, beam pod | Vulcan | — | Union, missions 5, 8 |
-| 21 | Naga, rail pod | Phoibos | — | Union, missions 7, 9 |
+| 21 | Naga, rail pod | Phoibos (choreography; own art since 2026-10-24) | — | Union, missions 7, 9 |
 | 22 | Rockeye, twin rail pod | Titan | — | Union, missions 8, 10 |
 | 28/29 | Camelii CR-61II, transport | Crab | carries one small unit, like the Crab | production from mission 4 |
 | 41 | Palmyra, missile frigate | Regulus | missile 64 → 115, range 2–4 | production from mission 5 |
@@ -644,3 +644,11 @@ rows' colours, keyed by the look's sheet tile each one stands in for (the Talos 
 the fight scene's tile cache for 32x32 body sprites only (fightscene.js `drawSprite`), so shots,
 flames and explosions still come from the sheet and the choreography is untouched; the modern board's
 token takes the rest pose. `fightName` is the name the fight scenes show (up to 9 letters).
+
+**The Naga's own art** (owner, 2026-10-24): the borrowed Phoibos graphics made the two pods look
+the same, so the Naga got original art (`tools/art/naga.mjs` → `js/art/naga.js`, `ownArt: "naga"`,
+no map tag any more): a gun pod mixing the Phoibos's railgun battery (the three-rail stack on top,
+the armoured body with its visor slit) with the Vulcan's beam cannon (a ringed emitter barrel
+underneath, fed by blue capacitor orbs on the flank). It keeps the Phoibos's choreography (`look`
+15); its poses stand in for the Phoibos sheet's tiles 0 (level), 4 and 8 (barrels rising) and 12
+(full elevation, recoil jets firing), the only 32x32 poses that sheet's fights draw. Stats unchanged.
