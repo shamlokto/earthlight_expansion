@@ -653,7 +653,9 @@ each weapon keeps its slot's choreography). Own art, `tools/art/pallas.mjs` → 
 three sets (jet, spent jet, robot), each with a picture, map icon and fight poses for the Athena
 sheet tiles its choreography draws (jet 0; spent jet 0, 64; robot 0/4/8/12/64 on the slot-0 sheet
 and, as `poses2`, 0-12/64/68/72/76/128 on the sabre sheet the other slots load). The robot's poses, picture and icon are placed pixel by pixel
-(`tools/art/pallas-pixels.mjs`: hand-drawn parts composed per pose, real-robot proportions).
+(`tools/art/pallas-pixels.mjs`: hand-drawn parts composed per pose, real-robot proportions). The jet's fight poses, both unit pictures
+(painted at 48x48, Scale2x to 96; the jet's from its 32x32 sprite, Scale3x) and both map icons are
+hand-placed too (`tools/art/pallas-pics.mjs`).
 
 **Leviathan and Directorate Talos** (owner, 2026-10-24; the new campaign's Union units, docs/STORY.md).
 Both are `unionOnly` (never in the market) and have their own art, drawn the same way:
