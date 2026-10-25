@@ -1,0 +1,324 @@
+// The Pallas robot's 32x32 fight poses, placed pixel by pixel (tools/art/pallas.mjs writes them to
+// js/art/pallas.js). Facing left like the ROM's sheets. Each pose is put together from hand-drawn
+// parts (pixel maps below) at fixed anchor points, so every pose shares one design: a real-robot
+// humanoid, about 7.5 heads tall. Head with a cyan visor and a V-fin crest; broad chest (the jet's
+// nose, the canopy as the chest light); intake blocks as shoulders; narrow waist and skirt armour;
+// thighs, knee guards, shins with flared calves and big feet; the jet's wings as a binder pack.
+// Arms are drawn as pixel strokes between hand-picked joints; weapons are a long railgun and a
+// beam sabre. A 1-px outline in the army's darkest colour closes every silhouette.
+//
+// Colour letters (the small craft's fight rows): o outline (7), k deep shade (6), p shade (5),
+// d dark (4), m mid (3), l light (2), w specular white (15), b/B/n blues dark to light (8, 9, 10),
+// c/C/x cyans (12, 13, 14). '.' is clear.
+const IDX = { o: 7, k: 6, p: 5, d: 4, m: 3, l: 2, w: 15, b: 8, B: 9, n: 10, c: 12, C: 13, x: 14 };
+
+// ---------------------------------------------------------------- parts
+const HEAD = [   // 9 x 9, anchored at the top left
+  '..o.....o',
+  '..on...no',
+  '...on.no.',
+  '...onwno.',
+  '..ommlllo',
+  '.omllllmo',
+  '.oCxClmdo',
+  '.okmddmko',
+  '..okkko..',
+];
+const BACK = [   // the binder pack: the jet's wings folded up behind the shoulders, thrusters below
+  '.........oo',
+  '........olo',
+  '.......olmo',
+  '......olmdo',
+  '.....olmdo.',
+  '....olmdo..',
+  '...olmdo...',
+  '..okmdo....',
+  '.okpddo....',
+  'okppddo....',
+  'opppdpo....',
+  'okppppo....',
+  'oonkonko...',
+  '.ono.ono...',
+  '..o...o....',
+];
+const REAR_SHOULDER = [
+  '.oooo.',
+  'opddko',
+  'opdddo',
+  'okpdko',
+  '.oooo.',
+];
+const CHEST = [   // 10 x 9: the jet's nose and canopy folded into the chest, a blue belly band
+  '.oooooooo.',
+  'oxCllmmmlo',
+  'oCClmmmmmo',
+  'ocCdmmmlmo',
+  'okkdmmmmdo',
+  '.odbBBBbo.',
+  '..obBBbo..',
+  '..odmmko..',
+  '...okko...',
+];
+const SKIRT = [   // front plate (light), side plate (dark)
+  '.ooooooooo',
+  'olllmodmdo',
+  'olmmdodmko',
+  'olmdo.okko',
+  '.ooo...oo.',
+];
+const SHOULDER = [   // the jet's intake as the front shoulder block
+  '.ooooo.',
+  'onnnnBo',
+  'oBkkkbo',
+  'oBkokbo',
+  'obBBbbo',
+  '.ooooo.',
+];
+// legs: [front leg rows, rear leg rows, origin x], y origin 19; front leg nearer the viewer
+const LEGS = {
+  stand: [8, [
+    '...oooo..oooo...',
+    '..ommlo..oppo...',
+    '..omlmo..odpo...',
+    '..ommdo..okpo...',
+    '.olllmo..oddo...',
+    '.ollmko..okdo...',
+    '.ommmdo..oddko..',
+    'olmmmmdo.oppdo..',
+    'ommmmmdo.okpdo..',
+    'olmmmmdko.oppdo.',
+    'oooookko.oooooo.',
+    'oBBBBBbo.obbbbbo',
+    'oooooooo.ooooooo',
+  ]],
+  strideA: [6, [   // front leg forward, rear leg back
+    '.....oooo..oooo...',
+    '....ommlo..oppo...',
+    '...omlmo...odpo...',
+    '...ommdo...okppo..',
+    '..olllmo....odpo..',
+    '..ollmko....okdo..',
+    '.ommmdo.....oddko.',
+    'olmmmmdo....oppdo.',
+    'ommmmmdo....okpdo.',
+    'olmmmdko.....oppdo',
+    'ooookko.....ooooo.',
+    'oBBBBbo....obbbbbo',
+    'ooooooo....ooooooo',
+  ]],
+  strideB: [7, [   // passing: legs close, rear knee bent
+    '....oooooooo...',
+    '...ommlooppo...',
+    '...omlmoodpo...',
+    '...ommdookpo...',
+    '..olllmooddo...',
+    '..ollmko.okdo..',
+    '..ommmdo.oddko.',
+    '.olmmmmdo.oppo.',
+    '.ommmmmdo.opdo.',
+    '.olmmmdko.okpo.',
+    '.oooookko.oooo.',
+    '.oBBBBBbooobbbo',
+    '.oooooooooooooo',
+  ]],
+  lunge: [3, [   // deep forward stance: front knee bent far forward, rear leg stretched back
+    '..........oooo.......',
+    '........ommlo..oo....',
+    '.......omlmo..oppo...',
+    '......ommdo....odpo..',
+    '....olllmo......opdo.',
+    '...ollmko........odpo',
+    '..ommmdo..........okp',
+    '.olmmmdo...........oo',
+    'ommmmdo..............',
+    'olmmmdko.............',
+    'ooookko..............',
+    'oBBBBbo..............',
+    'ooooooo..............',
+  ]],
+  recoil: [9, [   // knocked back: weight on the rear leg, front foot lifted
+    '...oooo..oooo..',
+    '..ommlo..oppo..',
+    '.omlmo...odpo..',
+    '.ommdo...okpo..',
+    'olllmo...oddo..',
+    'ollmko...okdo..',
+    'ommdo....oddko.',
+    'olmmdo...oppdo.',
+    'ommmdo...okpdo.',
+    'oBBBbo...oppdko',
+    'ooooo....oooooo',
+    '.........obbbbbo',
+    '.........ooooooo',
+  ]],
+};
+
+// ---------------------------------------------------------------- canvas helpers
+function canvas() { return Array.from({ length: 32 }, () => new Array(32).fill(0)); }
+function stamp(g, rows, x0, y0) {
+  rows.forEach((r, y) => [...r].forEach((ch, x) => {
+    if (ch === '.') return;
+    const X = x0 + x, Y = y0 + y;
+    if (X >= 0 && Y >= 0 && X < 32 && Y < 32) g[Y][X] = IDX[ch];
+  }));
+}
+const set = (g, x, y, v) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < 32 && y < 32) g[y][x] = v; };
+function line(g, [x0, y0], [x1, y1], v) {
+  const n = Math.max(1, Math.round(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))));
+  for (let i = 0; i <= n; i++) set(g, x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n, v);
+}
+// an armoured limb segment: a 3-px band, light on its upper/forward edge, shade below, outlined
+function limb(g, a, b, tones = ['l', 'm', 'd']) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
+  const up = ny < 0 || (ny === 0 && nx < 0) ? 1 : -1;   // the side facing up gets the light tone
+  for (const [off, t] of [[-2, 'o'], [2, 'o']]) line(g, [a[0] + nx * off, a[1] + ny * off], [b[0] + nx * off, b[1] + ny * off], IDX[t]);
+  line(g, [a[0] + nx * up, a[1] + ny * up], [b[0] + nx * up, b[1] + ny * up], IDX[tones[0]]);
+  line(g, a, b, IDX[tones[1]]);
+  line(g, [a[0] - nx * up, a[1] - ny * up], [b[0] - nx * up, b[1] - ny * up], IDX[tones[2]]);
+}
+const joint = (g, [x, y], v = 'k') => { set(g, x, y, IDX[v]); };
+function hand(g, [x, y]) { stamp(g, ['.oo.', 'onBo', 'obbo', '.oo.'], Math.round(x) - 1, Math.round(y) - 1); }
+// close every silhouette with the outline colour
+function outline(g) {
+  const out = g.map((r) => r.slice());
+  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+    if (g[y][x]) continue;
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => g[y + dy]?.[x + dx] && g[y + dy][x + dx] !== IDX.o && !isFx(g[y + dy][x + dx]))) out[y][x] = IDX.o;
+  }
+  return out;
+}
+const isFx = (v) => v === IDX.c || v === IDX.C || v === IDX.x || v === IDX.w;
+
+// ---------------------------------------------------------------- weapons
+const RIFLE = [   // the railgun held level, muzzle to the left; the hand sits at column 11, row 2
+  '......ooo.........',
+  '.....onnBo........',
+  'oooooobBBbooooo...',
+  'onnnnnBnnBnnnBBoo.',
+  'obbbbbbbbbbbbbbbbo',
+  '.ooooooookbbooooo.',
+  '.........obbo.....',
+  '..........oo......',
+];
+function rifle(g, [hx, hy], flash) {
+  stamp(g, RIFLE, Math.round(hx) - 11, Math.round(hy) - 3);
+  if (flash) stamp(g, ['..w..', '.xCx.', 'wCwCw', '.xCx.', '..w..'], Math.round(hx) - 15, Math.round(hy) - 3);
+}
+function sabre(g, [hx, hy], deg) {
+  const a = (deg * Math.PI) / 180, ux = Math.sin(a), uy = -Math.cos(a);
+  line(g, [hx - ux * 2, hy - uy * 2], [hx, hy], IDX.k);                                      // hilt
+  for (let i = 1; i <= 13; i++) {
+    const x = hx + ux * i, y = hy + uy * i;
+    set(g, x + uy * 0.9, y - ux * 0.9, IDX.C); set(g, x - uy * 0.9, y + ux * 0.9, IDX.c); set(g, x, y, i < 13 ? IDX.w : IDX.x);
+  }
+}
+
+// ---------------------------------------------------------------- poses
+// upper body anchor: (ux, uy) shifts head, pack, chest, shoulders and arms together
+function body(g, P) {
+  const ux = P.ux || 0, uy = P.uy || 0, at = (x, y) => [x + ux, y + uy];
+  stamp(g, BACK, 15 + ux, 0 + uy);
+  stamp(g, REAR_SHOULDER, 17 + ux, 8 + uy);
+  // rear arm, behind the body, in shade tones
+  const rs = at(19, 11), re = P.rearElbow ? at(...P.rearElbow) : at(20, 15), rh = P.rearHand ? at(...P.rearHand) : at(18, 18);
+  limb(g, rs, re, ['d', 'p', 'k']); limb(g, re, rh, ['d', 'p', 'k']); joint(g, re);
+  // legs, then the skirt over the hips
+  const [lx, rows] = LEGS[P.legs || 'stand'];
+  stamp(g, rows, lx + (P.lx || 0), 19);
+  stamp(g, SKIRT, 10 + ux, 17 + uy);
+  stamp(g, CHEST, 10 + ux, 8 + uy);
+  stamp(g, HEAD, 10 + ux, 0 + uy);
+  // front arm: shoulder, elbow, hand, then the weapon and the shoulder block over the arm's root
+  const fs = at(10, 12), fe = at(...(P.elbow || [9, 16])), fh = at(...(P.hand || [6, 17]));
+  if (P.weaponBehind) P.weaponBehind(g, fh);
+  limb(g, fs, fe); limb(g, fe, fh); joint(g, fe);
+  hand(g, fh);
+  if (P.weapon) P.weapon(g, fh);
+  stamp(g, SHOULDER, 6 + ux, 8 + uy);
+  if (P.spark) stamp(g, ['...w...', '...x...', '.w.C.w.', 'wxCwCxw', '.w.C.w.', '...x...', '...w...'], P.spark[0], P.spark[1]);
+}
+export function robotPose(P) {
+  const g = canvas();
+  body(g, P);
+  return outline(g);
+}
+
+const R = (o) => ({ elbow: [10, 16], hand: [7, 17], weapon: (g, h) => rifle(g, h, o.flash), ...o });
+const S = (deg, o = {}) => ({ weapon: (g, h) => sabre(g, h, deg), ...o });
+export const ROBOT_POSES = {
+  // slot 0 sheet: the railgun
+  robot: {
+    0: R({}),
+    4: R({ legs: 'strideA', uy: -1 }),
+    8: R({ legs: 'strideB' }),
+    12: R({ legs: 'strideA', uy: 1 }),
+    64: R({ flash: true, ux: 1, legs: 'stand' }),
+  },
+  // slots 1-3 sheet: the beam sabre
+  robotMelee: {
+    0: S(0, { elbow: [9, 16], hand: [7, 17] }),
+    4: S(-6, { elbow: [9, 16], hand: [7, 17], legs: 'strideA', uy: -1 }),
+    8: S(6, { elbow: [9, 16], hand: [7, 17], legs: 'strideB' }),
+    12: S(-12, { elbow: [9, 16], hand: [7, 17], legs: 'strideA', uy: 1 }),
+    64: S(-55, { elbow: [9, 15], hand: [6, 15], legs: 'stand' }),                          // guard
+    68: S(-130, { elbow: [8, 16], hand: [5, 19], legs: 'strideA', ux: -1, uy: 1 }),          // the cut, down and through
+    72: S(78, { elbow: [10, 9], hand: [12, 5], legs: 'strideB', ux: 1 }),                   // wind-up overhead, blade swept back
+    76: S(-92, { elbow: [11, 15], hand: [9, 15], legs: 'lunge', ux: -2, uy: 1 }),            // lunge, the blade thrust level
+    128: S(150, { elbow: [13, 12], hand: [16, 9], legs: 'recoil', ux: 2, spark: [1, 6] }),  // struck, reeling back
+  },
+};
+export const robotSprites = (key) => Object.fromEntries(Object.entries(ROBOT_POSES[key]).map(([b, P]) => {
+  const g = robotPose(P), px = new Uint8Array(32 * 32);
+  g.forEach((r, y) => r.forEach((v, x) => { px[y * 32 + x] = v; }));
+  return [b, { w: 32, h: 32, px }];
+}));
+
+// ---------------------------------------------------------------- the unit picture and map icon
+// The unit-info picture: the rifle stance, Scale3x-enlarged to 96x96 (smooth diagonals, still hard
+// pixel edges) and put in the picture palette (tools/art/pallas.mjs ART_PALETTE).
+const TO_ART = { 7: 1, 6: 17, 5: 6, 4: 7, 3: 8, 2: 9, 15: 5, 8: 11, 9: 12, 10: 13, 12: 12, 13: 13, 14: 5 };
+function scale3x(src, w, h) {
+  const at = (x, y) => src[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))], out = new Uint8Array(w * 3 * h * 3);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const A = at(x - 1, y - 1), B = at(x, y - 1), C = at(x + 1, y - 1), D = at(x - 1, y), E = at(x, y), F = at(x + 1, y), G = at(x - 1, y + 1), H = at(x, y + 1), I = at(x + 1, y + 1);
+    let e = [E, E, E, E, E, E, E, E, E];
+    if (B !== H && D !== F) {
+      e = [D === B ? D : E, (D === B && E !== C) || (B === F && E !== A) ? B : E, B === F ? F : E,
+        (D === B && E !== G) || (D === H && E !== A) ? D : E, E, (B === F && E !== I) || (H === F && E !== C) ? F : E,
+        D === H ? D : E, (D === H && E !== I) || (H === F && E !== G) ? H : E, H === F ? F : E];
+    }
+    for (let j = 0; j < 9; j++) out[(y * 3 + ((j / 3) | 0)) * w * 3 + x * 3 + (j % 3)] = e[j];
+  }
+  return out;
+}
+export function robotPicture() {
+  const g = robotPose({ ...ROBOT_POSES.robot[0] }), src = new Uint8Array(32 * 32);
+  g.forEach((r, y) => r.forEach((v, x) => { src[y * 32 + x] = v ? TO_ART[v] ?? 1 : 0; }));
+  return { w: 96, h: 96, px: scale3x(src, 32, 32) };
+}
+// The map icon (24x16, facing left here; pallas.mjs mirrors it to face right): the icon rows'
+// numbers, o 7 outline, k 6, d 5, m 4, l 3, h 2, w 1.
+const ICON = [
+  '........o...o...........',
+  '........oo.oo...oo......',
+  '........omwmo..olo......',
+  '.......oommmo.oldo......',
+  '......ohhommmolddo......',
+  '.....ohhhommmmddo.......',
+  'oooooohhhoommmko........',
+  'owwwwwwwwwwlmmmo........',
+  'oddddddddooommdko.......',
+  '.oooooooo.ommmmmo.......',
+  '..........olmookko......',
+  '.........olmo.odko......',
+  '.........olmo..oddo.....',
+  '........ollmo..oddo.....',
+  '.......ommmmo.oddddo....',
+  '.......oooooo.oooooo....',
+];
+const ICON_IDX = { o: 7, k: 6, d: 5, m: 4, l: 3, h: 2, w: 1 };
+export function robotIcon() {
+  const px = new Uint8Array(24 * 16);
+  ICON.forEach((r, y) => [...r].forEach((ch, x) => { if (ch !== '.') px[y * 24 + x] = ICON_IDX[ch]; }));
+  return { w: 24, h: 16, px };
+}

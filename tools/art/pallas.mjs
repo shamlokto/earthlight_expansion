@@ -20,6 +20,7 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { poly, ellipse, capsule, union, render, encode } from './raster.mjs';
+import { robotSprites, robotPicture, robotIcon } from './pallas-pixels.mjs';
 
 const rot = (cx, cy, deg) => { const a = (deg * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a); return ([x, y]) => [cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c]; };
 const polar = ([x, y], deg, len) => { const a = (deg * Math.PI) / 180; return [x + Math.sin(a) * len, y - Math.cos(a) * len]; };   // 0 deg = up, negative = forward (left)
@@ -199,7 +200,9 @@ export const POSES = {
 };
 // the ROM's sprites outline in the army's darkest tone, not black
 const sprite = (draw, pose) => render(32, 32, draw(pose, FIGHT), { outline: 7, cel: true, smooth: 1, bands: [0.1, 0.42, 0.9], bands3: [0.16, 0.6] });
-export const poseSprites = (which) => Object.fromEntries(Object.entries(POSES[which]).map(([b, p]) => [b, sprite(which.startsWith('jet') ? jet : robot, p)]));
+// the robot's fight poses are placed pixel by pixel (tools/art/pallas-pixels.mjs); the jet's are drawn from shapes
+export const poseSprites = (which) => (which.startsWith('robot') ? robotSprites(which)
+  : Object.fromEntries(Object.entries(POSES[which]).map(([b, p]) => [b, sprite(jet, p)])));
 
 // ---------------------------------------------------------------- unit-info pictures
 export const ART_PALETTE = ['#6b6bad', '#000000', '#5a5a7b', '#9c9cbd', '#d6d6ef', '#ffffff', '#7b005a', '#bd00bd', '#ff3aff', '#ff9cff',
@@ -208,7 +211,7 @@ const ARTC = { line: 2, hi: 5, glint: 19, mark: 8, white: [2, 3, 4, 5], trim: [1
 // the pictures have gold trim (crest, fin tips, leading edges); the fight palette has no gold, so blue there
 const PIC = ARTC;
 export function infoArt(which) {
-  if (which === 'robot') return render(96, 96, robot(rifle({ aim: -80, hand: [6.5, 15.5], legs: stride(1.2), lean: -4 }), PIC, 2.75, 4, 7), { bg: 0, outline: 1 });
+  if (which === 'robot') return robotPicture();
   return render(96, 96, jet({ pod: which === 'jet', lean: -14 }, PIC, 2.9, 2, 4), { bg: 0, outline: 1 });
 }
 
@@ -216,7 +219,7 @@ export function infoArt(which) {
 // icon rows: 1 white, 2-6 pink light to dark, 7 near black
 export function mapIcon(which) {
   const C = { line: 6, hi: 1, glint: 1, mark: 2, white: [3, 2, 1], trim: [5, 4], gun: [2, 1], far: [5, 4], dark: [6, 5], pink: [4, 3], blue: [5, 4], cyan: [2, 1], glow: [2, 1], beam: [2, 1] };
-  const img = which === 'robot' ? render(24, 16, robot(rifle({ legs: stride(1), aim: -84 }), C, 0.53, 5.5, -0.6), { outline: 7, cel: true, smooth: 0 })
+  const img = which === 'robot' ? robotIcon()
     : render(24, 16, jet({ pod: which === 'jet' }, C, 0.76, -0.4, -4.2), { outline: 7, cel: true, smooth: 0 });
   const px = new Uint8Array(img.px.length);
   for (let y = 0; y < 16; y++) for (let x = 0; x < 24; x++) px[y * 24 + x] = img.px[y * 24 + 23 - x];
