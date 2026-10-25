@@ -1,0 +1,355 @@
+// The Pallas's hand-placed pictures that are not robot fight poses (tools/art/pallas.mjs writes
+// them to js/art/pallas.js): the jet's 32x32 fight poses, the two unit pictures (robot and jet;
+// painted at 48x48 and enlarged with Scale2x to 96x96, hard pixel edges kept) and the two map
+// icons. Same parts as the robot (tools/art/pallas-pixels.mjs): the canopy becomes the chest light,
+// the intakes the shoulders, the wings and fins the binder pack and V-fin.
+// Every picture is put together from small pixel maps stamped at fixed anchors, then closed with a
+// 1-px outline.
+
+// ---------------------------------------------------------------- helpers
+function grid(w, h) { return Array.from({ length: h }, () => new Array(w).fill(0)); }
+function stamp(g, rows, x0, y0, map) {
+  rows.forEach((r, y) => [...r].forEach((ch, x) => {
+    if (ch === '.') return;
+    const X = x0 + x, Y = y0 + y;
+    if (Y >= 0 && Y < g.length && X >= 0 && X < g[0].length) g[Y][X] = map[ch];
+  }));
+}
+function outline(g, o, keep = () => false) {
+  const h = g.length, w = g[0].length, out = g.map((r) => r.slice());
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (g[y][x]) continue;
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const v = g[y + dy]?.[x + dx]; return v && v !== o && !keep(v); })) out[y][x] = o;
+  }
+  return out;
+}
+const flat = (g) => { const h = g.length, w = g[0].length, px = new Uint8Array(w * h); g.forEach((r, y) => r.forEach((v, x) => { px[y * w + x] = v; })); return { w, h, px }; };
+function scale2x(src) {
+  const { w, h, px } = src, at = (x, y) => px[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))], out = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const B = at(x, y - 1), D = at(x - 1, y), E = at(x, y), F = at(x + 1, y), H = at(x, y + 1);
+    let e = [E, E, E, E];
+    if (B !== H && D !== F) e = [D === B ? D : E, B === F ? F : E, D === H ? D : E, H === F ? F : E];
+    out[(y * 2) * w * 2 + x * 2] = e[0]; out[(y * 2) * w * 2 + x * 2 + 1] = e[1];
+    out[(y * 2 + 1) * w * 2 + x * 2] = e[2]; out[(y * 2 + 1) * w * 2 + x * 2 + 1] = e[3];
+  }
+  return { w: w * 2, h: h * 2, px: out };
+}
+
+// ---------------------------------------------------------------- the jet's fight poses (32x32)
+// small craft fight rows: o 7 outline, k 6, p 5, d 4, m 3, l 2, w 15, b/B/n 8/9/10, c/C/x 12/13/14
+const F = { o: 7, k: 6, p: 5, d: 4, m: 3, l: 2, w: 15, b: 8, B: 9, n: 10, c: 12, C: 13, x: 14 };
+const J = {
+  farFin: [
+    '....oo',
+    '...opo',
+    '..opdo',
+    '..opdo',
+    '.opdo.',
+    '.opdo.',
+    'opddo.',
+    'opdo..',
+  ],
+  nearFin: [
+    '.....oo',
+    '....ono',
+    '....olo',
+    '...olmo',
+    '...olmo',
+    '..olmdo',
+    '..olmdo',
+    '.olmmdo',
+    '.olmmdo',
+    'olmmddo',
+  ],
+  farWing: [
+    'oooo..........',
+    'okkpo.........',
+    '.okppdo.......',
+    '..okpdddo.....',
+    '...okpddddo...',
+    '....okpdddddo.',
+    '.....okppddddo',
+  ],
+  body: [
+    '.........ooooooooooooooooooo...',
+    '.......oolllllllllllllllllmooo.',
+    '.....oollllmmmmmmmmmmmmmmmmmmko',
+    '...oollmmmmmmmmmmmmmmmmmmmmmmko',
+    '.oolmmmmmmmmmmmmmmmmmmmmmmmmdko',
+    'olmmmmmmmmmmmmmmmmmmmmmmmmmddko',
+    'olmmmmmmmmmmmmmmmmmmmmmmmmdddko',
+    '.oddmmmmmmmmmmmmmmmmmmmmmddddko',
+    '..ooddmmmmmmmmmmmmmmmmmmdddpko.',
+    '....oodddddddddddddddddddppkko.',
+    '......oooooooooooooooooooooooo.',
+  ],
+  stripe: ['nnnnnnnnnnnnnnnnnn', '.bbbbbbbbbbbbbbbbb'],
+  canopy: [
+    '..ooooo..',
+    '.oxCCcco.',
+    'oxCccccbo',
+    '.ooooooo.',
+  ],
+  intake: [
+    'oooooooo.',
+    'okkkBnnBo',
+    'okokBnnbo',
+    'okkkBBBbo',
+    'oooooooo.',
+  ],
+  nozzle: ['oooo', 'okno', 'oknw', 'oknn', 'okno', 'okno', 'oooo'],
+  nearWing: [
+    '.......ooooooooo',
+    '......onllmmmmdo',
+    '.....onllmmmmdo.',
+    '....onllmmmmdo..',
+    '....onlmmmmdo...',
+    '...onlmmmmdo....',
+    '...onlmmmddo....',
+    '..onlmmmddo.....',
+    '..onmmmddo......',
+    '.onBBBBbo.......',
+    '.oooooooo.......',
+  ],
+  pod: [
+    '.oooooooooooooooooooo',
+    'oBwllllllllllllmbbBo.',
+    'oBmmmmmmmmmmmmmmdbbBo',
+    '.oooooooooooooooooooo',
+  ],
+  guns: ['..w..', '.xCx.', 'wCwCw', '.xCx.', '..w..'],
+};
+function jetPose({ pod = false, guns = false } = {}) {
+  const g = grid(32, 32);
+  stamp(g, J.farFin, 26, 2, F);
+  stamp(g, J.farWing, 9, 3, F);
+  stamp(g, J.body, 0, 9, F);
+  stamp(g, J.stripe, 9, 11, F);
+  stamp(g, J.canopy, 5, 8, F);
+  stamp(g, J.intake, 13, 13, F);
+  stamp(g, J.nozzle, 28, 10, F);
+  stamp(g, J.nearFin, 21, 0, F);
+  stamp(g, J.nearWing, 9, 18, F);
+  if (pod) stamp(g, J.pod, 3, 20, F);
+  if (guns) stamp(g, J.guns, -2, 12, F);
+  return flat(outline(g, F.o, (v) => [F.c, F.C, F.x, F.w].includes(v)));
+}
+export const JET_POSES = { jet: { 0: jetPose({ pod: true }) }, jetSpent: { 0: jetPose(), 64: jetPose({ guns: true }) } };
+
+// ---------------------------------------------------------------- unit pictures (48x48 -> 96x96)
+// the picture palette (tools/art/pallas.mjs ART_PALETTE): . backdrop 0, o black 1, g/G/W/w greys to
+// white 2-5, P/p/q/Q pinks dark to light 6-9, b/B/n/c blues to cyan 10-13, y/Y/z golds 14-16, k 17
+const A = { '.': 0, o: 1, g: 2, G: 3, W: 4, w: 5, P: 6, p: 7, q: 8, Q: 9, b: 10, B: 11, n: 12, c: 13, y: 14, Y: 15, z: 16, k: 17 };
+const RP = {   // robot parts at picture scale
+  pack: [
+    '....................oo',
+    '..................ooQo',
+    '................ooQqPo',
+    '..............ooQqqPo.',
+    '............ooWwqqPo..',
+    '..........ooWwwWqPo...',
+    '........ooWwwWGGPo....',
+    '......ooWwwWGGgPo..oo.',
+    '....ooWwwWGGggPo.ooQo.',
+    '...oWwwWGGggPPoooQqPo.',
+    '..oWwWGGggPPoooQqqPo..',
+    '..oWWGGgPPoo.oWqqPo...',
+    '.oGGGgPPoo..oWwqPo....',
+    '.oGgPPoo...oWwWPo.....',
+    '.oPPPo....oGWGPo......',
+    '.oooo....oGGgPo.......',
+    '........oGgPPo........',
+    '........oPPoo.........',
+  ],
+  head: [
+    '.oo........oo',
+    '.ozo......ozo',
+    '..ozo....ozo.',
+    '...ozooooyo..',
+    '....oWwwWWo..',
+    '...oWwwwWGGo.',
+    '...owWWWWGgo.',
+    '..ocnnWWGGgo.',
+    '..occnWWGggo.',
+    '..oGoqqGGggo.',
+    '...oGPPGggo..',
+    '....oooooo...',
+  ],
+  rearShoulder: [
+    '.ooooo.',
+    'oGWWGgo',
+    'oWWGGgo',
+    'oGGggPo',
+    'ogggPPo',
+    '.ogPPo.',
+    '..ooo..',
+  ],
+  chest: [
+    '.oooooooooooooo.',
+    'oWwwwwWWWWWWWGGo',
+    'owwccwWWWWWWGGgo',
+    'owcnncWWWWWWGGgo',
+    'oWcnncWWWGWWGggo',
+    'oWWccWWWGGWGGggo',
+    'oGWWWWWGGgGGgggo',
+    '.oGGGGGGgggggggo',
+    '.obnnnBBnnnnBbo.',
+    '..obBBBBBBBBbo..',
+    '...oGGWWWGGgo...',
+    '....oGGGGggo....',
+  ],
+  shoulder: [
+    '.oooooooo.',
+    'onnnnnnnBo',
+    'onwwnnnnBo',
+    'oBoooooobo',
+    'oBokkkkkbo',
+    'oBokokkPbo',
+    'oBbbbbbbbo',
+    '.oPQQQQPo.',
+    '..oooooo..',
+  ],
+  skirt: [
+    '..oooooooooooo..',
+    '.oWwwWoGWWGGGgo.',
+    'oWwwWWoGWGGggggo',
+    'oWwWWGoGGGgggPgo',
+    'oWWWGGooGGggPPgo',
+    '.oGGGGo.oggPPgo.',
+    '..oooo...ooooo..',
+  ],
+  legs: [
+    '......oooooo....oooooo......',
+    '.....oWwwWGGo..oGGGggo......',
+    '.....oWwWWGGo..oGGgggo......',
+    '.....oWWWGGgo..oGGggPo......',
+    '....oQqqqqqPo..oGgggPo......',
+    '....oQqqqqPPo..oPPPPPo......',
+    '....oWwwwWGGo..oGGggPo......',
+    '...oWwwwWWGGgo.oGGgggPo.....',
+    '...oWwwWWGGGgo.oGGggPPo.....',
+    '..oWwwWWGGGggo.oGGgggPPo....',
+    '..oWwWWGGGgggo.oGGgggPPo....',
+    '..oWWWGGGgggPo..oGggPPPo....',
+    '..oGGGGgggPPPo..oggPPPPo....',
+    '.oooooooooooooo.ooooooooo...',
+    'obnnnnBBBBBBbbooobnnnBBbbo..',
+    'obnnBBBBBBBbbbooobnBBBbbbo..',
+    'oooooooooooooooo.ooooooooooo',
+  ],
+  rifle: [
+    '.............oooo.......',
+    '............onnBbo......',
+    'ooooooooooooBBBBbooooo..',
+    'oGWWWWWWWWWWWWWWWWWGGGo.',
+    'onnnnnnnnnnnnnnnBnnnBBo.',
+    'obbbbbbbbbbbbbbbbbbbbbbo',
+    '.oooooooooooooobbbbooooo',
+    '...............obbbo....',
+    '................oooo....',
+  ],
+  frontArm: [   // upper arm under the shoulder block, elbow, forearm to the grip
+    '..oooo.',
+    '.oWwGo.',
+    '.oWWGo.',
+    '.obnbo.',
+    'oWwGgo.',
+    'oWGGgo.',
+    'oWGgo..',
+    'onnbo..',
+    'oBbbo..',
+  ],
+  rearArm: [
+    '.oooo..',
+    'oGGgo..',
+    'oGggPo.',
+    'obnbPo.',
+    '.oGgPo.',
+    '.oggPo.',
+    '.oGgPo.',
+    '.onnbo.',
+    '.obbbo.',
+    '..ooo..',
+  ],
+};
+export function robotPicture() {
+  const g = grid(48, 48);
+  stamp(g, RP.pack, 25, 0, A);
+  stamp(g, RP.rearShoulder, 29, 13, A);
+  stamp(g, RP.rearArm, 31, 18, A);
+  stamp(g, RP.legs, 9, 30, A);
+  stamp(g, RP.skirt, 15, 25, A);
+  stamp(g, RP.chest, 15, 13, A);
+  stamp(g, RP.head, 16, 1, A);
+  stamp(g, RP.frontArm, 9, 19, A);
+  stamp(g, RP.rifle, 0, 24, A);
+  stamp(g, RP.shoulder, 8, 12, A);
+  return scale2x(flat(outline(g, A.o)));
+}
+export function jetPicture(withPod) {
+  // the 32x32 jet, re-coloured into the picture palette and enlarged 3x (Scale2x then nearest 1.5x
+  // would blur; the jet keeps its sprite drawing at 3 pixels per pixel, Scale3x-smoothed)
+  const sp = jetPose({ pod: withPod }), toA = { 7: 1, 6: 6, 5: 2, 4: 3, 3: 4, 2: 5, 15: 5, 8: 10, 9: 11, 10: 12, 12: 12, 13: 13, 14: 5 };
+  const src = { w: 32, h: 32, px: sp.px.map((v) => (v ? toA[v] ?? 1 : 0)) };
+  return scale3x(src);
+}
+function scale3x({ w, h, px }) {
+  const at = (x, y) => px[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))], out = new Uint8Array(w * 3 * h * 3);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const A1 = at(x - 1, y - 1), B = at(x, y - 1), C = at(x + 1, y - 1), D = at(x - 1, y), E = at(x, y), F1 = at(x + 1, y), G = at(x - 1, y + 1), H = at(x, y + 1), I = at(x + 1, y + 1);
+    let e = [E, E, E, E, E, E, E, E, E];
+    if (B !== H && D !== F1) {
+      e = [D === B ? D : E, (D === B && E !== C) || (B === F1 && E !== A1) ? B : E, B === F1 ? F1 : E,
+        (D === B && E !== G) || (D === H && E !== A1) ? D : E, E, (B === F1 && E !== I) || (H === F1 && E !== C) ? F1 : E,
+        D === H ? D : E, (D === H && E !== I) || (H === F1 && E !== G) ? H : E, H === F1 ? F1 : E];
+    }
+    for (let j = 0; j < 9; j++) out[(y * 3 + ((j / 3) | 0)) * w * 3 + x * 3 + (j % 3)] = e[j];
+  }
+  return { w: w * 3, h: h * 3, px: out };
+}
+
+// ---------------------------------------------------------------- map icons (24x16, facing left;
+// pallas.mjs mirrors them to face right). Icon rows: o 7 outline, k 6, d 5, m 4, l 3, h 2, w 1.
+const I = { o: 7, k: 6, d: 5, m: 4, l: 3, h: 2, w: 1 };
+const ROBOT_ICON = [   // head with V-fin, shoulder block, rifle level, legs apart, binder pack
+  '........o..o............',
+  '........owoow...oo......',
+  '.......ohwwhho.olo......',
+  '.......ohwwhmo.oldo.....',
+  '...ooo.ohmmmo.olddo.....',
+  '..ohhhoooommoolddo......',
+  '..ohwwhohhhhmmkddo......',
+  'oooohhhohwwhmmmko.......',
+  'owwwwwwwwwwhmmmko.......',
+  'okkkkkkkkhooooko........',
+  '.oooooooommhmko.........',
+  '.......ohmo.ohmo........',
+  '.......ohmo..ohmo.......',
+  '......ohhmo..ohmmo......',
+  '......owwwo.owwwwo......',
+  '......ooooo.oooooo......',
+];
+const JET_ICON = [
+  '..............oo.oo.....',
+  '.............olooldo....',
+  '.......oo....olo.oldo...',
+  '.......oddo..ollooldo...',
+  '....oooooddoolllodddo...',
+  '..oowwhhhhhhhhhhhhhhmoo.',
+  'oohhwwhhhhhhmmmmmmmmmko.',
+  '.ookhhmmmmmmmmmmmmmmkkoo',
+  '...ooomlllmmmmmmmmkkoo..',
+  '.......olllldooooooo....',
+  '......ollldo............',
+  '.....ohhdo..............',
+  '.....oooo...............',
+];
+const JET_POD = ['oooooooooooo', 'ohhlllllldko', 'oooooooooooo'];
+export function robotIcon() { const g = grid(24, 16); stamp(g, ROBOT_ICON, 0, 0, I); return flat(g); }
+export function jetIcon(withPod) {
+  const g = grid(24, 16);
+  stamp(g, JET_ICON, 0, 1, I);
+  if (withPod) stamp(g, JET_POD, 3, 11, I);
+  return flat(g);
+}
