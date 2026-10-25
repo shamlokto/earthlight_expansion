@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
-const VERSION = 4;
+const VERSION = 5;
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const imp = (p) => import(pathToFileURL(join(root, p)).href);
 const args = process.argv.slice(2), opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
@@ -70,6 +70,9 @@ const types = allUnitTypes(realRom), T = types.length;
 // the battle board's unit tokens (js/render/tokens.js), every type in every army
 const { tokenPixels } = await imp('js/render/tokens.js');
 during('render', () => { for (let t = 0; t < 58; t++) for (const a of [0, 1, 2]) tokenPixels(rec, t, a); });
+// the original's map explosion for a destroyed unit (classic board)
+const { deathBurst } = await imp('js/render/deathburst.js');
+during('render', () => deathBurst(rec));
 
 during('render', () => {
   maps.battlePalette(rec);

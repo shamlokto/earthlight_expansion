@@ -11,6 +11,7 @@
 import { cellOrigin, cellAt, HEX_POINTS } from '../maps.js';
 import { neighbours } from '../game/rules.js';
 import { scale3x, indexedToRgba } from './upscale.js';
+import { deathBurst, BURST_STEP, BURST_FRAMES } from './deathburst.js';
 import { tokenPixels, ownTokenPixels, ownColorTokenPixels } from './tokens.js';
 import { lookOf } from '../look.js';
 import { ownArt, ownToken, ownIcon, ownColors, ownTokenColors } from '../art/own.js';
@@ -236,7 +237,16 @@ export class Board {
     for (const [id, s] of [...this.seen]) {
       if (live.has(id)) continue;
       const u = b.units[id];
-      if (u && u.hp <= 0 && !this.classic && !this.held.has(u)) { if (s.hp > 0) this.hit(s.x, s.y, s.hp); this.explode(s.x, s.y); }
+      if (u && u.hp <= 0 && !this.held.has(u)) {
+        if (this.onDeath) this.onDeath(u);   // gameapp: the original's sound $18
+        if (this.classic) this.romBurst(s.x, s.y);
+        else {
+          if (s.hp > 0) this.hit(s.x, s.y, s.hp);
+          // a capital ship or structure goes up in a chain of blasts; small craft in one
+          if (b.types[u.type].finale) this.finaleExplode(s.x, s.y, b);
+          else if (b.type(u).category < 7) this.bigExplode(s.x, s.y); else this.explode(s.x, s.y);
+        }
+      }
       this.seen.delete(id); this.anim.delete(id);
     }
   }
@@ -249,6 +259,61 @@ export class Board {
     const [cx, cy] = centre(x, y), now = performance.now(), parts = [];
     for (let i = 0; i < 16; i++) { const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 90; parts.push([Math.cos(a) * v, Math.sin(a) * v, 2 + Math.random() * 3]); }
     this.fx.push({ kind: 'boom', cx, cy, t0: now, life: 900, parts });
+  }
+
+  // The original's map explosion for a destroyed unit ($02:DF3A, js/render/deathburst.js): a
+  // 16 px white burst that swells and breaks into a dotted ring, 7 steps of 3 frames.
+  romBurst(x, y) {
+    const [cx, cy] = centre(x, y);
+    this.fx.push({ kind: 'deathRom', cx, cy, t0: performance.now(), life: BURST_STEP * BURST_FRAMES * FRAME });
+  }
+  burstCanvases() {
+    if (!this.bursts) this.bursts = deathBurst(this.rom).map((f) => {
+      const c = canvas(f.w, f.h), g = c.getContext('2d'), id = g.createImageData(f.w, f.h);
+      new Uint32Array(id.data.buffer).set(f.px); g.putImageData(id, 0, 0);
+      return c;
+    });
+    return this.bursts;
+  }
+  // Modern board: a capital ship's death. Its hex blows first, then a chain of secondary blasts
+  // walks around it, and a last big flash sends a shockwave over the neighbouring hexes; the board
+  // shakes (not with reduced motion).
+  bigExplode(x, y) {
+    const [cx, cy] = centre(x, y), now = performance.now(), R = 16 * S;
+    this.explode(x, y);
+    const n = reduced ? 2 : 6;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.6, d = R * (0.6 + Math.random() * 0.6), parts = [];
+      for (let k = 0; k < 10; k++) { const b = Math.random() * Math.PI * 2, v = 30 + Math.random() * 70; parts.push([Math.cos(b) * v, Math.sin(b) * v, 2 + Math.random() * 2]); }
+      this.fx.push({ kind: 'boom', cx: cx + Math.cos(a) * d, cy: cy + Math.sin(a) * d * 0.7, t0: now + 90 + i * 85, life: 750, parts });
+    }
+    const parts = [];
+    for (let k = 0; k < (reduced ? 10 : 34); k++) { const b = Math.random() * Math.PI * 2, v = 60 + Math.random() * 170; parts.push([Math.cos(b) * v, Math.sin(b) * v, 2 + Math.random() * 4]); }
+    this.fx.push({ kind: 'shipBlast', cx, cy, t0: now + 90 + n * 85, life: 1500, parts, reduced });
+  }
+
+  // The finale's flagship (units.json `finale`, the Leviathan): the biggest and longest of all.
+  // Blasts ripple out over its hex and the two rings of hexes around it for about two seconds,
+  // then the core goes up in a white flash with a shockwave three hexes wide, and the spot
+  // keeps glowing for several seconds.
+  finaleExplode(x, y, b) {
+    const [cx, cy] = centre(x, y), now = performance.now();
+    this.explode(x, y);
+    const ring1 = neighbours(x, y).filter(([i, j]) => b.inBounds(i, j));
+    const seen = new Set([`${x},${y}`, ...ring1.map(([i, j]) => `${i},${j}`)]), ring2 = [];
+    for (const [i, j] of ring1) for (const [p, q] of neighbours(i, j)) if (!seen.has(`${p},${q}`) && b.inBounds(p, q)) { seen.add(`${p},${q}`); ring2.push([p, q]); }
+    const boom = (cell, t) => {
+      const [bx, by] = centre(...cell), parts = [];
+      for (let k = 0; k < (reduced ? 4 : 12); k++) { const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 90; parts.push([Math.cos(a) * v, Math.sin(a) * v, 2 + Math.random() * 3]); }
+      this.fx.push({ kind: 'boom', cx: bx + (Math.random() - 0.5) * 10, cy: by + (Math.random() - 0.5) * 8, t0: now + t, life: 850, parts });
+    };
+    ring1.forEach((c, i) => boom(c, 140 + i * 90));
+    ring2.forEach((c, i) => boom(c, 700 + i * 75));
+    for (let i = 0; i < (reduced ? 2 : 6); i++) boom([x, y], 300 + i * 260);
+    const t = 700 + ring2.length * 75 + 250, parts = [];
+    for (let k = 0; k < (reduced ? 16 : 60); k++) { const a = Math.random() * Math.PI * 2, v = 90 + Math.random() * 260; parts.push([Math.cos(a) * v, Math.sin(a) * v, 2 + Math.random() * 5]); }
+    this.fx.push({ kind: 'shipBlast', cx, cy, t0: now + t, life: 2200, parts, reduced, scale: 2.2, quake: 1400 });
+    this.fx.push({ kind: 'linger', cx, cy, t0: now + t, life: 7000 });
   }
 
   // Briefly highlights hexes (cannon fire, Decimator); resolves when done.
@@ -378,7 +443,8 @@ export class Board {
   // The Decimator's screen shake (modern board): the whole stage jolts, decaying.
   shake(t) {
     const n = this.fx.find((e) => e.kind === 'nuke' && !e.reduced && t - e.t0 < NUKE.shake);
-    const a = n ? 16 * Math.pow(1 - (t - n.t0) / NUKE.shake, 2) : 0;
+    const sb = this.fx.find((e) => e.kind === 'shipBlast' && !e.reduced && t >= e.t0 && t - e.t0 < (e.quake || 600));
+    const a = n ? 16 * Math.pow(1 - (t - n.t0) / NUKE.shake, 2) : sb ? (sb.quake ? 16 : 9) * Math.pow(1 - (t - sb.t0) / (sb.quake || 600), 2) : 0;
     const tr = a > 0.3 ? `translate(${((Math.random() * 2 - 1) * a).toFixed(1)}px, ${((Math.random() * 2 - 1) * a * 0.7).toFixed(1)}px)` : '';
     if (this.stage.style.transform !== tr) this.stage.style.transform = tr;
   }
@@ -534,6 +600,7 @@ export class Board {
   effects(ctx, t) {
     this.fx = this.fx.filter((e) => t - e.t0 < e.life);
     for (const e of this.fx) {
+      if (t < e.t0) continue;   // a blast still to come in a chain
       const f = Math.max(0, (t - e.t0) / e.life);
       ctx.save();
       if (e.kind === 'flash') {
@@ -545,6 +612,27 @@ export class Board {
         ctx.globalAlpha = Math.min(1, 2 * (1 - f)); ctx.font = '800 22px system-ui, sans-serif'; ctx.textAlign = 'center';
         ctx.lineWidth = 4; ctx.strokeStyle = '#1a0006'; const y = e.cy - 30 * f;
         ctx.strokeText(e.text, e.cx, y); ctx.fillStyle = '#ff5a6a'; ctx.fillText(e.text, e.cx, y);
+      } else if (e.kind === 'deathRom') {
+        const k = Math.floor((t - e.t0) / FRAME / BURST_STEP), img = k < BURST_FRAMES && this.rom ? this.burstCanvases()[k] : null;
+        if (img) { ctx.imageSmoothingEnabled = false; ctx.drawImage(img, e.cx - 8 * S, e.cy - 8 * S, 16 * S, 16 * S); }
+      } else if (e.kind === 'shipBlast') {
+        // the last, biggest blast: white flash, fireball, a shockwave over the neighbours, debris
+        const g = this.glow.boom, rr = 16 * S * (e.scale || 1);
+        ctx.globalCompositeOperation = 'lighter';
+        if (f < 0.22) { ctx.globalAlpha = 1 - f / 0.22; const w = rr * 6; ctx.drawImage(this.glow.hit, e.cx - w, e.cy - w, w * 2, w * 2); ctx.drawImage(this.glow.hit, e.cx - w / 2, e.cy - w / 2, w, w); }
+        const r = rr * (1.6 + 2.4 * Math.sqrt(f));
+        for (let i = 0; i < 2; i++) { ctx.globalAlpha = Math.max(0, 1 - f * 1.2); ctx.drawImage(g, e.cx - r, e.cy - r * 0.85, r * 2, r * 1.7); }
+        ctx.fillStyle = `rgba(255,${210 - 140 * f | 0},90,${Math.max(0, 1 - f)})`;
+        for (const [vx, vy, s2] of e.parts) ctx.fillRect(e.cx + vx * Math.sqrt(f) * 1.4, e.cy + vy * Math.sqrt(f) * 1.4 + 40 * f * f, s2, s2);
+        ctx.globalCompositeOperation = 'source-over';
+        for (const [k, w] of [[1, 4], [0.7, 2]]) {
+          ctx.strokeStyle = `rgba(255,${235 - 60 * k | 0},200,${0.75 * (1 - f) * k})`; ctx.lineWidth = w;
+          ctx.beginPath(); ctx.ellipse(e.cx, e.cy, rr * 3.2 * Math.sqrt(f) * k + 6, rr * 2.1 * Math.sqrt(f) * k + 4, 0, 0, Math.PI * 2); ctx.stroke();
+        }
+      } else if (e.kind === 'linger') {   // the finale's wreck glowing where the flagship died
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.55 * (1 - f) * (0.85 + 0.15 * Math.sin(t / 90));
+        const r = 16 * S * 2.4; ctx.drawImage(this.glow.boom, e.cx - r, e.cy - r * 0.8, r * 2, r * 1.6);
       } else if (e.kind === 'nukeRom') {
         romFireball(ctx, e.cx, e.cy, (t - e.t0) / FRAME);
       } else if (e.kind === 'nuke') {

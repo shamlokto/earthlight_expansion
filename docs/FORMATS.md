@@ -581,6 +581,28 @@ music (`$02:9B70` sets `$06EC/$06ED` when a reinforcement key matches), reinforc
   The remake plays it the same way (gameapp.js `detonate`, board.js `nuke`: the Classic board
   draws this timeline; the modern board adds a white-out, shockwaves, debris and a plasma cloud).
   The remake also lets the Decimator clear an empty hex in range 2–4; that has no fight scene.
+* **Ships sinking** (captured with `fight3.py s4.pkl 0 6 1 1100 sk_t30_h39 --atype 30 --dtype 39
+  --pre 1d89=1`, a Tiamat sinking a Hannibal left at 1 HP, and the same with a Hannibal sinking a
+  Fenrir; extracted by `sinkx.py` in the scratch tools): a capital ship whose HP reach 0 in a
+  fight does not just stop. From battle frame **257** (the same in both captures, whatever the
+  attacker and the ship) its hull stops rocking and drifts out of the screen, 1 px every 4 frames
+  for 60 px, while explosions keep bursting from six fixed points where it lay (x 202/220,
+  y 22/52/82 and 31/61/91 for a ship on the right): 32x32 effect tiles 192 → 196 → 200, 3 frames
+  each, drifting (−2, −1) px a frame, each followed by a burst of 8x8 debris (tiles 204/220/221).
+  They repeat until the screen has faded out at frame **629** (the fight is ~300 frames longer than
+  usual). Small craft die as before. The remake replays the recording (js/game/sinkdata.js,
+  fightscene.js), mirrored for a ship dying on the left, one `$3F` per explosion.
+* **Units destroyed on the map** (`$01:A064` → `$02:DF3A` for the attacker and/or the defender
+  left with 0 HP, unless it was a Decimator shot; traced with `$02:DF3A` called on a map state):
+  asset **201** is loaded to OBJ VRAM `$7000` (`$00:CFDE`), sprite object `$3F` is spawned on the
+  unit's cell (`$02:E376`: cell origin + `$14`) with animation script `$02:E3D6`, sound command
+  **`$18`** goes to `$0A51`, and task `$02:DFAB` (timer 15) removes the unit, whose icon is gone
+  from its cell at frame 15. The burst is one 16x16 sprite made of a single 8x8 tile mirrored into
+  four (h/v flips), tiles `$140`–`$146` (the asset's data, after its 64-tile lead), 3 frames each,
+  gone after 21 frames: a white disc that swells and breaks into a dotted ring. Palette OBJ row 6:
+  colours 0–7 from asset 192, 8–15 from asset 199's second row. The same for every unit, craft or
+  capital ship; the Decimator uses the same object with asset 200 and script `$02:E3E5`. The
+  remake draws it on the Classic board (js/render/deathburst.js) and plays `$18` on both boards.
 * **Mines**: Wisp (18), Pandora (17) and Remora (19) are category-15 units, no special code.
 * **Comet** (map 23): Comet Tail / Comet Body cells are part of the map; no code moves them.
 

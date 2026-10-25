@@ -318,7 +318,7 @@ function setupBoard(m) {
   mission = m;
   const info = custom ? custom.info : mapInfo(rom, m);
   const terr = renderMap(custom ? custom.rom : rom, info, { units: false });
-  if (!board) { board = new Board($('board'), $('cv'), { rom, icon: maskedIcon, controlsHost: $('boardCtl') }); board.active = () => !$('sBattle').hidden; }
+  if (!board) { board = new Board($('board'), $('cv'), { rom, icon: maskedIcon, controlsHost: $('boardCtl') }); board.active = () => !$('sBattle').hidden; board.onDeath = () => { if (sound) sound.playSfx(0x18); }; }
   board.setTerrain(terr.img, pal);   // terrain classes come with the battle (board.update)
   sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; blastCells = null; blastAim = null; threat = null; range = null; $('log').innerHTML = '';
   show('sBattle'); $('where').textContent = custom ? `expansion · ${custom.mission.title || custom.mission.name}` : `mission ${m + 1} · ${missionTitle(m)}`;
@@ -389,7 +389,7 @@ function runFight(e) {
   // terrain under each side: the Decimator's fight was set up before its blast cleared the hexes (e.cls)
   const clsOf = (u, i) => (e.cls ? e.cls[i] : battle.cls(u.x, u.y));
   const sideOf = (u, before, after, other, w, i) => ({ type: lookOf(types, u.type), army: u.army === NEUTRAL ? 1 - other.army : u.army, hp: before, hpAfter: after,
-    cls: clsOf(u, i), slot: lookSlot(types, u.type, w?.slot), own: ownArt(types, u.type), ...label(u) });
+    cls: clsOf(u, i), slot: lookSlot(types, u.type, w?.slot), own: ownArt(types, u.type), finale: !!types[u.type].finale, ...label(u) });
   const seen = new Map(), v = (u) => {   // the same stand-in for a unit wherever the info screen meets it
     if (!u || types[u.type].look === undefined) return u;
     if (!seen.has(u)) { const own = ownArt(types, u.type); seen.set(u, { ...u, type: lookOf(types, u.type), ...label(u), ...(own ? { icon: typeIcon(rom, types, u.type, u.army === 1 ? 1 : 0) } : {}) }); }

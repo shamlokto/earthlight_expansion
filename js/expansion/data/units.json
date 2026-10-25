@@ -4297,6 +4297,7 @@
   },
   {
    "type": 59,
+   "finale": true,
    "ownColors": true,
    "name": "Leviathan",
    "nameJp": "リヴァイアサン",
