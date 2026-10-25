@@ -49,12 +49,12 @@ Get out. Bring as many as you can.`,
     'Keep the General inside the deck until the Hydra is gone; then leave by both gates together.',
     'Two Union machines hold the asteroid screen. Pass north of it with the General (the Athena flies 9) while the mecha and the Crane keep them busy.',
     'The Selene waits in the magnetic band, where beams can\'t touch her. Bring her west to meet you: units that board her escape with her, the General included.',
-    'The garrison comes out behind you on turn 4 and runs for the Selene. On turn 6 a Directorate patrol closes the east edge: be through the band by then. Only the General and two others have to get off.',
+    'The garrison comes out behind you on turn 4 and runs for the Selene. Don\'t turn and fight; only the General and two others have to get off the east edge.',
   ],
   plan: [
     { n: 1, path: [[3, 6], [9, 3], [10, 4]] }, { n: 3, path: [[4, 3], [9, 3], [14, 1], [21, 2]] },
     { n: 4, path: [[25, 5], [21, 4]] }, { n: 3, at: [15, 5], note: 'Screen' },
-    { n: 5, at: [3, 5], note: 'Garrison, turn 4' }, { n: 5, at: [27, 5], note: 'Patrol, turn 6' },
+    { n: 5, at: [3, 5], note: 'Garrison, turn 4' },
   ],
   //          11111111112222222222
   // 12345678901234567890123456789
@@ -81,7 +81,5 @@ Get out. Bring as many as you can.`,
     h: { type: 24, army: 1 },                 // Hydra battery on the turret railway
   },
   // the deck's guards come out of the barracks behind you on turn 4 and run for the carrier
-  arrivals: [{ turn: 3, army: 1, units: [{ type: 2, x: 2, y: 2, chase: 'carriers' }, { type: 0, x: 2, y: 9, chase: 'carriers' }, { type: 3, x: 3, y: 9, chase: 'carriers' }] },
-    // a Directorate patrol closes the exit from the east on turn 6 (owner, 2026-10-25: stage 1 was too easy)
-    { turn: 5, army: 1, units: [{ type: 49, x: 29, y: 2 }, { type: 49, x: 29, y: 9 }, { type: 2, x: 28, y: 4 }, { type: 2, x: 28, y: 7 }] }],
+  arrivals: [{ turn: 3, army: 1, units: [{ type: 2, x: 2, y: 2, chase: 'carriers' }, { type: 0, x: 2, y: 9, chase: 'carriers' }, { type: 3, x: 3, y: 9, chase: 'carriers' }] }],
 };
