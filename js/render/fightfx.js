@@ -76,7 +76,7 @@ export class FightRenderer {
     this.sprites = new Map();
     this.tilesId = new WeakMap(); this.nTiles = 0;
     this.particles = []; this.lights = []; this.decals = [];
-    this.trails = new Map(); this.shotAge = new Map(); this.lastShot = new Map(); this.shotOrigin = new Map();
+    this.trails = new Map(); this.shotAge = new Map(); this.lastShot = new Map(); this.shotOrigin = new Map(); this.lanes = new Map(); this.missilePos = new Map();
     this.shake = 0; this.seed = 7; this.punch = null; this.whiteout = 0;
     this.prev = null; this.cur = scene.frameState(); this.hulls = []; this.hullGroups = [];
     this.introImg = null; this.introCanvas = null; this.lastIntro = null; this.introEnd = null;
@@ -310,17 +310,22 @@ export class FightRenderer {
       // melee effects are numbered afresh every frame: no muzzle flashes, and a trail only while
       // the sprite with that number keeps moving smoothly
       const melee = sp.id.startsWith('fx');
-      if (!before.has(sp.id) && !melee) this.muzzle(cx, cy, e.glow, sp.size);
+      if (!before.has(sp.id) && !melee && this.shotKind(sp) !== 'missile') this.muzzle(cx, cy, e.glow, sp.size);   // missiles flash at launch (homing)
       let tr = this.trails.get(sp.id) || [];
       const last = tr[tr.length - 1];
-      if (last && Math.hypot(last[0] - cx, last[1] - cy) > (melee ? 10 : 28)) tr = [];
+      if (last && Math.hypot(last[0] - cx, last[1] - cy) > (melee ? 10 : 28)) { tr = []; this.missilePos.delete(sp.id); }   // a new shot on the same track
       tr.push([cx, cy]); if (tr.length > 12) tr.shift();
       this.trails.set(sp.id, tr);
       this.lastShot.set(sp.id, { x: cx, y: cy, col: e.glow, size: sp.size, moved: tr.length > 2 && Math.hypot(tr[tr.length - 1][0] - tr[0][0], tr[tr.length - 1][1] - tr[0][1]) > 6 });
       // a slow, long-lived shot is a missile: it smokes
       const sp1 = tr.length > 1 ? Math.hypot(tr[tr.length - 1][0] - tr[tr.length - 2][0], tr[tr.length - 1][1] - tr[tr.length - 2][1]) : 0;
       const kind = this.shotKind(sp);
-      if (kind === 'missile' && tr.length > 1 && !this.reduced) {   // the Azoras's missiles always smoke
+      if (kind === 'missile') {   // the Azoras's missiles home in on their robot (homing), and always smoke
+        const m = this.homing(sp, cx, cy), [hx, hy] = m.at(cx, cy), prev = this.missilePos.get(sp.id), [px, py] = prev || [hx, hy];
+        this.missilePos.set(sp.id, [hx, hy]);
+        this.lastShot.set(sp.id, { ...this.lastShot.get(sp.id), x: hx, y: hy });
+        if (!this.reduced && prev) this.particles.push({ kind: 'smoke', x: px, y: py, vx: (this.rnd() - 0.5) * 0.25, vy: -0.05 - this.rnd() * 0.12, drag: 0.95, g: 0, r: 1.8 + this.rnd(), grow: 0.2, life: 30, max: 30, shade: 170, rot: this.rnd() * 6, vr: 0.02 });
+      } else if (sp1 > 0.4 && sp1 < 2.2 && age > 3 && !this.reduced) {
         const [tx, ty] = tr[tr.length - 2];
         this.particles.push({ kind: 'smoke', x: tx, y: ty, vx: (this.rnd() - 0.5) * 0.25, vy: -0.05 - this.rnd() * 0.12, drag: 0.95, g: 0, r: 1.8 + this.rnd(), grow: 0.2, life: 30, max: 30, shade: 170, rot: this.rnd() * 6, vr: 0.02 });
       } else if (sp1 > 0.4 && sp1 < 2.2 && age > 3 && !this.reduced) {
@@ -334,7 +339,7 @@ export class FightRenderer {
       if (seen.has(id)) continue;
       const s = this.lastShot.get(id);
       if (s && s.moved) this.impact(s.x, s.y, s.col);
-      this.trails.delete(id); this.shotAge.delete(id); this.lastShot.delete(id); this.shotOrigin.delete(id);
+      this.trails.delete(id); this.shotAge.delete(id); this.lastShot.delete(id); this.shotOrigin.delete(id); this.missilePos.delete(id);
     }
     for (const p of this.particles) {
       p.x += p.vx; p.y += p.vy; p.vx *= p.drag; p.vy = p.vy * p.drag + p.g; p.life--;
@@ -656,12 +661,57 @@ export class FightRenderer {
     ctx.restore();
     this.lights.push({ x: x + sp.size / 2, y: y + sp.size / 2, col: [255, 40, 40], i: 0.5, r: 40, life: 1, max: 1 });
   }
+  // A missile's homing path (the Azoras's slot 0; visual only). The recorded battery shots fly
+  // straight along lanes towards the robots, each lane's flight made of short-lived sprites; the
+  // missiles are drawn on one curve per lane instead: launched angled out and up from the hull,
+  // weaving a little (staggered per lane), then curving in onto the robot in that lane. A shot's
+  // place on the curve is its recorded progress from the hull to that robot, so the missile
+  // arrives on the frame the recorded shot would hit; past it (a miss) it flies on along the
+  // curve's end tangent. A lane is forgotten after 20 frames without shots (the next volley).
+  // Returns the lane's { at(x) -> [x, y] } for a recorded shot centre x.
+  homing(sp, cx, cy) {
+    const side = this.sideOf(sp), dir = side === 0 ? 1 : -1, f = this.cur.f, key = `${side}:${Math.round(cy / 4)}`;
+    const centre = (q) => [q.x + q.size / 2, q.y + q.size / 2];
+    let m = this.lanes.get(key);
+    if (!m || f - m.seen > 20) {
+      let h = 0; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      h = (h ^ (f * 2654435761)) >>> 0;
+      const own = (this.cur.sprites || []).filter((q) => !this.isFx(q) && this.sideOf(q) === side);
+      const edge = own.length ? (dir > 0 ? Math.max(...own.map((q) => q.x + q.size)) : Math.min(...own.map((q) => q.x))) : cx;
+      const ox = dir > 0 ? Math.min(cx, edge - 24) : Math.max(cx, edge + 24);
+      const foes = (this.cur.sprites || []).filter((q) => !this.isFx(q) && this.sideOf(q) !== side && (q.x + q.size / 2 - ox) * dir > 8);
+      let best = null, bd = Infinity;
+      for (const q of foes) { const [qx, qy] = centre(q), d = Math.abs(qy - cy) * 3 + Math.abs(qx - ox) * 0.25; if (d < bd) { bd = d; best = q; } }
+      m = { O: [ox, cy], tid: best && best.id, T: best ? centre(best) : [ox + dir * 140, cy], s: h & 1 ? 1 : -1, amp: 18 + (h >> 3) % 16, k: 1 + ((h >> 7) % 10) / 10, ph: ((h >> 11) % 628) / 100 };
+      this.lanes.set(key, m);
+      this.muzzle(ox, cy, [255, 180, 90], 10);   // launch
+    }
+    m.seen = f;
+    const cur = m.tid && (this.cur.sprites || []).find((q) => q.id === m.tid);
+    if (cur) m.T = centre(cur);
+    const [Ox, Oy] = m.O, [Tx, Ty] = m.T;
+    const C1 = [Ox + dir * 14, Oy - m.s * m.amp * 2.4], C2 = [Tx - dir * 34, Ty + m.s * m.amp * 0.6];
+    const bez = (t) => { const u = 1 - t; return [0, 1].map((i) => u * u * u * [Ox, Oy][i] + 3 * u * u * t * C1[i] + 3 * u * t * t * C2[i] + t * t * t * [Tx, Ty][i]); };
+    m.at = (x) => {
+      const span = Tx - Ox, t = Math.abs(span) > 1 ? (x - Ox) / span : 1;
+      if (t <= 1) {
+        const tt = Math.max(0, t), [bx, by] = bez(tt), w = Math.sin(tt * Math.PI * m.k * 2 + m.ph) * 5 * 4 * tt * (1 - tt);
+        const [ax, ay] = bez(Math.max(0, tt - 0.02)), nx = -(by - ay), ny = bx - ax, nl = Math.hypot(nx, ny) || 1;
+        return [bx + (nx / nl) * w, by + (ny / nl) * w];
+      }
+      const ex = Tx - C2[0], ey = Ty - C2[1], el = Math.hypot(ex, ey) || 1, over = (t - 1) * Math.abs(span);   // a miss flies on
+      return [Tx + (ex / el) * over, Ty + (ey / el) * over];
+    };
+    return m;
+  }
+
   // The Azoras's anti-robot weapon: a missile (white body, red nose, a flame behind) pointing
   // along its flight, in place of the borrowed battery shot.
   drawMissile(ctx, sp, x, y) {
-    const S = this.S, cx = (x + sp.size / 2) * S, cy = (y + sp.size / 2) * S, tr = this.trails.get(sp.id);
-    let ang = this.sideOf(sp) ? Math.PI : 0;
-    if (tr && tr.length > 1) { const [ax, ay] = tr[tr.length - 2], [bx, by] = tr[tr.length - 1]; if (Math.hypot(bx - ax, by - ay) > 0.2) ang = Math.atan2(by - ay, bx - ax); }
+    const S = this.S, m = this.lanes.get(`${this.sideOf(sp)}:${Math.round((y + sp.size / 2) / 4)}`), rx = x + sp.size / 2, ry = y + sp.size / 2, dir = this.sideOf(sp) ? -1 : 1;
+    // on its homing curve (homing()), rotated along its velocity there
+    const [hx, hy] = m && m.at ? m.at(rx, ry) : [rx, ry], [px, py] = m && m.at ? m.at(rx - dir * 1.5, ry) : [rx - dir, ry];
+    const cx = hx * S, cy = hy * S, ang = Math.atan2(hy - py, hx - px);
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.scale(1.6, 1.6);
     ctx.globalCompositeOperation = 'lighter';
     const fr = 6 * S; ctx.globalAlpha = 0.9; ctx.drawImage(blob(255, 150, 50), -9 * S - fr, -fr, fr * 2, fr * 2);
