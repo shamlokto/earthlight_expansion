@@ -13,6 +13,7 @@ import { decodeTile, paletteFromBytes, bgr555 } from '../gfx.js';
 import { InfoScreen } from './infoscreen.js';
 import { SFX, fireSfx } from '../audio/fightsfx.js';
 import { SHIP_ATTACKS, MELEE } from './fightdata.js';
+import { SINK } from './sinkdata.js';
 import { ownHullTiles, ownPoseBases, ownPoseTiles, ownPoseSet, ownHullSet } from '../art/own.js';
 
 const W = 256, H = 224;
@@ -170,6 +171,8 @@ function bodyTrack(s) {
   return parsed.get(s);
 }
 const clampAt = (arr, k) => arr[Math.max(0, Math.min(arr.length - 1, k))];
+// frames (from SINK.t0) where a sinking ship's explosions start: one $3F each
+const SINK_BOOMS = new Set(SINK.tracks.map(track).filter((t) => t.size === 32 && t.f[0] && t.f[0][2] === 192).map((t) => t.t0));
 
 // The recorded attack of a capital ship or structure: by type, weapon slot and target (small
 // craft or ship); null if none was captured (the modelled patterns below are used instead).
@@ -396,6 +399,7 @@ export class FightScene {
     for (const a of [...this.left, ...this.right]) {
       if (a.rec) end = Math.max(end, a.rec.black ?? SHIP_END);
       if (a.dies && a.tDie !== undefined) end = Math.max(end, a.tDie + 60);
+      if (a.ship && a.dies) end = Math.max(end, SINK.black);   // a sinking ship drifts out under explosions (sinkdata.js)
     }
     if (this.melee) {
       this.meleeHit = Math.min(...this.melee.fx.map((t) => track(t).t0));
@@ -432,6 +436,7 @@ export class FightScene {
       for (const a of acts) {
         if (a.dies && !a.ship && f === a.tDie) out.push(SFX.BOOM);
         if (a.ship && a.hits && f === a.bob) out.push(SFX.BOOM);
+        if (a.ship && a.dies && SINK_BOOMS.has(f - SINK.t0)) out.push(SFX.BOOM);   // $3F per explosion while it sinks
         if (a.struct && a.hits && f === T_FIRE + variant(side === this.leftSide ? this.rightSide.type : this.leftSide.type).hit) out.push(SFX.BOOM);
       }
     }
@@ -477,22 +482,22 @@ export class FightScene {
   }
 
   // One frame of a recorded track; `hold` keeps its last state after it ends.
-  drawTrack(img, s, f, mirror, hold = false, dy = 0) {
+  drawTrack(img, s, f, mirror, hold = false, dy = 0, dx = 0) {
     const t = track(s), k = f - t.t0;
     if (k < 0 || (k >= t.f.length && !hold)) return;
     const e = t.f[Math.min(k, t.f.length - 1)];
     if (!e) return;
     const tag = this.tagK;
     this.tagAs(`t${t.uid}`);
-    this.drawRec(img, e[0], e[1] + dy, e[2], e[3], t.size, t.row, mirror);
+    this.drawRec(img, e[0], e[1] + dy, e[2], e[3], t.size, t.row, mirror, dx);
     this.tagAs(tag);
   }
 
   // A recorded sprite: rows 0-2 belong to the attacker, 3-5 to the defender; mirrored, the
   // attacker's sprites move to the right side (x' = 255 - size - x, flipped, rows + 3).
-  drawRec(img, x, y, tile, fl, size, row, mirror) {
+  drawRec(img, x, y, tile, fl, size, row, mirror, dx = 0) {
     const right = (row >= 3) !== mirror;
-    this.drawSprite(img, right ? this.tilesR : this.tilesL, (right ? 256 : 0) + tile, mirror ? 255 - size - x : x, y, size,
+    this.drawSprite(img, right ? this.tilesR : this.tilesL, (right ? 256 : 0) + tile, (mirror ? 255 - size - x : x) + dx, y, size,
       mirror ? !(fl & 1) : !!(fl & 1), mirror ? (row + 3) % 6 : row, !!(fl & 2));
   }
 
@@ -548,12 +553,20 @@ export class FightScene {
   // modelled parts are laid out in left-side coordinates and mirrored (x' = 223 - x).
   drawShip(img, a, tiles, off, row, f) {
     const dir = a.right ? -1 : 1, X = (x) => (a.right ? 223 - x : x);
-    const dy = a.bob !== null && f >= a.bob ? bobAt(f - a.bob) : 0;
+    // a ship that sinks stops rocking and drifts out of the screen, 1 px every SINK.every frames
+    const sinking = a.dies && f > SINK.t0, out = sinking ? Math.min(SINK.steps, Math.floor((f - SINK.t0 - 1) / SINK.every) + 1) : 0;
+    const dy = !sinking && a.bob !== null && f >= a.bob ? bobAt(f - a.bob) : 0, sdx = a.right ? out : -out;
     // left-side x of the modelled hull: glides in at 1 px/frame, settling at frame 98
-    const lx = a.hx - Math.max(0, HULL_ARRIVE - f);
-    if (a.own && a.own.hull) this.drawOwnHull(img, a, f, dy, lx, X);
-    else if (a.hull) for (const t of a.hull.hull) this.drawTrack(img, t, f, a.right, true, dy);
+    const lx = a.hx - Math.max(0, HULL_ARRIVE - f) - out;
+    if (a.own && a.own.hull) this.drawOwnHull(img, a, f, dy, lx, X, sdx);
+    else if (a.hull) for (const t of a.hull.hull) this.drawTrack(img, t, f, a.right, true, dy, sdx);
     else for (const [dx, y, t, fl] of a.parts) this.drawSprite(img, tiles, off + t, X(lx + dx), y + dy, 32, a.right ? !(fl & 1) : !!(fl & 1), row, !!(fl & 2));
+    // ... under explosions and debris that keep bursting where it lay (recorded for the right side)
+    if (a.dies && f >= SINK.t0) {
+      const tag = this.tagK;
+      for (const t of SINK.tracks) this.drawTrack(img, t, f - SINK.t0, !a.right);
+      this.tagAs(tag);
+    }
     if (a.rec) {
       // recorded shots; the explosions on a ship or structure only when it is damaged
       const foe = a.right ? this.leftSide : this.rightSide;
@@ -570,10 +583,10 @@ export class FightScene {
   // A ship with its own fight hull (js/art/own.js; the expansion's Selene Kai): drawn as one
   // 128 px sprite where its look's hull would be this frame (the box around that hull's sprites,
   // found by recording them without drawing), facing the other side.
-  drawOwnHull(img, a, f, dy, lx, X) {
+  drawOwnHull(img, a, f, dy, lx, X, sdx = 0) {
     const saved = this.capture, tag = this.tagK;
     this.capture = [];
-    if (a.hull) for (const t of a.hull.hull) this.drawTrack(img, t, f, a.right, true, dy);
+    if (a.hull) for (const t of a.hull.hull) this.drawTrack(img, t, f, a.right, true, dy, sdx);
     else for (const [dx, y, t, fl] of a.parts) this.drawSprite(img, null, t, X(lx + dx), y + dy, 32, false, 0);
     const box = this.capture;
     this.capture = saved; this.tagAs(tag);

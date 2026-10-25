@@ -9,6 +9,9 @@
 //     flares, impact sparks
 //   * multi-stage explosions: flash, fireball, shockwave, embers, tumbling debris, rising smoke,
 //     scorch glow; heavy hits punch the camera in and shake it (not with reduced motion)
+//   * a sinking capital ship (the original's sink, js/game/sinkdata.js) breaks up: a chain of
+//     blasts walks down its hull, the hull splits into burning pieces that drift and tumble apart,
+//     and a last big blast flashes the screen; all of it scales with the ship's size
 //   * a cinematic frame: a painted deep-space backdrop (nebula and planet in the terrain's
 //     colours) behind the original terrain layers, which are set back with depth of field; light
 //     shafts, colour grading, letterbox bars and a HUD with each side's name and HP
@@ -16,6 +19,7 @@
 //   const fx = new FightRenderer(scene, canvas);   // after each scene.step(): fx.update();
 //   fx.render(alpha);                              // alpha: 0..1 between the last two steps
 import { remastered, UP, canvasOf, scale2x } from './fightart.js';
+import { SINK } from '../game/sinkdata.js';
 
 const W = 256, H = 224;
 const BOOM_TILES = new Set([192, 196, 200]);
@@ -78,6 +82,9 @@ export class FightRenderer {
     this.particles = []; this.lights = []; this.decals = [];
     this.trails = new Map(); this.shotAge = new Map(); this.lastShot = new Map(); this.shotOrigin = new Map(); this.lanes = new Map(); this.missilePos = new Map();
     this.shake = 0; this.seed = 7; this.punch = null; this.whiteout = 0;
+    // sides whose capital ship sinks in this fight, and its wreck once the sinking starts
+    this.sinking = [scene.left, scene.right].map((acts) => !!(acts[0] && acts[0].ship && acts[0].dies));
+    this.wrecks = [null, null];
     this.prev = null; this.cur = scene.frameState(); this.hulls = []; this.hullGroups = [];
     this.introImg = null; this.introCanvas = null; this.lastIntro = null; this.introEnd = null;
     this.hpShown = [this.scene.leftSide.hp, this.scene.rightSide.hp]; this.drain = [null, null];
@@ -355,6 +362,7 @@ export class FightRenderer {
     this.decals = this.decals.filter((d) => d.life > 0);
     this.shake *= 0.85; this.whiteout *= 0.8;
     if (this.punch) { this.punch.t++; if (this.punch.t > 40) this.punch = null; }
+    for (const w of this.wrecks) if (w) this.updateWreck(w, cur.f);
     this.updateHud(cur.f);
   }
 
@@ -399,6 +407,102 @@ export class FightRenderer {
     if (!this.reduced) {
       this.shake = Math.min(7, this.shake + (big ? 3.6 : 1.5));
       if (big && crowd === 1) { this.punch = { x, y, t: 0 }; this.whiteout = Math.min(0.22, this.whiteout + 0.14); }
+    }
+  }
+
+  // ---------------------------------------------------------------- a capital ship breaking up
+  // The hull picture (as drawn the frame the original starts to sink it) cut into pieces that
+  // break off one after another from the bow down, as a chain of blasts walks along it; then they
+  // drift outwards, tumble and burn out, and a last big blast flashes the screen.
+  makeWreck(it, x, y, side, f) {
+    const e = it.e, pw = e.c.width / UP, ph = e.c.height / UP, x0 = x - e.pad, y0 = y - e.pad;
+    const size = Math.max(0.8, Math.min(1.9, Math.sqrt(pw * ph) / 92));
+    const cols = Math.max(2, Math.min(5, Math.round(pw / 24))), rows = Math.max(2, Math.min(6, Math.round(ph / 26)));
+    const out = side ? 1 : -1, cx = x0 + pw / 2, cy = y0 + ph / 2, pieces = [];
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const sx = (i * pw) / cols, sy = (j * ph) / rows, sw = pw / cols, sh = ph / rows;
+      const px = x0 + sx + sw / 2, py = y0 + sy + sh / 2, ox = (px - cx) / pw, oy = (py - cy) / ph;
+      pieces.push({ sx, sy, sw, sh, x: px, y: py, vx: out * (0.08 + this.rnd() * 0.22) + ox * 0.35, vy: oy * 0.45 - 0.06 + (this.rnd() - 0.5) * 0.1,
+        rot: 0, vr: (this.rnd() - 0.5) * (this.reduced ? 0 : 0.035), free: f + 10 + j * 9 + (this.rnd() * 6 | 0), glow: 0, row: j });
+    }
+    // the finale's flagship (units.json `finale`, the Leviathan) goes the longest and the hardest:
+    // the chain runs the whole sinking, the hull breaks in three stages, then the core blows
+    const finale = !!(side ? this.scene.rightSide : this.scene.leftSide).finale;
+    if (finale) for (const p of pieces) p.free = f + [50, 125, 195][Math.min(2, Math.floor((p.row * 3) / rows))] + (this.rnd() * 14 | 0);
+    const chain = finale ? 40 : Math.round((6 + rows * 2) * size), step = finale ? 6 : 7;
+    return { e, side, born: f, x0, y0, pw, ph, size, pieces, chain, step, finale, last: f + (finale ? 262 : 12 + chain * step + 16) };
+  }
+  updateWreck(w, f) {
+    const k = f - w.born;
+    // the chain: blasts walking down the hull, a little faster than the pieces break off
+    if (k >= 8 && (k - 8) % w.step === 0 && (k - 8) / w.step < w.chain) {
+      const n = (k - 8) / w.step, u = w.finale ? (n * 0.37) % 1 : n / Math.max(1, w.chain - 1);   // the finale's blasts walk the hull over and over
+      const x = w.x0 + w.pw * (0.2 + 0.6 * this.rnd()), y = w.y0 + w.ph * (0.1 + 0.8 * u) + (this.rnd() - 0.5) * 10;
+      this.explode(x, y, [255, 150, 70], { x: x - 16, y: y - 16, size: 32 });
+    }
+    // the finale escalates: secondary blasts all over the hull, the ship shuddering harder
+    if (w.finale && k > 60 && f < w.last && k % (k > 180 ? 3 : 5) === 0 && !this.reduced) {
+      const x = w.x0 + w.pw * (0.1 + 0.8 * this.rnd()), y = w.y0 + w.ph * (0.05 + 0.9 * this.rnd());
+      this.explode(x, y, [255, 170, 90], { x: x - 16, y: y - 16, size: 32 });
+      this.shake = Math.max(this.shake, 1 + (k / 260) * 3);
+    }
+    if (w.finale && f > w.last && f < w.last + 70 && !this.reduced) this.shake = Math.max(this.shake, 6 * (1 - (f - w.last) / 70));   // the quake rolls on
+    // the last blast: the core goes up
+    if (f === w.last && w.finale) {   // the reactor: white-out, a huge shockwave, the wreck flung apart
+      const x = w.x0 + w.pw / 2, y = w.y0 + w.ph / 2;
+      for (let i = 0; i < (this.reduced ? 2 : 7); i++) this.explode(x + (this.rnd() - 0.5) * w.pw * 0.8, y + (this.rnd() - 0.5) * w.ph * 0.8, [255, 230, 180], { x: x - 16, y: y - 16, size: 32 });
+      this.particles.push({ kind: 'flash', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 190, life: 26, max: 26, col: [255, 252, 240] });
+      for (const sp2 of [1.6, 2.6, 3.8, 5.2]) this.particles.push({ kind: 'ring', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 8, speed: sp2, life: 60, max: 60, col: [255, 220, 170] });
+      for (let i = 0; i < (this.reduced ? 10 : 46); i++) {
+        const a = this.rnd() * Math.PI * 2, v = 1 + this.rnd() * 4.5;
+        this.particles.push({ kind: 'debris', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.985, g: 0.02, life: 80 + (this.rnd() * 60 | 0), max: 140, col: [90 + this.rnd() * 60, 80 + this.rnd() * 40, 80], rot: this.rnd() * 6, vr: (this.rnd() - 0.5) * 0.4, r: 1.5 + this.rnd() * 3, hot: this.rnd() < 0.7 });
+      }
+      this.lights.push({ x, y, col: [255, 230, 200], i: 4, r: 340, life: 50, max: 50 });
+      if (!this.reduced) { this.whiteout = 0.95; this.shake = 7; this.punch = { x, y, t: 0 }; }
+      for (const p of w.pieces) { p.free = Math.min(p.free, f); p.vx = p.vx * 2.6 + (p.x - x) * 0.012; p.vy = p.vy * 2.6 + (p.y - y) * 0.012; p.vr *= 2.5; p.glow = 1; }
+    } else if (f === w.last) {
+      const x = w.x0 + w.pw / 2, y = w.y0 + w.ph / 2, s = w.size;
+      for (let i = 0; i < (this.reduced ? 1 : 3); i++) this.explode(x + (this.rnd() - 0.5) * 20 * s, y + (this.rnd() - 0.5) * 30 * s, [255, 200, 120], { x: x - 16, y: y - 16, size: 32 });
+      this.particles.push({ kind: 'flash', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 70 * s, life: 14, max: 14, col: [255, 245, 220] });
+      for (const sp2 of [2.2, 3.4]) this.particles.push({ kind: 'ring', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 6, speed: sp2 * s, life: 30, max: 30, col: [255, 210, 160] });
+      this.lights.push({ x, y, col: [255, 190, 120], i: 3, r: 200 * s, life: 30, max: 30 });
+      if (!this.reduced) { this.whiteout = Math.min(0.55, this.whiteout + 0.4); this.shake = 7; this.punch = { x, y, t: 0 }; }
+      for (const p of w.pieces) { p.vx *= 1.8; p.vy *= 1.8; p.vr *= 1.5; }
+    }
+    for (const p of w.pieces) {
+      if (f < p.free) continue;
+      if (f === p.free) {
+        p.glow = 1;
+        if (!this.reduced) for (let i = 0; i < 5; i++) {
+          const a = this.rnd() * Math.PI * 2, v = 0.6 + this.rnd() * 1.8;
+          this.particles.push({ kind: 'spark', x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.9, g: 0.03, life: 10 + (this.rnd() * 10 | 0), max: 20, col: [255, 190, 110] });
+        }
+      }
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.glow *= 0.985;
+      // burning pieces trail smoke and embers
+      if (!this.reduced && (f + (p.sx | 0)) % (w.finale ? 2 : 4) === 0 && f < w.born + 360) {
+        this.particles.push({ kind: 'smoke', x: p.x, y: p.y, vx: -p.vx * 0.3, vy: -0.1 - this.rnd() * 0.1, drag: 0.97, g: 0, r: (2.5 + this.rnd() * 2.5) * w.size, grow: 0.15, life: 40, max: 40, shade: 50 + (this.rnd() * 30 | 0), rot: this.rnd() * 6, vr: 0.02 });
+        this.particles.push({ kind: 'ember', x: p.x + (this.rnd() - 0.5) * p.sw * 0.6, y: p.y + (this.rnd() - 0.5) * p.sh * 0.6, vx: (this.rnd() - 0.5) * 0.5, vy: -0.2 - this.rnd() * 0.3, drag: 0.95, g: 0, life: 14, max: 14, col: [255, 140, 60], r: 1.3 });
+      }
+    }
+  }
+  drawWreck(ctx, w, f, alpha) {
+    const S = this.S, e = w.e, fade = Math.max(0, Math.min(1, 1 - (f - (w.born + (w.finale ? 330 : 240))) / 80));
+    if (fade <= 0) return;
+    for (const p of w.pieces) {
+      const loose = f >= p.free, a = loose ? alpha : 0;
+      const x = p.x + (loose ? p.vx * a : 0), y = p.y + (loose ? p.vy * a : 0);
+      const jx = !loose && !this.reduced && f >= w.born ? (this.rnd() - 0.5) * (w.finale ? 0.8 + (f - w.born) / 60 : 0.8) : 0;   // the hull shudders before it splits
+      ctx.save();
+      ctx.translate((x + jx) * S, y * S); ctx.rotate(p.rot + (loose ? p.vr * a : 0));
+      ctx.globalAlpha = fade;
+      ctx.drawImage(e.c, p.sx * UP, p.sy * UP, p.sw * UP, p.sh * UP, (-p.sw / 2) * S, (-p.sh / 2) * S, p.sw * S, p.sh * S);
+      if (p.glow > 0.05) {   // hot torn edges
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fade * p.glow * 0.8;
+        const r = Math.max(p.sw, p.sh) * 0.7 * S;
+        ctx.drawImage(blob(255, 120, 40), -r, -r, r * 2, r * 2);
+      }
+      ctx.restore();
     }
   }
 
@@ -531,6 +635,13 @@ export class FightRenderer {
       if (G.e) items.push({ e: G.e, sp: G.first, ox: G.x0 - G.first.x, oy: G.y0 - G.first.y });
     }
     const place = (it) => { const [x, y] = pos(it.sp); return [x + it.ox, y + it.oy]; };
+    // a sinking ship: from the original's sink frame its hull is a wreck breaking up (makeWreck)
+    if (st.f >= SINK.t0) for (const side of [0, 1]) {
+      if (!this.sinking[side]) continue;
+      const hull = (it) => !it.fx && it.e && this.sideOf(it.sp) === side && (groupOf.has(it.sp.id) || /^[LR]\d+own#/.test(it.sp.id));
+      if (!this.wrecks[side]) { const it = items.find(hull); if (it) { const [x, y] = place(it); this.wrecks[side] = this.makeWreck(it, x, y, side, st.f); } }
+      for (let i = items.length - 1; i >= 0; i--) if (hull(items[i])) items.splice(i, 1);
+    }
     const blit = (c, x, y, pad) => ctx.drawImage(c, (x - pad) * S, (y - pad) * S, (c.width / UP) * S, (c.height / UP) * S);
     // shadows
     for (const it of items) {
@@ -573,6 +684,7 @@ export class FightRenderer {
         ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
       }
     }
+    for (const w of this.wrecks) if (w) this.drawWreck(ctx, w, st.f, alpha);
     this.drawParticles(ctx, S, t);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(this.overlay, 0, 0);
