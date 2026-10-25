@@ -26,13 +26,13 @@ for (let y = 1; y <= ROWS; y++) { set(22 + (y % 2), y, 'm'); set(23 + (y % 2), y
 
 export default {
   name: 'KNIVES', title: 'Night of Knives', screens: [2, 1],
-  objective: { kind: 'escape', edge: 'east', count: 2 }, turnLimit: 12, cap: 7, music: 0,
+  objective: { kind: 'escape', edge: 'east', count: 2 }, turnLimit: 12, cap: 8, music: 0,
   goal: 'Get the General and two more units off the east edge.',
   chapter: 'Chapter 1 · Olympos, the night of the parade',
   briefing: `
 Olympos, the night of the victory parade. The Galt war is over, the Union's fleets fill the sky, and the man on the review stand beside you has just ordered your arrest. Marshal Oren Kessrin's Security Directorate is taking the station deck by deck. The Council is dead or under guard. You are next on his list.
 
-Not everyone on the parade deck obeyed. Five crews powered up their machines when the shooting started, and they're waiting for your orders. Captain Sato has the light carrier Selene out past the magnetic band, engines hot.
+Not everyone on the parade deck obeyed. Six crews powered up their machines when the shooting started, and they're waiting for your orders. Captain Sato has the light carrier Selene out past the magnetic band, engines hot.
 
 Two gates lead out of the deck. A Hydra battery on the turret railway covers both. Past the railway there's an asteroid screen, then the magnetic band, then open space and the Selene. Directorate destroyers are already moving to close that gap.
 
@@ -40,7 +40,7 @@ Get out. Bring as many as you can.`,
   comms: [
     { speaker: 'kessrin', text: 'General. You will find the gates locked and your officers reassigned. Stand down, and history will remember you kindly. I will see to that personally.' },
     { speaker: 'sato', text: 'Selene is past the magnetic band, holding position. I can wait twelve turns, General. Not thirteen.' },
-    { speaker: 'arkin', text: 'Five machines and a parade full of Directorate guns. I like these odds better than the review stand.' },
+    { speaker: 'arkin', text: 'Six machines and a parade full of Directorate guns. I like these odds better than the review stand.' },
     { speaker: 'ruess', text: 'That Hydra on the railway can\'t move and can\'t turn its back. Go past it fast, or go around through the rocks.' },
   ],
   strategy: [
@@ -66,13 +66,13 @@ Get out. Bring as many as you can.`,
 ..M.m.....h..................
 ..S...........f.........Cf...
 ..L...........u..............
-..M...........t..............
+..MA..........t..............
 .........................f...
 .............................
 .............................`,
   legend: {
     G: { type: 4, army: 0, general: true },   // Athena, the General's machine
-    M: { type: 0, army: 0 }, T: { type: 1, army: 0 }, L: { type: 8, army: 0 },
+    M: { type: 0, army: 0 }, T: { type: 1, army: 0 }, L: { type: 8, army: 0 }, A: { type: 1, army: 0 },
     S: { type: 3, army: 0 },                  // Medusa
     C: { type: 38, army: 0 },                 // Selene, Captain Sato's light carrier, waiting in the band
     m: { type: 0, army: 1 }, t: { type: 2, army: 1 }, u: { type: 51, army: 1 }, f: { type: 49, army: 1 },
