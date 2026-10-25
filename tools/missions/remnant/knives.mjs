@@ -1,7 +1,8 @@
 // Remnant 1, Night of Knives (docs/STORY.md): Kessrin's coup at the Olympos victory parade. The
 // General breaks out of the parade deck with the crews that follow and runs east, through the
 // station's outer works and an asteroid screen, to the Selene waiting past the magnetic band.
-// Small and tense: Union guards close in from the west, a Hydra on the turret railway covers
+// Small and tense (eased after the owner's playtests, 2026-10-25: no guards start inside the
+// deck, a lighter screen, two more crews, 14 turns): Union guards close in from the west, a Hydra on the turret railway covers
 // the deck's east gate, and destroyers hold the far side; the garrison comes out on turn 4 and
 // hunts the carrier.
 const COLS = 29, ROWS = 10;
@@ -26,54 +27,56 @@ for (let y = 1; y <= ROWS; y++) { set(22 + (y % 2), y, 'm'); set(23 + (y % 2), y
 
 export default {
   name: 'KNIVES', title: 'Night of Knives', screens: [2, 1],
-  objective: { kind: 'escape', edge: 'east', count: 2 }, turnLimit: 12, cap: 7, music: 0,
+  objective: { kind: 'escape', edge: 'east', count: 2 }, turnLimit: 14, cap: 8, music: 0,
   goal: 'Get the General and two more units off the east edge.',
   chapter: 'Chapter 1 · Olympos, the night of the parade',
   briefing: `
 Olympos, the night of the victory parade. The Galt war is over, the Union's fleets fill the sky, and the man on the review stand beside you has just ordered your arrest. Marshal Oren Kessrin's Security Directorate is taking the station deck by deck. The Council is dead or under guard. You are next on his list.
 
-Not everyone on the parade deck obeyed. Five crews powered up their machines when the shooting started, and they're waiting for your orders. Captain Sato has the light carrier Selene out past the magnetic band, engines hot.
+Not everyone on the parade deck obeyed. Seven crews powered up their machines when the shooting started, and they're waiting for your orders. Captain Sato has the light carrier Selene out past the magnetic band, engines hot.
 
 Two gates lead out of the deck. A Hydra battery on the turret railway covers both. Past the railway there's an asteroid screen, then the magnetic band, then open space and the Selene. Directorate destroyers are already moving to close that gap.
 
 Get out. Bring as many as you can.`,
   comms: [
     { speaker: 'kessrin', text: 'General. You will find the gates locked and your officers reassigned. Stand down, and history will remember you kindly. I will see to that personally.' },
-    { speaker: 'sato', text: 'Selene is past the magnetic band, holding position. I can wait twelve turns, General. Not thirteen.' },
-    { speaker: 'arkin', text: 'Five machines and a parade full of Directorate guns. I like these odds better than the review stand.' },
+    { speaker: 'sato', text: 'Selene is past the magnetic band, holding position. I can wait fourteen turns, General. Not fifteen.' },
+    { speaker: 'arkin', text: 'Seven machines and a parade full of Directorate guns. I like these odds better than the review stand.' },
     { speaker: 'ruess', text: 'That Hydra on the railway can\'t move and can\'t turn its back. Go past it fast, or go around through the rocks.' },
   ],
   strategy: [
-    'Leave the deck by both gates at once, so the Hydra can only shoot at one group.',
-    'The asteroid screen slows the guards behind you; mecha cross it, ships go around it.',
-    'Shelter in the magnetic band: the destroyers\' beams can\'t touch a ship inside it.',
-    'The garrison comes out on turn 4 and hunts the Selene. Keep moving east; don\'t turn and fight.',
-    'Only the General and two others have to make it. Machines aboard the Selene leave with her, so a carrier run can carry three at once.',
+    'Turn 1: send the Lobster out of the north gate and right up to the Hydra on the railway. Its missiles need two hexes, so it can\'t shoot back at a unit next to it, and it barely dodges.',
+    'Keep the General inside the deck until the Hydra is gone; then leave by both gates together.',
+    'Two Union machines hold the asteroid screen. Pass north of it with the General (the Athena flies 9) while the mecha and the Crane keep them busy.',
+    'The Selene waits in the magnetic band, where beams can\'t touch her. Bring her west to meet you: units that board her escape with her, the General included.',
+    'The garrison comes out behind you on turn 4 and runs for the Selene. Don\'t turn and fight; only the General and two others have to get off the east edge.',
   ],
   plan: [
-    { n: 1, path: [[7, 3], [12, 3], [15, 2]] }, { n: 1, path: [[7, 8], [12, 8], [15, 9]] },
-    { n: 3, path: [[20, 5], [23, 5], [28, 5]] }, { n: 2, at: [17, 5], note: 'Asteroid screen' },
-    { n: 4, at: [3, 5], note: 'Garrison, turn 4' },
+    { n: 1, path: [[3, 6], [9, 3], [10, 4]] }, { n: 3, path: [[4, 3], [9, 3], [14, 1], [21, 2]] },
+    { n: 4, path: [[25, 5], [21, 4]] }, { n: 3, at: [15, 5], note: 'Screen' },
+    { n: 5, at: [3, 5], note: 'Garrison, turn 4' },
   ],
   //          11111111112222222222
   // 12345678901234567890123456789
   terrain: '\n' + grid.map((r) => r.join('')).join('\n'),
   units: `
 .............................
-...m.........................
-..TG..........t..............
-..M.m.....h..................
-..S...........f.........Cf...
-..L...........u..............
-..M...........t..............
-.........................f...
 .............................
+..TG..........t..............
+..M.......h..................
+..S.C...................K....
+..L..........................
+..MA..........f..............
+.............................
+.........................f...
 .............................`,
   legend: {
     G: { type: 4, army: 0, general: true },   // Athena, the General's machine
     M: { type: 0, army: 0 }, T: { type: 1, army: 0 }, L: { type: 8, army: 0 },
     S: { type: 3, army: 0 },                  // Medusa
-    C: { type: 38, army: 0 },                 // Selene, Captain Sato's light carrier, waiting in the band
+    C: { type: 9, army: 0 },                  // Crane
+    A: { type: 1, army: 0 },                  // Titan
+    K: { type: 38, army: 0 },                 // Selene, Captain Sato's light carrier, waiting in the band
     m: { type: 0, army: 1 }, t: { type: 2, army: 1 }, u: { type: 51, army: 1 }, f: { type: 49, army: 1 },
     h: { type: 24, army: 1 },                 // Hydra battery on the turret railway
   },
