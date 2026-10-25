@@ -44,12 +44,11 @@ Get out. Bring as many as you can.`,
     { speaker: 'ruess', text: 'That Hydra on the railway can\'t move and can\'t turn its back. Go past it fast, or go around through the rocks.' },
   ],
   strategy: [
-    'The Hydra on the railway needs two hexes to fire its missiles: a unit right next to it is safe, and it barely dodges. Send the Lobster out early to kill it.',
-    'Leave the deck by both gates at once, so the Hydra can only shoot at one group.',
-    'The asteroid screen slows the guards behind you; mecha cross it, ships go around it.',
-    'Shelter in the magnetic band: the destroyers\' beams can\'t touch a ship inside it.',
-    'The garrison comes out on turn 6 and hunts the Selene. Keep moving east; don\'t turn and fight.',
-    'Only the General and two others have to make it. Machines aboard the Selene leave with her, so a carrier run can carry three at once.',
+    'Hit and run (the owner\'s winning plan): strike with the Cerberus and Fenrir ships, then pull back before the Union can answer.',
+    'Lure the Union machines back toward the parade deck and the garrison and kill them there, one group at a time, instead of pushing into the screen.',
+    'Ships are your best tools here: they shrug off the Hydra\'s missiles far better than mecha. Titans help, Mars and Medusas don\'t.',
+    'Once the screen is broken, run for the magnetic band: the destroyers\' beams can\'t touch a ship inside it.',
+    'Only the General and two others have to make it off the east edge. Machines aboard the Selene leave with her.',
   ],
   plan: [
     { n: 1, path: [[7, 3], [12, 3], [15, 2]] }, { n: 1, path: [[7, 8], [12, 8], [15, 9]] },
@@ -63,17 +62,16 @@ Get out. Bring as many as you can.`,
 .............................
 ...m.........................
 ..TG..........t..............
-..M.m.....h..................
-..S...........f.........Cf...
+..R.m.....h..................
+..F...........f.........Cf...
 ..L...........u..............
-..MA..........t..............
+..RF..........t..............
 .........................f...
 .............................
 .............................`,
   legend: {
     G: { type: 4, army: 0, general: true },   // Athena, the General's machine
-    M: { type: 0, army: 0 }, T: { type: 1, army: 0 }, L: { type: 8, army: 0 }, A: { type: 1, army: 0 },
-    S: { type: 3, army: 0 },                  // Medusa
+    M: { type: 0, army: 0 }, T: { type: 1, army: 0 }, L: { type: 8, army: 0 }, R: { type: 50, army: 0 }, F: { type: 49, army: 0 },   // Cerberus and Fenrir: ships the Hydra's missiles can't wreck as easily (owner's playtest)
     C: { type: 38, army: 0 },                 // Selene, Captain Sato's light carrier, waiting in the band
     m: { type: 0, army: 1 }, t: { type: 2, army: 1 }, u: { type: 51, army: 1 }, f: { type: 49, army: 1 },
     h: { type: 24, army: 1 },                 // Hydra battery on the turret railway
