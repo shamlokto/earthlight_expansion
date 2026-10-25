@@ -3,7 +3,7 @@
 // station's outer works and an asteroid screen, to the Selene waiting past the magnetic band.
 // Small and tense (eased after the owner's playtests, 2026-10-25: no guards start inside the
 // deck, a lighter screen, two more crews, 14 turns): Union guards close in from the west, a Hydra on the turret railway covers
-// the deck's east gate, and destroyers hold the far side; the garrison comes out on turn 4 and
+// the deck's east gate, and destroyers hold the far side; the garrison comes out on turn 6 and
 // hunts the carrier.
 const COLS = 29, ROWS = 10;
 const grid = Array.from({ length: ROWS }, () => new Array(COLS).fill('.'));
@@ -49,12 +49,12 @@ Get out. Bring as many as you can.`,
     'Keep the General inside the deck until the Hydra is gone; then leave by both gates together.',
     'Two Union machines hold the asteroid screen. Pass north of it with the General (the Athena flies 9) while the mecha and the Crane keep them busy.',
     'The Selene waits in the magnetic band, where beams can\'t touch her. Bring her west to meet you: units that board her escape with her, the General included.',
-    'The garrison comes out behind you on turn 4 and runs for the Selene. Don\'t turn and fight; only the General and two others have to get off the east edge.',
+    'The garrison comes out behind you on turn 6 and runs for the Selene. Don\'t turn and fight; only the General and two others have to get off the east edge.',
   ],
   plan: [
     { n: 1, path: [[3, 6], [9, 3], [10, 4]] }, { n: 3, path: [[4, 3], [9, 3], [14, 1], [21, 2]] },
     { n: 4, path: [[25, 5], [21, 4]] }, { n: 3, at: [15, 5], note: 'Screen' },
-    { n: 5, at: [3, 5], note: 'Garrison, turn 4' },
+    { n: 5, at: [3, 5], note: 'Garrison, turn 6' },
   ],
   //          11111111112222222222
   // 12345678901234567890123456789
@@ -81,5 +81,6 @@ Get out. Bring as many as you can.`,
     h: { type: 24, army: 1 },                 // Hydra battery on the turret railway
   },
   // the deck's guards come out of the barracks behind you on turn 4 and run for the carrier
-  arrivals: [{ turn: 3, army: 1, units: [{ type: 2, x: 2, y: 2, chase: 'carriers' }, { type: 0, x: 2, y: 9, chase: 'carriers' }, { type: 3, x: 3, y: 9, chase: 'carriers' }] }],
+  // (owner, 2026-10-25: on turn 6, not 4)
+  arrivals: [{ turn: 5, army: 1, units: [{ type: 2, x: 2, y: 2, chase: 'carriers' }, { type: 0, x: 2, y: 9, chase: 'carriers' }, { type: 3, x: 3, y: 9, chase: 'carriers' }] }],
 };
