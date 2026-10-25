@@ -652,7 +652,8 @@ the General aboard caps at 96), move 5. Fights with the Athena's moves (`look` 4
 each weapon keeps its slot's choreography). Own art, `tools/art/pallas.mjs` → `js/art/pallas.js`:
 three sets (jet, spent jet, robot), each with a picture, map icon and fight poses for the Athena
 sheet tiles its choreography draws (jet 0; spent jet 0, 64; robot 0/4/8/12/64 on the slot-0 sheet
-and, as `poses2`, 0-12/64/68/72/76/128 on the sabre sheet the other slots load).
+and, as `poses2`, 0-12/64/68/72/76/128 on the sabre sheet the other slots load). The robot's poses, picture and icon are placed pixel by pixel
+(`tools/art/pallas-pixels.mjs`: hand-drawn parts composed per pose, real-robot proportions).
 
 **Leviathan and Directorate Talos** (owner, 2026-10-24; the new campaign's Union units, docs/STORY.md).
 Both are `unionOnly` (never in the market) and have their own art, drawn the same way:
