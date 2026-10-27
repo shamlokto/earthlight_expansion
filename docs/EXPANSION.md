@@ -679,3 +679,39 @@ the armoured body with its visor slit) with the Vulcan's beam cannon (a ringed e
 underneath, fed by blue capacitor orbs on the flank). It keeps the Phoibos's choreography (`look`
 15); its poses stand in for the Phoibos sheet's tiles 0 (level), 4 and 8 (barrels rising) and 12
 (full elevation, recoil jets firing), the only 32x32 poses that sheet's fights draw. Stats unchanged.
+
+## Kai refits and a larger finale (owner, 2026-10-27)
+
+Late in the campaign supply piles up with nothing worth buying: the strong units are unique and the
+deployment cap limits how many machines go to battle. The Kai refits are strong machines that are
+**not unique**, so supply turns into a better team rather than a bigger one. Trade the old machine
+in and pay the difference; the pilot keeps their level. Unlocked from the intermission before
+mission 9 of the Galt remnant (index `unlocks` of mission 8); the Classic campaign has every
+machine from mission 8 anyway (`allFrom`).
+
+| type | unit | look | stats (base unit in brackets) | price |
+|---|---|---|---|---|
+| 66 | Lobster Kai FS-41K, interceptor | Lobster | move 12 (10), evasion 40% (30%); beam 128 (102) at 1; **new** W3 missile 77 at 1, which can hit ships | 32 |
+| 67 | Crane Kai FFA-81K, fighter-bomber | Crane | move 10 (9), evasion 60% (50%); railgun 77 (58) at 1; ship missile 128 (77) at **1–2** | 32 |
+| 68 | Titan Kai HU-NN7K, long-range mecha | Titan | evasion 40% (30%); railgun 102 (77) at **2–4**; **new** W2 railgun 90 at 2–3 against ships; railgun 64 (45) at 1 | 40 |
+
+Forecasts (pilot level 5, open space, against the finale's level-3 Union and level-6 Directorate
+Talos): about 25-40% more damage than the base machine, still well below the Pallas; the Crane
+Kai hits a Tiamat for about 7 from two hexes without a counter (the Pallas's torpedo: 13).
+
+**Art**: each has its own unit-info picture and map icon (`ownArt`, `js/art/kai.js`, written by
+`tools/art/kai-refits.mjs`); fights use the base unit's sprites and choreography (`look`). The
+pictures were generated with xAI's image model (`tools/art/xai-gen.py`; prompts and the chosen
+sources in `tools/art/kai/`, with the Pallas and Directorate Talos pictures as style references)
+and reduced to 96x96 with 32 colours and an outline (`tools/art/kai-convert.py`). The map icons are
+drawn from shapes after generated side views, since 24x16 needs every pixel placed. 14 of the
+owner's 100-image budget used.
+
+**Finale (Kessrin)**: more enemies to match. On the map: two more Directorate Talos pickets, two
+Corvus, two Regulus, two Cranes and two Lobsters (32 → 42 units), and each Artemis carries one
+more Crane. Reserves: two Lobsters more on turn 6; a new carrier group from the north-east on turn
+8 (Hastur with a Lobster and a Crane aboard, two Hannibals, two Fenrirs, a Corvus); a Tiamat and two
+Directorate Talos more on turn 11; eight Directorate Talos (was six) escort the Leviathan. 57 → 84
+enemy machines in all. `missions/remnant/kessrin.json` was regenerated from
+`tools/missions/remnant/kessrin.mjs` with the terrain kept as built (the builder needs the ROM; the
+rebuild reproduced the old file byte for byte before the change).

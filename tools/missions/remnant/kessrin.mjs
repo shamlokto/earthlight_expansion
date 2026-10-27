@@ -6,7 +6,7 @@
 //   * Kessrin's guard: Directorate Talos (level-6 Talos), two Abaddons, two battleships, cruisers;
 //     two carriers put out fighters on the first turn;
 //   * the atmosphere and Earth along the south edge (nothing inside the atmosphere can be
-//     targeted); Directorate reserves on turns 6 and 11; the Olympos garrison joins on turn 13, on afterburners.
+//     targeted); Directorate reserves on turns 6, 8 and 11; the Olympos garrison joins on turn 13, on afterburners.
 // Objective: sink the Leviathan within 30 turns. It arrives on turn 14. Epilogue by the campaign's choice (deal/refuse).
 const COLS = 59, ROWS = 40;
 const g = Array.from({ length: ROWS }, () => new Array(COLS).fill('.'));
@@ -65,6 +65,13 @@ place('W', [[39, 33], [50, 9]]);
 place('n', [[36, 10], [36, 25]]);
 place('e', [[30, 21], [32, 15]]);
 place('h', [[35, 17], [36, 27], [33, 6], [52, 18], [45, 30]]);
+// the last stand (owner, 2026-10-27: the finale wants more enemies once the Kai refits are in
+// production): more pickets, cruisers and fighters in front of the ring
+place('o', [[28, 11], [28, 24]]);
+place('c', [[39, 15], [39, 21]]);
+place('n', [[35, 8], [35, 28]]);
+place('l', [[47, 8], [47, 28]]);
+place('r', [[34, 16], [34, 19]]);
 const units = rows.map((_, j) => Array.from({ length: COLS }, (_, i) => U[`${i + 1},${j + 1}`] || '.').join('')).join('\n');
 
 export default {
@@ -85,8 +92,8 @@ export default {
     "Kill the two Abaddons in front of the gravity ring with fighters before any of your capital ships comes within four hexes of them.",
     "The gravity ring opens to the west and the north-east. Hold the west opening with the mecha while a fast group swings around to the north-east.",
     "Bring your own Abaddon up behind the mecha. From four hexes away its Decimator ends the Leviathan and everything next to it. Don't move it on the turn it fires.",
-    "His fast units come for the general at once: keep that machine in the second line and let them break on your mecha. His battleships, cruisers and Abaddons hold the ring until the Leviathan comes. Reserves arrive from the east on turns 6 and 11. Hold on: the Olympos garrison joins you on turn 13 on afterburners (detach them to fight).",
-    "Kessrin holds the Leviathan back until turn 14, then brings it in from the east with six Directorate Talos. Have your Abaddon and your best guns ready for it.",
+    "His fast units come for the general at once: keep that machine in the second line and let them break on your mecha. His battleships, cruisers and Abaddons hold the ring until the Leviathan comes. Reserves arrive from the east on turns 6 and 11, and a carrier group from the north-east on turn 8. Hold on: the Olympos garrison joins you on turn 13 on afterburners (detach them to fight).",
+    "Kessrin holds the Leviathan back until turn 14, then brings it in from the east with eight Directorate Talos. Have your Abaddon and your best guns ready for it.",
   ],
   plan: [
     { n: 1, path: [[8, 9], [22, 9], [34, 10]] },
@@ -97,6 +104,7 @@ export default {
     { n: 3, path: [[30, 18], [39, 18]] },
     { n: 4, path: [[5, 21], [22, 18], [36, 18]] },
     { n: 5, at: [58, 20], note: 'Reserves T6, T11' },
+    { n: 5, at: [54, 3], note: 'Carrier group T8' },
     { n: 5, at: [3, 2], note: 'Olympos T7' },
   ],
   briefing: `
@@ -168,17 +176,20 @@ The Union comes home, poorer and owing nobody.`,
     n: { type: 9, army: 1 },                  // Crane
     e: { type: 3, army: 1 },                  // Medusa
   },
-  cargo: { '53,12': [8, 9, 10], '53,24': [8, 9, 10] },
+  cargo: { '53,12': [8, 9, 10, 9], '53,24': [8, 9, 10, 9] },
   // the light units hunt the general (chaseGeneral); battleships, cruisers and Abaddons hold until
   // turn 14 (hold); the carriers keep to the ring
   routes: [[37, 16], [37, 20], [40, 11], [40, 25], [34, 14], [34, 22], [51, 10], [51, 26], [42, 18]].map(([x, y]) => ({ prio: 1, x, y })),
   arrivals: [
     // the boss: the Leviathan and its Directorate guard, from the east on turn 14
     // the Leviathan is a carrier-battlecruiser: two more Directorate Talos ride aboard
-    { turn: 13, army: 1, units: [{ type: 59, x: LX + 10, y: LY, cargo: [60, 60] }, ...[[-2, 0], [2, 0], [-1, -2], [1, -2], [-1, 2], [1, 2]].map(([dx, dy]) => ({ type: 60, x: LX + 10 + dx, y: LY + dy, level: 6 }))] },
-    // Directorate reserves from the east, turns 6 and 11
-    { turn: 5, army: 1, units: [{ type: 39, x: 59, y: 14 }, { type: 39, x: 59, y: 22 }, { type: 49, x: 58, y: 10 }, { type: 2, x: 59, y: 18 }, { type: 3, x: 58, y: 26 }] },
-    { turn: 10, army: 1, units: [{ type: 31, x: 59, y: 18 }, { type: 42, x: 58, y: 12 }, { type: 42, x: 58, y: 24 }, { type: 49, x: 59, y: 30 }, { type: 51, x: 59, y: 6 }] },
+    { turn: 13, army: 1, units: [{ type: 59, x: LX + 10, y: LY, cargo: [60, 60] }, ...[[-2, 0], [2, 0], [-1, -2], [1, -2], [-1, 2], [1, 2], [0, -4], [0, 4]].map(([dx, dy]) => ({ type: 60, x: LX + 10 + dx, y: LY + dy, level: 6 }))] },
+    // Directorate reserves from the east, turns 6 and 11, and from the north-east on turn 8
+    { turn: 5, army: 1, units: [{ type: 39, x: 59, y: 14 }, { type: 39, x: 59, y: 22 }, { type: 49, x: 58, y: 10 }, { type: 2, x: 59, y: 18 }, { type: 3, x: 58, y: 26 },
+      { type: 8, x: 58, y: 8 }, { type: 8, x: 58, y: 28 }] },
+    { turn: 7, army: 1, units: [{ type: 33, x: 56, y: 2, cargo: [8, 9] }, { type: 39, x: 52, y: 1 }, { type: 39, x: 58, y: 4 }, { type: 49, x: 50, y: 2 }, { type: 49, x: 58, y: 6 }, { type: 42, x: 54, y: 3 }] },
+    { turn: 10, army: 1, units: [{ type: 31, x: 59, y: 18 }, { type: 42, x: 58, y: 12 }, { type: 42, x: 58, y: 24 }, { type: 49, x: 59, y: 30 }, { type: 51, x: 59, y: 6 },
+      { type: 30, x: 57, y: 15 }, { type: 60, x: 57, y: 21, level: 6 }, { type: 60, x: 57, y: 9, level: 6 }] },
     // the Olympos garrison joins the remnant from the north-west on turn 13, just before the
     // Leviathan: a strong group on afterburners (fast, but they must detach them to fight)
     { turn: 12, army: 0, units: [{ type: 30, x: 3, y: 1 }, { type: 31, x: 6, y: 1 }, { type: 31, x: 1, y: 4 }, { type: 42, x: 9, y: 1 }, { type: 42, x: 1, y: 7 },

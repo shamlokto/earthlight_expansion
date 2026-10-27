@@ -70,7 +70,10 @@
   "Pallas",
   "Pallas",
   "Pallas",
-  "Pallas"
+  "Pallas",
+  "Lobster Kai",
+  "Crane Kai",
+  "Titan Kai"
  ],
  "unitInfo": [
   {
@@ -715,6 +718,36 @@
     "   Convert\n   Melee",
     "Transforming Ace\n(Hunter Mode)\n\nA railgun that answers fire\nat close range, and a\nbeamsaber for melee combat",
     "The Athena's successor. A\nnew frame from nose to heel;\none machine in two shapes.\nUnique: one at a time."
+   ]
+  },
+  {
+   "type": 66,
+   "name": "Lobster Kai",
+   "short": "Interceptor",
+   "info": [
+    "",
+    "Interceptor (Refit)\n\nUprated pulse beams and a\nlight missile rack",
+    "Ruess's refit of the Lobster.\nFaster than anything else\nthat flies, and its missiles\nlet it strike at warships."
+   ]
+  },
+  {
+   "type": 67,
+   "name": "Crane Kai",
+   "short": "Fighter-Bomber",
+   "info": [
+    "",
+    "Fighter-Bomber (Refit)\n\nA heavier railgun and a\nlong-reach ship missile",
+    "Ruess's refit of the Crane.\nIt hits capital ships from\ntwo hexes out and is very\nhard to pin down."
+   ]
+  },
+  {
+   "type": 68,
+   "name": "Titan Kai",
+   "short": "Sniper",
+   "info": [
+    "",
+    "Long-Range Mecha (Refit)\n\nA long railgun, an anti-ship\nbattery and a close-in gun",
+    "Ruess's refit of the Titan.\nIt holds a line from four\nhexes away and can answer\nthe ships behind it too."
    ]
   }
  ],

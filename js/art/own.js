@@ -1,7 +1,7 @@
 // The expansion's own unit art (original pictures, not from the ROM), for types whose unit data
 // names one (`ownArt`, js/expansion/data/units.json). Each set has a unit-info picture, a map icon
-// and either a fight hull (ships: js/art/selenekai.js, js/art/leviathan.js) or fight poses (small
-// craft: js/art/dirtalos.js); everything else about the type (choreography, sounds) still comes
+// and either a fight hull (ships: js/art/selenekai.js, js/art/leviathan.js), fight poses (small
+// craft: js/art/dirtalos.js) or neither (js/art/kai.js: fights use the look's sprites); everything else about the type (choreography, sounds) still comes
 // from its `look` (js/look.js).
 import { Indexed } from '../gfx.js';
 import { SELENE_KAI } from './selenekai.js';
@@ -10,9 +10,11 @@ import { DIRECTORATE_TALOS } from './dirtalos.js';
 import { AZORAS } from './azoras.js';
 import { PALLAS_JET, PALLAS_JET_SPENT, PALLAS_ROBOT } from './pallas.js';
 import { NAGA } from './naga.js';
+import { LOBSTER_KAI, CRANE_KAI, TITAN_KAI } from './kai.js';
 
 const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS, azoras: AZORAS,
-  pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT, naga: NAGA };
+  pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT, naga: NAGA,
+  lobsterKai: LOBSTER_KAI, craneKai: CRANE_KAI, titanKai: TITAN_KAI };
 export const ownArt = (types, type) => SETS[types?.[type]?.ownArt] || null;
 // A type drawn in its own picture's colours everywhere (units.json `ownColors`; the unique
 // Azoras, Leviathan and Directorate Talos): its set, when the set has the full-colour versions.

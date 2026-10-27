@@ -14,6 +14,7 @@ import { bannerUrl, cellUrl } from './terrainart.js';
 import { factsHtml, TERRAIN_CSS } from './terraincard.js';
 import { loadExpansionData } from './expansion/data.js';
 import { paintLookArt, lookOf, typeIcon } from './look.js';
+import { ownArt } from './art/own.js';
 import { price, marketTypes } from './expansion/campaign.js';
 
 const $ = (id) => document.getElementById(id);
@@ -339,7 +340,8 @@ function expansionUnitsHtml() {
     html += weapons.length ? `<table><tr><th>Slot</th><th>Type</th><th>Range</th><th>Power</th></tr>${weapons.map((w) =>
       `<tr><td>W${w.slot + 1}</td><td>${MODES[w.mode]}</td><td>${range(w)}</td><td>${w.power}</td></tr>`).join('')}</table>` : '<p class="note">Unarmed.</p>';
     if (tx?.info) html += `<p>${esc(prose(tx.info[1]))}</p><p>${esc(prose(tx.info[2]))}</p>`;
-    const notes = [u.ownArt ? `Its own art (picture, map icon and ${T[u.look] && T[u.look].category >= 8 ? 'fight poses' : 'fight hull'}, drawn for the expansion); it fights with the <a href="#unit-${u.look}">${esc(nameOf(u.look))}</a>'s moves.${u.tag ? ` Map tag <span class="mono">${esc(u.tag)}</span>.` : ''}`
+    const own = ownArt(T, u.type), ownParts = own?.poses ? ' and fight poses' : own?.hull ? ' and fight hull' : '';
+    const notes = [u.ownArt ? `Its own art (picture, map icon${ownParts}, drawn for the expansion); it fights with the <a href="#unit-${u.look}">${esc(nameOf(u.look))}</a>'s moves.${u.tag ? ` Map tag <span class="mono">${esc(u.tag)}</span>.` : ''}`
       : `Borrows the <a href="#unit-${u.look}">${esc(nameOf(u.look))}</a>'s graphics; map tag <span class="mono">${esc(u.tag || '')}</span>.`];
     if (u.type < types.length) notes.push(`Cut from the original: <a href="#unit-${u.type}">ROM entry</a>.`);
     else notes.push('New in the expansion.');
