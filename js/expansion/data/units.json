@@ -4815,6 +4815,186 @@
    "tag": "PLS",
    "fightName": "Pallas",
    "keepSlots": true
+  },
+  {
+   "type": 66,
+   "name": "Lobster Kai",
+   "nameJp": "ロブスター改",
+   "code": "FS-41K",
+   "category": 9,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 12,
+   "evasion": 51,
+   "value": 4,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 128
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 2,
+     "min": 1,
+     "max": 1,
+     "power": 77
+    },
+    null
+   ],
+   "aiValue": 15,
+   "info": {
+    "attack": [
+     100,
+     0,
+     60,
+     0
+    ],
+    "defence": 40,
+    "minRange": [
+     1,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 7,
+   "art": {
+    "fightSheet": 14,
+    "tiles": 219,
+    "palette": 220,
+    "frame": 7
+   },
+   "look": 8,
+   "ownArt": "lobsterKai",
+   "fightName": "Lobster-K"
+  },
+  {
+   "type": 67,
+   "name": "Crane Kai",
+   "nameJp": "クレーネ改",
+   "code": "FFA-81K",
+   "category": 9,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 10,
+   "evasion": 77,
+   "value": 4,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 77
+    },
+    {
+     "slot": 1,
+     "mode": 2,
+     "min": 1,
+     "max": 2,
+     "power": 128
+    },
+    null,
+    null
+   ],
+   "aiValue": 15,
+   "info": {
+    "attack": [
+     60,
+     100,
+     0,
+     0
+    ],
+    "defence": 60,
+    "minRange": [
+     1,
+     1,
+     0,
+     0
+    ]
+   },
+   "gfx": 8,
+   "art": {
+    "fightSheet": 15,
+    "tiles": 221,
+    "palette": 222,
+    "frame": 8
+   },
+   "look": 9,
+   "ownArt": "craneKai",
+   "fightName": "Crane Kai"
+  },
+  {
+   "type": 68,
+   "name": "Titan Kai",
+   "nameJp": "ティタン改",
+   "code": "HU-NN7K",
+   "category": 8,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 5,
+   "evasion": 51,
+   "value": 5,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 2,
+     "max": 4,
+     "power": 102
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 2,
+     "max": 3,
+     "power": 90
+    },
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 64
+    },
+    null
+   ],
+   "aiValue": 12,
+   "info": {
+    "attack": [
+     80,
+     70,
+     50,
+     0
+    ],
+    "defence": 40,
+    "minRange": [
+     2,
+     2,
+     1,
+     0
+    ]
+   },
+   "gfx": 1,
+   "art": {
+    "fightSheet": 4,
+    "tiles": 209,
+    "palette": 210,
+    "frame": 2
+   },
+   "look": 1,
+   "ownArt": "titanKai",
+   "fightName": "Titan Kai"
   }
  ]
 }
