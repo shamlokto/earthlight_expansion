@@ -46,6 +46,9 @@ place('S', [[1, 18]]);
 place('H', [[2, 5]]);
 place('R', [[4, 33]]);
 place('A', [[5, 21]]);
+// more start positions so 30 machines can deploy (owner, 2026-10-27: the whole roster wants to fly
+// in the last battle); open space, so any machine can take them
+place('M', [[4, 9], [3, 14], [7, 17], [4, 20], [8, 24], [3, 23], [9, 13], [2, 28], [7, 10]]);
 // Kessrin's fleet: the Leviathan, its guard, the line, the carriers
 // the Leviathan and its Directorate guard arrive last, on turn 14 (arrivals below)
 place('X', [[37, 14], [37, 22]]);
@@ -76,7 +79,7 @@ const units = rows.map((_, j) => Array.from({ length: COLS }, (_, i) => U[`${i +
 
 export default {
   name: 'KESSRIN', title: 'Kessrin', file: 'remnant/kessrin', screens: [4, 4],
-  objective: { kind: 'flagship', type: 59 }, turnLimit: 30, cap: 20, chaseGeneral: true, music: 29,
+  objective: { kind: 'flagship', type: 59 }, turnLimit: 30, cap: 30, chaseGeneral: true, music: 29,
   goal: "Sink Marshal Kessrin's flagship, the Leviathan, within 28 turns. If the general falls, it is over.",
   chapter: 'Chapter 12 · Low Earth orbit',
   transmission: "I gave the Union a victory, General, and you gave it a conscience. Only one of those was ever going to fit on a battleship.",
