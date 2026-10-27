@@ -715,3 +715,9 @@ Directorate Talos more on turn 11; eight Directorate Talos (was six) escort the 
 enemy machines in all. `missions/remnant/kessrin.json` was regenerated from
 `tools/missions/remnant/kessrin.mjs` with the terrain kept as built (the builder needs the ROM; the
 rebuild reproduced the old file byte for byte before the change).
+
+**Finale deployment** (owner, 2026-10-27): the cap goes from 20 to 30 (the owner asked for the
+whole roster, or 30 if that is too easy; with a late roster of level-7+ veterans, the Pallas, the
+Azoras and the Kai refits, plus the nine garrison joiners, an unlimited cap looked too easy against
+84 machines). Nine more open-space start positions (23 → 32), so 30 machines of any kind, capital
+ships included, find a place; checked with `campaign.applyRoster` on a 34-machine roster.
