@@ -699,12 +699,17 @@ Forecasts (pilot level 5, open space, against the finale's level-3 Union and lev
 Talos): about 25-40% more damage than the base machine, still well below the Pallas; the Crane
 Kai hits a Tiamat for about 7 from two hexes without a counter (the Pallas's torpedo: 13).
 
-**Art**: each has its own unit-info picture and map icon (`ownArt`, `js/art/kai.js`, written by
-`tools/art/kai-refits.mjs`); fights use the base unit's sprites and choreography (`look`). The
+**Art**: each has its own unit-info picture, map icon and fight poses (`ownArt`, `js/art/kai.js`,
+written by `tools/art/kai-refits.mjs`); fights keep the base unit's choreography (`look`). The
 pictures were generated with xAI's image model (`tools/art/xai-gen.py`; prompts and the chosen
 sources in `tools/art/kai/`, with the Pallas and Directorate Talos pictures as style references)
 and reduced to 96x96 with 32 colours and an outline (`tools/art/kai-convert.py`). The map icons are
-drawn from shapes after generated side views, since 24x16 needs every pixel placed. 14 of the
+drawn from shapes after generated side views, since 24x16 needs every pixel placed.
+The fight poses (`tools/art/kai-poses.py`) come from the same side views, for the sheet tiles each
+base unit's choreography draws (Lobster 0; Crane 0, 136; Titan 72, 68 with a muzzle flash): 32x32 in
+the craft fight rows' colours, which the classic fights and the modern board's token use, and a
+96x96 full-colour `posesArt` for the modern fights. (Without poses the modern board drew the base
+unit's sprite, since a small craft's token comes from its fight sprite, not its map icon.) 14 of the
 owner's 100-image budget used.
 
 **Finale (Kessrin)**: more enemies to match. On the map: two more Directorate Talos pickets, two
