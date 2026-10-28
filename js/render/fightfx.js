@@ -85,6 +85,7 @@ export class FightRenderer {
     // sides whose capital ship sinks in this fight, and its wreck once the sinking starts
     this.sinking = [scene.left, scene.right].map((acts) => !!(acts[0] && acts[0].ship && acts[0].dies));
     this.wrecks = [null, null];
+    this.lev = [null, null];   // the Leviathan's cannon per side (levCannonTick)
     this.prev = null; this.cur = scene.frameState(); this.hulls = []; this.hullGroups = [];
     this.introImg = null; this.introCanvas = null; this.lastIntro = null; this.introEnd = null;
     this.hpShown = [this.scene.leftSide.hp, this.scene.rightSide.hp]; this.drain = [null, null];
@@ -363,6 +364,7 @@ export class FightRenderer {
     this.shake *= 0.85; this.whiteout *= 0.8;
     if (this.punch) { this.punch.t++; if (this.punch.t > 40) this.punch = null; }
     for (const w of this.wrecks) if (w) this.updateWreck(w, cur.f);
+    this.levCannonTick(cur);
     this.updateHud(cur.f);
   }
 
@@ -686,6 +688,7 @@ export class FightRenderer {
       }
     }
     for (const w of this.wrecks) if (w) this.drawWreck(ctx, w, st.f, alpha);
+    this.drawLevCannon(ctx, st, alpha);
     this.drawParticles(ctx, S, t);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(this.overlay, 0, 0);
@@ -707,6 +710,7 @@ export class FightRenderer {
     const kind = this.shotKind(sp);
     if (kind === 'redBeam') return this.drawRedBeam(ctx, sp, x, y);
     if (kind === 'missile') return this.drawMissile(ctx, sp, x, y);
+    if (kind === 'levCannon') return;   // the Leviathan's cannon fire is drawn whole (drawLevCannon)
     const [r, g, b] = e.glow, n = sp.size * S;
     const cx = (x + sp.size / 2) * S, cy = (y + sp.size / 2) * S;
     ctx.globalCompositeOperation = 'lighter';
@@ -838,6 +842,134 @@ export class FightRenderer {
     ctx.globalAlpha = 0.6; ctx.drawImage(blob(255, 60, 60), ox - rad * 0.7, oy - rad * 0.7, rad * 1.4, rad * 1.4);
     ctx.restore();
     this.lights.push({ x: x + sp.size / 2, y: y + sp.size / 2, col: [255, 40, 40], i: 0.5, r: 40, life: 1, max: 1 });
+  }
+  // The Leviathan's guns (js/art/leviathan.js `shots`: 'levCannon'; visual only). Its recorded
+  // shots (the Nodens's: every one of its weapons fights with that one recording) are not drawn;
+  // instead, from the muzzle of the spinal cannon (`muzzle`, in the hull picture's box) to the
+  // other side: by the weapon the Leviathan really uses (the side's ownSlot),
+  //   1 the super-cannon: a 48-frame charge (a violet orb swelling, energy drawn in, arcs), then a
+  //     thick violet beam with a white core and pulses running down it, a flash and quake as it
+  //     fires, shock rings and sparks where it lands, and the muzzle glowing as it dies down;
+  //   0 the beam: a short charge and a thinner violet lance;
+  //   2 the railgun: no charge, three red rail streaks.
+  // The beam lasts from the recorded fire frame while the recording's shots are on screen; hits,
+  // explosions and their timing stay as recorded.
+  levCannon(st) {
+    const sc = this.scene, out = [];
+    [sc.leftSide, sc.rightSide].forEach((side, i) => {
+      const own = side && side.own;
+      if (!own || !own.muzzle || own.shots?.[sc.slotOf(side)] !== 'levCannon' || !(i ? sc.shooters.right : sc.shooters.left)) return;
+      const a = (i ? sc.right : sc.left)[0], hull = st.sprites.find((sp) => this.sideOf(sp) === i && /^[LR]\d+own#/.test(sp.id));
+      if (!a || !hull) return;
+      const mx = i ? hull.x + 127 - own.muzzle[0] : hull.x + own.muzzle[0], my = hull.y + own.muzzle[1];
+      const foes = st.sprites.filter((sp) => !this.isFx(sp) && this.sideOf(sp) !== i);
+      const tx = foes.length ? (i ? Math.max(...foes.map((q) => q.x + q.size - 6)) : Math.min(...foes.map((q) => q.x + 6))) : (i ? 30 : 194);
+      // against a ship or structure the beam runs level (as recorded); against craft, at the squad
+      const ship = !!(i ? sc.left : sc.right)[0]?.ship || !!(i ? sc.left : sc.right)[0]?.struct;
+      const ty = !foes.length || ship ? my : foes.reduce((t, q) => t + q.y + q.size / 2, 0) / foes.length;
+      const slot = side.ownSlot ?? 1, st0 = this.lev?.[i];
+      out.push({ i, mx, my, tx, ty, slot, fire: a.rec ? a.rec.fire : 129, last: st0 ? st0.last : -1, fired: st0 ? st0.fired : false });
+    });
+    return out;
+  }
+  levCannonTick(cur) {
+    if (cur.intro) return;
+    this.lev = this.lev || [null, null];
+    for (const c of this.levCannon(cur)) {
+      const shots = cur.sprites.some((sp) => this.isFx(sp) && !this.isBoom(sp) && this.sideOf(sp) === c.i && sp.size <= 16);
+      const s = this.lev[c.i] = this.lev[c.i] || { last: -1, fired: false };
+      if (shots && cur.f >= c.fire) s.last = cur.f;
+      const on = cur.f >= c.fire && cur.f <= Math.max(c.fire + 24, s.last + 4);
+      if (!on || this.reduced) continue;
+      const main = c.slot === 1, col = c.slot === 2 ? [255, 70, 60] : [190, 120, 255];
+      if (!s.fired) {   // the shot leaves: flash, quake, a burst at the muzzle
+        s.fired = true;
+        if (main) { this.whiteout = Math.min(0.5, this.whiteout + 0.35); this.shake = Math.max(this.shake, 6); this.punch = { x: c.tx, y: c.ty, t: 0 }; }
+        else this.shake = Math.max(this.shake, 2.5);
+        this.particles.push({ kind: 'flash', x: c.mx, y: c.my, vx: 0, vy: 0, drag: 1, g: 0, r: main ? 34 : 16, life: 9, max: 9, col: mix(col, [255, 255, 255], 0.5) });
+      }
+      // sparks spray from where it lands
+      for (let k = 0; k < (main ? 4 : 2); k++) {
+        const ang = (c.i ? 0 : Math.PI) + (this.rnd() - 0.5) * 2.2, v = 1.5 + this.rnd() * (main ? 4 : 2.5);
+        this.particles.push({ kind: 'spark', x: c.tx, y: c.ty + (this.rnd() - 0.5) * 10, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, drag: 0.88, g: 0.04, life: 10 + (this.rnd() * 10 | 0), max: 20, col: mix(col, [255, 255, 230], 0.5) });
+      }
+      this.lights.push({ x: c.tx, y: c.ty, col, i: main ? 0.9 : 0.5, r: main ? 70 : 40, life: 1, max: 1 });
+      this.lights.push({ x: c.mx, y: c.my, col, i: 0.6, r: 40, life: 1, max: 1 });
+    }
+  }
+  drawLevCannon(ctx, st, alpha) {
+    if (st.intro) return;
+    const S = this.S, f = st.f + alpha;
+    for (const c of this.levCannon(st)) {
+      const main = c.slot === 1, rail = c.slot === 2, charge = main ? 48 : rail ? 0 : 14;
+      const end = Math.max(c.fire + 24, c.last + 4), mx = c.mx * S, my = c.my * S, tx = c.tx * S, ty = c.ty * S;
+      const seed = (n) => { const x = Math.sin(n * 12.9898 + c.i * 78.233) * 43758.5453; return x - Math.floor(x); };
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      if (charge && f >= c.fire - charge && f < c.fire + 2) {
+        // the charge: an orb swelling at the muzzle, streaks of energy drawn into it, crackling arcs
+        const k = Math.min(1, (f - (c.fire - charge)) / charge), rad = (3 + (main ? 16 : 7) * k * k) * S;
+        ctx.globalAlpha = 0.55 + 0.35 * k; ctx.drawImage(blob(150, 70, 255), mx - rad * 2, my - rad * 2, rad * 4, rad * 4);
+        ctx.globalAlpha = 0.9; ctx.drawImage(blob(240, 220, 255), mx - rad * 0.7, my - rad * 0.7, rad * 1.4, rad * 1.4);
+        ctx.globalAlpha = 1;
+        for (let n = 0; n < (main ? 8 : 4); n++) {
+          const ang = seed(n) * 6.283 + f * 0.05, u = ((f * 0.045 + seed(n + 9)) % 1), r0 = (46 * (1 - u) + 4) * S * (main ? 1 : 0.6);
+          ctx.strokeStyle = rgbStr([200, 150, 255], 0.75 * u); ctx.lineWidth = (0.8 + 1.4 * u) * S;
+          ctx.beginPath(); ctx.moveTo(mx + Math.cos(ang) * r0, my + Math.sin(ang) * r0);
+          ctx.lineTo(mx + Math.cos(ang) * (r0 * 0.55 + rad * 0.4), my + Math.sin(ang) * (r0 * 0.55 + rad * 0.4)); ctx.stroke();
+        }
+        if (main && k > 0.25) for (let n = 0; n < 3; n++) {   // arcs, re-forming every 3 frames
+          const fr = Math.floor(f / 3) * 7 + n * 31, ang = seed(fr) * 6.283, len = (10 + 18 * k) * S;
+          ctx.strokeStyle = rgbStr([230, 200, 255], 0.85); ctx.lineWidth = 0.9 * S; ctx.beginPath(); ctx.moveTo(mx, my);
+          for (let s = 1; s <= 4; s++) ctx.lineTo(mx + Math.cos(ang) * len * s / 4 + (seed(fr + s) - 0.5) * 7 * S, my + Math.sin(ang) * len * s / 4 + (seed(fr + s + 5) - 0.5) * 7 * S);
+          ctx.stroke();
+        }
+      }
+      if (f >= c.fire && f <= end + 10) {
+        const on = Math.min(1, (f - c.fire) / 3) * Math.max(0, Math.min(1, (end + 10 - f) / 10));
+        if (rail) {
+          // three red rail streaks, flickering
+          for (let n = 0; n < 3; n++) {
+            const dy = (n - 1) * 5 * S, fl = 0.6 + 0.4 * seed(Math.floor(f) * 3 + n);
+            for (const [wd, col, a] of [[5, [255, 40, 30], 0.3], [2, [255, 110, 90], 0.8], [0.8, [255, 245, 235], 1]]) {
+              ctx.strokeStyle = rgbStr(col, a * on * fl); ctx.lineWidth = wd * S;
+              ctx.beginPath(); ctx.moveTo(mx, my + dy * 0.3); ctx.lineTo(tx, ty + dy); ctx.stroke();
+            }
+          }
+        } else {
+          // the beam: a wide violet halo, a magenta body, a white-hot core; it throbs
+          const thick = main ? 1 : 0.45, throb = 0.88 + 0.12 * Math.sin(f * 1.9) + 0.05 * Math.sin(f * 5.3);
+          for (const [wd, col, a] of [[30, [110, 40, 255], 0.16], [19, [170, 80, 255], 0.35], [11, [220, 120, 255], 0.6], [6, [255, 200, 255], 0.85], [2.6, [255, 255, 255], 1]]) {
+            ctx.strokeStyle = rgbStr(col, a * on); ctx.lineWidth = wd * thick * throb * on * S;
+            ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(tx, ty); ctx.stroke();
+          }
+          // energy pulses running down the beam
+          const len = Math.hypot(tx - mx, ty - my), ux = (tx - mx) / (len || 1), uy = (ty - my) / (len || 1);
+          for (let n = 0; n < (main ? 5 : 2); n++) {
+            const d = ((f - c.fire) * 14 * S + n * len / (main ? 5 : 2)) % len, pr = (main ? 9 : 5) * S * on;
+            ctx.globalAlpha = 0.8 * on; ctx.drawImage(blob(255, 230, 255), mx + ux * d - pr, my + uy * d - pr, pr * 2, pr * 2);
+          }
+          ctx.globalAlpha = 1;
+          // the muzzle burning, and the shock rings where it lands
+          const mr = (main ? 16 : 8) * S * throb * on;
+          ctx.globalAlpha = 0.9; ctx.drawImage(blob(200, 140, 255), mx - mr, my - mr, mr * 2, mr * 2);
+          ctx.drawImage(blob(255, 255, 255), mx - mr * 0.4, my - mr * 0.4, mr * 0.8, mr * 0.8);
+          const ir = (main ? 22 : 11) * S * throb * on;
+          ctx.drawImage(blob(230, 150, 255), tx - ir, ty - ir, ir * 2, ir * 2);
+          ctx.globalAlpha = 1;
+          if (main) for (let n = 0; n < 3; n++) {
+            const u = ((f - c.fire) / 16 + n / 3) % 1, rr = (6 + 40 * u) * S;
+            if (f > end) continue;
+            ctx.strokeStyle = rgbStr([220, 170, 255], 0.55 * (1 - u) * on); ctx.lineWidth = (3 * (1 - u) + 0.6) * S;
+            ctx.beginPath(); ctx.ellipse(tx, ty, rr * 0.55, rr, 0, 0, Math.PI * 2); ctx.stroke();
+          }
+        }
+      }
+      if (main && f > end && f < end + 40) {   // afterglow: the muzzle cools
+        const k = 1 - (f - end) / 40, rad = 10 * k * S;
+        ctx.globalAlpha = 0.7 * k; ctx.drawImage(blob(160, 90, 255), mx - rad, my - rad, rad * 2, rad * 2); ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+    }
   }
   // A missile's homing path (the Azoras's slot 0; visual only). The recorded battery shots fly
   // straight along lanes towards the robots, each lane's flight made of short-lived sprites; the
