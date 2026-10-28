@@ -1,3 +1,4 @@
+// Superseded (2026-10-28): js/art/dirtalos.js is now written by tools/art/dirtalos-xai.mjs from xAI-generated art; this shape-drawn version is kept for reference only.
 // The Directorate Talos's own art (expansion type 60, Commander Vane's machine and Marshal
 // Kessrin's guard): original pixel art, drawn from the shapes below with tools/art/raster.mjs and
 // written to js/art/dirtalos.js as indexed rows.

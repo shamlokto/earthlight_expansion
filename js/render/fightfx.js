@@ -645,7 +645,7 @@ export class FightRenderer {
     const blit = (c, x, y, pad) => ctx.drawImage(c, (x - pad) * S, (y - pad) * S, (c.width / UP) * S, (c.height / UP) * S);
     // shadows
     for (const it of items) {
-      if (it.fx || !it.e.shadow) continue;
+      if (it.fx || !it.e.shadow || this.sabreOf(it.sp)?.slash) continue;   // a sabre's slash casts no shadow
       const [x, y] = place(it), e = it.e;
       ctx.drawImage(e.shadow, (x - e.pad + 4) * S, (y - e.pad + 7) * S, (e.c.width / UP) * S, (e.c.height / UP) * S);
     }
@@ -663,6 +663,7 @@ export class FightRenderer {
         ctx.globalAlpha = 1;
       }
       blit(e.c, x, y, e.pad);
+      this.drawSabre(ctx, sp, x, y, e);
       if (e.litL && this.lights.length) {
         let wl = 0, wr = 0;
         const cx = x - e.pad + bw / 2, cy = y - e.pad + bh / 2, ext = Math.max(bw, bh) / 2;
@@ -749,6 +750,71 @@ export class FightRenderer {
     ctx.drawImage(e.c, (x - e.pad) * S, (y - e.pad) * S, q, q);
     ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(e.c, (x - e.pad) * S, (y - e.pad) * S, q, q);
+  }
+
+  // A melee sprite of a machine whose own art carries a `sabre` (js/art/own.js; the Directorate
+  // Talos): { set, slash } when it is that side's body or slash in a melee, else null.
+  sabreOf(sp) {
+    const sc = this.scene;
+    if (!sc.melee || sp.size !== 32 || this.isFx(sp)) return null;
+    const side = this.sideOf(sp) ? sc.rightSide : sc.leftSide, set = side && side.own && side.own.sabre;
+    return set ? { set, slash: (sp.base & 255) === set.slash } : null;
+  }
+  // The Directorate Talos's beam sabre (visual only; the recording's poses and timings): the slash
+  // sprite blazes with a crimson bloom and lights the scene; on the cuts the blade glows, and its
+  // tip leaves a fading crimson swing trail from frame to frame.
+  drawSabre(ctx, sp, x, y, e) {
+    const sab = this.sabreOf(sp);
+    if (!sab) return;
+    const S = this.S, col = sab.set.col, f = this.cur ? this.cur.f : 0, tile = sp.base & 255;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    if (sab.slash) {
+      ctx.globalAlpha = 0.75;
+      ctx.drawImage(e.c, (x - e.pad) * S, (y - e.pad) * S, (e.c.width / UP) * S, (e.c.height / UP) * S);
+      const r = 26 * S, cx = (x + 16) * S, cy = (y + 16) * S;
+      ctx.globalAlpha = 0.55; ctx.drawImage(blob(col[0], col[1], col[2]), cx - r, cy - r, r * 2, r * 2);
+      ctx.globalAlpha = 0.5; ctx.drawImage(blob(255, 235, 235), cx - r * 0.3, cy - r * 0.3, r * 0.6, r * 0.6);
+      ctx.restore();
+      this.lights.push({ x: x + 16, y: y + 16, col, i: 0.7, r: 60, life: 1, max: 1 });
+      return;
+    }
+    // the blade's tip in this pose: the hot pixel farthest from the body's middle (cached per pose)
+    const A = sp.tiles && sp.tiles.posesArt && sp.tiles.posesArt[tile];
+    this.sabreTips = this.sabreTips || new WeakMap();
+    if (A && !this.sabreTips.has(A)) {
+      const pal = A.palette.map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+      let best = null, far = -1;
+      A.rows.forEach((row, py) => { for (let px = 0; px < A.w; px++) {
+        const c = pal[parseInt(row[px], 36)];
+        if (!parseInt(row[px], 36) || !(c[0] > 180 && c[0] - c[1] > 70)) continue;
+        const d = Math.hypot(px - A.w / 2, py - A.h / 2);
+        if (d > far) { far = d; best = [px * 32 / A.w, py * 32 / A.h]; }
+      } });
+      this.sabreTips.set(A, best);
+    }
+    const tip = A ? this.sabreTips.get(A) : null;
+    if (tip) {
+      const tx = x + (sp.flip ? 32 - tip[0] : tip[0]), ty = y + tip[1];
+      // the trail: the tip's places over the last frames of this body
+      this.sabreTrail = this.sabreTrail || new Map();
+      const tr = this.sabreTrail.get(sp.id) || [];
+      if (!tr.length || tr[tr.length - 1].f !== f) { tr.push({ f, x: tx, y: ty }); while (tr.length && f - tr[0].f > 7) tr.shift(); this.sabreTrail.set(sp.id, tr); }
+      if (tr.length > 1) {
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        for (const [wd, a, c] of [[7, 0.18, col], [3.5, 0.45, col], [1.2, 0.8, [255, 235, 235]]]) {
+          for (let i = 1; i < tr.length; i++) {
+            const k = i / (tr.length - 1);
+            ctx.strokeStyle = rgbStr(c, a * k); ctx.lineWidth = wd * S * (0.4 + 0.6 * k);
+            ctx.beginPath(); ctx.moveTo(tr[i - 1].x * S, tr[i - 1].y * S); ctx.lineTo(tr[i].x * S, tr[i].y * S); ctx.stroke();
+          }
+        }
+      }
+      const cut = sab.set.cuts.includes(tile), r = (cut ? 16 : 8) * S;
+      ctx.globalAlpha = cut ? 0.7 : 0.35;
+      ctx.drawImage(blob(col[0], col[1], col[2]), tx * S - r, ty * S - r, r * 2, r * 2);
+      if (cut) this.lights.push({ x: tx, y: ty, col, i: 0.45, r: 40, life: 1, max: 1 });
+    }
+    ctx.restore();
   }
 
   // The Azoras's anti-ship gun: a thick red beam from where the shot left the cannon to where it is

@@ -4420,7 +4420,8 @@
    "look": 2,
    "ownArt": "directorateTalos",
    "fightName": "D-Talos",
-   "unionOnly": true
+   "unionOnly": true,
+   "keepSlots": true
   },
   {
    "type": 61,
