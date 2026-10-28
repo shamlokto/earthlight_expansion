@@ -10,6 +10,7 @@ used = int(open(cnt).read()) if cnt and os.path.exists(cnt) else 0
 if used + n > 100: sys.exit(f'quota: {used} used, {n} more would exceed 100')
 prompt = open(pf).read().strip()
 body = {"model": os.environ.get('XMODEL', 'grok-imagine-image-quality'), "prompt": prompt, "n": n, "response_format": "b64_json"}
+if os.environ.get('XASPECT'): body["aspect_ratio"] = os.environ['XASPECT']   # e.g. 3:4 for a fight hull
 url = 'https://api.x.ai/v1/images/generations'
 if refs:
     url = 'https://api.x.ai/v1/images/edits'
