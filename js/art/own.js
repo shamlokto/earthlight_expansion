@@ -15,6 +15,15 @@ import { LOBSTER_KAI, CRANE_KAI, TITAN_KAI } from './kai.js';
 const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS, azoras: AZORAS,
   pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT, naga: NAGA,
   lobsterKai: LOBSTER_KAI, craneKai: CRANE_KAI, titanKai: TITAN_KAI };
+// Weapon effect colours in the modern fights (js/render/fightfx.js: beams, railguns, missiles),
+// per set; the rest take the defaults there.
+const FX = {
+  lobsterKai: { beam: [255, 80, 200] }, craneKai: { rail: [140, 210, 255] }, titanKai: { rail: [255, 190, 90] },
+  directorateTalos: { beam: [255, 40, 60] }, naga: { rail: [70, 255, 200], beam: [70, 255, 200] },
+  pallasJet: { beam: [90, 200, 255] }, pallasJetSpent: { beam: [90, 200, 255] }, pallasRobot: { rail: [120, 220, 255] },
+  seleneKai: { rail: [255, 120, 210], beam: [255, 120, 210] }, azoras: { rail: [255, 210, 120] },
+};
+for (const [k, f] of Object.entries(FX)) if (SETS[k]) SETS[k].fx = f;
 export const ownArt = (types, type) => SETS[types?.[type]?.ownArt] || null;
 // A type drawn in its own picture's colours everywhere (units.json `ownColors`; the unique
 // Azoras, Leviathan and Directorate Talos): its set, when the set has the full-colour versions.

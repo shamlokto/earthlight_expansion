@@ -752,3 +752,23 @@ and `tools/art/<unit>-xai.*`; details in `docs/notes/art-*.md`.
   The fight sides carry `ownSlot`, the weapon actually fired (`gameapp.js`).
 
 Images: 58 of the owner's 100 used (14 for the Kai refits, 44 for these).
+
+## Weapon effects for the new units (owner, 2026-10-29)
+
+The new units' ranged shots in the modern fights (js/render/fightfx.js) are drawn by the mode of the
+weapon each side really fires (`ownMode` on the fight side, js/gameapp.js), over the recorded shots,
+which keep their paths and timings (hits and explosions unchanged). A unit's own `shots` (Azoras,
+Leviathan) still win; melee is untouched.
+
+* **Beam**: a lance that shoots out from the gun (28 px a frame) to the machine the recorded shot is
+  heading for: halo, body and white core, flicker, energy ripples running down it, burning ends and
+  sparks where it lands.
+* **Railgun**: a muzzle discharge (flash, shock ring, electric arcs, a kick), a white-hot slug with a
+  22-place tapering streak and an ionised line back to the gun, shock rings every 3 frames, and on
+  impact sparks thrown on along its path, a hard flash and a ring.
+* **Missile**: the homing curve and smoke the Azoras's missiles had, a flickering exhaust plume, and a
+  small fireball with sparks and smoke where it strikes.
+
+Colours per unit: js/art/own.js `FX` (Lobster Kai pink beam, Directorate Talos crimson, Naga green,
+Titan Kai amber rail, and so on); defaults in fightfx.js (`BEAM`, `RAIL`). The classic renderer is
+unchanged.

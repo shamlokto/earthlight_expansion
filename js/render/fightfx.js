@@ -25,6 +25,7 @@ const W = 256, H = 224;
 const BOOM_TILES = new Set([192, 196, 200]);
 const ARMY = [[255, 96, 210], [96, 255, 150]];   // rim and HUD colours: army A pink, army B green
 const BAR = 9;                                    // letterbox bar height (scene px)
+const BEAM = [90, 200, 255], RAIL = [150, 200, 255];   // default weapon effect colours (fxCol)
 
 // ------------------------------------------------------------------ helpers
 const scale4x = (src, w, h) => scale2x(scale2x(src, w, h), w * 2, h * 2);
@@ -317,18 +318,25 @@ export class FightRenderer {
       this.shotAge.set(sp.id, age);
       // melee effects are numbered afresh every frame: no muzzle flashes, and a trail only while
       // the sprite with that number keeps moving smoothly
-      const melee = sp.id.startsWith('fx');
-      if (!before.has(sp.id) && !melee && this.shotKind(sp) !== 'missile') this.muzzle(cx, cy, e.glow, sp.size);   // missiles flash at launch (homing)
+      const melee = sp.id.startsWith('fx'), kind = this.shotKind(sp);
+      if (!before.has(sp.id) && !melee) {   // missiles flash at launch (homing)
+        if (kind === 'xRail') this.railMuzzle(cx, cy, this.fxCol(sp, 'rail', RAIL), this.sideOf(sp) ? -1 : 1);
+        else if (kind === 'xBeam') this.muzzle(cx, cy, this.fxCol(sp, 'beam', BEAM), sp.size + 6);
+        else if (kind !== 'missile' && kind !== 'xMissile') this.muzzle(cx, cy, e.glow, sp.size);
+      }
       let tr = this.trails.get(sp.id) || [];
       const last = tr[tr.length - 1];
       if (last && Math.hypot(last[0] - cx, last[1] - cy) > (melee ? 10 : 28)) { tr = []; this.missilePos.delete(sp.id); }   // a new shot on the same track
-      tr.push([cx, cy]); if (tr.length > 12) tr.shift();
+      tr.push([cx, cy]); if (tr.length > (kind === 'xRail' ? 22 : 12)) tr.shift();
       this.trails.set(sp.id, tr);
-      this.lastShot.set(sp.id, { x: cx, y: cy, col: e.glow, size: sp.size, moved: tr.length > 2 && Math.hypot(tr[tr.length - 1][0] - tr[0][0], tr[tr.length - 1][1] - tr[0][1]) > 6 });
+      this.lastShot.set(sp.id, { x: cx, y: cy, col: e.glow, size: sp.size, kind, side: this.sideOf(sp), sp, moved: tr.length > 2 && Math.hypot(tr[tr.length - 1][0] - tr[0][0], tr[tr.length - 1][1] - tr[0][1]) > 6 });
       // a slow, long-lived shot is a missile: it smokes
       const sp1 = tr.length > 1 ? Math.hypot(tr[tr.length - 1][0] - tr[tr.length - 2][0], tr[tr.length - 1][1] - tr[tr.length - 2][1]) : 0;
-      const kind = this.shotKind(sp);
-      if (kind === 'missile') {   // the Azoras's missiles home in on their robot (homing), and always smoke
+      if (kind === 'xRail' && age % 3 === 0 && tr.length > 1 && !this.reduced) {   // a railgun slug leaves shock rings
+        const [px, py] = tr[tr.length - 2];
+        this.particles.push({ kind: 'shock', x: cx, y: cy, vx: 0, vy: 0, drag: 1, g: 0, r: 1.5, speed: 0.55, ang: Math.atan2(cy - py, cx - px), life: 12, max: 12, col: this.fxCol(sp, 'rail', RAIL) });
+      }
+      if (kind === 'missile' || kind === 'xMissile') {   // the Azoras's missiles home in on their robot (homing), and always smoke
         const m = this.homing(sp, cx, cy), [hx, hy] = m.at(cx, cy), prev = this.missilePos.get(sp.id), [px, py] = prev || [hx, hy];
         this.missilePos.set(sp.id, [hx, hy]);
         this.lastShot.set(sp.id, { ...this.lastShot.get(sp.id), x: hx, y: hy });
@@ -346,14 +354,19 @@ export class FightRenderer {
     for (const id of [...this.trails.keys()]) {
       if (seen.has(id)) continue;
       const s = this.lastShot.get(id);
-      if (s && s.moved) this.impact(s.x, s.y, s.col);
+      if (s && s.moved) {
+        if (s.kind === 'xMissile') this.missileBlast(s.x, s.y);
+        else if (s.kind === 'xRail') this.railImpact(s.x, s.y, this.fxCol(s.sp, 'rail', RAIL), s.side ? -1 : 1);
+        else if (s.kind === 'xBeam') this.impact(s.x, s.y, this.fxCol(s.sp, 'beam', BEAM));
+        else this.impact(s.x, s.y, s.col);
+      }
       this.trails.delete(id); this.shotAge.delete(id); this.lastShot.delete(id); this.shotOrigin.delete(id); this.missilePos.delete(id);
     }
     for (const p of this.particles) {
       p.x += p.vx; p.y += p.vy; p.vx *= p.drag; p.vy = p.vy * p.drag + p.g; p.life--;
       if (p.vr) p.rot += p.vr;
       if (p.grow) p.r += p.grow;
-      if (p.kind === 'ring') p.r += p.speed;
+      if (p.kind === 'ring' || p.kind === 'shock') p.r += p.speed;
       if (p.kind === 'fire') { p.r += p.grow2; }
     }
     this.particles = this.particles.filter((p) => p.life > 0);
@@ -543,12 +556,23 @@ export class FightRenderer {
     return per.get(key);
   }
 
-  // How a shot sprite is drawn: 'missile' or 'redBeam' when its side's own art asks for it for the
-  // weapon slot in use (js/art/own.js `shots`), else null (the shot as recorded).
+  // How a shot sprite is drawn: what its side's own art asks for for the weapon slot in use
+  // (js/art/own.js `shots`: 'missile', 'redBeam', 'levCannon'); else, for the expansion's own
+  // machines, by the mode of the weapon they really fire (the side's ownMode): 'xBeam', 'xRail' or
+  // 'xMissile' (weaponFx below); else null (the shot as recorded).
   shotKind(sp) {
     if (!this.isFx(sp) || this.isBoom(sp) || sp.size > 16) return null;
-    const sc = this.scene, side = this.sideOf(sp) ? sc.rightSide : sc.leftSide;
-    return (side && side.own && side.own.shots && side.own.shots[sc.slotOf(side)]) || null;
+    const sc = this.scene, side = this.sideOf(sp) ? sc.rightSide : sc.leftSide, own = side && side.own;
+    if (!own) return null;
+    const set = own.shots && own.shots[sc.slotOf(side)];
+    if (set) return set;
+    if (sc.melee || side.ownMode === undefined || side.ownMode === null) return null;
+    return ['xBeam', 'xRail', 'xMissile'][side.ownMode] || null;
+  }
+  // A weapon effect's colour for this shot's side (js/art/own.js `fx`), else the default.
+  fxCol(sp, key, def) {
+    const side = this.sideOf(sp) ? this.scene.rightSide : this.scene.leftSide;
+    return (side && side.own && side.own.fx && side.own.fx[key]) || def;
   }
 
   isBig(sp) {
@@ -711,6 +735,9 @@ export class FightRenderer {
     if (kind === 'redBeam') return this.drawRedBeam(ctx, sp, x, y);
     if (kind === 'missile') return this.drawMissile(ctx, sp, x, y);
     if (kind === 'levCannon') return;   // the Leviathan's cannon fire is drawn whole (drawLevCannon)
+    if (kind === 'xMissile') return this.drawMissile(ctx, sp, x, y, true);
+    if (kind === 'xRail') return this.drawRail(ctx, sp, x, y);
+    if (kind === 'xBeam') return this.drawBeam(ctx, sp, x, y);
     const [r, g, b] = e.glow, n = sp.size * S;
     const cx = (x + sp.size / 2) * S, cy = (y + sp.size / 2) * S;
     ctx.globalCompositeOperation = 'lighter';
@@ -971,6 +998,135 @@ export class FightRenderer {
       ctx.restore();
     }
   }
+  // ---------------------------------------------------------------- the expansion's weapon effects
+  // The expansion's own machines (js/art/own.js) fire by the mode of the weapon they really use
+  // (shotKind): beams, railgun slugs and missiles drawn as light and motion over the recorded
+  // shots, which keep their paths and timings (hits and explosions stay as recorded). Colours per
+  // machine: js/art/own.js `fx`.
+
+  // a railgun firing: a white flash, a shock ring, crackling arcs off the rails, a little kick
+  railMuzzle(x, y, col, dir) {
+    this.muzzle(x, y, mix(col, [255, 255, 255], 0.4), 12);
+    this.particles.push({ kind: 'ring', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 2, speed: 1.6, life: 9, max: 9, col });
+    if (!this.reduced) for (let k = 0; k < 4; k++) {
+      const ang = (dir > 0 ? 0 : Math.PI) + (this.rnd() - 0.5) * 2.4;
+      this.particles.push({ kind: 'arc', x, y, vx: 0, vy: 0, drag: 1, g: 0, ang, len: 7 + this.rnd() * 9, life: 4 + (this.rnd() * 3 | 0), max: 7, col });
+    }
+    this.shake = Math.max(this.shake, 1.2);
+  }
+  // a slug striking: sparks thrown on along its path, a hard white flash and a ring
+  railImpact(x, y, col, dir) {
+    const n = this.reduced ? 5 : 18;
+    for (let i = 0; i < n; i++) {
+      const a = (dir > 0 ? 0 : Math.PI) + (this.rnd() - 0.5) * 1.6, v = 1.5 + this.rnd() * 4;
+      this.particles.push({ kind: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.86, g: 0.04, life: 8 + (this.rnd() * 10 | 0), max: 18, col: mix(col, [255, 255, 230], 0.5) });
+    }
+    this.particles.push({ kind: 'flash', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 18, life: 6, max: 6, col: mix(col, [255, 255, 255], 0.5) });
+    this.particles.push({ kind: 'ring', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 2, speed: 2.2, life: 10, max: 10, col });
+    this.lights.push({ x, y, col, i: 1.2, r: 56, life: 8, max: 8 });
+    this.shake = Math.max(this.shake, 1.6);
+  }
+  // a missile striking: a small fireball, sparks, a puff of smoke
+  missileBlast(x, y) {
+    const hot = [255, 226, 170], fire = [255, 130, 40], few = this.reduced;
+    this.particles.push({ kind: 'flash', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 20, life: 7, max: 7, col: hot });
+    this.particles.push({ kind: 'ring', x, y, vx: 0, vy: 0, drag: 1, g: 0, r: 2, speed: 1.8, life: 12, max: 12, col: [255, 190, 120] });
+    for (let i = 0; i < (few ? 2 : 5); i++) {
+      const a = this.rnd() * Math.PI * 2, v = this.rnd() * 0.7;
+      this.particles.push({ kind: 'fire', x: x + Math.cos(a) * 2, y: y + Math.sin(a) * 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.1, drag: 0.9, g: -0.01, r: 2.5 + this.rnd() * 3, grow2: 0.3, life: 14 + (this.rnd() * 8 | 0), max: 22, col: fire });
+    }
+    for (let i = 0; i < (few ? 4 : 12); i++) {
+      const a = this.rnd() * Math.PI * 2, v = 0.8 + this.rnd() * 2.6;
+      this.particles.push({ kind: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.9, g: 0.04, life: 10 + (this.rnd() * 14 | 0), max: 24, col: mix(fire, hot, this.rnd()) });
+    }
+    if (!few) for (let i = 0; i < 3; i++) this.particles.push({ kind: 'smoke', x: x + (this.rnd() - 0.5) * 8, y: y + (this.rnd() - 0.5) * 8, vx: (this.rnd() - 0.5) * 0.3, vy: -0.1 - this.rnd() * 0.2, drag: 0.98, g: 0, r: 4 + this.rnd() * 3, grow: 0.18, life: 40, max: 40, shade: 60, rot: this.rnd() * 6, vr: 0.02, delay: 4 });
+    this.lights.push({ x, y, col: fire, i: 1.4, r: 64, life: 14, max: 14 });
+    this.shake = Math.max(this.shake, 2);
+  }
+
+  // A railgun slug: a white-hot spindle along its flight, with a long tapering electric streak
+  // behind it (its last 22 places) and a faint ionised line back to the gun.
+  drawRail(ctx, sp, x, y) {
+    const S = this.S, col = this.fxCol(sp, 'rail', RAIL), cx = x + sp.size / 2, cy = y + sp.size / 2;
+    const tr = this.trails.get(sp.id) || [[cx, cy]], o = this.shotOrigin.get(sp.id) || [cx, cy];
+    const [px, py] = tr.length > 1 ? tr[tr.length - 2] : [cx - (this.sideOf(sp) ? -1 : 1), cy], ang = Math.atan2(cy - py, cx - px);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    const age = this.shotAge.get(sp.id) || 1;
+    if (Math.hypot(cx - o[0], cy - o[1]) < 140) {   // the ionised line, fading as the slug flies on
+      ctx.strokeStyle = rgbStr(col, Math.max(0, 0.35 - age * 0.02)); ctx.lineWidth = 1 * S;
+      ctx.beginPath(); ctx.moveTo(o[0] * S, o[1] * S); ctx.lineTo(cx * S, cy * S); ctx.stroke();
+    }
+    if (tr.length > 1) {
+      const pts = tr.map(([a, b]) => [a * S, b * S]); pts[pts.length - 1] = [cx * S, cy * S];
+      for (const [wd, c, al] of [[7, col, 0.18], [3.2, col, 0.5], [1.2, [255, 255, 255], 0.95]]) {
+        for (let i = 1; i < pts.length; i++) {
+          const f = i / (pts.length - 1);
+          ctx.strokeStyle = rgbStr(c, al * f * f); ctx.lineWidth = Math.max(0.6, wd * S * (0.25 + 0.75 * f));
+          ctx.beginPath(); ctx.moveTo(pts[i - 1][0], pts[i - 1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+        }
+      }
+    }
+    // the slug: a glow stretched along its flight and a white core
+    ctx.translate(cx * S, cy * S); ctx.rotate(ang);
+    const L = 9 * S, R = 3.2 * S;
+    ctx.globalAlpha = 0.85; ctx.drawImage(blob(col[0], col[1], col[2]), -L, -R * 1.6, L * 2, R * 3.2);
+    ctx.globalAlpha = 1; ctx.drawImage(blob(255, 255, 255), -L * 0.55, -R * 0.45, L * 1.1, R * 0.9);
+    ctx.restore();
+    this.lights.push({ x: cx, y: cy, col, i: 0.6, r: 40, life: 1, max: 1 });
+  }
+
+  // A beam: a lance of light that shoots out from the gun (28 px a frame) to the nearest of the
+  // other side's machines, with a wide halo, a bright body and a white core; ripples of energy run
+  // down it, it flickers, and it burns at both ends. Shots coming down from off screen (a lobbed
+  // path) are drawn as slugs instead.
+  drawBeam(ctx, sp, x, y) {
+    const S = this.S, col = this.fxCol(sp, 'beam', BEAM), cx = x + sp.size / 2, cy = y + sp.size / 2;
+    const o = this.shotOrigin.get(sp.id) || [cx, cy];
+    if (o[1] < 24 || o[1] > H - 24) return this.drawRail(ctx, sp, x, y);
+    const right = this.sideOf(sp) === 0, age = this.shotAge.get(sp.id) || 1, f = (this.scene.clock || 0);
+    const foes = (this.cur.sprites || []).filter((q) => !this.isFx(q) && this.sideOf(q) !== this.sideOf(sp));
+    // the target: the machine the recorded shot is heading for (its line so far, carried on)
+    const slope = Math.abs(cx - o[0]) > 3 ? (cy - o[1]) / (cx - o[0]) : 0;
+    let best = null, bd = Infinity;
+    for (const q of foes) { const d = Math.abs(q.y + q.size / 2 - (o[1] + slope * (q.x + q.size / 2 - o[0]))); if (d < bd) { bd = d; best = q; } }
+    const edge = best ? (right ? best.x + 6 : best.x + best.size - 6) : (right ? W - 8 : 8);
+    const ty = best && bd < 40 ? best.y + best.size / 2 : cy;
+    const front = o[0] + (right ? 1 : -1) * age * 28, tx = right ? Math.min(edge, Math.max(front, cx)) : Math.max(edge, Math.min(front, cx));
+    const hit = right ? tx >= edge - 0.5 : tx <= edge + 0.5, k = Math.min(1, Math.abs(tx - o[0]) / Math.max(1, Math.abs(edge - o[0])));
+    const ox = o[0] * S, oy = o[1] * S, ex = tx * S, ey = (o[1] + (ty - o[1]) * k) * S;
+    const flick = 0.85 + 0.15 * Math.sin(f * 2.3 + sp.y) + 0.06 * Math.sin(f * 7.1);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    for (const [wd, c, a] of [[16, col, 0.14], [9, col, 0.38], [5, mix(col, [255, 255, 255], 0.45), 0.75], [1.9, [255, 255, 250], 1]]) {
+      ctx.strokeStyle = rgbStr(c, a * flick); ctx.lineWidth = wd * S * (0.9 + 0.1 * flick);
+      ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
+    }
+    // ripples of energy running down the beam
+    const len = Math.hypot(ex - ox, ey - oy), ux = (ex - ox) / (len || 1), uy = (ey - oy) / (len || 1);
+    for (let n = 0; n < 3; n++) {
+      const d = (age * 9 * S + n * len / 3) % (len || 1), pr = 4 * S;
+      ctx.globalAlpha = 0.7; ctx.drawImage(blob(255, 255, 255), ox + ux * d - pr, oy + uy * d - pr * 0.6, pr * 2, pr * 1.2);
+    }
+    // the gun's burn and, once it reaches, the target's
+    const mr = 7 * S * flick; ctx.globalAlpha = 0.85;
+    ctx.drawImage(blob(col[0], col[1], col[2]), ox - mr, oy - mr, mr * 2, mr * 2);
+    ctx.drawImage(blob(255, 255, 255), ox - mr * 0.35, oy - mr * 0.35, mr * 0.7, mr * 0.7);
+    if (hit) {
+      const ir = 13 * S * flick;
+      ctx.drawImage(blob(col[0], col[1], col[2]), ex - ir, ey - ir, ir * 2, ir * 2);
+      ctx.drawImage(blob(255, 255, 255), ex - ir * 0.35, ey - ir * 0.35, ir * 0.7, ir * 0.7);
+    }
+    ctx.restore();
+    if (hit && !this.reduced && this.cur.f !== this.beamSparkF?.[sp.id]) {   // sparks spray off where it burns
+      (this.beamSparkF = this.beamSparkF || {})[sp.id] = this.cur.f;
+      for (let i = 0; i < 2; i++) {
+        const a = (right ? Math.PI : 0) + (this.rnd() - 0.5) * 2.4, v = 1 + this.rnd() * 2.5;
+        this.particles.push({ kind: 'spark', x: tx, y: ey / S, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 0.88, g: 0.04, life: 8 + (this.rnd() * 8 | 0), max: 16, col: mix(col, [255, 255, 230], 0.5) });
+      }
+    }
+    this.lights.push({ x: tx, y: ey / S, col, i: hit ? 0.8 : 0.4, r: 50, life: 1, max: 1 });
+    this.lights.push({ x: o[0], y: o[1], col, i: 0.5, r: 36, life: 1, max: 1 });
+  }
+
   // A missile's homing path (the Azoras's slot 0; visual only). The recorded battery shots fly
   // straight along lanes towards the robots, each lane's flight made of short-lived sprites; the
   // missiles are drawn on one curve per lane instead: launched angled out and up from the hull,
@@ -1024,8 +1180,12 @@ export class FightRenderer {
     const cx = hx * S, cy = hy * S, ang = Math.atan2(hy - py, hx - px);
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.scale(1.6, 1.6);
     ctx.globalCompositeOperation = 'lighter';
-    const fr = 6 * S; ctx.globalAlpha = 0.9; ctx.drawImage(blob(255, 150, 50), -9 * S - fr, -fr, fr * 2, fr * 2);
-    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    // the exhaust: a flickering plume, an orange glow and a white-hot core at the nozzle
+    const fl = 0.75 + 0.25 * Math.sin((this.scene.clock || 0) * 3.1 + sp.y) + 0.15 * this.rnd(), fr = 6 * S;
+    ctx.globalAlpha = 0.9; ctx.drawImage(blob(255, 150, 50), -9 * S - fr, -fr, fr * 2, fr * 2);
+    ctx.globalAlpha = 0.8; ctx.drawImage(blob(255, 110, 30), -7 * S - 14 * S * fl, -2.2 * S, 14 * S * fl, 4.4 * S);
+    ctx.globalAlpha = 1; ctx.drawImage(blob(255, 245, 220), -8.5 * S - 3 * S, -1.4 * S, 6 * S, 2.8 * S);
+    ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#e9ecf7'; ctx.strokeStyle = '#2a2d44'; ctx.lineWidth = 0.6 * S;
     ctx.beginPath(); ctx.moveTo(-6 * S, -1.6 * S); ctx.lineTo(3 * S, -1.6 * S); ctx.lineTo(6 * S, 0); ctx.lineTo(3 * S, 1.6 * S); ctx.lineTo(-6 * S, 1.6 * S); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#ff3d5a'; ctx.beginPath(); ctx.moveTo(3 * S, -1.6 * S); ctx.lineTo(6 * S, 0); ctx.lineTo(3 * S, 1.6 * S); ctx.closePath(); ctx.fill();
@@ -1079,6 +1239,22 @@ export class FightRenderer {
         ctx.drawImage(hb, p.x * S - wl, p.y * S - hl, wl * 2, hl * 2);
         ctx.drawImage(hb, p.x * S - hl * 0.8, p.y * S - rad * 0.9, hl * 1.6, rad * 1.8);
         ctx.globalAlpha = 1;
+      } else if (p.kind === 'shock') {
+        // a railgun's shock ring: a thin ellipse across the slug's path, widening and fading
+        ctx.save(); ctx.translate(p.x * S, p.y * S); ctx.rotate(p.ang);
+        ctx.strokeStyle = rgbStr(c, a * 0.7); ctx.lineWidth = 1.1 * S * a + 0.3 * S;
+        ctx.beginPath(); ctx.ellipse(0, 0, p.r * 0.35 * S, p.r * S, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+      } else if (p.kind === 'arc') {
+        // an electric arc from a railgun's muzzle: a jagged bolt, re-drawn every frame
+        ctx.strokeStyle = rgbStr(mix(c, [255, 255, 255], 0.5), a); ctx.lineWidth = 0.8 * S;
+        ctx.beginPath(); ctx.moveTo(p.x * S, p.y * S);
+        for (let k = 1; k <= 4; k++) {
+          const d = p.len * k / 4, j = (this.rnd() - 0.5) * 5;
+          ctx.lineTo((p.x + Math.cos(p.ang) * d - Math.sin(p.ang) * j) * S, (p.y + Math.sin(p.ang) * d + Math.cos(p.ang) * j) * S);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = a * 0.5; ctx.drawImage(blob(c[0] | 0, c[1] | 0, c[2] | 0), (p.x - 5) * S, (p.y - 5) * S, 10 * S, 10 * S); ctx.globalAlpha = 1;
       } else if (p.kind === 'ring') {
         ctx.strokeStyle = rgbStr(mix(c, [255, 190, 120], 0.5), a * 0.4); ctx.lineWidth = 2 * S * a;
         ctx.beginPath(); ctx.arc(p.x * S, p.y * S, p.r * S, 0, Math.PI * 2); ctx.stroke();
