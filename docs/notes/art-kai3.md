@@ -31,3 +31,26 @@ Owner's request: the new Kai units drawn with xAI, beautiful on the map and in t
 * No code changes were needed: own hulls of any size up to 128x128 already work
   (own.js ownHullTiles, fightfx.js ownHullArt), and `hull2` is chosen per sheet.
 * Not checked in the browser (no ROM here); the classic previews use an approximate fight palette.
+
+## Redesign (owner, 2026-10-29)
+
+Owner's feedback: the Fenrir Kai lacked the hit-and-run gunboat, the Asura-II Kai should be a
+gigantic gun battleship, and the Kai units all looked alike (white and pink). Both are redrawn in
+their own colours (no magenta):
+
+* **Fenrir Kai**: a low teal and sea-green wedge gunboat with orange-red warning stripes and a white
+  "71", dominated by one oversized gunmetal railgun along its spine that reaches past the prow, two
+  big engines. The fight hull's muzzle is that railgun's tip: right edge, rows 27-31 (target 29.5).
+* **Asura-II Kai**: a deep navy and steel-blue battleship with gold trim, three giant triple-barrel
+  main turrets with red-hot muzzles, secondary turrets along the flanks.
+  * `hull2` (against ships): the top view, bow right; the blunt bow at x 95 on rows 58-64 (target
+    61), the triple turrets' muzzles a few pixels behind it.
+  * `hull` (against craft): now its own generated view, `asura-broadside-src.jpg`: bow up, every turret
+    swung to starboard, the barrels out to x 62-63 on rows 64-86 (the recorded broadside's shots
+    leave x 63 on y 68-116, so the upper half leave from the guns, the rest from the flank).
+* **Sources and prompts**: `fenrir-picture-src.jpg`, `fenrir-top-src.jpg`, `asura-picture-src.jpg`,
+  `asura-top-src.jpg`, `asura-broadside-src.jpg` with `p-*.txt`; the pictures used the Lobster Kai's
+  picture as the style reference, the views each unit's own picture.
+* **Map icons** redrawn for the new shapes in kai3-xai.mjs (a wedge with the spine gun; a broad hull
+  with three dark turret blocks and their barrels). Another fork is redoing all the Kai icons.
+* **Images**: 11 (3 pictures, 2 Fenrir top views, 4 Asura top views, 2 Asura broadside views).
