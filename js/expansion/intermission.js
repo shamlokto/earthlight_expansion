@@ -177,7 +177,7 @@ function render() {
   const batteries = state.roster.filter((r) => types[r.type].move === 0);
   const card = (r) => {
     const t = types[r.type], can = C.GENERAL_SHIPS.has(r.type), on = deployed.has(r.id), gen = state.general === r.id;
-    html += `<article class="rcard${on ? ' on' : ''}${gen ? ' gen' : ''}${picked.has(r.id) ? ' pick' : ''}">
+    return `<article class="rcard${on ? ' on' : ''}${gen ? ' gen' : ''}${picked.has(r.id) ? ' pick' : ''}">
       ${art(r.type) ? `<img class="rart" src="${art(r.type)}" alt="">` : ''}
       <div class="rbody"><div class="rname">${esc(name(r.type))}</div><div class="rcode">${esc(t.code.trim())} ${icon(r.type)}</div>
         <div class="rlv"><em>Pilot</em>${pips(r.level)}<b>L${r.level}</b></div><div class="rprice"><em>Value</em><b>${C.price(types, r.type)}</b></div></div>
