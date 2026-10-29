@@ -799,3 +799,26 @@ picture, modern fight poses and hulls, icon and token art) to its own hue when t
 Lobster Kai red, Crane Kai sky blue, Titan Kai green, Mars Kai orange, Selene Kai violet; the Athena
 Kai keeps the Kai pink. Their weapon effects follow (`FX`). The redesigned Cyclops, Fenrir and
 Asura-II Kai get their own schemes in their art. Classic sprites and map icons use the army colours.
+
+## The hidden battle: Nineveh (owner, 2026-10-29)
+
+A secret 13th mission of the Galt remnant campaign, a grand fleet battle beyond the finale
+(story: docs/STORY.md "The hidden battle"; build notes: docs/notes/hidden-boss.md,
+docs/notes/art-nineveh.md).
+
+* **Unlock**: sink the Leviathan by turn 24 (kessrin.json `secret`); the result screen says so, or
+  hints at it, and the campaign-complete screen hints while it is locked. Index entry
+  (index-act4.json) `secret: true` stays out of the mission list until then (campaign.js).
+* **Intermission**: 1200 supply once (`bonusSupply`), up to 40 builds (`builds`), every machine (`all`).
+* **Battle** (missions/remnant/nineveh.json from tools/missions/remnant/nineveh.mjs, built without
+  the ROM by tools/build-missions-norom.mjs): 59x40, cap 40 (46 start hexes); Nineveh's fortress of
+  Babylon hull at the top with three cannon towers whose lanes (x 22, 29, 36) fire at every phase
+  change (mission `cannons`, battle.js; the AI keeps out); about 150 Galt machines over the battle
+  (112 at the start, waves on turns 6, 10, 15, 20) against your 40 and two allied groups (turn 8
+  Union fleet; turn 12 Moraine's cartel on 'deal' or the Olympos guard on 'refuse', arrivals
+  `when.choice`). Objective: sink the Nineveh; game over if the general falls.
+* **Nineveh** (type 77): Babylon's sister fortress ship, Ahriman's flagship; HP 90, move 2,
+  evasion 60%, level 8; beam 170 at 1-2, railgun 255 at 2-6, missiles 200 at 1-4. Own art
+  (js/art/nineveh.js); its main cannon (slot 1) charges a white-gold sun and fires the biggest beam
+  in the game, slot 0 a fan of gold beams, slot 2 a missile swarm (fightfx.js). The board shows each
+  cannon lane firing as a white-gold beam sweeping down it.
