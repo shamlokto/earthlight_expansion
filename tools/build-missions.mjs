@@ -177,6 +177,8 @@ function build(spec) {
     // the new campaign (docs/STORY.md): briefing dialogue with portraits, and per-choice epilogues
     ...(spec.comms ? { comms: spec.comms.map((c) => ({ speaker: c.speaker, text: c.text.trim() })) } : {}),
     ...(spec.endings ? { endings: Object.fromEntries(Object.entries(spec.endings).map(([k, v]) => [k, v.trim()])) } : {}),
+    // map events and the hidden battle (battle.js): cannons, and the finale's `secret`
+    ...(spec.cannons ? { cannons: spec.cannons } : {}), ...(spec.secret ? { secret: spec.secret } : {}),
   });
   return { mission: m, view };
 }

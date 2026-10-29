@@ -12,6 +12,7 @@ export const SPEAKERS = {
   kessrin: { name: VILLAIN.name, rank: VILLAIN.rank, side: 'enemy' },
   vane: { name: 'Commander Lysa Vane', rank: 'Directorate ace', side: 'enemy' },
   moraine: { name: 'Queen Moraine', rank: 'Ashfall Cartel', side: 'cartel' },
+  ahriman: { name: 'Ahriman', rank: 'Supreme Commander of Galt', side: 'enemy' },
 };
 
 const SKIN = { light: ['#f1d2bf', '#e1b39c', '#a77466', '#c4917f'], warm: ['#e9bf9f', '#d39c7c', '#8f5f4b', '#b98266'], pale: ['#f6e1d6', '#e8c4b4', '#ad8278', '#d0a596'], aged: ['#e4bba2', '#cc9a82', '#8c6150', '#b4846f'] };
@@ -139,6 +140,28 @@ const CAST = {
     props: `<path d="M66 64 C82 52 120 52 136 64 L132 70 C118 60 84 60 70 70 Z" fill="url(#moraineTrim)"/>
       <path d="M92 58 L100 42 L108 58 Z M76 62 L80 50 L86 60 Z M116 60 L122 50 L126 62 Z" fill="url(#moraineTrim)"/><circle cx="100" cy="54" r="3" fill="#2fd6c4"/>
       <g transform="translate(140 118)"><circle r="4" fill="none" stroke="url(#moraineTrim)" stroke-width="2"/><path d="M0 4 L0 16" stroke="#ffd76a" stroke-width="1.6"/><circle cy="18" r="3" fill="#2fd6c4"/></g>`,
+  },
+  // Galt's old warlord, eleven years in hiding: long white hair swept back, a white beard, a scar
+  // through the brow, a green cybernetic eye, a high-collared Galt coat in black, green and gold
+  ahriman: {
+    skin: 'aged', iris: '#c9a23a', bg: ['#0f2e1a', '#04100a'], grid: '#5dff9a',
+    hair: ['#ffffff', '#cfd3d6', '#8a9096'], coat: ['#132018', '#030805'], trim: ['#7a5a12', '#ffd76a'],
+    hairBack: 'M48 110 C38 64 66 20 104 20 C142 20 166 62 156 110 C160 146 158 182 150 214 L132 186 L134 104 L68 104 L70 186 L52 214 C44 182 42 146 48 110 Z',
+    hairFront: 'M60 96 C56 60 78 30 104 30 C132 30 152 58 146 94 C140 76 130 62 112 56 C96 58 82 64 72 74 C66 80 62 88 60 96 Z',
+    hairLines: '<path d="M70 70 C86 50 112 44 136 54 M78 82 C92 64 116 58 140 66" stroke="#ffffff" stroke-width="1.4" fill="none" opacity=".75"/>',
+    brows: '<path d="M71 88 L96 84 L96 89 L72 92 Z" fill="#f2f2f0"/><path d="M106 84 L131 88 L130 92 L106 89 Z" fill="#f2f2f0"/>',
+    eyeR: `<path d="M106 99 C112 94 122 94 128 98 C122 102 112 103 106 99 Z" fill="#fbf8ff"/><circle cx="117" cy="99" r="3.8" fill="#c9a23a"/><circle cx="117" cy="99" r="1.6" fill="#1a1006"/><circle cx="115.8" cy="97.8" r=".9" fill="#fff"/><path d="M104 98 C112 92 123 92 130 97" stroke="#1d1428" stroke-width="2.6" fill="none" stroke-linecap="round"/>`,
+    eyeL: `<circle cx="86" cy="99" r="11" fill="#1b2a20" stroke="#8a9a90" stroke-width="2"/><circle cx="86" cy="99" r="6" fill="#5dff9a" filter="url(#ahrimanGlow)"/><circle cx="86" cy="99" r="3.6" fill="#c8ffe0"/>
+      <path d="M75 99 L66 99 M86 88 L86 82" stroke="#8a9a90" stroke-width="2"/>`,
+    face: `<path d="M120 78 L127 104" stroke="#9c5a4a" stroke-width="2.2" stroke-linecap="round" opacity=".8"/>
+      <path d="M76 118 C80 122 84 123 88 122 M112 122 C116 123 120 122 124 118 M84 70 C96 66 108 66 120 70" stroke="#b3866f" stroke-width="1" fill="none" opacity=".6"/>`,
+    mouth: `<path d="M74 126 C82 150 92 166 100 170 C108 166 118 150 126 126 C118 136 110 134 100 136 C90 134 82 136 74 126 Z" fill="#e8e8e4"/>
+      <path d="M90 138 C96 136 104 136 110 138" stroke="#6a3a30" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M84 146 L90 160 M100 148 L100 166 M116 146 L110 160" stroke="#c6c8c6" stroke-width="1" opacity=".8"/>`,
+    collar: '<path d="M72 150 L86 142 L114 142 L128 150 L124 186 L100 196 L76 186 Z" fill="#0c140f"/><path d="M78 156 L122 156" stroke="#ffd76a" stroke-width="2"/><path d="M80 164 L120 164" stroke="#5dff9a" stroke-width="1.2" opacity=".8"/>',
+    outfit: `<path d="M26 206 C40 186 58 178 72 176 L68 196 C54 196 40 202 26 214 Z M174 206 C160 186 142 178 128 176 L132 196 C146 196 160 202 174 214 Z" fill="url(#ahrimanTrim)"/>
+      <path d="M30 210 L40 198 M42 204 L50 192 M170 210 L160 198 M158 204 L150 192" stroke="#ffe9a6" stroke-width="1.6"/>
+      <g transform="translate(100 222)"><path d="M0 -10 L9 0 L0 10 L-9 0 Z" fill="url(#ahrimanTrim)"/><circle r="3.4" fill="#5dff9a"/></g>`,
   },
 };
 

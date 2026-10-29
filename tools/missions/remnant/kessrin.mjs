@@ -80,6 +80,12 @@ const units = rows.map((_, j) => Array.from({ length: COLS }, (_, i) => U[`${i +
 export default {
   name: 'KESSRIN', title: 'Kessrin', file: 'remnant/kessrin', screens: [4, 4],
   objective: { kind: 'flagship', type: 59 }, turnLimit: 30, cap: 30, chaseGeneral: true, music: 29,
+  // the hidden battle (missions/remnant/nineveh.json) opens if the Leviathan is sunk by turn 24
+  secret: {
+    maxTurns: 24,
+    unlocked: "A Galt beacon answers from Earth's shadow: an old Asgard code, and a name nobody has spoken since Babylon fell. Ahriman is alive. A hidden battle waits at the intermission.",
+    teaser: "Somewhere in Earth's shadow an old Galt beacon is still calling, but the fleet was too slow to hear it. (Sink the Leviathan by turn 24 to answer it.)",
+  },
   goal: "Sink Marshal Kessrin's flagship, the Leviathan, within 28 turns. If the general falls, it is over.",
   chapter: 'Chapter 12 · Low Earth orbit',
   transmission: "I gave the Union a victory, General, and you gave it a conscience. Only one of those was ever going to fit on a battleship.",

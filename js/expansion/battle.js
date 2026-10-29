@@ -180,6 +180,8 @@ export async function expansionFromUrl(rom) {
     state = campaign.load();
     if (state) {
       mission = campaign.applyRoster(mission, state, standChecker(rom, mission, types, tables), types);
+      // arrivals for one story choice only (`when: { choice }`; the hidden battle's cartel)
+      if (mission.arrivals) mission = { ...mission, arrivals: mission.arrivals.filter((e) => !e.when || e.when.choice === state.choice) };
       const index = await campaign.missionIndex();
       if (index) total = campaign.missionList(index, state).length;
     }
