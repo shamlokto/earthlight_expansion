@@ -201,6 +201,7 @@ def azoras():
             'hullArt': {'w': 192, 'h': 384, 'palette': pal, 'rows': rows36(idx3)}, 'hull2Art': {'w': 288, 'h': 384, 'palette': pal2, 'rows': rows36(idx3_2)},
             'token': tok, 'tokenArt': tok_art}
 
-for unit, fn in (('selenekai', selene_kai), ('azoras', azoras)):
-    json.dump(fn(), open(os.path.join(HERE, unit, f'{unit}-art.json'), 'w'))
-    print('wrote', f'tools/art/{unit}/{unit}-art.json')
+if __name__ == '__main__':   # (tools/art/kai3-xai.py imports the helpers above)
+    for unit, fn in (('selenekai', selene_kai), ('azoras', azoras)):
+        json.dump(fn(), open(os.path.join(HERE, unit, f'{unit}-art.json'), 'w'))
+        print('wrote', f'tools/art/{unit}/{unit}-art.json')
