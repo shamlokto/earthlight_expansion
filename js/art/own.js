@@ -23,14 +23,40 @@ const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DI
 // Weapon effect colours in the modern fights (js/render/fightfx.js: beams, railguns, missiles),
 // per set; the rest take the defaults there.
 const FX = {
-  lobsterKai: { beam: [255, 80, 200] }, craneKai: { rail: [140, 210, 255] }, titanKai: { rail: [255, 190, 90] },
+  lobsterKai: { beam: [255, 80, 60] }, craneKai: { rail: [140, 210, 255] }, titanKai: { rail: [150, 255, 120] },
   directorateTalos: { beam: [255, 40, 60] }, naga: { rail: [70, 255, 200], beam: [70, 255, 200] },
   pallasJet: { beam: [90, 200, 255] }, pallasJetSpent: { beam: [90, 200, 255] }, pallasRobot: { rail: [120, 220, 255] },
-  seleneKai: { rail: [255, 120, 210], beam: [255, 120, 210] }, azoras: { rail: [255, 210, 120] },
-  marsKai: { beam: [90, 220, 255], rail: [140, 230, 255] }, fenrirKai: { rail: [255, 120, 210] }, asuraKai: { rail: [150, 220, 255] },
+  seleneKai: { rail: [190, 130, 255], beam: [190, 130, 255] }, azoras: { rail: [255, 210, 120] },
+  marsKai: { beam: [255, 170, 60], rail: [255, 200, 120] }, fenrirKai: { rail: [255, 120, 210] }, asuraKai: { rail: [150, 220, 255] },
   athenaKaiJet: { rail: [255, 120, 210] }, athenaKaiJetSpent: { rail: [255, 120, 210] }, athenaKaiRobot: { rail: [255, 140, 220] },
 };
 for (const [k, f] of Object.entries(FX)) if (SETS[k]) SETS[k].fx = f;
+
+// Each Kai refit in its own colours (owner, 2026-10-29: they were all white and magenta-pink and hard
+// to tell apart): the pink and magenta of its full-colour pictures (unit picture, poses, hulls,
+// icon and token art) turned to the set's accent hue, keeping saturation and lightness. The
+// classic sprites and map icons draw in the army's colours and are unchanged.
+const ACCENT = { lobsterKai: 4, craneKai: 205, titanKai: 112, marsKai: 26, seleneKai: 268 };
+const hsl = ([r, g, b]) => {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  if (!d) return [0, 0, l];
+  const s = d / (1 - Math.abs(2 * l - 1)), h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+};
+const hex = ([h, s, l]) => {
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2;
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return '#' + [r, g, b].map((v) => Math.round((v + m) * 255).toString(16).padStart(2, '0')).join('');
+};
+export function accentPalette(pal, hue) {
+  return pal.map((c) => {
+    const [h, s, l] = hsl([1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)));
+    return h >= 285 && h <= 352 && s > 0.25 && l > 0.08 ? hex([hue, s, l]) : c;
+  });
+}
+const pictures = (set) => [set.art, set.iconArt, set.tokenArt, set.hullArt, set.hull2Art, ...Object.values(set.posesArt || {}), ...Object.values(set.posesArt2 || {})].filter((e) => e && e.palette);
+for (const [k, hue] of Object.entries(ACCENT)) if (SETS[k]) for (const e of pictures(SETS[k])) e.palette = accentPalette(e.palette, hue);
 export const ownArt = (types, type) => SETS[types?.[type]?.ownArt] || null;
 // A type drawn in its own picture's colours everywhere (units.json `ownColors`; the unique
 // Azoras, Leviathan and Directorate Talos): its set, when the set has the full-colour versions.

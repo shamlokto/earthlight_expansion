@@ -792,3 +792,10 @@ below the Pallas.
 the original series (campaign.js `SERIES`, `seriesOf`). The intermission's roster and production
 show each series as its own folding section (folded state remembered in the browser), and the trade
 list groups them.
+
+**Kai colours** (owner, 2026-10-29: the Kai refits were all white and magenta-pink and hard to tell
+apart): js/art/own.js `ACCENT` turns the pink and magenta of each set's full-colour pictures (unit
+picture, modern fight poses and hulls, icon and token art) to its own hue when the art loads:
+Lobster Kai red, Crane Kai sky blue, Titan Kai green, Mars Kai orange, Selene Kai violet; the Athena
+Kai keeps the Kai pink. Their weapon effects follow (`FX`). The redesigned Cyclops, Fenrir and
+Asura-II Kai get their own schemes in their art. Classic sprites and map icons use the army colours.
