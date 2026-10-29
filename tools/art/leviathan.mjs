@@ -1,3 +1,5 @@
+// SUPERSEDED (2026-10-28): js/art/leviathan.js is now written by tools/art/leviathan-xai.mjs from
+// generated pictures; running this script would put back the earlier shape-drawn art.
 // The Leviathan's own art (expansion type 59, Marshal Kessrin's flagship): original pixel art,
 // drawn from the shapes below with tools/art/raster.mjs and written to js/art/leviathan.js.
 //   node tools/art/leviathan.mjs

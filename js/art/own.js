@@ -127,11 +127,12 @@ export function ownHullSet(set, second) {
 }
 
 // A set's poses for the fight sheet in use: `poses2` (if any) stand in on the second sheet, the one
-// weapon slots 1-3 load (fightscene.js sheetOf; the Pallas's sabre poses), `poses` on the first.
+// weapon slots 1-3 load (fightscene.js sheetOf; the Pallas's and the Directorate Talos's sabre
+// poses), `poses` on the first; `posesArt2` are the second sheet's full-colour poses.
 const second = new WeakMap();
 export function ownPoseSet(set, slot) {
   if (!slot || !set.poses2) return set;
-  if (!second.has(set)) second.set(set, { poses: set.poses2 });
+  if (!second.has(set)) second.set(set, { poses: set.poses2, posesArt: set.posesArt2 || null });
   return second.get(set);
 }
 const poseBases = new WeakMap();

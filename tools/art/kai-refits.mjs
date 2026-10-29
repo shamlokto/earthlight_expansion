@@ -4,8 +4,11 @@
 // tools/art/kai/prompts.txt), then downscaled and reduced to an indexed 96x96 picture by
 // tools/art/kai-convert.py (tools/art/kai/<unit>.json; the chosen sources are kept beside them).
 // Map icons: drawn here from shapes with tools/art/raster.mjs (24x16, colour numbers 1-7 of the
-// map icons' army rows, facing right), after the generated side views. Fights keep the base
-// unit's sprites and choreography (`look`), so the sets have no fight poses.
+// map icons' army rows, facing right), after the generated side views. Fight poses (the classic
+// 32x32 in the craft fight rows' colour numbers, also the modern board's token; the modern
+// renderer's full-colour 96x96 `posesArt`): tools/art/kai-poses.py from the side views
+// (tools/art/kai/<unit>-poses.json), keyed by the base unit's sheet tiles its choreography
+// (`look`) draws, facing left like the ROM's sheets.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { poly, ellipse, rect, capsule, union, render, encode } from './raster.mjs';
@@ -65,15 +68,23 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   let out = `// The Kai refits' own art (expansion types 66-68), written by tools/art/kai-refits.mjs; original
 // art, not from the ROM. Unit-info pictures generated with xAI's image model and reduced to the
 // picture's own palette (rows of base-36 colour numbers); map icons drawn from shapes, in the map
-// icons' army rows (1-7). No fight poses: the Kai refits fight with their base unit's sprites.
+// icons' army rows (1-7); fight poses keyed by the base unit's sheet tiles, in the craft fight
+// rows' colour numbers, with full-colour versions for the modern fights.
 `;
   for (const [u, name] of Object.entries(SETS)) {
     const pic = JSON.parse(readFileSync(new URL(`./kai/${u}.json`, import.meta.url), 'utf8')), ic = icon(u);
+    const fp = JSON.parse(readFileSync(new URL(`./kai/${u}-poses.json`, import.meta.url), 'utf8'));
     out += `export const ${name} = {
   art: { w: ${pic.w}, h: ${pic.h}, palette: ${JSON.stringify(pic.palette)},
     rows: ${rows(pic.rows)} },
   icon: { w: 24, h: 16,
     rows: ${rows(encode(ic))} },
+  poses: {
+${Object.entries(fp.poses).map(([t, r]) => `    ${t}: { w: 32, h: 32,\n      rows: ${rows(r)} },`).join('\n')}
+  },
+  posesArt: {
+${Object.entries(fp.posesArt).map(([t, a]) => `    ${t}: { w: 96, h: 96, palette: ${JSON.stringify(a.palette)},\n      rows: ${rows(a.rows)} },`).join('\n')}
+  },
 };
 `;
   }

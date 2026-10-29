@@ -1,3 +1,5 @@
+// SUPERSEDED (2026-10-28): js/art/azoras.js is now written by tools/art/ships-xai.mjs from xAI-generated
+// art; running this tool would put the old shape-drawn art back.
 // The Azoras's own art (expansion type 61, the General's flagship): original pixel art, drawn
 // from the shapes below with tools/art/raster.mjs and written to js/art/azoras.js.
 //   node tools/art/azoras.mjs

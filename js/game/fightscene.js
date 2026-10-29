@@ -326,6 +326,14 @@ export class FightScene {
         obj[i] = [hi, Math.round(hi * 0.12 + lo * 0.55), Math.round(hi * 0.12 + lo * 0.5)];
       }
     }
+    // the Leviathan's super-cannon (`shots` 'levCannon'): its effect row turns violet (visual only)
+    for (const [side, row] of [[this.leftSide, 2], [this.rightSide, 5]]) {
+      if (side.own?.shots?.[this.slotOf(side)] !== 'levCannon') continue;
+      for (let i = row * 16 + 1; i < row * 16 + 16; i++) {
+        const c = obj[i], hi = Math.max(...c), lo = Math.min(...c);
+        obj[i] = [Math.round(hi * 0.72 + lo * 0.2), Math.round(lo * 0.45), hi];
+      }
+    }
     this.obj = obj;
     this.tilesL = tileCache(spriteBank(rom, this.leftSide.type, this.slotOf(this.leftSide), this.rightSide.type));
     this.tilesR = tileCache(spriteBank(rom, this.rightSide.type, this.slotOf(this.rightSide), this.leftSide.type));

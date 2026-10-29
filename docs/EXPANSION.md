@@ -699,12 +699,17 @@ Forecasts (pilot level 5, open space, against the finale's level-3 Union and lev
 Talos): about 25-40% more damage than the base machine, still well below the Pallas; the Crane
 Kai hits a Tiamat for about 7 from two hexes without a counter (the Pallas's torpedo: 13).
 
-**Art**: each has its own unit-info picture and map icon (`ownArt`, `js/art/kai.js`, written by
-`tools/art/kai-refits.mjs`); fights use the base unit's sprites and choreography (`look`). The
+**Art**: each has its own unit-info picture, map icon and fight poses (`ownArt`, `js/art/kai.js`,
+written by `tools/art/kai-refits.mjs`); fights keep the base unit's choreography (`look`). The
 pictures were generated with xAI's image model (`tools/art/xai-gen.py`; prompts and the chosen
 sources in `tools/art/kai/`, with the Pallas and Directorate Talos pictures as style references)
 and reduced to 96x96 with 32 colours and an outline (`tools/art/kai-convert.py`). The map icons are
-drawn from shapes after generated side views, since 24x16 needs every pixel placed. 14 of the
+drawn from shapes after generated side views, since 24x16 needs every pixel placed.
+The fight poses (`tools/art/kai-poses.py`) come from the same side views, for the sheet tiles each
+base unit's choreography draws (Lobster 0; Crane 0, 136; Titan 72, 68 with a muzzle flash): 32x32 in
+the craft fight rows' colours, which the classic fights and the modern board's token use, and a
+96x96 full-colour `posesArt` for the modern fights. (Without poses the modern board drew the base
+unit's sprite, since a small craft's token comes from its fight sprite, not its map icon.) 14 of the
 owner's 100-image budget used.
 
 **Finale (Kessrin)**: more enemies to match. On the map: two more Directorate Talos pickets, two
@@ -721,3 +726,29 @@ whole roster, or 30 if that is too easy; with a late roster of level-7+ veterans
 Azoras and the Kai refits, plus the nine garrison joiners, an unlimited cap looked too easy against
 84 machines). Nine more open-space start positions (23 → 32), so 30 machines of any kind, capital
 ships included, find a place; checked with `campaign.applyRoster` on a 34-machine roster.
+
+## New units redrawn with xAI (owner, 2026-10-28)
+
+Every unit with its own art now has generated pictures, map icons, board tokens and fight art,
+replacing the shape-drawn versions (the old tools under `tools/art/` are marked superseded; running
+them would bring the old art back). Each unit's generator and sources live in `tools/art/<unit>/`
+and `tools/art/<unit>-xai.*`; details in `docs/notes/art-*.md`.
+
+* **Naga**: picture, icon, the four barrel-elevation poses, and full-colour poses (new).
+* **Azoras, Selene Kai**: pictures, icons, tokens, fight hulls kept on the recorded alignment points
+  (Selene Kai rails at hull y 11/121; Azoras ports and wing-cannon emitters); the Selene Kai gains a
+  full-colour hull.
+* **Directorate Talos**: all poses on both sheets, including the melee (`poses2`, `posesArt2`), and
+  a crimson beam sabre: tile 132 (the slash the melee recordings draw) is a red crescent, and the
+  modern renderer adds a glow and a swing trail (`fightfx.js` `drawSabre`). It now has `keepSlots`,
+  so its sabre plays the melee recording; before, it played as a ranged beam.
+* **Pallas**: the jet, spent jet and robot, every pose including nine sabre frames, all from one
+  master design. `own.js ownPoseSet` carries `posesArt2`, so the modern renderer shows the sabre
+  sheet in full colour.
+* **Leviathan**: a black and red dreadnought with a violet spinal cannon. Its main cannon (slot 1)
+  charges a violet orb with lightning, then fires a thick pulsing beam with shock rings and a
+  screen shake (`fightfx.js` `levCannon`, `drawLevCannon`); a lance for slot 0 and red streaks for
+  slot 2; violet shots in the classic renderer. Visual only: recorded timings and hits unchanged.
+  The fight sides carry `ownSlot`, the weapon actually fired (`gameapp.js`).
+
+Images: 58 of the owner's 100 used (14 for the Kai refits, 44 for these).

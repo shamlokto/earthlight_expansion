@@ -1,3 +1,5 @@
+// SUPERSEDED (2026-10-28): the Naga's art now comes from tools/art/naga-xai.mjs (xAI-generated
+// pictures); running this script would overwrite js/art/naga.js with the old shape-drawn art.
 // The Naga's own art (expansion type 21, a cut ROM unit revived by the expansion): original pixel
 // art, drawn from the shapes below with tools/art/raster.mjs and written to js/art/naga.js.
 //   node tools/art/naga.mjs
