@@ -28,7 +28,7 @@ const FX = {
   directorateTalos: { beam: [255, 40, 60] }, naga: { rail: [70, 255, 200], beam: [70, 255, 200] },
   pallasJet: { beam: [90, 200, 255] }, pallasJetSpent: { beam: [90, 200, 255] }, pallasRobot: { rail: [120, 220, 255] },
   seleneKai: { rail: [190, 130, 255], beam: [190, 130, 255] }, azoras: { rail: [255, 210, 120] },
-  marsKai: { beam: [255, 170, 60], rail: [255, 200, 120] }, fenrirKai: { rail: [255, 120, 210] }, asuraKai: { rail: [150, 220, 255] },
+  marsKai: { beam: [255, 170, 60], rail: [255, 200, 120] }, fenrirKai: { rail: [255, 120, 50] }, asuraKai: { rail: [255, 90, 60] },
   athenaKaiJet: { rail: [255, 120, 210] }, athenaKaiJetSpent: { rail: [255, 120, 210] }, athenaKaiRobot: { rail: [255, 140, 220] },
 };
 for (const [k, f] of Object.entries(FX)) if (SETS[k]) SETS[k].fx = f;

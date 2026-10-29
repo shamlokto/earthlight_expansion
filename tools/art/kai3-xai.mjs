@@ -12,28 +12,28 @@ import { poly, ellipse, rect, capsule, union, render, encode } from './raster.mj
 // icon rows: 1 white, 2-6 light to dark, 7 near black. Ramps darkest first.
 const P = { hull: [5, 4, 3, 2], pale: [4, 3, 2, 1], trim: [6, 5, 4], dark: [6, 5], glass: [3, 2, 1], out: 7 };
 
-// the Fenrir Kai from above, bow right: a slim hull drawn out to a sharp prow, the spine railgun
-// reaching past it, two engines at the stern, swept fins with missile pods at their tips
+// the Fenrir Kai from above, bow right (owner's redesign, 2026-10-29: a hit-and-run gunboat): a
+// low wedge hull, the oversized spine railgun running its whole length and on past the prow, two
+// big engines at the stern, small swept fins
 const fenrir = () => [
-  { shape: union(capsule(1.5, 6.5, 4, 6.5, 1.4), capsule(1.5, 9.5, 4, 9.5, 1.4)), ramp: P.dark, bevel: 1 },
-  { shape: union(poly([[4, 6], [9, 6], [7, 2.5], [4, 2.5]]), poly([[4, 10], [9, 10], [7, 13.5], [4, 13.5]])), ramp: P.hull, bevel: 1 },
-  { shape: union(capsule(3.5, 2.5, 8, 2.5, 1), capsule(3.5, 13.5, 8, 13.5, 1)), ramp: P.trim, bevel: 1 },
-  { shape: poly([[3, 6], [14, 6], [20.5, 8], [14, 10], [3, 10]]), ramp: P.pale, bevel: 2, dome: 1 },
-  { shape: ellipse(8.5, 8, 2.2, 1.3), ramp: P.glass, bevel: 1, dome: 1 },
+  { shape: union(capsule(1.5, 5, 5, 5, 1.8), capsule(1.5, 11, 5, 11, 1.8)), ramp: P.dark, bevel: 1 },
+  { shape: union(poly([[5, 5], [8, 5], [7, 1.5], [5.5, 1.5]]), poly([[5, 11], [8, 11], [7, 14.5], [5.5, 14.5]])), ramp: P.trim, bevel: 1 },
+  { shape: poly([[3, 5.5], [9, 5], [19, 7.4], [19, 8.6], [9, 11], [3, 10.5]]), ramp: P.hull, bevel: 2, dome: 1 },
+  { shape: rect(4.5, 6.6, 15, 9.4), ramp: [5, 4, 3], bevel: 1, dome: 1 },
+  { shape: ellipse(7, 8, 1.6, 1.1), ramp: P.glass, bevel: 1, dome: 1 },
 ];
-const FENRIR_LINES = [[11, 23, 8, 4], [22, 23, 8, 2]];
+const FENRIR_LINES = [[15, 23, 7, 4], [15, 23, 8, 3], [15, 23, 9, 5], [23, 23, 8, 1]];
 
-// the Asura-II Kai from above, bow right: a broad armoured wedge, the command tower, the triple
-// rail battery forward, gun sponsons on both flanks, four engines at the stern
+// the Asura-II Kai from above, bow right (owner's redesign: a gigantic gun battleship): a broad
+// armoured hull with a blunt bow, three triple main turrets on the centre line with their barrels
+// forward, a turret sponson on each flank, four engines at the stern
 const asura = () => [
-  { shape: union(capsule(1.5, 4.5, 3.5, 4.5, 1.2), capsule(1.5, 7, 3.5, 7, 1.2), capsule(1.5, 9.5, 3.5, 9.5, 1.2), capsule(1.5, 12, 3.5, 12, 1.2)), ramp: P.dark, bevel: 1 },
-  { shape: union(poly([[5, 4], [10, 4], [8, 1], [5, 1]]), poly([[5, 12.5], [10, 12.5], [8, 15], [5, 15]])), ramp: P.hull, bevel: 1 },
-  { shape: poly([[3, 3.5], [14, 4.5], [19, 6.5], [19, 10], [14, 12], [3, 13]]), ramp: P.pale, bevel: 2, dome: 1 },
-  { shape: rect(7, 6.5, 10.5, 10), ramp: [4, 3, 2], bevel: 1, dome: 1 },
-  { shape: ellipse(9, 8.2, 1.4, 1.1), ramp: P.glass, bevel: 1, dome: 1 },
-  { shape: ellipse(15, 8, 2.2, 2.6), ramp: [5, 4, 3], bevel: 1, dome: 1 },
+  { shape: union(capsule(1.2, 4.5, 3, 4.5, 1.1), capsule(1.2, 7, 3, 7, 1.1), capsule(1.2, 9.5, 3, 9.5, 1.1), capsule(1.2, 12, 3, 12, 1.1)), ramp: P.dark, bevel: 1 },
+  { shape: union(poly([[5, 3.5], [11, 3.5], [9, 1], [6, 1]]), poly([[5, 13], [11, 13], [9, 15.5], [6, 15.5]])), ramp: P.trim, bevel: 1 },
+  { shape: poly([[2.5, 3], [16, 3.5], [21, 6], [21.5, 8.2], [21, 10.5], [16, 13], [2.5, 13.5]]), ramp: P.hull, bevel: 2, dome: 1 },
+  { shape: union(rect(5, 6.4, 7.6, 10.2), rect(9.5, 6.4, 12.1, 10.2), rect(14, 6.4, 16.6, 10.2)), ramp: [6, 5, 4], bevel: 1, dome: 1 },
 ];
-const ASURA_LINES = [[17, 22, 6, 4], [17, 23, 8, 3], [17, 22, 10, 4], [22, 22, 6, 2], [23, 23, 8, 1], [22, 22, 10, 2]];
+const ASURA_LINES = [[8, 9, 7, 3], [8, 9, 9, 3], [12, 13, 7, 3], [12, 13, 9, 3], [17, 22, 7, 3], [17, 23, 8, 2], [17, 22, 9, 3], [22, 22, 7, 1], [23, 23, 8, 1], [22, 22, 9, 1]];
 
 function icon(parts, lines) {
   const img = render(24, 16, parts(), { outline: P.out, cel: true, smooth: 0 });
