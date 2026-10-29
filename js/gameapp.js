@@ -791,18 +791,23 @@ async function enemyTurn() {
   checkEnd();
 }
 
-// Buccaneer cannon (map 19): fires down its lanes at every phase change.
+// Cannons (the Buccaneer's on map 19, the expansion's mission.cannons): fire down their lanes at
+// every phase change.
 async function phaseEvents() {
   const ev = battle.phaseEvent;
   if (!ev) return;
   battle.phaseEvent = null;
   busy = true;
-  log(`<b>Buccaneer Cannon fired</b>${ev.hit.length ? ': ' + ev.hit.map((u) => `<span class="${side(u.army)}">${nameOf(u)}</span>`).join(', ') + ' destroyed' : ''}`);
+  log(`<b>${battle.info.custom ? 'The cannons fired' : 'Buccaneer Cannon fired'}</b>${ev.hit.length ? ': ' + ev.hit.map((u) => `<span class="${side(u.army)}">${nameOf(u)}</span>`).join(', ') + ' destroyed' : ''}`);
   await alerts([EV.cannon]);
   if (sound) sound.playSfx(0x3F);
-  const cells = [];
-  for (const c of ev.cannons) for (let y = c.y; y <= battle.info.rows; y++) cells.push([c.x, y]);
-  await flash(cells, 'rgba(255,240,200,.75)');
+  // the modern board sweeps a beam down each lane; the classic one flashes the lanes' hexes
+  if (!board.classic && board.laneBlast) await board.laneBlast(ev.cannons, battle.info.rows);
+  else {
+    const cells = [];
+    for (const c of ev.cannons) for (let y = c.y; y <= battle.info.rows; y++) cells.push([c.x, y]);
+    await flash(cells, 'rgba(255,240,200,.75)');
+  }
   busy = false;
   battle.result = null;
 }
@@ -914,6 +919,8 @@ function expansionReport(w) {
   for (const c of $('resCrew').querySelectorAll('canvas[data-art]')) paintLookArt(c, rom, types, +c.dataset.art, 1);
   $('resCrew').hidden = !mine.length;
   if (w === 0 && custom.ending) { $('resEpilogue').textContent = custom.ending.split(/\n\s*\n/)[0]; $('resEpilogue').hidden = false; }
+  // the finale's hidden mission: opened (won fast enough) or hinted at
+  if (w === 0 && custom.secret) { $('resEpilogue').textContent += `\n\n${battle.turn <= custom.secret.maxTurns ? custom.secret.unlocked : custom.secret.teaser}`; $('resEpilogue').hidden = false; }
 }
 
 // The points screen ($08:A6C0): this map's points, the campaign total and the rank. The

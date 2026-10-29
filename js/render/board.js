@@ -316,6 +316,25 @@ export class Board {
     this.fx.push({ kind: 'linger', cx, cy, t0: now + t, life: 7000 });
   }
 
+  // Modern board: cannon towers firing their lanes (events.js fireCannons; the Buccaneer's, the
+  // expansion's). Each cannon's white-gold beam sweeps down its column from the cannon to the map's
+  // edge (about 0.45 s), its head flaring, burning debris thrown off each hex it crosses, then it
+  // fades; the cannons fire a beat apart and the board shakes. Reduced motion: a short, still beam.
+  // Resolves when done (about 1.5 s).
+  laneBlast(cannons, rows) {
+    const now = performance.now(), life = reduced ? 700 : 1500;
+    cannons.forEach((c, i) => {
+      const cells = [];
+      for (let y = c.y; y <= rows; y++) {
+        const parts = [];
+        for (let k = 0; k < (reduced ? 0 : 6); k++) { const s = Math.random() < 0.5 ? -1 : 1, v = 30 + Math.random() * 110; parts.push([s * v, (Math.random() - 0.7) * 60, 2 + Math.random() * 3]); }
+        cells.push({ y, parts });
+      }
+      this.fx.push({ kind: 'lane', x: c.x, y0: c.y, y1: rows, cells, t0: now + i * 110, life });
+    });
+    return new Promise((done) => setTimeout(done, life + (cannons.length - 1) * 110));
+  }
+
   // Briefly highlights hexes (cannon fire, Decimator); resolves when done.
   flash(cells, colour) {
     return new Promise((done) => {
@@ -444,7 +463,8 @@ export class Board {
   shake(t) {
     const n = this.fx.find((e) => e.kind === 'nuke' && !e.reduced && t - e.t0 < NUKE.shake);
     const sb = this.fx.find((e) => e.kind === 'shipBlast' && !e.reduced && t >= e.t0 && t - e.t0 < (e.quake || 600));
-    const a = n ? 16 * Math.pow(1 - (t - n.t0) / NUKE.shake, 2) : sb ? (sb.quake ? 16 : 9) * Math.pow(1 - (t - sb.t0) / (sb.quake || 600), 2) : 0;
+    const ln = !reduced && this.fx.find((e) => e.kind === 'lane' && t >= e.t0 && t - e.t0 < 600);   // a cannon firing its lane
+    const a = n ? 16 * Math.pow(1 - (t - n.t0) / NUKE.shake, 2) : sb ? (sb.quake ? 16 : 9) * Math.pow(1 - (t - sb.t0) / (sb.quake || 600), 2) : ln ? 8 * Math.pow(1 - (t - ln.t0) / 600, 2) : 0;
     const tr = a > 0.3 ? `translate(${((Math.random() * 2 - 1) * a).toFixed(1)}px, ${((Math.random() * 2 - 1) * a * 0.7).toFixed(1)}px)` : '';
     if (this.stage.style.transform !== tr) this.stage.style.transform = tr;
   }
@@ -605,6 +625,29 @@ export class Board {
       ctx.save();
       if (e.kind === 'flash') {
         if (Math.floor(f * 6) % 2 === 0) { ctx.fillStyle = e.colour; for (const [x, y] of e.cells) { hexPath(ctx, x, y); ctx.fill(); } }
+      } else if (e.kind === 'lane') {   // a cannon firing down its lane (laneBlast)
+        const [x0, ya] = centre(e.x, e.y0), [, yb] = centre(e.x, e.y1), sweep = reduced ? 1 : Math.min(1, f / 0.3);
+        const yh = ya + (yb - ya) * sweep, fade = f < 0.6 ? 1 : Math.max(0, 1 - (f - 0.6) / 0.4);
+        ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+        const throb = 0.85 + 0.15 * Math.sin(t / 40);
+        for (const [w, col, a] of [[90, '255,110,20', 0.12], [56, '255,150,40', 0.25], [32, '255,200,90', 0.55], [16, '255,240,180', 0.85], [6, '255,255,250', 1]]) {
+          ctx.strokeStyle = `rgba(${col},${(a * fade).toFixed(3)})`; ctx.lineWidth = w * throb * (f < 0.3 ? 1.15 : 1);
+          ctx.beginPath(); ctx.moveTo(x0, ya); ctx.lineTo(x0, yh); ctx.stroke();
+        }
+        if (f < 0.45) {   // the head flaring as it sweeps down, and the cannon's muzzle
+          const r = 80 * (1 - f); ctx.globalAlpha = 1 - f / 0.45;
+          ctx.drawImage(this.glow.hit, x0 - r, yh - r, r * 2, r * 2); ctx.drawImage(this.glow.hit, x0 - r * 0.8, ya - r * 0.8, r * 1.6, r * 1.6);
+          ctx.globalAlpha = 1;
+        }
+        // each hex flashing as the beam crosses it, then burning debris thrown off it
+        for (const c of e.cells) {
+          const [, cy] = centre(e.x, c.y), passed = (cy - ya) / Math.max(1, yb - ya), dt = f - passed * 0.3;
+          if (dt <= 0 || dt > 0.6) continue;
+          const k = dt / 0.6;
+          if (k < 0.25) { const r = 34 * (1 - k * 4); ctx.globalAlpha = 1 - k * 4; ctx.drawImage(this.glow.hit, x0 - r, cy - r, r * 2, r * 2); ctx.globalAlpha = 1; }
+          ctx.fillStyle = `rgba(255,${230 - 160 * k | 0},${110 - 80 * k | 0},${(1 - k).toFixed(3)})`;
+          for (const [vx, vy, s2] of c.parts) ctx.fillRect(x0 + vx * k * 1.4, cy + vy * k + 40 * k * k, s2 * (1.4 - k), s2 * (1.4 - k));
+        }
       } else if (e.kind === 'hit') {
         ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - f;
         const r = 22 * (0.6 + f); ctx.drawImage(this.glow.hit, e.cx - r, e.cy - r, r * 2, r * 2);

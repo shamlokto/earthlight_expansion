@@ -55,6 +55,13 @@ export class ExpansionBattle extends Battle {
     this.general = g || null;
     if (g) { g.general = true; g.pilotLevel = g.level; g.level = 9; }   // level 9 only while the general is aboard
     this.boosted = new Map();
+    // map events on expansion maps: cannons that fire straight down their column at every phase
+    // change while their tower stands (events.js fireCannons, as the Buccaneer's on map 19);
+    // mission.cannons [{ x, y, tower: [x, y] }], the tower being the unit standing there
+    if (mission.cannons) this.cannons = mission.cannons.map((c) => {
+      const t = this.units.find((u) => u.hp > 0 && !u.carrier && u.x === c.tower[0] && u.y === c.tower[1]);
+      return { x: c.x, y: c.y, tower: t ? t.id : null };
+    });
   }
 
   // The general's unit fights with doubled evasion (capped) and doubled power.
@@ -173,6 +180,8 @@ export async function expansionFromUrl(rom) {
     state = campaign.load();
     if (state) {
       mission = campaign.applyRoster(mission, state, standChecker(rom, mission, types, tables), types);
+      // arrivals for one story choice only (`when: { choice }`; the hidden battle's cartel)
+      if (mission.arrivals) mission = { ...mission, arrivals: mission.arrivals.filter((e) => !e.when || e.when.choice === state.choice) };
       const index = await campaign.missionIndex();
       if (index) total = campaign.missionList(index, state).length;
     }
@@ -186,7 +195,13 @@ export async function expansionFromUrl(rom) {
     ending: (state?.choice !== undefined && mission.endings?.[state.choice]) || mission.ending || null,
     types, tables, text: data.text, terrain: data.terrain,
     // a won campaign battle goes into the saved campaign; returns the supply gained
-    finish: (b) => { const s = campaign.load(); const gain = campaign.finish(s, b, mapPoints(b, missionNo).total, missionNo); campaign.save(s); return gain; },
+    finish: (b) => {
+      const s = campaign.load(), gain = campaign.finish(s, b, mapPoints(b, missionNo).total, missionNo);
+      if (mission.secret && b.turn <= mission.secret.maxTurns) s.secret = true;   // a hidden mission opens (missionList)
+      campaign.save(s); return gain;
+    },
+    // the finale's hidden mission: { maxTurns, unlocked, teaser } (the result screen says which)
+    secret: mission.secret || null,
     newBattle: (opts) => new ExpansionBattle(rom, mission, types, { ...opts, tables }),
     briefing: () => briefingPages(mission, scriptOf(mission).goal),
     hud: expansionHud,

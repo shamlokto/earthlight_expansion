@@ -1,0 +1,3 @@
+{"campaign":"remnant","act":4,"note":"The hidden battle (docs/STORY.md, \"The hidden battle\"): listed only once the finale opens it (secret; kessrin.json secret.maxTurns).","secretHint":"Far out in Earth's shadow an old Galt beacon is still calling. Sink the Leviathan by turn 24 to answer it.","missions":[
+{"no":13,"title":"Nineveh","file":"missions/remnant/nineveh.json","secret":true,"all":true,"builds":40,"bonusSupply":1200,"unlocks":[],"hint":"Everything you have, and forty machines of it: three cannon lanes split the field, so never end a move in one; craft must climb the hull to kill the towers."}
+]}

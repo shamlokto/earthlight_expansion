@@ -62,7 +62,7 @@ document.addEventListener('keydown', startSound, { capture: true });
 function fillIcons() { for (const c of document.querySelectorAll('canvas[data-icon]')) paint(c, typeIcon(rom, types, +c.dataset.icon, 0), pal, { scale: 2 }); }
 
 // late in the campaign (index.json allFrom) every machine type can be built
-const unlocked = () => state.next >= (index.allFrom ?? Infinity) ? C.marketTypes(types).map((t) => t.type) : [...new Set([...(index.start || []), ...list().slice(0, state.next).flatMap((m) => m.unlocks || [])])];
+const unlocked = () => state.next >= (index.allFrom ?? Infinity) || entry()?.all ? C.marketTypes(types).map((t) => t.type) : [...new Set([...(index.start || []), ...list().slice(0, state.next).flatMap((m) => m.unlocks || [])])];
 // the campaign's missions as this playthrough has them (the choice picks among alternatives)
 const list = () => C.missionList(index, state);
 const entry = () => list()[state.next] || null;
@@ -106,9 +106,9 @@ function confirmBuild(type) {
     ${t.move === 0 ? '<p class="muted">Fixed battery: it cannot move. Load it into a Crab on the roster (its Carries menu) and deploy the Crab: in battle it sets the battery down on bedrock, an asteroid, a fortress deck or a turret railway.</p>' : ''}
     <p><a href="wiki.html#${anchor}" target="_blank" rel="noopener">Full wiki entry →</a></p>
     ${C.isUnique(types, type) ? `<p class="muted">${C.ownsUnique(state, types, type) ? 'You already have one: only one may serve at a time.' : 'Unique: only one may serve at a time.'}</p>` : ''}
-    <div class="row"><button class="btn primary" id="buyYes" ${!C.ownsUnique(state, types, type) && (beta || (state.supply >= cost && state.builds < C.MAX_BUILDS)) ? '' : 'disabled'}>Buy${beta ? ' (free, beta)' : ` for ${cost} supply`}</button><button class="btn" id="buyNo">Cancel</button></div>`;
+    <div class="row"><button class="btn primary" id="buyYes" ${!C.ownsUnique(state, types, type) && (beta || (state.supply >= cost && state.builds < C.buildLimit(entry()))) ? '' : 'disabled'}>Buy${beta ? ' (free, beta)' : ` for ${cost} supply`}</button><button class="btn" id="buyNo">Cancel</button></div>`;
   $('buyNo').onclick = () => d.close();
-  $('buyYes').onclick = () => { d.close(); if (C.build(state, types, type)) { save(); render(); } };
+  $('buyYes').onclick = () => { d.close(); if (C.build(state, types, type, C.buildLimit(entry()))) { save(); render(); } };
   d.showModal();
 }
 
@@ -148,7 +148,7 @@ function render() {
   let html = '';
 
   // the next mission: the hero of the page
-  if (!e) html += `<section class="hero box"><div class="eyebrow">Campaign complete</div><h1>${C.campaign().id === 'classic' ? 'The Union leadership has fallen.' : 'The war is over.'}</h1></section>`;
+  if (!e) html += `<section class="hero box"><div class="eyebrow">Campaign complete</div><h1>${C.campaign().id === 'classic' ? 'The Union leadership has fallen.' : 'The war is over.'}</h1>${index.secretHint && !state.secret ? `<p class="brief">${esc(index.secretHint)}</p>` : ''}</section>`;
   else if (pending) html += choiceHtml(pending, e, total);
   else {
     const intro = briefFor !== e.file;
@@ -165,7 +165,7 @@ function render() {
   }
 
   html += `<div class="hudbar"><span><em>Supply</em><b>${beta ? '∞' : state.supply}</b>${beta ? '<i class="beta">beta</i>' : ''}</span>
-    <span><em>Built</em><b>${state.builds}${beta ? '' : ` / ${C.MAX_BUILDS}`}</b></span><span><em>Machines</em><b>${state.roster.length}</b></span>
+    <span><em>Built</em><b>${state.builds}${beta ? '' : ` / ${C.buildLimit(entry())}`}</b></span><span><em>Machines</em><b>${state.roster.length}</b></span>
     <span><em>Mission</em><b>${e ? e.no : '—'} / ${total}</b></span></div>`;
 
   const sortBox = (id, cur, keys) => `<select class="sortsel" id="${id}" title="Sort">${keys.map((k) => `<option value="${k}" ${k === cur ? 'selected' : ''}>Sort: ${SORT_LABELS[k]}</option>`).join('')}</select>`;
@@ -192,11 +192,11 @@ function render() {
   html += `<div class="row genrow"><label class="tog gold"><input type="radio" name="general" data-general="none" ${state.general === null ? 'checked' : ''}><span>General stays home</span></label>
     <span class="muted">Aboard: evasion ×2 (max 96), power ×2, level 9. If that unit is destroyed, the game is over.</span></div></section>`;
 
-  html += `<div class="two"><section class="box"><h2>Production <small>${beta ? 'beta: every machine, free' : `up to ${C.MAX_BUILDS} per intermission`}</small>${sortBox('shopSort', sorting.shop, ['supply', 'type', 'name', 'new'])}</h2>
+  html += `<div class="two"><section class="box"><h2>Production <small>${beta ? 'beta: every machine, free' : `up to ${C.buildLimit(entry())} per intermission`}</small>${sortBox('shopSort', sorting.shop, ['supply', 'type', 'name', 'new'])}</h2>
     <p class="muted">Each machine comes with a new pilot at level 0.${beta ? '' : state.next >= (index.allFrom ?? Infinity) ? ' Every machine type is now available.' : ` More types unlock as the campaign goes on; all of them from mission ${(index.allFrom ?? 0) + 1}.`}</p>`;
   const shopKey = { supply: byPrice, type: byType, name: byName, new: (a, b) => b - a }[sorting.shop];
   html += grouped('shop', (beta ? C.marketTypes(types) : unlocked().map((k) => types[k])).sort((a, b) => shopKey(a.type, b.type)), (t) => t.type, (t) => {
-    const cost = C.price(types, t.type), ok = !C.ownsUnique(state, types, t.type) && (beta || (state.supply >= cost && state.builds < C.MAX_BUILDS));
+    const cost = C.price(types, t.type), ok = !C.ownsUnique(state, types, t.type) && (beta || (state.supply >= cost && state.builds < C.buildLimit(entry())));
     return `<button class="btn shopitem" data-build="${t.type}" ${ok ? '' : 'disabled'}>${art(t.type) ? `<img src="${art(t.type)}" alt="">` : icon(t.type)}<span><b>${esc(name(t.type))}</b><small>${cost} supply${beta ? ' · free' : ''}</small></span></button>`;
   }, 'shop');
   html += `</section><section class="box"><h2>Trade <small>giving ${picked.size} · worth ${tradeValue}</small></h2>
@@ -297,6 +297,9 @@ async function openCampaign(id) {
   state = C.load(); picked.clear(); briefFor = null;
   if (!state) await startNew(); else await loadNext();
   if (C.ensureAthena(state)) save();
+  // an entry's one-time supply grant before its battle (`bonusSupply`; the hidden battle)
+  const e = entry();
+  if (e?.bonusSupply && !(state.bonuses || []).includes(e.file)) { state.supply += e.bonusSupply; state.bonuses = [...(state.bonuses || []), e.file]; save(); }
   render();
 }
 

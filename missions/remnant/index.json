@@ -1,4 +1,4 @@
-{"campaign":"remnant","title":"Galt remnant","start":[0,1,3],"missions":[
+{"campaign":"remnant","title":"Galt remnant","start":[0,1,3],"secretHint":"Far out in Earth's shadow an old Galt beacon is still calling. Sink the Leviathan by turn 24 to answer it.","missions":[
 {"no":1,"title":"Night of Knives","file":"missions/remnant/knives.json","unlocks":[],"hint":"Break out: go through both gates at once and run for the magnetic band."},
 {"no":2,"title":"Salvage Rights","file":"missions/remnant/salvage.json","unlocks":[8,9],"hint":"Grey docks: bring one to zero and it joins you with its machines."},
 {"no":3,"title":"The Shepherd","file":"missions/remnant/shepherd.json","unlocks":[26],"hint":"Crabs cross asteroids cheaply but crawl through meteoroids and flux."},
@@ -12,5 +12,6 @@
 {"no":9,"title":"Vane's Last Stand","file":"missions/remnant/laststand.json","unlocks":[31],"hint":"Many attackers: Vane's Talos is level 8; surround it in open space, away from the comet's tail."},
 {"no":10,"title":"Atmosphere","file":"missions/remnant/atmosphere.json","unlocks":[43],"hint":"Fighters and the captured Abaddon: four carriers in an asteroid ring, a strike group hidden in the atmosphere."},
 {"no":11,"title":"Olympos Again","file":"missions/remnant/olympos.json","unlocks":[32],"hint":"Fighters first: three Abaddons wait for your capital ships around the citadel."},
-{"no":12,"title":"Kessrin","file":"missions/remnant/kessrin.json","unlocks":[],"hint":"Magnetic belts lead to the gravity ring's west opening; your Abaddon can end the Leviathan from four hexes."}
+{"no":12,"title":"Kessrin","file":"missions/remnant/kessrin.json","unlocks":[],"hint":"Magnetic belts lead to the gravity ring's west opening; your Abaddon can end the Leviathan from four hexes."},
+{"no":13,"title":"Nineveh","file":"missions/remnant/nineveh.json","secret":true,"all":true,"builds":40,"bonusSupply":1200,"unlocks":[],"hint":"Everything you have, and forty machines of it: three cannon lanes split the field, so never end a move in one; craft must climb the hull to kill the towers."}
 ]}

@@ -1,6 +1,6 @@
 // Combines the new campaign's per-act index files (missions/remnant/index-act*.json, written by
 // the mission builders) into missions/remnant/index.json, the index the intermission reads
-// (docs/STORY.md). `start` comes from the first act; `allFrom` from whichever act sets it; the
+// (docs/STORY.md). `start` comes from the first act; `allFrom` and `secretHint` from whichever act sets them; the
 // missions are concatenated in act order. Usage: node tools/build-remnant-index.mjs
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -14,7 +14,8 @@ for (const f of acts) {
   const a = JSON.parse(readFileSync(join(dir, f), 'utf8'));
   if (!index.start.length && a.start) index.start = a.start;
   if (a.allFrom !== undefined) index.allFrom = a.allFrom;
+  if (a.secretHint) index.secretHint = a.secretHint;   // the hidden battle's hint (intermission, campaign complete)
   index.missions.push(...a.missions);
 }
-writeFileSync(join(dir, 'index.json'), `{"campaign":"remnant","title":"Galt remnant","start":${JSON.stringify(index.start)},${index.allFrom !== undefined ? `"allFrom":${index.allFrom},` : ''}"missions":[\n${index.missions.map((m) => JSON.stringify(m)).join(',\n')}\n]}\n`);
+writeFileSync(join(dir, 'index.json'), `{"campaign":"remnant","title":"Galt remnant","start":${JSON.stringify(index.start)},${index.allFrom !== undefined ? `"allFrom":${index.allFrom},` : ''}${index.secretHint ? `"secretHint":${JSON.stringify(index.secretHint)},` : ''}"missions":[\n${index.missions.map((m) => JSON.stringify(m)).join(',\n')}\n]}\n`);
 console.log(`missions/remnant/index.json: ${acts.join(', ')} → ${index.missions.length} entries`);

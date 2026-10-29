@@ -85,3 +85,23 @@ the Directorate Talos, each marked `// standin: 59` / `// standin: 60` for a lat
 - `js/expansion/briefing.js` `commsHtml` and `js/expansion/portraits.js` (`portrait`, `SPEAKERS`).
 - `tools/build-missions.mjs --dir remnant` builds `tools/missions/remnant/*.mjs` into
   `missions/remnant/`, passing `comms` and `endings` through.
+
+## The hidden battle: Nineveh (owner, 2026-10-29)
+A secret Chapter 13 after the finale, opened only if the Leviathan is sunk by turn 24 (the result
+screen says so; otherwise it hints at "an old Galt beacon still calling").
+- **Story**: Asgard's yards laid down two hulls eleven years ago. One became Babylon; the other was
+  never finished, never named in any Union record and never found. She is the **Nineveh**, hidden in
+  Earth's shadow. **Ahriman**, the Galt leader whose fate the original game never shows, survived;
+  while the remnant fought Kessrin he salvaged the main cannon Babylon never fired and fitted it to
+  her sister. Everything Galt still has is drawn up in front of her.
+- **Cast**: Ahriman speaks (new portrait: white hair and beard, a green cybernetic eye, the Galt coat
+  in black, green and gold); Ruess, Sato and Moraine answer.
+- **Battle**: the remnant brings up to forty machines (every machine buildable, 1200 supply, up to
+  40 builds at that intermission). Three towers on the Nineveh's hull feed her cannon, which fires
+  down three lanes at every phase change; a gravity veil, minefields, a battery fort and a carrier
+  anchorage guard her; about 150 Galt machines in all, in four waves. A loyal Union fleet joins on
+  turn 8, and on turn 12 Moraine's cartel (deal) or the Olympos guard (refuse).
+- **Ending**: the Nineveh breaks along the seams the Asgard welders left; Ahriman never begs; the
+  fleets drift and nobody fires; someone reads out the names of ships. "The war is over. This time,
+  all of it."
+- Details: docs/notes/hidden-boss.md.

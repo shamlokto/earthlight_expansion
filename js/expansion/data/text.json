@@ -81,7 +81,8 @@
   "Athena Kai",
   "Athena Kai",
   "Athena Kai",
-  "Athena Kai"
+  "Athena Kai",
+  "Nineveh"
  ],
  "unitInfo": [
   {
@@ -836,6 +837,16 @@
     "   Convert\n   Melee",
     "Transforming Fighter (Refit)\n(Hunter Mode)",
     "Ruess's refit of the Athena\nin hunter form."
+   ]
+  },
+  {
+   "type": 77,
+   "name": "Nineveh",
+   "short": "Fortress Ship",
+   "info": [
+    "   Carrier\n   Fortress",
+    "Fortress Ship\n\nBabylon's sister, armed with\nBabylon's own main cannon",
+    "Laid down at Asgard beside\nBabylon and hidden in Earth's\nshadow. Ahriman commands her."
    ]
   }
  ],

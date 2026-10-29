@@ -19,6 +19,8 @@ export function remembered() { try { return localStorage.getItem(CURRENT); } cat
 export function remember(id) { try { id ? localStorage.setItem(CURRENT, id) : localStorage.removeItem(CURRENT); } catch { } }
 export const saved = (id) => { try { return JSON.parse(localStorage.getItem(CAMPAIGNS[id].key)); } catch { return null; } };
 export const MAX_BUILDS = 3;
+// machines buildable per intermission: an index entry may allow more (`builds`, the hidden battle)
+export const buildLimit = (e) => e?.builds ?? MAX_BUILDS;
 export const BASE_SUPPLY = 10;          // every intermission, so a bad battle still builds something
 export const SCORE_PER_SUPPLY = 10;     // map points per supply point
 export const GENERAL_SHIPS = new Set([4, 5, 6, 7, 30, 31, 33, 34, 35, 36, 37, 38, 58, 61, 62, 63, 64, 65, 72, 73, 74, 75, 76]);   // Athena, Tiamat, Asura-II, Hastur, carriers (58: Selene Kai, 61: Azoras, 62-65: Pallas, 72: Asura-II Kai, 73-76: Athena Kai)
@@ -50,6 +52,7 @@ export async function missionIndex() { try { const r = await fetch(current.index
 export function missionList(index, s) {
   const out = [], seen = new Map();
   for (const e of index.missions) {
+    if (e.secret && !s.secret) continue;   // a hidden mission, until the finale opens it (battle.js finish)
     if (e.no === undefined) { out.push(e); continue; }
     if (!seen.has(e.no)) { seen.set(e.no, out.length); out.push(e); continue; }
     const i = seen.get(e.no), cur = out[i], fits = (x) => x.when && s.choice !== undefined && x.when.choice === s.choice;
@@ -103,10 +106,10 @@ export function ownsUnique(s, types, type, except = []) {
   return !beta(s) && isUnique(types, type) && s.roster.some((r) => !except.includes(r.id) && family(types, r.type) === family(types, type));
 }
 
-export function build(s, types, type) {
+export function build(s, types, type, limit = MAX_BUILDS) {
   const cost = price(types, type);
   if (ownsUnique(s, types, type)) return false;
-  if (!beta(s) && (s.builds >= MAX_BUILDS || s.supply < cost)) return false;
+  if (!beta(s) && (s.builds >= limit || s.supply < cost)) return false;
   if (!beta(s)) s.supply -= cost;
   s.builds++;
   s.roster.push({ id: s.nextId++, type, level: 0 });
