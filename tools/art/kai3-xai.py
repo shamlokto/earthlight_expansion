@@ -1,8 +1,11 @@
 # The Fenrir Kai's (type 71) and the Asura-II Kai's (type 72) pictures, fight hulls and board
 # tokens from their generated sources in tools/art/kai3/ (<unit>-picture-src.jpg, a three-quarter
-# view, and <unit>-top-src.jpg, the same ship from directly above with the bow to the right; made
-# with tools/art/xai-gen.py from the prompts beside them, the Azoras's picture as the style
-# reference). Writes tools/art/kai3/<unit>-art.json, which tools/art/kai3-xai.mjs turns into
+# view, and <unit>-top-src.jpg, the same ship from directly above with the bow to the right, plus
+# asura-broadside-src.jpg, the Asura-II Kai from above with the bow up and every turret swung to
+# starboard; made with tools/art/xai-gen.py from the prompts beside them, the pictures generated
+# with the Lobster Kai's as the style reference and the views with each unit's picture). Owner's
+# redesign (2026-10-29): the Fenrir Kai a teal hit-and-run gunboat with one oversized spine
+# railgun, the Asura-II Kai a navy-and-gold battleship of three giant triple turrets. Writes tools/art/kai3/<unit>-art.json, which tools/art/kai3-xai.mjs turns into
 # js/art/kai3.js with the map icons.
 #   python3 tools/art/kai3-xai.py && node tools/art/kai3-xai.mjs
 # The helpers (silhouette, warp, the 3x full-colour hull shrunk to the ships' fight rows) are
@@ -10,8 +13,8 @@
 # recorded shots leave from the guns (box coordinates of the base hull, js/game/fightdata.js):
 #   Fenrir Kai `hull` (64x64, the Fenrir's top-down hull, bow right): the spine railgun's muzzle at
 #     the box's right edge on y 29.5 (the Fenrir's shots leave x 62-70, y 19-39);
-#   Asura-II Kai `hull` (64x128, the Asura-II's hull against craft, bow up): the top view turned a
-#     quarter, the starboard flank out to x 63 over y 17-127 (shots leave x 63, y 68-116);
+#   Asura-II Kai `hull` (64x128, the Asura-II's hull against craft, bow up): the broadside view,
+#     its starboard gun muzzles out at x 63, the hull down to the bottom (shots leave x 63, y 68-116);
 #   Asura-II Kai `hull2` (96x128, its top-down hull against ships, slot 1): the rail battery's
 #     muzzles at x 95 on y 61 (shots leave x 92-108, y 45-77).
 import importlib.util, json, os
@@ -66,12 +69,13 @@ def asura():
     P, C = bow_right(im, fg, 96, 128, 95.4, 61)
     idx3_2, pal2 = X.full(P, C)
     hull2 = X.classic(idx3_2, pal2, 96, 128)
-    # hull (against craft, bow up): the top view turned a quarter, flanks out to x 1 and 63, the
-    # length drawn out a little (1.25) to fill the box from y 17 to the bottom
-    rim = im.rotate(90, expand=True); rfg = np.rot90(fg)
-    rx0, ry0, rx1, ry1 = X.bbox(rfg)
-    w = 186; h = min(381 - 51, (ry1 - ry0) * w / (rx1 - rx0) * 1.25)
-    P, C = X.warp(rim, rfg, (rx0, ry0, rx1, ry1), (3, 381 - h, 189, 381), 192, 384)
+    # hull (against craft, bow up): the broadside view (every turret swung to starboard), from the
+    # port wing at x 1 to the gun muzzles at the right edge x 63, where the recorded broadside
+    # shots leave; its length (in proportion, at most the box from y 17) ends at the bottom
+    bim, bfg = load('asura-broadside-src.jpg')
+    bx0, by0, bx1, by1 = X.bbox(bfg)
+    w = 186; h = min(381 - 51, (by1 - by0) * w / (bx1 - bx0))
+    P, C = X.warp(bim, bfg, (bx0, by0, bx1, by1), (3, 381 - h, 189, 381), 192, 384)
     idx3, pal = X.full(P, C)
     hull = X.classic(idx3, pal, 64, 128)
     tok_art, tok = X.token(im, fg, 36, 24)
