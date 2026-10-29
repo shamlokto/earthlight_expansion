@@ -14,6 +14,7 @@ import { LOBSTER_KAI, CRANE_KAI, TITAN_KAI } from './kai.js';
 import { MARS_KAI, CYCLOPS_KAI } from './kai2.js';
 import { FENRIR_KAI, ASURA_KAI } from './kai3.js';
 import { ATHENA_KAI_JET, ATHENA_KAI_JET_SPENT, ATHENA_KAI_ROBOT } from './athenakai.js';
+import { ICONS as KAI_ICONS } from './kai-icons.js';
 
 const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS, azoras: AZORAS,
   pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT, naga: NAGA,
@@ -31,6 +32,8 @@ const FX = {
   athenaKaiJet: { rail: [255, 120, 210] }, athenaKaiJetSpent: { rail: [255, 120, 210] }, athenaKaiRobot: { rail: [255, 140, 220] },
 };
 for (const [k, f] of Object.entries(FX)) if (SETS[k]) SETS[k].fx = f;
+// The Kai series' hand-drawn map icons (js/art/kai-icons.js) in place of the sets' own
+for (const [k, ic] of Object.entries(KAI_ICONS)) if (SETS[k]) SETS[k].icon = ic;
 
 // Each Kai refit in its own colours (owner, 2026-10-29: they were all white and magenta-pink and hard
 // to tell apart): the pink and magenta of its full-colour pictures (unit picture, poses, hulls,
