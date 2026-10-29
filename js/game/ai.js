@@ -26,9 +26,9 @@ import { distance, neighbours, hexRing, NEUTRAL } from './rules.js';
 import { inLane, decimator, blast } from './events.js';
 
 const ROUTES = 0x0289b1, SCRIPTS = 0x00e900, VIP_UNION = 0x02e64f, VIP_GALT = 0x02e631;
-const SPENT_FORMS = new Set([5, 7, 11, 44, 63, 65]);     // $01:8C10 (63/65: the expansion's Pallas)
+const SPENT_FORMS = new Set([5, 7, 11, 44, 63, 65, 74, 76]);     // $01:8C10 (63/65: the expansion's Pallas, 74/76: its Athena Kai)
 // The Athena's four forms (4-7) and the Pallas's (62-65, the expansion's successor): the lowest type
-const athenaBase = (t) => (t >= 4 && t <= 7 ? 4 : t >= 62 && t <= 65 ? 62 : null);
+const athenaBase = (t) => (t >= 4 && t <= 7 ? 4 : t >= 62 && t <= 65 ? 62 : t >= 73 && t <= 76 ? 73 : null);
 const ABADDON = 43, SIREN = 36, ERINYES = 34;
 const DOCK_CAT = 7, CARRIER_CAT = 1, GUARD_ZONE = 3;
 

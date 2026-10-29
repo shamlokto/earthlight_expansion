@@ -112,6 +112,14 @@ function confirmBuild(type) {
   d.showModal();
 }
 
+// The roster's and the shop's machines in their series (campaign.js SERIES: Kai, original), each a
+// section that folds away; which ones are folded is remembered in this browser.
+const folded = (() => { try { return JSON.parse(localStorage.getItem('el-expansion-folded')) || {}; } catch { return {}; } })();
+function grouped(list, items, typeOf, html1, cls) {
+  return C.SERIES.map((g) => [g, items.filter((x) => C.seriesOf(types, typeOf(x)) === g.id)]).filter(([, l]) => l.length)
+    .map(([g, l]) => `<details class="series" data-fold="${list}:${g.id}" ${folded[`${list}:${g.id}`] ? '' : 'open'}><summary>${g.label} <small>${l.length}</small></summary><div class="${cls}">${l.map(html1).join('')}</div></details>`).join('');
+}
+
 // Sorting (remembered in this browser): supply price, newest, unit type, pilot level, name.
 const SORT_LABELS = { supply: 'supply', new: 'newest', type: 'type', level: 'pilot level', name: 'name' };
 const sorting = (() => { try { return { roster: 'supply', shop: 'supply', ...JSON.parse(localStorage.getItem('el-expansion-sort')) }; } catch { return { roster: 'supply', shop: 'supply' }; } })();
@@ -161,13 +169,13 @@ function render() {
     <span><em>Mission</em><b>${e ? e.no : '—'} / ${total}</b></span></div>`;
 
   const sortBox = (id, cur, keys) => `<select class="sortsel" id="${id}" title="Sort">${keys.map((k) => `<option value="${k}" ${k === cur ? 'selected' : ''}>Sort: ${SORT_LABELS[k]}</option>`).join('')}</select>`;
-  html += `<section class="box"><h2>Roster <small>${deployed.size} of ${cap || '—'} deploying</small>${sortBox('rosterSort', sorting.roster, ['supply', 'new', 'type', 'level', 'name'])}</h2><div class="roster">`;
+  html += `<section class="box"><h2>Roster <small>${deployed.size} of ${cap || '—'} deploying</small>${sortBox('rosterSort', sorting.roster, ['supply', 'new', 'type', 'level', 'name'])}</h2>`;
   // the general's machine always comes first; the rest by the chosen order
   const rosterKey = { supply: (a, b) => byPrice(a.type, b.type) || b.level - a.level, new: (a, b) => b.id - a.id,
     type: (a, b) => byType(a.type, b.type) || b.level - a.level, level: (a, b) => b.level - a.level || byPrice(a.type, b.type), name: (a, b) => byName(a.type, b.type) || b.level - a.level }[sorting.roster];
   const loads = C.crabLoads(state, types), aboard = Object.fromEntries(Object.entries(loads).map(([c, b]) => [b, c]));
   const batteries = state.roster.filter((r) => types[r.type].move === 0);
-  for (const r of [...state.roster].sort((a, b) => (b.id === state.general) - (a.id === state.general) || rosterKey(a, b))) {
+  const card = (r) => {
     const t = types[r.type], can = C.GENERAL_SHIPS.has(r.type), on = deployed.has(r.id), gen = state.general === r.id;
     html += `<article class="rcard${on ? ' on' : ''}${gen ? ' gen' : ''}${picked.has(r.id) ? ' pick' : ''}">
       ${art(r.type) ? `<img class="rart" src="${art(r.type)}" alt="">` : ''}
@@ -179,20 +187,21 @@ function render() {
         ${can ? `<label class="tog gold"><input type="radio" name="general" data-general="${r.id}" ${gen ? 'checked' : ''}><span>★ General</span></label>` : ''}
         <label class="tog cyan"><input type="checkbox" data-pick="${r.id}" ${picked.has(r.id) ? 'checked' : ''}><span>Trade</span></label></div>
     </article>`;
-  }
-  html += `</div><div class="row genrow"><label class="tog gold"><input type="radio" name="general" data-general="none" ${state.general === null ? 'checked' : ''}><span>General stays home</span></label>
+  };
+  html += grouped('roster', [...state.roster].sort((a, b) => (b.id === state.general) - (a.id === state.general) || rosterKey(a, b)), (r) => r.type, card, 'roster');
+  html += `<div class="row genrow"><label class="tog gold"><input type="radio" name="general" data-general="none" ${state.general === null ? 'checked' : ''}><span>General stays home</span></label>
     <span class="muted">Aboard: evasion ×2 (max 96), power ×2, level 9. If that unit is destroyed, the game is over.</span></div></section>`;
 
   html += `<div class="two"><section class="box"><h2>Production <small>${beta ? 'beta: every machine, free' : `up to ${C.MAX_BUILDS} per intermission`}</small>${sortBox('shopSort', sorting.shop, ['supply', 'type', 'name', 'new'])}</h2>
-    <p class="muted">Each machine comes with a new pilot at level 0.${beta ? '' : state.next >= (index.allFrom ?? Infinity) ? ' Every machine type is now available.' : ` More types unlock as the campaign goes on; all of them from mission ${(index.allFrom ?? 0) + 1}.`}</p><div class="shop">`;
+    <p class="muted">Each machine comes with a new pilot at level 0.${beta ? '' : state.next >= (index.allFrom ?? Infinity) ? ' Every machine type is now available.' : ` More types unlock as the campaign goes on; all of them from mission ${(index.allFrom ?? 0) + 1}.`}</p>`;
   const shopKey = { supply: byPrice, type: byType, name: byName, new: (a, b) => b - a }[sorting.shop];
-  for (const t of (beta ? C.marketTypes(types) : unlocked().map((k) => types[k])).sort((a, b) => shopKey(a.type, b.type))) {
+  html += grouped('shop', (beta ? C.marketTypes(types) : unlocked().map((k) => types[k])).sort((a, b) => shopKey(a.type, b.type)), (t) => t.type, (t) => {
     const cost = C.price(types, t.type), ok = !C.ownsUnique(state, types, t.type) && (beta || (state.supply >= cost && state.builds < C.MAX_BUILDS));
-    html += `<button class="btn shopitem" data-build="${t.type}" ${ok ? '' : 'disabled'}>${art(t.type) ? `<img src="${art(t.type)}" alt="">` : icon(t.type)}<span><b>${esc(name(t.type))}</b><small>${cost} supply${beta ? ' · free' : ''}</small></span></button>`;
-  }
-  html += `</div></section><section class="box"><h2>Trade <small>giving ${picked.size} · worth ${tradeValue}</small></h2>
+    return `<button class="btn shopitem" data-build="${t.type}" ${ok ? '' : 'disabled'}>${art(t.type) ? `<img src="${art(t.type)}" alt="">` : icon(t.type)}<span><b>${esc(name(t.type))}</b><small>${cost} supply${beta ? ' · free' : ''}</small></span></button>`;
+  }, 'shop');
+  html += `</section><section class="box"><h2>Trade <small>giving ${picked.size} · worth ${tradeValue}</small></h2>
     <p class="muted">Tick <b>Trade</b> on machines in the roster to give them. You get one machine ${beta ? 'of any type (beta)' : `worth up to their total plus your supply (${state.supply})`}; the best pilot moves to it and keeps their level, so veterans step up to stronger machines.</p>
-    <div class="row"><select id="tradeFor">${C.marketTypes(types).map((t) => `<option value="${t.type}" ${(!beta && C.price(types, t.type) > tradeValue + state.supply) || C.ownsUnique(state, types, t.type, [...picked]) ? 'disabled' : ''}>${esc(name(t.type))} · ${C.price(types, t.type)}${!beta && picked.size && C.price(types, t.type) > tradeValue ? ` (+${C.price(types, t.type) - tradeValue} supply)` : ''}</option>`).join('')}</select>
+    <div class="row"><select id="tradeFor">${C.SERIES.map((g) => [g, C.marketTypes(types).filter((t) => C.seriesOf(types, t.type) === g.id)]).filter(([, l]) => l.length).map(([g, l]) => `<optgroup label="${g.label}">${l.map((t) => `<option value="${t.type}" ${(!beta && C.price(types, t.type) > tradeValue + state.supply) || C.ownsUnique(state, types, t.type, [...picked]) ? 'disabled' : ''}>${esc(name(t.type))} · ${C.price(types, t.type)}${!beta && picked.size && C.price(types, t.type) > tradeValue ? ` (+${C.price(types, t.type) - tradeValue} supply)` : ''}</option>`).join('')}</optgroup>`).join('')}</select>
     <button class="btn" id="tradeBtn" ${picked.size ? '' : 'disabled'}>Trade</button>
     <button class="btn" id="sellBtn" ${picked.size && picked.size < state.roster.length ? '' : 'disabled'}>Sell for ${tradeValue}</button></div>
     <p class="muted">Sell turns the ticked machines into supply at the same price; their pilots leave with them.</p></section></div>`;
@@ -208,6 +217,7 @@ function render() {
 }
 
 function wire(cap) {
+  for (const d of document.querySelectorAll('details.series')) d.ontoggle = () => { folded[d.dataset.fold] = !d.open; try { localStorage.setItem('el-expansion-folded', JSON.stringify(folded)); } catch { /* no storage */ } };
   for (const [id, k] of [['rosterSort', 'roster'], ['shopSort', 'shop']]) if ($(id)) $(id).onchange = () => { sorting[k] = $(id).value; try { localStorage.setItem('el-expansion-sort', JSON.stringify(sorting)); } catch { } render(); };
   for (const b of document.querySelectorAll('[data-build]')) b.onclick = () => confirmBuild(+b.dataset.build);
   for (const c of document.querySelectorAll('[data-deploy]')) c.onchange = () => {

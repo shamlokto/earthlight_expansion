@@ -21,7 +21,7 @@ export const saved = (id) => { try { return JSON.parse(localStorage.getItem(CAMP
 export const MAX_BUILDS = 3;
 export const BASE_SUPPLY = 10;          // every intermission, so a bad battle still builds something
 export const SCORE_PER_SUPPLY = 10;     // map points per supply point
-export const GENERAL_SHIPS = new Set([4, 5, 6, 7, 30, 31, 33, 34, 35, 36, 37, 38, 58, 61, 62, 63, 64, 65]);   // Athena, Tiamat, Asura-II, Hastur, carriers (58: Selene Kai, 61: Azoras, 62-65: Pallas)
+export const GENERAL_SHIPS = new Set([4, 5, 6, 7, 30, 31, 33, 34, 35, 36, 37, 38, 58, 61, 62, 63, 64, 65, 72, 73, 74, 75, 76]);   // Athena, Tiamat, Asura-II, Hastur, carriers (58: Selene Kai, 61: Azoras, 62-65: Pallas, 72: Asura-II Kai, 73-76: Athena Kai)
 const ATHENA = 4, STRUCTURE = 52;       // types 52-57 are docks, fortresses and command centres (58+: new expansion machines)
 const isStructure = (type) => type >= STRUCTURE && type < 58;
 
@@ -93,6 +93,10 @@ export const beta = (s) => s.beta !== false;
 // Unique machines (owner, 2026-10-24: too strong to field more than one): a type marked `unique`
 // may be in the roster once, counting all its forms (spent, loaded, transformed).
 const family = (types, t) => { let x = t; for (let i = 0; i < 4; i++) { const u = types[x]; const n = u.armed ?? u.empty ?? u.formOf; if (n === undefined) break; x = n; } return x; };
+// Series (owner, 2026-10-29): the Kai refits (units.json `series: "kai"`) and the original machines,
+// shown as separate groups in the intermission's roster, production and trade lists.
+export const SERIES = [{ id: 'kai', label: 'Kai series' }, { id: 'original', label: 'Original series' }];
+export const seriesOf = (types, type) => types[family(types, type)].series || types[type].series || 'original';
 export const isUnique = (types, type) => !!types[family(types, type)].unique || !!types[type].unique;
 // (beta testing lifts the limit, like every other limit)
 export function ownsUnique(s, types, type, except = []) {
