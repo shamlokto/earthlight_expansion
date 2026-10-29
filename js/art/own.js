@@ -13,11 +13,13 @@ import { NAGA } from './naga.js';
 import { LOBSTER_KAI, CRANE_KAI, TITAN_KAI } from './kai.js';
 import { MARS_KAI, CYCLOPS_KAI } from './kai2.js';
 import { FENRIR_KAI, ASURA_KAI } from './kai3.js';
+import { ATHENA_KAI_JET, ATHENA_KAI_JET_SPENT, ATHENA_KAI_ROBOT } from './athenakai.js';
 
 const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, directorateTalos: DIRECTORATE_TALOS, azoras: AZORAS,
   pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT, naga: NAGA,
   lobsterKai: LOBSTER_KAI, craneKai: CRANE_KAI, titanKai: TITAN_KAI, marsKai: MARS_KAI, cyclopsKai: CYCLOPS_KAI,
-  fenrirKai: FENRIR_KAI, asuraKai: ASURA_KAI };
+  fenrirKai: FENRIR_KAI, asuraKai: ASURA_KAI,
+  athenaKaiJet: ATHENA_KAI_JET, athenaKaiJetSpent: ATHENA_KAI_JET_SPENT, athenaKaiRobot: ATHENA_KAI_ROBOT };
 // Weapon effect colours in the modern fights (js/render/fightfx.js: beams, railguns, missiles),
 // per set; the rest take the defaults there.
 const FX = {
@@ -26,6 +28,7 @@ const FX = {
   pallasJet: { beam: [90, 200, 255] }, pallasJetSpent: { beam: [90, 200, 255] }, pallasRobot: { rail: [120, 220, 255] },
   seleneKai: { rail: [255, 120, 210], beam: [255, 120, 210] }, azoras: { rail: [255, 210, 120] },
   marsKai: { beam: [90, 220, 255], rail: [140, 230, 255] }, fenrirKai: { rail: [255, 120, 210] }, asuraKai: { rail: [150, 220, 255] },
+  athenaKaiJet: { rail: [255, 120, 210] }, athenaKaiJetSpent: { rail: [255, 120, 210] }, athenaKaiRobot: { rail: [255, 140, 220] },
 };
 for (const [k, f] of Object.entries(FX)) if (SETS[k]) SETS[k].fx = f;
 export const ownArt = (types, type) => SETS[types?.[type]?.ownArt] || null;
