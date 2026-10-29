@@ -5482,6 +5482,73 @@
    "formOf": 74,
    "armed": 75,
    "keepSlots": true
+  },
+  {
+   "type": 77,
+   "finale": true,
+   "ownColors": true,
+   "name": "Nineveh",
+   "nameJp": "ニネヴェ",
+   "code": "FOR-NV1",
+   "category": 1,
+   "startLevel": 8,
+   "hp": 90,
+   "move": 2,
+   "evasion": 77,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 2,
+     "power": 170
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 2,
+     "max": 6,
+     "power": 255
+    },
+    {
+     "slot": 2,
+     "mode": 2,
+     "min": 1,
+     "max": 4,
+     "power": 200
+    },
+    null
+   ],
+   "aiValue": 60,
+   "info": {
+    "attack": [
+     133,
+     199,
+     156,
+     0
+    ],
+    "defence": 60,
+    "minRange": [
+     1,
+     2,
+     1,
+     0
+    ]
+   },
+   "gfx": 21,
+   "art": {
+    "fightSheet": 30,
+    "tiles": 245,
+    "palette": 246,
+    "frame": 22
+   },
+   "look": 32,
+   "ownArt": "nineveh",
+   "fightName": "Nineveh",
+   "unionOnly": true
   }
  ]
 }

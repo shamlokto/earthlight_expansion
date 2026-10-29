@@ -75,7 +75,7 @@ class Brain {
     this.reach = new Map();     // reachable() per unit and form, until the next action
     this.cls = new Uint8Array(64 * 64);
     for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) this.cls[K(x, y)] = b.cls(x, y);
-    this.lanes = b.info.index === 19;   // Buccaneer cannon map: keep out of the lanes ($01:9340)
+    this.lanes = b.info.index === 19 || !!(b.cannons && b.cannons.length);   // cannon maps (the Buccaneer's, the expansion's): keep out of the lanes ($01:9340)
   }
 
   changed() { this.reach.clear(); }

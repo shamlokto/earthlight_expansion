@@ -914,6 +914,8 @@ function expansionReport(w) {
   for (const c of $('resCrew').querySelectorAll('canvas[data-art]')) paintLookArt(c, rom, types, +c.dataset.art, 1);
   $('resCrew').hidden = !mine.length;
   if (w === 0 && custom.ending) { $('resEpilogue').textContent = custom.ending.split(/\n\s*\n/)[0]; $('resEpilogue').hidden = false; }
+  // the finale's hidden mission: opened (won fast enough) or hinted at
+  if (w === 0 && custom.secret) { $('resEpilogue').textContent += `\n\n${battle.turn <= custom.secret.maxTurns ? custom.secret.unlocked : custom.secret.teaser}`; $('resEpilogue').hidden = false; }
 }
 
 // The points screen ($08:A6C0): this map's points, the campaign total and the rank. The
