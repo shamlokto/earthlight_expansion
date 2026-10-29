@@ -4293,7 +4293,8 @@
    "look": 38,
    "ownArt": "seleneKai",
    "tag": "KAI",
-   "tint": 300
+   "tint": 300,
+   "series": "kai"
   },
   {
    "type": 59,
@@ -4873,7 +4874,8 @@
    },
    "look": 8,
    "ownArt": "lobsterKai",
-   "fightName": "Lobster-K"
+   "fightName": "Lobster-K",
+   "series": "kai"
   },
   {
    "type": 67,
@@ -4931,7 +4933,8 @@
    },
    "look": 9,
    "ownArt": "craneKai",
-   "fightName": "Crane Kai"
+   "fightName": "Crane Kai",
+   "series": "kai"
   },
   {
    "type": 68,
@@ -4995,7 +4998,490 @@
    },
    "look": 1,
    "ownArt": "titanKai",
-   "fightName": "Titan Kai"
+   "fightName": "Titan Kai",
+   "series": "kai"
+  },
+  {
+   "type": 69,
+   "name": "Mars Kai",
+   "nameJp": "マルス改",
+   "code": "HUB-01K",
+   "category": 8,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 6,
+   "evasion": 64,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 0,
+     "min": 1,
+     "max": 1,
+     "power": 77
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 96
+    },
+    null
+   ],
+   "aiValue": 6,
+   "info": {
+    "attack": [
+     60,
+     0,
+     75,
+     0
+    ],
+    "defence": 50,
+    "minRange": [
+     1,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 0,
+   "art": {
+    "fightSheet": 0,
+    "tiles": 207,
+    "palette": 208,
+    "frame": 1
+   },
+   "look": 0,
+   "ownArt": "marsKai",
+   "fightName": "Mars Kai",
+   "series": "kai"
+  },
+  {
+   "type": 70,
+   "name": "Cyclops Kai",
+   "nameJp": "ランチャー改",
+   "code": "CUM-7K",
+   "category": 11,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 6,
+   "evasion": 58,
+   "value": 3,
+   "moveOrFire": true,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 2,
+     "min": 2,
+     "max": 5,
+     "power": 140
+    },
+    {
+     "slot": 1,
+     "mode": 2,
+     "min": 2,
+     "max": 6,
+     "power": 190
+    },
+    null,
+    null
+   ],
+   "aiValue": 14,
+   "info": {
+    "attack": [
+     109,
+     148,
+     0,
+     0
+    ],
+    "defence": 45,
+    "minRange": [
+     2,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 13,
+   "art": {
+    "fightSheet": 20,
+    "tiles": 229,
+    "palette": 230,
+    "frame": 12
+   },
+   "look": 16,
+   "ownArt": "cyclopsKai",
+   "fightName": "Cyclops K",
+   "series": "kai"
+  },
+  {
+   "type": 71,
+   "name": "Fenrir Kai",
+   "nameJp": "フェンリル改",
+   "code": "DDG-BB7K",
+   "category": 3,
+   "startLevel": 0,
+   "hp": 10,
+   "move": 9,
+   "evasion": 32,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 140
+    },
+    {
+     "slot": 1,
+     "mode": 2,
+     "min": 2,
+     "max": 3,
+     "power": 115
+    },
+    null,
+    null
+   ],
+   "aiValue": 8,
+   "info": {
+    "attack": [
+     109,
+     90,
+     0,
+     0
+    ],
+    "defence": 25,
+    "minRange": [
+     1,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 33,
+   "art": {
+    "fightSheet": 45,
+    "tiles": 267,
+    "palette": 268,
+    "frame": 33
+   },
+   "look": 49,
+   "ownArt": "fenrirKai",
+   "fightName": "Fenrir K",
+   "series": "kai"
+  },
+  {
+   "type": 72,
+   "name": "Asura-II Kai",
+   "nameJp": "アスラII改",
+   "code": "BB-AIIK",
+   "category": 2,
+   "startLevel": 0,
+   "hp": 22,
+   "move": 7,
+   "evasion": 70,
+   "value": 3,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 2,
+     "min": 1,
+     "max": 1,
+     "power": 165
+    },
+    {
+     "slot": 1,
+     "mode": 1,
+     "min": 2,
+     "max": 4,
+     "power": 220
+    },
+    null,
+    null
+   ],
+   "aiValue": 14,
+   "info": {
+    "attack": [
+     129,
+     172,
+     0,
+     0
+    ],
+    "defence": 55,
+    "minRange": [
+     1,
+     2,
+     0,
+     0
+    ]
+   },
+   "gfx": 20,
+   "art": {
+    "fightSheet": 28,
+    "tiles": 243,
+    "palette": 244,
+    "frame": 21
+   },
+   "look": 31,
+   "ownArt": "asuraKai",
+   "fightName": "Asura Kai",
+   "series": "kai"
+  },
+  {
+   "type": 73,
+   "name": "Athena Kai",
+   "nameJp": "アテナ改",
+   "code": "CHU-03FK",
+   "category": 10,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 10,
+   "evasion": 64,
+   "value": 4,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 38
+    },
+    null,
+    null,
+    {
+     "slot": 3,
+     "mode": 2,
+     "min": 2,
+     "max": 2,
+     "power": 240
+    }
+   ],
+   "aiValue": 22,
+   "info": {
+    "attack": [
+     30,
+     0,
+     0,
+     188
+    ],
+    "defence": 50,
+    "minRange": [
+     1,
+     0,
+     0,
+     2
+    ]
+   },
+   "gfx": 4,
+   "art": {
+    "fightSheet": 10,
+    "tiles": 215,
+    "palette": 216,
+    "frame": 5
+   },
+   "look": 4,
+   "ownArt": "athenaKaiJet",
+   "fightName": "Athena K",
+   "series": "kai",
+   "form": 1,
+   "otherForm": 75,
+   "spent": 74,
+   "keepSlots": true
+  },
+  {
+   "type": 74,
+   "name": "Athena Kai",
+   "nameJp": "アテナ改",
+   "code": "CHU-03FK",
+   "category": 9,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 10,
+   "evasion": 64,
+   "value": 4,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 38
+    },
+    null,
+    null,
+    null
+   ],
+   "aiValue": 22,
+   "info": {
+    "attack": [
+     30,
+     0,
+     0,
+     0
+    ],
+    "defence": 50,
+    "minRange": [
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 5,
+   "art": {
+    "fightSheet": 11,
+    "tiles": 215,
+    "palette": 216,
+    "frame": 5
+   },
+   "look": 5,
+   "ownArt": "athenaKaiJetSpent",
+   "fightName": "Athena K",
+   "series": "kai",
+   "form": 1,
+   "otherForm": 76,
+   "armed": 73,
+   "keepSlots": true
+  },
+  {
+   "type": 75,
+   "name": "Athena Kai",
+   "nameJp": "アテナ改",
+   "code": "CHU-03RK",
+   "category": 8,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 5,
+   "evasion": 70,
+   "value": 4,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 2,
+     "max": 3,
+     "power": 102
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 128
+    },
+    null
+   ],
+   "aiValue": 22,
+   "info": {
+    "attack": [
+     80,
+     0,
+     100,
+     0
+    ],
+    "defence": 55,
+    "minRange": [
+     2,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 6,
+   "art": {
+    "fightSheet": 12,
+    "tiles": 217,
+    "palette": 218,
+    "frame": 6
+   },
+   "look": 6,
+   "ownArt": "athenaKaiRobot",
+   "fightName": "Athena K",
+   "series": "kai",
+   "form": 2,
+   "formOf": 73,
+   "spent": 76,
+   "keepSlots": true
+  },
+  {
+   "type": 76,
+   "name": "Athena Kai",
+   "nameJp": "アテナ改",
+   "code": "CHU-03RK",
+   "category": 8,
+   "startLevel": 0,
+   "hp": 8,
+   "move": 5,
+   "evasion": 70,
+   "value": 4,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 1,
+     "min": 2,
+     "max": 3,
+     "power": 102
+    },
+    null,
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 1,
+     "power": 128
+    },
+    null
+   ],
+   "aiValue": 22,
+   "info": {
+    "attack": [
+     80,
+     0,
+     100,
+     0
+    ],
+    "defence": 55,
+    "minRange": [
+     2,
+     0,
+     1,
+     0
+    ]
+   },
+   "gfx": 6,
+   "art": {
+    "fightSheet": 12,
+    "tiles": 217,
+    "palette": 218,
+    "frame": 6
+   },
+   "look": 7,
+   "ownArt": "athenaKaiRobot",
+   "fightName": "Athena K",
+   "series": "kai",
+   "form": 2,
+   "formOf": 74,
+   "armed": 75,
+   "keepSlots": true
   }
  ]
 }

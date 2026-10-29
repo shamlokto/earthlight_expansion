@@ -772,3 +772,23 @@ Leviathan) still win; melee is untouched.
 Colours per unit: js/art/own.js `FX` (Lobster Kai pink beam, Directorate Talos crimson, Naga green,
 Titan Kai amber rail, and so on); defaults in fightfx.js (`BEAM`, `RAIL`). The classic renderer is
 unchanged.
+
+## More Kai refits and series groups (owner, 2026-10-29)
+
+Five more Kai refits, all not unique, unlocked with the others before mission 9:
+
+| type | unit | look | stats (base in brackets) | price |
+|---|---|---|---|---|
+| 69 | Mars Kai HUB-01K | Mars | move 6 (5), evasion 50% (40%); beam 77 (51); railgun 96 (64) at 1 | 24 |
+| 70 | Cyclops Kai CUM-7K | Cyclops | move 6 (5), evasion 45% (40%); missiles 140 (115) at 2-5 and 190 (153) at 2-6 | 24 |
+| 71 | Fenrir Kai DDG-BB7K | Fenrir | HP 10 (8), move 9 (8), evasion 25% (20%); railgun 140 (115) at 1; **new** ship missile 115 at 2-3; moves again after firing like the Fenrir | 30 |
+| 72 | Asura-II Kai BB-AIIK | Asura-II | HP 22 (18), move 7 (5), evasion 55% (50%); missile 165 (140) at 1; railgun 220 (192) at 2-4; the general can ride it | 66 |
+| 73-76 | Athena Kai CHU-03FK/RK | Athena (4 forms) | fighter: move 10 (9), evasion 50% (45%), torpedo 240 (230); hunter: move 5 (4), evasion 55% (45%), railgun 102 (89) at 2-3, melee 128 (102); same transform, spend and re-arm rules (units.js, rules.js REARM, ai.js) | 32 |
+
+Forecasts (pilot level 5 against the finale's Union): 10-50% more damage than the base machines,
+below the Pallas.
+
+**Series**: units.json `series: "kai"` marks the Kai refits (with the Selene Kai); everything else is
+the original series (campaign.js `SERIES`, `seriesOf`). The intermission's roster and production
+show each series as its own folding section (folded state remembered in the browser), and the trade
+list groups them.

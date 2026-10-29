@@ -65,8 +65,9 @@ export function unitType(rom, t) {
 //     type + 1, with more movement (4/5, 10/11, 12/13, 43/44, 45/46, 47/48; 6/7 likewise);
 //   cargo ($01:A5AF): CR-1 26 empty -> 27 loaded (CR-61II 28/29 likewise).
 // 62-65: the expansion's Pallas, the Athena's successor, with the same four forms
-export const TRANSFORM = { 4: 6, 6: 4, 5: 7, 7: 5, 36: 37, 37: 36, 62: 64, 64: 62, 63: 65, 65: 63 };
-export const SPENT = { 4: 5, 6: 7, 10: 11, 12: 13, 43: 44, 45: 46, 47: 48, 62: 63, 64: 65 };
+// 73-76: the expansion's Athena Kai, likewise
+export const TRANSFORM = { 4: 6, 6: 4, 5: 7, 7: 5, 36: 37, 37: 36, 62: 64, 64: 62, 63: 65, 65: 63, 73: 75, 75: 73, 74: 76, 76: 74 };
+export const SPENT = { 4: 5, 6: 7, 10: 11, 12: 13, 43: 44, 45: 46, 47: 48, 62: 63, 64: 65, 73: 74, 75: 76 };
 export const LOADED = { 26: 27, 28: 29 };
 
 export function allUnitTypes(rom) {

@@ -73,7 +73,15 @@
   "Pallas",
   "Lobster Kai",
   "Crane Kai",
-  "Titan Kai"
+  "Titan Kai",
+  "Mars Kai",
+  "Cyclops Kai",
+  "Fenrir Kai",
+  "Asura-II Kai",
+  "Athena Kai",
+  "Athena Kai",
+  "Athena Kai",
+  "Athena Kai"
  ],
  "unitInfo": [
   {
@@ -748,6 +756,86 @@
     "",
     "Long-Range Mecha (Refit)\n\nA long railgun, an anti-ship\nbattery and a close-in gun",
     "Ruess's refit of the Titan.\nIt holds a line from four\nhexes away and can answer\nthe ships behind it too."
+   ]
+  },
+  {
+   "type": 69,
+   "name": "Mars Kai",
+   "short": "Mecha",
+   "info": [
+    "",
+    "Mecha (Refit)\n\nA stronger beam rifle and\nheavier close-in railgun",
+    "Ruess's refit of the Mars.\nCheap, quicker on its feet\nand harder to hit: the\nbackbone of the line."
+   ]
+  },
+  {
+   "type": 70,
+   "name": "Cyclops Kai",
+   "short": "Missile Launcher",
+   "info": [
+    "   Moves or\n   Fires",
+    "Missile Launcher (Refit)\n\nLonger-reaching missile pods\nfor craft and ships",
+    "Ruess's refit of the Cyclops.\nIts ship missiles reach six\nhexes, so it can strike from\nbehind the line."
+   ]
+  },
+  {
+   "type": 71,
+   "name": "Fenrir Kai",
+   "short": "Destroyer",
+   "info": [
+    "",
+    "Destroyer (Refit)\n\nA heavier railgun and a\nship missile battery",
+    "Ruess's refit of the Fenrir.\nFast, tougher, and it can\nstill move after firing."
+   ]
+  },
+  {
+   "type": 72,
+   "name": "Asura-II Kai",
+   "short": "Battleship",
+   "info": [
+    "   Battleship\n   Large",
+    "Battleship (Refit)\n\nUprated engines, a heavier\nrail battery and missiles",
+    "Ruess's refit of the Asura-II.\nThe fastest of the battle-\nships, with guns reaching\nfour hexes."
+   ]
+  },
+  {
+   "type": 73,
+   "name": "Athena Kai",
+   "short": "Fighter-Bomber",
+   "info": [
+    "   Convert\n   Missile",
+    "Transforming Fighter (Refit)\n(Fighter Mode)\n\nA torpedo for capital ships",
+    "Ruess's refit of the Athena.\nFaster and harder to hit in\nboth shapes. Not unique: a\nwhole wing can fly them."
+   ]
+  },
+  {
+   "type": 74,
+   "name": "Athena Kai",
+   "short": "Fighter",
+   "info": [
+    "   Convert",
+    "Transforming Fighter (Refit)\n(Fighter Mode, spent)\n\nRe-armed on boarding",
+    "Ruess's refit of the Athena,\nits torpedo spent."
+   ]
+  },
+  {
+   "type": 75,
+   "name": "Athena Kai",
+   "short": "Hunter",
+   "info": [
+    "   Convert\n   Melee",
+    "Transforming Fighter (Refit)\n(Hunter Mode)\n\nA railgun at two to three\nhexes and a heavier melee gun",
+    "Ruess's refit of the Athena\nin hunter form."
+   ]
+  },
+  {
+   "type": 76,
+   "name": "Athena Kai",
+   "short": "Hunter",
+   "info": [
+    "   Convert\n   Melee",
+    "Transforming Fighter (Refit)\n(Hunter Mode)",
+    "Ruess's refit of the Athena\nin hunter form."
    ]
   }
  ],

@@ -75,6 +75,9 @@
 
     /* production gallery and trade */
     .two { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 18px; }
+    details.series { margin: 0 0 16px; }
+    details.series > summary { cursor: pointer; margin: 0 0 10px; font: 600 12px var(--f-display); letter-spacing: .2em; text-transform: uppercase; color: var(--gold); }
+    details.series > summary small { margin-left: 6px; font: 400 12px var(--f-data); letter-spacing: 0; color: var(--dim); }
     .shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 8px; max-height: 520px; overflow: auto; padding-right: 4px; }
     .shopitem { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 10px 8px !important; text-transform: none !important; letter-spacing: .02em !important; }
     .shopitem img { width: 72px; height: 72px; object-fit: contain; image-rendering: pixelated; transition: transform .2s var(--ease); }
