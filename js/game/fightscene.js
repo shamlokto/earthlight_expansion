@@ -334,6 +334,15 @@ export class FightScene {
         obj[i] = [Math.round(hi * 0.72 + lo * 0.2), Math.round(lo * 0.45), hi];
       }
     }
+    // the Nineveh's guns (`shots` 'nvCannon', by the weapon really fired): its effect row turns
+    // white-gold (visual only)
+    for (const [side, row] of [[this.leftSide, 2], [this.rightSide, 5]]) {
+      if (side.own?.shots?.[side.ownSlot ?? this.slotOf(side)] !== 'nvCannon') continue;
+      for (let i = row * 16 + 1; i < row * 16 + 16; i++) {
+        const c = obj[i], hi = Math.max(...c), lo = Math.min(...c);
+        obj[i] = [hi, Math.round(hi * 0.82 + lo * 0.1), Math.round(lo * 0.5 + hi * 0.2)];
+      }
+    }
     this.obj = obj;
     this.tilesL = tileCache(spriteBank(rom, this.leftSide.type, this.slotOf(this.leftSide), this.rightSide.type));
     this.tilesR = tileCache(spriteBank(rom, this.rightSide.type, this.slotOf(this.rightSide), this.leftSide.type));
