@@ -82,7 +82,8 @@
   "Athena Kai",
   "Athena Kai",
   "Athena Kai",
-  "Nineveh"
+  "Nineveh",
+  "Azoras Kai"
  ],
  "unitInfo": [
   {
@@ -847,6 +848,16 @@
     "   Carrier\n   Fortress",
     "Fortress Ship\n\nBabylon's sister, armed with\nBabylon's own main cannon",
     "Laid down at Asgard beside\nBabylon and hidden in Earth's\nshadow. Ahriman commands her."
+   ]
+  },
+  {
+   "type": 78,
+   "name": "Azoras Kai",
+   "short": "Flagship",
+   "info": [
+    "   Carrier\n   Large",
+    "Flagship (Refit)\n\nHeavier missiles, a longer\nbeam battery and new engines",
+    "Ruess rebuilt the Azoras from\nkeel to crown for the last\nbattle. Unique, and worth a\nfleet."
    ]
   }
  ],

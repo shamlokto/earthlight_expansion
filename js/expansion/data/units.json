@@ -5549,6 +5549,74 @@
    "ownArt": "nineveh",
    "fightName": "Nineveh",
    "unionOnly": true
+  },
+  {
+   "type": 78,
+   "ownColors": true,
+   "unique": true,
+   "name": "Azoras Kai",
+   "nameJp": "アゾラス改",
+   "code": "BB-AZ1K",
+   "category": 1,
+   "startLevel": 0,
+   "hp": 44,
+   "move": 10,
+   "evasion": 90,
+   "value": 8,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    {
+     "slot": 0,
+     "mode": 2,
+     "min": 1,
+     "max": 3,
+     "power": 120
+    },
+    {
+     "slot": 1,
+     "mode": 0,
+     "min": 2,
+     "max": 5,
+     "power": 160
+    },
+    {
+     "slot": 2,
+     "mode": 1,
+     "min": 1,
+     "max": 2,
+     "power": 110
+    },
+    null
+   ],
+   "aiValue": 40,
+   "info": {
+    "attack": [
+     94,
+     125,
+     86,
+     0
+    ],
+    "defence": 70,
+    "minRange": [
+     1,
+     2,
+     1,
+     0
+    ]
+   },
+   "gfx": 19,
+   "art": {
+    "fightSheet": 26,
+    "tiles": 241,
+    "palette": 242,
+    "frame": 20
+   },
+   "look": 30,
+   "ownArt": "azorasKai",
+   "fightName": "Azoras K",
+   "keepSlots": true,
+   "series": "kai"
   }
  ]
 }
