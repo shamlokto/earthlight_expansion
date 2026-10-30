@@ -536,6 +536,12 @@ export class FightRenderer {
     const e = this.fullColour(set.hullArt, W, Hh, sp.flip);
     return { e, sp, ox: sp.flip ? 128 - w : w - W, oy: (h - Hh) / 2 };
   }
+  // A point of an own hull's box (muzzle, in the classic hull's pixels) where the modern renderer draws
+  // it: the picture scaled by hullScale from the bow (ownHullArt), mirrored on the right side.
+  ownHullPoint(set, sp, flip, [px, py]) {
+    const k = set.hullScale || 1, w = set.hull.w, h = set.hull.h;
+    return [sp.x + (flip ? 128 - w + (w - 1 - px) * k : w - (w - px) * k), sp.y + h / 2 + (py - h / 2) * k];
+  }
   // A full-colour picture (js/art/own.js hullArt, posesArt; drawn larger than the classic sprite)
   // as a body entry like remastered()'s, w x h classic pixels, mirrored when `flip`.
   fullColour(A, w, h, flip) {
@@ -891,7 +897,7 @@ export class FightRenderer {
       if (!own || !own.muzzle || (kind !== 'levCannon' && kind !== 'nvCannon') || !(i ? sc.shooters.right : sc.shooters.left)) return;
       const a = (i ? sc.right : sc.left)[0], hull = st.sprites.find((sp) => this.sideOf(sp) === i && /^[LR]\d+own#/.test(sp.id));
       if (!a || !hull) return;
-      const mx = i ? hull.x + 127 - own.muzzle[0] : hull.x + own.muzzle[0], my = hull.y + own.muzzle[1];
+      const [mx, my] = this.ownHullPoint(own, hull, i === 1, own.muzzle);
       const foes = st.sprites.filter((sp) => !this.isFx(sp) && this.sideOf(sp) !== i);
       const tx = foes.length ? (i ? Math.max(...foes.map((q) => q.x + q.size - 6)) : Math.min(...foes.map((q) => q.x + 6))) : (i ? 30 : 194);
       // against a ship or structure the beam runs level (as recorded); against craft, at the squad
