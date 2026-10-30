@@ -33,6 +33,11 @@ const FX = {
   athenaKaiJet: { rail: [255, 120, 210] }, athenaKaiJetSpent: { rail: [255, 120, 210] }, athenaKaiRobot: { rail: [255, 140, 220] },
 };
 for (const [k, f] of Object.entries(FX)) if (SETS[k]) SETS[k].fx = f;
+// Ships drawn larger than the box of the ship they borrow their fight moves from (owner, 2026-10-30:
+// the Kai ships and the Azoras looked too small in the fights; modern renderer only, fightfx.js
+// ownHullArt): `hullScale` for the hull, `hull2Scale` for the second (against ships).
+const SCALE = { seleneKai: { hullScale: 1.35 }, azoras: { hullScale: 1.4, hull2Scale: 1.3 }, asuraKai: { hullScale: 1.35, hull2Scale: 1.7 }, fenrirKai: { hullScale: 1.25 } };
+for (const [k, sc] of Object.entries(SCALE)) if (SETS[k]) Object.assign(SETS[k], sc);
 // The Kai series' hand-drawn map icons (js/art/kai-icons.js) in place of the sets' own
 for (const [k, ic] of Object.entries(KAI_ICONS)) if (SETS[k]) SETS[k].icon = ic;
 
@@ -168,7 +173,7 @@ export function ownHullTiles(set) {
 const secondHull = new WeakMap();
 export function ownHullSet(set, second) {
   if (!second || !set.hull2) return set;
-  if (!secondHull.has(set)) secondHull.set(set, { ...set, hull: set.hull2, hullArt: set.hull2Art || null });
+  if (!secondHull.has(set)) secondHull.set(set, { ...set, hull: set.hull2, hullArt: set.hull2Art || null, hullScale: set.hull2Scale ?? set.hullScale });
   return secondHull.get(set);
 }
 
