@@ -415,8 +415,10 @@ export class Board {
     const src = canvas(up.w, up.h), sg = src.getContext('2d'), id = sg.createImageData(up.w, up.h);
     new Uint32Array(id.data.buffer).set(up.px); sg.putImageData(id, 0, 0);
     // fit: craft about 58 px tall, ships and structures a little larger than a hex
-    const kindShip = type >= 30, maxW = own ? 78 : kindShip ? 84 : 66, maxH = own ? 52 : 58;   // an own token: about a ROM ship's size
-    const k = Math.min(maxW / up.w, maxH / up.h, 1), w = Math.round(up.w * k), h = Math.round(up.h * k), pad = 6;
+    // an own token: about a ROM ship's size, or larger for the expansion's battleships and super-
+    // weapons (js/art/own.js SCALE tokenScale), which spill over their hex
+    const ts = (own && own.tokenScale) || 1, kindShip = type >= 30, maxW = (own ? 78 : kindShip ? 84 : 66) * ts, maxH = (own ? 52 : 58) * ts;
+    const k = Math.min(maxW / up.w, maxH / up.h, ts), w = Math.round(up.w * k), h = Math.round(up.h * k), pad = 6;
     const fit = canvas(w, h), fg = fit.getContext('2d');
     fg.imageSmoothingQuality = 'high'; fg.drawImage(src, 0, 0, w, h);
     if (army === 2) { const gr = canvas(w, h), gg = gr.getContext('2d'); gg.filter = 'grayscale(1) brightness(1.15)'; gg.drawImage(fit, 0, 0); fg.clearRect(0, 0, w, h); fg.drawImage(gr, 0, 0); }
