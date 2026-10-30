@@ -183,6 +183,25 @@ export const SRC = {
     '....cccccccccccccccc',
     '',
   ],
+  // super-flagship: the needle prow, forward-swept wings out to twin heavy cannons on each tip,
+  // the crowned bridge, a crimson stripe down the drum, the engine block astern
+  azorasKai: [
+    '',
+    '.....bbbffffffff1',
+    '....bbbbffffffff1',
+    '.....bbbb',
+    '.....bb.d1d',
+    '.eebbaaadddaaa',
+    '.e2aaaaaaaaaaaaaa',
+    '.eeccccccccccccccaaaaa1',
+    '.e2aaaaaaaaaaaaaa',
+    '.eebbaaaaaaaaaa',
+    '.....bb',
+    '.....bbbb',
+    '....bbbbffffffff1',
+    '.....bbbffffffff1',
+    '',
+  ],
 };
 
 export function build(src) {

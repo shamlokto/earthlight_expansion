@@ -9,6 +9,7 @@ import { LEVIATHAN } from './leviathan.js';
 import { NINEVEH } from './nineveh.js';
 import { DIRECTORATE_TALOS } from './dirtalos.js';
 import { AZORAS } from './azoras.js';
+import { AZORAS_KAI } from './azoraskai.js';
 import { PALLAS_JET, PALLAS_JET_SPENT, PALLAS_ROBOT } from './pallas.js';
 import { NAGA } from './naga.js';
 import { LOBSTER_KAI, CRANE_KAI, TITAN_KAI } from './kai.js';
@@ -17,7 +18,7 @@ import { FENRIR_KAI, ASURA_KAI } from './kai3.js';
 import { ATHENA_KAI_JET, ATHENA_KAI_JET_SPENT, ATHENA_KAI_ROBOT } from './athenakai.js';
 import { ICONS as KAI_ICONS } from './kai-icons.js';
 
-const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, nineveh: NINEVEH, directorateTalos: DIRECTORATE_TALOS, azoras: AZORAS,
+const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, nineveh: NINEVEH, directorateTalos: DIRECTORATE_TALOS, azoras: AZORAS, azorasKai: AZORAS_KAI,
   pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT, naga: NAGA,
   lobsterKai: LOBSTER_KAI, craneKai: CRANE_KAI, titanKai: TITAN_KAI, marsKai: MARS_KAI, cyclopsKai: CYCLOPS_KAI,
   fenrirKai: FENRIR_KAI, asuraKai: ASURA_KAI,
@@ -28,7 +29,7 @@ const FX = {
   lobsterKai: { beam: [255, 80, 60] }, craneKai: { rail: [140, 210, 255] }, titanKai: { rail: [150, 255, 120] },
   directorateTalos: { beam: [255, 40, 60] }, naga: { rail: [70, 255, 200], beam: [70, 255, 200] },
   pallasJet: { beam: [90, 200, 255] }, pallasJetSpent: { beam: [90, 200, 255] }, pallasRobot: { rail: [120, 220, 255] },
-  seleneKai: { rail: [190, 130, 255], beam: [190, 130, 255] }, azoras: { rail: [255, 210, 120] },
+  seleneKai: { rail: [190, 130, 255], beam: [190, 130, 255] }, azoras: { rail: [255, 210, 120] }, azorasKai: { rail: [255, 215, 110] },
   marsKai: { beam: [255, 170, 60], rail: [255, 200, 120] }, fenrirKai: { rail: [255, 120, 50] }, asuraKai: { rail: [255, 90, 60] },
   athenaKaiJet: { rail: [255, 120, 210] }, athenaKaiJetSpent: { rail: [255, 120, 210] }, athenaKaiRobot: { rail: [255, 140, 220] },
 };
@@ -36,7 +37,7 @@ for (const [k, f] of Object.entries(FX)) if (SETS[k]) SETS[k].fx = f;
 // Ships drawn larger than the box of the ship they borrow their fight moves from (owner, 2026-10-30:
 // the Kai ships and the Azoras looked too small in the fights; modern renderer only, fightfx.js
 // ownHullArt): `hullScale` for the hull, `hull2Scale` for the second (against ships).
-const SCALE = { seleneKai: { hullScale: 1.35 }, azoras: { hullScale: 1.4, hull2Scale: 1.3 }, asuraKai: { hullScale: 1.35, hull2Scale: 1.7 }, fenrirKai: { hullScale: 1.25 } };
+const SCALE = { seleneKai: { hullScale: 1.35 }, azoras: { hullScale: 1.4, hull2Scale: 1.3 }, azorasKai: { hullScale: 1.55, hull2Scale: 1.45 }, asuraKai: { hullScale: 1.35, hull2Scale: 1.7 }, fenrirKai: { hullScale: 1.25 } };
 for (const [k, sc] of Object.entries(SCALE)) if (SETS[k]) Object.assign(SETS[k], sc);
 // The Kai series' hand-drawn map icons (js/art/kai-icons.js) in place of the sets' own
 for (const [k, ic] of Object.entries(KAI_ICONS)) if (SETS[k]) SETS[k].icon = ic;
