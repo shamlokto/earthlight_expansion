@@ -530,8 +530,11 @@ export class FightRenderer {
     if (!m) return null;
     const a = (m[1] === 'L' ? this.scene.left : this.scene.right)[+m[2]], set = a && a.own;
     if (!set || !set.hullArt) return null;
-    const e = this.fullColour(set.hullArt, set.hull.w, set.hull.h, sp.flip);
-    return { e, sp, ox: sp.flip ? 128 - set.hull.w : 0, oy: 0 };
+    // drawn larger than the classic box by the set's hullScale (js/art/own.js SCALE), grown from the
+    // bow, which stays where the recorded shots leave (the box's right edge, or its left mirrored)
+    const k = set.hullScale || 1, w = set.hull.w, h = set.hull.h, W = Math.round(w * k), Hh = Math.round(h * k);
+    const e = this.fullColour(set.hullArt, W, Hh, sp.flip);
+    return { e, sp, ox: sp.flip ? 128 - w : w - W, oy: (h - Hh) / 2 };
   }
   // A full-colour picture (js/art/own.js hullArt, posesArt; drawn larger than the classic sprite)
   // as a body entry like remastered()'s, w x h classic pixels, mirrored when `flip`.
