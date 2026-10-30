@@ -37,7 +37,7 @@ for (const [k, f] of Object.entries(FX)) if (SETS[k]) SETS[k].fx = f;
 // Ships drawn larger than the box of the ship they borrow their fight moves from (owner, 2026-10-30:
 // the Kai ships and the Azoras looked too small in the fights; modern renderer only, fightfx.js
 // ownHullArt): `hullScale` for the hull, `hull2Scale` for the second (against ships).
-const SCALE = { seleneKai: { hullScale: 1.35 }, azoras: { hullScale: 1.4, hull2Scale: 1.3 }, azorasKai: { hullScale: 1.55, hull2Scale: 1.45 }, asuraKai: { hullScale: 1.35, hull2Scale: 1.7 }, fenrirKai: { hullScale: 1.25 } };
+const SCALE = { seleneKai: { hullScale: 1.35 }, azoras: { hullScale: 1.4, hull2Scale: 1.3 }, azorasKai: { hullScale: 1.55, hull2Scale: 1.45 }, asuraKai: { hullScale: 1.35, hull2Scale: 1.7 }, fenrirKai: { hullScale: 1.6 } };
 for (const [k, sc] of Object.entries(SCALE)) if (SETS[k]) Object.assign(SETS[k], sc);
 // The Kai series' hand-drawn map icons (js/art/kai-icons.js) in place of the sets' own
 for (const [k, ic] of Object.entries(KAI_ICONS)) if (SETS[k]) SETS[k].icon = ic;
