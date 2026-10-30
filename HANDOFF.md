@@ -58,3 +58,15 @@ Expansion (`docs/EXPANSION.md` is the design document):
 See the README's Layout table. Key places: `js/game/` (rules, AI, fights, scripts, events, points),
 `js/audio/`, `js/expansion/`, `missions/`, `research/` (Python 65816 emulator and tools),
 `docs/notes/` (working notes from each part of the build).
+
+## Reminder: xAI image model change (owner, 2026-10-30)
+
+The expansion's art is generated with `tools/art/xai-gen.py`, which defaults to the model
+`grok-imagine-image-quality` (override with `XMODEL`). xAI retires that model on **Monday,
+November 2, 2026**. From then on, requests to it are served by `grok-imagine-image-2.0` at
+`quality: low`:
+* No code change is needed: the old model name keeps working.
+* The output will change, so test `grok-imagine-image-2.0` at `quality: low` on our own prompts
+  (tools/art/*/prompts*) before relying on it for art that must match existing sets.
+* It is cheaper: each image costs $0.01 less.
+* For another quality tier, call `grok-imagine-image-2.0` directly and set `quality` (default `auto`).
