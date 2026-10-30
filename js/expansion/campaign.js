@@ -23,7 +23,7 @@ export const MAX_BUILDS = 3;
 export const buildLimit = (e) => e?.builds ?? MAX_BUILDS;
 export const BASE_SUPPLY = 10;          // every intermission, so a bad battle still builds something
 export const SCORE_PER_SUPPLY = 10;     // map points per supply point
-export const GENERAL_SHIPS = new Set([4, 5, 6, 7, 30, 31, 33, 34, 35, 36, 37, 38, 58, 61, 62, 63, 64, 65, 72, 73, 74, 75, 76]);   // Athena, Tiamat, Asura-II, Hastur, carriers (58: Selene Kai, 61: Azoras, 62-65: Pallas, 72: Asura-II Kai, 73-76: Athena Kai)
+export const GENERAL_SHIPS = new Set([4, 5, 6, 7, 30, 31, 33, 34, 35, 36, 37, 38, 58, 61, 62, 63, 64, 65, 72, 73, 74, 75, 76, 78]);   // Athena, Tiamat, Asura-II, Hastur, carriers (58: Selene Kai, 61: Azoras, 62-65: Pallas, 72: Asura-II Kai, 73-76: Athena Kai, 78: Azoras Kai)
 const ATHENA = 4, STRUCTURE = 52;       // types 52-57 are docks, fortresses and command centres (58+: new expansion machines)
 const isStructure = (type) => type >= STRUCTURE && type < 58;
 
