@@ -5550,7 +5550,8 @@
    "fightName": "Nineveh",
    "unionOnly": true,
    "moveCat": 5,
-   "hunts": "general"
+   "hunts": "general",
+   "wakes": "attacked"
   },
   {
    "type": 78,

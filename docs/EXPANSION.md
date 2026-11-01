@@ -877,3 +877,9 @@ and no ship could get within six hexes of her. Now:
   leaves the hull by its west side around turn 19 and reaches the remnant's lines in the south by
   about turn 28, firing at what comes within range on the way.
 * Checked by `node tests/nineveh-moves.mjs`.
+* **Update (owner, same day): she wakes when attacked.** No turn hold any more: `wakes: 'attacked'`
+  (units.json) keeps her dormant in her berth, firing only at what comes in range of where she lies
+  (ai.js `dormant`), until any attack on her (rules.js `attack` sets `engaged`). Then she goes on a
+  rampage (ai.js `rampage`): every turn she first moves on the general, then fires at the
+  highest-priority foe in range from where she ends up (`fireHere`), so she destroys whatever is in
+  her path; with nowhere closer to go she still fires. The strategy text says so.

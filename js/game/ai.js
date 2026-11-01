@@ -84,6 +84,23 @@ class Brain {
   mobile(u) { return this.mine(u) && u.type !== 0x12 && (u.type < 0x34 || u.type >= 58); }   // 58+: expansion machines
   free(u) { return !this.done.has(u) && !u.moved && !u.acted; }
   blocked(x, y) { return this.lanes && inLane(this.b, x, y); }
+  // Expansion (units.json `wakes: 'attacked'`, the Nineveh): dormant until something attacks her
+  // (rules.js attack sets `engaged`): she only fires from where she lies; once engaged she goes on
+  // a rampage: each turn she moves on her quarry first (`hunts`), then fires at whatever is in range.
+  dormant(u) { return this.b.type(u).wakes === 'attacked' && !u.engaged; }
+  rampage(u) { return this.b.type(u).wakes === 'attacked' && !!u.engaged; }
+  // Her best shot from where she stands: the highest-priority foe in range, then the most damage.
+  * fireHere(u) {
+    let best = null;
+    for (const e of this.b.alive()) {
+      if (e.army === this.army || e.carrier) continue;
+      for (let s = 0; s < 4; s++) {
+        const a = this.evaluate(u, e, s, true), p = this.prio.get(e) ?? 0;
+        if (a && (!best || p > best.p || (p === best.p && a.score > best.a.score))) best = { e, s, a, p };
+      }
+    }
+    if (best) yield* this.strike(u, best.e, best.s, best.a);
+  }
 
   reachable(u) {
     const k = `${u.id}:${u.type}`;
@@ -428,10 +445,10 @@ class Brain {
       if (!tgt) break;
       let best = null;
       for (const u of b.units) {
-        if (!this.mobile(u) || !this.free(u) || this.passive.has(u) || u.burner) continue;
+        if (!this.mobile(u) || !this.free(u) || this.passive.has(u) || u.burner || this.rampage(u)) continue;   // on a rampage she moves first (below)
         if (u.guard && distance(tgt, u.guard) > GUARD_ZONE) continue;
         for (let s = 0; s < 4; s++) {
-          const a = this.evaluate(u, tgt, s);
+          const a = this.evaluate(u, tgt, s, this.dormant(u));   // dormant: fires only from where she lies
           if (a && (a.special || !best || a.score > best.a.score)) best = { u, s, a };
           if (a && a.special) break;
         }
@@ -450,6 +467,7 @@ class Brain {
     const goals = this.army !== 1 ? null : b.info.custom ? b.info.routes : routes(this.rom, b.info.index);
     for (const u of b.units) {
       if (!this.mobile(u) || !this.free(u) || u.aiScripted || u.guard || this.passive.has(u)) continue;
+      if (this.dormant(u)) continue;   // expansion: until she is attacked
       if (u.hold && b.turn < u.hold) continue;   // expansion: holds its post until that turn (it still fires at what comes in range)
       const t0 = u.type, athena = athenaBase(t0) !== null && t0 >= athenaBase(t0) + 2;
       if (athena && !u.burner && b.canTransform(u)) u.type -= 2;   // moves in fighter form, unless it has an afterburner ($01:880D)
@@ -491,6 +509,7 @@ class Brain {
       if (goal) {
         b.move(u, ...goal); this.done.add(u); this.changed();
         yield { kind: 'move', u };
+        if (this.rampage(u)) yield* this.fireHere(u);   // and destroys what is in her path
         if (u.burner) {   // afterburner units fire after moving ($01:8A93)
           for (const e of b.alive()) {
             if (e.army === this.army) continue;
@@ -498,6 +517,10 @@ class Brain {
             if (s !== undefined) { yield* this.strike(u, e, s, this.evaluate(u, e, s, true)); break; }
           }
         }
+        if (end()) return;
+      } else if (this.rampage(u) && this.free(u)) {   // nowhere closer to go: she fires from where she is
+        this.done.add(u);
+        yield* this.fireHere(u);
         if (end()) return;
       }
     }

@@ -386,6 +386,7 @@ export class Battle {
   // Both blows are computed from pre-combat HP, then applied together.
   // TODO: exact range of the random term ($00:CF93, a signed byte added to the damage).
   attack(att, def, w, rnd = Math.random) {
+    if (this.type(def).wakes === 'attacked') def.engaged = true;   // expansion: the Nineveh wakes when attacked (ai.js dormant)
     const cw = this.counterWeapon(att, def, w);
     const info = this.fightInfo(att, def, w);
     const jitter = () => Math.floor(rnd() * 256) - 128;
