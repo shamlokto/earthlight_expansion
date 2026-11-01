@@ -151,6 +151,7 @@ export function build(spec, L) {
     if (u.joiner) o.joiner = true;
     if (u.level !== undefined) o.level = u.level;
     if (u.hold) o.hold = u.hold;
+    if (u.wakes) o.wakes = true;
     if (u.cargo) o.cargo = u.cargo;
     return o;
   });

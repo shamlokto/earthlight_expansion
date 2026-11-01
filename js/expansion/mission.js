@@ -74,7 +74,7 @@ export function romView(rom, mission) {
 export function deployList(mission) {
   const out = [];
   for (const u of mission.units) {
-    const host = { type: u.type, army: u.army, x: u.x, y: u.y, flag40: !!u.neutral, level: u.level, rosterId: u.rosterId, hold: u.hold };
+    const host = { type: u.type, army: u.army, x: u.x, y: u.y, flag40: !!u.neutral, level: u.level, rosterId: u.rosterId, hold: u.hold, wakes: !!u.wakes };
     out.push(host);
     // cargo: unit types, or campaign machines { type, level, rosterId } (campaign.applyRoster)
     for (const c of u.cargo || []) out.push(typeof c === 'number' ? { type: c, army: u.army, x: u.x, y: u.y, carrier: host }
