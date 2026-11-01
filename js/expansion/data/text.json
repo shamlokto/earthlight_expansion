@@ -84,7 +84,8 @@
   "Athena Kai",
   "Nineveh",
   "Azoras Kai",
-  "Hephaestus"
+  "Hephaestus",
+  "Directorate Medusa"
  ],
  "unitInfo": [
   {
@@ -869,6 +870,16 @@
     "   Carrier\n   Repair",
     "Repair Ship (Dock)\n\nNo guns. Every ally beside it\nregains 5 HP each turn; craft,\ncruisers and destroyers board\nit for a full repair.",
     "Ruess's answer to a war with\nno safe harbour: a drydock\nwith engines. Park it a hex\nbehind the battle line and\nrotate wounded ships beside\nit. Slow and thin-skinned, and\nthe enemy hunts it right after\nthe General: never leave it\nunescorted."
+   ]
+  },
+  {
+   "type": 80,
+   "name": "Directorate Medusa",
+   "short": "Elite Fire Support Hunter",
+   "info": [
+    "   Missile\n   Elite",
+    "Elite Fire Support Hunter\n\nA rebuilt missile pod (102)\nthat reaches craft two hexes\nout, and a shock flail (90)\nthat hits anything in melee;\nmove 6, 50% evasion.",
+    "Kessrin's Directorate guards\nits flagships with these:\nMedusas stripped and rebuilt\nwith heavier armour and a pod\nthat fires twice as far. Its\nmissiles fly through magnetic\nfields where a Talos's saber\nfails, and two hexes is no\nlonger safe. Kill it with ship\nguns or long railguns before\nyour craft close in."
    ]
   }
  ],

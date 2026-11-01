@@ -192,13 +192,16 @@ The Union comes home, poorer and owing nobody.`,
   arrivals: [
     // the boss: the Leviathan and its Directorate guard, from the east on turn 14
     // the Leviathan is a carrier-battlecruiser: two more Directorate Talos ride aboard
-    { turn: 13, army: 1, units: [{ type: 59, x: LX + 10, y: LY, cargo: [60, 60] }, ...[[-2, 0], [2, 0], [-1, -2], [1, -2], [-1, 2], [1, 2], [0, -4], [0, 4]].map(([dx, dy]) => ({ type: 60, x: LX + 10 + dx, y: LY + dy, level: 6 }))] },
+    { turn: 13, army: 1, units: [{ type: 59, x: LX + 10, y: LY, cargo: [60, 60] }, ...[[-2, 0], [2, 0], [-1, -2], [1, -2], [-1, 2], [1, 2], [0, -4], [0, 4]].map(([dx, dy]) => ({ type: 60, x: LX + 10 + dx, y: LY + dy, level: 6 })),
+      // and its Directorate Medusas (type 80), whose missiles reach two hexes
+      ...[[-3, -1], [3, -1], [-3, 1], [3, 1]].map(([dx, dy]) => ({ type: 80, x: LX + 10 + dx, y: LY + dy, level: 6 }))] },
     // Directorate reserves from the east, turns 6 and 11, and from the north-east on turn 8
-    { turn: 5, army: 1, units: [{ type: 39, x: 59, y: 14 }, { type: 39, x: 59, y: 22 }, { type: 49, x: 58, y: 10 }, { type: 2, x: 59, y: 18 }, { type: 3, x: 58, y: 26 },
+    { turn: 5, army: 1, units: [{ type: 39, x: 59, y: 14 }, { type: 39, x: 59, y: 22 }, { type: 49, x: 58, y: 10 }, { type: 2, x: 59, y: 18 }, { type: 80, x: 58, y: 26, level: 5 },
       { type: 8, x: 58, y: 8 }, { type: 8, x: 58, y: 28 }] },
     { turn: 7, army: 1, units: [{ type: 33, x: 56, y: 2, cargo: [8, 9] }, { type: 39, x: 52, y: 1 }, { type: 39, x: 58, y: 4 }, { type: 49, x: 50, y: 2 }, { type: 49, x: 58, y: 6 }, { type: 42, x: 54, y: 3 }] },
     { turn: 10, army: 1, units: [{ type: 31, x: 59, y: 18 }, { type: 42, x: 58, y: 12 }, { type: 42, x: 58, y: 24 }, { type: 49, x: 59, y: 30 }, { type: 51, x: 59, y: 6 },
-      { type: 30, x: 57, y: 15 }, { type: 60, x: 57, y: 21, level: 6 }, { type: 60, x: 57, y: 9, level: 6 }] },
+      { type: 30, x: 57, y: 15 }, { type: 60, x: 57, y: 21, level: 6 }, { type: 60, x: 57, y: 9, level: 6 },
+      { type: 80, x: 58, y: 16, level: 6 }, { type: 80, x: 58, y: 20, level: 6 }] },
     // the Olympos garrison joins the remnant from the north-west on turn 13, just before the
     // Leviathan: a strong group on afterburners (fast, but they must detach them to fight)
     { turn: 12, army: 0, units: [{ type: 30, x: 3, y: 1 }, { type: 31, x: 6, y: 1 }, { type: 31, x: 1, y: 4 }, { type: 42, x: 9, y: 1 }, { type: 42, x: 1, y: 7 },

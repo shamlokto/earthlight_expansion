@@ -59,6 +59,8 @@ blast paths (missions 8, 11); the remnant captures one late (an Abaddon joiner i
   than the Nodens (HP 40 class). Union only.
 - **Directorate Talos** (type 60): Vane's machine and Kessrin's guard; new original art, an
   elite Talos. Union only.
+- **Directorate Medusa** (type 80; owner, 2026-11-01): the Directorate's elite Medusa, a missile pod
+  reaching two hexes and a shock flail; escorts the Leviathan in the finale and Vane in mission 9.
 Until they land, mission specs use stand-ins: Nodens (32) for the Leviathan and Talos (2) for
 the Directorate Talos, each marked `// standin: 59` / `// standin: 60` for a later swap.
 
