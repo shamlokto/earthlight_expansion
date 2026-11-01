@@ -5548,7 +5548,9 @@
    "look": 32,
    "ownArt": "nineveh",
    "fightName": "Nineveh",
-   "unionOnly": true
+   "unionOnly": true,
+   "moveCat": 5,
+   "hunts": "general"
   },
   {
    "type": 78,
