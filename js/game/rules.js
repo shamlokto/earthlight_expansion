@@ -113,7 +113,9 @@ export class Battle {
     const uc = this.type(u).category, hc = this.type(host).category;
     if (hc === DOCK_CAT) return uc >= 3 && uc !== 5 && uc !== 6 && uc !== 7;
     if (TRANSPORT[host.type] !== undefined) return uc >= 8 && uc !== 13;
-    if (hc === CARRIER_CAT) return uc >= 8 && !u.burner;   // no boarding with an afterburner ($01:A576)
+    // expansion: a carrier that is also a dock for ships (`dockShips`, the Hephaestus) takes cruisers
+    // and destroyers (categories 3 and 4) as well as small craft
+    if (hc === CARRIER_CAT) return (uc >= 8 && !u.burner) || (!!this.type(host).dockShips && (uc === 3 || uc === 4));   // no boarding with an afterburner ($01:A576)
     return false;
   }
   // Hosts u can reach this turn (moving onto a friendly host's hex boards it).
@@ -442,12 +444,31 @@ export class Battle {
     }
   }
 
+  // Expansion: repair ships (units.json `repair`, the Hephaestus) mend every ally next to them by
+  // that many HP at the start of their side's turn (not structures or docks, not themselves). Its
+  // cargo is already whole: boarding restores full HP. Returns [{ by, u, hp }] for the log.
+  repairShips(army) {
+    const out = [];
+    for (const r of this.alive(army)) {
+      const n = this.type(r).repair;
+      if (!n || r.carrier) continue;
+      for (const [x, y] of neighbours(r.x, r.y)) {
+        const u = this.inBounds(x, y) && this.unitAt(x, y), t = u && this.type(u);
+        if (!u || u.army !== army || t.category === DOCK_CAT || (t.category >= 5 && t.category <= 7) || u.hp >= t.hp) continue;
+        const hp = Math.min(n, t.hp - u.hp);
+        u.hp += hp; out.push({ by: r, u, hp });
+      }
+    }
+    return out;
+  }
+
   // Returns the units that arrived for the side whose turn starts.
   endTurn() {
     for (const u of this.units) { u.moved = false; u.acted = false; u.mp = null; u.reMove = 0; }
     this.army = 1 - this.army;
     if (this.army === 0) this.turn++;
     this.repairDocks(this.army);
+    this.repaired = this.repairShips(this.army);
     this.phaseEvent = fireCannons(this);   // map events run at every phase change ($01:9E4E)
     const arrived = this.arrive();
     this.eventMusic = arrived.length > 0;   // $06EC/$06ED: event song for this phase ($02:9B70)

@@ -10,6 +10,7 @@ import { NINEVEH } from './nineveh.js';
 import { DIRECTORATE_TALOS } from './dirtalos.js';
 import { AZORAS } from './azoras.js';
 import { AZORAS_KAI } from './azoraskai.js';
+import { HEPHAESTUS } from './hephaestus.js';
 import { PALLAS_JET, PALLAS_JET_SPENT, PALLAS_ROBOT } from './pallas.js';
 import { NAGA } from './naga.js';
 import { LOBSTER_KAI, CRANE_KAI, TITAN_KAI } from './kai.js';
@@ -18,7 +19,7 @@ import { FENRIR_KAI, ASURA_KAI } from './kai3.js';
 import { ATHENA_KAI_JET, ATHENA_KAI_JET_SPENT, ATHENA_KAI_ROBOT } from './athenakai.js';
 import { ICONS as KAI_ICONS } from './kai-icons.js';
 
-const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, nineveh: NINEVEH, directorateTalos: DIRECTORATE_TALOS, azoras: AZORAS, azorasKai: AZORAS_KAI,
+const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, nineveh: NINEVEH, directorateTalos: DIRECTORATE_TALOS, azoras: AZORAS, azorasKai: AZORAS_KAI, hephaestus: HEPHAESTUS,
   pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT, naga: NAGA,
   lobsterKai: LOBSTER_KAI, craneKai: CRANE_KAI, titanKai: TITAN_KAI, marsKai: MARS_KAI, cyclopsKai: CYCLOPS_KAI,
   fenrirKai: FENRIR_KAI, asuraKai: ASURA_KAI,
@@ -47,6 +48,8 @@ const SCALE = {
   fenrirKai: { hullScale: 1.6 },
   leviathan: { hullScale: 1.55, tokenScale: 1.5 },
   nineveh: { hullScale: 1.7, tokenScale: 1.7 },
+  // the repair ship (owner, 2026-11-01: "super super large"), the largest of the Galt ships
+  hephaestus: { hullScale: 2.0, hull2Scale: 2.2, tokenScale: 1.75 },
 };
 for (const [k, sc] of Object.entries(SCALE)) if (SETS[k]) Object.assign(SETS[k], sc);
 // The Kai series' hand-drawn map icons (js/art/kai-icons.js) in place of the sets' own

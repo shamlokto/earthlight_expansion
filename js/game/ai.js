@@ -120,6 +120,8 @@ class Brain {
     if (b.info.custom) for (const e of foes) {
       if (e.army === NEUTRAL && b.type(e).category === DOCK_CAT) prio.set(e, Math.max(prio.get(e), 0xC0));
       if (e.general) prio.set(e, 255);
+      // a unit marked as a prime target (units.json `aiTarget`, the Hephaestus repair ship): just after the general
+      else if (b.type(e).aiTarget) prio.set(e, Math.max(prio.get(e), b.type(e).aiTarget));
     }
     this.prio = prio;
   }
@@ -280,11 +282,11 @@ class Brain {
     return at.x > 0 ? [{ prio: 255, x: at.x, y: at.y }] : [];
   }
 
-  // Expansion: what a unit with nothing in reach closes in on: the nearest grey dock or the enemy
-  // general (whichever is nearer), else every enemy.
+  // Expansion: what a unit with nothing in reach closes in on: the nearest grey dock, the enemy
+  // general or a prime target (`aiTarget`, the repair ship), whichever is nearer, else every enemy.
   huntTargets(u) {
     const b = this.b, foes = b.alive().filter((e) => e.army !== this.army && !e.carrier && e.x > 0);
-    const key = foes.filter((e) => e.general || (e.army === NEUTRAL && b.type(e).category === DOCK_CAT));
+    const key = foes.filter((e) => e.general || b.type(e).aiTarget || (e.army === NEUTRAL && b.type(e).category === DOCK_CAT));
     const list = key.length ? key : foes;
     if (!list.length) return [];
     const d = (e) => distance(u, e), best = list.reduce((a, e) => (d(e) < d(a) ? e : a));

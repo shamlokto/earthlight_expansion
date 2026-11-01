@@ -83,7 +83,8 @@
   "Athena Kai",
   "Athena Kai",
   "Nineveh",
-  "Azoras Kai"
+  "Azoras Kai",
+  "Hephaestus"
  ],
  "unitInfo": [
   {
@@ -858,6 +859,16 @@
     "   Carrier\n   Large",
     "Flagship (Refit)\n\nHeavier missiles, a longer\nbeam battery and new engines",
     "Ruess rebuilt the Azoras from\nkeel to crown for the last\nbattle. Unique, and worth a\nfleet."
+   ]
+  },
+  {
+   "type": 79,
+   "name": "Hephaestus",
+   "short": "Repair ship",
+   "info": [
+    "   Carrier\n   Huge",
+    "Repair ship (Dock)\n\nNo guns. Mends every ally\nbeside it 4 HP a turn",
+    "A drydock with engines: craft\nand destroyers board it for a\nfull repair. Slow and thin-\nskinned; the enemy hunts it\nright after the general."
    ]
   }
  ],

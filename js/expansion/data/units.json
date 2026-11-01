@@ -5617,6 +5617,56 @@
    "fightName": "Azoras K",
    "keepSlots": true,
    "series": "kai"
+  },
+  {
+   "type": 79,
+   "ownColors": true,
+   "name": "Hephaestus",
+   "nameJp": "ヘパイストス",
+   "code": "AR-H9",
+   "category": 1,
+   "startLevel": 0,
+   "hp": 36,
+   "move": 3,
+   "evasion": 5,
+   "value": 14,
+   "moveOrFire": false,
+   "cut": false,
+   "weapons": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "aiValue": 50,
+   "info": {
+    "attack": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "defence": 10,
+    "minRange": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "gfx": 19,
+   "art": {
+    "fightSheet": 26,
+    "tiles": 241,
+    "palette": 242,
+    "frame": 20
+   },
+   "look": 30,
+   "ownArt": "hephaestus",
+   "fightName": "Hephaest",
+   "repair": 4,
+   "dockShips": true,
+   "aiTarget": 240
   }
  ]
 }

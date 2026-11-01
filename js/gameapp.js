@@ -744,6 +744,9 @@ async function attack(a, d) {
 }
 
 function announce(arrived) {
+  // repair ships (the Hephaestus) mend the allies next to them as the turn starts
+  const fixed = battle.repaired || [];
+  if (fixed.length) log(`<span class="${side(fixed[0].by.army)}">${nameOf(fixed[0].by)}</span> repaired ${fixed.map((r) => `<span class="${side(r.u.army)}">${nameOf(r.u)}</span> +${r.hp}`).join(', ')}`);
   if (!arrived.length) return;
   const a = arrived[0].army;
   log(`<b class="${side(a)}">${armyName(a)} reinforcements: ${arrived.length} units</b>`);

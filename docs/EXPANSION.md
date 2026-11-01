@@ -822,3 +822,25 @@ docs/notes/art-nineveh.md).
   (js/art/nineveh.js); its main cannon (slot 1) charges a white-gold sun and fires the biggest beam
   in the game, slot 0 a fan of gold beams, slot 2 a missile swarm (fightfx.js). The board shows each
   cannon lane firing as a white-gold beam sweeping down it.
+
+## The Hephaestus repair ship (owner, 2026-11-01)
+Type 79, **Hephaestus** (AR-H9), a Galt repair ship and mobile drydock, buyable from mission 10
+(unlocked by mission 9, index-act3.json). The owner asked for: very expensive, super super large,
+slow, thin skin, no attack and only repair, a carrier and a dock for destroyers, and the enemy's
+prime target right after the general.
+* **Stats** (units.json): HP 36, move 3, evasion 5, value 14, so it costs 504 supply (the Azoras
+  Kai 352), not unique. No weapons, so it never attacks or fires back. Category 1 (carrier), with
+  the Tiamat's fight moves (`look` 30) like the Azoras.
+* **Repair** (`repair: 4`, rules.js `repairShips`): at the start of its side's turn every ally next
+  to it gains 4 HP, up to full (not structures or docks, not itself). The game log lists them.
+* **Carrier and dock** (`dockShips`, rules.js `canBoard`): small craft board it as at any carrier,
+  and cruisers and destroyers (categories 3 and 4: Hannibal to Gulon, the Fenrir Kai, the Abaddon)
+  as at a dock; battleships and carriers can't. Boarding restores full HP and re-arms, as everywhere.
+* **Prime target** (`aiTarget: 240`, ai.js): on expansion maps the Union rates it just below the
+  general (255) and above the grey docks (0xC0), and units with nothing in reach head for it as
+  they do for the general.
+* **Art** (js/art/hephaestus.js, from tools/art/hephaestus/ with tools/art/hephaestus-xai.py and
+  .mjs; 3 xAI images, 2 kept): picture, both fight hulls, board token, and a hand-drawn map icon
+  (tools/art/kai-icons.mjs `hephaestus`). The largest Galt ship in the fights (own.js SCALE: hull
+  2.0, hull2 2.2) and on the board (token 1.75).
+* Checked by `node tests/repair-ship.mjs`.
