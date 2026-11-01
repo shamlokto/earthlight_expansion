@@ -883,3 +883,5 @@ and no ship could get within six hexes of her. Now:
   rampage (ai.js `rampage`): every turn she first moves on the general, then fires at the
   highest-priority foe in range from where she ends up (`fireHere`), so she destroys whatever is in
   her path; with nowhere closer to go she still fires. The strategy text says so.
+* **Update: the turn hold stays too.** Her hold (turn 12) still wakes her if nothing has attacked
+  her by then (ai.js `dormant`); an attack before that wakes her at once, hold or not.

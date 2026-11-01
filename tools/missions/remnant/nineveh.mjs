@@ -90,7 +90,7 @@ place('P', [[17, 20], [23, 21], [31, 21], [35, 20], [44, 22], [12, 21], [50, 21]
 place('w', [[19, 22], [26, 23], [37, 24], [40, 21], [48, 24], [10, 25], [53, 26]]);
 const units = rows.map((_, j) => Array.from({ length: COLS }, (_, i) => U[`${i + 1},${j + 1}`] || '.').join('')).join('\n');
 
-const HOLD_LINE = 10, HOLD_HEAVY = 16, HOLD_SCREEN = 3;   // the screen of cruisers and craft holds its ground for the first turns
+const HOLD_LINE = 10, HOLD_HEAVY = 16, HOLD_BOSS = 12, HOLD_SCREEN = 3;   // the screen of cruisers and craft holds its ground for the first turns
 export default {
   name: 'NINEVEH', title: 'Nineveh', file: 'remnant/nineveh', screens: [4, 4],
   objective: { kind: 'flagship', type: 77 }, turnLimit: 40, cap: 40, music: 29,
@@ -110,7 +110,7 @@ export default {
     "The towers sit on Nineveh's hull. Only craft can climb onto the hull; send fighters and mecha through the gaps in the gravity veil to kill them, while the capital ships hold the line south of the veil.",
     "Clear the minefields with long guns before advancing; the mines block the gaps.",
     "Reserves come on turns 6 (west), 10 (east), 15 (from behind the hull) and 20. A loyal Union fleet joins you on turn 8 from the south-west, and on turn 12 Moraine's cartel or the Olympos guard.",
-    "The Nineveh sleeps in her hull and fires only at what comes within six hexes of her berth. Hit her once and she wakes: she sails straight for the General across her own decks, two hexes a turn, and fires on everything in her way. Be ready before you wake her.",
+    "The Nineveh sleeps in her hull and fires only at what comes within six hexes of her berth. Hit her once, or wait until turn 12, and she wakes: she sails straight for the General across her own decks, two hexes a turn, and fires on everything in her way. Be ready before she wakes.",
   ],
   plan: [
     { n: 1, path: [[8, 33], [10, 24], [14, 19]] },
@@ -148,7 +148,7 @@ The war is over. This time, all of it.`,
   legend: {
     G: { type: 4, army: 0, general: true },   // the general's machine (the roster fills the start hexes)
     M: { type: 0, army: 0 },
-    N: { type: 77, army: 1 },   // the Nineveh (Ahriman aboard): dormant until attacked (units.json wakes), then she hunts the general
+    N: { type: 77, army: 1, hold: HOLD_BOSS },   // the Nineveh (Ahriman aboard): dormant until attacked (units.json wakes) or turn 12, then she hunts the general
     T: { type: 56, army: 1 },                 // cannon tower (Cortex)
     Y: { type: 24, army: 1 },                 // Hydra battery
     R: { type: 23, army: 1 },                 // Dragon battery

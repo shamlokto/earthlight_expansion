@@ -29,14 +29,18 @@ const gen = b.units.find((u) => u.general);
 let seed = 7; Math.random = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x80000000;
 const start = [nv.x, nv.y];
 const play = (turns) => { const end = b.turn + turns; while (b.turn < end && b.winner() === null) { gen.hp = 9999; if (gen.carrier) gen.carrier.hp = 9999; if (b.army === 1) for (const _ of aiTurn(b)) if (b.winner() !== null) break; b.endTurn(); } };
-play(20);
+play(nv.hold - 2);
 check(nv.x === start[0] && nv.y === start[1] && !nv.engaged, `untouched, she stays in her berth (turn ${b.turn})`);
 const lob = b.spawn(66, 0, nv.x, nv.y + 1); b.army = 0;   // a Lobster Kai on her deck takes a shot at her
 const w = b.weaponsAgainst(lob, nv)[0];
 if (w) b.attack(lob, nv, w);
 check(!!nv.engaged, 'an attack wakes her');
-b.endTurn(); const d0 = distance(nv, gen); play(4);
-check(nv.hp > 0 && distance(nv, gen) < d0, `awake, she closes on the general (${d0} -> ${distance(nv, gen)} hexes)`);
+b.endTurn(); const d0 = distance(nv, gen), at0 = [nv.x, nv.y]; play(4);
+check(nv.hp > 0 && distance(nv, gen) < d0, `awake before her hold (turn ${nv.hold}), she closes on the general (${d0} -> ${distance(nv, gen)} hexes)`);
+// untouched, her hold still wakes her
+const b3 = fresh(), n3 = b3.units.find((u) => u.type === 77), g3 = b3.units.find((u) => u.general), s3 = [n3.x, n3.y];
+while (b3.turn <= n3.hold + 2 && b3.winner() === null) { g3.hp = 9999; if (b3.army === 1) for (const _ of aiTurn(b3)) if (b3.winner() !== null) break; b3.endTurn(); }
+check(!!n3.engaged && (n3.x !== s3[0] || n3.y !== s3[1]), `untouched, she wakes on turn ${n3.hold} and sails (now at ${n3.x},${n3.y})`);
 
 // 3. dormant, she fires from her berth at a battleship four hexes away; engaged, she moves and still fires
 for (const engaged of [false, true]) {
@@ -48,7 +52,7 @@ for (const engaged of [false, true]) {
   let spot = null;
   for (let y = 15; y < 38 && !spot; y++) for (let x = 10; x < 30 && !spot; x++) if (distance({ x, y }, n2) === 4 && !b.unitAt(x, y) && tables.moveCost(1, b.cls(x, y)) === 1) spot = [x, y];
   const tiamat = b.spawn(30, 0, ...spot), hp0 = tiamat.hp, at = [n2.x, n2.y];
-  b.army = 1; b.turn = 14;
+  b.army = 1; b.turn = 5;   // before her hold
   const steps = [...aiTurn(b)].filter((s) => s.att === n2 || s.u === n2).map((s) => s.kind);
   const hit = tiamat.hp < hp0, moved = n2.x !== at[0] || n2.y !== at[1];
   check(hit && moved === engaged, `${engaged ? 'engaged' : 'dormant'}: ${moved ? 'moves, then ' : 'stays and '}fires on a Tiamat in range (HP ${hp0} -> ${tiamat.hp}; ${steps.join(', ')})`);
