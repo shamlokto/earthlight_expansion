@@ -2,6 +2,7 @@
 // roster (machines and their pilots' levels), production, trade, the general, deployment, and
 // the next mission's briefing. State lives in campaign.js; battles run in game.html.
 import { paint } from '../gfx.js';
+import { mountSaveButtons } from '../savefile.js';
 import { paintLookArt, typeIcon } from '../look.js';
 import { battlePalette, renderMap } from '../maps.js';
 import { romView } from './mission.js';
@@ -324,3 +325,5 @@ async function startNew() {
   if (!id || !C.CAMPAIGNS[id]) return selectCampaign();
   await openCampaign(id);
 })().catch((e) => { $('app').textContent = `Intermission error: ${e.message}`; console.error(e); });
+
+mountSaveButtons(document.getElementById('saveIO'));
