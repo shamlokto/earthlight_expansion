@@ -4836,7 +4836,7 @@
      "slot": 0,
      "mode": 0,
      "min": 1,
-     "max": 1,
+     "max": 2,
      "power": 128
     },
     null,
@@ -5664,7 +5664,7 @@
    "look": 30,
    "ownArt": "hephaestus",
    "fightName": "Hephaest",
-   "repair": 4,
+   "repair": 5,
    "dockShips": true,
    "aiTarget": 240
   }

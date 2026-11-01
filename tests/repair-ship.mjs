@@ -32,7 +32,7 @@ check(!b.canBoard(tiamat, ship), 'a battleship (Tiamat) may not');
 check(b.boardable(fenrir).includes(ship), 'the Fenrir can reach it to board');
 fenrir.hp = 2; lobster.hp = 1; tiamat.hp = 10;
 b.army = 1; b.endTurn();
-check(fenrir.hp === 6 && lobster.hp === Math.min(types[8].hp, 5) && tiamat.hp === 14, `repairs +4 at turn start (Fenrir ${fenrir.hp}, Lobster ${lobster.hp}, Tiamat ${tiamat.hp})`);
+check(fenrir.hp === 7 && lobster.hp === Math.min(types[8].hp, 6) && tiamat.hp === 15, `repairs +5 at turn start (Fenrir ${fenrir.hp}, Lobster ${lobster.hp}, Tiamat ${tiamat.hp})`);
 check(b.repaired.length === 3, 'the repairs are reported for the log');
 fenrir.hp = 3; b.board(fenrir, ship);
 check(fenrir.carrier === ship && fenrir.hp === types[49].hp, 'boarding it restores full HP');
