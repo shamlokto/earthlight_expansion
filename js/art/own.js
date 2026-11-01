@@ -8,6 +8,7 @@ import { SELENE_KAI } from './selenekai.js';
 import { LEVIATHAN } from './leviathan.js';
 import { NINEVEH } from './nineveh.js';
 import { DIRECTORATE_TALOS } from './dirtalos.js';
+import { DIRECTORATE_MEDUSA } from './dirmedusa.js';
 import { AZORAS } from './azoras.js';
 import { AZORAS_KAI } from './azoraskai.js';
 import { HEPHAESTUS } from './hephaestus.js';
@@ -19,7 +20,7 @@ import { FENRIR_KAI, ASURA_KAI } from './kai3.js';
 import { ATHENA_KAI_JET, ATHENA_KAI_JET_SPENT, ATHENA_KAI_ROBOT } from './athenakai.js';
 import { ICONS as KAI_ICONS } from './kai-icons.js';
 
-const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, nineveh: NINEVEH, directorateTalos: DIRECTORATE_TALOS, azoras: AZORAS, azorasKai: AZORAS_KAI, hephaestus: HEPHAESTUS,
+const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, nineveh: NINEVEH, directorateTalos: DIRECTORATE_TALOS, directorateMedusa: DIRECTORATE_MEDUSA, azoras: AZORAS, azorasKai: AZORAS_KAI, hephaestus: HEPHAESTUS,
   pallasJet: PALLAS_JET, pallasJetSpent: PALLAS_JET_SPENT, pallasRobot: PALLAS_ROBOT, naga: NAGA,
   lobsterKai: LOBSTER_KAI, craneKai: CRANE_KAI, titanKai: TITAN_KAI, marsKai: MARS_KAI, cyclopsKai: CYCLOPS_KAI,
   fenrirKai: FENRIR_KAI, asuraKai: ASURA_KAI,
@@ -28,7 +29,7 @@ const SETS = { seleneKai: SELENE_KAI, leviathan: LEVIATHAN, nineveh: NINEVEH, di
 // per set; the rest take the defaults there.
 const FX = {
   lobsterKai: { beam: [255, 80, 60] }, craneKai: { rail: [140, 210, 255] }, titanKai: { rail: [150, 255, 120] },
-  directorateTalos: { beam: [255, 40, 60] }, naga: { rail: [70, 255, 200], beam: [70, 255, 200] },
+  directorateTalos: { beam: [255, 40, 60] }, directorateMedusa: { rail: [255, 60, 80] }, naga: { rail: [70, 255, 200], beam: [70, 255, 200] },
   pallasJet: { beam: [90, 200, 255] }, pallasJetSpent: { beam: [90, 200, 255] }, pallasRobot: { rail: [120, 220, 255] },
   seleneKai: { rail: [190, 130, 255], beam: [190, 130, 255] }, azoras: { rail: [255, 210, 120] }, azorasKai: { rail: [255, 215, 110] },
   marsKai: { beam: [255, 170, 60], rail: [255, 200, 120] }, fenrirKai: { rail: [255, 120, 50] }, asuraKai: { rail: [255, 90, 60] },

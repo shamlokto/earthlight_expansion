@@ -889,3 +889,19 @@ and no ship could get within six hexes of her. Now:
   it is attacked itself, whichever comes first: the mission marks them `wakes: true` with
   `hold: 12` (the six Directorate Talos guards; the towers and batteries there can't move anyway),
   and ai.js `dormant` treats them as it does her. Only she goes on the rampage after the general.
+
+## The Directorate Medusa (owner, 2026-11-01)
+Type 80, **Directorate Medusa** (HU-M34D), Union only: the Security Directorate's elite rebuild of
+the Medusa fire-support hunter, beside the Directorate Talos.
+* **Stats** (units.json): HP 8, move 6, evasion 64 (50%; the Medusa's 25%), start level 6; missile
+  pod 102 at **1-2** hexes against craft (the Medusa's 70 at 1), shock flail 90 in melee (slot 2,
+  hits anything; the Medusa's 38). The Medusa's fight moves (`look` 3, `keepSlots`).
+* **Art** (js/art/dirmedusa.js, all from xAI images, 3 kept of 4: tools/art/dirmedusa/): the unit
+  picture (dark gunmetal and crimson, red mono-eye, the huge missile pod over its shoulders, a
+  spiked flail on a lightning chain), fight poses on both sheets (first sheet: ready, hover, the
+  missile salvo; second: the flail wind-up, overhead smash, sweep, pull-back, block, and the
+  crimson lightning burst as the strike effect) in classic and full colour, the map icon, its
+  full-colour version and the board token. Built by tools/art/dirmedusa-poses.py (the Mars Kai's
+  cutting and reduction), dirmedusa-icons.py (the Directorate Talos's) and dirmedusa-xai.mjs.
+* **Where**: Kessrin (four escort the Leviathan on turn 13, one in the turn-5 reserve in place of a
+  Medusa, two in the turn-10 reserve) and Vane's Last Stand (two in Vane's escort on turn 5).

@@ -118,6 +118,7 @@ Her flagship and its escort are coming up behind her. Destroy her Talos before t
   routes: [[30, 17], [27, 14], [27, 26], [22, 18], [18, 20], [20, 24], [33, 21], [24, 13]].map(([x, y]) => ({ prio: 1, x, y })),
   arrivals: [
     // Vane's flagship escort, from the east on turn 6
-    { turn: 5, army: 1, units: [{ type: 33, x: 44, y: 17 }, { type: 39, x: 44, y: 14 }, { type: 39, x: 44, y: 20 }, { type: 49, x: 43, y: 11 }, { type: 49, x: 43, y: 23 }] },
+    { turn: 5, army: 1, units: [{ type: 33, x: 44, y: 17 }, { type: 39, x: 44, y: 14 }, { type: 39, x: 44, y: 20 }, { type: 49, x: 43, y: 11 }, { type: 49, x: 43, y: 23 },
+      { type: 80, x: 44, y: 16, level: 6 }, { type: 80, x: 44, y: 18, level: 6 }] },   // two Directorate Medusas
   ],
 };
