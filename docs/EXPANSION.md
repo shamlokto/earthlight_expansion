@@ -851,3 +851,15 @@ now gives its story and what it is for: the role line, its weapons with their po
 then who built it and how to use it. Lines stay within 30 characters (the original's width); the
 game card, the shop and the wiki show them as running text. The Lobster Kai's beam now reaches
 1-2 hexes, so it hits most craft from where their guns can't answer.
+
+## Big ships kept on screen in fights (owner, 2026-11-01)
+The Azoras Kai, Fenrir Kai and Asura-II Kai were cut off in the fights, weapons included: their
+hulls were scaled up from the bow and centred on the classic box, so the stern left the screen's
+edge and the bow or wing guns its top or bottom. fightfx.js `ownHullGeom` now places every own
+hull: the scale (own.js SCALE) is capped so the ship's pixels fit between the letterbox bars and
+across its half of the screen (with at most 24 px of stern past the edge); then the picture
+slides until the stern is inside the edge, the bow stays on its own half (two big ships never
+overlap in the middle) and the top and bottom clear the bars. The shift is fixed per fight, so
+arrivals, bobbing and sinking are unchanged; muzzle points (`ownHullPoint`, the Leviathan's and
+the Nineveh's cannons) follow it. The Fenrir Kai's scale went from 1.6 to 2.4 (it now spans its
+half of the screen).

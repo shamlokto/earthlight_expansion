@@ -45,7 +45,7 @@ const SCALE = {
   azoras: { hullScale: 1.7, hull2Scale: 1.6, tokenScale: 1.3 },
   azorasKai: { hullScale: 1.85, hull2Scale: 1.75, tokenScale: 1.45 },
   asuraKai: { hullScale: 1.7, hull2Scale: 2.1, tokenScale: 1.3 },
-  fenrirKai: { hullScale: 1.6 },
+  fenrirKai: { hullScale: 2.4 },
   leviathan: { hullScale: 1.55, tokenScale: 1.5 },
   nineveh: { hullScale: 1.7, tokenScale: 1.7 },
   // the repair ship (owner, 2026-11-01: "super super large"), the largest of the Galt ships

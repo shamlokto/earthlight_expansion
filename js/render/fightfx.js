@@ -22,6 +22,18 @@ import { remastered, UP, canvasOf, scale2x } from './fightart.js';
 import { SINK } from '../game/sinkdata.js';
 
 const W = 256, H = 224;
+const W_SCREEN = W, MID = 127, STERN = 24;   // own hulls: the bow up to the middle, at most 24 px of stern off screen (ownHullGeom)
+// The box (in the classic hull's pixels) that a full-colour picture's opaque pixels fill.
+const boxes = new WeakMap();
+function artBox(A, w, h) {
+  if (!boxes.has(A)) {
+    let x0 = A.w, y0 = A.h, x1 = 0, y1 = 0;
+    A.rows.forEach((r, y) => { for (let x = 0; x < A.w; x++) if (r[x] !== '0') { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } });
+    if (x1 < x0) { x0 = 0; y0 = 0; x1 = A.w - 1; y1 = A.h - 1; }
+    boxes.set(A, [x0 * w / A.w, y0 * h / A.h, (x1 + 1) * w / A.w, (y1 + 1) * h / A.h]);
+  }
+  return boxes.get(A);
+}
 const BOOM_TILES = new Set([192, 196, 200]);
 const ARMY = [[255, 96, 210], [96, 255, 150]];   // rim and HUD colours: army A pink, army B green
 const BAR = 9;                                    // letterbox bar height (scene px)
@@ -526,21 +538,46 @@ export class FightRenderer {
   // renderer puts its 128 px hull sprite (the picture at the sheet's left end, or mirrored at its
   // right end).
   ownHullArt(sp) {
+    const g = this.ownHullGeom(sp);
+    if (!g) return null;
+    return { e: this.fullColour(g.set.hullArt, g.W, g.Hh, sp.flip), sp, ox: g.ox, oy: g.oy };
+  }
+  // Where an own hull is drawn: larger than the classic box by the set's hullScale (js/art/own.js
+  // SCALE), grown from the bow, which stays where the recorded shots leave (the box's right edge, or
+  // its left mirrored); then (owner, 2026-11-01: the big ships were cut off, weapons and all) kept
+  // on screen: the scale is capped so the whole ship fits the screen's height, and the picture slides
+  // in until its stern is inside the screen edge (the bow going no further than the middle, and
+  // the scale capped so at most a sliver of stern is left outside) and its top and bottom are inside. The shift is fixed per fight (from the hull's resting
+  // place), so arrivals, bobbing and sinking move the ship as before.
+  ownHullGeom(sp) {
     const m = /^([LR])(\d+)own#/.exec(sp.id);
     if (!m) return null;
     const a = (m[1] === 'L' ? this.scene.left : this.scene.right)[+m[2]], set = a && a.own;
     if (!set || !set.hullArt) return null;
-    // drawn larger than the classic box by the set's hullScale (js/art/own.js SCALE), grown from the
-    // bow, which stays where the recorded shots leave (the box's right edge, or its left mirrored)
-    const k = set.hullScale || 1, w = set.hull.w, h = set.hull.h, W = Math.round(w * k), Hh = Math.round(h * k);
-    const e = this.fullColour(set.hullArt, W, Hh, sp.flip);
-    return { e, sp, ox: sp.flip ? 128 - w : w - W, oy: (h - Hh) / 2 };
+    const w = set.hull.w, h = set.hull.h, flip = !!sp.flip, [bx0, by0, bx1, by1] = artBox(set.hullArt, w, h);
+    // at most the height between the letterbox bars, and as wide as its half plus a sliver of stern past the edge
+    const k = Math.min(set.hullScale || 1, (H - 2 * BAR - 4) / Math.max(1, by1 - by0), (MID + STERN - 2) / Math.max(1, bx1 - bx0)), W = Math.round(w * k), Hh = Math.round(h * k);
+    const ox = flip ? 128 - w : w - W, oy = (h - Hh) / 2;
+    this.ownShift = this.ownShift || new Map();
+    const key = `${m[1]}${m[2]}:${W}:${Hh}`;
+    if (!this.ownShift.has(key)) {
+      // the ship's pixels on screen with the hull at rest (x 4 on the left, mirrored on the right)
+      const x = (flip ? 123 : 4) + ox, l = x + (flip ? W - bx1 * k : bx0 * k), r = x + (flip ? W - bx0 * k : bx1 * k);
+      // the bow stays on its own half, so two big ships never overlap in the middle
+      const dx = flip ? -Math.min(Math.max(0, r - (W_SCREEN - 2)), Math.max(0, l - (W_SCREEN - MID))) : Math.min(Math.max(0, 2 - l), Math.max(0, MID - r));
+      const t = sp.y + oy + by0 * k, b = sp.y + oy + by1 * k;
+      const dy = t < BAR + 2 ? BAR + 2 - t : b > H - BAR - 2 ? H - BAR - 2 - b : 0;   // clear of the letterbox bars
+      this.ownShift.set(key, [dx, dy]);
+    }
+    const [dx, dy] = this.ownShift.get(key);
+    return { set, k, w, h, W, Hh, ox: ox + dx, oy: oy + dy };
   }
-  // A point of an own hull's box (muzzle, in the classic hull's pixels) where the modern renderer draws
-  // it: the picture scaled by hullScale from the bow (ownHullArt), mirrored on the right side.
+  // A point of an own hull's box (muzzle, in the classic hull's pixels) where the modern renderer
+  // draws it: through the same scale and shift as the picture (ownHullGeom), mirrored on the right.
   ownHullPoint(set, sp, flip, [px, py]) {
-    const k = set.hullScale || 1, w = set.hull.w, h = set.hull.h;
-    return [sp.x + (flip ? 128 - w + (w - 1 - px) * k : w - (w - px) * k), sp.y + h / 2 + (py - h / 2) * k];
+    const g = this.ownHullGeom(sp);
+    if (!g) return [sp.x + px, sp.y + py];
+    return [sp.x + g.ox + (flip ? (g.w - 1 - px) : px) * g.k, sp.y + g.oy + py * g.k];
   }
   // A full-colour picture (js/art/own.js hullArt, posesArt; drawn larger than the classic sprite)
   // as a body entry like remastered()'s, w x h classic pixels, mirrored when `flip`.
