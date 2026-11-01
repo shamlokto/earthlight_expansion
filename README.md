@@ -103,6 +103,11 @@ The game has no unit production, and units and levels don't carry over between m
 mission, and replay any mission you've reached. After clearing the last mission, the title
 screen offers hard mode (both sides attack ×2, the original's second-round option).
 
+**Save files**: **Export save** (in the ☰ menu, and in the expansion page's header) downloads
+all progress, battle saves and settings (both campaigns) as a `.json` file; **Import save**
+loads one back, replacing what this browser holds. Use it to back up or move to another
+browser or computer. The ROM is never part of a save file.
+
 **Map events** (`js/game/events.js`, read from the game code): on map 20 (The Buccaneer Cannon)
 the three Adzam towers each arm a cannon that, after every phase, destroys every unit in its
 column, of either army, until its tower falls; the lanes are tinted on the board. Hunters
@@ -227,6 +232,7 @@ objective (usually: destroy the Galt command centre or fortress, or sink a flags
 | `js/game/scenario.js` | per-map units: deployment, extras, fortresses, dock cargo, warp-in, reinforcements |
 | `js/game/scripts.js` | per-map objectives, guards, turn limits |
 | `js/game/savegame.js` | campaign progress and the battle save slot (localStorage) |
+| `js/savefile.js` | Export/Import save: every `earthlight*`/`el-*` localStorage key to and from a JSON file |
 | `js/game/events.js` | map events: Buccaneer cannon, afterburner, Quantum Decimator, comet alert |
 | `js/game/points.js` | victory points and rank |
 | `js/screens.js` | full-screen ROM pictures (title, menu, mission header, points frame) |

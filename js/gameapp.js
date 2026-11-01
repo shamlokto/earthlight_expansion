@@ -4,6 +4,7 @@
 // every mission starts from the ROM's own deployment.
 import { Rom } from './rom.js';
 import { paint } from './gfx.js';
+import { mountSaveButtons } from './savefile.js';
 import { MAP_COUNT, mapInfo, battlePalette, renderMap } from './maps.js';
 import { allUnitTypes } from './units.js';
 import { applyBps } from './bps.js';
@@ -939,3 +940,5 @@ function pointsScreen(p) {
   $('pointsRank').innerHTML = `<span class="dim">Rank</span><b>${rankName(rom, rank, en ? en.labels : null)}</b><span class="grade" title="emblem grade ${(rank & 3) + 1} of 4">${grade}</span>`;
   $('points').hidden = false;
 }
+
+mountSaveButtons(document.querySelector('header.top .pages nav'), 'navbtn');
