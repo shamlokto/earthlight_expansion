@@ -84,12 +84,12 @@ class Brain {
   mobile(u) { return this.mine(u) && u.type !== 0x12 && (u.type < 0x34 || u.type >= 58); }   // 58+: expansion machines
   free(u) { return !this.done.has(u) && !u.moved && !u.acted; }
   blocked(x, y) { return this.lanes && inLane(this.b, x, y); }
-  // Expansion (units.json `wakes: 'attacked'`, the Nineveh): dormant until something attacks her
-  // (rules.js attack sets `engaged`): she only fires from where she lies; once engaged she goes on
-  // a rampage: each turn she moves on her quarry first (`hunts`), then fires at whatever is in range.
-  // A turn hold (u.hold) still wakes her when that turn comes, if nothing has attacked her by then.
+  // Expansion: dormant until attacked or until its hold turn, whichever comes first (the Nineveh,
+  // units.json `wakes: 'attacked'`, and every unit inside her hull, mission `wakes: true`; rules.js
+  // attack sets `engaged`): a dormant unit only fires from where it stands. Once engaged the Nineveh
+  // goes on a rampage: each turn she moves on her quarry first (`hunts`), then fires at what is in range.
   dormant(u) {
-    if (this.b.type(u).wakes !== 'attacked' || u.engaged) return false;
+    if ((this.b.type(u).wakes !== 'attacked' && !u.wakes) || u.engaged) return false;
     if (u.hold && this.b.turn >= u.hold) { u.engaged = true; return false; }
     return true;
   }

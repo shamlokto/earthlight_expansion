@@ -885,3 +885,7 @@ and no ship could get within six hexes of her. Now:
   her path; with nowhere closer to go she still fires. The strategy text says so.
 * **Update: the turn hold stays too.** Her hold (turn 12) still wakes her if nothing has attacked
   her by then (ai.js `dormant`); an attack before that wakes her at once, hold or not.
+* **Update: the same two rules for her hull.** Every unit inside the hull wakes on turn 12 or when
+  it is attacked itself, whichever comes first: the mission marks them `wakes: true` with
+  `hold: 12` (the six Directorate Talos guards; the towers and batteries there can't move anyway),
+  and ai.js `dormant` treats them as it does her. Only she goes on the rampage after the general.

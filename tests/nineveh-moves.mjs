@@ -57,4 +57,18 @@ for (const engaged of [false, true]) {
   const hit = tiamat.hp < hp0, moved = n2.x !== at[0] || n2.y !== at[1];
   check(hit && moved === engaged, `${engaged ? 'engaged' : 'dormant'}: ${moved ? 'moves, then ' : 'stays and '}fires on a Tiamat in range (HP ${hp0} -> ${tiamat.hp}; ${steps.join(', ')})`);
 }
+// 4. her hull's guard (Directorate Talos, mission wakes) follows the same two rules
+{
+  const g4 = fresh(), gen4 = g4.units.find((u) => u.general);
+  const guards = g4.units.filter((u) => u.type === 60 && u.wakes && !u.carrier), at = guards.map((u) => `${u.x},${u.y}`);
+  check(guards.length === 6, `six guards inside the hull carry the rule (${guards.length})`);
+  const run = (turns) => { const end = g4.turn + turns; while (g4.turn < end && g4.winner() === null) { gen4.hp = 9999; if (g4.army === 1) for (const _ of aiTurn(g4)) if (g4.winner() !== null) break; g4.endTurn(); } };
+  run(5);
+  check(guards.every((u, i) => `${u.x},${u.y}` === at[i] && !u.engaged), 'untouched, the guards stay at their posts');
+  const one = guards[0], lob = g4.spawn(66, 0, ...neighbours(one.x, one.y).find(([x, y]) => g4.inBounds(x, y) && !g4.unitAt(x, y)));
+  g4.army = 0; const w4 = g4.weaponsAgainst(lob, one)[0]; if (w4) g4.attack(lob, one, w4);
+  check(!!one.engaged && !guards[1].engaged, 'an attacked guard wakes; the others sleep on');
+  run(16);
+  check(guards.filter((u) => u.hp > 0).every((u) => u.engaged), 'by turn 12 every guard is awake');
+}
 process.exit(fails ? 1 : 0);

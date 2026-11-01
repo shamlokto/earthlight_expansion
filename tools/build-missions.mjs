@@ -159,6 +159,7 @@ function build(spec) {
     if (u.joiner) o.joiner = true;
     if (u.level !== undefined) o.level = u.level;
     if (u.hold) o.hold = u.hold;   // the AI keeps it in place until that battle turn (ai.js)
+    if (u.wakes) o.wakes = true;   // ... or until it is attacked, whichever comes first (ai.js dormant)
     if (u.cargo) o.cargo = u.cargo;
     return o;
   });

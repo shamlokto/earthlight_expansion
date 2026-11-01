@@ -42,7 +42,7 @@ many enemies."
   2 Asura-II Kai, 2 Artemis + Hastur (with cargo), Siren, 3 Abaddons (held to turn 18), 4 Corvus,
   3 Hannibal, 2 Regulus, 2 Palmyra, 4 Fenrir, 2 Fenrir Kai, 2 Cerberus, 2 Gulon, Kai craft (Athena
   Kai, Lobster, Crane, Mars, Titan, Cyclops Kai), Talos, 14 batteries, 14 mines, 3 towers.
-  Holds: the screen of cruisers and craft 3 turns, the battle line 10, Nodens 16; the Nineveh wakes when attacked, or on turn 12.
+  Holds: the screen of cruisers and craft 3 turns, the battle line 10, Nodens 16; the Nineveh and the guards in her hull wake when attacked, or on turn 12 (mission `wakes: true`).
 * **Enemy waves**: turn 6 west (8 + 6 aboard), turn 10 east (8), turn 15 from behind the hull (11),
   turn 20 (8): 41 more, about 150 in all.
 * **Allies**: turn 8 a loyal Union fleet from the south-west (10); turn 12 Moraine's cartel on the
