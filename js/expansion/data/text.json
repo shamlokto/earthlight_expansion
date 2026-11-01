@@ -213,8 +213,8 @@
    "short": "Light Bomber",
    "info": [
     "   Bomb\n   and Move",
-    "Light Bomber\n\nThe FB-33 carries a short-\nrange anti-ship missile.\nCheaper and lighter than the\nBrontes.",
-    "Built in numbers before the\nBrontes replaced it. Galt\nyards still turn them out:\nthe missile hits hard enough\nto finish a damaged ship."
+    "Light Bomber\n\nA railgun for dogfights and\none anti-ship missile (150) at\none to two hexes. Re-arms on\nany carrier or dock.",
+    "The bomber the Brontes\nreplaced, still built in\nremnant yards because it is\ncheap. Fly pairs behind a\nfighter screen: the missile\nfinishes a wounded cruiser\nfrom two hexes, then run home\nto re-arm. Fragile once spent."
    ]
   },
   {
@@ -369,8 +369,8 @@
    "short": "Transport Ship",
    "info": [
     "   Transport",
-    "Transport Ship\n\nThe CR-61II ferries one small\nunit like the Crab, with a\nlonger range.",
-    "The Galt remnant's yards\nbuild the Camelii to carry\nslow units to the front.\nCan't attack while empty."
+    "Transport Ship\n\nNo guns. Carries one small\nmachine at move 7 and sets a\nDragon or Hydra battery down\non bedrock or asteroid.",
+    "Ruess's long-haul ferry. It\nbrings slow mecha and\nbatteries to the front faster\nthan they walk. Keep it behind\nthe line: at 10% evasion\nanything that reaches it sinks\nit, and whatever it carries."
    ]
   },
   {
@@ -535,8 +535,8 @@
    "short": "Heavy Bomber",
    "info": [
     "   Bomb\n   and Move",
-    "Heavy Bomber\n\nThe Union's mass-produced\nmissile bomber, a cheaper\nAbaddon without the\nDecimator.",
-    "MSNP-IIs come in waves late\nin the war. Kill them before\nthey reach missile range."
+    "Heavy Bomber\n\nA pulse beam and one heavy\nmissile (230) at two to four\nhexes, the hardest single hit\na bomber carries. Slow while\nloaded.",
+    "The Union mass-produced it for\nthe end of the war, and\nKessrin kept every one. As a\nstand-off ship killer it fires\nfrom four hexes behind a wall\nof mecha, then a carrier\nscoops it up to re-arm."
    ]
   },
   {
@@ -551,8 +551,8 @@
    "short": "Strike Bomber",
    "info": [
     "   Bomb\n   and Move",
-    "Strike Bomber\n\nArmoured railgun bomber with\none heavy missile.",
-    "The MSFB-5 is the Security\nDirectorate's own design:\nhard to hit, and it keeps\nits railgun after the strike."
+    "Strike Bomber\n\nA railgun that keeps biting\nafter the strike and one heavy\nmissile (200) at two to four\nhexes. Hard to hit (60%).",
+    "The Security Directorate's own\nbomber, built to live through\nwhat kills an MSNP-II. Its\nevasion lets it loiter near\nthe front, fire, and still\nduel interceptors with the\nrailgun."
    ]
   },
   {
@@ -657,8 +657,8 @@
    "short": "Fast Carrier",
    "info": [
     "   Carrier\n   Large",
-    "Fast Carrier\n\nThe Selene rebuilt with new\nengines and a beam turret.\nFaster than any warship.",
-    "The Kai outruns everything in\nthe Union fleet. It drops\nfighters deep behind the line\nand is gone before the\ncruisers can turn."
+    "Fast Carrier (Refit)\n\nA railgun against craft and a\nbeam turret (77) for ships at\none to two hexes. Carries any\nnumber of craft at move 10.",
+    "Captain Sato refused a new\nship and had Ruess rebuild her\nold Selene instead. It outruns\nevery warship: load a strike\nwing, sprint to the flank,\nlaunch, and pull back before\nthe cruisers turn. Thin\narmour: never park it in their\nrange."
    ]
   },
   {
@@ -667,8 +667,8 @@
    "short": "Directorate Flagship",
    "info": [
     "   Large\n   Warship",
-    "Directorate Flagship\n\nA carrier-battlecruiser: heavy\nbeam turrets, missile cells,\nrailguns and a hangar deck.",
-    "Marshal Kessrin's own ship.\nIts black armour shrugs off\nwhat would sink a Nodens.\nKill its escort first, then\ncome at it from every side."
+    "Directorate Flagship\n\nBeam batteries (154) against\ncraft, missile cells (255) at\ntwo to five hexes, railguns at\none to three, a hangar; 60 HP,\n78% evasion.",
+    "Marshal Kessrin's flagship,\nlaid down in secret while the\nwar still raged. It kills\nalmost anything it reaches.\nStrip its escort, then\nsurround it with many\nattackers so every hit counts;\nan Abaddon's Decimator ends it\nfrom four hexes."
    ]
   },
   {
@@ -677,8 +677,8 @@
    "short": "Elite Close Combat Hunter",
    "info": [
     "   Melee\n   Elite",
-    "Elite Close Combat Hunter\n\nA rebuilt Talos with heavier\narmour, uprated thrusters and\na longer beamsaber.",
-    "Flown only by the Security\nDirectorate's picked pilots.\nFaster and harder to hit than\nany Talos, and just as useless\nin magnetic fields."
+    "Elite Close Combat Hunter\n\nA long beamsaber (140) in\nmelee and a pulse gun; move 5\nand 65% evasion.",
+    "Commander Vane's machine; the\nDirectorate's picked guards\nfly the rest. It cuts a Mars\nin half before the Mars can\nanswer. Don't duel it: pin it\nwith railguns and missiles\nfrom two hexes, or catch it in\na magnetic field where its\nsaber fails."
    ]
   },
   {
@@ -687,8 +687,8 @@
    "short": "General's Flagship",
    "info": [
     "   Beam\n   Large",
-    "General's Flagship\n\nWing-mounted heavy beam\ncannons, missile pods for\nclose work, a railgun.",
-    "A carrier-battlecruiser with\noversized engines: the\nfastest capital ship in the\nsky. The General's chariot.\nUnique: one at a time."
+    "General's Flagship\n\nMissile pods (90) at one to\ntwo hexes, heavy wing beams\n(120) at two to four and a\nclose-in railgun; move 9 and a\nhangar.",
+    "Built in hidden yards to carry\nthe General: a battlecruiser\nwith a carrier's hangar and a\ndestroyer's engines. With the\nGeneral aboard it is the\nstrongest ship on the field\nand the one the enemy must\nkill. Fight at beam range with\nescorts on its flanks. Unique."
    ]
   },
   {
@@ -697,8 +697,8 @@
    "short": "Transforming Ace",
    "info": [
     "   Convert\n   Bomb",
-    "Transforming Ace\n(Fighter-Bomber Mode)\n\nBeam guns in the nose and\none anti-ship torpedo",
-    "The Athena's successor. A\nnew frame from nose to heel;\none machine in two shapes.\nUnique: one at a time."
+    "Transforming Ace\n(Fighter-Bomber Mode)\n\nNose beams (48) and one\nanti-ship torpedo (255) at two\nhexes: the heaviest strike any\ncraft carries. Move 10.",
+    "The Athena's successor, a new\nframe from nose to heel, built\nfor the remnant's best pilot.\nOpen as a fighter and put the\ntorpedo into a capital ship,\nthen turn hunter and hold the\nline until a carrier re-arms\nyou. Unique."
    ]
   },
   {
@@ -707,8 +707,8 @@
    "short": null,
    "info": [
     "   Convert\n   Fighter",
-    "Transforming Ace\n(Fighter Mode)\n\nBeam guns in the nose; the\ntorpedo is spent",
-    "The Athena's successor. A\nnew frame from nose to heel;\none machine in two shapes.\nUnique: one at a time."
+    "Transforming Ace\n(Fighter Mode)\n\nNose beams (48); the torpedo\nis spent and re-arms on any\ncarrier or dock.",
+    "The Athena's successor, a new\nframe from nose to heel, built\nfor the remnant's best pilot.\nOpen as a fighter and put the\ntorpedo into a capital ship,\nthen turn hunter and hold the\nline until a carrier re-arms\nyou. Unique."
    ]
   },
   {
@@ -717,8 +717,8 @@
    "short": null,
    "info": [
     "   Convert\n   Melee",
-    "Transforming Ace\n(Hunter Mode)\n\nA railgun that answers fire\nat close range, and a\nbeamsaber for melee combat",
-    "The Athena's successor. A\nnew frame from nose to heel;\none machine in two shapes.\nUnique: one at a time."
+    "Transforming Ace\n(Hunter Mode)\n\nA railgun (102) that answers\nfire up to three hexes and a\nbeamsaber (140) in melee; 70%\nevasion.",
+    "The Athena's successor, a new\nframe from nose to heel, built\nfor the remnant's best pilot.\nOpen as a fighter and put the\ntorpedo into a capital ship,\nthen turn hunter and hold the\nline until a carrier re-arms\nyou. Unique."
    ]
   },
   {
@@ -727,8 +727,8 @@
    "short": null,
    "info": [
     "   Convert\n   Melee",
-    "Transforming Ace\n(Hunter Mode)\n\nA railgun that answers fire\nat close range, and a\nbeamsaber for melee combat",
-    "The Athena's successor. A\nnew frame from nose to heel;\none machine in two shapes.\nUnique: one at a time."
+    "Transforming Ace\n(Hunter Mode)\n\nA railgun (102) that answers\nfire up to three hexes and a\nbeamsaber (140) in melee; 70%\nevasion.",
+    "The Athena's successor, a new\nframe from nose to heel, built\nfor the remnant's best pilot.\nOpen as a fighter and put the\ntorpedo into a capital ship,\nthen turn hunter and hold the\nline until a carrier re-arms\nyou. Unique."
    ]
   },
   {
@@ -736,9 +736,9 @@
    "name": "Lobster Kai",
    "short": "Interceptor",
    "info": [
-    "",
-    "Interceptor (Refit)\n\nUprated pulse beams and a\nlight missile rack",
-    "Ruess's refit of the Lobster.\nFaster than anything else\nthat flies, and its missiles\nlet it strike at warships."
+    "   Fast\n   Beam",
+    "Interceptor (Refit)\n\nA heavy pulse beam (128) at\none to two hexes and a light\nmissile (77) that hits\nanything, ships included. Move\n12.",
+    "Ruess's refit of the Lobster:\nbigger engines, a longer beam,\na missile rack. The fastest\nmachine in the sky. From two\nhexes its beam hits craft\nwhose guns can't answer, so it\nhunts bombers and finishes the\nwounded untouched, and its\nmissile chips at stray ships."
    ]
   },
   {
@@ -746,9 +746,9 @@
    "name": "Crane Kai",
    "short": "Fighter-Bomber",
    "info": [
-    "",
-    "Fighter-Bomber (Refit)\n\nA heavier railgun and a\nlong-reach ship missile",
-    "Ruess's refit of the Crane.\nIt hits capital ships from\ntwo hexes out and is very\nhard to pin down."
+    "   Missile",
+    "Fighter-Bomber (Refit)\n\nA railgun (77) for dogfights\nand a ship missile (128) at\none to two hexes; 60% evasion.",
+    "Ruess's refit of the Crane.\nIts missile reaches warships\nfrom two hexes, beyond most\npoint defence, and it is very\nhard to pin down. Send pairs\nagainst cruisers and carriers,\nthen fall back behind the\nmecha line."
    ]
   },
   {
@@ -756,9 +756,9 @@
    "name": "Titan Kai",
    "short": "Sniper",
    "info": [
-    "",
-    "Long-Range Mecha (Refit)\n\nA long railgun, an anti-ship\nbattery and a close-in gun",
-    "Ruess's refit of the Titan.\nIt holds a line from four\nhexes away and can answer\nthe ships behind it too."
+    "   Long\n   Range",
+    "Long-Range Mecha (Refit)\n\nA long railgun (102) against\ncraft at two to four hexes, an\nanti-ship battery (90) at two\nto three and a close-in gun\n(64).",
+    "Ruess's refit of the Titan, a\nmecha that shoots like a\nwarship. Plant it on asteroid\nor bedrock behind the line: it\nbreaks attacks from four hexes\nand answers the ships behind\nthem. Slow, so guard its\nflanks."
    ]
   },
   {
@@ -766,39 +766,39 @@
    "name": "Mars Kai",
    "short": "Mecha",
    "info": [
-    "",
-    "Mecha (Refit)\n\nA stronger beam rifle and\nheavier close-in railgun",
-    "Ruess's refit of the Mars.\nCheap, quicker on its feet\nand harder to hit: the\nbackbone of the line."
+    "   Melee",
+    "Mecha (Refit)\n\nA stronger beam rifle (77) and\na heavy close-in railgun (96)\nthat hits ships too; move 6,\n50% evasion.",
+    "Ruess's refit of the Mars:\ncheap, quick and hard to hit.\nBuy them in numbers to hold\nchokepoints, take docks and\nsoak the hits meant for your\naces; the railgun finishes any\nship that strays too close."
    ]
   },
   {
    "type": 70,
    "name": "Cyclops Kai",
-   "short": "Missile Launcher",
+   "short": "Missile Boat",
    "info": [
     "   Moves or\n   Fires",
-    "Missile Launcher (Refit)\n\nLonger-reaching missile pods\nfor craft and ships",
-    "Ruess's refit of the Cyclops.\nIts ship missiles reach six\nhexes, so it can strike from\nbehind the line."
+    "Missile Boat (Refit)\n\nMissiles against craft (140)\nat two to five hexes and ship\nmissiles (190) at two to six.\nMoves or fires.",
+    "Ruess turned the Cyclops into\na missile boat that out-ranges\neverything the remnant flies.\nHide it behind the line, let\nthe enemy come, and fire from\nsix hexes; missiles fly\nthrough the magnetic fields\nthat stop beams. Never let\ncraft reach it."
    ]
   },
   {
    "type": 71,
    "name": "Fenrir Kai",
-   "short": "Destroyer",
+   "short": "Gunboat",
    "info": [
-    "",
-    "Destroyer (Refit)\n\nA heavier railgun and a\nship missile battery",
-    "Ruess's refit of the Fenrir.\nFast, tougher, and it can\nstill move after firing."
+    "   Fire and\n   Move",
+    "Destroyer (Refit)\n\nA heavy railgun (140) against\ncraft and a ship missile\nbattery (115) at two to three\nhexes. Moves again after\nfiring.",
+    "Ruess's refit of the Fenrir,\nbuilt for hit-and-run: dash\nin, fire, and use the movement\nleft to slip back behind the\nline before the enemy turn.\nTougher than the old Fenrir,\nand it docks on the Hephaestus\nfor repairs."
    ]
   },
   {
    "type": 72,
    "name": "Asura-II Kai",
-   "short": "Battleship",
+   "short": "Gun Battleship",
    "info": [
     "   Battleship\n   Large",
-    "Battleship (Refit)\n\nUprated engines, a heavier\nrail battery and missiles",
-    "Ruess's refit of the Asura-II.\nThe fastest of the battle-\nships, with guns reaching\nfour hexes."
+    "Battleship (Refit)\n\nA huge rail battery (220)\nagainst ships at two to four\nhexes and close-in missiles\n(165); 22 HP, move 7.",
+    "Ruess's gun battleship: the\nAsura-II rebuilt around a rail\nbattery that guts a carrier in\none volley. It wins every ship\nduel at range. Keep mecha in\nfront and let it fire over\nthem; craft that slip under\nits guns are its real danger."
    ]
   },
   {
@@ -807,8 +807,8 @@
    "short": "Fighter-Bomber",
    "info": [
     "   Convert\n   Missile",
-    "Transforming Fighter (Refit)\n(Fighter Mode)\n\nA torpedo for capital ships",
-    "Ruess's refit of the Athena.\nFaster and harder to hit in\nboth shapes. Not unique: a\nwhole wing can fly them."
+    "Transforming Fighter (Refit)\n(Fighter Mode)\n\nA railgun (38) and a torpedo\n(240) for capital ships at two\nhexes; move 10.",
+    "Ruess's refit of the Athena,\nfaster and harder to hit in\nboth shapes, and not unique: a\nwhole wing can fly them.\nStrike with the torpedoes,\nturn hunter and fight from two\nhexes while a carrier waits to\nre-arm the wing."
    ]
   },
   {
@@ -817,8 +817,8 @@
    "short": "Fighter",
    "info": [
     "   Convert",
-    "Transforming Fighter (Refit)\n(Fighter Mode, spent)\n\nRe-armed on boarding",
-    "Ruess's refit of the Athena,\nits torpedo spent."
+    "Transforming Fighter (Refit)\n(Fighter Mode, spent)\n\nA railgun (38); the torpedo\nre-arms on any carrier or\ndock.",
+    "Ruess's refit of the Athena,\nfaster and harder to hit in\nboth shapes, and not unique: a\nwhole wing can fly them.\nStrike with the torpedoes,\nturn hunter and fight from two\nhexes while a carrier waits to\nre-arm the wing."
    ]
   },
   {
@@ -827,8 +827,8 @@
    "short": "Hunter",
    "info": [
     "   Convert\n   Melee",
-    "Transforming Fighter (Refit)\n(Hunter Mode)\n\nA railgun at two to three\nhexes and a heavier melee gun",
-    "Ruess's refit of the Athena\nin hunter form."
+    "Transforming Fighter (Refit)\n(Hunter Mode)\n\nA railgun (102) at two to\nthree hexes and a heavy melee\ngun (128); 55% evasion.",
+    "Ruess's refit of the Athena,\nfaster and harder to hit in\nboth shapes, and not unique: a\nwhole wing can fly them.\nStrike with the torpedoes,\nturn hunter and fight from two\nhexes while a carrier waits to\nre-arm the wing."
    ]
   },
   {
@@ -837,8 +837,8 @@
    "short": "Hunter",
    "info": [
     "   Convert\n   Melee",
-    "Transforming Fighter (Refit)\n(Hunter Mode)",
-    "Ruess's refit of the Athena\nin hunter form."
+    "Transforming Fighter (Refit)\n(Hunter Mode)\n\nA railgun (102) at two to\nthree hexes and a heavy melee\ngun (128); 55% evasion.",
+    "Ruess's refit of the Athena,\nfaster and harder to hit in\nboth shapes, and not unique: a\nwhole wing can fly them.\nStrike with the torpedoes,\nturn hunter and fight from two\nhexes while a carrier waits to\nre-arm the wing."
    ]
   },
   {
@@ -847,28 +847,28 @@
    "short": "Fortress Ship",
    "info": [
     "   Carrier\n   Fortress",
-    "Fortress Ship\n\nBabylon's sister, armed with\nBabylon's own main cannon",
-    "Laid down at Asgard beside\nBabylon and hidden in Earth's\nshadow. Ahriman commands her."
+    "Fortress Ship\n\nBabylon's main cannon (255) at\ntwo to six hexes, missile\ncells (200) at one to four,\nbeam batteries (170) and a\nhangar; 90 HP.",
+    "Babylon's sister, laid down at\nAsgard and never in any Union\nrecord; Ahriman finished her\nin Earth's shadow. Towers on\nher hull feed a cannon that\nsweeps three lanes: kill them\nwith craft that climb the\nhull, never end a move in a\nlane, then swarm her."
    ]
   },
   {
    "type": 78,
    "name": "Azoras Kai",
-   "short": "Flagship",
+   "short": "Super-Flagship",
    "info": [
     "   Carrier\n   Large",
-    "Flagship (Refit)\n\nHeavier missiles, a longer\nbeam battery and new engines",
-    "Ruess rebuilt the Azoras from\nkeel to crown for the last\nbattle. Unique, and worth a\nfleet."
+    "Flagship (Refit)\n\nMissiles (120) at one to three\nhexes, a beam battery (160) at\ntwo to five and railguns (110)\nat one to two; 44 HP, move 10,\n70% evasion.",
+    "Ruess rebuilt the Azoras from\nkeel to crown for the last\nbattle. With the General\naboard nothing in Kessrin's\nfleet matches it at any range.\nIts price would buy a fleet,\nand it is worth one. Unique."
    ]
   },
   {
    "type": 79,
    "name": "Hephaestus",
-   "short": "Repair ship",
+   "short": "Repair Ship",
    "info": [
-    "   Carrier\n   Huge",
-    "Repair ship (Dock)\n\nNo guns. Mends every ally\nbeside it 4 HP a turn",
-    "A drydock with engines: craft\nand destroyers board it for a\nfull repair. Slow and thin-\nskinned; the enemy hunts it\nright after the general."
+    "   Carrier\n   Repair",
+    "Repair Ship (Dock)\n\nNo guns. Every ally beside it\nregains 5 HP each turn; craft,\ncruisers and destroyers board\nit for a full repair.",
+    "Ruess's answer to a war with\nno safe harbour: a drydock\nwith engines. Park it a hex\nbehind the battle line and\nrotate wounded ships beside\nit. Slow and thin-skinned, and\nthe enemy hunts it right after\nthe General: never leave it\nunescorted."
    ]
   }
  ],

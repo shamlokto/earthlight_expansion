@@ -691,7 +691,7 @@ machine from mission 8 anyway (`allFrom`).
 
 | type | unit | look | stats (base unit in brackets) | price |
 |---|---|---|---|---|
-| 66 | Lobster Kai FS-41K, interceptor | Lobster | move 12 (10), evasion 40% (30%); beam 128 (102) at 1; **new** W3 missile 77 at 1, which can hit ships | 32 |
+| 66 | Lobster Kai FS-41K, interceptor | Lobster | move 12 (10), evasion 40% (30%); beam 128 (102) at 1–2 (owner, 2026-11-01: was 1); **new** W3 missile 77 at 1, which can hit ships | 32 |
 | 67 | Crane Kai FFA-81K, fighter-bomber | Crane | move 10 (9), evasion 60% (50%); railgun 77 (58) at 1; ship missile 128 (77) at **1–2** | 32 |
 | 68 | Titan Kai HU-NN7K, long-range mecha | Titan | evasion 40% (30%); railgun 102 (77) at **2–4**; **new** W2 railgun 90 at 2–3 against ships; railgun 64 (45) at 1 | 40 |
 
@@ -831,8 +831,8 @@ prime target right after the general.
 * **Stats** (units.json): HP 36, move 3, evasion 5, value 14, so it costs 504 supply (the Azoras
   Kai 352), not unique. No weapons, so it never attacks or fires back. Category 1 (carrier), with
   the Tiamat's fight moves (`look` 30) like the Azoras.
-* **Repair** (`repair: 4`, rules.js `repairShips`): at the start of its side's turn every ally next
-  to it gains 4 HP, up to full (not structures or docks, not itself). The game log lists them.
+* **Repair** (`repair: 5`, owner 2026-11-01, was 4; rules.js `repairShips`): at the start of its side's turn every ally next
+  to it gains 5 HP, up to full (not structures or docks, not itself). The game log lists them.
 * **Carrier and dock** (`dockShips`, rules.js `canBoard`): small craft board it as at any carrier,
   and cruisers and destroyers (categories 3 and 4: Hannibal to Gulon, the Fenrir Kai, the Abaddon)
   as at a dock; battleships and carriers can't. Boarding restores full HP and re-arms, as everywhere.
@@ -844,3 +844,10 @@ prime target right after the general.
   (tools/art/kai-icons.mjs `hephaestus`). The largest Galt ship in the fights (own.js SCALE: hull
   2.0, hull2 2.2) and on the board (token 1.75).
 * Checked by `node tests/repair-ship.mjs`.
+
+## Unit descriptions rewritten (owner, 2026-11-01)
+Every new or revived unit's description (text.json `unitInfo`: types 12, 28, 45, 47 and 58-79)
+now gives its story and what it is for: the role line, its weapons with their power and range,
+then who built it and how to use it. Lines stay within 30 characters (the original's width); the
+game card, the shop and the wiki show them as running text. The Lobster Kai's beam now reaches
+1-2 hexes, so it hits most craft from where their guns can't answer.
