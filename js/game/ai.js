@@ -87,7 +87,12 @@ class Brain {
   // Expansion (units.json `wakes: 'attacked'`, the Nineveh): dormant until something attacks her
   // (rules.js attack sets `engaged`): she only fires from where she lies; once engaged she goes on
   // a rampage: each turn she moves on her quarry first (`hunts`), then fires at whatever is in range.
-  dormant(u) { return this.b.type(u).wakes === 'attacked' && !u.engaged; }
+  // A turn hold (u.hold) still wakes her when that turn comes, if nothing has attacked her by then.
+  dormant(u) {
+    if (this.b.type(u).wakes !== 'attacked' || u.engaged) return false;
+    if (u.hold && this.b.turn >= u.hold) { u.engaged = true; return false; }
+    return true;
+  }
   rampage(u) { return this.b.type(u).wakes === 'attacked' && !!u.engaged; }
   // Her best shot from where she stands: the highest-priority foe in range, then the most damage.
   * fireHere(u) {
@@ -468,7 +473,7 @@ class Brain {
     for (const u of b.units) {
       if (!this.mobile(u) || !this.free(u) || u.aiScripted || u.guard || this.passive.has(u)) continue;
       if (this.dormant(u)) continue;   // expansion: until she is attacked
-      if (u.hold && b.turn < u.hold) continue;   // expansion: holds its post until that turn (it still fires at what comes in range)
+      if (u.hold && b.turn < u.hold && !u.engaged) continue;   // expansion: holds its post until that turn (it still fires at what comes in range)
       const t0 = u.type, athena = athenaBase(t0) !== null && t0 >= athenaBase(t0) + 2;
       if (athena && !u.burner && b.canTransform(u)) u.type -= 2;   // moves in fighter form, unless it has an afterburner ($01:880D)
       const mp0 = b.movePoints(u);
