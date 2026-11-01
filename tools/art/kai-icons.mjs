@@ -7,7 +7,7 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const TONES = { a: 3, b: 4, c: 5, d: 2, e: 6, f: 4 };
+const TONES = { a: 3, b: 4, c: 5, d: 2, e: 6, f: 4, g: 4, h: 2, y: 2, k: 6 };
 export const SRC = {
   // claw interceptor: two long prongs ahead of the nose, a swept fin, a missile rack, a big engine
   lobsterKai: [
@@ -200,6 +200,26 @@ export const SRC = {
     '.....bbbb',
     '....bbbbffffffff1',
     '.....bbbffffffff1',
+    '',
+  ],
+  // repair ship and drydock (type 79): two long hull beams with hazard stripes and containers, the
+  // open repair bay between them with a destroyer clamped inside, crane arms, the control tower with
+  // the repair cross astern, the glowing hangar door at the bow
+  hephaestus: [
+    '',
+    '....cc...cc...cc...cc',
+    '..aaaaaaaaaaaaaaaaaaaa',
+    '..aykykykykykykykykyaa',
+    '.gggg.d.......d....aa',
+    'eggggg.d.....d.....aah',
+    'egg1gg...ddddddd...aah',
+    'eg111g..dddddddd...aah',
+    'egg1gg...ddddddd...aah',
+    'eggggg.d.....d.....aah',
+    '.gggg.d.......d....aa',
+    '..aykykykykykykykykyaa',
+    '..aaaaaaaaaaaaaaaaaaaa',
+    '....cc...cc...cc...cc',
     '',
   ],
 };
