@@ -35,14 +35,14 @@ many enemies."
 * **Cannons**: towers (Cortex, type 56) at (22,12), (29,10), (36,6) on the hull; lanes x 22 from row
   13, x 29 from row 11, x 36 from row 7 to the bottom edge. At every phase change each lane whose
   tower stands destroys everything in it (events.js fireCannons). The AI keeps out of them.
-* **The Nineveh** (type 77) on the turret railway in the hull's heart at (30,7), hold 26, carrying
+* **The Nineveh** (type 77) on the turret railway in the hull's heart at (30,7), hold 12 (was 26; owner 2026-11-01: she never moved), moving over her own hull's decks (units.json `moveCat` 5), carrying
   two Directorate Talos and two Athena Kai. Capital ships can't enter the hull (Babylon Hull class);
   craft can. Her guard: six Directorate Talos at level 8 on the hull, eight batteries on the railway.
 * **Enemy at the start**: 97 on the map (+15 aboard carriers) = 112: 4 Nodens, 3 Tiamat, 3 Asura-II,
   2 Asura-II Kai, 2 Artemis + Hastur (with cargo), Siren, 3 Abaddons (held to turn 18), 4 Corvus,
   3 Hannibal, 2 Regulus, 2 Palmyra, 4 Fenrir, 2 Fenrir Kai, 2 Cerberus, 2 Gulon, Kai craft (Athena
   Kai, Lobster, Crane, Mars, Titan, Cyclops Kai), Talos, 14 batteries, 14 mines, 3 towers.
-  Holds: the screen of cruisers and craft 3 turns, the battle line 10, Nodens 16, the Nineveh 26.
+  Holds: the screen of cruisers and craft 3 turns, the battle line 10, Nodens 16, the Nineveh 12.
 * **Enemy waves**: turn 6 west (8 + 6 aboard), turn 10 east (8), turn 15 from behind the hull (11),
   turn 20 (8): 41 more, about 150 in all.
 * **Allies**: turn 8 a loyal Union fleet from the south-west (10); turn 12 Moraine's cartel on the

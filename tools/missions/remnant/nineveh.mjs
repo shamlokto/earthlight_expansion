@@ -90,7 +90,7 @@ place('P', [[17, 20], [23, 21], [31, 21], [35, 20], [44, 22], [12, 21], [50, 21]
 place('w', [[19, 22], [26, 23], [37, 24], [40, 21], [48, 24], [10, 25], [53, 26]]);
 const units = rows.map((_, j) => Array.from({ length: COLS }, (_, i) => U[`${i + 1},${j + 1}`] || '.').join('')).join('\n');
 
-const HOLD_LINE = 10, HOLD_HEAVY = 16, HOLD_BOSS = 26, HOLD_SCREEN = 3;   // the screen of cruisers and craft holds its ground for the first turns
+const HOLD_LINE = 10, HOLD_HEAVY = 16, HOLD_BOSS = 12, HOLD_SCREEN = 3;   // the screen of cruisers and craft holds its ground for the first turns
 export default {
   name: 'NINEVEH', title: 'Nineveh', file: 'remnant/nineveh', screens: [4, 4],
   objective: { kind: 'flagship', type: 77 }, turnLimit: 40, cap: 40, music: 29,
@@ -110,7 +110,7 @@ export default {
     "The towers sit on Nineveh's hull. Only craft can climb onto the hull; send fighters and mecha through the gaps in the gravity veil to kill them, while the capital ships hold the line south of the veil.",
     "Clear the minefields with long guns before advancing; the mines block the gaps.",
     "Reserves come on turns 6 (west), 10 (east), 15 (from behind the hull) and 20. A loyal Union fleet joins you on turn 8 from the south-west, and on turn 12 Moraine's cartel or the Olympos guard.",
-    "The Nineveh holds in her hull until turn 26 and launches her fighters when you come close. Her guns reach six hexes; take her apart from the hull's edge with railguns and missiles.",
+    "The Nineveh holds in her hull until turn 12, then sails out across her own decks at two hexes a turn. Her main guns reach six hexes; keep your capital ships spread, and take her apart with railguns and missiles as she comes.",
   ],
   plan: [
     { n: 1, path: [[8, 33], [10, 24], [14, 19]] },

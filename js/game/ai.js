@@ -210,7 +210,7 @@ class Brain {
   // 0 = out of reach. The search covers 12/move turns; a turn's points refill when spent.
   // `span` is the movement the turn count is taken from (the type's, or 10 with an afterburner).
   field(u, mp0, span = u.burner ? 10 : this.b.type(u).move) {
-    const b = this.b, t = b.type(u), cat = t.category, move = t.move || mp0;
+    const b = this.b, t = b.type(u), cat = t.moveCat ?? t.category, move = t.move || mp0;   // moveCat: expansion, the Nineveh
     const T = Math.max(0, Math.floor(12 / (span || 1)) - 1);
     const val = new Uint8Array(64 * 64), foe = new Uint8Array(64 * 64), zoc = new Uint8Array(64 * 64);
     for (const e of b.hostiles(u)) {
@@ -291,6 +291,21 @@ class Brain {
     if (!list.length) return [];
     const d = (e) => distance(u, e), best = list.reduce((a, e) => (d(e) < d(a) ? e : a));
     return [{ x: best.x, y: best.y }];
+  }
+
+  // Steps from each hex to the nearest of `to` over the terrain u can cross (units ignored), as a
+  // function (x, y) -> steps; hexes with no path count their bee-line distance plus 1000.
+  pathTo(u, to) {
+    const b = this.b, t = b.type(u), cat = t.moveCat ?? t.category, d = new Map(), q = [];
+    for (const p of to) { d.set(K(p.x, p.y), 0); q.push([p.x, p.y]); }
+    for (let i = 0; i < q.length; i++) {
+      const [x, y] = q[i], n = d.get(K(x, y)) + 1;
+      for (const [a, c] of neighbours(x, y)) {
+        if (!b.inBounds(a, c) || d.has(K(a, c)) || b.tables.moveCost(cat, b.cls(a, c)) === 0) continue;
+        d.set(K(a, c), n); q.push([a, c]);
+      }
+    }
+    return (x, y) => d.get(K(x, y)) ?? 1000 + Math.min(...to.map((p) => distance({ x, y }, p)));
   }
 
   wantsDock(u) {
@@ -443,7 +458,8 @@ class Brain {
       if (mp0) {
         // expansion arrivals may be ordered to hunt the enemy's carriers ({ chase: 'carriers' }); with none left they advance as usual
         // ... or the enemy general ({ chase: 'general' }, or the mission's chaseGeneral for every unit but carriers)
-        const huntsGeneral = u.chase === 'general' || (b.info.chaseGeneral && b.type(u).category !== CARRIER_CAT);
+        // ... or its type's standing order (units.json `hunts`: the Nineveh, once her hold ends)
+        const huntsGeneral = u.chase === 'general' || b.type(u).hunts === 'general' || (b.info.chaseGeneral && b.type(u).category !== CARRIER_CAT);
         const prey = u.chase === 'carriers' ? b.alive().filter((e) => e.army !== this.army && b.type(e).category === CARRIER_CAT).map((e) => ({ prio: 255, x: e.x, y: e.y }))
           : huntsGeneral ? this.generalAt() : [];
         const f = this.field(u, mp0), list = prey.length ? prey : goals || b.alive().filter((e) => e.army !== this.army).map((e) => ({ prio: (this.prio.get(e) ?? 0) + 1, x: e.x, y: e.y }));
@@ -459,7 +475,8 @@ class Brain {
         const hunt = prey.length ? prey : !goal && !goals && b.info.custom ? this.huntTargets(u) : [];
         // a hunted carrier beyond the original's ~12-point planning range: close in as far as this turn allows
         if (!goal && hunt.length) {
-          const far = (x, y) => Math.min(...hunt.map((p) => distance({ x, y }, p)));
+          // a unit with its own terrain rules (moveCat, the Nineveh inside her hull) follows the path, not the bee-line
+          const far = b.type(u).moveCat !== undefined ? this.pathTo(u, hunt) : (x, y) => Math.min(...hunt.map((p) => distance({ x, y }, p)));
           let bd = far(u.x, u.y);
           for (const k of this.reachable(u).keys()) {
             const [x, y] = k.split(',').map(Number), d = far(x, y);

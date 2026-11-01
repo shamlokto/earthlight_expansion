@@ -863,3 +863,17 @@ overlap in the middle) and the top and bottom clear the bars. The shift is fixed
 arrivals, bobbing and sinking are unchanged; muzzle points (`ownHullPoint`, the Leviathan's and
 the Nineveh's cannons) follow it. The Fenrir Kai's scale went from 1.6 to 2.4 (it now spans its
 half of the screen).
+
+## The Nineveh sails (owner, 2026-11-01)
+The Nineveh never moved, so her anti-ship railgun (2-6 hexes) never fired: she sat on a short
+stretch of turret railway inside her hull, whose decks (terrain class 13) only craft can cross,
+and no ship could get within six hexes of her. Now:
+* `moveCat: 5` (units.json): she moves by the structures' terrain costs, so she crosses her own
+  hull's decks (walls still stop her); rules.js `flood`/`freeNear` and ai.js `field` honour it.
+* `hunts: 'general'` (units.json): once her hold ends she sails for the enemy general. On a map with
+  routes a unit beyond its planning range used to sit idle; for her the catch-up move follows the
+  real path through the hull (ai.js `pathTo`), not the bee-line, so she doesn't stick on a wall.
+* Her hold is turn 12 (was 26; tools/missions/remnant/nineveh.mjs, the strategy text says so). She
+  leaves the hull by its west side around turn 19 and reaches the remnant's lines in the south by
+  about turn 28, firing at what comes within range on the way.
+* Checked by `node tests/nineveh-moves.mjs`.

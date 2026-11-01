@@ -163,7 +163,7 @@ export class Battle {
     return out;
   }
   freeNear(x0, y0, type) {
-    const cat = this.type({ type }).category, seen = new Set([`${x0},${y0}`]), q = [[x0, y0]];
+    const t0 = this.type({ type }), cat = t0.moveCat ?? t0.category, seen = new Set([`${x0},${y0}`]), q = [[x0, y0]];
     while (q.length) {
       const [x, y] = q.shift();
       if (this.inBounds(x, y) && !this.unitAt(x, y) && this.tables.moveCost(cat, this.cls(x, y)) !== 0) return [x, y];
@@ -208,7 +208,9 @@ export class Battle {
   }
 
   flood(u) {
-    const t = this.type(u), cat = t.category, mp0 = this.movePoints(u);
+    // expansion: a type may move by another category's terrain costs (`moveCat`: the Nineveh crosses
+    // her own hull's decks as craft do; its walls still stop her)
+    const t = this.type(u), cat = t.moveCat ?? t.category, mp0 = this.movePoints(u);
     const res = new Map([[`${u.x},${u.y}`, mp0]]);
     if (!mp0) return res;
     const enemyAdj = new Set();
