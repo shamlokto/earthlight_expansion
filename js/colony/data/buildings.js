@@ -20,6 +20,8 @@
 //   unlock                   { pop } colonists needed before it appears in the menu
 //   tech                     the tech (data/tech.js) that unlocks it (version 2)
 //   service                  happiness for habitats in its radius (clinic, canteen, safety post)
+//   builds                   'arsenal' | 'shipyard': builds the machines of data/machines.js with that `at`
+//   crews                    machines this building crews (version 3)
 //   fixed                    cannot be built, moved or demolished by the player
 //   text                     one line for the build menu
 export const CATEGORIES = [
@@ -30,6 +32,7 @@ export const CATEGORIES = [
   { key: 'industry', name: 'Industry' },
   { key: 'homes', name: 'Homes & parks' },
   { key: 'services', name: 'Services' },
+  { key: 'defence', name: 'Defence' },
 ];
 
 // What one colonist needs a day.
@@ -138,6 +141,37 @@ export const BUILDINGS = [
     text: 'Wardens and breach crews: calmer homes in range, and Bulkhead Seals in range go up twice as fast.' },
   { key: 'obsdeck', name: 'Observation Deck', cat: 'services', size: 2, zone: 'hull', on: ['hull'], cost: { credits: 300, parts: 20 }, days: 5, jobs: 1, upkeep: 2, power: -2, tech: 'observation',
     text: 'A window on Earth below: +3 happiness for the whole colony (the first one). Only on the hull facing Earth.' },
+  // ---------------------------------------------------------------- version 3 (docs/COLONY-V3.md)
+  // Machines (data/machines.js) are built with credits and parts (owner): price × 10 credits, price parts.
+  { key: 'arsenal', name: 'Arsenal', cat: 'defence', size: 3, zone: 'interior', on: ['deck', 'plain', 'poor', 'rock'], cost: { credits: 600, parts: 50 }, days: 6, jobs: 6, upkeep: 6, power: -10, unlock: { pop: 80 }, builds: 'arsenal',
+    text: 'Builds Earth Light machines: HU mecha, fighters, armour and batteries, for credits and parts. One at a time; more research, stronger machines.' },
+  { key: 'shipyard', name: 'Shipyard', cat: 'defence', size: 2, zone: 'hull', on: ['hull'], cost: { credits: 1200, parts: 100 }, days: 10, jobs: 10, upkeep: 12, power: -20, tech: 'shipyard', builds: 'shipyard',
+    text: 'Builds capital ships on the hull: carriers, cruisers and battleships.' },
+  { key: 'barracks', name: 'Guardian Barracks', cat: 'defence', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock'], cost: { credits: 300, parts: 20 }, days: 4, jobs: 0, upkeep: 3, power: -3, crews: 6, unlock: { pop: 80 },
+    text: 'Quarters for the crews of six machines. Machines without a crew stay in the hangar when raiders come.' },
+  { key: 'scrapyard', name: 'Scrapyard', cat: 'defence', size: 2, zone: 'any', on: ['deck', 'plain', 'poor', 'rock', 'void'], cost: { credits: 300, parts: 15 }, days: 4, jobs: 4, upkeep: 3, power: -4, unlock: { pop: 80 },
+    text: 'Repairs damaged machines (2 HP a day each, a part per HP), and machines sold here fetch a fifth more.' },
+  { key: 'emplacement', name: 'Battery Emplacement', cat: 'defence', size: 1, zone: 'hull', on: ['hull'], cost: { credits: 250, parts: 25 }, days: 4, jobs: 1, upkeep: 2, power: -2, unlock: { pop: 80 },
+    modes: [{ key: 'dragon', name: 'Dragon', text: 'Railgun battery: strong against ships.' }, { key: 'hydra', name: 'Hydra', text: 'Missile battery: strong against small craft.' }],
+    text: 'A Dragon or Hydra battery on the hull, as in Earth Light: it fires on raiders that come near.' },
+  { key: 'sensormast', name: 'Sensor Mast', cat: 'defence', size: 1, zone: 'any', on: ['hull', 'void', 'asteroid'], cost: { credits: 200, parts: 15 }, days: 3, jobs: 1, upkeep: 2, power: -3, tech: 'sensors',
+    text: 'Sees raiders coming: warnings come 3 days earlier (up to 9 with three masts).' },
+  { key: 'shieldpylon', name: 'Shield Pylon', cat: 'defence', size: 1, zone: 'any', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'hull'], cost: { credits: 350, parts: 30 }, days: 4, jobs: 1, upkeep: 4, power: -15, radius: 8, tech: 'shields',
+    text: 'Keeps raiders\' fire off every building in range.' },
+  { key: 'jammer', name: 'Jammer Array', cat: 'defence', size: 1, zone: 'space', on: ['void', 'asteroid', 'magnetic'], cost: { credits: 300, parts: 25 }, days: 4, jobs: 1, upkeep: 4, power: -8, tech: 'jamming',
+    text: 'Hides Eden from prying sensors: heat −10 (up to −30 with three).' },
+  { key: 'fusion', name: 'Fusion Reactor', cat: 'power', size: 3, zone: 'interior', on: ['deck', 'plain', 'poor', 'rock'], cost: { credits: 1500, parts: 120 }, days: 10, jobs: 8, upkeep: 15, power: 200, uses: { helium: 2 }, tech: 'fusion',
+    modes: [{ key: 'normal', name: 'Normal', text: '200 power.' }, { key: 'overdrive', name: 'Overdrive', text: '+50% power, twice the helium, and a small chance each day of a 5-day shutdown.' }],
+    text: 'Burns helium-3 for 200 power: a city\'s worth.' },
+  { key: 'mushroom', name: 'Mushroom Wall', cat: 'food', size: 1, zone: 'interior', on: ['deck', 'plain', 'poor', 'rock'], cost: { credits: 180, parts: 12 }, days: 3, jobs: 1, upkeep: 2, power: -2, makes: { food: 10 }, tech: 'fungi',
+    text: 'Food grown on the colony\'s waste: no water, no soil.' },
+  { key: 'terrace', name: 'Terrace Homes', cat: 'homes', size: 2, zone: 'interior', on: ['hills'], cost: { credits: 300, parts: 20 }, days: 4, jobs: 0, upkeep: 3, power: -3, housing: 60, radius: 4, service: 3, tech: 'terraces',
+    text: 'Roomy homes on the hills for 60: they make their neighbours happier too.' },
+  { key: 'lodge', name: 'Wanderers\' Lodge', cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor'], cost: { credits: 400, parts: 25 }, days: 5, jobs: 2, upkeep: 4, power: -3, tech: 'leadership',
+    levels: [{ name: 'Lodge' }, { name: 'Inn', cost: { credits: 400, parts: 30 } }, { name: 'Grand Lodge', cost: { credits: 700, parts: 60 } }],
+    text: 'Wanderers stop here: pilots, captains and engineers adrift since the war. Invite the best as commanders. Bigger lodges draw more.' },
+  { key: 'quarters', name: 'Officers\' Quarters', cat: 'services', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor'], cost: { credits: 300, parts: 20 }, days: 4, jobs: 0, upkeep: 3, power: -2, tech: 'leadership',
+    text: 'Room for two more commanders.' },
   { key: 'park', name: 'Park', cat: 'homes', size: 1, zone: 'interior', on: ['plain', 'fertile', 'poor', 'deck'], cost: { credits: 60, parts: 0 }, days: 1, jobs: 0, upkeep: 1, uses: { water: 1 }, radius: 6, park: 8,
     text: 'Raises happiness in range, up to its rating. Costs water, not power.' },
 ];

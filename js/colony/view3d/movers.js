@@ -58,7 +58,7 @@ function shapeGeo(p) {
     default: throw new Error('movers: unknown shape ' + p.s);
   }
 }
-function model(parts) {
+export function model(parts) {
   const pos = [], col = [], tint = [], glow = [];
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color();
   for (const p of parts) {
@@ -178,7 +178,7 @@ const TRANSPORT = () => model([
 
 // Lambert with vertex colours: the instance colour applies only where aTint = 1, and aGlow mixes
 // the lit colour back to the unlit one (engines, windows).
-function moverMaterial() {
+export function moverMaterial() {
   const m = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   m.onBeforeCompile = (sh) => {
     sh.vertexShader = sh.vertexShader

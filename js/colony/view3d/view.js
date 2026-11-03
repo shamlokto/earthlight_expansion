@@ -9,6 +9,9 @@
 //     changes; each tile joins its 4 road neighbours (straight, corner, T, cross, dead end)
 //   * movers (movers.js): barges, haulers, drones, the transport, people and rovers on the roads,
 //     derived from the state on refresh() and animated every frame; setSpeed(0) freezes them
+//   * defence (defence.js, version 3): guardians idling beside the Arsenal / Shipyard / dock, the
+//     raid animation (state.raid.coming within a day, state.raid.last on its day), smoke over
+//     buildings with `damaged > 0` (drawn dimmed and sooty here); visual only, frozen by setSpeed(0)
 //   * Earth: a big (flattened) sphere beyond the bottom edge, its curve under the atmosphere band
 //   * camera: OrbitControls (rotate, tilt, zoom to cursor, right-drag / arrow-key pan), optional
 //     90° snap; picking walks the tile grid along the pointer ray, so it costs nothing per move.
@@ -40,6 +43,7 @@ import { TERRAIN, T, R } from '../data/terrain.js';
 import { BUILDING } from '../data/buildings.js';
 import { kitParts, kitHeight, ROAD } from './kits.js';
 import { createMovers } from './movers.js';
+import { createDefence } from './defence.js';
 import { createMinimap, reachMask } from './minimap.js';
 import { createNavPad } from './navpad.js';
 
@@ -265,6 +269,12 @@ export function createView(container, opts = {}) {
   const terrainGroup = new THREE.Group(), buildGroup = new THREE.Group(), fxGroup = new THREE.Group(), roadGroup = new THREE.Group();
   scene.add(terrainGroup, buildGroup, fxGroup, roadGroup);
   const movers = createMovers(scene);
+  let buildVersion = 0;   // bumps when buildings change: the guardians' aprons follow
+  const defence = createDefence(scene, {
+    topAt: (x, y) => Math.max(0, tops[y * W + x]),
+    freeAt: (i) => !occ[i],
+    occSig: () => buildVersion,
+  });
   const UNIT = unitGeometries(), COLUMN = columnGeometry();
   const PLANE = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
   const ROCK = new THREE.IcosahedronGeometry(0.5, 0), GEM = new THREE.OctahedronGeometry(0.5);
@@ -275,6 +285,8 @@ export function createView(container, opts = {}) {
     glow: new THREE.MeshBasicMaterial(),
     build: new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.18, depthWrite: false }),
     wire: new THREE.MeshBasicMaterial({ wireframe: true, transparent: true, opacity: 0.55, depthWrite: false }),
+    // see-through, additive and pulsing in frame(): the Shield Pylon's dome (kits.js `shimmer`)
+    shimmer: new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
   };
   const pools = new Map();
   const pool = (shape, kind) => {
@@ -464,7 +476,10 @@ export function createView(container, opts = {}) {
   // ---- buildings -----------------------------------------------------------------------------
 
   // everything a kit draws from: the Tailings Dump's heap also follows its fill (in steps of 5)
-  const sigOf = (b) => `${b.key}|${b.x}|${b.y}|${b.level}|${b.build > 0 ? 1 : 0}|${b.off ? 1 : 0}|${b.mode}${b.key === 'tailings' ? '|' + Math.round((b.fill || 0) / 5) : ''}`;
+  // version 3: a raid-damaged building is drawn sooty; the Fusion Reactor's torus goes dark with no helium-3
+  const noHelium = () => !((st?.stock?.helium ?? 1) > 0);
+  const sigOf = (b) => `${b.key}|${b.x}|${b.y}|${b.level}|${b.build > 0 ? 1 : 0}|${b.off ? 1 : 0}|${b.mode}${b.key === 'tailings' ? '|' + Math.round((b.fill || 0) / 5) : ''}${b.damaged > 0 ? '|d' : ''}${b.key === 'fusion' && noHelium() ? '|he0' : ''}`;
+  const SOOT = [0.42, 0.37, 0.34];
   const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), e4 = new THREE.Euler(), v4 = new THREE.Vector3(), s4 = new THREE.Vector3(), c4 = new THREE.Color();
   const sizeOf = (key) => BUILDING[key]?.size || 1;
   function groundOf(x, y, n) {
@@ -479,17 +494,24 @@ export function createView(container, opts = {}) {
   }
   function addBuilding(b) {
     if (b.key === 'road') return addRoad(b);
-    const n = sizeOf(b.key), parts = kitParts(b.key, b.level, b.mode, b), g = groundOf(b.x, b.y, n);
-    const cx = b.x + n / 2, cz = b.y + n / 2, building = b.build > 0;
+    const n = sizeOf(b.key), parts = kitParts(b.key, b.level, b.mode, b, b.key === 'fusion' ? { noHelium: noHelium() } : null), g = groundOf(b.x, b.y, n);
+    const cx = b.x + n / 2, cz = b.y + n / 2, building = b.build > 0, hurt = b.damaged > 0 && !building;
     for (const p of parts) {
       const m = partMatrix(p, cx, g, cz);
       if (building) {
+        if (p.shimmer) continue;
         pool(p.shape, 'build').add(b.id, m, [BUILD_RGB.r, BUILD_RGB.g, BUILD_RGB.b]);
         pool(p.shape, 'wire').add(b.id, m, [BUILD_RGB.r, BUILD_RGB.g, BUILD_RGB.b]);
         continue;
       }
       c4.set(p.color);
+      if (p.shimmer) { if (!b.off && !hurt) pool(p.shape, 'shimmer').add(b.id, m, [c4.r, c4.g, c4.b]); continue; }
       const dim = b.off ? (p.glow ? 0.15 : 0.35) : 1;
+      if (hurt) {   // raid damage: sooty, the lights flicker out to embers
+        const k = p.glow ? 0.25 : 1;
+        pool(p.shape, 'solid').add(b.id, m, [c4.r * SOOT[0] * k * dim, c4.g * SOOT[1] * k * dim, c4.b * SOOT[2] * k * dim]);
+        continue;
+      }
       pool(p.shape, p.glow && !b.off ? 'glow' : 'solid').add(b.id, m, [c4.r * dim, c4.g * dim, c4.b * dim]);
     }
     const h = g + kitHeight(parts);
@@ -516,6 +538,7 @@ export function createView(container, opts = {}) {
     }
     for (const id of [...built.keys()]) if (!seen.has(id)) { removeBuilding(id); changed = true; }
     syncRoads();
+    if (changed) buildVersion++;
     return changed;
   }
 
@@ -663,6 +686,7 @@ export function createView(container, opts = {}) {
       for (const id of [...built.keys()]) removeBuilding(id);
       syncBuildings();
       movers.refresh(st, { terrTop, buildingsChanged: true });
+      defence.refresh(st, { terrTop, terrainChanged: true });
     }
   }
 
@@ -985,6 +1009,7 @@ export function createView(container, opts = {}) {
   resize();
 
   let raf = 0, last = performance.now();
+  const shimmerMat = KIND_MAT.shimmer;
   const dbg = { noRender: false };   // tests on slow software GL skip drawing (debug.setRender)
   function frame(now) {
     raf = requestAnimationFrame(frame);
@@ -993,7 +1018,9 @@ export function createView(container, opts = {}) {
     if (breachMat) breachMat.color.setScalar(0.75 + 0.25 * Math.sin(now / 260));   // breaches throb
     if (plasmaMat) plasmaMat.color.setScalar(0.9 + 0.1 * Math.sin(now / 900));
     if (st) movers.update(dt, camera.position.distanceTo(controls.target));
-    if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z]);
+    if (st) defence.update(dt, movers.getSpeed());
+    if (shimmerMat) shimmerMat.opacity = 0.26 + 0.12 * Math.sin(now / 480) + 0.05 * Math.sin(now / 137);
+    if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], defence.marks());
     for (const p of pools.values()) p.flush();
     for (const a of dirty) a.needsUpdate = true;
     dirty.clear();
@@ -1017,6 +1044,7 @@ export function createView(container, opts = {}) {
     showOverlay();
     movers.reset();
     movers.refresh(st, { terrTop, reset: true, buildingsChanged: true, chambersChanged: true });
+    defence.refresh(st, { terrTop, reset: true });
     minimap.setState(st);
     if (first) {
       buildSky();
@@ -1041,6 +1069,7 @@ export function createView(container, opts = {}) {
       buildArtifacts();
       showOverlay();
       movers.refresh(st, { terrTop, buildingsChanged: true, chambersChanged: true });
+      defence.refresh(st, { terrTop, terrainChanged: true });
       minimap.setState(st);
       return;
     }
@@ -1049,6 +1078,7 @@ export function createView(container, opts = {}) {
     if (cc || bc || rc) buildArtifacts();
     if (overlayName && !overlayValues && bc) showOverlay();
     movers.refresh(st, { terrTop, buildingsChanged: bc, chambersChanged: cc });
+    defence.refresh(st, { terrTop });
     if (cc || bc) minimap.refresh(st);
   }
 
@@ -1085,7 +1115,7 @@ export function createView(container, opts = {}) {
 
   function destroy() {
     cancelAnimationFrame(raf); ac.abort(); ro.disconnect(); controls.dispose();
-    movers.dispose(); minimap.destroy(); navPad.destroy();
+    movers.dispose(); defence.dispose(); minimap.destroy(); navPad.destroy();
     for (const g of [terrainGroup, buildGroup, fxGroup, roadGroup, ghost.group]) clearGroup(g);
     scene.traverse((o) => { o.geometry?.dispose(); if (o.material) [].concat(o.material).forEach((m) => { m.map?.dispose(); m.dispose(); }); });
     for (const g of [...Object.values(UNIT), COLUMN, PLANE, ROCK, GEM]) g.dispose();
@@ -1095,7 +1125,8 @@ export function createView(container, opts = {}) {
   }
 
   // Mover time: 0 paused (everything freezes), 1, 2, 4 (movers hurry, SimCity style). Until this is
-  // called the movers follow state.speed.
+  // called the movers follow state.speed. The guardians and the raid animation (defence.js) run on
+  // the same clock.
   const setSpeed = (s) => movers.setSpeed(s);
 
   // Version 2: the minimap and the camera buttons (both on unless opts.minimap / opts.navButtons
@@ -1109,8 +1140,12 @@ export function createView(container, opts = {}) {
 
   // `debug` is for dev pages and tests only (colony-view-test.html), not part of the contract.
   return { setState, refresh, setOverlay, setGhost, focus, setSnap, setSpeed, destroy, setMinimap, setNavButtons, setWheelMode, nav, home,
-    debug: { scene, camera, controls, renderer, placeCamera, pick, movers, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse'),
+    debug: { scene, camera, controls, renderer, placeCamera, pick, movers, defence, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse'),
       // n camera steps of 1/60 s now, without rendering (tests on slow software GL)
       setRender(on) { dbg.noRender = !on; },
-      tick(n = 1) { for (let k = 0; k < n && st; k++) stepCamera(1 / 60, performance.now()); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z]); } } };
+      tick(n = 1) { for (let k = 0; k < n && st; k++) stepCamera(1 / 60, performance.now()); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], defence.marks()); },
+      // n seconds of guardian / raid time now, ignoring the speed (tests on slow software GL)
+      advanceDefence(sec) { defence.advance(sec); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], defence.marks()); },
+      // draw one frame now (with setRender(false), for a screenshot)
+      render() { for (const p of pools.values()) p.flush(); renderer.render(scene, camera); } } };
 }

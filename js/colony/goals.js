@@ -2,7 +2,7 @@
 // instructions on how to play become important"; "even on beta testing it becomes too hard").
 // Pure: no DOM. The sim calls updateGoals() each day; the interface shows goalStatus() and advise().
 //   goal: { id, title, text, speaker, done(state), progress(state)?, show(state)?, only(state)? }
-//   show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true } | { research: true | techKey } | null
+//   show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true } | { research: true | techKey } | { defence: tab } | null
 import { BUILDING } from './data/buildings.js';
 import { summary, chamberLinks, openBreaches, chamberOf, addPending, log, centre, pressuriseAir, storageCaps } from './rules.js';
 import { diffOf } from './difficulty.js';
@@ -101,6 +101,19 @@ export const GOALS = [
   { id: 'apartments', speaker: 'sato', title: 'Apartments',
     text: 'A Habitat with every need met, a park and a clinic in reach grows into Apartments: seventy homes on one tile. Watch the homes around the Clinic.',
     done: (s) => s.buildings.some((b) => b.key === 'habitat' && b.level >= 3), show: (s) => (s.unlocked.includes('clinic') ? { build: 'park' } : { research: 'medicine' }) },
+  // ---- version 3: guardians and raids (docs/COLONY-V3.md)
+  { id: 'arsenal', speaker: 'sato', title: 'An Arsenal',
+    text: 'Eden is starting to look rich, and in this sky that draws trouble. An Arsenal builds Earth Light machines for credits and parts: Mars and Titan to start, stronger ones as Ruess researches Machine Works.',
+    done: (s) => finished(s, 'arsenal') >= 1, show: () => ({ build: 'arsenal' }) },
+  { id: 'machine', speaker: 'sato', title: 'The first guardian',
+    text: 'Open Defence (the top bar, or G), choose Production and order a machine. A Mars or a Titan is cheap and fights well enough against scavengers.',
+    done: (s) => (s.guardians?.length || 0) > (s.imported?.beta ? s.imported.units : 0), show: () => ({ defence: 'production' }) },
+  { id: 'barracks', speaker: 'sato', title: 'Crews for the machines',
+    text: 'A machine needs a crew to fly it. The Command Centre crews four; a Guardian Barracks crews six more. Put Battery Emplacements on the hull too: they fire on raiders that come close.',
+    done: (s) => finished(s, 'barracks') >= 1, show: () => ({ build: 'barracks' }) },
+  { id: 'raid', speaker: 'sato', title: 'Weather the first raid',
+    text: 'Sooner or later the sensors will pick up a contact. When the raiders come, fight with the guardians or pay them to leave: either way, Eden goes on. The Defence panel shows how heated things are.',
+    done: (s) => (s.raid?.count || 0) >= 1, progress: (s) => (s.raid?.coming ? `raiders on the way` : `heat ${Math.round(s.raid?.heat || 0)}`), show: () => ({ defence: 'raids' }) },
 ];
 
 const active = (s) => GOALS.filter((g) => !g.only || g.only(s) || (s.goals?.done || []).includes(g.id));

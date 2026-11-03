@@ -40,6 +40,8 @@ export function newGame({ seed = 1, importSave = null, beta = false, types = nul
     log: [], pending: [], stats: { last: { produced: {}, consumed: {} } },
     imported: null, guardians: [], flags: { short: { food: 0, water: 0, air: 0, power: 0 } },
     research: { points: 0, focus: null, progress: {}, done: [] },   // version 2 (docs/COLONY-V2.md)
+    // version 3 (docs/COLONY-V3.md): production, commanders (the General and Sato), wanderers, raids
+    production: [], commanders: null, wanderers: [], raid: null,
   };
   const put = (key, x, y) => {
     const d = BUILDING[key], b = { id: state.nextId++, key, x, y, level: 1, mode: d.modes ? d.modes[0].key : null, build: 0, off: false };
@@ -68,10 +70,13 @@ export function newGame({ seed = 1, importSave = null, beta = false, types = nul
     for (const r of roster) prices[r.type] = unitPrice(types, r.type);
     const credits = beta ? 0 : 10 * roster.reduce((s, r) => s + prices[r.type], 0);
     state.imported = { credits, beta: !!beta, units: roster.length, prices };
-    if (beta) state.guardians = JSON.parse(JSON.stringify(roster));
+    // beta: the original army as guardians, full HP, no upkeep for 60 days (D7; upgradeState below)
+    if (beta) state.guardians = roster.map((r) => ({ id: r.id, type: r.type, level: r.level ?? 0 }));
     state.stock.credits += credits;
     log(state, beta ? `The guard arrives: ${roster.length} machines of the old army.` : `The old army was sold for ${credits} credits.`);
   }
+  state.commanders = null; state.raid = null;
+  upgradeState(state);   // version 3 defaults: commanders, the raid clock, guardians' HP and free days
   state.housing = state.buildings.reduce((s, b) => s + (BUILDING[b.key].housing || 0), 0);
   log(state, 'Landfall. The Command Centre is running; Eden waits behind its bulkheads.');
   // A first word from Ruess: what to do in the first weeks (the event pauses the clock, D1).

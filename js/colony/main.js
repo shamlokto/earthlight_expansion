@@ -229,6 +229,7 @@ const api = {
     if (k === 'minimap' || k === 'navButtons' || k === 'wheel') viewHelpers();
   },
   openResearch: (key) => ui?.openResearch(key),
+  openDefence: (tab) => ui?.openDefence?.(tab),
   audio,
 };
 
@@ -267,12 +268,18 @@ function save(announce) {
 // ---------------------------------------------------------------- "Show me" (goals and advisor)
 // show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true }
 //       | { research: true | techKey } (the Research panel, at that tech or the first one to study)
+//       | { defence: 'guardians' | 'production' | 'commanders' | 'raids' | true } (the Defence panel on that tab)
 function doShow(sh) {
   if (!sh || !state) return;
   ui.closePops();
   if (sh.research) {
     setPlacing(null);
     ui.openResearch(typeof sh.research === 'string' ? sh.research : ui.firstAvailableTech?.() || null);
+    return;
+  }
+  if (sh.defence) {
+    setPlacing(null);
+    ui.openDefence?.(typeof sh.defence === 'string' ? sh.defence : null);
     return;
   }
   if (sh.market) { setPlacing(null); ui.openMarket(); const d = state.buildings.find((b) => b.key === 'dock'); if (d) view?.focus?.(d.x + 1, d.y + 1); return; }
@@ -473,6 +480,7 @@ function onKey(e) {
     case 'm': case 'M': if (!e.ctrlKey && !e.metaKey) { audio.setMuted(!audio.muted); ui.toast(audio.available ? (audio.muted ? 'Music off.' : 'Music on.') : audio.why, audio.available ? 'good' : 'bad'); } break;
     case 'r': case 'R': if (!e.ctrlKey && !e.metaKey && lastKey) api.pick(lastKey); break;
     case 't': case 'T': if (!e.ctrlKey && !e.metaKey && !e.altKey) ui.toggleResearch(); break;
+    case 'g': case 'G': if (!e.ctrlKey && !e.metaKey && !e.altKey) ui.toggleDefence?.(); break;
     case 'Escape':
       if (placing?.roadStart) { placing.roadStart = null; applyOverlay(); if (hover) ghostAt(hover.x, hover.y); }
       else if (placing) setPlacing(null);
