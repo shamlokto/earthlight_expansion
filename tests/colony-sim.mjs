@@ -2,7 +2,9 @@
 // determinism, and the balance targets with a scripted player.   node tests/colony-sim.mjs
 // Runs on the stand-in map (tests/colony-fakemap.mjs) and, when it exists, on js/colony/mapgen.js.
 import { existsSync, readFileSync } from 'node:fs';
-import { newGame, saveState, loadState } from '../js/colony/state.js';
+import { newGame as newGame0, saveState, loadState } from '../js/colony/state.js';
+// The balance checks below are for Normal; Easy is checked on its own (tests/colony-goals.mjs).
+const newGame = (o = {}) => newGame0({ difficulty: 'normal', ...o });
 import * as rules from '../js/colony/rules.js';
 import { dayTick, stateRng, runDays, habitatNeeds } from '../js/colony/sim.js';
 import { BUILDING } from '../js/colony/data/buildings.js';
@@ -357,8 +359,10 @@ for (const [name, gen] of gens) {
     const { s } = play(gen, 11, 60, { bot: false, onDay: (s) => { if (s.day % 10 === 0) curve.push(`${s.day}:${s.pop}`); } });
     console.log('  do-nothing pop', curve.join(' '));
     const at30 = +curve[2].split(':')[1];
-    check(at30 > 0 && at30 < 40, `do-nothing alive but declining at day 30 (${at30})`);
-    check(s.pop <= 40, 'do-nothing does not grow');
+    // a forgiving start (owner: "too hard"): a colony left alone holds its own for the first weeks,
+    // and without new homes or farms it cannot grow much
+    check(at30 >= 30, `do-nothing still holds at day 30 (${at30})`);
+    check(s.pop <= 60, 'do-nothing does not grow much');
   }
 
   // The scripted player: 80 by day 40–80, 200+ by day 200, never starving, credits positive.

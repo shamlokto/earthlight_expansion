@@ -6,6 +6,8 @@ import {
   STORED, spec, active, tilesOf, centre, log, addPending, chamberOf, idx, storageCaps, jobsOf, crewsOf,
   powerOf, parkField, parkAt, openBreaches, habitatNeeds, PRICE,
 } from './rules.js';
+import { diffOf } from './difficulty.js';
+import { updateGoals } from './goals.js';
 
 export { habitatNeeds };
 
@@ -160,7 +162,8 @@ export function dayTick(state, rng) {
   const pop = state.pop;
   let chamberAir = 0;
   for (const c of state.chambers) if (c.status === 'open') chamberAir += (c.tiles / 100) * CHAMBER_AIR_PER_100;
-  const need = { food: pop * NEEDS.food, water: pop * NEEDS.water, air: pop * NEEDS.air + chamberAir };
+  const nm = diffOf(state).need;
+  const need = { food: pop * NEEDS.food * nm, water: pop * NEEDS.water * nm, air: (pop * NEEDS.air + chamberAir) * nm };
   const got = {};
   for (const g in need) { const before = st[g]; use(g, need[g]); got[g] = need[g] > 0 ? (before - st[g]) / need[g] : 1; }
   const housing = state.buildings.reduce((t, b) => t + (active(b) ? spec(b).housing || 0 : 0), 0);
@@ -216,15 +219,16 @@ export function dayTick(state, rng) {
     state.pop -= gone;
     say('emigration', `${gone} colonist${gone > 1 ? 's' : ''} left on a passing ship.`);
   }
-  if (state.day % SIM.transportEvery === 0 && state.buildings.some((b) => b.key === 'dock' && b.build === 0)) {
+  const dv = diffOf(state);
+  if (state.day % dv.transportEvery === 0 && state.buildings.some((b) => b.key === 'dock' && b.build === 0)) {
     const free = housing - state.pop, surplus = (produced.food || 0) - (consumed.food || 0);
     const short = ['air', 'water', 'food'].filter((g) => !met[g]);
-    const why = state.happy < SIM.transportHappy ? `the colony is not happy enough (${Math.round(state.happy)}, needs ${SIM.transportHappy})`
+    const why = state.happy < dv.transportHappy ? `the colony is not happy enough (${Math.round(state.happy)}, needs ${dv.transportHappy})`
       : short.length ? `the colony is short of ${short.join(' and ')}` : free <= 0 ? 'there is no free housing' : surplus <= 0 ? 'there is no food to spare' : null;
     if (why) say('transport', `A transport passed by without docking: ${why}.`);
     else {
       // 8–20 arrive; the happier the colony, the larger the transport it attracts.
-      const top = SIM.transportMin + Math.round((SIM.transportMax - SIM.transportMin) * Math.min(1, (state.happy - SIM.transportHappy) / SIM.transportFull));
+      const top = SIM.transportMin + Math.round((SIM.transportMax - SIM.transportMin) * Math.min(1, (state.happy - dv.transportHappy) / SIM.transportFull));
       const n = Math.min(free, SIM.transportMin + Math.floor(rng() * (top - SIM.transportMin + 1)));
       state.pop += n;
       state.flags.arrival = { day: state.day, n };   // the view flies the transport in (view3d/movers.js)
@@ -235,12 +239,22 @@ export function dayTick(state, rng) {
 
   // 10 money: tax in, upkeep out. Unpaid upkeep slows everything the next day.
   const tax = state.pop * SIM.taxPerPop * (state.tax / 0.1);
-  const upkeep = state.buildings.reduce((t, b) => t + (b.build === 0 ? BUILDING[b.key].upkeep || 0 : 0), 0);
+  const upkeep = diffOf(state).upkeep * state.buildings.reduce((t, b) => t + (b.build === 0 ? BUILDING[b.key].upkeep || 0 : 0), 0);
   make('credits', tax);
   const paid = Math.min(upkeep, st.credits);
   use('credits', paid);
   f.unpaid = paid < upkeep - 1e-9;
   if (f.unpaid && state.day % 5 === 0) say('broke', 'The treasury is empty: upkeep goes unpaid and work slows down.');
+  // Easy: Council relief when the colony is broke or hungry (difficulty.js relief), so a beginner's
+  // colony cannot spiral into starvation for want of money to build farms.
+  const relief = diffOf(state).relief;
+  if (relief && (st.credits < 50 || f.short.food > 0) && state.day - (f.relief ?? -1e9) >= relief.every) {
+    f.relief = state.day;
+    st.credits += relief.credits; st.food = Math.min(st.food + relief.food, Math.max(cap.food || 0, relief.food));
+    ask('relief', 'Council relief', `The Council sends ${relief.credits} credits and ${relief.food} food to tide Eden over. `
+      + 'To earn your own: sell ore or spare food at the Market (the dock), switch farms to cash crops, or raise the tax a little. '
+      + 'Switch off buildings you don\'t need to save upkeep. The Council helps at most once a month.');
+  }
 
   // 11 market: prices drift back toward their base.
   for (const g in state.market) state.market[g] += (1 - state.market[g]) * PRICE.recover;
@@ -254,6 +268,9 @@ export function dayTick(state, rng) {
   }
 
   state.stats.last = { produced, consumed, met, staffing, jobs, power: { supply, demand, factor: pf }, tax, upkeep };
+  // 13 guided goals: a finished goal pays the Council grant and names the next (js/colony/goals.js)
+  const goal = updateGoals(state);
+  if (goal) events.push({ kind: 'goal', text: state.log[state.log.length - 1].text, pause: true });
   return { events };
 }
 

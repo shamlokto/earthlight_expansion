@@ -2,6 +2,7 @@
 // (docs/COLONY-V1.md "rules.js"). Pure: no DOM, no randomness. Every action returns { ok, msg }
 // with a sentence a player can read; refusals say what to do about it.
 import { T, R, TERRAIN, ARTIFACT, zoneOf } from './data/terrain.js';
+import { diffOf } from './difficulty.js';
 import { BUILDING, BUILDINGS, BASE_PRICE, DOCK_REACH, NEEDS } from './data/buildings.js';
 
 export const STORED = ['food', 'water', 'air', 'parts', 'ore'];
@@ -83,7 +84,7 @@ export const housingOf = (state) => state.buildings.reduce((t, b) => t + (active
 export const jobsOf = (state) => state.buildings.reduce((t, b) => t + (active(b) ? spec(b).jobs || 0 : 0), 0);
 export const staffingOf = (state) => { const j = jobsOf(state); return j ? Math.min(1, state.pop / j) : 1; };
 // Construction crews: the Command Centre's own plus each working Repair Yard's.
-export const crewsOf = (state) => 1 + state.buildings.reduce((t, b) => t + (b.key === 'repairyard' && active(b) ? spec(b).crews || 1 : 0), 0);
+export const crewsOf = (state) => 2 + state.buildings.reduce((t, b) => t + (b.key === 'repairyard' && active(b) ? spec(b).crews || 1 : 0), 0);
 
 // Power this day before batteries: { supply, demand }. Producers with jobs scale with staffing.
 export function powerOf(state, staffing = staffingOf(state), moneyF = 1) {
@@ -203,12 +204,18 @@ export function placeCheck(state, key, x, y, opts = {}) {
   if (!opts.free) return afford(state, d.cost);
   return null;
 }
-function afford(state, cost) {
+// A cost as this colony pays it: scaled by difficulty (js/colony/difficulty.js), rounded up.
+export function costOf(state, cost) {
+  const m = diffOf(state).cost;
+  return { credits: Math.ceil((cost.credits || 0) * m), parts: Math.ceil((cost.parts || 0) * m) };
+}
+function afford(state, raw) {
+  const cost = costOf(state, raw);
   if (state.stock.credits < cost.credits) return `Needs ${Math.ceil(cost.credits - state.stock.credits)} more credits.`;
   if (state.stock.parts < (cost.parts || 0)) return `Needs ${Math.ceil(cost.parts - state.stock.parts)} more parts.`;
   return null;
 }
-const pay = (state, cost) => { state.stock.credits -= cost.credits; state.stock.parts -= cost.parts || 0; };
+const pay = (state, raw) => { const cost = costOf(state, raw); state.stock.credits -= cost.credits; state.stock.parts -= cost.parts; };
 
 // Best free spot for `key` (lowest score) in a box of tiles; null if none. For setup and bots.
 export function findSpot(state, key, { box, score = () => 0, free = false } = {}) {
@@ -294,7 +301,7 @@ export function demolish(state, id) {
   if (d.fixed) return no(`The ${d.name} cannot be demolished.`);
   const air = holdsAir(state, b);
   if (air) return no(air);
-  const c = spent(b), back = { credits: Math.floor(c.credits / 2), parts: Math.floor(c.parts / 2) };
+  const c = costOf(state, spent(b)), back = { credits: Math.floor(c.credits / 2), parts: Math.floor(c.parts / 2) };
   state.buildings.splice(state.buildings.indexOf(b), 1);
   state.stock.credits += back.credits; state.stock.parts += back.parts;
   log(state, `${d.name} demolished.`);
@@ -360,9 +367,12 @@ export function toggle(state, id) {
 export function buildable(state) {
   return BUILDINGS.filter((d) => !d.fixed).map((d) => {
     const unlocked = state.unlocked.includes(d.key);
-    return { key: d.key, name: d.name, cat: d.cat, cost: { ...d.cost }, unlocked, why: unlocked ? afford(state, d.cost) : `Unlocks at ${d.unlock?.pop ?? 80} colonists.` };
+    return { key: d.key, name: d.name, cat: d.cat, cost: costOf(state, d.cost), unlocked, why: unlocked ? afford(state, d.cost) : `Unlocks at ${d.unlock?.pop ?? 80} colonists.` };
   });
 }
+
+// Air it takes to pressurise a chamber (scaled with the difficulty's needs).
+export const pressuriseAir = (state, c) => Math.ceil(c.tiles * PRESSURISE.airPerTile * diffOf(state).need);
 
 export function chamberAction(state, chamberId, action) {
   const c = chamberOf(state, chamberId);
@@ -370,8 +380,9 @@ export function chamberAction(state, chamberId, action) {
   if (action === 'survey') {
     if (c.status !== 'sealed') return no(`${c.name} has already been surveyed.`);
     if (!touchesOpen(state, c)) return no(`${c.name} does not touch an open chamber: open a neighbour first.`);
-    if (state.stock.credits < SURVEY.credits) return no(`A survey costs ${SURVEY.credits} credits.`);
-    state.stock.credits -= SURVEY.credits;
+    const fee = costOf(state, { credits: SURVEY.credits }).credits;
+    if (state.stock.credits < fee) return no(`A survey costs ${fee} credits.`);
+    state.stock.credits -= fee;
     c.status = 'surveying'; c.work = SURVEY.days;
     log(state, `Surveyors sent into ${c.name}.`);
     return ok(`Surveying ${c.name}: ${SURVEY.days} days.`);
@@ -381,8 +392,9 @@ export function chamberAction(state, chamberId, action) {
     if (c.status !== 'surveyed') return no(`Survey ${c.name} first.`);
     const left = openBreaches(state, c).length;
     if (left) return no(`${left} breach${left > 1 ? 'es' : ''} still open: build a Bulkhead Seal on each.`);
-    const air = Math.ceil(c.tiles * PRESSURISE.airPerTile);
-    if (state.stock.air < air) return no(`Pressurising ${c.name} takes ${air} air; there is ${Math.floor(state.stock.air)}.`);
+    const air = pressuriseAir(state, c), cap = storageCaps(state).air || 0;
+    if (air > cap) return no(`Pressurising ${c.name} takes ${air} air, more than your stores hold (${Math.floor(cap)}): build a Storage Depot and set it to Air.`);
+    if (state.stock.air < air) return no(`Pressurising ${c.name} takes ${air} air; there is ${Math.floor(state.stock.air)}. Air Plants fill the stores.`);
     state.stock.air -= air;
     c.status = 'pressurising'; c.work = PRESSURISE.days;
     log(state, `Pressurising ${c.name}.`);
@@ -478,7 +490,7 @@ export function summary(state) {
   return {
     stock, power: { supply: p.supply, demand: p.demand, battery: state.battery, cap: cap.power },
     pop: state.pop, housing: housingOf(state), jobs, workers: Math.min(state.pop, jobs),
-    happy: state.happy, happyParts: state.happyParts, nextArrival: 10 - (state.day % 10),
+    happy: state.happy, happyParts: state.happyParts, nextArrival: diffOf(state).transportEvery - (state.day % diffOf(state).transportEvery),
   };
 }
 
