@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colony 3D view test</title>
+<!-- Dev page for js/colony/view3d/view.js: renders a fake colony state (or mapgen.js's map when it
+     exists) without the sim or the interface. window.view / window.state / window.tick are for tests. -->
+<script type="importmap">{"imports":{"three":"./js/vendor/three/three.module.min.js"}}</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #010205; color: #cfd6e4; font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
+  #view { position: fixed; inset: 0; }
+  #hud { position: fixed; left: 8px; top: 8px; background: #0b1020d0; border: 1px solid #2a3450; border-radius: 6px; padding: 8px 10px; max-width: 360px; }
+  #hud button, #hud select { background: #1a2238; color: #dfe6f4; border: 1px solid #3a4870; border-radius: 4px; padding: 2px 7px; margin: 2px 2px 2px 0; font: inherit; cursor: pointer; }
+  #hud .row { margin: 3px 0; }
+  #info { color: #9fb0d0; white-space: pre; }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<div id="hud">
+  <div class="row"><b>Colony view test</b> <span id="fps"></span> <span id="src"></span></div>
+  <div class="row">Overlay
+    <select id="overlay"><option value="">none</option><option>reach</option><option>park</option><option>power</option><option value="noise">values (noise)</option></select>
+    <label><input type="checkbox" id="snap"> 90° snap</label>
+  </div>
+  <div class="row">Ghost
+    <select id="ghost"><option value="">none</option></select>
+    <button id="day">+1 day</button><button id="home">Landing</button><button id="survey">Survey next</button>
+  </div>
+  <div id="info">hover a tile</div>
+</div>
+<script type="module">
+import { createView } from './js/colony/view3d/view.js';
+import { T, R, TERRAIN } from './js/colony/data/terrain.js';
+import { BUILDING, BUILDINGS, DOCK_REACH } from './js/colony/data/buildings.js';
+
+const W = 256, H = 160;
+const hash = (x, y, s) => { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 2246822519) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const noise = (x, y, s) => { const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+  const a = hash(xi, yi, s), b = hash(xi + 1, yi, s), c = hash(xi, yi + 1, s), d = hash(xi + 1, yi + 1, s); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; };
+const fbm = (x, y, s) => 0.6 * noise(x, y, s) + 0.3 * noise(x * 2, y * 2, s + 1) + 0.1 * noise(x * 4, y * 4, s + 2);
+
+// A quick stand-in for mapgen.js with the contract's layout (docs/COLONY-V1.md "The map").
+function fakeMap(seed = 1) {
+  const n = W * H, t = new Uint8Array(n), r = new Uint8Array(n), ch = new Uint8Array(n).fill(255), sv = new Uint8Array(n);
+  const inEden = (x, y) => x >= 48 && x <= 207 && y >= 32 && y <= 111;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x;
+    if (y >= 154) { t[i] = T.EARTH; continue; }
+    if (y >= 144) { t[i] = T.ATMOSPHERE; continue; }
+    if (inEden(x, y)) continue;
+    const busy = y < 32 ? 0.08 : 0;   // deep space is busier than near Eden
+    const belt = Math.abs(((x - y * 0.9 + 400 + 6 * noise(x / 10, y / 10, seed + 5)) % 46) - 23);
+    if (fbm(x / 9, y / 9, seed) > 0.66 - busy) t[i] = T.ASTEROID;
+    else if (belt < 1.8 && noise(x / 14, y / 14, seed + 6) > 0.45) t[i] = T.MAGNETIC;
+    else if (fbm(x / 8, y / 8, seed + 10) > 0.7 - busy) t[i] = T.PLASMA;
+    else if (fbm(x / 5, y / 5, seed + 20) > 0.72 - busy) t[i] = T.METEOROID;
+    else if (Math.abs(y - (12 + 6 * Math.sin(x / 15))) < 1.2 && x > 150 && x < 240) t[i] = T.GRAVITY;
+    else t[i] = T.VOID;
+    if (t[i] === T.ASTEROID && hash(x, y, seed + 3) < 0.07) r[i] = R.ORE_SEAM;
+    if (t[i] === T.VOID && hash(x, y, seed + 4) < 0.004) { r[i] = R.WRECK; sv[i] = 120; }
+  }
+  // a comet with its tail (top left)
+  for (let k = 0; k < 40; k++) { const cx = 20 + k, cy = 6 + k * 0.35, w = 0.6 + k * 0.06; for (let y = Math.floor(cy - w); y <= cy + w; y++) for (let x = cx; x < cx + 2; x++) if (y >= 0) t[y * W + x] = T.COMET; }
+  // the guarantees near the dock: an asteroid cluster with seams and a magnetic patch
+  const blob = (cx, cy, rad, id) => { for (let y = cy - rad; y <= cy + rad; y++) for (let x = cx - rad; x <= cx + rad; x++) if (Math.hypot(x - cx, y - cy) <= rad + 0.3 * hash(x, y, 9)) t[y * W + x] = id; };
+  blob(112, 124, 3, T.ASTEROID); for (const [x, y] of [[111, 123], [113, 125], [112, 126]]) r[y * W + x] = R.ORE_SEAM;
+  for (let k = 0; k < 14; k++) for (let w = 0; w < 3; w++) t[(116 + k) * W + 140 + k + w] = T.MAGNETIC;
+
+  // Eden: hull, bulkheads, gates, chambers
+  const cols = [50, 76, 102, 128, 154, 180, 206];
+  for (let y = 32; y <= 111; y++) for (let x = 48; x <= 207; x++) {
+    const i = y * W + x;
+    t[i] = (x < 50 || x > 205 || y < 34 || y > 109) ? T.HULL : T.PLAIN;
+  }
+  const chambers = [];
+  const riverY = (x) => Math.round(68 + 7 * Math.sin(x / 19) + 24 * Math.exp(-(((x - 120) / 18) ** 2)));
+  const kinds = ['fields', 'river', 'rubble', 'deck'];
+  for (let c = 0; c < 6; c++) {
+    const x0 = cols[c] + (c ? 1 : 0), x1 = cols[c + 1] - 1;
+    const rows = [34, 52 + (c % 2) * 4, 71 - (c % 3) * 3, 90 + (c % 2) * 3, 110];
+    for (let k = 0; k < 4; k++) {
+      const y0 = rows[k] + (k ? 1 : 0), y1 = rows[k + 1] - 1, id = chambers.length;
+      const landing = c === 2 && k === 3;
+      const kind = landing ? 'landing' : kinds[(c * 3 + k) % 4];
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const i = y * W + x, f = fbm(x / 7, y / 7, seed + 30);
+        ch[i] = id;
+        t[i] = kind === 'deck' ? T.DECK : f < 0.38 ? T.POOR : T.PLAIN;
+        if (!landing) {
+          if (kind === 'rubble' && f > 0.55) t[i] = T.RUBBLE;
+          else if (fbm(x / 6, y / 6, seed + 40) > 0.68) t[i] = T.FOREST;
+          else if (fbm(x / 6, y / 6, seed + 50) > 0.72) t[i] = T.HILLS;
+          else if (fbm(x / 5, y / 5, seed + 60) > 0.74) t[i] = T.ROCK;
+        } else if (x > 118 && y > 100) t[i] = T.DECK;
+        if (t[i] === T.RUBBLE && hash(x, y, 7) < 0.03) { r[i] = R.WRECK; sv[i] = 120; } else if (t[i] === T.RUBBLE) sv[i] = 40;
+      }
+      if (k) for (let x = x0; x <= x1; x++) t[(y0 - 1) * W + x] = T.BULKHEAD;
+      if (c) for (let y = y0; y <= y1; y++) t[y * W + x0 - 1] = T.BULKHEAD;
+      chambers.push({ id, name: `Chamber ${id + 1}`, kind, x0, y0, x1, y1, tiles: (x1 - x0 + 1) * (y1 - y0 + 1), status: landing ? 'open' : 'sealed', breaches: [], work: 0 });
+    }
+  }
+  for (let y = 33; y <= 110; y++) for (const cx of cols.slice(1, -1)) if (t[y * W + cx] !== T.HULL) t[y * W + cx] = T.BULKHEAD;
+  // gates: one per wall segment between two chambers
+  for (const a of chambers) for (const b of chambers) if (a.id < b.id) {
+    if (a.x1 + 2 === b.x0 && a.y1 >= b.y0 && b.y1 >= a.y0) { const y = Math.round((Math.max(a.y0, b.y0) + Math.min(a.y1, b.y1)) / 2); t[y * W + a.x1 + 1] = T.GATE; }
+    if (a.x0 === b.x0 && a.y1 + 2 === b.y0) { const x = Math.round((a.x0 + a.x1) / 2) + 3; t[(a.y1 + 1) * W + x] = T.GATE; }
+  }
+  // the river: meanders east-west, through gates in the bulkheads, fertile soil beside it
+  for (let x = 50; x <= 205; x++) {
+    const ry = riverY(x), ry2 = riverY(x + 1);
+    for (let y = Math.min(ry, ry2) - 1; y <= Math.max(ry, ry2); y++) {
+      const i = y * W + x;
+      if (t[i] === T.HULL) continue;
+      t[i] = t[i] === T.BULKHEAD ? T.GATE : T.RIVER;
+      for (let d = -4; d <= 4; d++) { const j = (y + d) * W + x; if (ch[j] !== 255 && (t[j] === T.PLAIN || t[j] === T.POOR || t[j] === T.FOREST) && Math.abs(d) <= 2 + 2 * hash(x, y + d, 3)) t[j] = T.FERTILE; }
+    }
+  }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (t[i] === T.RIVER || t[i] === T.GATE || t[i] === T.BULKHEAD || t[i] === T.HULL) ch[i] = (t[i] === T.RIVER) ? ch[i] : 255; }
+  // a lake and a marsh in two chambers
+  blob(165, 45, 4, T.LAKE); blob(80, 98, 3, T.MARSH);
+  // breaches: hull chambers 2-6 on the hull, inner ones 0-3 on bulkheads; the landing has none
+  for (const c of chambers) {
+    if (c.kind === 'landing') continue;
+    const onHull = c.x0 === 50 || c.x1 === 205 || c.y0 === 34 || c.y1 === 109;
+    const want = onHull ? 2 + Math.floor(hash(c.id, 1, seed) * 5) : Math.floor(hash(c.id, 2, seed) * 4);
+    for (let k = 0, tries = 0; k < want && tries < 200; tries++) {
+      const side = Math.floor(hash(c.id, tries, 5) * 4), f = hash(c.id, tries, 6);
+      const x = side < 2 ? Math.round(c.x0 + f * (c.x1 - c.x0)) : side === 2 ? c.x0 - 1 : c.x1 + 1;
+      const y = side >= 2 ? Math.round(c.y0 + f * (c.y1 - c.y0)) : side === 0 ? c.y0 - 1 : c.y1 + 1;
+      const i = y * W + x;
+      if ((t[i] === T.HULL || t[i] === T.BULKHEAD) && !c.breaches.includes(i)) { t[i] = T.BREACH; c.breaches.push(i); k++; }
+    }
+  }
+  const landing = chambers.find((c) => c.kind === 'landing');
+  return { map: { w: W, h: H, t, r, ch, sv }, chambers, start: { command: { x: 112, y: 98 }, dock: { x: 120, y: 110 }, landing: landing.id } };
+}
+
+// Places buildings like state.newGame would, plus a showcase of every kit, by scanning for legal spots.
+function fakeState(gen) {
+  const { map, chambers } = gen, { t, ch } = map, landing = chambers.find((c) => c.id === gen.start.landing);
+  const buildings = [], taken = new Uint8Array(W * H);
+  let nextId = 1;
+  const fits = (key, x, y) => {
+    const def = BUILDING[key], n = def.size;
+    for (let j = y; j < y + n; j++) for (let i = x; i < x + n; i++) {
+      if (i < 0 || j < 0 || i >= W || j >= H) return false;
+      const k = j * W + i;
+      if (taken[k] || !def.on.includes(TERRAIN[t[k]].key)) return false;
+      if (def.zone === 'interior' && ch[k] !== landing.id) return false;
+    }
+    if (def.adj) { let ok = false; for (let j = y - 1; j <= y + n; j++) for (let i = x - 1; i <= x + n; i++) if (TERRAIN[t[j * W + i]]?.key === def.adj) ok = true; if (!ok) return false; }
+    return true;
+  };
+  const put = (key, x, y, extra = {}) => {
+    const n = BUILDING[key].size;
+    for (let j = y; j < y + n; j++) for (let i = x; i < x + n; i++) taken[j * W + i] = 1;
+    const b = { id: nextId++, key, x, y, level: 1, mode: BUILDING[key].modes?.[0]?.key ?? null, build: 0, off: false, ...extra };
+    buildings.push(b);
+    return b;
+  };
+  // first legal spot scanning from (cx, cy) outwards
+  const near = (key, cx, cy, extra, maxR = 30) => {
+    for (let rad = 0; rad <= maxR; rad++) for (let y = cy - rad; y <= cy + rad; y++) for (let x = cx - rad; x <= cx + rad; x++)
+      if (Math.max(Math.abs(x - cx), Math.abs(y - cy)) === rad && fits(key, x, y)) return put(key, x, y, extra);
+    return null;
+  };
+  const cmd = gen.start.command, dock = gen.start.dock;
+  // the hull under the dock must be hull for the fake map too
+  put('dock', dock.x, dock.y);
+  near('command', cmd.x, cmd.y);
+  const lcx = Math.round((landing.x0 + landing.x1) / 2), lcy = Math.round((landing.y0 + landing.y1) / 2);
+  near('habitat', lcx + 3, lcy + 2); near('habitat', lcx + 4, lcy + 2, { level: 2 }); near('habitat', lcx + 5, lcy + 2, { level: 3 });
+  near('habitat', lcx + 3, lcy + 4); near('habitat', lcx + 4, lcy + 4, { level: 2 });
+  near('park', lcx + 5, lcy + 4); near('grove', lcx + 6, lcy + 4);
+  near('riverpump', lcx - 4, lcy - 4);
+  near('farm', lcx - 6, lcy - 2); near('farm', lcx - 9, lcy - 2, { mode: 'cash' }); near('farm', lcx - 6, lcy + 1, { mode: 'fallow' }); near('farm', lcx - 9, lcy + 1);
+  near('airplant', lcx + 6, lcy - 3); near('repairyard', lcx + 8, lcy + 3, { level: 2 });
+  near('hydro', lcx + 2, lcy + 6); near('battery', lcx + 3, lcy + 6); near('depot', lcx + 4, lcy + 6, { mode: 'water' }); near('depot', lcx + 5, lcy + 6, { mode: 'parts', off: true });
+  near('salvage', lcx - 2, lcy + 5); near('habitat', lcx + 7, lcy + 6, { build: 2 }); near('airplant', lcx - 3, lcy + 3, { build: 3 });
+  // space: solar on the hull, mine and collector within the dock's reach
+  const inReach = (x, y) => Math.max(Math.abs(x - dock.x - 1), Math.abs(y - dock.y - 1)) <= DOCK_REACH - 2;
+  const space = (key, extra) => { for (let y = dock.y - 20; y < dock.y + 24; y++) for (let x = dock.x - 22; x < dock.x + 22; x++) if (inReach(x, y) && fits(key, x, y)) return put(key, x, y, extra); return null; };
+  for (let k = 0; k < 4; k++) near('solar', dock.x - 3 - k, dock.y + 1, { level: 1 + (k % 3) });
+  space('oremine'); space('induction'); space('solar');
+  // a seal on one breach of a neighbour
+  const nb = chambers.find((c) => c.breaches.length && c.id !== landing.id);
+  if (nb) put('seal', nb.breaches[0] % W, Math.floor(nb.breaches[0] / W));
+  // a few chamber statuses to see the tints
+  const sorted = chambers.filter((c) => c.id !== landing.id).sort((a, b) => Math.hypot(a.x0 - landing.x0, a.y0 - landing.y0) - Math.hypot(b.x0 - landing.x0, b.y0 - landing.y0));
+  if (sorted[0]) sorted[0].status = 'surveyed';
+  if (sorted[1]) { sorted[1].status = 'pressurising'; sorted[1].work = 3; }
+  if (sorted[2]) { sorted[2].status = 'surveying'; sorted[2].work = 1; }
+  if (sorted[3]) sorted[3].status = 'open';
+  return { v: 1, seed: 1, day: 0, map, chambers, buildings, nextId, stock: {}, flags: {} };
+}
+
+let gen, src = 'fake map';
+try {
+  const mod = await import('./js/colony/mapgen.js');
+  gen = mod.generateMap(1); src = 'mapgen.js';
+  if (gen.map.t[gen.start.dock.y * W + gen.start.dock.x] !== T.HULL) console.warn('mapgen dock not on hull');
+} catch (e) { if (!/Failed to fetch|Importing a module|404/i.test(String(e))) console.warn('mapgen.js failed, using the fake map:', e); gen = fakeMap(1); }
+document.getElementById('src').textContent = '· ' + src;
+const state = fakeState(gen);
+
+const info = document.getElementById('info');
+const view = createView(document.getElementById('view'), {
+  onTileHover(x, y) {
+    if (x < 0) { info.textContent = 'off the map'; return; }
+    const i = y * W + x, c = state.chambers.find((k) => k.id === state.map.ch[i]);
+    info.textContent = `(${x}, ${y}) ${TERRAIN[state.map.t[i]].name}${c ? ` · ${c.name} ${c.status}` : ''}`;
+    if (ghostKey) view.setGhost(ghostKey, x, y, (x + y) % 3 !== 0);
+  },
+  onTileClick(x, y, button) { console.log('click', x, y, button); info.textContent += `\nclicked (${x}, ${y}) button ${button}`; },
+});
+view.setState(state);
+
+// one simulated day: construction ticks down, a pressurising chamber gets closer
+window.tick = () => {
+  state.day++;
+  for (const b of state.buildings) if (b.build > 0) b.build--;
+  for (const c of state.chambers) if (c.work > 0 && --c.work === 0) c.status = c.status === 'surveying' ? 'surveyed' : 'open';
+  view.refresh(state);
+};
+let ghostKey = '';
+const gsel = document.getElementById('ghost');
+for (const b of BUILDINGS) gsel.add(new Option(b.name, b.key));
+gsel.onchange = () => { ghostKey = gsel.value; if (!ghostKey) view.setGhost(null); };
+document.getElementById('overlay').onchange = (e) => {
+  const v = e.target.value;
+  if (v === 'noise') { const a = new Float32Array(W * H); for (let i = 0; i < a.length; i++) a[i] = noise((i % W) / 12, Math.floor(i / W) / 12, 77); view.setOverlay('noise', a); }
+  else view.setOverlay(v || null);
+};
+document.getElementById('snap').onchange = (e) => view.setSnap(e.target.checked);
+document.getElementById('day').onclick = () => window.tick();
+const lm = state.chambers.find((c) => c.id === gen.start.landing);
+document.getElementById('home').onclick = () => view.focus(Math.round((lm.x0 + lm.x1) / 2), Math.round((lm.y0 + lm.y1) / 2));
+document.getElementById('survey').onclick = () => { const c = state.chambers.find((k) => k.status === 'sealed'); if (c) { c.status = 'surveyed'; view.refresh(state); } };
+
+// fps meter
+let frames = 0, t0 = performance.now();
+(function count(now) { frames++; if (now - t0 > 1000) { document.getElementById('fps').textContent = `${Math.round(frames * 1000 / (now - t0))} fps`; frames = 0; t0 = now; } requestAnimationFrame(count); })(t0);
+Object.assign(window, { view, state, gen, landing: lm });
+window.__cam = (tx, tz, d, polar, theta) => view.debug.placeCamera(tx, tz, d, polar, theta);
+</script>
+</body>
+</html>
