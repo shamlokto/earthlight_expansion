@@ -65,9 +65,23 @@ function showTitle() {
 }
 
 let importData = null, importName = '';
-function newDialog() {
+// The expansion campaigns kept in this browser (js/expansion/campaign.js CAMPAIGNS keys): the
+// colony follows straight on from them, no save file needed (owner: part of the campaign).
+const EXPANSION = { remnant: ['el-expansion-campaign-remnant', 'Galt remnant'], classic: ['el-expansion-campaign', 'Classic campaign'] };
+function browserCampaign(prefer) {
+  for (const id of [prefer, 'remnant', 'classic']) {
+    const [key, title] = EXPANSION[id] || [];
+    let raw = null; try { raw = key && localStorage.getItem(key); } catch { }
+    if (raw && rosterOf({ [key]: raw })) return { data: { [key]: raw }, name: `This browser's ${title}` };
+  }
+  return null;
+}
+function newDialog(prefer) {
   importData = null;
   $('#nSeed').value = ''; $('#nBeta').checked = false; $('#nFile').value = '';
+  const here = browserCampaign(prefer);
+  $('#nHere').hidden = !here;
+  if (here && typeof prefer === 'string') { importData = here.data; importName = here.name; }   // arrived from the expansion
   showFound();
   $('#dNew').showModal();
 }
@@ -349,7 +363,8 @@ function stopLoop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
 // ---------------------------------------------------------------- start
 async function main() {
   mountSaveButtons($('#saveIO'), 'cl-btn sm');
-  $('#bNew').onclick = newDialog;
+  $('#bNew').onclick = () => newDialog();
+  $('#nHere').onclick = () => { const h = browserCampaign(); if (h) { importData = h.data; importName = h.name; showFound(); } };
   $('#bContinue').onclick = continueGame;
   $('#nFile').onchange = async () => {
     const f = $('#nFile').files[0]; if (!f) return;
@@ -368,5 +383,8 @@ async function main() {
   }
   showTitle();
   window.__colony = { get state() { return state; }, get view() { return view; }, get M() { return M; }, tick, setSpeed, settings };
+  // colony.html?from=remnant|classic: straight on from the expansion's ending, its army already found
+  const from = new URLSearchParams(location.search).get('from');
+  if (from && EXPANSION[from]) newDialog(from);
 }
 main();

@@ -34,8 +34,9 @@
       <h2>New colony</h2>
       <label class="cl-field"><span>Seed <small>(optional: the same seed makes the same Eden)</small></span>
         <input type="text" id="nSeed" placeholder="random" autocomplete="off" spellcheck="false"></label>
-      <div class="cl-field"><span>Import expansion save <small>(.json, from Export save)</small></span>
-        <label class="cl-btn cl-file">Choose file<input type="file" id="nFile" accept=".json,application/json" hidden></label>
+      <div class="cl-field"><span>Bring the army from the expansion <small>(this browser's campaign, or a .json from Export save)</small></span>
+        <div class="cl-row"><button class="cl-btn" type="button" id="nHere" hidden>Use this browser's campaign</button>
+        <label class="cl-btn cl-file">Choose file<input type="file" id="nFile" accept=".json,application/json" hidden></label></div>
         <div id="nFound" class="cl-found">No save: the base start (3000 credits, no machines).</div>
       </div>
       <label class="cl-check"><input type="checkbox" id="nBeta"><span></span>
