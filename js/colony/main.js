@@ -1,12 +1,20 @@
 // Earthlight Space Colony Rebuild: page wiring (colony.html). Title screen, the new-colony dialog
 // (seed, expansion save import, beta guardians), the game loop (live days, decisions pause the
-// clock: docs/COLONY.md §4), placement mode, keyboard, saving. Panels live in js/colony/ui.js.
+// clock: docs/COLONY.md §4), placement mode, keyboard, saving, the How to play dialog and the goals'
+// "Show me". Panels live in js/colony/ui.js.
 // Contract: docs/COLONY-V1.md.
 import { parseSave, mountSaveButtons } from '../savefile.js';
-import { BUILDING } from './data/buildings.js';
-import { createUI, esc } from './ui.js';
+import { createAudio } from './audio.js';
 
-const KEY = 'el-colony', SETTINGS_KEY = 'el-colony-settings';
+// Earth Light's own music (owner, 2026-11-03), when this browser has the expansion's sound pack.
+const audio = createAudio();
+for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, () => audio.unlock(), { capture: true });
+import { BUILDING } from './data/buildings.js';
+import { createUI, esc, helpHtml } from './ui.js';
+
+const KEY = 'el-colony', SETTINGS_KEY = 'el-colony-settings', HELP_SEEN = 'el-colony-help-seen';
+// Fallback when js/colony/difficulty.js is missing: the dialog still offers the choice.
+const DIFF_FALLBACK = { easy: { name: 'Easy', text: 'Recommended for a first colony.' }, normal: { name: 'Normal', text: 'The colony as designed.' } };
 const $ = (s) => document.querySelector(s);
 
 let M = null;                 // { state: stateMod, rules, sim, view: viewMod, art }
@@ -24,13 +32,19 @@ function storeSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringi
 
 // ---------------------------------------------------------------- modules
 async function loadModules() {
-  const [stateMod, rules, sim, viewMod, artMod] = await Promise.all([
+  const [stateMod, rules, sim, viewMod, artMod, goals, difficulty] = await Promise.all([
     import('./state.js'), import('./rules.js'), import('./sim.js'), import('./view3d/view.js'),
     import('./art.js').catch(() => null),
+    import('./goals.js').catch((e) => { console.warn('goals.js not loaded', e); return null; }),
+    import('./difficulty.js').catch(() => null),
   ]);
-  return { state: stateMod, rules, sim, view: viewMod, art: artMod };
+  return { state: stateMod, rules, sim, view: viewMod, art: artMod, goals, difficulty };
 }
 const art = (slot) => { try { return M?.art?.art?.(slot) || null; } catch { return null; } };
+const DIFF = () => M?.difficulty?.DIFFICULTY || DIFF_FALLBACK;
+const diffOf = (s) => { try { return M?.difficulty?.diffOf?.(s) || null; } catch { return null; } };
+// A cost as this colony pays it (difficulty-scaled), whatever rules.js offers.
+const costOf = (cost) => { try { return M.rules.costOf?.(state, cost) || cost; } catch { return cost; } };
 
 async function loadTypes() {
   if (types) return types;
@@ -51,13 +65,14 @@ const rngFor = (s) => mulberry32((hashStr(s.seed) ^ Math.imul(s.day + 1, 0x9E377
 // ---------------------------------------------------------------- title screen
 function showTitle() {
   stopLoop();
+  audio.play('title');
   $('#sGame').hidden = true; $('#sTitle').hidden = false;
   const saved = localStorage.getItem(KEY);
   $('#bContinue').hidden = !saved;
   const info = $('#contInfo');
   info.hidden = true;
   if (saved && M) {
-    try { const s = M.state.loadState(saved); info.textContent = `Day ${s.day} · ${s.pop} colonists · ${Math.round(s.stock?.credits ?? 0)} credits`; info.hidden = false; } catch { }
+    try { const s = M.state.loadState(saved); info.textContent = `Day ${s.day} · ${s.pop} colonists · ${Math.round(s.stock?.credits ?? 0)} credits${s.difficulty && DIFF()[s.difficulty] ? ' · ' + DIFF()[s.difficulty].name : ''}`; info.hidden = false; } catch { }
   }
   const url = art('title/rebuild');
   $('#titleArt').style.backgroundImage = url ? `url("${url}")` : '';
@@ -65,12 +80,36 @@ function showTitle() {
 }
 
 let importData = null, importName = '';
-function newDialog() {
+// The expansion campaigns kept in this browser (js/expansion/campaign.js CAMPAIGNS keys): the
+// colony follows straight on from them, no save file needed (owner: part of the campaign).
+const EXPANSION = { remnant: ['el-expansion-campaign-remnant', 'Galt remnant'], classic: ['el-expansion-campaign', 'Classic campaign'] };
+function browserCampaign(prefer) {
+  for (const id of [prefer, 'remnant', 'classic']) {
+    const [key, title] = EXPANSION[id] || [];
+    let raw = null; try { raw = key && localStorage.getItem(key); } catch { }
+    if (raw && rosterOf({ [key]: raw })) return { data: { [key]: raw }, name: `This browser's ${title}` };
+  }
+  return null;
+}
+function newDialog(prefer) {
   importData = null;
   $('#nSeed').value = ''; $('#nBeta').checked = false; $('#nFile').value = '';
+  renderDifficulty();
+  const here = browserCampaign(prefer);
+  $('#nHere').hidden = !here;
+  if (here && typeof prefer === 'string') { importData = here.data; importName = here.name; }   // arrived from the expansion
   showFound();
   $('#dNew').showModal();
 }
+
+// Easy (the default, beta testers too) or Normal, one line each from js/colony/difficulty.js.
+function renderDifficulty() {
+  const D = DIFF(), box = $('#nDiff');
+  box.innerHTML = Object.entries(D).map(([k, d]) => `<label class="cl-diff"><input type="radio" name="diff" value="${esc(k)}" ${k === 'easy' ? 'checked' : ''}>
+    <span><b>${esc(d.name || k)}</b>${k === 'easy' ? ' <em>recommended for a first colony</em>' : ''}<small>${esc(k === 'easy' ? cap((d.text || '').replace(/^recommended for a first colony[:.]?\s*/i, '')) : d.text || '')}</small></span></label>`).join('');
+}
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+const chosenDifficulty = () => document.querySelector('#nDiff input:checked')?.value || 'easy';
 
 function rosterOf(data) {
   const raw = data?.['el-expansion-campaign-remnant'] ?? data?.['el-expansion-campaign'];
@@ -101,8 +140,8 @@ async function startNew() {
   await new Promise((r) => setTimeout(r, 30));      // let "Preparing Eden" paint before map generation
   try {
     const ty = await loadTypes();
-    const s = M.state.newGame({ seed, importSave: importData, beta, types: ty });
-    startGame(s);
+    const s = M.state.newGame({ seed, importSave: importData, beta, types: ty, difficulty: chosenDifficulty() });
+    startGame(s, true);
   } catch (e) { console.error(e); $('#loadErr').textContent = 'Could not start a colony: ' + e.message; boot(false); }
 }
 
@@ -114,8 +153,10 @@ function continueGame() {
 function boot(on) { $('#boot').hidden = !on; }
 
 // ---------------------------------------------------------------- game screen
-function startGame(s) {
-  state = s;
+let fresh = false;   // a brand-new colony: the welcome leads into the goals (first run)
+function startGame(s, isNew = false) {
+  state = s; fresh = isNew;
+  audio.play('colony');
   if (!state.speed && state.speed !== 0) state.speed = 1;
   lastSpeed = state.speed || 1;
   $('#sTitle').hidden = true; $('#sGame').hidden = false;
@@ -162,10 +203,23 @@ const api = {
     showTitle();
   },
   focus: (x, y) => view?.focus?.(x, y),
+  get goals() { return M?.goals || null; },
+  diff: diffOf,
+  show: (sh) => doShow(sh),
+  help: () => openHelp(),
+  answered: (p) => {
+    if (p?.kind === 'welcome' && fresh) {
+      fresh = false;
+      let seen = false; try { seen = !!localStorage.getItem(HELP_SEEN); } catch { }
+      ui.welcomeDone(!seen);
+    }
+  },
   setSetting: (k, v) => { settings[k] = v; storeSettings(); if (k === 'snap') view?.setSnap?.(v); },
+  audio,
 };
 
 function afterAction(r, quiet) {
+  ui.changed?.();
   if (r && r.ok === false) ui.toast(r.msg || 'Not possible.', 'bad');
   else if (r?.msg && !quiet) ui.toast(r.msg, 'good');
   try { view?.refresh(state); } catch (e) { console.error(e); }
@@ -196,6 +250,102 @@ function save(announce) {
   catch (e) { console.error(e); ui?.toast('Could not save: ' + e.message, 'bad'); }
 }
 
+// ---------------------------------------------------------------- "Show me" (goals and advisor)
+// show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true }
+function doShow(sh) {
+  if (!sh || !state) return;
+  ui.closePops();
+  if (sh.market) { setPlacing(null); ui.openMarket(); const d = state.buildings.find((b) => b.key === 'dock'); if (d) view?.focus?.(d.x + 1, d.y + 1); return; }
+  if (sh.roads) {
+    ui.openBuild('road'); setPlacing({ key: 'road' });
+    ui.toast('Roads: click where the road starts, then where it ends.', '');
+    return;
+  }
+  if (sh.build) {
+    const key = sh.build;
+    if (!BUILDING[key]) return;
+    ui.openBuild(key);
+    setPlacing({ key });
+    const spot = lastSpot = suggestSpot(key);
+    if (spot) {
+      const o = Math.floor(((BUILDING[key].size || 1) - 1) / 2);
+      view?.focus?.(spot.x + o, spot.y + o);
+      try { view?.setGhost(key, spot.x, spot.y, M.rules.canBuild(state, key, spot.x, spot.y) == null); } catch { }
+      ui.toast(`${BUILDING[key].name}: a good spot is marked. Click it, or any spot where the ghost turns green.`, '');
+    } else ui.toast(`${BUILDING[key].name}: move over the map; green means you can build there.`, '');
+    return;
+  }
+  setPlacing(null);
+  if (sh.chamber != null) {
+    const c = state.chambers.find((k) => k.id === sh.chamber); if (!c) return;
+    const t = tileOfChamber(c);
+    view?.focus?.(t.x, t.y);
+    ui.inspect(t.x, t.y);
+    return;
+  }
+  if (sh.tile) { view?.focus?.(sh.tile.x, sh.tile.y); ui.inspect(sh.tile.x, sh.tile.y); }
+}
+
+// A floor tile of the chamber nearest its middle (the middle itself may be a wall).
+function tileOfChamber(c) {
+  const { w, ch } = state.map, mx = (c.x0 + c.x1) / 2, my = (c.y0 + c.y1) / 2;
+  let best = { x: Math.round(mx), y: Math.round(my) }, bd = Infinity;
+  for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) {
+    if (ch[y * w + x] !== c.id) continue;
+    const d = (x - mx) ** 2 + (y - my) ** 2;
+    if (d < bd) { bd = d; best = { x, y }; }
+  }
+  return best;
+}
+
+// Where a new player might put `key`: near the Command Centre; farms on the best soil, seals on
+// the next open breach. Null when nothing fits (the ghost then says why wherever the pointer is).
+function suggestSpot(key) {
+  const R = M.rules, d = BUILDING[key];
+  try {
+    if (key === 'seal' && R.openBreaches) {
+      for (const c of state.chambers) {
+        if (c.status !== 'surveyed') continue;
+        for (const i of R.openBreaches(state, c)) {
+          const x = i % state.map.w, y = (i / state.map.w) | 0;
+          if (R.placeCheck ? R.placeCheck(state, 'seal', x, y, { free: true }) == null : true) return { x, y };
+        }
+      }
+      return null;
+    }
+    if (!R.findSpot || key === 'road') return null;
+    const cc = state.buildings.find((b) => b.key === 'command'), n = d.size || 1;
+    const cx = cc ? cc.x + 1.5 : state.map.w / 2, cy = cc ? cc.y + 1.5 : state.map.h / 2;
+    const dist = (x, y) => Math.abs(x + n / 2 - cx) + Math.abs(y + n / 2 - cy);
+    let score = dist;
+    if (key === 'farm' && M.sim.farmSoil) score = (x, y) => -M.sim.farmSoil(state, { key, x, y }) * 100 + dist(x, y);
+    if (key === 'park' || key === 'grove') {   // beside the homes
+      const homes = state.buildings.filter((b) => b.key === 'habitat');
+      if (homes.length) score = (x, y) => Math.min(...homes.map((h) => Math.abs(h.x - x) + Math.abs(h.y - y))) * 3 + dist(x, y) * 0.2;
+    }
+    return R.findSpot(state, key, { score, free: true });
+  } catch (e) { console.warn('suggestSpot', e); return null; }
+}
+
+let lastSpot = null;   // the last spot "Show me" marked (tests read it through window.__colony)
+
+// ---------------------------------------------------------------- How to play
+let helpPaused = false;
+function openHelp(section) {
+  const dlg = $('#dHelp');
+  $('#helpBody').innerHTML = helpHtml(art, (state && diffOf(state)) || DIFF().easy || null);
+  try { localStorage.setItem(HELP_SEEN, '1'); } catch { }
+  if (state && !$('#sGame').hidden && state.speed > 0) { helpPaused = true; setSpeed(0); }   // reading costs no days
+  if (!dlg.open) dlg.showModal();
+  const body = $('#helpBody [data-hbody]');
+  if (section) $(`#help-${section}`)?.scrollIntoView();
+  else if (body) body.scrollTop = 0;
+}
+function helpClosed() {
+  if (helpPaused && state) setSpeed(lastSpeed || 1);
+  helpPaused = false;
+}
+
 // ---------------------------------------------------------------- placement
 function setPlacing(p) {
   if (placing?.roadStart) applyOverlay();   // drop the road preview
@@ -224,7 +374,7 @@ function placeCheck(x, y) {
 
 // Roads go down as a line: the first click fixes the start, the second builds an L to the end.
 function roadPreview(x, y) {
-  const s0 = placing.roadStart, plan = M.rules.planRoad(state, s0.x, s0.y, x, y), d = BUILDING.road;
+  const s0 = placing.roadStart, plan = M.rules.planRoad(state, s0.x, s0.y, x, y), d = { cost: costOf(BUILDING.road.cost) };
   const { w, h } = state.map, v = new Float32Array(w * h);
   let fresh = 0, blocked = 0;
   for (const p of plan) { v[p.y * w + p.x] = p.why == null ? 1 : p.why === 'have' ? 0.6 : 0.15; if (p.why == null) fresh++; else if (p.why !== 'have') blocked++; }
@@ -237,8 +387,8 @@ function ghostAt(x, y) {
   if (placing.key === 'road' && placing.roadStart) return roadPreview(x, y);
   const c = placeCheck(x, y);
   try { view?.setGhost(placing.key, c.x, c.y, c.why == null); } catch (e) { console.error(e); }
-  const d = BUILDING[placing.key];
-  const cost = placing.moveId ? `move: ${Math.ceil((d.cost.credits || 0) * 0.2)} cr` : [d.cost.credits ? `${d.cost.credits} cr` : '', d.cost.parts ? `${d.cost.parts} parts` : ''].filter(Boolean).join(' · ');
+  const d = BUILDING[placing.key], dc = costOf(d.cost);
+  const cost = placing.moveId ? `move: ${Math.ceil((dc.credits || 0) * 0.2)} cr` : [dc.credits ? `${dc.credits} cr` : '', dc.parts ? `${dc.parts} parts` : ''].filter(Boolean).join(' · ');
   const verb = placing.moveId ? 'move' : placing.key === 'road' ? 'start the road here' : 'build';
   ui.tip(`<b>${esc(d.name)}</b> <small>${esc(cost)}${placing.key === 'road' ? ' a tile' : ''}</small><br>${c.why == null ? '<span class="ok">✓ Click to ' + verb + '</span>' : `<span class="no">✗ ${esc(c.why)}</span>`}`, pointer.x, pointer.y, c.why == null);
 }
@@ -285,7 +435,14 @@ function onTileClick(x, y, button) {
 let shiftHeld = false, downAt = null;
 function onKey(e) {
   shiftHeld = e.shiftKey;
-  if (!state || $('#sGame').hidden || e.type !== 'keydown') return;
+  if (e.type !== 'keydown') return;
+  if ((e.key === 'F1' || (e.key === '?' && !e.target.closest?.('input, textarea, select'))) && !$('#dNew').open) {
+    e.preventDefault();
+    if ($('#dHelp').open) $('#dHelp').close(); else openHelp();
+    return;
+  }
+  if ($('#dHelp').open) return;
+  if (!state || $('#sGame').hidden) return;
   if (e.target.closest?.('input, textarea, select') && e.key !== 'Escape') return;
   if (ui.eventOpen() && settings.pauseOnEvents && e.key !== 'Escape') return;
   switch (e.key) {
@@ -293,6 +450,7 @@ function onKey(e) {
     case '1': setSpeed(1); break;
     case '2': setSpeed(2); break;
     case '3': setSpeed(4); break;
+    case 'm': case 'M': if (!e.ctrlKey && !e.metaKey) { audio.setMuted(!audio.muted); ui.toast(audio.available ? (audio.muted ? 'Music off.' : 'Music on.') : audio.why, audio.available ? 'good' : 'bad'); } break;
     case 'r': case 'R': if (!e.ctrlKey && !e.metaKey && lastKey) api.pick(lastKey); break;
     case 'Escape':
       if (placing?.roadStart) { placing.roadStart = null; applyOverlay(); if (hover) ghostAt(hover.x, hover.y); }
@@ -349,7 +507,8 @@ function stopLoop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
 // ---------------------------------------------------------------- start
 async function main() {
   mountSaveButtons($('#saveIO'), 'cl-btn sm');
-  $('#bNew').onclick = newDialog;
+  $('#bNew').onclick = () => newDialog();
+  $('#nHere').onclick = () => { const h = browserCampaign(); if (h) { importData = h.data; importName = h.name; showFound(); } };
   $('#bContinue').onclick = continueGame;
   $('#nFile').onchange = async () => {
     const f = $('#nFile').files[0]; if (!f) return;
@@ -357,6 +516,13 @@ async function main() {
     catch (e) { importData = null; showFound(e.message); }
   };
   $('#nBeta').onchange = () => showFound();
+  $('#bHelp').onclick = () => openHelp();
+  $('#dHelp').addEventListener('close', helpClosed);
+  $('#dHelp').addEventListener('click', (e) => {
+    if (e.target === $('#dHelp')) { $('#dHelp').close(); return; }   // a click on the backdrop
+    const a = e.target.closest('[data-help]');
+    if (a) { e.preventDefault(); $(`#help-${a.dataset.help}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  });
   $('#fNew').addEventListener('submit', (e) => { if (e.submitter?.value === 'go') { e.preventDefault(); $('#dNew').close(); startNew(); } });
   showTitle();
   try { M = await loadModules(); }
@@ -367,6 +533,10 @@ async function main() {
     return;
   }
   showTitle();
-  window.__colony = { get state() { return state; }, get view() { return view; }, get M() { return M; }, tick, setSpeed, settings };
+  audio.init().then((ok) => { if (ok && !$('#sTitle').hidden) audio.play('title'); });
+  window.__colony = { get state() { return state; }, get view() { return view; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings };
+  // colony.html?from=remnant|classic: straight on from the expansion's ending, its army already found
+  const from = new URLSearchParams(location.search).get('from');
+  if (from && EXPANSION[from]) newDialog(from);
 }
 main();

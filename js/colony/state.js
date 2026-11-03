@@ -5,6 +5,7 @@ import { BUILDING, BUILDINGS } from './data/buildings.js';
 import { T } from './data/terrain.js';
 import { findSpot, log, unitPrice, chamberOf, addPending, placeCheck, occupancy, tilesOf } from './rules.js';
 import { farmSoil } from './sim.js';
+import { DIFFICULTY } from './difficulty.js';
 
 export const SAVE_KEY = 'el-colony';
 export const TITLE = 'Earthlight Space Colony Rebuild';
@@ -26,10 +27,11 @@ export function readRoster(data) {
 
 // importSave: parsed save `data` (js/savefile.js). types: the expansion's units ([{ type, value, hp }]
 // or units.json's `units`) for machine prices; 24 a machine without it. generate: the map generator.
-export function newGame({ seed = 1, importSave = null, beta = false, types = null, generate = generateMap } = {}) {
+export function newGame({ seed = 1, importSave = null, beta = false, types = null, generate = generateMap, difficulty = 'easy' } = {}) {
   const { map, chambers, start } = generate(seed);
   const state = {
-    v: 1, seed, title: TITLE, day: 0, speed: 1, tax: START.tax,
+    v: 1, seed, title: TITLE, day: 0, speed: 1, tax: START.tax, difficulty: DIFFICULTY[difficulty] ? difficulty : 'easy',
+    goals: { done: [] },
     map, chambers, buildings: [], nextId: 1,
     stock: { ...START.stock }, battery: 0, pop: START.pop, housing: 0,
     happy: 50, happyParts: [],

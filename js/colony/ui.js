@@ -9,11 +9,16 @@
 //   ui.toast(msg, kind)       kind: 'bad' | 'good' | ''
 //   ui.tip(html | null, clientX, clientY, ok)
 //   ui.setPlacing(key | null, moving)  ui.setSpeed(s)  ui.openMarket()  ui.destroy()
+//   ui.openBuild(key)         the build menu on that building's category (opened on phones)
+//   ui.welcomeDone(offerHelp) first run: the goals panel opened, "Show me" pulsed, How to play offered
 //
 // api: { state(), rules, sim, art(slot) → url|null, types (expansion units by type, or null),
 //        act(result) → result, pick(key), move(id), setSpeed(s), setOverlay(name|null), save(),
-//        toTitle(), focus(x, y), settings: { pauseOnEvents, snap }, setSetting(key, value) }
-import { CATEGORIES, BUILDINGS, BUILDING } from './data/buildings.js';
+//        toTitle(), focus(x, y), settings: { pauseOnEvents, snap }, setSetting(key, value),
+//        goals (js/colony/goals.js or null), diff(state) → difficulty row or null,
+//        show(show) performs a goal's or the advisor's "Show me", help() opens How to play,
+//        answered(pending, choiceKey) after an event is answered }
+import { CATEGORIES, BUILDINGS, BUILDING, NEEDS, CHAMBER_AIR_PER_100 } from './data/buildings.js';
 import { TERRAIN, ARTIFACT, T } from './data/terrain.js';
 
 const GOODS = ['food', 'water', 'air', 'parts', 'ore', 'credits'];
@@ -28,6 +33,11 @@ const STATUS = {
   open: ['Open', 'Pressurised: build inside.'],
 };
 const OVERLAYS = [[null, 'None'], ['reach', 'Reach'], ['park', 'Parks'], ['power', 'Power']];
+const KIND_LABEL = { goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost' };
+const SPEAKER = { ruess: 'Prof. Ruess', sato: 'Capt. Sato' };
+const UI_KEY = 'el-colony-ui';   // per-viewer panel state (collapsed or not)
+const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}') || {}; } catch { return {}; } };
+const storeUI = (o) => { try { localStorage.setItem(UI_KEY, JSON.stringify(o)); } catch { } };
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const num = (n) => {
@@ -60,6 +70,78 @@ function cardIcon(b) {
     ${b.power > 0 ? `<path d="M${cx + 2} ${top - 18} l-7 11 h6 l-3 9 l9 -12 h-6 z" fill="#fff6c2"/>` : ''}</svg>`;
 }
 
+// ---------------------------------------------------------------- How to play
+// The help dialog's sections (colony.html #dHelp). Short sentences, pictures from the card art.
+// diff: the difficulty row (js/colony/difficulty.js) the numbers are quoted for, or null.
+export const HELP_SECTIONS = [['goal', 'The goal'], ['time', 'Time'], ['build', 'Building'], ['res', 'Resources'], ['chambers', 'Chambers'],
+  ['homes', 'Homes & happiness'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['tips', 'First 10 days']];
+export function helpHtml(art, diff) {
+  const pic = (slot, alt = '') => { const u = art?.(slot); return u ? `<img src="${esc(u)}" alt="${esc(alt)}" loading="lazy">` : ''; };
+  const card = (key) => { const u = art?.(`card/${key}`); return `<figure class="cl-hfig">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : cardIcon(BUILDING[key])}<figcaption>${esc(BUILDING[key]?.name || key)}</figcaption></figure>`; };
+  const every = diff?.transportEvery ?? 7, happy = diff?.transportHappy ?? 45, name = diff?.name ?? 'Easy';
+  const sec = (id, title, figs, body) => `<section class="cl-hsec" id="help-${id}"><h3>${esc(title)}</h3><div class="cl-hrow">${figs ? `<div class="cl-hfigs">${figs}</div>` : ''}<div class="cl-htext">${body}</div></div></section>`;
+  return `<nav class="cl-hnav" aria-label="Sections">${HELP_SECTIONS.map(([id, t]) => `<a href="#help-${id}" data-help="${id}">${esc(t)}</a>`).join('')}</nav>
+  <div class="cl-hbody" data-hbody>
+  ${sec('goal', 'The goal', `<figure class="cl-hfig portrait">${pic('portrait/ruess', 'Prof. Hal Ruess')}<figcaption>Prof. Ruess</figcaption></figure>`, `
+    <p>You are the Governor of <b>Eden</b>, a broken space colony above a poisoned Earth.</p>
+    <p>Most of Eden is dark and airless. Your job: <b>open its chambers one by one</b> and <b>grow the colony</b>.</p>
+    <p>The <b>goal panel</b> (under the top bar) always says what to do next. Press <b>Show me</b> and it takes you there. Each goal done pays a <b>Council grant</b> of credits and parts.</p>
+    <p>The <b>advisor</b> warns you when something is going wrong. Press <b>Fix</b> to jump to the answer.</p>`)}
+  ${sec('time', 'Time', '', `
+    <p>One <b>day</b> passes every second. The buttons at the top are <b>pause</b>, <b>×1</b>, <b>×2</b> and <b>×4</b>. Keys: space, 1, 2, 3.</p>
+    <p>When something needs your answer (a ship, a finished goal, a new chamber), <b>the clock stops</b> until you answer.</p>
+    <p>Pause any time to plan. Nothing is lost while paused.</p>`)}
+  ${sec('build', 'Building', card('farm') + card('repairyard'), `
+    <p>Pick a card in the <b>build menu</b> (left). Move over the map: a <b class="cl-good">green</b> ghost means you can build there. A <b class="cl-bad">red</b> ghost means you can't: <b>read the reason</b> next to the pointer.</p>
+    <p>Click to order it. Right-click or Esc cancels. Hold Shift to place several. R builds the same again.</p>
+    <p><b>Crews</b> put buildings up. Each crew builds one thing at a time; the rest wait in line. You start with 2 crews. Each <b>Repair Yard</b> adds more.</p>
+    <p>Click any building to see what it makes and uses, to upgrade, move or switch it off.</p>`)}
+  ${sec('res', 'Resources', card('riverpump') + card('airplant'), `
+    <p>The top bar shows each good: <b>stock / cap</b> and the <b>change per day</b>. Hover a number to see why it moves.</p>
+    <table class="cl-table cl-htable"><thead><tr><th>Good</th><th>Made by</th><th>Used by</th></tr></thead><tbody>
+      <tr><td>Food</td><td>Farm Fields (best on fertile soil by the river), Hydroponics Bays</td><td>Every colonist eats</td></tr>
+      <tr><td>Water</td><td>River Pumps (beside the river), the Command Centre</td><td>Colonists, farms, Air Plants, parks</td></tr>
+      <tr><td>Air</td><td>The Command Centre, Air Plants, Forest Groves</td><td>Colonists; open chambers leak a little</td></tr>
+      <tr><td>Power</td><td>The Command Centre, Solar Arrays (hull or space)</td><td>Most buildings. Short power slows them all</td></tr>
+      <tr><td>Parts</td><td>The Command Centre (a few), Salvage Yards, goal grants</td><td>Building</td></tr>
+      <tr><td>Credits</td><td>Tax, cash crops, selling at the Market, goal grants</td><td>Building and daily upkeep</td></tr>
+      <tr><td>Ore</td><td>Ore Mines on asteroids</td><td>Sell it at the Market</td></tr>
+    </tbody></table>
+    <p><b>Stores have a cap</b> (the number after the slash). Anything above it is lost. A <b>Storage Depot</b> holds 300 more of one good. Power is never stored, except in Battery Banks.</p>`)}
+  ${sec('chambers', 'Chambers', card('seal'), `
+    <p>Eden is split into chambers. Only yours is open at the start. To open the next one:</p>
+    <ol class="cl-hsteps">
+      <li><b>Survey</b>: click a dark chamber next to an open one and press Survey (2 days).</li>
+      <li><b>Seal</b>: the <b class="cl-bad">red tiles</b> in its walls are breaches. Build a <b>Bulkhead Seal</b> on each one (Water &amp; air menu).</li>
+      <li><b>Pressurise</b>: press Pressurise. It uses air from your stores (a quarter of the floor tiles, a fifth on Easy) and takes 5 days.</li>
+      <li><b>Build</b>: the chamber is open. Build anything inside it.</li>
+    </ol>`)}
+  ${sec('homes', 'Homes & happiness', card('habitat') + card('park'), `
+    <p><b>Habitats</b> house 20 colonists. They <b>grow by themselves</b> into Quarters (40) when food, water, air and power are enough for everyone and a <b>park or grove</b> is nearby.</p>
+    <p><b>Happiness</b> (top bar, click it for the breakdown) starts at 50. Needs met add, shortages take a lot away. Parks add. High tax takes away.</p>
+    <p>On ${esc(name)}, a <b>transport</b> calls every <b>${every} days</b>. It brings new colonists if happiness is at least <b>${happy}</b>, there are <b>free homes</b>, and food, water and air are not short.</p>
+    <p><b>Tax</b> (top bar slider) pays upkeep. 10% is neutral. Lower makes people happier; higher makes them unhappy.</p>`)}
+  ${sec('roads', 'Roads', '', `
+    <p>Colonists walk and rovers drive <b>only on roads</b>. Without roads your colony still works, but nobody moves.</p>
+    <p>Choose <b>Road</b> (Command menu). <b>Click where it starts</b>, then <b>click where it ends</b>: it lays an L-shaped line. Roads pass through gates once both chambers are open.</p>`)}
+  ${sec('market', 'Market & guardians', card('dock'), `
+    <p>Traders land at the <b>Dock</b>. Open the <b>Market</b> (top bar) to sell <b>ore, food and parts</b> for credits. Each sale lowers the price a little; it recovers over a few days. Sell in batches.</p>
+    <p><b>Beta testers</b>: your <b>guardians</b> are your old army. They eat nothing. Sell machines at the Market for lots of credits and parts, or keep them.</p>`)}
+  ${sec('tips', 'Your first 10 days', '', `
+    <ol class="cl-hsteps">
+      <li>Read Ruess's welcome, then follow the <b>goal panel</b>. Press <b>Show me</b>.</li>
+      <li>Plant a second <b>Farm Field</b> on the dark green soil by the river.</li>
+      <li>Put a <b>Park</b> next to the Habitats, then build <b>two more Habitats</b>.</li>
+      <li>Watch the <b>advisor</b>. If food, water or air runs low, press <b>Fix</b>.</li>
+      <li>Build a <b>Repair Yard</b> so more goes up at once.</li>
+      <li>Keep some credits and parts for surveying and sealing the next chamber.</li>
+      <li>Short of credits? Sell some food at the Market, or set a farm to cash crops.</li>
+    </ol>
+    ${diff?.relief ? `<p>On <b>${esc(name)}</b>, if the treasury runs dry or colonists go hungry, the Council sends <b>${num(diff.relief.credits)} credits</b> and <b>${num(diff.relief.food)} food</b> (at most once every ${diff.relief.every} days).</p>` : ''}
+    <p class="cl-dim">Keys: space pause · 1 / 2 / 3 speed · R build again · Esc cancel · F1 or ? this guide.</p>`)}
+  </div>`;
+}
+
 export function createUI(root, api) {
   const R = api.rules;
   const S = () => api.state();
@@ -82,10 +164,33 @@ export function createUI(root, api) {
     <div class="cl-tools">
       <button type="button" class="cl-btn sm" data-tool="market" title="Sell goods and guardians"><span class="cl-ico">⚖</span><span class="cl-lbl">Market</span></button>
       <button type="button" class="cl-btn sm" data-tool="save" title="Save the colony in this browser"><span class="cl-ico">⤓</span><span class="cl-lbl">Save</span></button>
+      <button type="button" class="cl-btn sm icon cl-helpbtn" data-tool="help" title="How to play (F1 or ?)" aria-label="How to play">?</button>
       <button type="button" class="cl-btn sm icon" data-tool="settings" title="Settings">⚙</button>
       <button type="button" class="cl-btn sm icon" data-tool="title" title="Back to the title">⏏</button>
     </div>
   </header>
+  <div class="cl-col cl-left">
+  <section class="cl-goal cl-panel" aria-label="Current goal" hidden>
+    <header class="cl-goalhead">
+      <span class="cl-goalpic" data-goalpic></span>
+      <div class="cl-goalt"><i data-goalkicker>Goal</i><b data-goaltitle></b><em data-goalprog1></em></div>
+      <button type="button" class="cl-goalfold" data-goalfold aria-expanded="true" title="Fold the goal panel">▾</button>
+    </header>
+    <div class="cl-goalbody">
+      <p class="cl-goaltext" data-goaltext></p>
+      <div class="cl-goalprog" data-goalprogwrap><span class="cl-goalbar"><span data-goalbar></span></span><small data-goalprog></small></div>
+      <div class="cl-goalreward" data-goalreward></div>
+      <div class="cl-goalacts">
+        <button type="button" class="cl-btn primary cl-showme" data-showme>Show me</button>
+        <button type="button" class="cl-goalall" data-goalall aria-expanded="false"></button>
+      </div>
+      <ol class="cl-goallist" data-goallist hidden></ol>
+    </div>
+    <div class="cl-offer" data-offer hidden>
+      <b>First colony?</b> A two-minute guide explains everything: time, building, chambers, homes.
+      <div class="cl-row"><button type="button" class="cl-btn sm primary" data-offer="help">How to play</button><button type="button" class="cl-btn sm ghost" data-offer="later">Later</button></div>
+    </div>
+  </section>
   <aside class="cl-build cl-panel" aria-label="Build">
     <button type="button" class="cl-buildtoggle" data-buildtoggle>Build ▾</button>
     <div class="cl-buildbody">
@@ -93,15 +198,22 @@ export function createUI(root, api) {
       <div class="cl-cards" data-cards></div>
     </div>
   </aside>
+  </div>
+  <div class="cl-col cl-right">
+  <section class="cl-adv cl-panel" aria-label="Advisor" hidden>
+    <button type="button" class="cl-advhead" data-advfold aria-expanded="true"><i>Advisor</i><span data-advcount></span><b>▾</b></button>
+    <ul class="cl-advlist" data-advlist></ul>
+  </section>
   <aside class="cl-insp cl-panel" hidden aria-label="Inspector"><button type="button" class="cl-x" data-close="insp" title="Close (Esc)">×</button><div data-insp></div></aside>
+  <div class="cl-pop cl-panel" data-pop="happy" hidden></div>
+  <div class="cl-pop cl-panel" data-pop="market" hidden></div>
+  <div class="cl-pop cl-panel" data-pop="settings" hidden></div>
+  </div>
   <div class="cl-ovl" role="group" aria-label="Overlay"><i>Overlay</i>${OVERLAYS.map(([k, n]) => `<button type="button" data-ovl="${k ?? ''}" aria-pressed="${k === null}">${n}</button>`).join('')}</div>
   <div class="cl-placing" hidden><span data-placing></span> <button type="button" class="cl-btn sm" data-cancel>Cancel</button></div>
   <div class="cl-log" data-log title="Colony log (click to expand)"></div>
   <div class="cl-tip" hidden></div>
   <div class="cl-toasts" aria-live="polite"></div>
-  <div class="cl-pop cl-panel" data-pop="happy" hidden></div>
-  <div class="cl-pop cl-panel" data-pop="market" hidden></div>
-  <div class="cl-pop cl-panel" data-pop="settings" hidden></div>
   <div class="cl-modal" hidden><div class="cl-win cl-event" role="dialog" aria-modal="true" aria-labelledby="evTitle"></div></div>`;
 
   const $ = (s) => root.querySelector(s);
@@ -113,7 +225,7 @@ export function createUI(root, api) {
   const logEl = $('[data-log]'), modal = $('.cl-modal'), evBox = $('.cl-event'), placingEl = $('.cl-placing');
   const pops = { happy: $('[data-pop=happy]'), market: $('[data-pop=market]'), settings: $('[data-pop=settings]') };
   let cat = CATEGORIES[0].key, cardSig = '', inspAt = null, inspSig = '', logSig = '', logOpen = false, evId = null, marketSig = '', happySig = '';
-  let summary = null;
+  let summary = null, dirty = false;
 
   const result = (r) => api.act(r);
 
@@ -127,6 +239,7 @@ export function createUI(root, api) {
     if (t === 'market') togglePop('market');
     else if (t === 'save') api.save();
     else if (t === 'settings') togglePop('settings');
+    else if (t === 'help') api.help?.();
     else if (t === 'title') api.toTitle();
   });
 
@@ -141,6 +254,61 @@ export function createUI(root, api) {
     if (e.el.className !== k) e.el.className = k;
   }
 
+  // Why a resource moves: "−13 a day: 40 colonists eat 32, 2 Farm Fields make 19" (the stat's title).
+  const specOf = (b) => { try { return R.spec?.(b) || BUILDING[b.key] || {}; } catch { return BUILDING[b.key] || {}; } };
+  const isActive = (b) => b.build === 0 && !b.off;
+  function groupNames(list) {
+    const n = {};
+    for (const b of list) { const nm = BUILDING[b.key]?.name || b.key; n[nm] = (n[nm] || 0) + 1; }
+    return Object.entries(n).map(([nm, k]) => k > 1 ? `${k} ${/[^aeiou]y$/.test(nm) ? nm.slice(0, -1) + 'ies' : nm + 's'}` : nm).join(', ');
+  }
+  function why(g, s, m) {
+    const last = s.stats?.last || {}, pr = last.produced?.[g] || 0, co = last.consumed?.[g] || 0, d = pr - co;
+    const st = m?.stock?.[g] || {};
+    const live = s.buildings.filter(isActive);
+    const makers = live.filter((b) => specOf(b).makes?.[g] && !(b.key === 'farm' && b.mode === 'fallow'));
+    const users = live.filter((b) => specOf(b).uses?.[g] && !(b.key === 'farm' && b.mode === 'fallow'));
+    const head = `${GOOD_NAME[g]}: ${num(st.have ?? s.stock[g])}${st.cap ? ` of ${num(st.cap)} stored` : ''}.\n${d ? signed(d) : '±0'} a day`;
+    if (!s.day) return `${GOOD_NAME[g]}: ${num(st.have ?? s.stock[g])}${st.cap ? ` of ${num(st.cap)} stored` : ''}.\nWhat it gains or loses a day shows after the first day.`;
+    const bits = [];
+    if (g === 'food' || g === 'water' || g === 'air') {
+      const nm = api.diff?.(s)?.need ?? 1;
+      let need = s.pop * (NEEDS[g] || 0) * nm, chamberAir = 0;
+      if (g === 'air') for (const c of s.chambers) if (c.status === 'open') chamberAir += (c.tiles / 100) * CHAMBER_AIR_PER_100 * nm;
+      const people = Math.min(co, need), rest = Math.max(0, co - people - chamberAir);
+      bits.push(`${num(s.pop)} colonists ${{ food: 'eat', water: 'drink', air: 'breathe' }[g]} ${num(people)}`);
+      if (chamberAir > 0.5) bits.push(`open chambers leak ${num(Math.min(chamberAir, Math.max(0, co - people)))}`);
+      if (rest > 0.5) bits.push(`${groupNames(users) || 'buildings'} use ${num(rest)}`);
+      if (pr > 0) bits.push(`${groupNames(makers) || 'buildings'} make ${num(pr)}`);
+    } else if (g === 'credits') {
+      const tax = last.tax || 0, upkeep = last.upkeep || 0, other = pr - tax;
+      bits.push(`tax brings ${num(tax)}`);
+      if (other > 0.5) bits.push(`cash crops ${num(other)}`);
+      bits.push(`upkeep costs ${num(upkeep)}${co < upkeep - 0.5 ? ` (only ${num(co)} paid)` : ''}`);
+    } else {
+      if (pr > 0) bits.push(`${groupNames(makers) || 'buildings'} make ${num(pr)}`);
+      if (co > 0) bits.push(`${groupNames(users) || 'buildings'} use ${num(co)}`);
+    }
+    if (!bits.length) bits.push(g === 'ore' ? 'nothing mines ore yet (Ore Mines unlock at 80 colonists)' : 'nothing makes or uses it yet');
+    let tail = '';
+    if (g === 'credits' || g === 'parts') tail = '\nBuilding costs are paid at once and are not in this number.';
+    if (st.cap && g !== 'credits') tail += `\n${st.have >= st.cap ? 'Stores are full: anything more is lost. ' : ''}Storage Depots raise the cap.`;
+    if (g === 'food' && d < 0 && (st.have ?? 0) > 0) tail += `\nRuns out in ${Math.floor((st.have ?? 0) / -d)} days.`;
+    return `${head}: ${bits.join(', ')}.${tail}`;
+  }
+  function powerWhy(s, m) {
+    const p = m?.power || {}, live = s.buildings.filter(isActive);
+    const prod = live.filter((b) => specOf(b).power > 0), use = live.filter((b) => specOf(b).power < 0);
+    return `Power: ${num(p.supply ?? 0)} MW made by ${groupNames(prod) || 'nothing'}; ${num(p.demand ?? 0)} MW needed by ${use.length} building${use.length === 1 ? '' : 's'}.`
+      + ((p.supply ?? 0) < (p.demand ?? 0) ? '\nShort: every powered building slows down. Build Solar Arrays.' : '\nPower is never stored, except in Battery Banks.')
+      + (p.cap ? `\nBattery ${num(p.battery ?? 0)} / ${num(p.cap)}.` : '');
+  }
+  function popWhy(s, m) {
+    const dv = api.diff?.(s), every = dv?.transportEvery ?? 10, need = dv?.transportHappy ?? 55;
+    return `Colonists ${num(m?.pop ?? s.pop)} / homes ${num(m?.housing ?? s.housing)}.\nA transport calls every ${every} days. It docks if happiness is at least ${need}, there are free homes, and food, water and air are not short.`;
+  }
+  const setTitle = (g, t) => { const e = statEls[g]; if (e && e.el.title !== t) e.el.title = t; };
+
   function hud() {
     const s = S(), m = summary;
     dayEl.textContent = `Day ${s.day}`;
@@ -152,6 +320,9 @@ export function createUI(root, api) {
       stat(g, num(st.have), cap, d ? signed(d) : '±0', (d > 0 ? 'up' : d < 0 ? 'down' : '') + (low ? ' low' : '') + (st.cap && st.have >= st.cap && g !== 'credits' ? ' full' : ''));
     }
     const p = m?.power || {};
+    for (const g of GOODS) setTitle(g, why(g, s, m));
+    setTitle('power', powerWhy(s, m));
+    setTitle('pop', popWhy(s, m));
     stat('power', num(p.supply ?? 0), `/${num(p.demand ?? 0)}`, p.cap ? `bat ${num(p.battery ?? 0)}/${num(p.cap)}` : '', (p.supply ?? 0) < (p.demand ?? 0) ? 'down' : 'up');
     const pop = m?.pop ?? s.pop, housing = m?.housing ?? s.housing;
     stat('pop', num(pop), `/${num(housing)}`, m?.nextArrival != null ? (typeof m.nextArrival === 'number' ? `ship in ${m.nextArrival}d` : String(m.nextArrival)) : '', pop > housing ? 'down' : '');
@@ -283,13 +454,14 @@ export function createUI(root, api) {
       const surveyR = ch.status === 'sealed' ? dry(s, (c) => R.chamberAction(c, ch.id, 'survey')) : { ok: false, msg: ch.status === 'surveying' ? 'Survey under way.' : 'Already surveyed.' };
       const pressR = ch.status === 'surveyed' ? dry(s, (c) => R.chamberAction(c, ch.id, 'pressurise'))
         : { ok: false, msg: ch.status === 'open' ? 'Already open.' : ch.status === 'pressurising' ? 'Pressurising now.' : 'Survey it first.' };
-      const air = Math.ceil((ch.tiles || 0) / 4);
+      const air = R.pressuriseAir ? R.pressuriseAir(s, ch) : Math.ceil((ch.tiles || 0) / 4);
+      let fee = 100; try { fee = R.costOf?.(s, { credits: 100 })?.credits ?? 100; } catch { }
       parts.push(`<section class="cl-isec"><h4>Chamber <span class="cl-badge st-${esc(ch.status)}">${esc(st[0])}</span></h4>
         <div class="cl-iname">${esc(ch.name || 'Chamber ' + ch.id)} <small>${esc(ch.kind || '')} · ${num(ch.tiles)} tiles</small></div>
         <p class="cl-dim">${esc(st[1])}${ch.work ? ` ${ch.work} day${ch.work === 1 ? '' : 's'} left.` : ''}</p>
         <div class="cl-kv"><span>Breaches</span><b class="${total && sealed < total ? 'bad' : 'good'}">${hidden ? '?' : `${sealed} / ${total} sealed`}</b></div>
         ${ch.status !== 'open' ? `<div class="cl-acts">
-          <button type="button" class="cl-btn sm" data-a="survey" data-id="${ch.id}" ${surveyR.ok ? '' : 'disabled'} title="${esc(surveyR.ok ? 'Survey: 100 credits, 2 days' : surveyR.msg)}">Survey <small>100 cr · 2 d</small></button>
+          <button type="button" class="cl-btn sm" data-a="survey" data-id="${ch.id}" ${surveyR.ok ? '' : 'disabled'} title="${esc(surveyR.ok ? `Survey: ${fee} credits, 2 days` : surveyR.msg)}">Survey <small>${fee} cr · 2 d</small></button>
           <button type="button" class="cl-btn sm" data-a="pressurise" data-id="${ch.id}" ${pressR.ok ? '' : 'disabled'} title="${esc(pressR.ok ? `Pressurise: ${air} air, 5 days` : pressR.msg)}">Pressurise <small>${air} air · 5 d</small></button>
         </div>${!surveyR.ok && ch.status === 'sealed' ? `<p class="cl-why">${esc(surveyR.msg)}</p>` : ''}${!pressR.ok && ch.status === 'surveyed' ? `<p class="cl-why">${esc(pressR.msg)}</p>` : ''}` : ''}
       </section>`);
@@ -435,8 +607,21 @@ export function createUI(root, api) {
       <h3>Settings</h3>
       <label class="cl-check"><input type="checkbox" data-set="pauseOnEvents" ${st.pauseOnEvents ? 'checked' : ''}><span></span><em>Pause on events<small>Decisions stop the clock until answered.</small></em></label>
       <label class="cl-check"><input type="checkbox" data-set="snap" ${st.snap ? 'checked' : ''}><span></span><em>Snap rotation to 90°<small>Quarter turns instead of a free orbit.</small></em></label>
-      <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · Esc cancel.</p>`;
+      ${musicHtml()}
+      <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · M music · Esc cancel · F1 or ? how to play.</p>`;
     for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => api.setSetting(c.dataset.set, c.checked);
+    const mus = pops.settings.querySelector('[data-music]'), setup = pops.settings.querySelector('[data-musicsetup]');
+    if (mus) mus.onchange = () => api.audio.setMuted(!mus.checked);
+    if (setup) setup.onclick = () => { setup.disabled = true; api.audio.setUp().then(() => { renderSettings(); toast('Earth Light music is ready.', 'good'); }).catch((e) => { setup.disabled = false; toast(e.message || 'No ROM chosen.', 'bad'); }); };
+  }
+  // Earth Light's own music, from the expansion's sound pack (js/colony/audio.js).
+  function musicHtml() {
+    const a = api.audio;
+    if (!a) return '';
+    return a.available
+      ? `<label class="cl-check"><input type="checkbox" data-music ${a.muted ? '' : 'checked'}><span></span><em>Music<small>Earth Light's own songs, from your ROM's sound pack.</small></em></label>`
+      : `<div class="cl-field"><em>Music<small>${esc(a.why || 'Earth Light music needs your ROM once.')}</small></em>
+         <button type="button" class="cl-btn sm" data-musicsetup>Set up Earth Light music</button></div>`;
   }
 
   // ---------------------------------------------------------------- log, toasts, tip
@@ -492,7 +677,7 @@ export function createUI(root, api) {
     evId = p.id;
     const portrait = p.speaker && api.art?.(`portrait/${p.speaker}`);
     modal.classList.toggle('soft', !api.settings.pauseOnEvents);
-    evBox.innerHTML = `<div class="cl-evkind">${esc(p.kind || 'Event')} · Day ${s.day}${s.pending.length > 1 ? ` · ${s.pending.length - 1} more waiting` : ''}</div>
+    evBox.innerHTML = `<div class="cl-evkind">${esc(KIND_LABEL[p.kind] || p.kind || 'Event')} · Day ${s.day}${s.pending.length > 1 ? ` · ${s.pending.length - 1} more waiting` : ''}</div>
       <div class="cl-evbody">${portrait ? `<img class="cl-portrait" src="${esc(portrait)}" alt="">` : ''}
       <div><h2 id="evTitle">${esc(p.title)}</h2><p>${esc(p.text)}</p></div></div>
       <div class="cl-evchoices">${(p.choices?.length ? p.choices : [{ key: 'ok', label: 'Understood' }]).map((c, i) => `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}" data-choice="${esc(c.key)}">${esc(c.label)}</button>`).join('')}</div>
@@ -504,15 +689,131 @@ export function createUI(root, api) {
     const b = e.target.closest('[data-choice]'); if (!b) return;
     const p = S().pending?.[0]; if (!p) return;
     evId = null; modal.hidden = true;
-    result(R.answer(S(), p.id, b.dataset.choice));
+    const r = result(R.answer(S(), p.id, b.dataset.choice));
+    if (r?.ok !== false) api.answered?.(p, b.dataset.choice);
   });
+
+  // ---------------------------------------------------------------- goals panel
+  const prefs = loadUI();
+  const goalEl = $('.cl-goal'), goalList = $('[data-goallist]'), showBtn = $('[data-showme]'), offerEl = $('[data-offer]');
+  let goalSig = '', goalId, goalShow = null, listOpen = false;
+  const setFold = (el, btn, folded) => { el.classList.toggle('folded', folded); btn.setAttribute('aria-expanded', String(!folded)); };
+  // Phones start with the strip folded, so the map keeps the room.
+  setFold(goalEl, $('[data-goalfold]'), prefs.goalFolded ?? matchMedia('(max-width: 760px)').matches);
+  $('[data-goalfold]').addEventListener('click', () => {
+    const f = !goalEl.classList.contains('folded');
+    setFold(goalEl, $('[data-goalfold]'), f); prefs.goalFolded = f; storeUI(prefs);
+  });
+  $('.cl-goalhead').addEventListener('click', (e) => {   // a tap on a folded strip opens it
+    if (goalEl.classList.contains('folded') && !e.target.closest('button')) $('[data-goalfold]').click();
+  });
+  $('[data-goalall]').addEventListener('click', () => { listOpen = !listOpen; goalSig = ''; renderGoals(); });
+  const phone = () => matchMedia('(max-width: 760px)').matches;
+  // On a phone the strip folds away so the map (and the marked spot) can be seen.
+  const foldForMap = () => { if (phone()) { setFold(goalEl, $('[data-goalfold]'), true); offerEl.hidden = true; } };
+  showBtn.addEventListener('click', () => { if (goalShow) { foldForMap(); api.show?.(goalShow); } });
+  showBtn.addEventListener('animationend', () => showBtn.classList.toggle('pulse', false));
+  offerEl.addEventListener('click', (e) => {
+    const k = e.target.closest('[data-offer]')?.dataset.offer; if (!k) return;
+    offerEl.hidden = true;
+    try { localStorage.setItem('el-colony-help-seen', '1'); } catch { }
+    if (k === 'help') api.help?.();
+  });
+
+  // "1 / 2 fields" gives 0.5 for the bar; null when the text holds no fraction.
+  const fraction = (t) => { const m = /(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/.exec(t || ''); return m && +m[2] > 0 ? Math.min(1, +m[1] / +m[2]) : null; };
+  const grantText = (r) => r ? [r.credits ? `+${num(r.credits)} cr` : '', r.parts ? `+${num(r.parts)} parts` : ''].filter(Boolean).join(' · ') : '';
+  const showLabel = (sh) => !sh ? '' : sh.build ? `Show me: ${BUILDING[sh.build]?.name || sh.build}` : sh.market ? 'Show me: the Market' : sh.roads ? 'Show me: Roads' : sh.chamber != null ? 'Show me the chamber' : sh.tile ? 'Show me where' : 'Show me';
+
+  function renderGoals() {
+    const G = api.goals;
+    if (!G?.goalStatus) { goalEl.hidden = true; return; }
+    let st; try { st = G.goalStatus(S()); } catch (e) { console.warn('goalStatus failed', e); goalEl.hidden = true; return; }
+    const sig = JSON.stringify(st) + listOpen;
+    if (sig === goalSig) return;
+    goalSig = sig;
+    goalEl.hidden = false;
+    const c = st.current;
+    if (goalId !== undefined && (c?.id ?? null) !== goalId) { goalEl.classList.remove('fresh'); void goalEl.offsetWidth; goalEl.classList.add('fresh'); }
+    goalId = c?.id ?? null;
+    goalShow = c?.show || null;
+    const pic = c?.speaker && api.art?.(`portrait/${c.speaker}`);
+    $('[data-goalpic]').innerHTML = pic ? `<img src="${esc(pic)}" alt="${esc(SPEAKER[c.speaker] || '')}">` : '<span>◆</span>';
+    $('[data-goalkicker]').textContent = c ? `Goal ${Math.min(st.total, st.done + 1)} of ${st.total}${c.speaker && SPEAKER[c.speaker] ? ' · ' + SPEAKER[c.speaker] : ''}` : `Goals ${st.done} / ${st.total}`;
+    $('[data-goaltitle]').textContent = c ? c.title : 'All goals done: Eden is yours.';
+    $('[data-goalprog1]').textContent = c?.progress || '';
+    $('[data-goaltext]').textContent = c ? c.text : 'Every goal is complete. Keep opening chambers, growing homes and trading: there is no limit to how far Eden can grow.';
+    const f = fraction(c?.progress);
+    $('[data-goalprogwrap]').hidden = !c?.progress;
+    $('[data-goalbar]').style.width = f == null ? '0' : `${Math.round(f * 100)}%`;
+    $('[data-goalbar]').parentElement.hidden = f == null;
+    $('[data-goalprog]').textContent = c?.progress || '';
+    const g = grantText(c?.reward);
+    $('[data-goalreward]').innerHTML = g ? `<i>Council grant</i> <b>${esc(g)}</b>` : '';
+    $('[data-goalreward]').hidden = !g;
+    showBtn.hidden = !goalShow;
+    showBtn.textContent = showLabel(goalShow);
+    const all = $('[data-goalall]');
+    all.textContent = `All goals (${st.done} / ${st.total}) ${listOpen ? '▴' : '▾'}`;
+    all.setAttribute('aria-expanded', String(listOpen));
+    goalList.hidden = !listOpen;
+    goalList.innerHTML = (st.list || []).map((x) => `<li class="${x.done ? 'done' : x.id === c?.id ? 'now' : ''}"><span>${x.done ? '✓' : x.id === c?.id ? '▸' : '·'}</span>${esc(x.title)}</li>`).join('');
+    goalEl.classList.toggle('alldone', !c);
+  }
+
+  function welcomeDone(offer) {
+    goalSig = ''; renderGoals();
+    if (goalEl.hidden) return;
+    setFold(goalEl, $('[data-goalfold]'), false);
+    showBtn.classList.toggle('pulse', false); void showBtn.offsetWidth; showBtn.classList.add('pulse');
+    if (offer) offerEl.hidden = false;
+  }
+
+  // ---------------------------------------------------------------- advisor
+  const advEl = $('.cl-adv'), advList = $('[data-advlist]');
+  let advSig = '', advDay = -1, advItems = [];
+  setFold(advEl, $('[data-advfold]'), prefs.advFolded ?? matchMedia('(max-width: 760px)').matches);
+  $('[data-advfold]').addEventListener('click', () => {
+    const f = !advEl.classList.contains('folded');
+    setFold(advEl, $('[data-advfold]'), f); prefs.advFolded = f; storeUI(prefs);
+  });
+  advList.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-fix]'); if (!b) return;
+    const it = advItems[+b.dataset.fix];
+    if (it?.show) { foldForMap(); if (phone()) setFold(advEl, $('[data-advfold]'), true); api.show?.(it.show); }
+  });
+  function renderAdvice(force) {
+    const G = api.goals, s = S();
+    if (!G?.advise) { advEl.hidden = true; return; }
+    if (!force && s.day === advDay) return;
+    advDay = s.day;
+    try { advItems = G.advise(s) || []; } catch (e) { console.warn('advise failed', e); advItems = []; }
+    const sig = JSON.stringify(advItems);
+    if (sig === advSig) return;
+    advSig = sig;
+    const fixes = advItems.filter((a) => a.level !== 'tip').length;
+    advEl.hidden = false;
+    advEl.dataset.level = advItems[0]?.level || 'ok';
+    $('[data-advcount]').innerHTML = fixes ? `${fixes} to fix` : advItems.length ? 'a tip' : '<span class="cl-good">all well</span>';
+    advList.innerHTML = advItems.length ? advItems.map((a, i) => `<li class="lv-${esc(a.level)}"><span class="cl-advdot" aria-hidden="true"></span><span class="cl-advtext">${esc(a.text)}</span>${a.show ? `<button type="button" class="cl-advfix" data-fix="${i}" title="${esc(showLabel(a.show))}">Fix</button>` : ''}</li>`).join('')
+      : '<li class="lv-ok"><span class="cl-advdot" aria-hidden="true"></span><span class="cl-advtext">Nothing urgent. Follow the goal, or open How to play (?).</span></li>';
+  }
+
+  function openBuild(key) {
+    const c = BUILDING[key]?.cat; if (!c) return;
+    if (c !== cat) { cat = c; for (const t of $$('[data-cat]')) t.setAttribute('aria-selected', String(t.dataset.cat === c)); cardSig = ''; buildMenu(); }
+    requestAnimationFrame(() => cardsEl.querySelector(`[data-key="${key}"]`)?.scrollIntoView({ block: 'nearest' }));
+  }
 
   // ---------------------------------------------------------------- update
   function update(force) {
     const s = S();
     try { summary = R.summary(s); } catch (e) { summary = null; console.warn('summary failed', e); }
-    if (force) { cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; }
+    if (force) { cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; }
     hud();
+    renderGoals();
+    renderAdvice(force || dirty);
+    dirty = false;
     buildMenu();
     refreshInspector();
     renderHappy();
@@ -522,7 +823,8 @@ export function createUI(root, api) {
   }
 
   return {
-    update, inspect, closeInspector, toast, tip, setPlacing, setSpeed, closePops,
+    update, inspect, closeInspector, toast, tip, setPlacing, setSpeed, closePops, openBuild, welcomeDone,
+    changed: () => { dirty = true; },
     openMarket: () => openPop('market'),
     eventOpen: () => !modal.hidden,
     inspecting: () => inspAt,

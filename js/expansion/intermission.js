@@ -149,7 +149,9 @@ function render() {
   let html = '';
 
   // the next mission: the hero of the page
-  if (!e) html += `<section class="hero box"><div class="eyebrow">Campaign complete</div><h1>${C.campaign().id === 'classic' ? 'The Union leadership has fallen.' : 'The war is over.'}</h1>${index.secretHint && !state.secret ? `<p class="brief">${esc(index.secretHint)}</p>` : ''}</section>`;
+  if (!e) html += `<section class="hero box"><div class="eyebrow">Campaign complete</div><h1>${C.campaign().id === 'classic' ? 'The Union leadership has fallen.' : 'The war is over.'}</h1>${index.secretHint && !state.secret ? `<p class="brief">${esc(index.secretHint)}</p>` : ''}
+    <p class="brief">Earth is poisoned and most colonies are dead hulks. The General sells the fleet and disbands the army to rebuild Eden, a broken colony above the atmosphere.</p>
+    <div class="row"><a class="btn primary" href="colony.html?from=${C.campaign().id}">Rebuild Eden →</a><span class="muted">Earthlight Space Colony Rebuild: your ${state.roster.length} machines become starting funds, or, for beta testers, the colony's guardians.</span></div></section>`;
   else if (pending) html += choiceHtml(pending, e, total);
   else {
     const intro = briefFor !== e.file;
@@ -286,8 +288,19 @@ async function selectCampaign() {
     return `<button class="camp" type="button" data-camp="${c.id}" ${idx ? '' : 'disabled'}><span class="tag">${tag}</span><h2>${esc(c.title)}</h2>
       <div class="faces">${faces.map((k) => `<div class="cline ${SPEAKERS[k].side} on" style="padding:0;border:0;background:none;display:block"><div class="cFace">${portrait(k)}</div></div>`).join('')}</div>
       <p>${esc(text)}</p><span class="state">${esc(state)}</span></button>`;
-  }).join('')}</div></section>`;
+  }).join('')}${colonyCard()}</div></section>`;
   for (const b of document.querySelectorAll('[data-camp]')) b.onclick = () => { history.replaceState(null, '', `expansion.html?c=${b.dataset.camp}`); openCampaign(b.dataset.camp); };
+}
+
+// After the war: the colony game (colony.html), the expansion's epilogue. It reads this browser's
+// expansion campaign to carry the army over (sold for funds, or the beta guardians).
+function colonyCard() {
+  let line = 'Not started · a city builder, no ROM needed.';
+  try { const raw = localStorage.getItem('el-colony'); if (raw) { const s = JSON.parse(raw); line = `Saved: day ${s.day}, ${s.pop} colonists.`; } } catch { }
+  return `<a class="camp" href="colony.html?from=remnant" style="text-decoration:none;color:inherit"><span class="tag">After the war</span><h2>Earthlight Space Colony Rebuild</h2>
+    <div class="faces">${['ruess', 'sato'].map((k) => `<div class="cline ${SPEAKERS[k].side} on" style="padding:0;border:0;background:none;display:block"><div class="cFace">${portrait(k)}</div></div>`).join('')}</div>
+    <p>The war is won and Earth is poisoned. The General sells the fleet to rebuild Eden, a broken colony above the atmosphere: repair its chambers, farm the river, mine the asteroids. Your expansion army carries over as starting funds, or as guardians for beta testers.</p>
+    <span class="state">${esc(line)}</span></a>`;
 }
 
 async function openCampaign(id) {
