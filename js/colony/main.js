@@ -100,8 +100,9 @@ function newDialog(prefer) {
 function renderDifficulty() {
   const D = DIFF(), box = $('#nDiff');
   box.innerHTML = Object.entries(D).map(([k, d]) => `<label class="cl-diff"><input type="radio" name="diff" value="${esc(k)}" ${k === 'easy' ? 'checked' : ''}>
-    <span><b>${esc(d.name || k)}</b>${k === 'easy' ? ' <em>recommended for a first colony</em>' : ''}<small>${esc(d.text || '')}</small></span></label>`).join('');
+    <span><b>${esc(d.name || k)}</b>${k === 'easy' ? ' <em>recommended for a first colony</em>' : ''}<small>${esc(k === 'easy' ? cap((d.text || '').replace(/^recommended for a first colony[:.]?\s*/i, '')) : d.text || '')}</small></span></label>`).join('');
 }
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 const chosenDifficulty = () => document.querySelector('#nDiff input:checked')?.value || 'easy';
 
 function rosterOf(data) {
@@ -257,7 +258,7 @@ function doShow(sh) {
     if (!BUILDING[key]) return;
     ui.openBuild(key);
     setPlacing({ key });
-    const spot = suggestSpot(key);
+    const spot = lastSpot = suggestSpot(key);
     if (spot) {
       const o = Math.floor(((BUILDING[key].size || 1) - 1) / 2);
       view?.focus?.(spot.x + o, spot.y + o);
@@ -317,6 +318,8 @@ function suggestSpot(key) {
     return R.findSpot(state, key, { score, free: true });
   } catch (e) { console.warn('suggestSpot', e); return null; }
 }
+
+let lastSpot = null;   // the last spot "Show me" marked (tests read it through window.__colony)
 
 // ---------------------------------------------------------------- How to play
 let helpPaused = false;
@@ -521,7 +524,7 @@ async function main() {
     return;
   }
   showTitle();
-  window.__colony = { get state() { return state; }, get view() { return view; }, get M() { return M; }, tick, setSpeed, settings };
+  window.__colony = { get state() { return state; }, get view() { return view; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings };
   // colony.html?from=remnant|classic: straight on from the expansion's ending, its army already found
   const from = new URLSearchParams(location.search).get('from');
   if (from && EXPANSION[from]) newDialog(from);

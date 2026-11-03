@@ -34,7 +34,7 @@ const STATUS = {
 };
 const OVERLAYS = [[null, 'None'], ['reach', 'Reach'], ['park', 'Parks'], ['power', 'Power']];
 const KIND_LABEL = { goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost' };
-const SPEAKER = { ruess: 'Prof. Hal Ruess', sato: 'Capt. Mira Sato' };
+const SPEAKER = { ruess: 'Prof. Ruess', sato: 'Capt. Sato' };
 const UI_KEY = 'el-colony-ui';   // per-viewer panel state (collapsed or not)
 const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}') || {}; } catch { return {}; } };
 const storeUI = (o) => { try { localStorage.setItem(UI_KEY, JSON.stringify(o)); } catch { } };
@@ -85,8 +85,8 @@ export function helpHtml(art, diff) {
   ${sec('goal', 'The goal', `<figure class="cl-hfig portrait">${pic('portrait/ruess', 'Prof. Hal Ruess')}<figcaption>Prof. Ruess</figcaption></figure>`, `
     <p>You are the Governor of <b>Eden</b>, a broken space colony above a poisoned Earth.</p>
     <p>Most of Eden is dark and airless. Your job: <b>open its chambers one by one</b> and <b>grow the colony</b>.</p>
-    <p>The <b>goal panel</b> (top left) always says what to do next. Press <b>Show me</b> and it takes you there. Each goal done pays a <b>Council grant</b> of credits and parts.</p>
-    <p>The <b>advisor</b> (top right) warns you when something is going wrong. Press <b>Fix</b> to jump to the answer.</p>`)}
+    <p>The <b>goal panel</b> (under the top bar) always says what to do next. Press <b>Show me</b> and it takes you there. Each goal done pays a <b>Council grant</b> of credits and parts.</p>
+    <p>The <b>advisor</b> warns you when something is going wrong. Press <b>Fix</b> to jump to the answer.</p>`)}
   ${sec('time', 'Time', '', `
     <p>One <b>day</b> passes every second. The buttons at the top are <b>pause</b>, <b>×1</b>, <b>×2</b> and <b>×4</b>. Keys: space, 1, 2, 3.</p>
     <p>When something needs your answer (a ship, a finished goal, a new chamber), <b>the clock stops</b> until you answer.</p>
@@ -693,7 +693,11 @@ export function createUI(root, api) {
     if (goalEl.classList.contains('folded') && !e.target.closest('button')) $('[data-goalfold]').click();
   });
   $('[data-goalall]').addEventListener('click', () => { listOpen = !listOpen; goalSig = ''; renderGoals(); });
-  showBtn.addEventListener('click', () => { if (goalShow) api.show?.(goalShow); });
+  const phone = () => matchMedia('(max-width: 760px)').matches;
+  // On a phone the strip folds away so the map (and the marked spot) can be seen.
+  const foldForMap = () => { if (phone()) { setFold(goalEl, $('[data-goalfold]'), true); offerEl.hidden = true; } };
+  showBtn.addEventListener('click', () => { if (goalShow) { foldForMap(); api.show?.(goalShow); } });
+  showBtn.addEventListener('animationend', () => showBtn.classList.toggle('pulse', false));
   offerEl.addEventListener('click', (e) => {
     const k = e.target.closest('[data-offer]')?.dataset.offer; if (!k) return;
     offerEl.hidden = true;
@@ -703,7 +707,7 @@ export function createUI(root, api) {
 
   // "1 / 2 fields" gives 0.5 for the bar; null when the text holds no fraction.
   const fraction = (t) => { const m = /(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/.exec(t || ''); return m && +m[2] > 0 ? Math.min(1, +m[1] / +m[2]) : null; };
-  const grantText = (r) => r ? [r.credits ? `+${num(r.credits)} credits` : '', r.parts ? `+${num(r.parts)} parts` : ''].filter(Boolean).join(' · ') : '';
+  const grantText = (r) => r ? [r.credits ? `+${num(r.credits)} cr` : '', r.parts ? `+${num(r.parts)} parts` : ''].filter(Boolean).join(' · ') : '';
   const showLabel = (sh) => !sh ? '' : sh.build ? `Show me: ${BUILDING[sh.build]?.name || sh.build}` : sh.market ? 'Show me: the Market' : sh.roads ? 'Show me: Roads' : sh.chamber != null ? 'Show me the chamber' : sh.tile ? 'Show me where' : 'Show me';
 
   function renderGoals() {
@@ -747,7 +751,6 @@ export function createUI(root, api) {
     if (goalEl.hidden) return;
     setFold(goalEl, $('[data-goalfold]'), false);
     showBtn.classList.toggle('pulse', false); void showBtn.offsetWidth; showBtn.classList.add('pulse');
-    setTimeout(() => showBtn.classList.toggle('pulse', false), 4000);
     if (offer) offerEl.hidden = false;
   }
 
@@ -761,7 +764,8 @@ export function createUI(root, api) {
   });
   advList.addEventListener('click', (e) => {
     const b = e.target.closest('[data-fix]'); if (!b) return;
-    const it = advItems[+b.dataset.fix]; if (it?.show) api.show?.(it.show);
+    const it = advItems[+b.dataset.fix];
+    if (it?.show) { foldForMap(); if (phone()) setFold(advEl, $('[data-advfold]'), true); api.show?.(it.show); }
   });
   function renderAdvice(force) {
     const G = api.goals, s = S();
