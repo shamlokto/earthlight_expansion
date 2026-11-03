@@ -114,7 +114,33 @@ export const GOALS = [
   { id: 'raid', speaker: 'sato', title: 'Weather the first raid',
     text: 'Sooner or later the sensors will pick up a contact. When the raiders come, fight with the guardians or pay them to leave: either way, Eden goes on. The Defence panel shows how heated things are.',
     done: (s) => (s.raid?.count || 0) >= 1, progress: (s) => (s.raid?.coming ? `raiders on the way` : `heat ${Math.round(s.raid?.heat || 0)}`), show: () => ({ defence: 'raids' }) },
+  // ---- version 4: the decks (docs/COLONY-V4.md)
+  { id: 'lift', speaker: 'ruess', title: 'Repair a lift',
+    text: 'Eden is three decks deep: the habitat rings above us and the machinery and catacombs below. The gold-rimmed pits are lift shafts. Repair a Lift on the one in our own chamber, and the decks above and below open to survey.',
+    done: (s) => s.buildings.some((b) => b.key === 'lift' && b.build === 0), show: () => ({ build: 'lift' }) },
+  { id: 'upper', speaker: 'ruess', title: 'Open a chamber on the upper deck',
+    text: 'Ride the lift up: the upper deck has sky gardens and galleries under the glass. Survey a chamber the lift reaches, seal it and pump in air, as we did down here.',
+    done: (s) => s.chambers.some((c) => c.deck === 'upper' && c.status === 'open'), show: (s) => deckChamber(s, 'upper') },
+  { id: 'lower', speaker: 'sato', title: 'Open a chamber on the lower deck',
+    text: 'The lower deck is pumps, cisterns and flooded tunnels, and the old core still runs hot down there. People say the catacombs are not empty. Open a chamber below and see.',
+    done: (s) => s.chambers.some((c) => c.deck === 'lower' && c.status === 'open'), show: (s) => deckChamber(s, 'lower') },
 ];
+
+// The next chamber to open on another deck: one being worked on, else a sealed one a working lift reaches.
+function deckChamber(s, deck) {
+  const on = s.chambers.filter((c) => c.deck === deck);
+  const busy = on.find((c) => c.status !== 'sealed' && c.status !== 'open');
+  // a big chamber may need more air than the stores hold: point at an air depot first (as airFor does)
+  if (busy && busy.status === 'surveyed' && openBreaches(s, busy).length === 0 && pressuriseAir(s, busy) > (storageCaps(s).air || 0)) return { build: 'depot' };
+  if (busy) return { chamber: busy.id };
+  const lifts = s.buildings.filter((b) => b.key === 'lift' && b.build === 0);
+  for (const l of lifts) {
+    const ch = s.decks?.[deck]?.ch?.[l.y * s.map.w + l.x];
+    const c = ch !== undefined && ch !== 255 && on.find((k) => k.id === ch);
+    if (c && c.status === 'sealed') return { chamber: c.id };
+  }
+  return lifts.length ? null : { build: 'lift' };
+}
 
 const active = (s) => GOALS.filter((g) => !g.only || g.only(s) || (s.goals?.done || []).includes(g.id));
 

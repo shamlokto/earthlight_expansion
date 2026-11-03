@@ -14,7 +14,12 @@
      Won / Lost / Tribute write state.raid.last for today (window.raid(from), window.resolve(how)).
      The minimap (bottom right) and the camera buttons (top
      right, where the game's right column leaves room) are on by default; the HUD toggles them.
-     window.view / window.state / window.tick / window.demo / window.showcaseV2 are for tests. -->
+     window.view / window.state / window.tick / window.demo / window.showcaseV2 are for tests.
+     Version 4 (docs/COLONY-V4.md): the upper and lower decks come from state.js when it makes
+     them, else from js/colony/decks.js generateDecks when present, else from fakeDecks() below (the
+     main map's hull box with plausible terrain, 7 lift shafts stamped through all three decks, a
+     few open chambers around the landing chamber's shaft with the deck kits, roads and lifts).
+     ?deck=upper|lower starts there; the Decks row switches (window.setDeck). -->
 <script type="importmap">{"imports":{"three":"./js/vendor/three/three.module.min.js"}}</script>
 <style>
   html, body { margin: 0; height: 100%; background: #010205; color: #cfd6e4; font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
@@ -53,6 +58,9 @@
     <label><input type="checkbox" id="nohe"> no He-3</label>
   </div>
   <div id="def"></div>
+  <div class="row">Decks <button data-deck="upper">Upper</button><button data-deck="main">Main</button><button data-deck="lower">Lower</button>
+    <button id="lift">Lift kits</button> <span id="decksrc"></span>
+  </div>
   <div class="row">Pop <input id="pop" type="number" min="0" max="5000" step="20" style="width:60px">
     <label><input type="checkbox" id="glum"> glum (happy 30)</label> <button id="stress">Stress</button>
   </div>
@@ -510,6 +518,166 @@ window.resolve = (how = 'won') => {
   return report;
 };
 
+
+// ---- version 4: the upper and lower decks (until js/colony/decks.js and state.js make them) -------
+
+const DECK_KINDS = { upper: ['garden', 'skylight', 'gallery', 'skylight', 'ring', 'garden'], lower: ['conduit', 'rock', 'flooded', 'catacomb', 'conduit', 'hall'] };
+const DECK_NAMES = { upper: ['Skyward Gallery', 'Lantern Ring', 'Sunward Garden', 'Glasshouse Row', 'Halo Walk', 'Cloud Terrace', 'Upper Arcade', 'Orchard Ring', 'Mirror Hall'],
+  lower: ['Old Cistern', 'Pump Hall', 'Ossuary', 'Dynamo Vault', 'Drowned Tunnels', 'Cable Run', 'Crypt Row', 'Boiler Deep', 'Sump Gallery'] };
+function fakeDecks(state) {
+  const main = state.map, mt = main.t;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let i = 0; i < W * H; i++) if (mt[i] === T.HULL) { const x = i % W, y = (i / W) | 0; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  let nextCh = Math.max(...state.chambers.map((c) => c.id)) + 1;
+  const decks = {}, chambers = [];
+  const ix0 = x0 + 2, ix1 = x1 - 2, iy0 = y0 + 2, iy1 = y1 - 2;
+  for (const [d, seed, nc, nr] of [['upper', 11, 6, 3], ['lower', 23, 5, 4]]) {
+    const t = new Uint8Array(W * H).fill(T.OUTSIDE), r = new Uint8Array(W * H), ch = new Uint8Array(W * H).fill(255), sv = new Uint8Array(W * H);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) t[y * W + x] = (x < ix0 || x > ix1 || y < iy0 || y > iy1) ? T.HULL : T.DECK;
+    const xs = [ix0 - 1]; for (let k = 1; k < nc; k++) xs.push(Math.round(ix0 + (ix1 - ix0) * k / nc + 4 * (hash(k, 1, seed) - 0.5))); xs.push(ix1 + 1);
+    const list = [];
+    for (let c = 0; c < nc; c++) {
+      const ys = [iy0 - 1]; for (let k = 1; k < nr; k++) ys.push(Math.round(iy0 + (iy1 - iy0) * k / nr + 6 * (hash(c, k, seed) - 0.5))); ys.push(iy1 + 1);
+      for (let k = 0; k < nr; k++) {
+        const cx0 = xs[c] + 1, cx1 = xs[c + 1] - 1, cy0 = ys[k] + 1, cy1 = ys[k + 1] - 1, id = nextCh++;
+        const kind = DECK_KINDS[d][(c * 2 + k) % DECK_KINDS[d].length];
+        const cham = { id, name: DECK_NAMES[d][(c * nr + k) % DECK_NAMES[d].length] + (c * nr + k >= DECK_NAMES[d].length ? ' ' + (c + 1) : ''), kind, deck: d, x0: cx0, y0: cy0, x1: cx1, y1: cy1, tiles: (cx1 - cx0 + 1) * (cy1 - cy0 + 1), status: 'sealed', breaches: [], work: 0 };
+        list.push(cham);
+        for (let y = cy0; y <= cy1; y++) for (let x = cx0; x <= cx1; x++) {
+          const i = y * W + x, f = fbm(x / 6, y / 6, seed + 3);
+          ch[i] = id;
+          if (d === 'upper') {
+            if (kind === 'garden') t[i] = fbm(x / 5, y / 5, seed + 5) > 0.66 ? T.FOREST : f > 0.5 ? T.FERTILE : T.PLAIN;
+            else if (kind === 'skylight') t[i] = (y - cy0) % 6 < 4 && x > cx0 && x < cx1 && y > cy0 && y < cy1 ? T.GLASS : T.DECK;
+            else if (kind === 'ring') t[i] = Math.abs(Math.hypot((x - (cx0 + cx1) / 2) / (cx1 - cx0 + 1), (y - (cy0 + cy1) / 2) / (cy1 - cy0 + 1)) - 0.3) < 0.08 ? T.PLAIN : T.DECK;
+            else t[i] = T.DECK;
+          } else {
+            if (kind === 'conduit' || kind === 'hall') t[i] = kind === 'hall' && f > 0.62 ? T.RUBBLE : T.CONDUIT;
+            else if (kind === 'rock') t[i] = f > 0.6 ? T.RUBBLE : f > 0.42 ? T.ROCK : T.DECK;
+            else if (kind === 'flooded') t[i] = f > 0.45 ? T.MARSH : T.DECK;
+            else t[i] = ((x - cx0) % 5 === 2 || (y - cy0) % 5 === 2) && hash(x >> 1, y >> 1, seed) > 0.25 ? T.CATACOMB : T.ROCK;
+            if (t[i] === T.RUBBLE) sv[i] = 40;
+          }
+        }
+      }
+    }
+    for (let y = iy0; y <= iy1; y++) for (let x = ix0; x <= ix1; x++) if (ch[y * W + x] === 255) t[y * W + x] = T.BULKHEAD;
+    for (const a of list) for (const b of list) if (a.id < b.id) {   // a gate per shared wall
+      if (a.x1 + 2 === b.x0 && a.y1 >= b.y0 && b.y1 >= a.y0) { const y = Math.round((Math.max(a.y0, b.y0) + Math.min(a.y1, b.y1)) / 2); t[y * W + a.x1 + 1] = T.GATE; }
+      if (a.x0 === b.x0 && a.y1 + 2 === b.y0) { const x = Math.round((a.x0 + a.x1) / 2); t[(a.y1 + 1) * W + x] = T.GATE; }
+    }
+    for (const c of list) {   // breaches: the sky panels (upper) or cracked bulkheads (lower)
+      const want = Math.floor(hash(c.id, 3, seed) * 3);
+      for (let k = 0, tries = 0; k < want && tries < 100; tries++) {
+        const x = Math.round(c.x0 + hash(c.id, tries, 7) * (c.x1 - c.x0)), y = hash(c.id, tries, 8) < 0.5 ? c.y0 - 1 : c.y1 + 1, i = y * W + x;
+        if ((t[i] === T.HULL || t[i] === T.BULKHEAD) && !c.breaches.includes(i)) { t[i] = T.BREACH; c.breaches.push(i); k++; }
+      }
+    }
+    decks[d] = { t, r, ch, sv };
+    chambers.push(...list);
+  }
+  // 7 lift shafts: 2×2, the same (x, y) on all three decks, on free interior ground of each; the
+  // first in the main deck's landing chamber, near the Command Centre
+  const occ = RU.occupancy(state), shafts = [];
+  const bad = new Set([T.RIVER, T.LAKE, T.GATE, T.BULKHEAD, T.HULL, T.BREACH, T.SHAFT]);
+  const fits = (x, y) => {
+    for (let j = y - 1; j <= y + 2; j++) for (let i = x - 1; i <= x + 2; i++) {
+      const k = j * W + i;
+      if (occ[k] || bad.has(mt[k]) || main.ch[k] === 255) return false;
+      for (const d of ['upper', 'lower']) if (decks[d].ch[k] === 255 || bad.has(decks[d].t[k])) return false;
+      if (j >= y && j <= y + 1 && i >= x && i <= x + 1 && shafts.some(([sx, sy]) => Math.abs(sx - i) < 8 && Math.abs(sy - j) < 8)) return false;
+    }
+    return true;
+  };
+  const near = (cx, cy) => { for (let rad = 0; rad < 30; rad++) for (let y = cy - rad; y <= cy + rad; y++) for (let x = cx - rad; x <= cx + rad; x++) if (Math.max(Math.abs(x - cx), Math.abs(y - cy)) === rad && fits(x, y)) return [x, y]; return null; };
+  const cmd = state.buildings.find((b) => b.key === 'command');
+  for (const [cx, cy] of [[cmd.x - 6, cmd.y - 5], [x0 + 22, y0 + 18], [x0 + 70, y0 + 14], [x1 - 30, y0 + 20], [x0 + 30, y1 - 22], [x1 - 22, y1 - 20], [x1 - 60, (y0 + y1) >> 1]]) {
+    const p = near(cx, cy);
+    if (p) shafts.push(p);
+  }
+  for (const [x, y] of shafts) for (const k of [0, 1, W, W + 1]) { const i = y * W + x + k; mt[i] = T.SHAFT; decks.upper.t[i] = T.SHAFT; decks.lower.t[i] = T.SHAFT; }
+  state.decks = decks;
+  state.chambers.push(...chambers);
+  state.shafts = shafts.map(([x, y]) => ({ x, y }));
+  return shafts;
+}
+
+// The deck showcase: around the first shaft, open chambers on the upper and lower decks with the
+// deck kits on a road, working Lifts on all three decks at the first shaft, one Lift being built.
+function deckDemo(state, shafts) {
+  const [sx, sy] = shafts[0];
+  let nextId = Math.max(0, ...state.buildings.map((b) => b.id)) + 1;
+  const put = (deck, key, x, y, extra = {}) => {
+    const b = { id: nextId++, key, x, y, level: 1, mode: BUILDING[key].modes?.[0]?.key ?? null, build: 0, off: false, ...extra };
+    if (deck !== 'main') b.deck = deck;
+    state.buildings.push(b);
+    return b;
+  };
+  const tOf = (deck) => (deck === 'main' ? state.map : state.decks[deck]);
+  for (const deck of ['main', 'upper', 'lower']) put(deck, 'lift', sx, sy);
+  if (shafts[1]) put('lower', 'lift', shafts[1][0], shafts[1][1], { build: 3 });
+  if (shafts[2]) put('main', 'lift', shafts[2][0], shafts[2][1]);
+  for (const deck of ['upper', 'lower']) {
+    const m = tOf(deck), home = m.ch[sy * W + sx];
+    const c0 = state.chambers.find((c) => c.id === home);
+    // open the shaft's chamber and its gate neighbours; survey the next ring
+    const nb = (c) => state.chambers.filter((o) => o.deck === deck && o !== c && (o.x0 <= c.x1 + 2 && o.x1 >= c.x0 - 2 && o.y0 <= c.y1 + 2 && o.y1 >= c.y0 - 2));
+    c0.status = 'open';
+    for (const o of nb(c0)) { o.status = 'open'; for (const q of nb(o)) if (q.status === 'sealed') q.status = 'surveyed'; }
+    const pr = state.chambers.find((o) => o.deck === deck && o.status === 'surveyed');
+    if (pr) { pr.status = 'pressurising'; pr.work = 2; }
+    // a road along the row under the shaft, buildings above and below it
+    const occ = new Uint8Array(W * H), road = sy + 2;
+    for (const b of state.buildings) if ((b.deck || 'main') === deck) { const n = BUILDING[b.key].size; for (let j = b.y; j < b.y + n; j++) for (let i = b.x; i < b.x + n; i++) occ[j * W + i] = 1; }
+    const floorOk = (i) => ![T.HULL, T.BULKHEAD, T.GATE, T.OUTSIDE, T.GLASS, T.SHAFT, T.BREACH, T.CATACOMB, T.MARSH, T.RUBBLE].includes(m.t[i]) && state.chambers.find((c) => c.id === m.ch[i])?.status === 'open';
+    const roadOk = (i) => floorOk(i) || m.t[i] === T.GATE;
+    let xa = sx, xb = sx;
+    while (xa > 1 && roadOk(road * W + xa - 1) && sx - xa < 22) xa--;
+    while (xb < W - 2 && roadOk(road * W + xb + 1) && xb - sx < 24) xb++;
+    for (let x = xa; x <= xb; x++) { if (!occ[road * W + x]) { put(deck, 'road', x, road); occ[road * W + x] = 1; } }
+    const keys = deck === 'upper' ? ['skygarden', 'habitat', 'gallery', 'habitat', 'park', 'skygarden', 'habitat', 'grove', 'habitat', 'gallery']
+      : ['cistern', 'depot', 'geotap', 'pumpstation', 'airplant', 'depot', 'cistern', 'pumpstation', 'geotap', 'depot'];
+    let k = 0, above = true;
+    const fitsAt = (n, x, y) => { for (let j = y; j < y + n; j++) for (let i = x; i < x + n; i++) { const q = j * W + i; if (occ[q] || !floorOk(q)) return false; } return true; };
+    for (let x = xa; x <= xb && k < keys.length; ) {
+      const key = keys[k], n = BUILDING[key].size, y = above ? road - n : road + 1;
+      if (fitsAt(n, x, y)) {
+        put(deck, key, x, y, key === 'habitat' ? { level: 1 + (k % 3) } : key === 'depot' ? { mode: ['water', 'parts', 'food'][k % 3] } : key === 'geotap' && k > 5 ? { build: 2 } : {});
+        for (let j = y; j < y + n; j++) for (let i = x; i < x + n; i++) occ[j * W + i] = 1;
+        k++; above = !above;
+        if (above) x += n + 1;
+      } else if (!above) { above = true; x++; } else { above = false; }
+    }
+  }
+  // the main deck: a Pump Station in the landing chamber
+  const occM = RU.occupancy(state), land = state.chambers.find((c) => c.id === state.map.ch[sy * W + sx]);
+  for (let y = land.y0; y <= land.y1; y++) for (let x = land.x0; x <= land.x1; x++) {
+    const i = y * W + x;
+    if (!occM[i] && [T.PLAIN, T.POOR, T.DECK].includes(state.map.t[i]) && Math.abs(x - sx) + Math.abs(y - sy) > 4 && Math.abs(x - sx) + Math.abs(y - sy) < 9) { put('main', 'pumpstation', x, y); y = 1e9; break; }
+  }
+  state.pop = Math.max(state.pop || 0, 420);
+  return [sx + 1, sy + 1];
+}
+
+// Decks for the test: state.js's, else decks.js's, else the fake ones above.
+async function ensureDecks(state) {
+  const asXY = (list) => [...(list || [])].sort((a, b) => (b.landing ? 1 : 0) - (a.landing ? 1 : 0)).map((s) => [s.x ?? s[0], s.y ?? s[1]]);   // the landing chamber's first
+  if (state.decks) return { src: 'state.js decks', shafts: asXY(state.decks.shafts || state.shafts) };
+  try {
+    const D = await import('./js/colony/decks.js');
+    const startId = Math.max(...state.chambers.map((c) => c.id)) + 1;
+    const g = D.generateDecks(state.seed ?? 2, state.map, state.chambers, startId);
+    state.decks = { upper: g.upper, lower: g.lower, shafts: g.shafts };
+    state.chambers.push(...g.chambers);
+    const shafts = asXY(g.shafts);
+    for (const [x, y] of shafts) for (const k of [0, 1, W, W + 1]) state.map.t[y * W + x + k] = T.SHAFT;
+    return { src: 'decks.js', shafts };
+  } catch (e) {
+    if (!/Failed to fetch|Importing a module|404|Cannot find/i.test(String(e))) console.warn('decks.js failed, using fake decks:', e);
+    return { src: 'fake decks', shafts: fakeDecks(state) };
+  }
+}
+
 let gen = null, src, state;
 const showcase = qs.has('showcase') || qs.has('fake');
 if (showcase) {
@@ -526,14 +694,17 @@ if (showcase) {
   state = await realState(seed);
   src = `newGame seed ${seed}`;
 }
+const decksGot = await ensureDecks(state);
+const deckCentre = decksGot.shafts.length ? deckDemo(state, decksGot.shafts) : null;
 document.getElementById('src').textContent = '· ' + src;
+document.getElementById('decksrc').textContent = decksGot.src + ` · ${decksGot.shafts.length} shafts`;
 
 const info = document.getElementById('info');
 const view = createView(document.getElementById('view'), {
   onTileHover(x, y) {
     if (x < 0) { info.textContent = 'off the map'; return; }
-    const i = y * W + x, c = state.chambers.find((k) => k.id === state.map.ch[i]);
-    info.textContent = `(${x}, ${y}) ${TERRAIN[state.map.t[i]].name}${c ? ` · ${c.name} ${c.status}` : ''}`;
+    const m = view.deck === 'main' ? state.map : state.decks[view.deck], i = y * W + x, c = state.chambers.find((k) => k.id === m.ch[i]);
+    info.textContent = `${view.deck} (${x}, ${y}) ${TERRAIN[m.t[i]].name || 'outside'}${c ? ` · ${c.name} ${c.status}` : ''}`;
     if (ghostKey) view.setGhost(ghostKey, x, y, (x + y) % 3 !== 0);
   },
   onTileClick(x, y, button) { console.log('click', x, y, button); info.textContent += `\nclicked (${x}, ${y}) button ${button}`; },
@@ -595,7 +766,10 @@ document.getElementById('mini').onchange = (e) => view.setMinimap(e.target.check
 document.getElementById('navb').onchange = (e) => view.setNavButtons(e.target.checked);
 document.getElementById('wheel').onchange = (e) => view.setWheelMode(e.target.value);
 setInterval(() => { document.getElementById('wk').textContent = `last: ${view.debug.wheelKind()}`; }, 400);
-Object.assign(window, { view, state, gen, landing: lm, demo: { demoRoads, stress, realState }, showcaseV2, showcaseV3 });
+for (const el of document.querySelectorAll('[data-deck]')) el.onclick = () => view.setDeck(el.dataset.deck);
+document.getElementById('lift').onclick = () => { if (deckCentre) view.focus(deckCentre[0], deckCentre[1]); };
+if (qs.get('deck')) { view.setDeck(qs.get('deck'), { animate: false }); if (deckCentre) view.focus(deckCentre[0], deckCentre[1]); }
+Object.assign(window, { view, state, gen, landing: lm, demo: { demoRoads, stress, realState, fakeDecks, deckDemo }, showcaseV2, showcaseV3, deckCentre, decksGot, setDeck: (d, o) => view.setDeck(d, o) });
 window.__cam = (tx, tz, d, polar, theta) => view.debug.placeCamera(tx, tz, d, polar, theta);
 </script>
 </body>

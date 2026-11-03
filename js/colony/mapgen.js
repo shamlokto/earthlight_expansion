@@ -1,6 +1,7 @@
 // Earthlight Space Colony Rebuild: the map generator (docs/COLONY-V1.md "The map", docs/COLONY.md §5).
 // Pure and deterministic: no DOM, no Math.random; the same seed always gives the same map.
 //   generateMap(seed) → { map: { w, h, t, r, ch, sv }, chambers, start: { command, dock, landing } }
+// The seeded helpers (hashSeed, mulberry32, fbm, hypot, gatesConnect) are shared with decks.js (version 4).
 // Space follows Earth Light's landscape grammar (organic blobs and rivers, diagonal magnetic belts,
 // never straight bands); Eden is a walled fortress of chambers split by bulkheads with gates.
 import { T, R } from './data/terrain.js';
@@ -31,7 +32,7 @@ const NAMES = {
 
 // --- seeded randomness -----------------------------------------------------------------------------
 
-function hashSeed(seed) {
+export function hashSeed(seed) {
   const s = String(seed);
   let h = 1779033703 ^ s.length;
   for (let i = 0; i < s.length; i++) { h = Math.imul(h ^ s.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
@@ -39,7 +40,7 @@ function hashSeed(seed) {
   return (h ^ (h >>> 16)) >>> 0;
 }
 
-function mulberry32(seed) {
+export function mulberry32(seed) {
   const st = new Int32Array([seed]);   // state in a typed array: no boxed number per call
   return () => {
     const a = (st[0] = (st[0] + 0x6d2b79f5) | 0);
@@ -61,7 +62,7 @@ function vnoise(x, y, s) {
   const a = lattice(ix, iy, s), b = lattice(ix + 1, iy, s), c = lattice(ix, iy + 1, s), d = lattice(ix + 1, iy + 1, s);
   return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
 }
-const fbm = (x, y, s) => (vnoise(x, y, s) * 2 + vnoise(x * 2.03 + 17.1, y * 2.03 + 5.3, s + 1)) / 3;
+export const fbm = (x, y, s) => (vnoise(x, y, s) * 2 + vnoise(x * 2.03 + 17.1, y * 2.03 + 5.3, s + 1)) / 3;
 
 // Engine-exact maths: Math.sin/cos/hypot/pow may differ in the last bit between JS engines, which
 // would let node and a browser grow different maps from one seed. +, *, / and sqrt are exact (IEEE).
@@ -73,7 +74,7 @@ function sin(x) {
   return x * (1 - x2 / 6 * (1 - x2 / 20 * (1 - x2 / 42 * (1 - x2 / 72 * (1 - x2 / 110)))));
 }
 const cos = (x) => sin(x + PI / 2);
-const hypot = (x, y) => Math.sqrt(x * x + y * y);
+export const hypot = (x, y) => Math.sqrt(x * x + y * y);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
@@ -587,7 +588,7 @@ function oreSpots(t, tiles) {
 }
 
 // Every chamber reachable from the landing chamber by walking floor and gate tiles.
-function gatesConnect(t, ch, chambers, start) {
+export function gatesConnect(t, ch, chambers, start) {
   const seen = new Uint8Array(W * H), reached = new Set();
   const q = [];
   for (let i = 0; i < W * H; i++) if (ch[i] === start) { seen[i] = 1; q.push(i); }

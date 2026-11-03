@@ -14,6 +14,11 @@
 //     or by styling `.cv-minimap` directly. 1 CSS px per tile, half that at phone widths.
 //   * marks (version 3, from defence.js through view.js each frame): guardians as small blue dots,
 //     raiders as red dots during a raid, and a red glow along the edge a coming raid comes from
+//   * decks (version 4, docs/COLONY-V4.md): view.js hands it the current deck's view of the state
+//     (its map, chambers and buildings); OUTSIDE tiles are dark space, GLASS shows the main deck's
+//     ground beneath (extra.below), and every 2×2 lift shaft gets a gold square: an outline while
+//     the shaft is unrepaired, filled with a white core when a working Lift stands on it on any
+//     deck (extra.lifts), a cyan core while one is being built
 import { TERRAIN, T } from '../data/terrain.js';
 import { BUILDING, DOCK_REACH } from '../data/buildings.js';
 
@@ -23,6 +28,7 @@ const ROAD_RGB = [176, 184, 198], REACH_RGB = [111, 211, 255], BUILD_RGB = [111,
 const rgbOf = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 const CAT_RGB = Object.fromEntries(Object.entries(CAT_COLOR).map(([k, v]) => [k, rgbOf(v)]));
 const TERRAIN_RGB = TERRAIN.map((d) => rgbOf(d.color));
+const OUTSIDE_RGB = [5, 7, 15], SHAFT_RGB = [26, 24, 20];
 const hash = (x, y) => { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
 // Space reach as a tile mask: Chebyshev DOCK_REACH around each finished dock's centre, then each
@@ -77,6 +83,7 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
   const base = document.createElement('canvas'), bctx = base.getContext('2d');
 
   let W = 0, H = 0, st = null, terr = null, img = null, visible = true;
+  let extra = {}, shafts = [];                       // version 4: lifts on every deck, shaft corners [x, y, ...]
   let baseDirty = true, drawSig = '', poly = null, target = null, marks = null;
   const phone = typeof matchMedia === 'function' ? matchMedia('(max-width: 760px)') : null;
   let scale = 1;
@@ -107,7 +114,20 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
         r += (200 - r) * cl; g += (220 - g) * cl; b += (240 - b) * cl;
         if (y > 0 && t[i - W] !== T.EARTH) { r = 120; g = 190; b = 255; }
       } else if (id === T.VOID) k = 0.8 + 0.4 * hash(x, y);
+      else if (id === T.OUTSIDE) { [r, g, b] = OUTSIDE_RGB; k = hash(x, y) > 0.985 ? 6 : 1; }   // dark space, a few stars
+      else if (id === T.SHAFT) [r, g, b] = SHAFT_RGB;
+      else if (id === T.GLASS && extra.below) {   // the main deck's ground, dimly, through the panel
+        const c2 = TERRAIN_RGB[extra.below[i]] || c;
+        r = c2[0] * 0.45 + c[0] * 0.3; g = c2[1] * 0.45 + c[1] * 0.3; b = c2[2] * 0.45 + c[2] * 0.3;
+        if ((x + y) % 4 === 0) k = 1.15;
+      }
       terr[i * 3] = r * k; terr[i * 3 + 1] = g * k; terr[i * 3 + 2] = b * k;
+    }
+    // the top-left tile of every lift shaft (2×2 sites)
+    shafts = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      if (t[i] === T.SHAFT && (x === 0 || t[i - 1] !== T.SHAFT) && (y === 0 || t[i - W] !== T.SHAFT)) shafts.push(x, y);
     }
   }
 
@@ -172,6 +192,7 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
     ctx.imageSmoothingEnabled = cw < W;   // downscaled on a phone at 1x: smooth; otherwise crisp
     ctx.clearRect(0, 0, cw, chh);
     ctx.drawImage(base, 0, 0, cw, chh);
+    if (shafts.length) drawShafts(sx, sz);
     if (marks) drawMarks(sx, sz, cw, chh);
     if (poly && poly.length >= 6) {
       ctx.save();
@@ -193,6 +214,29 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
       }
       ctx.restore();
     }
+  }
+
+  // Lift shafts: gold squares round each 2×2 site, filled where a Lift works (on any deck).
+  function drawShafts(sx, sz) {
+    const lifts = extra.lifts || [];
+    const at = (x, y) => { let s = 0; for (const l of lifts) if (x >= l.x - 1 && x <= l.x + 1 && y >= l.y - 1 && y <= l.y + 1) s = Math.max(s, l.working ? 2 : 1); return s; };
+    const half = Math.max(3, sx * 2.6);
+    ctx.save();
+    ctx.lineWidth = Math.max(1, sx * 0.9);
+    for (let k = 0; k < shafts.length; k += 2) {
+      const x = shafts[k], y = shafts[k + 1], cx = (x + 1) * sx, cy = (y + 1) * sz, s = at(x, y);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(cx - half - 1, cy - half - 1, half * 2 + 2, half * 2 + 2);
+      if (s === 2) { ctx.fillStyle = '#f5c542'; ctx.fillRect(cx - half, cy - half, half * 2, half * 2); }
+      ctx.strokeStyle = '#f5c542';
+      ctx.strokeRect(cx - half + 0.5, cy - half + 0.5, half * 2 - 1, half * 2 - 1);
+      if (s) {
+        ctx.fillStyle = s === 2 ? '#ffffff' : '#6fd8ff';
+        const c = Math.max(1, half * 0.42);
+        ctx.fillRect(cx - c, cy - c, c * 2, c * 2);
+      }
+    }
+    ctx.restore();
   }
 
   // The coming raid's edge glows red (pulsing), guardians are blue dots, raiders red dots.
@@ -243,9 +287,10 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
   // ---- API ----------------------------------------------------------------------------------------
   return {
     el,
-    // A new map (or new terrain): redraw everything.
-    setState(state) {
-      st = state;
+    // A new map (or new terrain, or another deck): redraw everything. `more` (version 4):
+    // { lifts: [{ x, y, working }] on every deck, below: the main deck's terrain under GLASS }.
+    setState(state, more) {
+      st = state; extra = more || {};
       if (state.map.w !== W || state.map.h !== H) {
         W = state.map.w; H = state.map.h;
         base.width = W; base.height = H;
@@ -256,7 +301,7 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
       baseDirty = true;
     },
     // Chambers or buildings changed: recompose on the next draw (only if shown).
-    refresh(state) { st = state; baseDirty = true; },
+    refresh(state, more) { st = state; if (more) extra = more; baseDirty = true; },
     // The camera's ground footprint [x0, z0, x1, z1, ...] and target [x, z], in tiles, and the
     // defence marks ({ raiders: [x, z, ...], guardians: [x, z, ...], edge }); drawn only when changed.
     frame(footprint, at, m = null) { poly = footprint; target = at; marks = m; draw(); },

@@ -3,10 +3,11 @@
 import { generateMap } from './mapgen.js';
 import { BUILDING, BUILDINGS } from './data/buildings.js';
 import { T } from './data/terrain.js';
-import { findSpot, log, unitPrice, chamberOf, addPending, placeCheck, occupancy, tilesOf, upgradeState } from './rules.js';
+import { findSpot, log, unitPrice, chamberOf, addPending, placeCheck, occupancy, tilesOf, upgradeState, ensureDecks, mapOf } from './rules.js';
 import { farmSoil } from './sim.js';
 import { DIFFICULTY } from './difficulty.js';
 
+export { mapOf };
 export const SAVE_KEY = 'el-colony';
 export const TITLE = 'Earthlight Space Colony Rebuild';
 // Starting numbers (tuned by tests/colony-sim.mjs).
@@ -50,6 +51,9 @@ export function newGame({ seed = 1, importSave = null, beta = false, types = nul
   };
   const cmd = put('command', start.command.x, start.command.y);
   put('dock', start.dock.x, start.dock.y);
+  // version 4: the upper and lower decks, and the lift shafts stamped into this map (one in the
+  // landing chamber), before the rest of the start so nothing stands on a shaft
+  ensureDecks(state);
   // The rest of the start goes near the Command Centre: the pump on the river, the farm on the best
   // soil, the habitats on ground a farm would not want.
   const land = chamberOf(state, typeof start.landing === 'object' ? start.landing.id : start.landing) || chambers.find((c) => c.status === 'open');
@@ -125,6 +129,7 @@ function layStarterRoads(state, cmd) {
 // ---------------------------------------------------------------- save / load
 
 const MAP_ARRAYS = ['t', 'r', 'ch', 'sv'];
+const EXTRA_DECKS = ['upper', 'lower'];   // state.decks (version 4), stored like the main map
 function toB64(u8) {
   let s = '';
   for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
@@ -139,13 +144,21 @@ function fromB64(str) {
 export function saveState(state) {
   const map = { ...state.map };
   for (const k of MAP_ARRAYS) map[k] = toB64(state.map[k]);
-  return JSON.stringify({ ...state, map });
+  if (!state.decks) return JSON.stringify({ ...state, map });
+  const decks = { ...state.decks };
+  for (const d of EXTRA_DECKS) if (state.decks[d]) {
+    decks[d] = { ...state.decks[d] };
+    for (const k of MAP_ARRAYS) decks[d][k] = toB64(state.decks[d][k]);
+  }
+  return JSON.stringify({ ...state, map, decks });
 }
 
 export function loadState(text) {
   const s = typeof text === 'string' ? JSON.parse(text) : text;
   if (!s || s.v !== 1 || !s.map) throw new Error('This is not an Earthlight colony save.');
   for (const k of MAP_ARRAYS) s.map[k] = fromB64(s.map[k]);
+  // version 4: the extra decks' arrays; a save without decks gets them generated from its seed
+  if (s.decks) for (const d of EXTRA_DECKS) if (s.decks[d]) for (const k of MAP_ARRAYS) s.decks[d][k] = fromB64(s.decks[d][k]);
   upgradeState(s);   // colonies saved before version 2: research, alloy, helium, the lab
   // a version 2 building is unlocked only by its tech (saves from builds that unlocked them early)
   s.unlocked = s.unlocked.filter((k) => !BUILDING[k]?.tech || s.research.done.includes(BUILDING[k].tech));

@@ -20,6 +20,16 @@
 //     mouse wheel, see CONTROLS below; button, key and minimap moves are animated (animTo)
 //   * minimap (minimap.js) and the camera buttons (navpad.js): DOM overlays in the container,
 //     shown by default, toggled with setMinimap(on) / setNavButtons(on)
+//   * decks (version 4, docs/COLONY-V4.md): setDeck('upper' | 'main' | 'lower') shows one deck of
+//     state.decks (same W×H indexing as state.map; chambers and buildings carry `deck`, absent =
+//     main). Everything above draws from a light view of the state for that deck (its map, chambers
+//     and buildings; the rest read through to the state), so terrain, tints, buildings, roads,
+//     movers, overlays, picking, the ghost and the minimap follow the deck. OUTSIDE tiles are not
+//     drawn (space, Earth and the stars stay as the backdrop); GLASS sky panels show the main
+//     deck's ground dimly beneath them; SHAFT tiles are dark pits with a gold rim, covered by a
+//     Lift's plate; guardians and raids (defence.js) and space traffic exist on the main deck only.
+//     A deck change rebuilds the terrain (a few tens of ms) while the world slides through a short
+//     rise or sink under a dark veil, and the deck's name shows for a moment
 // Art slots (js/colony/art.js, docs/COLONY.md §7): terrain/<key> textures the tile tops (every
 // terrain, version 2's forest, hills, rock, meteoroid, comet, plasma and gravity included) and
 // sky/earth-below the Earth when present; otherwise everything is procedural.
@@ -29,9 +39,9 @@
 //              alt (option) + two-finger scroll: tilt · click a tile: select / build
 //   Mouse      wheel: zoom (toward the pointer) · left-drag: rotate and tilt · right-drag: pan
 //   Touch      one finger: rotate · two fingers: pinch to zoom, drag to pan
-//   Keyboard   WASD / arrows: pan · Q / E: rotate · + / −: zoom · PgUp / PgDn: tilt ·
+//   Keyboard   WASD / arrows: pan · Q / E: rotate · + / −: zoom · PgUp / PgDn: one deck up / down ·
 //              Home: back to the Command Centre
-//   Buttons    zoom in / out, rotate left / right 45°, tilt up / down, home (top right of the map)
+//   Buttons    zoom in / out, rotate left / right 45°, tilt up / down, home, deck ▲ ▼ (top right)
 //   Minimap    click or drag on it to move the view there (bottom right)
 // The wheel guess: ctrl + wheel is always zoom (browsers send a trackpad pinch that way, Safari
 // sends gesture events, handled too); a wheel event in pixels (deltaMode 0) with a sideways part or
@@ -90,13 +100,60 @@ const SHAPE = {
   marsh: (x, y) => [0.02 + 0.04 * hash(x, y), 0.8 + 0.4 * smooth(x / 3, y / 3)],
   rubble: (x, y) => [0.2 + 0.4 * hash(x, y), 0.6 + 0.6 * hash(x + 7, y)],
   breach: () => [0.2, 1],
+  // version 4: the decks (GLASS is drawn by buildTerrain itself, OUTSIDE not at all)
+  glass: () => [0.05, 1],
+  conduit: (x, y) => [0.1, (x % 4 === 0 || y % 6 === 0 ? 0.78 : 1) * (0.92 + 0.12 * hash(x, y))],   // pipe runs in the plating
+  catacomb: (x, y) => [0.22 + 0.16 * hash(x, y), 0.7 + 0.45 * smooth(x / 3, y / 3)],
+  shaft: () => [-0.5, 1],
 };
 // Tile-top colours that differ from terrain.js (whose colour then goes to the rocks or water).
-const TOP_COLOR = { asteroid: '#2c2622', meteoroid: '#27221f', river: '#1b3049', lake: '#182c44' };
+const TOP_COLOR = { asteroid: '#2c2622', meteoroid: '#27221f', river: '#1b3049', lake: '#182c44', shaft: '#0c0d11' };
+const SHAFT_RIM = '#f0be48';
+export const DECKS = ['upper', 'main', 'lower'];
+export const DECK_INFO = {
+  upper: { name: 'Upper deck', text: 'Galleries, sky gardens and the sky panels' },
+  main: { name: 'Main deck', text: 'Fields, the river, industry and the docks' },
+  lower: { name: 'Lower deck', text: 'Machinery halls, flooded tunnels and catacombs' },
+};
+// light per deck: [hemisphere, sun, earthlight]; the main deck's are the version 1-3 values
+const DECK_LIGHT = { upper: [2.4, 2.8, 0.9], main: [2.2, 2.6, 0.9], lower: [1.75, 2.1, 0.55] };
+const hasDeck = (state, d) => d === 'main' || !!state?.decks?.[d]?.t;
+const isOnDeck = (o, d) => (o.deck || 'main') === d;
+// The state as one deck sees it: its map, chambers and buildings; everything else reads through.
+function deckView(state, d) {
+  const anyDeck = (list) => (list || []).some((o) => o.deck && o.deck !== 'main');
+  if (d === 'main' && !anyDeck(state.buildings) && !anyDeck(state.chambers)) return state;   // a version 1-3 colony
+  const v = Object.create(state), D = d === 'main' ? null : state.decks[d];
+  v.map = D ? { w: state.map.w, h: state.map.h, t: D.t, r: D.r, ch: D.ch, sv: D.sv, deck: d } : state.map;
+  v.chambers = (state.chambers || []).filter((c) => isOnDeck(c, d));
+  v.buildings = (state.buildings || []).filter((b) => isOnDeck(b, d));
+  v.deck = d;
+  return v;
+}
+// The sky panel: a thin steel frame with a cross bar and a faint streak of reflected light; the
+// pane itself nearly clear, so the main deck's ground under it shows through.
+let glassTex = null;
+function glassTexture() {
+  if (glassTex) return glassTex;
+  const n = 64, cv = document.createElement('canvas');
+  cv.width = cv.height = n;
+  const g = cv.getContext('2d');
+  g.fillStyle = 'rgba(200, 235, 255, 0.16)'; g.fillRect(0, 0, n, n);
+  const sheen = g.createLinearGradient(0, 0, n, n);
+  sheen.addColorStop(0.3, 'rgba(255, 255, 255, 0)'); sheen.addColorStop(0.42, 'rgba(255, 255, 255, 0.22)'); sheen.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
+  g.fillStyle = sheen; g.fillRect(0, 0, n, n);
+  g.fillStyle = 'rgba(178, 190, 204, 0.95)';
+  g.fillRect(0, 0, n, 4); g.fillRect(0, n - 4, n, 4); g.fillRect(0, 0, 4, n); g.fillRect(n - 4, 0, 4, n);
+  g.fillStyle = 'rgba(150, 162, 178, 0.8)'; g.fillRect(n / 2 - 1, 0, 2, n);
+  glassTex = new THREE.CanvasTexture(cv);
+  glassTex.colorSpace = THREE.SRGBColorSpace; glassTex.anisotropy = 4;
+  return glassTex;
+}
 const GLOW_TERRAIN = new Set(['plasma', 'breach']);   // unlit: plasma glows, breaches burn
 
 const lin = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
 const TERRAIN_RGB = TERRAIN.map((d) => lin(TOP_COLOR[d.key] || d.color));
+const TERRAIN_LIN = TERRAIN.map((d) => lin(d.color));   // terrain.js colours (water, rocks)
 const RAMP = [[58, 111, 240], [63, 224, 160], [255, 240, 122]];   // overlay sRGB: low, mid, high
 
 // Unit shapes, each spanning [-0.5, 0.5]³, so a part's size is its scale.
@@ -236,7 +293,7 @@ function terrainShader(mat, ov) {
 }
 
 export function createView(container, opts = {}) {
-  const { onTileClick = () => {}, onTileHover = () => {} } = opts;
+  const { onTileClick = () => {}, onTileHover = () => {}, onDeck = null } = opts;
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   const canvas = renderer.domElement;
@@ -262,15 +319,21 @@ export function createView(container, opts = {}) {
   });
   controls.keys = {};   // our own key handler pans (it ignores text fields)
 
-  scene.add(new THREE.HemisphereLight('#d8e0f4', '#1a2233', 2.2));
+  const hemi = new THREE.HemisphereLight('#d8e0f4', '#1a2233', 2.2);
+  scene.add(hemi);
   const sun = new THREE.DirectionalLight('#fff1dc', 2.6), earthlight = new THREE.DirectionalLight('#5f9fff', 0.9);
   scene.add(sun, sun.target, earthlight, earthlight.target);
 
+  // everything of the deck on show lives in `world`, which slides up or down when the deck changes
+  // (Earth, the stars and the lights stay in the scene)
+  const world = new THREE.Group();
+  world.name = 'deck';
+  scene.add(world);
   const terrainGroup = new THREE.Group(), buildGroup = new THREE.Group(), fxGroup = new THREE.Group(), roadGroup = new THREE.Group();
-  scene.add(terrainGroup, buildGroup, fxGroup, roadGroup);
-  const movers = createMovers(scene);
+  world.add(terrainGroup, buildGroup, fxGroup, roadGroup);
+  const movers = createMovers(world);
   let buildVersion = 0;   // bumps when buildings change: the guardians' aprons follow
-  const defence = createDefence(scene, {
+  const defence = createDefence(world, {
     topAt: (x, y) => Math.max(0, tops[y * W + x]),
     freeAt: (i) => !occ[i],
     occSig: () => buildVersion,
@@ -296,7 +359,9 @@ export function createView(container, opts = {}) {
   };
 
   let st = null, W = 0, H = 0, N = 0, tCopy = null, rCopy = null;
+  let full = null, deck = 'main';                     // the whole state, and the deck on show (st is its view)
   let meshes = [], slot = null, waterMesh = null, waterSlot = null, terrTop = null, tops = null, baseRgb = null;
+  let underMesh = null, underSlot = null;             // upper deck: the main deck's ground seen through the glass
   let rockMesh = null, gemMesh = null, wreckMesh = null, breachMat = null, plasmaMat = null;
   let occ = null;                                     // building id + 1 per tile, 0 = free
   const chamberSig = new Map(), chamberById = new Map(), built = new Map();
@@ -336,6 +401,7 @@ export function createView(container, opts = {}) {
     const m = meshes[st.map.t[i]];
     if (m && slot[i] >= 0) { tileRgb(i, m.instanceColor.array, slot[i] * 3); dirty.add(m.instanceColor); }
     if (waterSlot && waterSlot[i] >= 0) { tileRgb(i, waterMesh.instanceColor.array, waterSlot[i] * 3, waterMesh.userData.base, waterSlot[i] * 3); dirty.add(waterMesh.instanceColor); }
+    if (underSlot && underSlot[i] >= 0) { tileRgb(i, underMesh.instanceColor.array, underSlot[i] * 3, underMesh.userData.base, underSlot[i] * 3); dirty.add(underMesh.instanceColor); }
   }
   const paintAll = () => { for (let i = 0; i < N; i++) paintTile(i); };
 
@@ -343,6 +409,7 @@ export function createView(container, opts = {}) {
 
   function terrainMaterial(def) {
     if (def.key === 'atmosphere') return new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+    if (def.key === 'glass') return new THREE.MeshLambertMaterial({ map: glassTexture(), transparent: true, depthWrite: false });   // the sheen is in the texture, so a sealed chamber's tint darkens it all
     const map = textured.get(def.id) || null;
     if (GLOW_TERRAIN.has(def.key)) return terrainShader(new THREE.MeshBasicMaterial({ map }), OV);
     return terrainShader(new THREE.MeshLambertMaterial({ map }), OV);
@@ -351,28 +418,73 @@ export function createView(container, opts = {}) {
     for (const o of [...g.children]) { g.remove(o); o.dispose?.(); if (o.material && !Object.values(KIND_MAT).includes(o.material) && o.material !== ghost.footMat) o.material.dispose(); }
   }
 
+  // (x, y, i) → linear RGB of the main deck's ground at that tile, dimmed: soil, water, rock, and
+  // the warm lights of buildings standing there (roads dark), darker under chambers not yet open.
+  function mainBelow() {
+    const m = full.map, occM = new Uint8Array(N), stat = new Map();
+    for (const c of full.chambers || []) if (isOnDeck(c, 'main')) stat.set(c.id, c.status);
+    for (const b of full.buildings || []) {
+      if (!isOnDeck(b, 'main')) continue;
+      const n = sizeOf(b.key);
+      for (let j = b.y; j < b.y + n; j++) for (let k = b.x; k < b.x + n; k++) if (k >= 0 && j >= 0 && k < W && j < H) occM[j * W + k] = b.key === 'road' ? 2 : 1;
+    }
+    const out = [0, 0, 0];
+    return (x, y, i) => {
+      const mt = m.t[i], def = TERRAIN[mt], c = TERRAIN_RGB[mt] || [0, 0, 0];
+      const bright = def ? (SHAPE[def.key] || (() => [0, 1]))(x, y)[1] : 1;
+      let k = 0.42 * bright;
+      if (occM[i] === 1) { const h = hash(x, y + 77); out[0] = 0.5 * h + 0.2; out[1] = 0.36 * h + 0.14; out[2] = 0.16 * h + 0.08; }
+      else if (occM[i] === 2) { out[0] = 0.05; out[1] = 0.055; out[2] = 0.065; }
+      else { out[0] = c[0] * k; out[1] = c[1] * k; out[2] = c[2] * k; }
+      const s = stat.get(m.ch[i]);
+      if (s === 'sealed') k = 0.15; else if (s && s !== 'open') k = 0.45; else k = 1;
+      out[0] *= k; out[1] *= k; out[2] *= k;
+      return out;
+    };
+  }
+
   function buildTerrain() {
-    clearGroup(terrainGroup);
+    dropTerrain(deck);
+    terrGroup = new THREE.Group(); terrGroup.name = 'terrain-' + deck;
+    terrainGroup.add(terrGroup);
     const { t, r } = st.map, count = new Int32Array(TERRAIN.length);
     for (let i = 0; i < N; i++) count[t[i]]++;
     meshes = []; slot = new Int32Array(N).fill(-1); waterSlot = new Int32Array(N).fill(-1);
     terrTop = new Float32Array(N); baseRgb = new Float32Array(N * 3);
     for (const def of TERRAIN) {
-      if (!count[def.id] || def.key === 'earth') continue;
-      const mesh = new THREE.InstancedMesh(def.key === 'atmosphere' ? PLANE : COLUMN, terrainMaterial(def), count[def.id]);
+      if (!count[def.id] || def.key === 'earth' || def.key === 'outside') continue;
+      const flat = def.key === 'atmosphere' || def.key === 'glass';
+      const mesh = new THREE.InstancedMesh(flat ? PLANE : COLUMN, terrainMaterial(def), count[def.id]);
       mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count[def.id] * 3), 3);
       mesh.frustumCulled = false; mesh.count = 0; mesh.name = def.key;
       if (def.key === 'atmosphere') mesh.renderOrder = 2;
+      if (def.key === 'glass') mesh.renderOrder = 1;
       if (def.key === 'breach') breachMat = mesh.material;
       if (def.key === 'plasma') plasmaMat = mesh.material;
-      meshes[def.id] = mesh; terrainGroup.add(mesh);
+      meshes[def.id] = mesh; terrGroup.add(mesh);
     }
     const nWater = count[T.RIVER] + count[T.LAKE];
     waterMesh = new THREE.InstancedMesh(PLANE, terrainShader(new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.8, emissive: '#0a2a50' }), OV), Math.max(1, nWater));
     waterMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, nWater) * 3), 3);
     waterMesh.userData.base = new Float32Array(Math.max(1, nWater) * 3);
     waterMesh.frustumCulled = false; waterMesh.count = 0; waterMesh.renderOrder = 1;
-    terrainGroup.add(waterMesh);
+    terrGroup.add(waterMesh);
+    // upper deck: under each sky panel a plate in the colours of the main deck's ground (and its
+    // buildings' lights), down at the foot of the columns, so it reads as seen through the glass
+    const nGlass = count[T.GLASS] || 0;
+    underMesh = null; underSlot = null;
+    let below = null;
+    if (nGlass) {
+      underSlot = new Int32Array(N).fill(-1);
+      underMesh = new THREE.InstancedMesh(PLANE, new THREE.MeshBasicMaterial(), nGlass);
+      underMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(nGlass * 3), 3);
+      underMesh.userData.base = new Float32Array(nGlass * 3);
+      underMesh.frustumCulled = false; underMesh.count = 0; underMesh.name = 'below-glass';
+      terrGroup.add(underMesh);
+      below = mainBelow();
+    }
+    const rims = [];   // gold rim bars along the open edges of lift shafts
+    const pipes = [];  // conduit pipe segments: x, z, along x (1) or z (0), colour pick
 
     const rocks = [];
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -387,15 +499,32 @@ export function createView(container, opts = {}) {
       }
       const s = slot[i] = m.count++, a = m.instanceMatrix.array, o = s * 16;
       a[o] = 1; a[o + 10] = 1; a[o + 12] = x + 0.5; a[o + 14] = y + 0.5;
-      if (def.key === 'atmosphere') { a[o + 5] = 1; a[o + 13] = top; }
+      if (def.key === 'atmosphere' || def.key === 'glass') { a[o + 5] = 1; a[o + 13] = top; }
       else { a[o + 5] = top - BASE; a[o + 13] = BASE; }
       terrTop[i] = top;
+      if (id === T.GLASS) {
+        const u = underSlot[i] = underMesh.count++, ua = underMesh.instanceMatrix.array, uo = u * 16;
+        ua[uo] = 1; ua[uo + 5] = 1; ua[uo + 10] = 1; ua[uo + 12] = x + 0.5; ua[uo + 13] = BASE + 0.08; ua[uo + 14] = y + 0.5; ua[uo + 15] = 1;
+        underMesh.userData.base.set(below(x, y, i), u * 3);
+      } else if (id === T.SHAFT) {
+        for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+          const nx = x + dx, ny = y + dy;
+          if (nx >= 0 && ny >= 0 && nx < W && ny < H && t[ny * W + nx] === T.SHAFT) continue;
+          rims.push(x + 0.5 + dx * 0.44, y + 0.5 + dy * 0.44, dx !== 0);
+        }
+      }
       if (id === T.RIVER || id === T.LAKE) {
         const w = waterSlot[i] = waterMesh.count++, wa = waterMesh.instanceMatrix.array, wo = w * 16;
         wa[wo] = 1; wa[wo + 5] = 1; wa[wo + 10] = 1; wa[wo + 12] = x + 0.5; wa[wo + 13] = -0.08; wa[wo + 14] = y + 0.5;
-        const wc = lin(def.color), wb = 0.85 + 0.3 * smooth(x / 3, y / 3);
-        waterMesh.userData.base.set(wc.map((c) => c * wb), w * 3);
+        const wc = TERRAIN_LIN[id], wb = 0.85 + 0.3 * smooth(x / 3, y / 3), wB = waterMesh.userData.base;
+        wB[w * 3] = wc[0] * wb; wB[w * 3 + 1] = wc[1] * wb; wB[w * 3 + 2] = wc[2] * wb;
         terrTop[i] = -0.08;
+      }
+      // lower deck: pipe runs half sunk in the conduit halls' plating (flush enough that a kit's
+      // base or a road covers them)
+      if (id === T.CONDUIT) {
+        if (y % 6 === 0) pipes.push(x + 0.5, y + 0.5, 1, hash(x >> 3, y));
+        if (x % 8 === 0) pipes.push(x + 0.5, y + 0.5, 0, hash(x, y >> 3));
       }
       // sparse low rocks on asteroid fields, pebbles on meteoroid drifts
       if (id === T.ASTEROID || id === T.METEOROID) {
@@ -408,6 +537,20 @@ export function createView(container, opts = {}) {
     }
     for (const m of meshes) if (m) m.instanceMatrix.needsUpdate = true;
     waterMesh.instanceMatrix.needsUpdate = true;
+    if (underMesh) underMesh.instanceMatrix.needsUpdate = true;
+    if (rims.length) {
+      const n = rims.length / 3, rim = new THREE.InstancedMesh(UNIT.box, new THREE.MeshBasicMaterial({ color: SHAFT_RIM }), n);
+      rim.frustumCulled = false; rim.name = 'shaft-rims';
+      const ra = rim.instanceMatrix.array;
+      for (let k = 0; k < n; k++) {
+        const o = k * 16, side = rims[k * 3 + 2];
+        ra.fill(0, o, o + 16);
+        ra[o] = side ? 0.12 : 1.0; ra[o + 5] = 0.14; ra[o + 10] = side ? 1.0 : 0.12; ra[o + 15] = 1;
+        ra[o + 12] = rims[k * 3]; ra[o + 13] = 0.13; ra[o + 14] = rims[k * 3 + 1];
+      }
+      rim.instanceMatrix.needsUpdate = true;
+      terrGroup.add(rim);
+    }
 
     rockMesh = new THREE.InstancedMesh(ROCK, new THREE.MeshLambertMaterial({ flatShading: true }), Math.max(1, rocks.length));
     rockMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, rocks.length) * 3), 3);
@@ -417,13 +560,68 @@ export function createView(container, opts = {}) {
       q.setFromEuler(e.set(k.a, k.a * 1.7, 0));
       m4.compose(v.set(k.x, 0.04 + k.s * 0.2, k.z), q, sc.set(k.s, k.s * 0.65, k.s));
       rockMesh.setMatrixAt(n, m4);
-      rockMesh.instanceColor.array.set(lin(TERRAIN[k.id].color).map((c) => c * k.b), n * 3);
+      const rc = TERRAIN_LIN[k.id], ra = rockMesh.instanceColor.array;
+      ra[n * 3] = rc[0] * k.b; ra[n * 3 + 1] = rc[1] * k.b; ra[n * 3 + 2] = rc[2] * k.b;
     });
-    terrainGroup.add(rockMesh);
-    tops = Float32Array.from(terrTop);
+    terrGroup.add(rockMesh);
+    if (pipes.length) {
+      const n = pipes.length / 4, pm = new THREE.InstancedMesh(UNIT.cylinder, new THREE.MeshLambertMaterial(), n);
+      pm.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
+      pm.frustumCulled = false; pm.name = 'conduit-pipes';
+      const PIPE_RGB = ['#b87a4a', '#8a949e', '#4f8a86', '#a8963a'].map(lin);
+      const rx = new THREE.Quaternion().setFromEuler(e.set(Math.PI / 2, 0, 0)), rz = new THREE.Quaternion().setFromEuler(e.set(0, 0, Math.PI / 2));
+      for (let k = 0; k < n; k++) {
+        const alongX = pipes[k * 4 + 2] === 1;
+        m4.compose(v.set(pipes[k * 4], 0.085, pipes[k * 4 + 1] + (alongX ? -0.22 : 0)), alongX ? rz : rx, sc.set(0.15, 1.0, 0.15));
+        if (!alongX) m4.elements[12] -= 0.22;
+        pm.setMatrixAt(k, m4);
+        pm.instanceColor.array.set(PIPE_RGB[Math.floor(pipes[k * 4 + 3] * PIPE_RGB.length)], k * 3);
+      }
+      terrGroup.add(pm);
+    }
+    tops0 = Float32Array.from(terrTop);
+    if (count[T.OUTSIDE]) for (let i = 0; i < N; i++) if (t[i] === T.OUTSIDE) tops0[i] = -100;   // never picked
+    tops = Float32Array.from(tops0);
     paintAll();
     tCopy = Uint8Array.from(t); rCopy = Uint8Array.from(r);
+    tRef = t;
   }
+
+  // ---- terrain per deck (version 4): a deck's terrain stays built (hidden) while another deck
+  // is on show, so going back only repaints the chamber tints; it is rebuilt if its tiles changed.
+  const terrCache = new Map();   // deck → { group, ...the terrain arrays and meshes }
+  let terrGroup = null, tops0 = null, tRef = null;
+  function stashTerrain() {
+    if (!terrGroup) return;
+    terrGroup.visible = false;
+    terrCache.set(deck, { group: terrGroup, meshes, slot, waterMesh, waterSlot, underMesh, underSlot, terrTop, tops0, baseRgb, breachMat, plasmaMat, rockMesh, tCopy, tRef, tex: textured.size });
+    terrGroup = null;
+  }
+  function restoreTerrain() {
+    const c = terrCache.get(deck), t = st.map.t;
+    if (!c || c.tRef !== t || c.tex !== textured.size) return false;
+    for (let i = 0; i < N; i++) if (t[i] !== c.tCopy[i]) return false;
+    terrCache.delete(deck);
+    ({ meshes, slot, waterMesh, waterSlot, underMesh, underSlot, terrTop, tops0, baseRgb, breachMat, plasmaMat, rockMesh, tCopy, tRef } = c);
+    terrGroup = c.group; terrGroup.visible = true;
+    tops = Float32Array.from(tops0);
+    rCopy = Uint8Array.from(st.map.r);
+    if (underMesh) {   // the main deck below may have changed meanwhile
+      const below = mainBelow(), B = underMesh.userData.base;
+      for (let i = 0; i < N; i++) if (underSlot[i] >= 0) B.set(below(i % W, (i / W) | 0, i), underSlot[i] * 3);
+    }
+    paintAll();
+    return true;
+  }
+  // Disposes a deck's terrain (the one on show too when it is that deck's); every deck's with no argument.
+  function dropTerrain(d) {
+    const kill = (g) => { terrainGroup.remove(g); clearGroup(g); };
+    if (d === undefined) { for (const c of terrCache.values()) kill(c.group); terrCache.clear(); if (terrGroup) kill(terrGroup); terrGroup = null; return; }
+    const c = terrCache.get(d);
+    if (c) { kill(c.group); terrCache.delete(d); }
+    if (d === deck && terrGroup) { kill(terrGroup); terrGroup = null; }
+  }
+
 
   // Ore seams glint and wrecks lie tilted, once their tile is known (space, or a chamber surveyed).
   function buildArtifacts() {
@@ -674,7 +872,7 @@ export function createView(container, opts = {}) {
     }
     await Promise.all(TERRAIN.map(async (def) => {
       const s = 'terrain/' + def.key;
-      if (!meshes[def.id] || def.key === 'atmosphere' || !has(s)) return;
+      if (def.key === 'atmosphere' || def.key === 'glass' || def.key === 'outside' || !has(s)) return;   // every deck's terrains
       const tex = await load(artMod.art(s));
       if (!tex) return;
       tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
@@ -682,11 +880,12 @@ export function createView(container, opts = {}) {
       textured.set(def.id, tex);
     }));
     if (textured.size && st) {   // white bases under the textures, new materials with the maps
+      dropTerrain();
       buildTerrain();
       for (const id of [...built.keys()]) removeBuilding(id);
       syncBuildings();
       movers.refresh(st, { terrTop, buildingsChanged: true });
-      defence.refresh(st, { terrTop, terrainChanged: true });
+      if (deck === 'main') defence.refresh(st, { terrTop, terrainChanged: true });
     }
   }
 
@@ -726,13 +925,21 @@ export function createView(container, opts = {}) {
     return { x: controls.target.x, z: controls.target.z, d: sph.radius, th: sph.theta, ph: sph.phi };
   }
   function homeTile() {
+    if (st && deck !== 'main') {   // another deck: its first Lift, else the middle of its chambers
+      const l = (st.buildings || []).find((b) => b.key === 'lift');
+      if (l) return [l.x + 1, l.y + 1];
+      const cs = st.chambers || [];
+      if (cs.length) return [(Math.min(...cs.map((c) => c.x0)) + Math.max(...cs.map((c) => c.x1)) + 1) / 2, (Math.min(...cs.map((c) => c.y0)) + Math.max(...cs.map((c) => c.y1)) + 1) / 2];
+    }
     const c = st && (st.buildings || []).find((b) => b.key === 'command');
     if (c) { const n = sizeOf('command'); return [c.x + n / 2, c.y + n / 2]; }
     const d = st && (st.buildings || []).find((b) => b.key === 'dock');
     return d ? [d.x + 1, d.y + 1] : [W / 2, H / 2];
   }
   // The camera buttons and keys: 'zoomIn' | 'zoomOut' | 'rotateLeft' | 'rotateRight' | 'tiltUp' |
-  // 'tiltDown' | 'home'. Rotation turns 45°, or a quarter turn in 90° snap mode.
+  // 'tiltDown' | 'home' | 'deckUp' | 'deckDown' (version 4). Rotation turns 45°, or a quarter turn
+  // in 90° snap mode. A deck step goes to opts.onDeck(+1 up | -1 down) when given (the game decides),
+  // else straight to setDeck.
   const ZOOM_STEP = 0.6, TILT_STEP = 0.22;
   function nav(name) {
     if (!st) return false;
@@ -748,6 +955,7 @@ export function createView(container, opts = {}) {
       case 'tiltUp': animTo({ x: g.x, z: g.z, dist: g.d, theta: g.th, phi: g.ph - TILT_STEP, dur: 420 }); break;
       case 'tiltDown': animTo({ x: g.x, z: g.z, dist: g.d, theta: g.th, phi: g.ph + TILT_STEP, dur: 420 }); break;
       case 'home': { const [x, z] = homeTile(); animTo({ x, z, dist: 55, theta: g.th, phi: 0.62, dur: 900 }); break; }
+      case 'deckUp': case 'deckDown': return stepDeckBy(name === 'deckUp' ? 1 : -1);
       default: return false;
     }
     return true;
@@ -888,7 +1096,7 @@ export function createView(container, opts = {}) {
   // Walks the grid along the ray (Amanatides & Woo) and returns the first tile whose column, or
   // building on it, the ray dips into: exact for our boxes, and a few dozen steps at most.
   function pick(clientX, clientY) {
-    if (!st) return null;
+    if (!st || trans) return null;   // nothing to pick while the decks change
     const rc = canvas.getBoundingClientRect();
     ndc.set(((clientX - rc.left) / rc.width) * 2 - 1, -((clientY - rc.top) / rc.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
@@ -919,10 +1127,10 @@ export function createView(container, opts = {}) {
   // ---- hover marker and ghost ----------------------------------------------------------------
 
   const hoverBox = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 0.04, 1)), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.85 }));
-  hoverBox.visible = false; hoverBox.renderOrder = 3; scene.add(hoverBox);
+  hoverBox.visible = false; hoverBox.renderOrder = 3; world.add(hoverBox);
   let hover = null;
   const ghost = { group: new THREE.Group(), key: null, foot: null, footMat: new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.4, depthWrite: false }), parts: [] };
-  ghost.group.visible = false; ghost.group.renderOrder = 4; scene.add(ghost.group);
+  ghost.group.visible = false; ghost.group.renderOrder = 4; world.add(ghost.group);
   function setGhost(key, x, y, ok) {
     if (!key || !st) { ghost.group.visible = false; ghost.key = null; updateHover(); return; }
     const n = sizeOf(key);
@@ -982,11 +1190,13 @@ export function createView(container, opts = {}) {
   canvas.addEventListener('pointerleave', () => { if (hover) { hover = null; updateHover(); onTileHover(-1, -1); } }, sig);
   canvas.addEventListener('contextmenu', (e) => e.preventDefault(), sig);
   const KEYMAP = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', KeyQ: 'rotL', KeyE: 'rotR' };
-  const NAVKEYS = { Equal: 'zoomIn', NumpadAdd: 'zoomIn', Minus: 'zoomOut', NumpadSubtract: 'zoomOut', Home: 'home', PageUp: 'tiltUp', PageDown: 'tiltDown' };
+  // PageUp / PageDown step through the decks (version 4; tilt kept its buttons and Alt + scroll)
+  const NAVKEYS = { Equal: 'zoomIn', NumpadAdd: 'zoomIn', Minus: 'zoomOut', NumpadSubtract: 'zoomOut', Home: 'home', PageUp: 'deckUp', PageDown: 'deckDown' };
   const typing = (e) => e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || e.target?.isContentEditable;
   addEventListener('keydown', (e) => {
     if (typing(e)) return;
     const n = NAVKEYS[e.code] || (e.key === '+' ? 'zoomIn' : e.key === '-' ? 'zoomOut' : null);
+    if (n && n.startsWith('deck') && (e.defaultPrevented || e.repeat)) { e.preventDefault(); return; }   // the game took it, or a held key
     if (n) { if (nav(n)) e.preventDefault(); return; }
     const k = KEYMAP[e.code];
     if (!k) return;
@@ -1015,12 +1225,13 @@ export function createView(container, opts = {}) {
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (st) stepCamera(dt, now);
+    if (trans && !trans.hold) stepTransition(now);
     if (breachMat) breachMat.color.setScalar(0.75 + 0.25 * Math.sin(now / 260));   // breaches throb
     if (plasmaMat) plasmaMat.color.setScalar(0.9 + 0.1 * Math.sin(now / 900));
     if (st) movers.update(dt, camera.position.distanceTo(controls.target));
-    if (st) defence.update(dt, movers.getSpeed());
+    if (st && deck === 'main') defence.update(dt, movers.getSpeed());
     if (shimmerMat) shimmerMat.opacity = 0.26 + 0.12 * Math.sin(now / 480) + 0.05 * Math.sin(now / 137);
-    if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], defence.marks());
+    if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], deckMarks());
     for (const p of pools.values()) p.flush();
     for (const a of dirty) a.needsUpdate = true;
     dirty.clear();
@@ -1030,22 +1241,68 @@ export function createView(container, opts = {}) {
 
   // ---- API -----------------------------------------------------------------------------------
 
-  function setState(state) {
-    const first = !st || state.map.w !== W || state.map.h !== H;
-    st = state; W = state.map.w; H = state.map.h; N = W * H;
+  // ---- decks (version 4) -----------------------------------------------------------------------
+
+  // Lifts on every deck, for the minimap's shaft marks.
+  function liftList() {
+    const out = [];
+    for (const b of full?.buildings || []) if (b.key === 'lift') out.push({ x: b.x, y: b.y, deck: b.deck || 'main', working: !(b.build > 0) && !b.off });
+    return out;
+  }
+  let liftSig = '';
+  const liftSigOf = (l) => l.map((o) => `${o.x},${o.y},${o.deck},${o.working ? 1 : 0}`).join(';');
+  function minimapExtra() {
+    const lifts = liftList();
+    liftSig = liftSigOf(lifts);
+    return { lifts, below: deck === 'upper' ? full.map.t : null };
+  }
+  const deckMarks = () => (deck === 'main' ? defence.marks() : null);
+  function setLights() {
+    const [h, s2, e] = DECK_LIGHT[deck] || DECK_LIGHT.main;
+    hemi.intensity = h; sun.intensity = s2; earthlight.intensity = e;
+  }
+  function updateDeckPad() {
+    const multi = !!full && DECKS.some((d) => d !== 'main' && hasDeck(full, d));
+    const k = DECKS.indexOf(deck);
+    navPad.setDeck(multi ? DECK_INFO[deck].name : null, multi && k > 0 && hasDeck(full, DECKS[k - 1]), multi && k < 2 && hasDeck(full, DECKS[k + 1]));
+  }
+
+  // Everything of the current deck from scratch: a new state, or another deck. `fresh` also clears
+  // the guardians and the raid animation (a new state).
+  const rebuildMs = {};   // the last rebuild's steps in ms (debug.rebuildMs)
+  function rebuild(fresh) {
+    let t0 = performance.now();
+    const lap = (k) => { const t = performance.now(); rebuildMs[k] = +(t - t0).toFixed(1); t0 = t; };
     occ = new Int32Array(N);
     chamberById.clear(); chamberSig.clear(); built.clear();
     for (const p of pools.values()) p.clear();
     roadsDirty = true;
     syncChambers(true);
-    buildTerrain();
-    syncBuildings();
+    rebuildMs.cached = restoreTerrain();
+    if (!rebuildMs.cached) buildTerrain();
+    lap('terrain');
+    syncBuildings(); lap('buildings');
     buildArtifacts();
-    showOverlay();
+    showOverlay(); lap('artifacts');
     movers.reset();
-    movers.refresh(st, { terrTop, reset: true, buildingsChanged: true, chambersChanged: true });
-    defence.refresh(st, { terrTop, reset: true });
-    minimap.setState(st);
+    movers.refresh(st, { terrTop, reset: true, buildingsChanged: true, chambersChanged: true }); lap('movers');
+    defence.group.visible = deck === 'main';
+    if (deck === 'main') defence.refresh(st, fresh ? { terrTop, reset: true } : { terrTop, terrainChanged: true });
+    lap('defence');
+    minimap.setState(st, minimapExtra()); lap('minimap');
+    setLights();
+    updateDeckPad();
+    hover = null; updateHover();
+  }
+
+  function setState(state) {
+    const first = !st || state.map.w !== W || state.map.h !== H;
+    full = state; W = state.map.w; H = state.map.h; N = W * H;
+    if (!hasDeck(state, deck)) deck = 'main';
+    if (trans) { trans = null; world.position.y = 0; veil.style.opacity = 0; }
+    dropTerrain();
+    st = deckView(state, deck);
+    rebuild(true);
     if (first) {
       buildSky();
       resize();
@@ -1056,8 +1313,10 @@ export function createView(container, opts = {}) {
 
   function refresh(state) {
     if (!st || state.map.w !== W || state.map.h !== H || state.map.t.length !== N) return setState(state);
-    st = state;
-    const { t, r } = state.map;
+    full = state;
+    if (!hasDeck(state, deck)) { applyDeck('main'); return; }   // the deck went away (a new colony): back to main
+    st = deckView(state, deck);
+    const { t, r } = st.map;
     let tc = false, rc = false;
     for (let i = 0; i < N; i++) { if (t[i] !== tCopy[i]) { tc = true; break; } }
     for (let i = 0; i < N && !rc; i++) if (r[i] !== rCopy[i]) rc = true;
@@ -1069,8 +1328,8 @@ export function createView(container, opts = {}) {
       buildArtifacts();
       showOverlay();
       movers.refresh(st, { terrTop, buildingsChanged: true, chambersChanged: true });
-      defence.refresh(st, { terrTop, terrainChanged: true });
-      minimap.setState(st);
+      if (deck === 'main') defence.refresh(st, { terrTop, terrainChanged: true });
+      minimap.setState(st, minimapExtra());
       return;
     }
     if (rc) rCopy = Uint8Array.from(r);
@@ -1078,8 +1337,83 @@ export function createView(container, opts = {}) {
     if (cc || bc || rc) buildArtifacts();
     if (overlayName && !overlayValues && bc) showOverlay();
     movers.refresh(st, { terrTop, buildingsChanged: bc, chambersChanged: cc });
-    defence.refresh(st, { terrTop });
-    if (cc || bc) minimap.refresh(st);
+    if (deck === 'main') defence.refresh(st, { terrTop });
+    const lifts = full.buildings?.some((b) => b.key === 'lift') || liftSig ? liftList() : [];
+    const ls = liftSigOf(lifts);
+    if (cc || bc || ls !== liftSig) { liftSig = ls; minimap.refresh(st, { lifts, below: deck === 'upper' ? full.map.t : null }); }
+    updateDeckPad();
+  }
+
+  // The deck change: the world slides (up past the camera when rising, away below when sinking)
+  // under a dark veil; halfway, with the veil at its darkest, the new deck is built and its name
+  // shows. `D` follows the zoom, so the move reads the same near and far.
+  const veil = document.createElement('div'), banner = document.createElement('div');
+  veil.className = 'cv-deck-veil'; banner.className = 'cv-deck-banner';
+  banner.innerHTML = '<b></b><span></span>';
+  canvas.after(veil, banner);
+  if (!document.getElementById('cv-deck-style')) {
+    const css = document.createElement('style');
+    css.id = 'cv-deck-style';
+    css.textContent = `
+.cv-deck-veil { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(4, 8, 20, .82), rgba(1, 2, 6, .97)); }
+.cv-deck-banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, 8px); pointer-events: none; opacity: 0; text-align: center;
+  transition: opacity .35s ease, transform .35s ease; text-shadow: 0 2px 12px rgba(0, 0, 0, .9); white-space: nowrap; }
+.cv-deck-banner.on { opacity: 1; transform: translate(-50%, 0); }
+.cv-deck-banner b { display: block; font: 700 30px/1.1 system-ui, sans-serif; letter-spacing: .32em; text-transform: uppercase; color: #f5c542; padding-left: .32em; }
+.cv-deck-banner span { display: block; margin-top: 6px; font: 500 13px/1.3 system-ui, sans-serif; letter-spacing: .12em; color: #cfe6ff; }
+@media (max-width: 760px) { .cv-deck-banner b { font-size: 20px; } .cv-deck-banner span { font-size: 11px; } }`;
+    document.head.appendChild(css);
+  }
+  let bannerTimer = 0;
+  function showBanner(d) {
+    banner.firstChild.textContent = DECK_INFO[d].name;
+    banner.lastChild.textContent = DECK_INFO[d].text;
+    banner.classList.add('on');
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => banner.classList.remove('on'), 1700);
+  }
+
+  let trans = null;   // { t0, dur, dir: +1 rising | -1 sinking, to, D, swapped }
+  const TRANS_MS = 800;
+  function applyDeck(d) {
+    stashTerrain();
+    deck = d;
+    st = deckView(full, d);
+    rebuild(false);
+  }
+  function stepTransition(now) {
+    const k = Math.min(1, (now - trans.t0) / trans.dur), p = k * k * (3 - 2 * k);
+    if (!trans.swapped && k >= 0.5) { trans.swapped = true; applyDeck(trans.to); showBanner(trans.to); }
+    world.position.y = trans.swapped ? trans.dir * trans.D * (1 - p) : -trans.dir * trans.D * p;
+    veil.style.opacity = (Math.sin(Math.PI * k) ** 2).toFixed(3);
+    if (k >= 1) { trans = null; world.position.y = 0; veil.style.opacity = 0; }
+  }
+  function endTransition() {
+    if (!trans) return;
+    if (!trans.swapped) applyDeck(trans.to);
+    trans = null; world.position.y = 0; veil.style.opacity = 0;
+  }
+  // Shows a deck: 'upper' | 'main' | 'lower'. False when the colony has no such deck. Before the
+  // first setState it only remembers the deck. { animate: false } swaps at once (still names it).
+  function setDeck(d, { animate = true } = {}) {
+    if (!DECKS.includes(d)) return false;
+    if (!full) { deck = d; return true; }
+    if (!hasDeck(full, d)) return false;
+    if (trans) endTransition();
+    if (d === deck) return true;
+    const dir = DECKS.indexOf(d) < DECKS.indexOf(deck) ? 1 : -1;
+    hover = null; updateHover();
+    if (!animate) { applyDeck(d); showBanner(d); return true; }
+    anim = null; glide = null; stopMomentum();
+    trans = { t0: performance.now(), dur: TRANS_MS, dir, to: d, D: Math.max(5, offset().length() * 0.45), swapped: false };
+    return true;
+  }
+  // ▲ / ▼ and PageUp / PageDown: the game's callback when given, else one deck that way.
+  function stepDeckBy(dir) {
+    if (!full) return false;
+    if (onDeck) { onDeck(dir); return true; }
+    const k = DECKS.indexOf(trans && !trans.swapped ? trans.to : deck) - dir;
+    return k >= 0 && k < DECKS.length ? setDeck(DECKS[k]) : false;
   }
 
   // Writes the overlay (caller's values, else our own) into the per-tile texture the terrain samples.
@@ -1116,12 +1450,14 @@ export function createView(container, opts = {}) {
   function destroy() {
     cancelAnimationFrame(raf); ac.abort(); ro.disconnect(); controls.dispose();
     movers.dispose(); defence.dispose(); minimap.destroy(); navPad.destroy();
+    dropTerrain();
     for (const g of [terrainGroup, buildGroup, fxGroup, roadGroup, ghost.group]) clearGroup(g);
     scene.traverse((o) => { o.geometry?.dispose(); if (o.material) [].concat(o.material).forEach((m) => { m.map?.dispose(); m.dispose(); }); });
     for (const g of [...Object.values(UNIT), COLUMN, PLANE, ROCK, GEM]) g.dispose();
     for (const m of Object.values(KIND_MAT)) m.dispose();
     OV.uOverlay.value?.dispose();
-    renderer.dispose(); canvas.remove(); st = null;
+    clearTimeout(bannerTimer); veil.remove(); banner.remove();
+    renderer.dispose(); canvas.remove(); st = null; full = null;
   }
 
   // Mover time: 0 paused (everything freezes), 1, 2, 4 (movers hurry, SimCity style). Until this is
@@ -1139,13 +1475,20 @@ export function createView(container, opts = {}) {
   const home = () => nav('home');
 
   // `debug` is for dev pages and tests only (colony-view-test.html), not part of the contract.
-  return { setState, refresh, setOverlay, setGhost, focus, setSnap, setSpeed, destroy, setMinimap, setNavButtons, setWheelMode, nav, home,
-    debug: { scene, camera, controls, renderer, placeCamera, pick, movers, defence, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse'),
+  // Version 4: setDeck(deck, { animate }) and the current deck (view.deck); DECKS / DECK_INFO are
+  // exported for the interface's names.
+  return { setState, refresh, setOverlay, setGhost, focus, setSnap, setSpeed, destroy, setMinimap, setNavButtons, setWheelMode, nav, home, setDeck,
+    get deck() { return deck; },
+    debug: {
+      // the deck change held at progress k (0..1) for a screenshot mid-move (k = 1 finishes it);
+      // false if no change runs
+      deckAt(k) { if (!trans) return false; const now = performance.now(); trans.hold = k < 1; trans.t0 = now - k * trans.dur; stepTransition(now); return true; },
+      deckState: () => st, world, rebuildMs, scene, camera, controls, renderer, placeCamera, pick, movers, defence, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse'),
       // n camera steps of 1/60 s now, without rendering (tests on slow software GL)
       setRender(on) { dbg.noRender = !on; },
-      tick(n = 1) { for (let k = 0; k < n && st; k++) stepCamera(1 / 60, performance.now()); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], defence.marks()); },
+      tick(n = 1) { for (let k = 0; k < n && st; k++) stepCamera(1 / 60, performance.now()); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], deckMarks()); },
       // n seconds of guardian / raid time now, ignoring the speed (tests on slow software GL)
-      advanceDefence(sec) { defence.advance(sec); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], defence.marks()); },
+      advanceDefence(sec) { defence.advance(sec); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], deckMarks()); },
       // draw one frame now (with setRender(false), for a screenshot)
       render() { for (const p of pools.values()) p.flush(); renderer.render(scene, camera); } } };
 }

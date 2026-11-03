@@ -16,7 +16,8 @@ const SIZE = { card: [256, 256], terrain: [256, 256], portrait: [256, 320], sky:
 const CARD_REF = 'tools/art/colony/ref/card.png';
 const PORTRAIT_REF = 'art/colony/portrait/sato.webp';   // the wanderers' portraits follow Sato's style
 
-// Slots of version 1, then version 2 (docs/COLONY-V2.md "Art"), then version 3 (docs/COLONY-V3.md "Art"). Add a slot here and a prompt file,
+// Slots of version 1, then version 2 (docs/COLONY-V2.md "Art"), then version 3 (docs/COLONY-V3.md "Art"), then version 4
+// (docs/COLONY-V4.md stage 1: the deck buildings). Add a slot here and a prompt file,
 // then run tools/art/colony-xai.mjs.
 const SLOTS = {
   card: ['command', 'dock', 'repairyard', 'depot', 'solar', 'induction', 'battery', 'riverpump', 'airplant',
@@ -26,7 +27,9 @@ const SLOTS = {
     'fabricator', 'sweeper', 'tailings', 'plasmaskimmer', 'tether', 'dronebay', 'clinic', 'safetypost', 'obsdeck',
     // version 3
     'arsenal', 'shipyard', 'barracks', 'scrapyard', 'emplacement', 'sensormast', 'shieldpylon', 'jammer', 'fusion',
-    'mushroom', 'terrace', 'lodge', 'quarters'],
+    'mushroom', 'terrace', 'lodge', 'quarters',
+    // version 4: the deck buildings
+    'lift', 'skygarden', 'gallery', 'cistern', 'geotap', 'pumpstation'],
   title: ['rebuild'],
   sky: ['earth-below'],
   terrain: ['void', 'asteroid', 'magnetic', 'atmosphere', 'hull', 'deck', 'plain', 'fertile', 'river', 'rubble', 'breach',
@@ -89,6 +92,12 @@ const FILES = {
   'card/terrace': 'art/colony/card/terrace.webp',
   'card/lodge': 'art/colony/card/lodge.webp',
   'card/quarters': 'art/colony/card/quarters.webp',
+  'card/lift': 'art/colony/card/lift.webp',
+  'card/skygarden': 'art/colony/card/skygarden.webp',
+  'card/gallery': 'art/colony/card/gallery.webp',
+  'card/cistern': 'art/colony/card/cistern.webp',
+  'card/geotap': 'art/colony/card/geotap.webp',
+  'card/pumpstation': 'art/colony/card/pumpstation.webp',
   'title/rebuild': 'art/colony/title/rebuild.webp',
   'sky/earth-below': 'art/colony/sky/earth-below.webp',
   'terrain/void': 'art/colony/terrain/void.webp',

@@ -219,9 +219,9 @@ function walk(v, path, out) {
   check(r.ok && nb.work === 1 && s.stock.credits === cr - Math.ceil(100 * 0.6 * 0.5), `Survey Drones: half the cost, one day (${cr - s.stock.credits})`);
   tick(s);
   check(nb.status === 'surveyed', 'a drone survey takes one day');
-  // a Drone Bay reaches sealed chambers that touch no open one
+  // a Drone Bay reaches sealed chambers that touch no open one (on its own deck: the main deck here)
   const cc = R.centre(cmdOf(s));
-  const lone = s.chambers.filter((c) => c.status === 'sealed' && ![...links.get(c.id)].some((id) => R.chamberOf(s, id).status === 'open'))
+  const lone = s.chambers.filter((c) => !c.deck && c.status === 'sealed' && ![...links.get(c.id)].some((id) => R.chamberOf(s, id).status === 'open'))
     .map((c) => ({ c, d: Math.max(Math.abs(c.x0 - cc.x), Math.abs(c.x1 - cc.x), Math.abs(c.y0 - cc.y), Math.abs(c.y1 - cc.y)) })).sort((a, b) => a.d - b.d);
   let target = null, bay = null;
   for (const { c } of lone) {
@@ -236,7 +236,7 @@ function walk(v, path, out) {
     check(!R.chamberAction(s, target.id, 'survey').ok, 'an unfinished Drone Bay does not survey');
     b.build = 0;
     check(R.chamberAction(s, target.id, 'survey').ok && target.status === 'surveying', 'a finished Drone Bay surveys a chamber within 40 tiles');
-    const farC = s.chambers.find((c) => c.status === 'sealed' && ![...links.get(c.id)].some((id) => R.chamberOf(s, id).status === 'open') && !R.droneReach(s, c));
+    const farC = s.chambers.find((c) => !c.deck && c.status === 'sealed' && ![...links.get(c.id)].some((id) => R.chamberOf(s, id).status === 'open') && !R.droneReach(s, c));
     check(!farC || !R.chamberAction(s, farC.id, 'survey').ok, 'a chamber beyond the Drone Bay is refused');
   }
 }

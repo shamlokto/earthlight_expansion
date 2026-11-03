@@ -10,6 +10,7 @@ export const T = {
   ATMOSPHERE: 7, EARTH: 8, HULL: 9, BULKHEAD: 10, GATE: 11, DECK: 12,
   PLAIN: 13, FERTILE: 14, POOR: 15, RIVER: 16, LAKE: 17, FOREST: 18, HILLS: 19, ROCK: 20,
   MARSH: 21, RUBBLE: 22, BREACH: 23,
+  GLASS: 24, CONDUIT: 25, CATACOMB: 26, SHAFT: 27, OUTSIDE: 28,   // version 4: the upper and lower decks
 };
 
 export const TERRAIN = [
@@ -37,6 +38,12 @@ export const TERRAIN = [
   { id: 21, key: 'marsh',      name: 'Flooded ground',  zone: 'interior', build: false, height: 0,    color: '#4a6a5a', ver: 2, text: 'Flooded by a burst main. Drain it first.' },
   { id: 22, key: 'rubble',     name: 'Rubble',          zone: 'interior', build: false, height: 0.4,  color: '#5a524a', ver: 1, text: 'A wrecked district. A salvage yard turns it into parts and clears it.' },
   { id: 23, key: 'breach',     name: 'Breach',          zone: 'wall',     build: true,  height: 0.2,  color: '#ff5a3a', ver: 1, text: 'A hole in a wall. Air escapes; a Bulkhead Seal closes it.' },
+  // ---- version 4: the upper and lower decks (docs/COLONY-V4.md)
+  { id: 24, key: 'glass',      name: 'Sky panel',       zone: 'wall',     build: false, height: 0.05, color: '#9fd0e8', ver: 4, text: 'A glass panel of the upper deck\'s sky: light falls through it onto the fields below.' },
+  { id: 25, key: 'conduit',    name: 'Conduit hall',    zone: 'interior', build: true,  height: 0.1,  color: '#5c6470', ver: 4, text: 'The lower deck\'s machinery floor: pipes, cables and pumps. Heavy industry likes it here.' },
+  { id: 26, key: 'catacomb',   name: 'Catacomb',        zone: 'interior', build: false, height: 0.3,  color: '#4a4238', ver: 4, text: 'Old tunnels and crypts under the fields. Something may still be down here.' },
+  { id: 27, key: 'shaft',      name: 'Lift shaft',      zone: 'interior', build: true,  height: 0,    color: '#d8b04a', ver: 4, text: 'A lift shaft through all three decks. Repair a Lift on it to link the decks.' },
+  { id: 28, key: 'outside',    name: '',                zone: 'none',     build: false, height: 0,    color: '#000000', ver: 4, text: '' },
 ];
 
 // Artifacts (map.r): one per tile at most, revealed when the chamber is surveyed (space: always visible).
