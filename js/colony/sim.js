@@ -1,10 +1,13 @@
 // Earthlight Space Colony Rebuild: one day of the colony (docs/COLONY-V1.md "sim.js", the version 1
-// subset of docs/COLONY.md §4). Pure apart from rng(), a seeded generator the caller passes in.
+// subset of docs/COLONY.md §4, plus version 2 in docs/COLONY-V2.md: research, the ore -> alloy ->
+// parts chain, services, clinics and Apartments, tailings, sweeper strikes, seed vaults).
+// Pure apart from rng(), a seeded generator the caller passes in.
 import { T, R, TERRAIN } from './data/terrain.js';
 import { BUILDING, NEEDS, CHAMBER_AIR_PER_100 } from './data/buildings.js';
+import { TECH } from './data/tech.js';
 import {
-  STORED, spec, active, tilesOf, centre, log, addPending, chamberOf, idx, storageCaps, jobsOf, crewsOf,
-  powerOf, parkField, parkAt, openBreaches, habitatNeeds, PRICE,
+  STORED, spec, active, finished, tilesOf, centre, log, addPending, chamberOf, idx, storageCaps, jobsOf, crewsOf,
+  powerOf, parkField, parkAt, openBreaches, habitatNeeds, PRICE, upgradeState, techEffect, SERVICE_KINDS, covers, serviceValue,
 } from './rules.js';
 import { diffOf } from './difficulty.js';
 import { updateGoals } from './goals.js';
@@ -24,7 +27,17 @@ export const SIM = {
   taxPerPop: 0.3,         // credits a colonist a day at 10% tax
   unpaid: 0.75,           // output while upkeep is unpaid
   unlockPop: 80,
+  // version 2
+  ration: 0.8, rationHappy: -8,      // a Canteen on rationing: food use × 0.8, happiness −8
+  obsHappy: 3,                       // the first Observation Deck, colony-wide
+  birthEvery: 10, birthPer: 50,      // clinic births: every 10 days, +1 per 50 colonists covered
+  mendEvery: 10,                     // Seed Vault: one poor tile in range to plain every 10 days
+  strike: 0.02, strikeDays: 5,       // Meteoroid Sweeper: chance of a strike a day; days out
+  minesFree: 4, minesPerDump: 4, dumpFull: 100, tailingsHalf: 0.5,   // Tailings Dumps
+  sealFast: 2,                       // Bulkhead Seals in a Safety Post's range: days of work a day
 };
+// Production stages: a user of a good another user makes runs after it (Smelter before Fabricator).
+const STAGE = { alloy: 1 };
 const TAX_HAPPY = [[0, 8], [0.1, 0], [0.2, -14], [0.3, -32]];
 
 // A small seeded generator (mulberry32) whose state lives in the colony, so saves keep the dice.
@@ -72,20 +85,38 @@ function strip(state, b, amount) {
   return got;
 }
 
+// The nearest poor tile (Chebyshev, ties in reading order) within a building's radius, or -1.
+function nearestPoor(state, b) {
+  const { w, h, t } = state.map, c = centre(b), rad = spec(b).radius;
+  let best = -1, bd = Infinity;
+  for (let y = Math.max(0, Math.floor(c.y - rad)); y < Math.min(h, Math.ceil(c.y + rad)); y++) {
+    for (let x = Math.max(0, Math.floor(c.x - rad)); x < Math.min(w, Math.ceil(c.x + rad)); x++) {
+      const i = y * w + x, d = Math.max(Math.abs(x + 0.5 - c.x), Math.abs(y + 0.5 - c.y));
+      if (t[i] === T.POOR && d <= rad && d < bd) { bd = d; best = i; }
+    }
+  }
+  return best;
+}
+
 export function dayTick(state, rng) {
   const events = [];
   const say = (kind, text, pause = false) => { events.push({ kind, text, pause }); log(state, text); };
   const ask = (kind, title, text) => { addPending(state, kind, title, text); say(kind, text, true); };
   const f = state.flags;
   f.short ||= { food: 0, water: 0, air: 0, power: 0 };
+  upgradeState(state);
   state.day++;
 
-  // 1 construction: each crew works on one building, oldest order first.
+  // 1 construction: each crew works on one building, oldest order first. A Safety Post's crews
+  // put up Bulkhead Seals in its range twice as fast.
   let crews = crewsOf(state);
+  const posts = state.buildings.filter((b) => b.key === 'safetypost' && active(b));
   for (const b of state.buildings) {
     if (b.build <= 0 || crews <= 0) continue;
     crews--;
-    if (--b.build > 0) continue;
+    const step = b.key === 'seal' && posts.some((p) => covers(p, b)) ? SIM.sealFast : 1;
+    b.build = Math.max(0, b.build - step);
+    if (b.build > 0) continue;
     const d = BUILDING[b.key];
     say('built', `${d.name}${b.level > 1 ? ` level ${b.level}` : ''} finished.`);
     if (b.key === 'seal') {
@@ -118,19 +149,33 @@ export function dayTick(state, rng) {
   const use = (g, n) => { if (n > 0) { n = Math.min(n, st[g]); st[g] -= n; consumed[g] = (consumed[g] || 0) + n; } };
   const rate = (s) => (s.jobs ? staffing : 1) * (s.power < 0 ? pf : 1) * moneyF;
   const usesOf = (b, s) => (b.key === 'farm' && b.mode === 'fallow' ? null : s.uses);
+  const outMult = {}, om = (key) => (outMult[key] ??= techEffect(state, 'output', key));
+  const rates = new Map();   // each building's working rate today (services scale with it)
+  let researchMade = 0;
+  // Tailings: more than 4 Ore Mines need a Dump (not full) per 4 beyond the first 4, else half output.
+  const mines = state.buildings.filter((b) => b.key === 'oremine' && active(b)).length;
+  const dumps = state.buildings.filter((b) => b.key === 'tailings' && active(b) && (b.fill || 0) < SIM.dumpFull);
+  const dumpsNeeded = mines > SIM.minesFree ? Math.ceil((mines - SIM.minesFree) / SIM.minesPerDump) : 0;
+  const tailF = dumps.length >= dumpsNeeded ? 1 : SIM.tailingsHalf;
+  if (dumpsNeeded > dumps.length && state.day % 10 === 0) say('tailings', `${mines} Ore Mines and ${dumps.length ? `only ${dumps.length}` : 'no'} working Tailings Dump${dumps.length === 1 ? '' : 's'}: the mines run at half output (${dumpsNeeded} needed).`);
   const run = (b, s, r) => {
+    rates.set(b, r);
     if (!s.makes || r <= 0) return;
+    const m = om(b.key);
     if (b.key === 'farm') {
       const soil = farmSoil(state, b);
-      if (b.mode === 'cash') { make('food', s.makes.food * soil * SIM.cash.food * r); make('credits', SIM.cash.credits * soil * r); }
-      else make('food', s.makes.food * soil * r);
+      if (b.mode === 'cash') { make('food', s.makes.food * soil * SIM.cash.food * r * m); make('credits', SIM.cash.credits * soil * r * m); }
+      else make('food', s.makes.food * soil * r * m);
     } else if (b.key === 'oremine') {
       const seam = [...tilesOf(state, b)].some((i) => state.map.r[i] === R.ORE_SEAM);
-      make('ore', s.makes.ore * (seam ? SIM.seam : 1) * r);
+      make('ore', s.makes.ore * (seam ? SIM.seam : 1) * r * m * tailF);
     } else if (b.key === 'salvage') {
       const careful = b.mode === 'careful';
-      make('parts', strip(state, b, s.makes.parts * r * (careful ? 0.5 : 1)) * (careful ? 2 : 1));
-    } else for (const [g, n] of Object.entries(s.makes)) make(g, n * r);
+      make('parts', strip(state, b, s.makes.parts * r * m * (careful ? 0.5 : 1)) * (careful ? 2 : 1));
+    } else for (const [g, n] of Object.entries(s.makes)) {
+      if (g === 'research') researchMade += n * r * m;
+      else make(g, n * r * m);
+    }
   };
   const users = [];
   for (const b of state.buildings) {
@@ -148,22 +193,60 @@ export function dayTick(state, rng) {
     if (usesOf(b, s)) users.push([b, s, rate(s)]);
     else run(b, s, rate(s));
   }
-  const want = {};
-  for (const [b, s, r] of users) for (const [g, n] of Object.entries(usesOf(b, s))) want[g] = (want[g] || 0) + n * r;
-  const share = {};
-  for (const g in want) share[g] = want[g] > 0 ? Math.min(1, st[g] / want[g]) : 1;
-  for (const [b, s, r0] of users) {
-    const u = usesOf(b, s), r = r0 * Math.min(...Object.keys(u).map((g) => share[g]));
-    for (const [g, n] of Object.entries(u)) use(g, n * r);
-    run(b, s, r);
+  // users by stage (a Fabricator uses the alloy today's Smelters made); a short input is shared in
+  // proportion and scales the output of everyone who uses it
+  const stageOf = ([b, s]) => Math.max(0, ...Object.keys(usesOf(b, s)).map((g) => STAGE[g] || 0));
+  for (const stage of [0, 1]) {
+    const group = users.filter((u) => stageOf(u) === stage), want = {};
+    for (const [b, s, r] of group) for (const [g, n] of Object.entries(usesOf(b, s))) want[g] = (want[g] || 0) + n * r;
+    const share = {};
+    for (const g in want) share[g] = want[g] > 0 ? Math.min(1, st[g] / want[g]) : 1;
+    for (const [b, s, r0] of group) {
+      const u = usesOf(b, s), r = r0 * Math.min(...Object.keys(u).map((g) => share[g]));
+      for (const [g, n] of Object.entries(u)) use(g, n * r);
+      run(b, s, r);
+    }
   }
+  // Tailings Dumps fill: each working Ore Mine adds 1 a day, spread over the dumps not yet full.
+  if (dumps.length && mines) for (const d of dumps) {
+    d.fill = Math.min(SIM.dumpFull, (d.fill || 0) + mines / dumps.length);
+    if (d.fill >= SIM.dumpFull) say('tailings', 'A Tailings Dump is full: it takes no more waste until it is emptied (its panel has the order).');
+  }
+  // Seed Vaults mend the nearest poor tile in range every 10 days.
+  for (const b of state.buildings) {
+    if (b.key !== 'seedvault' || !active(b) || (b.mend = (b.mend || 0) + 1) < SIM.mendEvery) continue;
+    b.mend = 0;
+    const i = nearestPoor(state, b);
+    if (i >= 0) { state.map.t[i] = T.PLAIN; say('mend', 'A Seed Vault mended a tile of poor soil: it is plain again.'); }
+  }
+
+  // 5b research: the labs' points go to the tech being studied (or into the bank, which flows into
+  // the next one); a finished tech unlocks its buildings and its effects apply from now on.
+  const rs = state.research;
+  let flow = researchMade + rs.points;
+  while (flow > 1e-9 && rs.focus && TECH[rs.focus]) {
+    const t = TECH[rs.focus], put = Math.min(flow, t.cost - (rs.progress[t.key] || 0));
+    rs.progress[t.key] = (rs.progress[t.key] || 0) + put;
+    flow -= put;
+    if (rs.progress[t.key] < t.cost - 1e-9) break;
+    rs.progress[t.key] = t.cost; rs.focus = null;
+    if (!rs.done.includes(t.key)) rs.done.push(t.key);
+    for (const k of t.unlocks) if (!state.unlocked.includes(k)) state.unlocked.push(k);
+    const news = t.unlocks.map((k) => BUILDING[k]?.name).filter(Boolean);
+    const text = `Governor, the labs have finished ${t.name}. ${t.text}${news.length ? ` New to build: ${news.join(', ')}.` : ''} Choose what to study next in Research.`;
+    const p = addPending(state, 'tech', `Research: ${t.name}`, text);
+    p.speaker = 'ruess';
+    say('tech', text, true);
+  }
+  rs.points = flow;
 
   // 6 needs: colonists eat, drink and breathe; open chambers leak a little air.
   const pop = state.pop;
   let chamberAir = 0;
   for (const c of state.chambers) if (c.status === 'open') chamberAir += (c.tiles / 100) * CHAMBER_AIR_PER_100;
   const nm = diffOf(state).need;
-  const need = { food: pop * NEEDS.food * nm, water: pop * NEEDS.water * nm, air: (pop * NEEDS.air + chamberAir) * nm };
+  const ration = state.buildings.some((b) => b.key === 'canteen' && b.mode === 'ration' && active(b));
+  const need = { food: pop * NEEDS.food * nm * (ration ? SIM.ration : 1), water: pop * NEEDS.water * nm, air: (pop * NEEDS.air + chamberAir) * nm };
   const got = {};
   for (const g in need) { const before = st[g]; use(g, need[g]); got[g] = need[g] > 0 ? (before - st[g]) / need[g] : 1; }
   const housing = state.buildings.reduce((t, b) => t + (active(b) ? spec(b).housing || 0 : 0), 0);
@@ -188,6 +271,16 @@ export function dayTick(state, rng) {
   const field = parkField(state), homes = state.buildings.filter((b) => b.key === 'habitat' && active(b));
   const parkAvg = homes.length ? homes.reduce((t, b) => t + parkAt(state, b, field), 0) / homes.length : 0;
   parts.push({ label: 'Parks near homes', value: Math.round(parkAvg) });
+  // services (version 2): the best of each kind covering a home, averaged over the homes; a
+  // service works at its building's rate today (staff, power, a Canteen's food)
+  for (const k of SERVICE_KINDS) {
+    const list = state.buildings.filter((b) => b.key === k.key && active(b));
+    if (!list.length) continue;
+    const best = (h) => list.reduce((m, b) => (covers(b, h) ? Math.max(m, serviceValue(b) * Math.min(1, rates.get(b) ?? 1)) : m), 0);
+    parts.push({ label: k.label, value: Math.round(homes.length ? homes.reduce((t, h) => t + best(h), 0) / homes.length : 0) });
+  }
+  if (state.buildings.some((b) => b.key === 'obsdeck' && active(b))) parts.push({ label: 'Observation Deck', value: SIM.obsHappy });
+  if (ration) parts.push({ label: 'Rationing', value: SIM.rationHappy });
   if (pop > housing) parts.push({ label: 'Crowding', value: -Math.min(30, Math.floor((housing ? (pop - housing) / housing : 1) * 50)) });
   if (pop > 0 && (pop - jobs) / pop > 0.2) parts.push({ label: 'Unemployment', value: -5 });
   state.happyParts = parts;
@@ -219,6 +312,13 @@ export function dayTick(state, rng) {
     state.pop -= gone;
     say('emigration', `${gone} colonist${gone > 1 ? 's' : ''} left on a passing ship.`);
   }
+  // Clinic births (full care): every 10 days, +1 colonist per 50 living in homes a clinic covers.
+  const clinics = state.buildings.filter((b) => b.key === 'clinic' && b.mode !== 'triage' && active(b));
+  if (clinics.length && state.day % SIM.birthEvery === 0 && housing > 0) {
+    const coveredHomes = homes.reduce((t, h) => t + (clinics.some((c) => covers(c, h)) ? spec(h).housing || 0 : 0), 0);
+    const n = Math.min(Math.max(0, housing - state.pop), Math.floor((state.pop * Math.min(1, coveredHomes / housing)) / SIM.birthPer));
+    if (n > 0) { state.pop += n; say('births', `${n} child${n > 1 ? 'ren were' : ' was'} born in the Clinic's care.`); }
+  }
   const dv = diffOf(state);
   if (state.day % dv.transportEvery === 0 && state.buildings.some((b) => b.key === 'dock' && b.build === 0)) {
     const free = housing - state.pop, surplus = (produced.food || 0) - (consumed.food || 0);
@@ -239,7 +339,7 @@ export function dayTick(state, rng) {
 
   // 10 money: tax in, upkeep out. Unpaid upkeep slows everything the next day.
   const tax = state.pop * SIM.taxPerPop * (state.tax / 0.1);
-  const upkeep = diffOf(state).upkeep * state.buildings.reduce((t, b) => t + (b.build === 0 ? BUILDING[b.key].upkeep || 0 : 0), 0);
+  const upkeep = diffOf(state).upkeep * state.buildings.reduce((t, b) => t + (b.build === 0 ? (BUILDING[b.key].upkeep || 0) * (b.key === 'clinic' && b.mode === 'triage' ? 0.5 : 1) : 0), 0);
   make('credits', tax);
   const paid = Math.min(upkeep, st.credits);
   use('credits', paid);
@@ -259,6 +359,13 @@ export function dayTick(state, rng) {
   // 11 market: prices drift back toward their base.
   for (const g in state.market) state.market[g] += (1 - state.market[g]) * PRICE.recover;
 
+  // 11b meteoroid strikes: a working sweeper may be knocked out for a few days.
+  for (const b of state.buildings) {
+    if (b.key !== 'sweeper' || !finished(b)) continue;
+    if (b.down > 0) b.down--;
+    else if (!b.off && rng() < SIM.strike) { b.down = SIM.strikeDays; say('strike', `A meteoroid struck a Meteoroid Sweeper: it is out of action for ${SIM.strikeDays} days.`); }
+  }
+
   // 12 milestones.
   if (state.pop >= SIM.unlockPop && !f.unlock80) {
     f.unlock80 = true;
@@ -267,7 +374,7 @@ export function dayTick(state, rng) {
     ask('unlock', 'Eighty colonists', `Eden has ${state.pop} colonists. New buildings: ${keys.map((k) => BUILDING[k].name).join(', ')}.`);
   }
 
-  state.stats.last = { produced, consumed, met, staffing, jobs, power: { supply, demand, factor: pf }, tax, upkeep };
+  state.stats.last = { produced, consumed, met, staffing, jobs, power: { supply, demand, factor: pf }, tax, upkeep, research: researchMade };
   // 13 guided goals: a finished goal pays the Council grant and names the next (js/colony/goals.js)
   const goal = updateGoals(state);
   if (goal) events.push({ kind: 'goal', text: state.log[state.log.length - 1].text, pause: true });

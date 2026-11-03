@@ -25,7 +25,7 @@ let raf = 0, last = 0, acc = 0, pointer = { x: 0, y: 0 };
 const settings = loadSettings();
 
 function loadSettings() {
-  const d = { pauseOnEvents: true, snap: false };
+  const d = { pauseOnEvents: true, snap: false, minimap: true, navButtons: true, wheel: 'auto' };
   try { return { ...d, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }; } catch { return d; }
 }
 function storeSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { } }
@@ -44,7 +44,8 @@ const art = (slot) => { try { return M?.art?.art?.(slot) || null; } catch { retu
 const DIFF = () => M?.difficulty?.DIFFICULTY || DIFF_FALLBACK;
 const diffOf = (s) => { try { return M?.difficulty?.diffOf?.(s) || null; } catch { return null; } };
 // A cost as this colony pays it (difficulty-scaled), whatever rules.js offers.
-const costOf = (cost) => { try { return M.rules.costOf?.(state, cost) || cost; } catch { return cost; } };
+// key: the building, so tech discounts (Better Seals) show too.
+const costOf = (cost, key) => { try { return M.rules.costOf?.(state, cost, key) || cost; } catch { return cost; } };
 
 async function loadTypes() {
   if (types) return types;
@@ -166,6 +167,7 @@ function startGame(s, isNew = false) {
     view = M.view.createView($('#view'), { onTileClick, onTileHover });
     view.setState(state);
     view.setSnap?.(settings.snap);
+    viewHelpers();
     view.setSpeed?.(state.speed ?? 1);
     const cc = state.buildings.find((b) => b.key === 'command');
     if (cc) view.focus?.(cc.x + 1, cc.y + 1);
@@ -180,6 +182,13 @@ function startGame(s, isNew = false) {
   ui.update(true);
   boot(false);
   startLoop();
+}
+
+// The view's trackpad helpers (version 2): the minimap and the on-map buttons, as the settings say.
+function viewHelpers() {
+  try { view?.setMinimap?.(settings.minimap !== false); } catch (e) { console.warn('setMinimap', e); }
+  try { view?.setNavButtons?.(settings.navButtons !== false); } catch (e) { console.warn('setNavButtons', e); }
+  try { view?.setWheelMode?.(settings.wheel || 'auto'); } catch (e) { console.warn('setWheelMode', e); }
 }
 
 const api = {
@@ -214,7 +223,12 @@ const api = {
       ui.welcomeDone(!seen);
     }
   },
-  setSetting: (k, v) => { settings[k] = v; storeSettings(); if (k === 'snap') view?.setSnap?.(v); },
+  setSetting: (k, v) => {
+    settings[k] = v; storeSettings();
+    if (k === 'snap') view?.setSnap?.(v);
+    if (k === 'minimap' || k === 'navButtons' || k === 'wheel') viewHelpers();
+  },
+  openResearch: (key) => ui?.openResearch(key),
   audio,
 };
 
@@ -252,9 +266,15 @@ function save(announce) {
 
 // ---------------------------------------------------------------- "Show me" (goals and advisor)
 // show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true }
+//       | { research: true | techKey } (the Research panel, at that tech or the first one to study)
 function doShow(sh) {
   if (!sh || !state) return;
   ui.closePops();
+  if (sh.research) {
+    setPlacing(null);
+    ui.openResearch(typeof sh.research === 'string' ? sh.research : ui.firstAvailableTech?.() || null);
+    return;
+  }
   if (sh.market) { setPlacing(null); ui.openMarket(); const d = state.buildings.find((b) => b.key === 'dock'); if (d) view?.focus?.(d.x + 1, d.y + 1); return; }
   if (sh.roads) {
     ui.openBuild('road'); setPlacing({ key: 'road' });
@@ -374,7 +394,7 @@ function placeCheck(x, y) {
 
 // Roads go down as a line: the first click fixes the start, the second builds an L to the end.
 function roadPreview(x, y) {
-  const s0 = placing.roadStart, plan = M.rules.planRoad(state, s0.x, s0.y, x, y), d = { cost: costOf(BUILDING.road.cost) };
+  const s0 = placing.roadStart, plan = M.rules.planRoad(state, s0.x, s0.y, x, y), d = { cost: costOf(BUILDING.road.cost, 'road') };
   const { w, h } = state.map, v = new Float32Array(w * h);
   let fresh = 0, blocked = 0;
   for (const p of plan) { v[p.y * w + p.x] = p.why == null ? 1 : p.why === 'have' ? 0.6 : 0.15; if (p.why == null) fresh++; else if (p.why !== 'have') blocked++; }
@@ -387,7 +407,7 @@ function ghostAt(x, y) {
   if (placing.key === 'road' && placing.roadStart) return roadPreview(x, y);
   const c = placeCheck(x, y);
   try { view?.setGhost(placing.key, c.x, c.y, c.why == null); } catch (e) { console.error(e); }
-  const d = BUILDING[placing.key], dc = costOf(d.cost);
+  const d = BUILDING[placing.key], dc = costOf(d.cost, placing.key);
   const cost = placing.moveId ? `move: ${Math.ceil((dc.credits || 0) * 0.2)} cr` : [dc.credits ? `${dc.credits} cr` : '', dc.parts ? `${dc.parts} parts` : ''].filter(Boolean).join(' · ');
   const verb = placing.moveId ? 'move' : placing.key === 'road' ? 'start the road here' : 'build';
   ui.tip(`<b>${esc(d.name)}</b> <small>${esc(cost)}${placing.key === 'road' ? ' a tile' : ''}</small><br>${c.why == null ? '<span class="ok">✓ Click to ' + verb + '</span>' : `<span class="no">✗ ${esc(c.why)}</span>`}`, pointer.x, pointer.y, c.why == null);
@@ -452,6 +472,7 @@ function onKey(e) {
     case '3': setSpeed(4); break;
     case 'm': case 'M': if (!e.ctrlKey && !e.metaKey) { audio.setMuted(!audio.muted); ui.toast(audio.available ? (audio.muted ? 'Music off.' : 'Music on.') : audio.why, audio.available ? 'good' : 'bad'); } break;
     case 'r': case 'R': if (!e.ctrlKey && !e.metaKey && lastKey) api.pick(lastKey); break;
+    case 't': case 'T': if (!e.ctrlKey && !e.metaKey && !e.altKey) ui.toggleResearch(); break;
     case 'Escape':
       if (placing?.roadStart) { placing.roadStart = null; applyOverlay(); if (hover) ghostAt(hover.x, hover.y); }
       else if (placing) setPlacing(null);
@@ -534,7 +555,7 @@ async function main() {
   }
   showTitle();
   audio.init().then((ok) => { if (ok && !$('#sTitle').hidden) audio.play('title'); });
-  window.__colony = { get state() { return state; }, get view() { return view; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings };
+  window.__colony = { get state() { return state; }, get view() { return view; }, get ui() { return ui; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings, show: doShow };
   // colony.html?from=remnant|classic: straight on from the expansion's ending, its army already found
   const from = new URLSearchParams(location.search).get('from');
   if (from && EXPANSION[from]) newDialog(from);

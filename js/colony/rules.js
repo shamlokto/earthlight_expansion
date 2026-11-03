@@ -4,12 +4,15 @@
 import { T, R, TERRAIN, ARTIFACT, zoneOf } from './data/terrain.js';
 import { diffOf } from './difficulty.js';
 import { BUILDING, BUILDINGS, BASE_PRICE, DOCK_REACH, NEEDS } from './data/buildings.js';
+import { TECH, TECHS } from './data/tech.js';
 
-export const STORED = ['food', 'water', 'air', 'parts', 'ore'];
+// alloy and helium(-3) arrived with version 2 (docs/COLONY-V2.md "New goods").
+export const STORED = ['food', 'water', 'air', 'parts', 'ore', 'alloy', 'helium'];
 export const GOODS = [...STORED, 'credits'];
 export const SURVEY = { credits: 100, days: 2 };
 export const PRESSURISE = { days: 5, airPerTile: 1 / 4 };
 export const MOVE_FEE = 0.2;
+export const EMPTY_TAILINGS = { credits: 50 };
 export const TAX_MAX = 0.3;
 export const PRICE = { lot: 10, drop: 0.02, recover: 0.05, floor: 0.1 };
 // Sale price of an expansion machine, as campaign.js prices it (value × hp); 24 when unknown.
@@ -34,6 +37,60 @@ export function addPending(state, kind, title, text, choices = [{ key: 'ok', lab
   return p;
 }
 
+// Version 2 fields with their defaults, for colonies started (or saved) before version 2 and for
+// hand-made states. Idempotent; state.js loadState and sim.js dayTick call it.
+export function upgradeState(state) {
+  state.research ??= { points: 0, focus: null, progress: {}, done: [] };
+  const r = state.research;
+  r.points ??= 0; r.focus ??= null; r.progress ??= {}; r.done ??= [];
+  for (const g of STORED) state.stock[g] ??= 0;
+  state.market ??= {};
+  for (const g of Object.keys(BASE_PRICE)) state.market[g] ??= 1;
+  // a colony that passed 80 colonists before the lab existed still gets it
+  if (state.flags?.unlock80) for (const d of BUILDINGS) if (d.unlock && d.unlock.pop <= 80 && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
+  return state;
+}
+
+// ---------------------------------------------------------------- research (version 2)
+
+// The product of `mult` over finished techs' effects of this kind (and key, for output, storage
+// and cost); 1 when none. 'survey' returns { mult, days } (days: the shortest a tech allows).
+export function techEffect(state, kind, key) {
+  let mult = 1, days = SURVEY.days;
+  for (const k of state.research?.done || []) for (const e of TECH[k]?.effects || []) {
+    if (e.kind !== kind || (e.key ?? null) !== (key ?? null)) continue;
+    mult *= e.mult ?? 1;
+    if (e.days !== undefined) days = Math.min(days, e.days);
+  }
+  return kind === 'survey' ? { mult, days } : mult;
+}
+const techAvailable = (state, t) => t.needs.every((n) => state.research.done.includes(n));
+
+export function techStatus(state) {
+  upgradeState(state);
+  const r = state.research;
+  return TECHS.map((t) => {
+    const done = r.done.includes(t.key);
+    return {
+      key: t.key, name: t.name, branch: t.branch, cost: t.cost, progress: done ? t.cost : Math.min(t.cost, r.progress[t.key] || 0),
+      done, available: !done && techAvailable(state, t), focus: r.focus === t.key, needs: [...t.needs], unlocks: [...t.unlocks], text: t.text,
+    };
+  });
+}
+
+// Choose what the labs study. Points banked while nothing was focused flow into it from the next day.
+export function research(state, techKey) {
+  upgradeState(state);
+  const t = TECH[techKey], r = state.research;
+  if (!t) return no('There is no such technology.');
+  if (r.done.includes(t.key)) return no(`${t.name} is already known.`);
+  if (!techAvailable(state, t)) return no(`${t.name} needs ${t.needs.filter((n) => !r.done.includes(n)).map((n) => TECH[n].name).join(' and ')} first.`);
+  if (r.focus === t.key) return ok(`The labs are already studying ${t.name}.`);
+  r.focus = t.key;
+  const labs = state.buildings.some((b) => b.key === 'lab');
+  return ok(`The labs study ${t.name}: ${Math.ceil(t.cost - (r.progress[t.key] || 0))} points to go.${labs ? '' : ' Build a Research Lab to make research points.'}`);
+}
+
 // A building's table entry with its level's overrides (power, housing, crews...) applied.
 const specs = new Map();
 export function spec(b) {
@@ -47,7 +104,8 @@ export function spec(b) {
   }
   return s;
 }
-export const active = (b) => b.build === 0 && !b.off;
+// `down`: days a building is knocked out (a meteoroid strike on a sweeper).
+export const active = (b) => b.build === 0 && !b.off && !(b.down > 0);
 export const finished = (b) => b.build === 0;
 export const idx = (state, x, y) => y * state.map.w + x;
 export function* tilesOf(state, b, size = BUILDING[b.key].size) {
@@ -70,13 +128,16 @@ export function occupancy(state, ignore = -1) {
 }
 
 export function storageCaps(state) {
-  const cap = { food: 0, water: 0, air: 0, parts: 0, ore: 0, power: 0 };
+  const cap = { power: 0 };
+  for (const g of STORED) cap[g] = 0;
+  const mult = {};
   for (const b of state.buildings) {
     if (!finished(b)) continue;
     const s = spec(b);
     if (!s.storage) continue;
-    if (b.key === 'depot') cap[b.mode || 'food'] += Object.values(s.storage)[0];
-    else for (const [g, n] of Object.entries(s.storage)) cap[g] += n;
+    const m = (mult[b.key] ??= techEffect(state, 'storage', b.key));
+    if (b.key === 'depot') cap[b.mode || 'food'] = (cap[b.mode || 'food'] || 0) + Object.values(s.storage)[0] * m;
+    else for (const [g, n] of Object.entries(s.storage)) cap[g] = (cap[g] || 0) + n * m;
   }
   return cap;
 }
@@ -102,9 +163,42 @@ export function powerOf(state, staffing = staffingOf(state), moneyF = 1) {
 
 const docks = (state) => state.buildings.filter((b) => b.key === 'dock' && finished(b));
 const REACH = BUILDING.dock.radius || DOCK_REACH;
-const reachTest = (cs) => (x, y) => cs.some((c) => Math.max(Math.abs(x + 0.5 - c.x), Math.abs(y + 0.5 - c.y)) <= REACH);
-// Space buildability: the tile's centre within DOCK_REACH (Chebyshev) of a finished dock's centre.
-export const inReach = (state, x, y) => reachTest(docks(state).map(centre))(x, y);
+const cheb = (x, y, c) => Math.max(Math.abs(x + 0.5 - c.x), Math.abs(y + 0.5 - c.y));
+const reachTest = (cs) => (x, y) => cs.some((c) => cheb(x, y, c) <= c.r);
+// The centres that give space reach: every finished dock (radius 24), then every finished Tether
+// Mast (radius 16) that itself stands in reach, chained outwards. [{ x, y, r, key }]
+export function reachSources(state) {
+  const out = docks(state).map((b) => ({ ...centre(b), r: REACH, key: 'dock' }));
+  let masts = state.buildings.filter((b) => b.key === 'tether' && finished(b));
+  for (let grew = true; grew && masts.length;) {
+    grew = false;
+    const test = reachTest(out);
+    masts = masts.filter((b) => {
+      if (!test(b.x, b.y)) return true;
+      out.push({ ...centre(b), r: spec(b).radius || 16, key: 'tether' });
+      grew = true;
+      return false;
+    });
+  }
+  return out;
+}
+// Space (and atmosphere) buildability: the tile's centre within reach (Chebyshev) of a finished
+// dock's centre, or of a chained Tether Mast's.
+export const inReach = (state, x, y) => reachTest(reachSources(state))(x, y);
+const spaceLike = (ti) => { const z = zoneOf(ti); return z === 'space' || z === 'atmo'; };
+
+// The bottom hull wall (facing Earth): hull tiles below every chamber tile of their column.
+const bottomCache = new WeakMap();
+export function bottomHull(state, x, y) {
+  const { w, h, ch, t } = state.map;
+  let low = bottomCache.get(ch);
+  if (!low) {
+    low = new Int32Array(w).fill(-1);
+    for (let i = 0; i < w * h; i++) if (ch[i] !== 255) low[i % w] = Math.max(low[i % w], (i / w) | 0);
+    bottomCache.set(ch, low);
+  }
+  return t[y * w + x] === T.HULL && low[x] >= 0 && y > low[x];
+}
 
 // Chamber id -> Set of chambers across one wall tile (bulkheads, gates, breaches). Cached per map.
 const linkCache = new WeakMap();
@@ -168,21 +262,22 @@ export function placeCheck(state, key, x, y, opts = {}) {
   const d = BUILDING[key];
   if (!d) return 'There is no such building.';
   if (d.fixed) return `The ${d.name} cannot be built.`;
-  if (!state.unlocked.includes(key)) return `The ${d.name} unlocks at ${d.unlock?.pop ?? 80} colonists.`;
+  if (!state.unlocked.includes(key)) return lockedWhy(d);
   const { w, h, t, ch } = state.map;
   if (x < 0 || y < 0 || x + d.size > w || y + d.size > h) return 'That is off the edge of the map.';
-  const on = onSet(d), reach = opts.reach || reachTest(docks(state).map(centre));
+  const on = onSet(d), reach = opts.reach || reachTest(reachSources(state));
   const occ = opts.occ || occupancy(state, opts.ignore ?? -1);
   for (let dy = 0; dy < d.size; dy++) for (let dx = 0; dx < d.size; dx++) {
     const i = (y + dy) * w + x + dx, ti = t[i];
     if (!on.has(ti)) return `A ${d.name} stands only on ${names(d.on)}, not on ${TERRAIN[ti].name.toLowerCase()}.`;
     const c = chamberOf(state, ch[i]);
-    const interior = !!c && c.status === OPEN, space = zoneOf(ti) === 'space', near = space && reach(x + dx, y + dy);
+    const interior = !!c && c.status === OPEN, space = spaceLike(ti), near = space && reach(x + dx, y + dy);
     if (d.zone === 'interior' && !interior) return c ? `${c.name} is not pressurised yet: survey, seal and pressurise it first.` : `A ${d.name} must stand inside an open chamber.`;
-    if (d.zone === 'space' && !near) return space ? `That is beyond the dock's reach (${DOCK_REACH} tiles): build closer to a dock.` : `A ${d.name} must stand in space near a dock.`;
+    if (d.zone === 'space' && !near) return space ? `That is beyond reach (${DOCK_REACH} tiles of a dock, 16 of a Tether Mast): build closer.` : `A ${d.name} must stand in space near a dock.`;
     if (d.zone === 'hull' && ti !== T.HULL) return `A ${d.name} must stand on the hull.`;
+    if (key === 'obsdeck' && !bottomHull(state, x + dx, y + dy)) return `An ${d.name} must stand on the bottom hull wall, facing Earth.`;
     if (d.zone === 'any' && !(interior || near || ti === T.HULL)) {
-      return space ? `That is beyond the dock's reach (${DOCK_REACH} tiles): build closer to a dock.` : c ? `${c.name} is not pressurised yet.` : `A ${d.name} cannot stand here.`;
+      return space ? `That is beyond reach (${DOCK_REACH} tiles of a dock, 16 of a Tether Mast): build closer.` : c ? `${c.name} is not pressurised yet.` : `A ${d.name} cannot stand here.`;
     }
     if (d.zone === 'road' && !(interior || (ti === T.GATE && gateOpen(state, i)))) {
       return ti === T.GATE ? 'A road can pass a gate only when the chambers on both sides are open.' : c ? `${c.name} is not pressurised yet.` : 'Roads run on open chamber floors and through gates.';
@@ -201,25 +296,28 @@ export function placeCheck(state, key, x, y, opts = {}) {
     }
     if (!found) return `A ${d.name} must stand beside the ${TERRAIN[want].name.toLowerCase()}.`;
   }
-  if (!opts.free) return afford(state, d.cost);
+  if (!opts.free) return afford(state, d.cost, key);
   return null;
 }
-// A cost as this colony pays it: scaled by difficulty (js/colony/difficulty.js), rounded up.
-export function costOf(state, cost) {
-  const m = diffOf(state).cost;
+// Why a locked building is locked: a version 2 building waits on its tech, the rest on 80 colonists.
+const lockedWhy = (d) => (d.tech && TECH[d.tech] ? `Research ${TECH[d.tech].name}.` : `The ${d.name} unlocks at ${d.unlock?.pop ?? 80} colonists.`);
+// A cost as this colony pays it: scaled by difficulty (js/colony/difficulty.js) and, given the
+// building's key, by finished techs' cost effects (Better Seals); rounded up.
+export function costOf(state, cost, key) {
+  const m = diffOf(state).cost * (key ? techEffect(state, 'cost', key) : 1);
   return { credits: Math.ceil((cost.credits || 0) * m), parts: Math.ceil((cost.parts || 0) * m) };
 }
-function afford(state, raw) {
-  const cost = costOf(state, raw);
+function afford(state, raw, key) {
+  const cost = costOf(state, raw, key);
   if (state.stock.credits < cost.credits) return `Needs ${Math.ceil(cost.credits - state.stock.credits)} more credits.`;
   if (state.stock.parts < (cost.parts || 0)) return `Needs ${Math.ceil(cost.parts - state.stock.parts)} more parts.`;
   return null;
 }
-const pay = (state, raw) => { const cost = costOf(state, raw); state.stock.credits -= cost.credits; state.stock.parts -= cost.parts; };
+const pay = (state, raw, key) => { const cost = costOf(state, raw, key); state.stock.credits -= cost.credits; state.stock.parts -= cost.parts; };
 
 // Best free spot for `key` (lowest score) in a box of tiles; null if none. For setup and bots.
 export function findSpot(state, key, { box, score = () => 0, free = false } = {}) {
-  const occ = occupancy(state), reach = reachTest(docks(state).map(centre)), d = BUILDING[key], on = d && onSet(d), { w, t } = state.map;
+  const occ = occupancy(state), reach = reachTest(reachSources(state)), d = BUILDING[key], on = d && onSet(d), { w, t } = state.map;
   const b = box || { x0: 0, y0: 0, x1: state.map.w - 1, y1: state.map.h - 1 };
   let best = null;
   for (let y = Math.max(0, b.y0); y <= Math.min(state.map.h - 1, b.y1); y++) for (let x = Math.max(0, b.x0); x <= Math.min(w - 1, b.x1); x++) {
@@ -227,7 +325,7 @@ export function findSpot(state, key, { box, score = () => 0, free = false } = {}
     const s = score(x, y);
     if (s !== null && (!best || s < best.s)) best = { x, y, s };
   }
-  if (best && !free && afford(state, BUILDING[key].cost)) return null;
+  if (best && !free && afford(state, BUILDING[key].cost, key)) return null;
   return best && { x: best.x, y: best.y };
 }
 
@@ -276,8 +374,9 @@ export function build(state, key, x, y) {
   const why = canBuild(state, key, x, y);
   if (why) return no(why);
   const d = BUILDING[key];
-  pay(state, d.cost);
+  pay(state, d.cost, key);
   const b = { id: state.nextId++, key, x, y, level: 1, mode: d.modes ? d.modes[0].key : null, build: d.days, off: false };
+  if (key === 'tailings') b.fill = 0;
   state.buildings.push(b);
   log(state, `${d.name} ordered.`);
   return ok(`${d.name} placed: ${d.days} days of work for a crew.`, { id: b.id });
@@ -301,7 +400,7 @@ export function demolish(state, id) {
   if (d.fixed) return no(`The ${d.name} cannot be demolished.`);
   const air = holdsAir(state, b);
   if (air) return no(air);
-  const c = costOf(state, spent(b)), back = { credits: Math.floor(c.credits / 2), parts: Math.floor(c.parts / 2) };
+  const c = costOf(state, spent(b), b.key), back = { credits: Math.floor(c.credits / 2), parts: Math.floor(c.parts / 2) };
   state.buildings.splice(state.buildings.indexOf(b), 1);
   state.stock.credits += back.credits; state.stock.parts += back.parts;
   log(state, `${d.name} demolished.`);
@@ -318,9 +417,9 @@ export function move(state, id, x, y) {
   const why = placeCheck(state, b.key, x, y, { ignore: b.id, free: true });
   if (why) return no(why);
   const fee = { credits: Math.ceil(d.cost.credits * MOVE_FEE), parts: Math.ceil((d.cost.parts || 0) * MOVE_FEE) };
-  const poor = afford(state, fee);
+  const poor = afford(state, fee, b.key);
   if (poor) return no(`Moving costs ${fee.credits} credits and ${fee.parts} parts. ${poor}`);
-  pay(state, fee);
+  pay(state, fee, b.key);
   b.x = x; b.y = y;
   return ok(`${d.name} moved for ${fee.credits} credits and ${fee.parts} parts.`);
 }
@@ -345,9 +444,9 @@ export function upgrade(state, id) {
   if (!next) return no(`This ${d.name} is at its top level.`);
   if (!next.cost) return no(`${d.name}s grow by themselves when their needs are met: see the panel for what is missing.`);
   if (b.build > 0) return no('Finish building it first.');
-  const poor = afford(state, next.cost);
+  const poor = afford(state, next.cost, b.key);
   if (poor) return no(poor);
-  pay(state, next.cost);
+  pay(state, next.cost, b.key);
   b.level++;
   b.build = Math.max(1, Math.ceil(d.days / 2));
   log(state, `${d.name} upgrade to level ${b.level} ordered.`);
@@ -367,25 +466,36 @@ export function toggle(state, id) {
 export function buildable(state) {
   return BUILDINGS.filter((d) => !d.fixed).map((d) => {
     const unlocked = state.unlocked.includes(d.key);
-    return { key: d.key, name: d.name, cat: d.cat, cost: costOf(state, d.cost), unlocked, why: unlocked ? afford(state, d.cost) : `Unlocks at ${d.unlock?.pop ?? 80} colonists.` };
+    const why = unlocked ? afford(state, d.cost, d.key) : d.tech && TECH[d.tech] ? `Research ${TECH[d.tech].name}.` : `Unlocks at ${d.unlock?.pop ?? 80} colonists.`;
+    return { key: d.key, name: d.name, cat: d.cat, cost: costOf(state, d.cost, d.key), unlocked, why };
   });
 }
 
-// Air it takes to pressurise a chamber (scaled with the difficulty's needs).
-export const pressuriseAir = (state, c) => Math.ceil(c.tiles * PRESSURISE.airPerTile * diffOf(state).need);
+// Air it takes to pressurise a chamber (scaled with the difficulty's needs and Better Seals).
+export const pressuriseAir = (state, c) => Math.ceil(c.tiles * PRESSURISE.airPerTile * diffOf(state).need * techEffect(state, 'pressurise'));
+
+// A finished Survey Drone Bay whose radius (Chebyshev, from its centre) holds the chamber's whole box.
+export function droneReach(state, c) {
+  return state.buildings.some((b) => b.key === 'dronebay' && active(b) && [[c.x0, c.y0], [c.x1, c.y0], [c.x0, c.y1], [c.x1, c.y1]].every(([x, y]) => cheb(x, y, centre(b)) <= spec(b).radius));
+}
+// What a survey costs and takes now: { credits, days } (Survey Drones halve the cost, one day).
+export function surveyCost(state) {
+  const e = techEffect(state, 'survey');
+  return { credits: costOf(state, { credits: SURVEY.credits * e.mult }).credits, days: e.days };
+}
 
 export function chamberAction(state, chamberId, action) {
   const c = chamberOf(state, chamberId);
   if (!c) return no('There is no such chamber.');
   if (action === 'survey') {
     if (c.status !== 'sealed') return no(`${c.name} has already been surveyed.`);
-    if (!touchesOpen(state, c)) return no(`${c.name} does not touch an open chamber: open a neighbour first.`);
-    const fee = costOf(state, { credits: SURVEY.credits }).credits;
+    if (!touchesOpen(state, c) && !droneReach(state, c)) return no(`${c.name} does not touch an open chamber: open a neighbour first${state.buildings.some((b) => b.key === 'dronebay') ? ', or bring a Survey Drone Bay within 40 tiles' : ''}.`);
+    const { credits: fee, days } = surveyCost(state);
     if (state.stock.credits < fee) return no(`A survey costs ${fee} credits.`);
     state.stock.credits -= fee;
-    c.status = 'surveying'; c.work = SURVEY.days;
+    c.status = 'surveying'; c.work = days;
     log(state, `Surveyors sent into ${c.name}.`);
-    return ok(`Surveying ${c.name}: ${SURVEY.days} days.`);
+    return ok(`Surveying ${c.name}: ${days} day${days === 1 ? '' : 's'}.`);
   }
   if (action === 'pressurise') {
     if (c.status === OPEN || c.status === 'pressurising') return no(`${c.name} is already ${c.status === OPEN ? 'open' : 'being pressurised'}.`);
@@ -403,6 +513,20 @@ export function chamberAction(state, chamberId, action) {
   return no('Chambers can be surveyed or pressurised.');
 }
 
+// Order a Tailings Dump emptied: 50 credits, fill back to 0.
+export function emptyTailings(state, id) {
+  const b = byId(state, id);
+  if (!b || b.key !== 'tailings') return no('That is not a Tailings Dump.');
+  if (b.build > 0) return no('Finish building it first.');
+  if (!(b.fill > 0)) return no('The dump is already empty.');
+  const fee = EMPTY_TAILINGS.credits;
+  if (state.stock.credits < fee) return no(`Emptying the dump costs ${fee} credits.`);
+  state.stock.credits -= fee;
+  b.fill = 0;
+  log(state, 'A Tailings Dump was emptied.');
+  return ok(`Tailings Dump emptied for ${fee} credits.`);
+}
+
 // ---------------------------------------------------------------- market and money
 
 export const price = (state, good) => (BASE_PRICE[good] || 0) * (state.market[good] ?? 1);
@@ -414,9 +538,9 @@ export function sell(state, good, qty) {
   qty = Math.floor(qty);
   if (!(qty > 0)) return no('Choose how much to sell.');
   if (!hasDock(state)) return no('Traders call only at a finished dock.');
-  if (state.stock[good] < qty) return no(`There are only ${Math.floor(state.stock[good])} ${good} in store.`);
+  if ((state.stock[good] || 0) < qty) return no(`There are only ${Math.floor(state.stock[good] || 0)} ${good} in store.`);
   const step = Math.pow(1 - PRICE.drop, 1 / PRICE.lot);
-  let f = state.market[good], gain = 0;
+  let f = state.market[good] ?? 1, gain = 0;
   for (let k = 0; k < qty; k++) { gain += BASE_PRICE[good] * f; f = Math.max(PRICE.floor, f * step); }
   gain = Math.floor(gain);
   state.stock[good] -= qty; state.stock.credits += gain; state.market[good] = f;
@@ -453,20 +577,41 @@ export function answer(state, pendingId, choiceKey) {
 
 // ---------------------------------------------------------------- read-outs
 
+// A level whose needs name a building the game doesn't have (none since version 2) is not offered.
+export const habitatLevelReachable = (level) => !level?.needs?.some((n) => !['allNeeds', 'park'].includes(n) && !BUILDING[n]);
+
 // What a habitat needs for its next level: [{ need, label, met }] (Caesar III's panel, rule 10).
 export function habitatNeeds(state, b, field) {
   const d = BUILDING[b.key], next = d.levels?.[b.level];
-  if (!next?.needs) return [];
+  if (!next?.needs || !habitatLevelReachable(next)) return [];
   const met = state.stats?.last?.met || {};
   const out = [];
   for (const n of next.needs) {
     if (n === 'allNeeds') {
       for (const g of ['food', 'water', 'air', 'power']) out.push({ need: g, label: `Enough ${g} for every colonist`, met: !!met[g] });
     } else if (n === 'park') out.push({ need: 'park', label: 'A park or grove in reach', met: parkAt(state, b, field) > 0 });
-    else if (n === 'clinic') out.push({ need: 'clinic', label: 'A clinic in reach (coming in a later version)', met: false });
+    else if (n === 'clinic') out.push({ need: 'clinic', label: 'A Clinic in reach', met: serviceAt(state, b, 'clinic') > 0 });
     else out.push({ need: n, label: n, met: false });
   }
   return out;
+}
+
+// Services (version 2): a service building covers a home when the home's centre lies within its
+// radius (Chebyshev, from the service's centre). serviceAt: the best `service` value of that
+// building kind covering the home (Clinic triage halves it; a Canteen on rationing gives none).
+export const SERVICE_KINDS = [{ key: 'clinic', label: 'Clinic' }, { key: 'canteen', label: 'Canteen' }, { key: 'safetypost', label: 'Safety' }];
+export function serviceValue(b) {
+  const s = spec(b);
+  if (!s.service || !active(b)) return 0;
+  if (b.key === 'clinic' && b.mode === 'triage') return s.service / 2;
+  if (b.key === 'canteen' && b.mode === 'ration') return 0;
+  return s.service;
+}
+export const covers = (svc, b) => { const c = centre(b); return cheb(c.x - 0.5, c.y - 0.5, centre(svc)) <= spec(svc).radius; };
+export function serviceAt(state, home, key, list = state.buildings) {
+  let best = 0;
+  for (const s of list) if (s.key === key && active(s) && covers(s, home)) best = Math.max(best, serviceValue(s));
+  return best;
 }
 
 export function tileInfo(state, x, y) {
@@ -477,7 +622,7 @@ export function tileInfo(state, x, y) {
   const b = state.buildings.find((k) => { const s = BUILDING[k.key].size; return x >= k.x && y >= k.y && x < k.x + s && y < k.y + s; }) || null;
   return {
     terrain: TERRAIN[t[i]], artifact: hidden ? ARTIFACT[R.NONE] : ARTIFACT[r[i]], salvage: state.map.sv[i],
-    chamber: c, building: b, reach: zoneOf(t[i]) === 'space' && inReach(state, x, y),
+    chamber: c, building: b, reach: spaceLike(t[i]) && inReach(state, x, y),
     coverage: { park: parkField(state)[i] },
   };
 }
@@ -491,6 +636,7 @@ export function summary(state) {
     stock, power: { supply: p.supply, demand: p.demand, battery: state.battery, cap: cap.power },
     pop: state.pop, housing: housingOf(state), jobs, workers: Math.min(state.pop, jobs),
     happy: state.happy, happyParts: state.happyParts, nextArrival: diffOf(state).transportEvery - (state.day % diffOf(state).transportEvery),
+    research: { perDay: last.research || 0, focus: state.research?.focus ?? null, banked: state.research?.points || 0 },
   };
 }
 
@@ -500,8 +646,8 @@ export function coverage(state, kind) {
   const { w, h, t, ch } = state.map, n = w * h, out = new Float32Array(n);
   if (kind === 'park') return parkField(state);
   if (kind === 'reach') {
-    const reach = reachTest(docks(state).map(centre));
-    for (let i = 0; i < n; i++) if (zoneOf(t[i]) === 'space' && reach(i % w, (i / w) | 0)) out[i] = 1;
+    const reach = reachTest(reachSources(state));
+    for (let i = 0; i < n; i++) if (spaceLike(t[i]) && reach(i % w, (i / w) | 0)) out[i] = 1;
     return out;
   }
   if (kind === 'power') {

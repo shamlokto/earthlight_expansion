@@ -11,15 +11,37 @@
 //     derived from the state on refresh() and animated every frame; setSpeed(0) freezes them
 //   * Earth: a big (flattened) sphere beyond the bottom edge, its curve under the atmosphere band
 //   * camera: OrbitControls (rotate, tilt, zoom to cursor, right-drag / arrow-key pan), optional
-//     90° snap; picking walks the tile grid along the pointer ray, so it costs nothing per move
-// Art slots (js/colony/art.js, docs/COLONY.md §7): terrain/<key> textures the tile tops and
+//     90° snap; picking walks the tile grid along the pointer ray, so it costs nothing per move.
+//     Trackpads (the owner's laptop, docs/COLONY-V2.md): our own wheel handler runs before
+//     OrbitControls' (capture phase on the container) and sorts the wheel into pinch, scroll and
+//     mouse wheel, see CONTROLS below; button, key and minimap moves are animated (animTo)
+//   * minimap (minimap.js) and the camera buttons (navpad.js): DOM overlays in the container,
+//     shown by default, toggled with setMinimap(on) / setNavButtons(on)
+// Art slots (js/colony/art.js, docs/COLONY.md §7): terrain/<key> textures the tile tops (every
+// terrain, version 2's forest, hills, rock, meteoroid, comet, plasma and gravity included) and
 // sky/earth-below the Earth when present; otherwise everything is procedural.
+//
+// CONTROLS (for the How to play text)
+//   Trackpad   two-finger scroll: pan · pinch: zoom · shift + two-finger scroll: rotate ·
+//              alt (option) + two-finger scroll: tilt · click a tile: select / build
+//   Mouse      wheel: zoom (toward the pointer) · left-drag: rotate and tilt · right-drag: pan
+//   Touch      one finger: rotate · two fingers: pinch to zoom, drag to pan
+//   Keyboard   WASD / arrows: pan · Q / E: rotate · + / −: zoom · PgUp / PgDn: tilt ·
+//              Home: back to the Command Centre
+//   Buttons    zoom in / out, rotate left / right 45°, tilt up / down, home (top right of the map)
+//   Minimap    click or drag on it to move the view there (bottom right)
+// The wheel guess: ctrl + wheel is always zoom (browsers send a trackpad pinch that way, Safari
+// sends gesture events, handled too); a wheel event in pixels (deltaMode 0) with a sideways part or
+// a small step (< 50 px) starts a trackpad gesture, anything else a mouse wheel; a gesture keeps its
+// kind while its events keep coming (momentum included). setWheelMode('zoom' | 'pan') overrides it.
 import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/three/addons/OrbitControls.js';
 import { TERRAIN, T, R } from '../data/terrain.js';
-import { BUILDING, DOCK_REACH } from '../data/buildings.js';
+import { BUILDING } from '../data/buildings.js';
 import { kitParts, kitHeight, ROAD } from './kits.js';
 import { createMovers } from './movers.js';
+import { createMinimap, reachMask } from './minimap.js';
+import { createNavPad } from './navpad.js';
 
 const BASE = -0.6;                       // tile columns start here, so steps in height show sides
 const PICK_LO = -1.5;
@@ -217,6 +239,14 @@ export function createView(container, opts = {}) {
   canvas.style.cssText = 'display:block;width:100%;height:100%;touch-action:none;outline:none';
   canvas.tabIndex = 0;
   container.appendChild(canvas);
+  // the minimap and the camera buttons are positioned in the container (CSS custom properties
+  // move them: --cv-minimap-right / -bottom, --cv-nav-top / -right; opts.cssVars sets some here)
+  if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
+  for (const [k, v] of Object.entries(opts.cssVars || {})) container.style.setProperty(k, v);
+  const minimap = createMinimap(container, { onMove: (x, z, phase) => glideTo(x, z, phase), onWheel: (e) => onWheel(e, true) });
+  const navPad = createNavPad(container, (name) => nav(name));
+  minimap.setVisible(opts.minimap !== false);
+  navPad.setVisible(opts.navButtons !== false);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#010205');
@@ -433,7 +463,8 @@ export function createView(container, opts = {}) {
 
   // ---- buildings -----------------------------------------------------------------------------
 
-  const sigOf = (b) => `${b.key}|${b.x}|${b.y}|${b.level}|${b.build > 0 ? 1 : 0}|${b.off ? 1 : 0}|${b.mode}`;
+  // everything a kit draws from: the Tailings Dump's heap also follows its fill (in steps of 5)
+  const sigOf = (b) => `${b.key}|${b.x}|${b.y}|${b.level}|${b.build > 0 ? 1 : 0}|${b.off ? 1 : 0}|${b.mode}${b.key === 'tailings' ? '|' + Math.round((b.fill || 0) / 5) : ''}`;
   const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), e4 = new THREE.Euler(), v4 = new THREE.Vector3(), s4 = new THREE.Vector3(), c4 = new THREE.Color();
   const sizeOf = (key) => BUILDING[key]?.size || 1;
   function groundOf(x, y, n) {
@@ -448,7 +479,7 @@ export function createView(container, opts = {}) {
   }
   function addBuilding(b) {
     if (b.key === 'road') return addRoad(b);
-    const n = sizeOf(b.key), parts = kitParts(b.key, b.level, b.mode), g = groundOf(b.x, b.y, n);
+    const n = sizeOf(b.key), parts = kitParts(b.key, b.level, b.mode, b), g = groundOf(b.x, b.y, n);
     const cx = b.x + n / 2, cz = b.y + n / 2, building = b.build > 0;
     for (const p of parts) {
       const m = partMatrix(p, cx, g, cz);
@@ -553,16 +584,11 @@ export function createView(container, opts = {}) {
 
   // ---- overlays ------------------------------------------------------------------------------
 
-  const finished = (key) => (st.buildings || []).filter((b) => b.key === key && !(b.build > 0));
   function computeOverlay(name) {
     const v = new Float32Array(N);
-    if (name === 'reach') {
-      for (const d of finished('dock')) {
-        const n = sizeOf('dock'), cx = d.x + n / 2, cy = d.y + n / 2;
-        for (let y = Math.max(0, Math.floor(cy - DOCK_REACH)); y < Math.min(H, cy + DOCK_REACH); y++)
-          for (let x = Math.max(0, Math.floor(cx - DOCK_REACH)); x < Math.min(W, cx + DOCK_REACH); x++)
-            if (Math.max(Math.abs(x + 0.5 - cx), Math.abs(y + 0.5 - cy)) <= DOCK_REACH) v[y * W + x] = 1;
-      }
+    if (name === 'reach') {   // docks, and tether masts standing in reach (they chain)
+      const m = reachMask(st);
+      for (let i = 0; i < N; i++) v[i] = m[i];
     } else if (name === 'power') {
       for (const b of st.buildings || []) {
         const def = BUILDING[b.key], n = def?.size || 1, val = def?.storage?.power ? 0.7 : def?.power > 0 ? 1 : def?.power < 0 ? 0.3 : 0;
@@ -642,28 +668,83 @@ export function createView(container, opts = {}) {
 
   // ---- camera --------------------------------------------------------------------------------
 
-  let snap = false, snapTheta = 0, curTheta = 0, fly = null;
-  const keys = new Set();
+  let snap = false, snapTheta = 0, curTheta = 0, anim = null, glide = null;
+  const keys = new Set(), sph = new THREE.Spherical();
   const offset = () => camera.position.clone().sub(controls.target);
   const thetaNow = () => { const o = offset(); return Math.atan2(o.x, o.z); };
+  const clampDist = (d) => Math.max(controls.minDistance, Math.min(controls.maxDistance, d));
+  const clampPhi = (p) => Math.max(controls.minPolarAngle, Math.min(controls.maxPolarAngle, p));
   function fitDistance() {
     const aspect = camera.aspect || 1, half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
     return (Math.max(H + 40, (W + 20) / aspect) / 2 / half) * 1.02;
   }
   function placeCamera(tx, tz, dist, polar, theta) {
+    anim = glide = null;
     controls.target.set(tx, 0, tz);
     camera.position.setFromSpherical(new THREE.Spherical(dist, polar, theta)).add(controls.target);
     controls.update();
   }
   function moveBy(dx, dz) { controls.target.x += dx; controls.target.z += dz; camera.position.x += dx; camera.position.z += dz; }
+  // Leftover OrbitControls momentum would fight an animation: drop it (r170 field names).
+  function stopMomentum() { controls._sphericalDelta?.set(0, 0, 0); controls._panOffset?.set(0, 0, 0); }
+  // An eased move of the target, distance, azimuth (theta) and polar angle (phi); omitted parts stay.
+  function animTo({ x, z, dist, theta, phi, dur = 550 }) {
+    sph.setFromVector3(offset());
+    stopMomentum();
+    glide = null;
+    anim = { t0: performance.now(), dur, x0: controls.target.x, z0: controls.target.z, x1: x ?? controls.target.x, z1: z ?? controls.target.z,
+      d0: sph.radius, d1: clampDist(dist ?? sph.radius), th0: sph.theta, th1: snap ? sph.theta : theta ?? sph.theta, ph0: sph.phi, ph1: clampPhi(phi ?? sph.phi) };
+  }
+  // Where the camera is headed: an animation's end, else where it is now (so repeated clicks add up).
+  function camGoal() {
+    if (anim) return { x: anim.x1, z: anim.z1, d: anim.d1, th: anim.th1, ph: anim.ph1 };
+    sph.setFromVector3(offset());
+    return { x: controls.target.x, z: controls.target.z, d: sph.radius, th: sph.theta, ph: sph.phi };
+  }
+  function homeTile() {
+    const c = st && (st.buildings || []).find((b) => b.key === 'command');
+    if (c) { const n = sizeOf('command'); return [c.x + n / 2, c.y + n / 2]; }
+    const d = st && (st.buildings || []).find((b) => b.key === 'dock');
+    return d ? [d.x + 1, d.y + 1] : [W / 2, H / 2];
+  }
+  // The camera buttons and keys: 'zoomIn' | 'zoomOut' | 'rotateLeft' | 'rotateRight' | 'tiltUp' |
+  // 'tiltDown' | 'home'. Rotation turns 45°, or a quarter turn in 90° snap mode.
+  const ZOOM_STEP = 0.6, TILT_STEP = 0.22;
+  function nav(name) {
+    if (!st) return false;
+    const g = camGoal();
+    switch (name) {
+      case 'zoomIn': animTo({ x: g.x, z: g.z, dist: g.d * ZOOM_STEP, theta: g.th, phi: g.ph, dur: 420 }); break;
+      case 'zoomOut': animTo({ x: g.x, z: g.z, dist: g.d / ZOOM_STEP, theta: g.th, phi: g.ph, dur: 420 }); break;
+      case 'rotateLeft': case 'rotateRight': {
+        const dir = name === 'rotateLeft' ? 1 : -1;
+        if (snap) rotateStep(dir); else animTo({ x: g.x, z: g.z, dist: g.d, theta: g.th + dir * Math.PI / 4, phi: g.ph, dur: 520 });
+        break;
+      }
+      case 'tiltUp': animTo({ x: g.x, z: g.z, dist: g.d, theta: g.th, phi: g.ph - TILT_STEP, dur: 420 }); break;
+      case 'tiltDown': animTo({ x: g.x, z: g.z, dist: g.d, theta: g.th, phi: g.ph + TILT_STEP, dur: 420 }); break;
+      case 'home': { const [x, z] = homeTile(); animTo({ x, z, dist: 55, theta: g.th, phi: 0.62, dur: 900 }); break; }
+      default: return false;
+    }
+    return true;
+  }
+  // The minimap: the target follows the pointer while it is held, then settles.
+  function glideTo(x, z, phase) {
+    if (!st) return;
+    anim = null; stopMomentum();
+    if (phase === 'start' || !glide) glide = { x, z, held: true };
+    glide.x = x; glide.z = z;
+    if (phase === 'end') glide.held = false;
+  }
   function stepCamera(dt, now) {
     // keyboard pan relative to where the camera looks; Q / E rotate
     const o = offset(), dist = o.length(), f = new THREE.Vector2(-o.x, -o.z).normalize(), sp = dist * 0.9 * dt;
     let fx = 0, fz = 0;
     if (keys.has('up')) fz += 1; if (keys.has('down')) fz -= 1; if (keys.has('right')) fx += 1; if (keys.has('left')) fx -= 1;
-    if (fx || fz) moveBy((f.x * fz - f.y * fx) * sp, (f.y * fz + f.x * fx) * sp);
+    if (fx || fz) { anim = glide = null; moveBy((f.x * fz - f.y * fx) * sp, (f.y * fz + f.x * fx) * sp); }
     const turn = (keys.has('rotL') ? 1 : 0) - (keys.has('rotR') ? 1 : 0);
     if (turn && !snap) {
+      anim = null;
       const a = turn * QUARTER * dt, c = Math.cos(a), s = Math.sin(a);
       camera.position.set(controls.target.x + o.x * c + o.z * s, camera.position.y, controls.target.z - o.x * s + o.z * c);
     }
@@ -672,13 +753,16 @@ export function createView(container, opts = {}) {
       if (Math.abs(snapTheta - curTheta) < 1e-4) curTheta = snapTheta;
       controls.minAzimuthAngle = controls.maxAzimuthAngle = curTheta;
     }
-    if (fly) {
-      const k = Math.min(1, (now - fly.t0) / 700), e = k * k * (3 - 2 * k);
-      const tx = fly.from.x + (fly.to.x - fly.from.x) * e, tz = fly.from.z + (fly.to.z - fly.from.z) * e;
-      moveBy(tx - controls.target.x, tz - controls.target.z);
-      const d = fly.d0 + (fly.d1 - fly.d0) * e, oo = offset().setLength(d);
-      camera.position.copy(controls.target).add(oo);
-      if (k >= 1) fly = null;
+    if (anim) {
+      const k = Math.min(1, (now - anim.t0) / anim.dur), e = k * k * (3 - 2 * k), L = (a, b) => a + (b - a) * e;
+      controls.target.set(L(anim.x0, anim.x1), 0, L(anim.z0, anim.z1));
+      sph.set(L(anim.d0, anim.d1), L(anim.ph0, anim.ph1), L(anim.th0, anim.th1));
+      camera.position.setFromSpherical(sph).add(controls.target);
+      if (k >= 1) anim = null;
+    } else if (glide) {
+      const k = 1 - Math.exp(-dt * (glide.held ? 14 : 9)), dx = glide.x - controls.target.x, dz = glide.z - controls.target.z;
+      moveBy(dx * k, dz * k);
+      if (!glide.held && Math.hypot(dx, dz) < 0.03) { moveBy(dx * (1 - k), dz * (1 - k)); glide = null; }
     }
     controls.update();
     // keep the target over the map, so panning never loses it
@@ -700,6 +784,79 @@ export function createView(container, opts = {}) {
     const wrap = snapTheta > Math.PI ? -2 * Math.PI : snapTheta < -Math.PI ? 2 * Math.PI : 0;
     snapTheta += wrap; curTheta += wrap;
   };
+
+  // The camera's view on the ground (y = 0) for the minimap: the screen's edge rays, eight points
+  // round the border; rays at or above the horizon are cut off far out along their heading.
+  const RING = [[-1, 1], [0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0]], ringPts = new Array(16).fill(0);
+  function footprint() {
+    camera.updateMatrixWorld();
+    const far = 2 * Math.max(W, H), o = camera.position;
+    for (let k = 0; k < 8; k++) {
+      ray.setFromCamera(ndc.set(RING[k][0], RING[k][1]), camera);
+      const d = ray.ray.direction, hl = Math.hypot(d.x, d.z) || 1e-6;
+      let t = d.y < -1e-6 ? -o.y / d.y : Infinity;
+      if (t * hl > far) t = far / hl;
+      ringPts[k * 2] = o.x + d.x * t; ringPts[k * 2 + 1] = o.z + d.z * t;
+    }
+    return ringPts;
+  }
+
+  // ---- wheel: trackpad scroll pans, pinch zooms, a mouse wheel zooms (see CONTROLS above) -----
+
+  let wheelMode = ['auto', 'zoom', 'pan'].includes(opts.wheel) ? opts.wheel : 'auto';
+  const gest = { t: 0, pad: false, rot: 0 };
+  function trackpadGuess(e, dx, dy, fresh) {
+    if (wheelMode !== 'auto') return wheelMode === 'pan';
+    if (!fresh) return gest.pad;                       // one gesture keeps its kind, momentum included
+    if (e.deltaMode !== 0) return false;               // lines or pages: a mouse wheel
+    if (dx !== 0) return true;                         // sideways: two fingers
+    const a = Math.abs(dy);
+    if (a >= 50 && e.wheelDeltaY && Math.abs(e.wheelDeltaY) % 120 === 0) return false;   // a notched wheel
+    return a < 50;                                     // small steps (fractional or not): two fingers
+  }
+  function wheelZoom(cx, cy, delta) {
+    if (!delta) return;
+    controls._updateZoomParameters(cx, cy);
+    const s = Math.pow(0.95, controls.zoomSpeed * Math.abs(delta * 0.01));
+    if (delta < 0) controls._dollyIn(s); else controls._dollyOut(s);
+    controls.update();
+  }
+  function onWheel(e, centred) {
+    if (!st) return;
+    e.preventDefault();
+    anim = null; glide = null;
+    const now = performance.now(), fresh = now - gest.t > 250;
+    gest.t = now;
+    let dx = e.deltaX, dy = e.deltaY;
+    if (e.deltaMode === 1) { dx *= 16; dy *= 16; } else if (e.deltaMode === 2) { dx *= 100; dy *= 100; }
+    const rc = canvas.getBoundingClientRect(), cx = centred ? rc.left + rc.width / 2 : e.clientX, cy = centred ? rc.top + rc.height / 2 : e.clientY;
+    if (e.ctrlKey) {   // a trackpad pinch (no Control key held: browsers mark it so), or ctrl + wheel
+      wheelZoom(cx, cy, (dy || dx) * (controls._controlActive ? 1 : 10));
+      return;
+    }
+    if (e.shiftKey) {   // rotate (browsers may move a shifted vertical scroll to deltaX)
+      const a = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+      if (snap) { gest.rot = fresh ? a : gest.rot + a; if (Math.abs(gest.rot) > 140) { rotateStep(gest.rot > 0 ? -1 : 1); gest.rot = 0; } }
+      else controls._rotateLeft((2 * Math.PI * a * 0.6) / (canvas.clientHeight || 600));
+      return;
+    }
+    if (e.altKey) { controls._rotateUp((2 * Math.PI * dy * 0.5) / (canvas.clientHeight || 600)); return; }
+    gest.pad = trackpadGuess(e, dx, dy, fresh);
+    if (gest.pad) controls._pan(-dx, -dy);   // the map moves with the fingers, like a page
+    else wheelZoom(cx, cy, dy);
+  }
+  // Safari reports a trackpad pinch as gesture events instead of ctrl + wheel.
+  let gScale = 1;
+  function onGesture(e) {
+    e.preventDefault();
+    if (e.type === 'gesturestart') { gScale = 1; anim = glide = null; return; }
+    if (e.type !== 'gesturechange' || !st || !(e.scale > 0)) return;
+    const r = e.scale / gScale;
+    gScale = e.scale;
+    controls._updateZoomParameters(e.clientX, e.clientY);
+    controls._dollyIn(1 / r);
+    controls.update();
+  }
 
   // ---- picking -------------------------------------------------------------------------------
 
@@ -776,7 +933,10 @@ export function createView(container, opts = {}) {
 
   const ac = new AbortController(), sig = { signal: ac.signal };
   let down = null;
-  canvas.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, acc: 0, lastX: e.clientX, button: e.button, moved: false }; canvas.focus({ preventScroll: true }); }, sig);
+  canvas.addEventListener('pointerdown', (e) => { anim = glide = null; down = { x: e.clientX, y: e.clientY, acc: 0, lastX: e.clientX, button: e.button, moved: false }; canvas.focus({ preventScroll: true }); }, sig);
+  // ours before OrbitControls' own wheel listener on the canvas: the capture phase on the container
+  container.addEventListener('wheel', (e) => { if (e.target === canvas) { e.stopPropagation(); onWheel(e, false); } }, { capture: true, passive: false, signal: ac.signal });
+  for (const g of ['gesturestart', 'gesturechange', 'gestureend']) canvas.addEventListener(g, onGesture, { passive: false, signal: ac.signal });
   canvas.addEventListener('pointermove', (e) => {
     if (down) {
       if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) down.moved = true;
@@ -798,10 +958,14 @@ export function createView(container, opts = {}) {
   canvas.addEventListener('pointerleave', () => { if (hover) { hover = null; updateHover(); onTileHover(-1, -1); } }, sig);
   canvas.addEventListener('contextmenu', (e) => e.preventDefault(), sig);
   const KEYMAP = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', KeyQ: 'rotL', KeyE: 'rotR' };
+  const NAVKEYS = { Equal: 'zoomIn', NumpadAdd: 'zoomIn', Minus: 'zoomOut', NumpadSubtract: 'zoomOut', Home: 'home', PageUp: 'tiltUp', PageDown: 'tiltDown' };
   const typing = (e) => e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || e.target?.isContentEditable;
   addEventListener('keydown', (e) => {
+    if (typing(e)) return;
+    const n = NAVKEYS[e.code] || (e.key === '+' ? 'zoomIn' : e.key === '-' ? 'zoomOut' : null);
+    if (n) { if (nav(n)) e.preventDefault(); return; }
     const k = KEYMAP[e.code];
-    if (!k || typing(e)) return;
+    if (!k) return;
     keys.add(k);
     if (!e.repeat && (k === 'rotL' || k === 'rotR')) rotateStep(k === 'rotL' ? 1 : -1);
     if (k !== 'rotL' && k !== 'rotR') e.preventDefault();
@@ -814,12 +978,14 @@ export function createView(container, opts = {}) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h; camera.updateProjectionMatrix();
     if (W) controls.maxDistance = fitDistance() * 1.25;
+    minimap.layout();
   }
   const ro = new ResizeObserver(resize);
   ro.observe(container);
   resize();
 
   let raf = 0, last = performance.now();
+  const dbg = { noRender: false };   // tests on slow software GL skip drawing (debug.setRender)
   function frame(now) {
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
@@ -827,10 +993,11 @@ export function createView(container, opts = {}) {
     if (breachMat) breachMat.color.setScalar(0.75 + 0.25 * Math.sin(now / 260));   // breaches throb
     if (plasmaMat) plasmaMat.color.setScalar(0.9 + 0.1 * Math.sin(now / 900));
     if (st) movers.update(dt, camera.position.distanceTo(controls.target));
+    if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z]);
     for (const p of pools.values()) p.flush();
     for (const a of dirty) a.needsUpdate = true;
     dirty.clear();
-    renderer.render(scene, camera);
+    if (!dbg.noRender) renderer.render(scene, camera);
   }
   raf = requestAnimationFrame(frame);
 
@@ -850,6 +1017,7 @@ export function createView(container, opts = {}) {
     showOverlay();
     movers.reset();
     movers.refresh(st, { terrTop, reset: true, buildingsChanged: true, chambersChanged: true });
+    minimap.setState(st);
     if (first) {
       buildSky();
       resize();
@@ -873,6 +1041,7 @@ export function createView(container, opts = {}) {
       buildArtifacts();
       showOverlay();
       movers.refresh(st, { terrTop, buildingsChanged: true, chambersChanged: true });
+      minimap.setState(st);
       return;
     }
     if (rc) rCopy = Uint8Array.from(r);
@@ -880,6 +1049,7 @@ export function createView(container, opts = {}) {
     if (cc || bc || rc) buildArtifacts();
     if (overlayName && !overlayValues && bc) showOverlay();
     movers.refresh(st, { terrTop, buildingsChanged: bc, chambersChanged: cc });
+    if (cc || bc) minimap.refresh(st);
   }
 
   // Writes the overlay (caller's values, else our own) into the per-tile texture the terrain samples.
@@ -910,13 +1080,12 @@ export function createView(container, opts = {}) {
   }
 
   function focus(x, y) {
-    const d = offset().length();
-    fly = { t0: performance.now(), from: controls.target.clone(), to: new THREE.Vector3(x + 0.5, 0, y + 0.5), d0: d, d1: Math.min(d, 45) };
+    animTo({ x: x + 0.5, z: y + 0.5, dist: Math.min(camGoal().d, 45), dur: 700 });
   }
 
   function destroy() {
     cancelAnimationFrame(raf); ac.abort(); ro.disconnect(); controls.dispose();
-    movers.dispose();
+    movers.dispose(); minimap.destroy(); navPad.destroy();
     for (const g of [terrainGroup, buildGroup, fxGroup, roadGroup, ghost.group]) clearGroup(g);
     scene.traverse((o) => { o.geometry?.dispose(); if (o.material) [].concat(o.material).forEach((m) => { m.map?.dispose(); m.dispose(); }); });
     for (const g of [...Object.values(UNIT), COLUMN, PLANE, ROCK, GEM]) g.dispose();
@@ -929,6 +1098,19 @@ export function createView(container, opts = {}) {
   // called the movers follow state.speed.
   const setSpeed = (s) => movers.setSpeed(s);
 
+  // Version 2: the minimap and the camera buttons (both on unless opts.minimap / opts.navButtons
+  // is false), the wheel mode ('auto' guesses trackpad or mouse; 'zoom' / 'pan' force one), the
+  // camera moves the buttons make (nav(name): 'zoomIn' | 'zoomOut' | 'rotateLeft' | 'rotateRight' |
+  // 'tiltUp' | 'tiltDown' | 'home'), and home() = nav('home').
+  const setMinimap = (on) => { minimap.setVisible(on); };
+  const setNavButtons = (on) => { navPad.setVisible(!!on); };
+  const setWheelMode = (m) => { wheelMode = ['auto', 'zoom', 'pan'].includes(m) ? m : 'auto'; };
+  const home = () => nav('home');
+
   // `debug` is for dev pages and tests only (colony-view-test.html), not part of the contract.
-  return { setState, refresh, setOverlay, setGhost, focus, setSnap, setSpeed, destroy, debug: { scene, camera, controls, renderer, placeCamera, pick, movers } };
+  return { setState, refresh, setOverlay, setGhost, focus, setSnap, setSpeed, destroy, setMinimap, setNavButtons, setWheelMode, nav, home,
+    debug: { scene, camera, controls, renderer, placeCamera, pick, movers, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse'),
+      // n camera steps of 1/60 s now, without rendering (tests on slow software GL)
+      setRender(on) { dbg.noRender = !on; },
+      tick(n = 1) { for (let k = 0; k < n && st; k++) stepCamera(1 / 60, performance.now()); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z]); } } };
 }

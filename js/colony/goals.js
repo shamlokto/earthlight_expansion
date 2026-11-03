@@ -2,10 +2,11 @@
 // instructions on how to play become important"; "even on beta testing it becomes too hard").
 // Pure: no DOM. The sim calls updateGoals() each day; the interface shows goalStatus() and advise().
 //   goal: { id, title, text, speaker, done(state), progress(state)?, show(state)?, only(state)? }
-//   show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true } | null
+//   show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true } | { research: true | techKey } | null
 import { BUILDING } from './data/buildings.js';
 import { summary, chamberLinks, openBreaches, chamberOf, addPending, log, centre, pressuriseAir, storageCaps } from './rules.js';
 import { diffOf } from './difficulty.js';
+import { TECH } from './data/tech.js';
 
 const finished = (s, key) => s.buildings.filter((b) => b.key === key && b.build === 0).length;
 const opened = (s) => s.chambers.filter((c) => c.status === 'open').length;
@@ -83,6 +84,23 @@ export const GOALS = [
   { id: 'chambers4', speaker: 'ruess', title: 'Four chambers breathing',
     text: 'Keep going: survey, seal and pressurise until four chambers are open. Each one is room for fields, homes and industry. Eden is coming back to life.',
     done: (s) => opened(s) >= 4, progress: (s) => `${opened(s)} / 4 chambers open`, show: (s) => airFor(s) },
+  // ---- version 2: research and the new buildings (docs/COLONY-V2.md)
+  { id: 'lab', speaker: 'ruess', title: 'A Research Lab',
+    text: 'With eighty colonists we can spare minds as well as hands. A Research Lab makes research points: with them we learn to smelt ore, heal the sick, harvest the comet and reach further into space.',
+    done: (s) => finished(s, 'lab') >= 1, show: () => ({ build: 'lab' }) },
+  { id: 'tech1', speaker: 'ruess', title: 'Choose what to study',
+    text: 'Open Research (the button in the top bar, or T) and pick a technology. Smelting is a good start: it turns our ore into alloy, which sells well and later becomes parts. Medicine brings clinics.',
+    done: (s) => (s.research?.done?.length || 0) >= 1,
+    progress: (s) => { const f = s.research?.focus; return f ? `studying ${TECH[f]?.name || f}` : 'nothing studied yet'; }, show: () => ({ research: true }) },
+  { id: 'alloy', speaker: 'ruess', title: 'Make alloy',
+    text: 'Research Smelting, then build a Smelter: it melts 20 ore a day into 10 alloy. Keep the mines running to feed it; alloy sells for far more than ore.',
+    done: (s) => (s.stock.alloy || 0) > 0 || finished(s, 'fabricator') > 0, show: (s) => (s.unlocked.includes('smelter') ? { build: 'smelter' } : { research: 'smelting' }) },
+  { id: 'clinic', speaker: 'sato', title: 'A Clinic for the colony',
+    text: 'Research Medicine and open a Clinic near the homes. Colonists in its reach are happier, children are born, and their Habitats can grow into Apartments.',
+    done: (s) => finished(s, 'clinic') >= 1, show: (s) => (s.unlocked.includes('clinic') ? { build: 'clinic' } : { research: 'medicine' }) },
+  { id: 'apartments', speaker: 'sato', title: 'Apartments',
+    text: 'A Habitat with every need met, a park and a clinic in reach grows into Apartments: seventy homes on one tile. Watch the homes around the Clinic.',
+    done: (s) => s.buildings.some((b) => b.key === 'habitat' && b.level >= 3), show: (s) => (s.unlocked.includes('clinic') ? { build: 'park' } : { research: 'medicine' }) },
 ];
 
 const active = (s) => GOALS.filter((g) => !g.only || g.only(s) || (s.goals?.done || []).includes(g.id));

@@ -260,7 +260,8 @@ for (const [name, gen] of gens) {
     act(rules.setTax(s, 0.5)); check(s.tax === 0.3, 'tax clamps');
     check(!act(rules.sell(s, 'ore', 10)).ok && !act(rules.sell(s, 'gold', 1)).ok && !act(rules.sellGuardian(s, 99)).ok, 'market refusals');
     const bl = rules.buildable(s);
-    check(bl.length === 17 && bl.find((b) => b.key === 'road') && bl.find((b) => b.key === 'oremine').why.includes('80'), 'buildable list');
+    // version 2 (docs/COLONY-V2.md): 17 version 1 buildings + 18 new ones, locked behind research
+    check(bl.length === 35 && bl.find((b) => b.key === 'road') && bl.find((b) => b.key === 'oremine').why.includes('80') && bl.find((b) => b.key === 'smelter').why === 'Research Smelting.', 'buildable list');
     const ti = rules.tileInfo(s, cmd.x, cmd.y);
     check(ti.building?.key === 'command' && ti.chamber?.status === 'open', 'tileInfo');
     for (const k of ['park', 'reach', 'power', 'happiness']) check(rules.coverage(s, k).length === w * s.map.h, `coverage ${k}`);
@@ -334,7 +335,8 @@ for (const [name, gen] of gens) {
     const hab = s.buildings.find((b) => b.key === 'habitat');
     const n1 = habitatNeeds(s, hab);
     check(n1.some((n) => n.need === 'park' && !n.met) && n1.some((n) => n.need === 'food'), 'level 1 lists food and a park');
-    check(habitatNeeds(s, { ...hab, level: 2 }).some((n) => n.need === 'clinic' && !n.met), 'level 2 needs a clinic (missing in version 1)');
+    // Apartments need a clinic (version 2): Quarters list it, unmet without one
+    check(habitatNeeds(s, { ...hab, level: 2 }).some((n) => n.need === 'clinic' && !n.met), 'Quarters list the clinic for Apartments');
   }
 
   // Import: credits from the sold army (non-beta), guardians (beta), sellGuardian.

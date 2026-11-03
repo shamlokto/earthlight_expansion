@@ -35,6 +35,7 @@ function roadInto(s, c, fromAnywhere = false) {
 }
 // Keep the colony fed, breathing and housed while waiting on a goal (a sensible player does).
 // A sensible player doesn't order a second one while the first is still going up.
+const finished = (s, key) => s.buildings.filter((b) => b.key === key && b.build === 0).length;
 const queued = (s, key) => s.buildings.some((b) => b.key === key && b.build > 0);
 function upkeep(s) {
   const m = R.summary(s), place = (s, key) => (queued(s, key) ? null : placeAny(s, key));
@@ -45,7 +46,12 @@ function upkeep(s) {
   if (m.power.demand > m.power.supply) place(s, 'solar');
   if (m.housing - s.pop < 10) place(s, 'habitat');
   if (s.happy < 60 && R.summary(s).stock.credits.have > 400) place(s, 'park');
-  if (s.stock.ore > 50) R.sell(s, 'ore', s.stock.ore);
+  if (s.stock.ore > 50 && !finished(s, 'smelter')) R.sell(s, 'ore', s.stock.ore);
+  if ((s.stock.alloy || 0) > 40 && !finished(s, 'fabricator')) R.sell(s, 'alloy', Math.floor(s.stock.alloy - 20));
+  if (s.research && finished(s, 'lab') && !R.techStatus(s).find((t) => t.key === s.research.focus && !t.done)) {
+    const next = ['smelting', 'medicine', 'fabrication', 'reclaim'].find((k) => R.techStatus(s).find((t) => t.key === k && t.available && !t.done));
+    if (next) R.research(s, next);
+  }
 }
 function act(s) {
   const g = goalStatus(s).current;
@@ -59,9 +65,14 @@ function act(s) {
     else if (c.status === 'surveyed') for (const i of R.openBreaches(s, c)) R.build(s, 'seal', i % s.map.w, (i / s.map.w) | 0);
   } else if (sh?.tile && g.id === 'seal') R.build(s, 'seal', sh.tile.x, sh.tile.y);
   else if (sh?.roads) { const c = s.chambers.find((k) => k.status === 'open' && k.kind !== 'landing'); c && roadInto(s, c); }
-  else if (sh?.market) { if (s.guardians.length && s.imported?.beta) R.sellGuardian(s, s.guardians[0].id); else if (s.stock.ore) R.sell(s, 'ore', s.stock.ore); else R.sell(s, 'food', 10); }
+  else if (sh?.research) {
+    // a player who opens Research picks what the goal talks about: smelting, then medicine
+    const st = R.techStatus(s), want = ['smelting', 'medicine', 'fabrication', 'reclaim'].find((k) => st.find((t) => t.key === k && t.available && !t.done));
+    if (want && s.research.focus !== want && !st.find((t) => t.key === s.research.focus && !t.done)) R.research(s, want);
+    if (finished(s, 'lab') === 0 && !queued(s, 'lab')) placeAny(s, 'lab');
+  } else if (sh?.market) { if (s.guardians.length && s.imported?.beta) R.sellGuardian(s, s.guardians[0].id); else if (s.stock.ore) R.sell(s, 'ore', s.stock.ore); else R.sell(s, 'food', 10); }
 }
-function play(opts, days = 220) {
+function play(opts, days = 300) {
   const s = newGame(opts), rng = stateRng(s), when = {};
   let pop0 = s.pop, deaths = 0;
   for (let d = 0; d < days && goalStatus(s).current; d++) {

@@ -207,14 +207,273 @@ export const KITS = {
     cyl([0.36, 0.03, 0.3], [0.18, 0.05, 0.2], '#4aa0e0'),
     ...tree(-0.25, -0.22, 1.1, true), ...tree(0.22, -0.25, 0.9, true), ...tree(-0.25, 0.25, 0.8, true),
   ],
+
+  // ---------------------------------------------------------------- version 2 (docs/COLONY-V2.md)
+  // Services read violet / teal, industry orange and hot, life blue and white, food green.
+
+  // 2×2: a white block with a violet window band, a big observatory dome, an antenna with a red
+  // beacon and a dish; a second dome at level 2, a taller antenna with a glowing ring at level 3.
+  lab: (level) => {
+    const lv = Math.max(1, Math.min(3, level || 1)), mast = lv === 3 ? 1.9 : 1.3;
+    const parts = [
+      box([1.94, 0.08, 1.94], [0, 0, 0], '#555c66'),
+      box([1.5, 0.5, 1.25], [-0.12, 0.08, 0.18], '#d8dde4'),
+      box([1.53, 0.08, 1.28], [-0.12, 0.38, 0.18], '#b89cff', GLOW),
+      dome([1.0, 0.62, 1.0], [-0.38, 0.58, 0.2], '#eef4fb'),
+      torus([1.05, 0.05, 1.05], [-0.38, 0.56, 0.2], '#8a7ad8'),
+      box([0.16, 0.05, 0.9], [-0.38, 1.08, 0.2], '#3a3f6a', { rot: [0, 0.6, 0] }),   // the dome's shutter
+      cyl([0.06, mast, 0.06], [0.62, 0.08, -0.62], STEEL),
+      dome([0.14, 0.12, 0.14], [0.62, 0.08 + mast, -0.62], BEACON, GLOW),
+      cyl([0.06, 0.32, 0.06], [0.62, 0.08, 0.7], STEEL),
+      dome([0.46, 0.14, 0.46], [0.62, 0.4, 0.7], '#f2f4f7', { rot: [Math.PI - 0.7, 0, 0] }),
+    ];
+    if (lv >= 2) parts.push(box([0.6, 0.36, 0.6], [0.55, 0.08, -0.05], '#c9ced6'), dome([0.5, 0.32, 0.5], [0.55, 0.44, -0.05], '#d9ccff'));
+    if (lv >= 3) parts.push(torus([0.4, 0.05, 0.4], [0.62, 0.08 + mast * 0.7, -0.62], '#c3a6ff', GLOW), box([1.53, 0.06, 1.28], [-0.12, 0.2, 0.18], '#b89cff', GLOW));
+    return parts;
+  },
+  // 1×1: a white tank with a glowing blue ring and one filter column more per level.
+  reclaimer: (level) => {
+    const lv = Math.max(1, Math.min(3, level || 1)), parts = [
+      box([0.92, 0.05, 0.92], [0, 0, 0], '#5a6470'),
+      cyl([0.5, 0.55, 0.5], [-0.17, 0.05, -0.12], '#dbe8f2', { slot: 'mat/tank' }),
+      dome([0.5, 0.18, 0.5], [-0.17, 0.6, -0.12], '#5aa8ff'),
+      torus([0.56, 0.06, 0.56], [-0.17, 0.32, -0.12], '#5fd0ff', GLOW),
+      box([0.5, 0.06, 0.06], [0.05, 0.25, 0.22], STEEL),
+    ];
+    for (let k = 0; k <= lv; k++) {
+      const h = 0.34 + 0.08 * k, x = -0.3 + k * 0.21;
+      parts.push(cyl([0.15, h, 0.15], [x, 0.05, 0.27], '#8ab4d8'), cyl([0.16, 0.04, 0.16], [x, 0.05 + h, 0.27], '#7fe0ff', GLOW));
+    }
+    return parts;
+  },
+  // 2×2 on the comet's tail: frosted tanks with ice rings, a melter with a cyan vent, ice blocks.
+  iceharvester: () => [
+    box([1.9, 0.14, 1.9], [0, 0, 0], '#4a5868'),
+    ...[[-0.5, -0.45], [0.18, -0.52], [-0.52, 0.22]].flatMap(([x, z], k) => [
+      cyl([0.6, 0.85 - k * 0.12, 0.6], [x, 0.14, z], '#e3f4fc', { slot: 'mat/tank' }),
+      dome([0.6, 0.26, 0.6], [x, 0.99 - k * 0.12, z], '#ffffff'),
+      torus([0.66, 0.05, 0.66], [x, 0.36, z], '#a8e4f8'),
+      torus([0.66, 0.05, 0.66], [x, 0.7 - k * 0.12, z], '#a8e4f8'),
+    ]),
+    box([0.62, 0.42, 0.62], [0.45, 0.14, 0.42], '#7a8a9a'),
+    box([0.64, 0.08, 0.64], [0.45, 0.42, 0.42], '#9ff0ff', GLOW),
+    cyl([0.16, 0.5, 0.16], [0.6, 0.56, 0.6], '#c9d6e0'),
+    box([0.08, 0.08, 0.9], [-0.15, 0.62, -0.1], STEEL, { rot: [0, Math.PI / 4, 0] }),
+    box([0.22, 0.16, 0.2], [0.05, 0.14, 0.62], '#cdeefa', { rot: [0, 0.5, 0] }),
+    box([0.18, 0.14, 0.16], [-0.12, 0.14, 0.78], '#bfe8f8', { rot: [0, 1.1, 0] }),
+  ],
+  // 2×2 over the atmosphere: a hovering platform with two gas spheres, a hazard hose dangling
+  // down to a copper funnel whose mouth glows in the air below.
+  gasscoop: () => [
+    box([1.6, 0.16, 1.6], [0, 1.25, 0], '#c9ced6'),
+    torus([1.5, 0.05, 1.5], [0, 1.2, 0], '#7fd0ff', GLOW),
+    ...[[-0.45, -0.35], [0.42, 0.38]].flatMap(([x, z]) => [
+      dome([0.7, 0.36, 0.7], [x, 1.76, z], '#eef4fb'),
+      dome([0.7, 0.3, 0.7], [x, 1.46, z], '#d6e4f0', { rot: [Math.PI, 0, 0] }),
+    ]),
+    box([0.4, 0.3, 0.4], [0.45, 1.41, -0.45], '#8a929c'),
+    dome([0.12, 0.1, 0.12], [0.45, 1.71, -0.45], BEACON, GLOW),
+    cyl([0.09, 1.3, 0.09], [0, -0.05, 0], HAZARD),
+    cone([0.95, 0.55, 0.95], [0, -0.45, 0], '#d07a3a'),
+    torus([0.95, 0.05, 0.95], [0, -0.47, 0], '#9fe8ff', GLOW),
+    ...[-1, 1].map((s) => box([0.06, 0.06, 0.9], [s * 0.4, 0.75, 0], STEEL, { rot: [s * 0.6, 0, 0] })),
+  ],
+  // 2×2 on the hills: three stepped terraces of round fruit trees, orange fruit on top.
+  orchard: () => {
+    const parts = [];
+    for (let r = 0; r < 3; r++) {
+      const z = -0.62 + r * 0.62, y = r * 0.12;
+      parts.push(box([1.92, 0.1 + y, 0.62], [0, 0, z], '#7a6a3a'), box([1.92, 0.04, 0.6], [0, 0.1 + y, z], '#6aa83a'));
+      for (let c = 0; c < 4; c++) {
+        const x = -0.7 + c * 0.47 + (r % 2) * 0.12, s = 0.85 + 0.15 * ((r + c) % 2);
+        parts.push(cyl([0.05, 0.1, 0.05], [x, 0.14 + y, z], '#6a4a2a'),
+          dome([0.34 * s, 0.3 * s, 0.34 * s], [x, 0.2 + y, z], '#3f8a34'),
+          dome([0.1, 0.07, 0.1], [x + 0.04, 0.2 + y + 0.28 * s, z - 0.03], c % 2 ? '#ff8a3a' : '#ffcf3a'));
+      }
+    }
+    return parts;
+  },
+  // 1×1 by the river: a blue-roofed shed, a wooden jetty, a net drum and a glowing fish tank.
+  fishery: () => [
+    box([0.92, 0.05, 0.92], [0, 0, 0], '#6a6e74'),
+    box([0.5, 0.32, 0.46], [-0.18, 0.05, -0.16], '#e4e8ee'),
+    box([0.56, 0.08, 0.52], [-0.18, 0.37, -0.16], '#3a7ae8'),
+    box([0.22, 0.05, 0.9], [0.3, 0.06, 0.02], '#9a7450'),
+    cyl([0.22, 0.24, 0.22], [0.3, 0.11, -0.26], '#e8b52a', { rot: [0, 0, HALF_PI] }),
+    cyl([0.36, 0.14, 0.36], [-0.18, 0.05, 0.26], '#2a4a58'),
+    cyl([0.32, 0.03, 0.32], [-0.18, 0.19, 0.26], '#4ad8c8', GLOW),
+  ],
+  // 1×1: a warm diner with orange windows, a red roof, a round sign (amber: hot meals, red:
+  // rationing) and a chimney with a white puff.
+  canteen: (level, mode) => [
+    box([0.92, 0.05, 0.92], [0, 0, 0], '#6a6e74'),
+    box([0.78, 0.36, 0.66], [0, 0.05, 0.06], '#ead9b8'),
+    box([0.8, 0.1, 0.68], [0, 0.18, 0.06], '#ffb84a', GLOW),
+    box([0.84, 0.07, 0.72], [0, 0.41, 0.06], '#c4502a'),
+    cyl([0.04, 0.3, 0.04], [-0.28, 0.48, -0.2], STEEL),
+    cyl([0.34, 0.05, 0.34], [-0.28, 0.6, -0.27], mode === 'ration' ? '#ff5a3a' : '#ffd23a', { rot: [0.9, 0, 0], ...GLOW }),
+    cyl([0.1, 0.3, 0.1], [0.26, 0.48, 0.2], '#9aa3ad'),
+    dome([0.18, 0.14, 0.18], [0.26, 0.8, 0.2], '#f4f7fa'),
+  ],
+  // 1×1: a squat bunker under a green glass dome, sprouts at the corners.
+  seedvault: () => [
+    box([0.94, 0.05, 0.94], [0, 0, 0], '#5a4a30', { slot: 'mat/soil' }),
+    box([0.76, 0.26, 0.76], [0, 0.05, 0], '#a4a494'),
+    box([0.78, 0.04, 0.78], [0, 0.31, 0], '#7a7a6c'),
+    dome([0.56, 0.36, 0.56], [0, 0.33, 0], '#8fe38a'),
+    torus([0.6, 0.05, 0.6], [0, 0.33, 0], '#b8ff9a', GLOW),
+    box([0.22, 0.18, 0.04], [0, 0.05, 0.39], '#3d444d'),
+    ...[[-0.38, -0.38], [0.38, -0.38], [-0.38, 0.38], [0.38, 0.38]].map(([x, z]) => cone([0.1, 0.16, 0.1], [x, 0.05, z], '#5fbf3a')),
+  ],
+  // 2×2: a dark furnace hall with a glowing mouth and a molten channel, a converter with a hot
+  // top, an ore hopper and a tall banded stack with a red light.
+  smelter: () => [
+    box([1.94, 0.06, 1.94], [0, 0, 0], '#4a4440'),
+    box([1.1, 0.72, 1.2], [-0.38, 0.06, -0.12], '#6a5a50'),
+    box([1.14, 0.08, 1.24], [-0.38, 0.78, -0.12], '#3d3632'),
+    box([0.5, 0.32, 0.06], [-0.38, 0.06, 0.5], '#ff7a1a', GLOW),
+    box([0.2, 0.03, 0.42], [-0.38, 0.06, 0.74], '#ffa030', GLOW),
+    cyl([0.62, 0.55, 0.62], [0.5, 0.06, 0.48], '#5a5a60'),
+    dome([0.5, 0.18, 0.5], [0.5, 0.61, 0.48], '#ff8a2a', GLOW),
+    cone([0.5, 0.42, 0.5], [-0.38, 0.86, -0.3], '#9a7a5a', { rot: [Math.PI, 0, 0] }),
+    cyl([0.3, 2.4, 0.3], [0.58, 0.06, -0.58], '#8a7a70'),
+    cyl([0.32, 0.12, 0.32], [0.58, 1.6, -0.58], HAZARD),
+    cyl([0.32, 0.12, 0.32], [0.58, 2.1, -0.58], HAZARD),
+    dome([0.12, 0.1, 0.12], [0.58, 2.46, -0.58], BEACON, GLOW),
+  ],
+  // 2×2: a white sawtooth-roofed hall with skylights, a yellow crane arm and orange parts crates.
+  fabricator: () => [
+    box([1.94, 0.06, 1.94], [0, 0, 0], '#5a5e64'),
+    box([1.2, 0.55, 1.3], [-0.32, 0.06, -0.2], '#c9ced6'),
+    ...[-0.62, -0.32, -0.02].flatMap((x) => [
+      box([0.28, 0.06, 1.3], [x, 0.66, -0.2], '#e6eaef', { rot: [0, 0, 0.5] }),
+      box([0.05, 0.16, 1.28], [x + 0.13, 0.61, -0.2], '#7fe0ff', GLOW),
+    ]),
+    box([0.14, 1.55, 0.14], [0.66, 0.06, 0.62], HAZARD),
+    box([1.25, 0.1, 0.12], [0.2, 1.55, 0.62], HAZARD, { rot: [0, 0.35, 0] }),
+    box([0.24, 0.16, 0.2], [0.72, 1.48, 0.62], DARK),
+    cyl([0.025, 0.55, 0.025], [-0.28, 0.98, 0.42], STEEL),
+    box([0.26, 0.18, 0.26], [-0.28, 0.8, 0.42], '#e08a3a'),
+    ...[[0.48, -0.5], [0.72, -0.5], [0.6, -0.2], [0.6, -0.5]].map(([x, z], k) => box([0.22, 0.2, 0.22], [x, 0.06 + (k === 3 ? 0.2 : 0), z], k % 2 ? '#f0a050' : '#e08a3a')),
+  ],
+  // 1×1 on a meteoroid drift: a white pod on a pad inside a tilted yellow sweep ring, with a
+  // glowing magnet and a beacon.
+  sweeper: () => [
+    box([0.86, 0.08, 0.86], [0, 0, 0], '#3d444d'),
+    cyl([0.36, 0.34, 0.36], [0, 0.08, 0], '#e8eef4'),
+    dome([0.36, 0.14, 0.36], [0, 0.42, 0], '#c9ced6'),
+    torus([0.98, 0.08, 0.98], [0, 0.36, 0], HAZARD, { rot: [0.28, 0, 0.12] }),
+    ...[0, 1, 2, 3].map((k) => box([0.42, 0.04, 0.05], [0.24 * Math.cos(k * HALF_PI), 0.36, 0.24 * Math.sin(k * HALF_PI)], STEEL, { rot: [0, -k * HALF_PI, 0] })),
+    cyl([0.2, 0.05, 0.2], [0, 0.56, 0], '#9fe8ff', GLOW),
+    dome([0.08, 0.07, 0.08], [0.18, 0.5, -0.18], BEACON, GLOW),
+  ],
+  // 2×2: a walled basin whose spoil heap grows with b.fill (0..100); the lamp turns red near full.
+  tailings: (level, mode, b) => {
+    const f = Math.max(0, Math.min(1, (b?.fill || 0) / 100)), s = 0.45 + 0.55 * f;
+    const parts = [
+      box([1.94, 0.05, 1.94], [0, 0, 0], '#3e3a36'),
+      box([1.94, 0.3, 0.1], [0, 0.05, -0.92], '#7a7066'), box([1.94, 0.3, 0.1], [0, 0.05, 0.92], '#7a7066'),
+      box([0.1, 0.3, 1.74], [-0.92, 0.05, 0], '#7a7066'), box([0.1, 0.3, 1.74], [0.92, 0.05, 0], '#7a7066'),
+      cone([1.6 * s, 0.08 + 1.05 * f, 1.6 * s], [-0.08, 0.05, 0.05], '#8a6a4a'),
+      box([0.16, 0.06, 1.1], [0.62, 0.42, -0.25], DARK, { rot: [0.5, 0, 0] }),
+      cyl([0.05, 0.8, 0.05], [0.8, 0.05, -0.8], STEEL),
+      dome([0.14, 0.12, 0.14], [0.8, 0.85, -0.8], f >= 0.9 ? '#ff3a2a' : f >= 0.6 ? '#ffb02a' : '#5fff8a', GLOW),
+    ];
+    if (f > 0.25) parts.push(cone([0.9 * s, 0.05 + 0.6 * f, 0.9 * s], [0.42, 0.05, 0.5], '#6e5640'));
+    if (f > 0.55) parts.push(cone([0.7 * s, 0.05 + 0.45 * f, 0.7 * s], [-0.5, 0.05, -0.5], '#9a7a5a'));
+    return parts;
+  },
+  // 2×2 on a plasma lake: three coil towers ringed in glowing magenta, a containment tank and arcs.
+  plasmaskimmer: () => {
+    const parts = [box([1.9, 0.1, 1.9], [0, 0, 0], '#2a2238')];
+    const towers = [[-0.5, -0.5], [0.5, -0.45], [-0.45, 0.5]];
+    for (const [x, z] of towers) {
+      parts.push(cyl([0.18, 1.25, 0.18], [x, 0.1, z], STEEL));
+      for (let k = 0; k < 3; k++) parts.push(torus([0.6 - k * 0.08, 0.12, 0.6 - k * 0.08], [x, 0.3 + k * 0.32, z], '#ff4ad8', GLOW));
+      parts.push(dome([0.3, 0.2, 0.3], [x, 1.35, z], '#ffb8f0', GLOW));
+    }
+    parts.push(box([0.05, 0.05, 1.0], [0, 1.44, -0.48], '#ff9af0', { rot: [0, HALF_PI, 0], ...GLOW }));
+    parts.push(box([0.05, 0.05, 1.0], [-0.48, 1.44, 0], '#ff9af0', GLOW));
+    parts.push(cyl([0.62, 0.5, 0.62], [0.48, 0.1, 0.48], '#c9ced6', { slot: 'mat/tank' }), torus([0.68, 0.06, 0.68], [0.48, 0.42, 0.48], '#ff6ae8', GLOW),
+      dome([0.62, 0.2, 0.62], [0.48, 0.6, 0.48], '#e8eef4'));
+    return parts;
+  },
+  // 1×1: a tall thin mast with guy rings, a cyan emitter ring and a gold beacon on top.
+  tether: () => [
+    box([0.6, 0.12, 0.6], [0, 0, 0], '#4a525c'),
+    ...[[-0.22, -0.22], [0.22, -0.22], [-0.22, 0.22], [0.22, 0.22]].map(([x, z]) => box([0.06, 0.6, 0.06], [x * 0.6, 0.12, z * 0.6], STEEL, { rot: [z * 0.5, 0, -x * 0.5] })),
+    cyl([0.09, 4.1, 0.09], [0, 0.12, 0], '#dfe3ea'),
+    ...[1.2, 2.3, 3.3].map((y) => torus([0.32, 0.04, 0.32], [0, y, 0], HAZARD)),
+    torus([0.6, 0.06, 0.6], [0, 4.0, 0], '#6fd3ff', GLOW),
+    dome([0.24, 0.22, 0.24], [0, 4.22, 0], '#ffd23a', GLOW),
+  ],
+  // 1×1: a grey hangar with a lit door, a landing pad on its roof (gold ring) and two parked drones.
+  dronebay: () => [
+    box([0.92, 0.05, 0.92], [0, 0, 0], '#5a6068'),
+    box([0.82, 0.36, 0.82], [0, 0.05, 0], '#8a929c'),
+    box([0.4, 0.24, 0.04], [0, 0.05, 0.42], '#7fe0ff', GLOW),
+    cyl([0.66, 0.03, 0.66], [0, 0.41, 0], '#2b3138'),
+    torus([0.62, 0.04, 0.62], [0, 0.43, 0], '#ffd23a', GLOW),
+    ...[[-0.12, -0.08], [0.15, 0.12]].flatMap(([x, z]) => [
+      cyl([0.16, 0.05, 0.16], [x, 0.45, z], '#e8eef4'),
+      torus([0.26, 0.03, 0.26], [x, 0.46, z], '#d07a3a'),
+    ]),
+    cyl([0.03, 0.4, 0.03], [0.34, 0.41, -0.34], STEEL),
+    dome([0.07, 0.06, 0.07], [0.34, 0.81, -0.34], BEACON, GLOW),
+  ],
+  // 1×1: white health care with a teal plus inside a ring on the roof; it grows with its level
+  // (Clinic, Medical Centre with a wing, Hospital tower with a roof pad).
+  clinic: (level) => {
+    const lv = Math.max(1, Math.min(3, level || 1)), h = [0.42, 0.72, 1.15][lv - 1], w = [0.72, 0.8, 0.84][lv - 1];
+    const parts = [
+      box([0.94, 0.05, 0.94], [0, 0, 0], '#6a6e74'),
+      box([w, h, w], [0, 0.05, 0], '#f4f7fa'),
+    ];
+    for (let y = 0.18; y < h - 0.08; y += 0.3) parts.push(box([w + 0.03, 0.07, w + 0.03], [0, 0.05 + y, 0], '#3ad8c8', GLOW));
+    if (lv >= 2) parts.push(box([0.3, h * 0.55, 0.86], [w / 2 - 0.05, 0.05, 0], '#e6ecf0'));
+    const top = 0.05 + h;
+    parts.push(
+      box([w * 0.9, 0.04, w * 0.9], [0, top, 0], '#dfe6ea'),
+      torus([w * 0.85, 0.05, w * 0.85], [0, top + 0.02, 0], '#2ac8b8', GLOW),
+      box([w * 0.52, 0.05, 0.13], [0, top + 0.03, 0], '#2ac8b8', GLOW),
+      box([0.13, 0.05, w * 0.52], [0, top + 0.03, 0], '#2ac8b8', GLOW),
+    );
+    if (lv === 3) parts.push(cyl([0.04, 0.3, 0.04], [w / 2 - 0.08, top, -w / 2 + 0.08], STEEL), dome([0.08, 0.06, 0.08], [w / 2 - 0.08, top + 0.3, -w / 2 + 0.08], BEACON, GLOW));
+    return parts;
+  },
+  // 1×1: a hazard-yellow warden's hut with a dark roof and orange beacon, and a tall street lamp.
+  safetypost: () => [
+    box([0.92, 0.05, 0.92], [0, 0, 0], '#5a5e64'),
+    box([0.58, 0.42, 0.58], [-0.1, 0.05, 0.08], HAZARD),
+    box([0.6, 0.08, 0.6], [-0.1, 0.18, 0.08], '#2a2a2a'),
+    box([0.64, 0.06, 0.64], [-0.1, 0.47, 0.08], '#3d444d'),
+    dome([0.14, 0.12, 0.14], [-0.1, 0.53, 0.08], '#ff8a2a', GLOW),
+    cyl([0.05, 1.05, 0.05], [0.32, 0.05, -0.3], STEEL),
+    box([0.22, 0.04, 0.06], [0.24, 1.06, -0.3], STEEL),
+    dome([0.26, 0.16, 0.26], [0.16, 0.96, -0.3], '#fff2b8', { rot: [Math.PI, 0, 0], ...GLOW }),
+    torus([0.36, 0.04, 0.36], [0.16, 0.95, -0.3], '#ffd23a', GLOW),
+  ],
+  // 2×2 on the Earth-facing hull: a glass bay (a lit half barrel with steel ribs) bulging toward
+  // Earth, an entry block behind it and a small telescope.
+  obsdeck: () => [
+    box([1.94, 0.08, 1.94], [0, 0, 0], '#4a525c', { slot: 'mat/hull-plate' }),
+    cyl([1.15, 1.8, 1.15], [0, 0.08 - 0.9, 0.3], '#a6e3f0', { rot: [0, 0, HALF_PI], slot: 'mat/greenhouse-glass', ...GLOW }),
+    ...[-0.85, -0.3, 0.3, 0.85].map((x) => torus([1.26, 0.07, 1.26], [x, 0.08 - 0.035, 0.3], STEEL, { rot: [0, 0, HALF_PI] })),
+    box([1.8, 0.05, 0.1], [0, 0.66, 0.3], '#dfe3ea'),
+    box([1.0, 0.4, 0.5], [-0.3, 0.08, -0.65], '#c9ced6'),
+    box([1.02, 0.06, 0.52], [-0.3, 0.3, -0.65], WIN, GLOW),
+    cyl([0.12, 0.4, 0.12], [0.62, 0.08, -0.6], '#3d444d', { rot: [0.6, 0, 0] }),
+  ],
 };
 
 // A plain block for any key without a kit (later buildings), so the view never fails on new data.
 const fallback = (n) => [box([n * 0.9, 0.6, n * 0.9], [0, 0, 0], '#b0b4ba'), box([n * 0.92, 0.08, n * 0.92], [0, 0.45, 0], WIN, GLOW)];
 
-export function kitParts(key, level = 1, mode = null) {
+// `b` (optional) is the building itself, for kits that show more than level and mode: the
+// Tailings Dump's heap follows b.fill. view.js puts the same fields in its refresh signature.
+export function kitParts(key, level = 1, mode = null, b = null) {
   const def = BUILDING[key], kit = KITS[key];
-  return kit ? kit(level, mode ?? def?.modes?.[0]?.key ?? null) : fallback(def?.size || 1);
+  return kit ? kit(level, mode ?? def?.modes?.[0]?.key ?? null, b) : fallback(def?.size || 1);
 }
 
 // Height of a kit's top above its base (picking and the ghost use it).

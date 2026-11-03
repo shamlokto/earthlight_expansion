@@ -11,20 +11,28 @@
 //   ui.setPlacing(key | null, moving)  ui.setSpeed(s)  ui.openMarket()  ui.destroy()
 //   ui.openBuild(key)         the build menu on that building's category (opened on phones)
 //   ui.welcomeDone(offerHelp) first run: the goals panel opened, "Show me" pulsed, How to play offered
+//   ui.openResearch(techKey)  the Research panel (version 2), scrolled to and flashing that tech
+//   ui.toggleResearch()       key T
 //
 // api: { state(), rules, sim, art(slot) → url|null, types (expansion units by type, or null),
 //        act(result) → result, pick(key), move(id), setSpeed(s), setOverlay(name|null), save(),
 //        toTitle(), focus(x, y), settings: { pauseOnEvents, snap }, setSetting(key, value),
 //        goals (js/colony/goals.js or null), diff(state) → difficulty row or null,
 //        show(show) performs a goal's or the advisor's "Show me", help() opens How to play,
-//        answered(pending, choiceKey) after an event is answered }
+//        answered(pending, choiceKey) after an event is answered, openResearch(techKey) }
 import { CATEGORIES, BUILDINGS, BUILDING, NEEDS, CHAMBER_AIR_PER_100 } from './data/buildings.js';
 import { TERRAIN, ARTIFACT, T } from './data/terrain.js';
+import { BRANCHES, TECHS, TECH } from './data/tech.js';
 
-const GOODS = ['food', 'water', 'air', 'parts', 'ore', 'credits'];
-const GOOD_NAME = { food: 'Food', water: 'Water', air: 'Air', parts: 'Parts', ore: 'Ore', credits: 'Credits', power: 'Power' };
-const SELLABLE = ['ore', 'food', 'parts'];
-const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8' };
+const GOODS = ['food', 'water', 'air', 'parts', 'ore', 'alloy', 'helium', 'credits'];
+const GOOD_NAME = { food: 'Food', water: 'Water', air: 'Air', parts: 'Parts', ore: 'Ore', alloy: 'Alloy', helium: 'Helium-3', credits: 'Credits', power: 'Power', research: 'Research' };
+// Version 2 goods: in the top bar and the market only once the colony has any, or the tech that makes them is done.
+const LATE = { alloy: 'smelting', helium: 'plasma' };
+const SELLABLE = ['ore', 'food', 'parts', 'alloy', 'helium'];
+const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8', services: '#c3a6ff' };
+const BRANCH_COLOR = { life: '#5aa8ff', industry: '#ff9a52', society: '#ff8fd8', logistics: '#f5c542' };
+// The happiness the tax costs or gives (rules: 0% +8, 10% 0, 20% −14, 30% −32, interpolated).
+const taxHappy = (t) => { const P = [[0, 8], [10, 0], [20, -14], [30, -32]]; for (let i = 1; i < P.length; i++) if (t <= P[i][0]) { const [a, va] = P[i - 1], [b, vb] = P[i]; return va + (vb - va) * (t - a) / (b - a); } return -32; };
 const STATUS = {
   sealed: ['Sealed', 'Airless and unknown. Survey it from an open neighbour.'],
   surveying: ['Surveying', 'Ruess\'s team is mapping it.'],
@@ -33,7 +41,7 @@ const STATUS = {
   open: ['Open', 'Pressurised: build inside.'],
 };
 const OVERLAYS = [[null, 'None'], ['reach', 'Reach'], ['park', 'Parks'], ['power', 'Power']];
-const KIND_LABEL = { goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost' };
+const KIND_LABEL = { goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost', tech: 'Research complete' };
 const SPEAKER = { ruess: 'Prof. Ruess', sato: 'Capt. Sato' };
 const UI_KEY = 'el-colony-ui';   // per-viewer panel state (collapsed or not)
 const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}') || {}; } catch { return {}; } };
@@ -74,7 +82,7 @@ function cardIcon(b) {
 // The help dialog's sections (colony.html #dHelp). Short sentences, pictures from the card art.
 // diff: the difficulty row (js/colony/difficulty.js) the numbers are quoted for, or null.
 export const HELP_SECTIONS = [['goal', 'The goal'], ['time', 'Time'], ['build', 'Building'], ['res', 'Resources'], ['chambers', 'Chambers'],
-  ['homes', 'Homes & happiness'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['tips', 'First 10 days']];
+  ['homes', 'Homes & happiness'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
 export function helpHtml(art, diff) {
   const pic = (slot, alt = '') => { const u = art?.(slot); return u ? `<img src="${esc(u)}" alt="${esc(alt)}" loading="lazy">` : ''; };
   const card = (key) => { const u = art?.(`card/${key}`); return `<figure class="cl-hfig">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : cardIcon(BUILDING[key])}<figcaption>${esc(BUILDING[key]?.name || key)}</figcaption></figure>`; };
@@ -105,13 +113,15 @@ export function helpHtml(art, diff) {
       <tr><td>Power</td><td>The Command Centre, Solar Arrays (hull or space)</td><td>Most buildings. Short power slows them all</td></tr>
       <tr><td>Parts</td><td>The Command Centre (a few), Salvage Yards, goal grants</td><td>Building</td></tr>
       <tr><td>Credits</td><td>Tax, cash crops, selling at the Market, goal grants</td><td>Building and daily upkeep</td></tr>
-      <tr><td>Ore</td><td>Ore Mines on asteroids</td><td>Sell it at the Market</td></tr>
+      <tr><td>Ore</td><td>Ore Mines on asteroids</td><td>Sell it at the Market; Smelters (research)</td></tr>
+      <tr><td>Alloy</td><td>Smelters (20 ore → 10 alloy)</td><td>Fabricators; sells well</td></tr>
+      <tr><td>Helium-3</td><td>Plasma Skimmers on plasma clouds</td><td>Earth's most precious cargo: sell it</td></tr>
     </tbody></table>
     <p><b>Stores have a cap</b> (the number after the slash). Anything above it is lost. A <b>Storage Depot</b> holds 300 more of one good. Power is never stored, except in Battery Banks.</p>`)}
   ${sec('chambers', 'Chambers', card('seal'), `
     <p>Eden is split into chambers. Only yours is open at the start. To open the next one:</p>
     <ol class="cl-hsteps">
-      <li><b>Survey</b>: click a dark chamber next to an open one and press Survey (2 days).</li>
+      <li><b>Survey</b>: click a dark chamber next to an open one and press Survey (2 days; Survey Drones research makes it 1).</li>
       <li><b>Seal</b>: the <b class="cl-bad">red tiles</b> in its walls are breaches. Build a <b>Bulkhead Seal</b> on each one (Water &amp; air menu).</li>
       <li><b>Pressurise</b>: press Pressurise. It uses air from your stores (a quarter of the floor tiles, a fifth on Easy) and takes 5 days.</li>
       <li><b>Build</b>: the chamber is open. Build anything inside it.</li>
@@ -125,8 +135,27 @@ export function helpHtml(art, diff) {
     <p>Colonists walk and rovers drive <b>only on roads</b>. Without roads your colony still works, but nobody moves.</p>
     <p>Choose <b>Road</b> (Command menu). <b>Click where it starts</b>, then <b>click where it ends</b>: it lays an L-shaped line. Roads pass through gates once both chambers are open.</p>`)}
   ${sec('market', 'Market & guardians', card('dock'), `
-    <p>Traders land at the <b>Dock</b>. Open the <b>Market</b> (top bar) to sell <b>ore, food and parts</b> for credits. Each sale lowers the price a little; it recovers over a few days. Sell in batches.</p>
+    <p>Traders land at the <b>Dock</b>. Open the <b>Market</b> (top bar) to sell <b>ore, food and parts</b> (later <b>alloy</b> and <b>helium-3</b>) for credits. Each sale lowers the price a little; it recovers over a few days. Sell in batches.</p>
     <p><b>Beta testers</b>: your <b>guardians</b> are your old army. They eat nothing. Sell machines at the Market for lots of credits and parts, or keep them.</p>`)}
+  ${sec('research', 'Research and new buildings', card('lab') + card('clinic'), `
+    <p>At <b>80 colonists</b> you can build a <b>Research Lab</b> (Services menu). Labs make <b>research points</b> every day; more staff, power and lab levels make more.</p>
+    <p>Open <b>Research</b> (top bar, or key <b>T</b>). The tech tree has four branches: <b>Life Support</b>, <b>Industry</b>, <b>Society</b> and <b>Logistics</b>. Click a tech you can study: the labs' points flow into it. Points made while nothing is chosen are <b>banked</b> and flow into the next choice.</p>
+    <p>A finished tech <b>unlocks new buildings</b> (greyed cards in the build menu say <b>Research …</b>: click one to jump to its tech) or makes old ones better.</p>
+    <ul class="cl-hsteps">
+      <li><b>Clinics</b> make homes happier, bring children and let Habitats grow into <b>Apartments</b> (70 homes).</li>
+      <li><b>Smelters</b> turn ore into <b>alloy</b>; <b>Fabricators</b> turn alloy into parts. Mines leave waste: past four Ore Mines, build a <b>Tailings Dump</b> per four and <b>empty</b> it (50 credits) before it is full.</li>
+      <li><b>Canteens</b> and <b>Safety Posts</b> cheer the homes around them; an <b>Observation Deck</b> on the Earth-facing hull cheers everyone.</li>
+      <li><b>Tether Masts</b> carry the dock's reach further into space, down to the atmosphere.</li>
+    </ul>`)}
+  ${sec('nav', 'Navigating with a trackpad', '', `
+    <ul class="cl-hsteps">
+      <li><b>Two-finger scroll</b> pans the map. <b>Pinch</b> zooms in and out.</li>
+      <li><b>Shift + scroll</b> rotates the view; <b>Alt (Option) + scroll</b> tilts it.</li>
+      <li>The <b>buttons on the map</b> (top right) zoom, rotate, tilt and fly <b>home</b> to the Command Centre.</li>
+      <li>The <b>minimap</b> (bottom right) shows all of Eden: <b>click or drag on it</b> to jump there. The outline is what you see now.</li>
+      <li>Keys: <b>W A S D</b> or the <b>arrows</b> pan, <b>Q / E</b> rotate, <b>+ / −</b> zoom, <b>PgUp / PgDn</b> tilt, <b>Home</b> back to the Command Centre.</li>
+    </ul>
+    <p>With a mouse: drag to rotate, right-drag to pan, the wheel zooms. The map buttons and the minimap can be switched off in Settings (⚙).</p>`)}
   ${sec('tips', 'Your first 10 days', '', `
     <ol class="cl-hsteps">
       <li>Read Ruess's welcome, then follow the <b>goal panel</b>. Press <b>Show me</b>.</li>
@@ -138,7 +167,7 @@ export function helpHtml(art, diff) {
       <li>Short of credits? Sell some food at the Market, or set a farm to cash crops.</li>
     </ol>
     ${diff?.relief ? `<p>On <b>${esc(name)}</b>, if the treasury runs dry or colonists go hungry, the Council sends <b>${num(diff.relief.credits)} credits</b> and <b>${num(diff.relief.food)} food</b> (at most once every ${diff.relief.every} days).</p>` : ''}
-    <p class="cl-dim">Keys: space pause · 1 / 2 / 3 speed · R build again · Esc cancel · F1 or ? this guide.</p>`)}
+    <p class="cl-dim">Keys: space pause · 1 / 2 / 3 speed · R build again · T research · Esc cancel · F1 or ? this guide.</p>`)}
   </div>`;
 }
 
@@ -155,13 +184,16 @@ export function createUI(root, api) {
       <button type="button" data-speed="4" title="×4 (3)">×4</button>
     </div>
     <div class="cl-stats">
-      ${GOODS.map((g) => `<div class="cl-stat" data-g="${g}" title="${GOOD_NAME[g]}: stock / capacity, change per day"><i>${GOOD_NAME[g]}</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>`).join('')}
+      ${GOODS.map((g) => `<div class="cl-stat" data-g="${g}"${LATE[g] ? ' hidden' : ''} title="${GOOD_NAME[g]}: stock / capacity, change per day"><i>${g === 'helium' ? 'Helium' : GOOD_NAME[g]}</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>`).join('')}
+      <button type="button" class="cl-stat cl-resstat" data-g="research" hidden title="Research a day from the labs"><i>Research</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
       <div class="cl-stat" data-g="power" title="Power: supply / demand (MW), battery"><i>Power</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
       <div class="cl-stat" data-g="pop" title="Colonists / housing; next transport"><i>Colonists</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
       <button type="button" class="cl-stat cl-happybtn" data-g="happy" title="Happiness: click for the breakdown"><i>Happiness</i><b><span data-v></span></b><em data-d></em></button>
-      <label class="cl-stat cl-tax" title="Tax rate: 0% +8 happiness, 10% 0, 20% −14, 30% −32"><i>Tax <span data-tax></span></i><input type="range" min="0" max="30" step="1" data-taxin></label>
+      <div class="cl-stat cl-tax" title="Tax rate: 0% +8 happiness, 10% 0, 20% −14, 30% −32. Shift-click steps 5%."><i>Tax</i>
+        <b class="cl-taxctl"><button type="button" data-taxstep="-1" aria-label="Lower the tax">−</button><span data-tax></span><button type="button" data-taxstep="1" aria-label="Raise the tax">+</button></b><em data-taxfx></em></div>
     </div>
     <div class="cl-tools">
+      <button type="button" class="cl-btn sm cl-resbtn" data-tool="research" title="Research: the tech tree (T)"><span class="cl-ico">⚗</span><span class="cl-lbl">Research</span></button>
       <button type="button" class="cl-btn sm" data-tool="market" title="Sell goods and guardians"><span class="cl-ico">⚖</span><span class="cl-lbl">Market</span></button>
       <button type="button" class="cl-btn sm" data-tool="save" title="Save the colony in this browser"><span class="cl-ico">⤓</span><span class="cl-lbl">Save</span></button>
       <button type="button" class="cl-btn sm icon cl-helpbtn" data-tool="help" title="How to play (F1 or ?)" aria-label="How to play">?</button>
@@ -209,6 +241,16 @@ export function createUI(root, api) {
   <div class="cl-pop cl-panel" data-pop="market" hidden></div>
   <div class="cl-pop cl-panel" data-pop="settings" hidden></div>
   </div>
+  <div class="cl-mid" aria-hidden="true"></div>
+  <section class="cl-research cl-win" hidden role="dialog" aria-label="Research">
+    <header class="cl-rhead">
+      <div class="cl-rtitle"><h3>Research</h3><small>the tech tree · T</small></div>
+      <div class="cl-rstats" data-rstats></div>
+      <button type="button" class="cl-x" data-close="research" title="Close (Esc or T)" aria-label="Close">×</button>
+    </header>
+    <div class="cl-rnote" data-rnote hidden></div>
+    <div class="cl-rcols" data-rcols></div>
+  </section>
   <div class="cl-ovl" role="group" aria-label="Overlay"><i>Overlay</i>${OVERLAYS.map(([k, n]) => `<button type="button" data-ovl="${k ?? ''}" aria-pressed="${k === null}">${n}</button>`).join('')}</div>
   <div class="cl-placing" hidden><span data-placing></span> <button type="button" class="cl-btn sm" data-cancel>Cancel</button></div>
   <div class="cl-log" data-log title="Colony log (click to expand)"></div>
@@ -219,8 +261,8 @@ export function createUI(root, api) {
   const $ = (s) => root.querySelector(s);
   const $$ = (s) => [...root.querySelectorAll(s)];
   const statEls = {};
-  for (const el of $$('.cl-stat[data-g]')) statEls[el.dataset.g] = { el, v: el.querySelector('[data-v]'), c: el.querySelector('[data-c]'), d: el.querySelector('[data-d]') };
-  const dayEl = $('[data-h=day]'), taxIn = $('[data-taxin]'), taxEl = $('[data-tax]');
+  for (const el of $$('.cl-stat[data-g]')) statEls[el.dataset.g] = { el, base: el.className, v: el.querySelector('[data-v]'), c: el.querySelector('[data-c]'), d: el.querySelector('[data-d]') };
+  const dayEl = $('[data-h=day]'), taxEl = $('[data-tax]'), taxFx = $('[data-taxfx]');
   const cardsEl = $('[data-cards]'), insp = $('.cl-insp'), inspBody = $('[data-insp]'), tipEl = $('.cl-tip'), toasts = $('.cl-toasts');
   const logEl = $('[data-log]'), modal = $('.cl-modal'), evBox = $('.cl-event'), placingEl = $('.cl-placing');
   const pops = { happy: $('[data-pop=happy]'), market: $('[data-pop=market]'), settings: $('[data-pop=settings]') };
@@ -229,14 +271,33 @@ export function createUI(root, api) {
 
   const result = (r) => api.act(r);
 
+  // ---------------------------------------------------------------- research state (version 2; guarded: rules may predate it)
+  const researchOf = (s) => s.research || { points: 0, focus: null, progress: {}, done: [] };
+  const techDone = (s, key) => !!researchOf(s).done?.includes(key);
+  // rules.techStatus when it exists, else the same rows worked out from data/tech.js and state.research.
+  function techList(s) {
+    try { const r = R.techStatus?.(s); if (Array.isArray(r) && r.length) return r; } catch (e) { console.warn('techStatus failed', e); }
+    const rs = researchOf(s), done = new Set(rs.done || []);
+    return TECHS.map((t) => ({ key: t.key, name: t.name, branch: t.branch, cost: t.cost, progress: done.has(t.key) ? t.cost : rs.progress?.[t.key] || 0,
+      done: done.has(t.key), available: !done.has(t.key) && t.needs.every((n) => done.has(n)), focus: rs.focus === t.key, needs: t.needs, unlocks: t.unlocks, text: t.text }));
+  }
+  const lateShown = (s, g) => (s.stock?.[g] || 0) > 0 || techDone(s, LATE[g]) || s.buildings.some((b) => BUILDING[b.key]?.makes?.[g]);
+
   // ---------------------------------------------------------------- top bar
   $('.cl-speeds').addEventListener('click', (e) => { const b = e.target.closest('[data-speed]'); if (b) api.setSpeed(+b.dataset.speed); });
-  taxIn.addEventListener('input', () => { taxEl.textContent = taxIn.value + '%'; });
-  taxIn.addEventListener('change', () => result(R.setTax(S(), taxIn.value / 100)));
+  $('.cl-taxctl').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-taxstep]'); if (!b) return;
+    const now = Math.round((S().tax ?? 0) * 100), want = Math.max(0, Math.min(30, now + +b.dataset.taxstep * (e.shiftKey ? 5 : 1)));
+    if (want === now) return;
+    const r = R.setTax(S(), want / 100);
+    result(r && r.ok === false ? r : { ok: true });   // no toast for every step: the number itself changes
+  });
   $('.cl-happybtn').addEventListener('click', () => togglePop('happy'));
+  statEls.research.el.addEventListener('click', () => toggleResearch());
   $('.cl-tools').addEventListener('click', (e) => {
     const t = e.target.closest('[data-tool]')?.dataset.tool;
-    if (t === 'market') togglePop('market');
+    if (t === 'research') toggleResearch();
+    else if (t === 'market') togglePop('market');
     else if (t === 'save') api.save();
     else if (t === 'settings') togglePop('settings');
     else if (t === 'help') api.help?.();
@@ -250,9 +311,10 @@ export function createUI(root, api) {
     if (e.v && e.v.textContent !== v) e.v.textContent = v;
     if (e.c && e.c.textContent !== c) e.c.textContent = c;
     if (e.d && e.d.textContent !== d) e.d.textContent = d;
-    const k = 'cl-stat' + (cls ? ' ' + cls : '') + (g === 'happy' ? ' cl-happybtn' : '');
+    const k = e.base + (cls ? ' ' + cls : '');
     if (e.el.className !== k) e.el.className = k;
   }
+  const show = (g, on) => { const e = statEls[g]; if (e && e.el.hidden === !!on) e.el.hidden = !on; };
 
   // Why a resource moves: "−13 a day: 40 colonists eat 32, 2 Farm Fields make 19" (the stat's title).
   const specOf = (b) => { try { return R.spec?.(b) || BUILDING[b.key] || {}; } catch { return BUILDING[b.key] || {}; } };
@@ -309,10 +371,28 @@ export function createUI(root, api) {
   }
   const setTitle = (g, t) => { const e = statEls[g]; if (e && e.el.title !== t) e.el.title = t; };
 
+  // Research (version 2): the labs' points a day, what is studied, what is banked.
+  function labInfo(s) {
+    const labs = s.buildings.filter((b) => b.key === 'lab'), live = labs.filter(isActive);
+    const m = summary || {}, staff = m.jobs ? Math.min(1, (m.workers ?? s.pop) / m.jobs) : 1, pf = s.stats?.last?.power?.factor ?? 1;
+    const nominal = live.reduce((t, b) => t + (specOf(b).makes?.research || 0), 0);
+    const made = summary?.research?.perDay ?? s.stats?.last?.research ?? s.stats?.last?.produced?.research;
+    const perDay = s.day > 0 && Number.isFinite(made) ? made : nominal * staff * Math.min(1, pf);
+    return { labs: labs.length, live: live.length, building: labs.filter((b) => b.build > 0).length, perDay, nominal };
+  }
+  function researchWhy(s, li, rs, list) {
+    const f = list.find((t) => t.focus);
+    return `Research: ${num(li.perDay)} points a day from ${li.live} working lab${li.live === 1 ? '' : 's'}${li.building ? ` (${li.building} being built)` : ''}.`
+      + (f ? `\nStudying ${f.name}: ${num(f.progress)} / ${num(f.cost)}${li.perDay > 0 ? `, about ${Math.ceil((f.cost - f.progress) / li.perDay)} days left` : ''}.` : '\nNothing is being studied: points are banked for the next tech.')
+      + (rs.points ? `\nBanked: ${num(rs.points)} points.` : '')
+      + '\nStaff, power and lab upgrades make more. Click to open Research (T).';
+  }
+
   function hud() {
     const s = S(), m = summary;
     dayEl.textContent = `Day ${s.day}`;
     for (const g of GOODS) {
+      if (LATE[g]) { const on = lateShown(s, g); show(g, on); if (!on) continue; }
       const st = m?.stock?.[g] || { have: s.stock?.[g] ?? 0 };
       const cap = st.cap != null && Number.isFinite(st.cap) ? `/${num(st.cap)}` : '';
       const d = st.delta ?? 0;
@@ -320,7 +400,18 @@ export function createUI(root, api) {
       stat(g, num(st.have), cap, d ? signed(d) : '±0', (d > 0 ? 'up' : d < 0 ? 'down' : '') + (low ? ' low' : '') + (st.cap && st.have >= st.cap && g !== 'credits' ? ' full' : ''));
     }
     const p = m?.power || {};
-    for (const g of GOODS) setTitle(g, why(g, s, m));
+    for (const g of GOODS) if (!statEls[g].el.hidden) setTitle(g, why(g, s, m));
+    const li = labInfo(s);
+    show('research', li.labs > 0);
+    // version 2 has begun (the lab is unlocked): phones show the Research button only from then on
+    const v2 = !!(s.unlocked?.includes?.('lab') || li.labs || researchOf(s).done?.length || researchOf(s).focus);
+    if (root.classList.contains('cl-v2') !== v2) root.classList.toggle('cl-v2', v2);
+    if (li.labs) {
+      const rs = researchOf(s), list = techList(s), f = list.find((t) => t.focus);
+      const short = (n) => n.length > 13 ? n.slice(0, 12) + '…' : n;
+      stat('research', '+' + num(li.perDay), '/d', f ? short(f.name) : rs.points ? `bank ${num(rs.points)}` : 'pick a tech', f ? 'up' : 'idle');
+      setTitle('research', researchWhy(s, li, rs, list));
+    }
     setTitle('power', powerWhy(s, m));
     setTitle('pop', popWhy(s, m));
     stat('power', num(p.supply ?? 0), `/${num(p.demand ?? 0)}`, p.cap ? `bat ${num(p.battery ?? 0)}/${num(p.cap)}` : '', (p.supply ?? 0) < (p.demand ?? 0) ? 'down' : 'up');
@@ -328,7 +419,10 @@ export function createUI(root, api) {
     stat('pop', num(pop), `/${num(housing)}`, m?.nextArrival != null ? (typeof m.nextArrival === 'number' ? `ship in ${m.nextArrival}d` : String(m.nextArrival)) : '', pop > housing ? 'down' : '');
     const h = Math.round(m?.happy ?? s.happy);
     stat('happy', String(h), '', h >= 70 ? 'thriving' : h >= 55 ? 'content' : h >= 40 ? 'steady' : h >= 25 ? 'unrest' : 'protests', h >= 55 ? 'up' : h < 40 ? 'down' : '');
-    if (document.activeElement !== taxIn) { const t = Math.round((s.tax ?? 0) * 100); if (+taxIn.value !== t) taxIn.value = t; taxEl.textContent = t + '%'; }
+    const t = Math.round((s.tax ?? 0) * 100), th = Math.round(taxHappy(t));
+    if (taxEl.textContent !== t + '%') taxEl.textContent = t + '%';
+    const fx = `${th > 0 ? '+' : th < 0 ? '−' : '±'}${Math.abs(th)} happy`;
+    if (taxFx.textContent !== fx) { taxFx.textContent = fx; taxFx.className = th > 0 ? 'good' : th < 0 ? 'bad' : ''; }
     setSpeed(s.speed);
   }
 
@@ -341,7 +435,9 @@ export function createUI(root, api) {
   });
   $('[data-buildtoggle]').addEventListener('click', () => $('.cl-build').classList.toggle('open'));
   cardsEl.addEventListener('click', (e) => {
-    const c = e.target.closest('[data-key]'); if (!c || c.getAttribute('aria-disabled') === 'true') return;
+    const c = e.target.closest('[data-key]'); if (!c) return;
+    if (c.dataset.tech) { openResearch(c.dataset.tech); return; }   // locked behind a tech: show it in the tree
+    if (c.getAttribute('aria-disabled') === 'true') return;
     api.pick(c.dataset.key);
     if (matchMedia('(max-width: 760px)').matches) $('.cl-build').classList.remove('open');
   });
@@ -351,25 +447,27 @@ export function createUI(root, api) {
     let list; try { list = R.buildable(s); } catch { list = []; }
     const by = Object.fromEntries((list || []).map((o) => [o.key, o]));
     const items = BUILDINGS.filter((b) => b.cat === cat && !b.fixed).map((b) => {
-      const o = by[b.key] || { key: b.key, name: b.name, cost: b.cost, unlocked: !b.unlock, why: b.unlock ? `At ${b.unlock.pop} colonists` : '' };
+      const o = by[b.key] || { key: b.key, name: b.name, cost: b.cost, unlocked: !b.unlock && !b.tech, why: b.unlock ? `At ${b.unlock.pop} colonists` : '' };
       const cost = o.cost || b.cost;
       const poor = (cost.credits || 0) > (s.stock.credits || 0) || (cost.parts || 0) > (s.stock.parts || 0);
-      return { b, o, cost, poor };
+      // version 2: still locked behind its tech (whatever rules.buildable words it as)
+      const tech = !o.unlocked && b.tech && !techDone(s, b.tech) ? b.tech : null;
+      return { b, o, cost, poor, tech };
     });
-    const sig = cat + '|' + items.map((i) => `${i.b.key}:${i.o.unlocked}:${i.o.why || ''}:${i.poor}`).join(',') + '|' + api.placingKey?.();
+    const sig = cat + '|' + items.map((i) => `${i.b.key}:${i.o.unlocked}:${i.o.why || ''}:${i.poor}:${i.tech}`).join(',') + '|' + api.placingKey?.();
     if (sig === cardSig) return;
     cardSig = sig;
     const placing = api.placingKey?.();
-    cardsEl.innerHTML = items.map(({ b, o, cost, poor }) => {
+    cardsEl.innerHTML = items.map(({ b, o, cost, poor, tech }) => {
       const url = api.art?.(`card/${b.key}`);
       const locked = !o.unlocked;
-      const why = locked ? (o.why || (b.unlock ? `At ${b.unlock.pop} colonists` : 'Locked')) : '';
-      return `<button type="button" class="cl-card${locked ? ' locked' : ''}${placing === b.key ? ' on' : ''}" data-key="${b.key}" aria-disabled="${locked}" style="--cc:${CAT_COLOR[b.cat]}" title="${esc(b.text)}">
+      const why = !locked ? '' : tech ? `Research ${TECH[tech]?.name || tech}` : (o.why || (b.unlock ? `At ${b.unlock.pop} colonists` : 'Locked'));
+      return `<button type="button" class="cl-card${locked ? ' locked' : ''}${tech ? ' techlock' : ''}${placing === b.key ? ' on' : ''}" data-key="${b.key}"${tech ? ` data-tech="${esc(tech)}"` : ''} aria-disabled="${locked && !tech}" style="--cc:${CAT_COLOR[b.cat] || '#9aa'}" title="${esc(tech ? `${b.text}\nClick to see ${TECH[tech]?.name || tech} in Research.` : b.text)}">
         <span class="cl-cardpic">${url ? `<img src="${esc(url)}" alt="" loading="lazy">` : cardIcon(b)}</span>
         <span class="cl-cardname">${esc(o.name || b.name)}</span>
         <span class="cl-cardcost${poor && !locked ? ' poor' : ''}">${costText(cost)}</span>
         <span class="cl-cardmeta">${b.size}×${b.size}${b.power ? ` · ${b.power > 0 ? '+' : ''}${b.power} MW` : ''}${b.jobs ? ` · ${b.jobs} jobs` : ''}${b.housing ? ` · ${b.housing} homes` : ''}</span>
-        ${locked ? `<span class="cl-cardwhy">🔒 ${esc(why)}</span>` : `<span class="cl-cardtext">${esc(b.text)}</span>`}
+        ${locked ? `<span class="cl-cardwhy">${tech ? '⚗' : '🔒'} ${esc(why)}${tech ? ' <i>›</i>' : ''}</span>` : `<span class="cl-cardtext">${esc(b.text)}</span>`}
       </button>`;
     }).join('') || '<p class="cl-dim">Nothing to build here yet.</p>';
   }
@@ -390,6 +488,8 @@ export function createUI(root, api) {
         break;
       }
       case 'market': openPop('market'); break;
+      case 'empty': result(typeof R.emptyTailings === 'function' ? R.emptyTailings(s, id) : { ok: false, msg: 'Emptying dumps is not ready yet.' }); break;
+      case 'research': openResearch(a.dataset.v || null); break;
       case 'focus': api.focus(+a.dataset.x, +a.dataset.y); break;
     }
     inspSig = ''; refreshInspector();
@@ -455,13 +555,13 @@ export function createUI(root, api) {
       const pressR = ch.status === 'surveyed' ? dry(s, (c) => R.chamberAction(c, ch.id, 'pressurise'))
         : { ok: false, msg: ch.status === 'open' ? 'Already open.' : ch.status === 'pressurising' ? 'Pressurising now.' : 'Survey it first.' };
       const air = R.pressuriseAir ? R.pressuriseAir(s, ch) : Math.ceil((ch.tiles || 0) / 4);
-      let fee = 100; try { fee = R.costOf?.(s, { credits: 100 })?.credits ?? 100; } catch { }
+      let fee = 100, sdays = 2; try { const sc = R.surveyCost?.(s); if (sc) { fee = sc.credits ?? fee; sdays = sc.days ?? sdays; } else fee = R.costOf?.(s, { credits: 100 })?.credits ?? 100; } catch { }
       parts.push(`<section class="cl-isec"><h4>Chamber <span class="cl-badge st-${esc(ch.status)}">${esc(st[0])}</span></h4>
         <div class="cl-iname">${esc(ch.name || 'Chamber ' + ch.id)} <small>${esc(ch.kind || '')} · ${num(ch.tiles)} tiles</small></div>
         <p class="cl-dim">${esc(st[1])}${ch.work ? ` ${ch.work} day${ch.work === 1 ? '' : 's'} left.` : ''}</p>
         <div class="cl-kv"><span>Breaches</span><b class="${total && sealed < total ? 'bad' : 'good'}">${hidden ? '?' : `${sealed} / ${total} sealed`}</b></div>
         ${ch.status !== 'open' ? `<div class="cl-acts">
-          <button type="button" class="cl-btn sm" data-a="survey" data-id="${ch.id}" ${surveyR.ok ? '' : 'disabled'} title="${esc(surveyR.ok ? `Survey: ${fee} credits, 2 days` : surveyR.msg)}">Survey <small>${fee} cr · 2 d</small></button>
+          <button type="button" class="cl-btn sm" data-a="survey" data-id="${ch.id}" ${surveyR.ok ? '' : 'disabled'} title="${esc(surveyR.ok ? `Survey: ${fee} credits, ${sdays} day${sdays === 1 ? '' : 's'}` : surveyR.msg)}">Survey <small>${fee} cr · ${sdays} d</small></button>
           <button type="button" class="cl-btn sm" data-a="pressurise" data-id="${ch.id}" ${pressR.ok ? '' : 'disabled'} title="${esc(pressR.ok ? `Pressurise: ${air} air, 5 days` : pressR.msg)}">Pressurise <small>${air} air · 5 d</small></button>
         </div>${!surveyR.ok && ch.status === 'sealed' ? `<p class="cl-why">${esc(surveyR.msg)}</p>` : ''}${!pressR.ok && ch.status === 'surveyed' ? `<p class="cl-why">${esc(pressR.msg)}</p>` : ''}` : ''}
       </section>`);
@@ -476,32 +576,62 @@ export function createUI(root, api) {
     const m = summary || {};
     const staff = d.jobs ? (m.jobs ? Math.min(1, (m.workers ?? s.pop) / m.jobs) : 1) : null;
     const status = b.build > 0 ? `<span class="cl-badge st-surveying">Building · ${b.build} d</span>` : b.off ? '<span class="cl-badge st-sealed">Off</span>' : '<span class="cl-badge st-open">Working</span>';
-    const power = lv.power ?? d.power, housing = lv.housing ?? d.housing;
+    const sp = { ...d, ...lv, ...specOf(b) };   // this level's numbers (rules.spec), the table's as a fallback
+    const power = sp.power, housing = sp.housing, mode = b.mode ?? d.modes?.[0]?.key;
+    const kv = (k, v, cls = '') => `<div class="cl-kv"><span>${k}</span><b class="${cls}">${v}</b></div>`;
     const rows = [];
-    rows.push(`<div class="cl-kv"><span>Level</span><b>${b.level}${d.levels ? ` / ${d.levels.length}` : ''}${lv.name ? ` · ${esc(lv.name)}` : ''}</b></div>`);
-    if (d.jobs) rows.push(`<div class="cl-kv"><span>Staffing</span><b class="${staff < 1 ? 'bad' : 'good'}">${d.jobs} jobs · ${Math.round(staff * 100)}%</b></div>`);
-    if (power) rows.push(`<div class="cl-kv"><span>Power</span><b class="${power > 0 ? 'good' : ''}">${power > 0 ? '+' : ''}${power} MW</b></div>`);
-    if (d.makes && Object.keys(d.makes).length) rows.push(`<div class="cl-kv"><span>Makes</span><b class="good">${flows(d.makes)} /day</b></div>`);
-    if (d.uses && Object.keys(d.uses).length) rows.push(`<div class="cl-kv"><span>Uses</span><b>${flows(d.uses)} /day</b></div>`);
-    if (housing) rows.push(`<div class="cl-kv"><span>Homes</span><b>${housing}</b></div>`);
-    if (lv.crews) rows.push(`<div class="cl-kv"><span>Crews</span><b>${lv.crews}</b></div>`);
-    if (d.storage) rows.push(`<div class="cl-kv"><span>Stores</span><b>${b.mode && d.modes ? `${Object.values(d.storage)[0]} ${GOOD_NAME[b.mode] || b.mode}` : flows(d.storage)}</b></div>`);
-    if (d.radius) rows.push(`<div class="cl-kv"><span>Radius</span><b>${d.radius} tiles${d.park ? ` · park ${d.park}` : ''}</b></div>`);
-    if (d.upkeep) rows.push(`<div class="cl-kv"><span>Upkeep</span><b>${d.upkeep} cr/day</b></div>`);
+    rows.push(kv('Level', `${b.level}${d.levels ? ` / ${d.levels.length}` : ''}${lv.name ? ` · ${esc(lv.name)}` : ''}`));
+    if (d.jobs) rows.push(kv('Staffing', `${d.jobs} jobs · ${Math.round(staff * 100)}%`, staff < 1 ? 'bad' : 'good'));
+    if (power) rows.push(kv('Power', `${power > 0 ? '+' : ''}${power} MW`, power > 0 ? 'good' : ''));
+    if (b.key === 'lab') {
+      const li = labInfo(s), out = isActive(b) ? (sp.makes?.research || 0) * (staff ?? 1) * Math.min(1, s.stats?.last?.power?.factor ?? 1) : 0;
+      const f = techList(s).find((t) => t.focus);
+      rows.push(kv('Research', `${num(out)} / day${li.live > 1 ? ` · all labs ${num(li.perDay)}` : ''}`, out > 0 ? 'good' : 'bad'));
+      rows.push(kv('Studying', f ? `${esc(f.name)} · ${num(f.progress)} / ${num(f.cost)}` : 'nothing: points are banked', f ? '' : 'bad'));
+    } else if (sp.makes && Object.keys(sp.makes).length) rows.push(kv('Makes', `${flows(sp.makes)} /day`, 'good'));
+    if (sp.uses && Object.keys(sp.uses).length) rows.push(kv('Uses', `${flows(sp.uses)} /day`));
+    if (housing) rows.push(kv('Homes', housing));
+    if (sp.crews) rows.push(kv('Crews', sp.crews));
+    if (d.storage) rows.push(kv('Stores', b.mode && d.modes ? `${Object.values(sp.storage || d.storage)[0]} ${GOOD_NAME[b.mode] || b.mode}` : flows(sp.storage || d.storage)));
+    if (sp.radius) rows.push(kv(d.service ? 'Range' : 'Radius', `${sp.radius} tiles${sp.park ? ` · park ${sp.park}` : ''}`));
+    if (d.service) {
+      const v = (sp.service || d.service) * (mode === 'triage' ? 0.5 : 1);
+      rows.push(kv('Happiness', `+${num(v)} for homes in range`, 'good'));
+    }
+    if (d.upkeep) rows.push(kv('Upkeep', `${num((sp.upkeep ?? d.upkeep) * (mode === 'triage' ? 0.5 : 1))} cr/day`));
+    let extra = '';
+    if (b.key === 'tailings') {
+      const fill = Math.max(0, Math.min(100, Math.round(b.fill || 0)));
+      const mines = s.buildings.filter((k) => k.key === 'oremine' && k.build === 0).length, dumps = s.buildings.filter((k) => k.key === 'tailings' && k.build === 0).length;
+      const need = Math.max(0, Math.ceil((mines - 4) / 4));
+      extra = `<div class="cl-fillrow"><span>Fill</span><span class="cl-fill${fill >= 100 ? ' full' : fill >= 75 ? ' high' : ''}"><span style="width:${fill}%"></span></span><b class="${fill >= 100 ? 'bad' : ''}">${fill}%</b></div>
+        <p class="cl-dim">${num(mines)} Ore Mine${mines === 1 ? '' : 's'} · ${num(dumps)} dump${dumps === 1 ? '' : 's'}${need ? ` (${need} needed)` : ''}. Each mine adds 1 a day; a full dump takes no more waste.</p>
+        ${fill >= 100 ? '<p class="cl-why">Full: empty it, or mines beyond four run at half output.</p>' : ''}`;
+    }
+    if (b.key === 'lab') extra = `<p class="cl-dim">Choose what the labs study in the Research panel (T).</p>`;
+    if (b.key === 'clinic' && next) extra = `<p class="cl-dim">Next: <b>${esc(next.name || 'level ' + (b.level + 1))}</b>, range ${next.radius ?? sp.radius} tiles. Habitats in range can grow into Apartments.</p>`;
     const modes = d.modes ? `<div class="cl-modes" role="group" aria-label="Mode">${d.modes.map((mo, i) => {
       const on = (b.mode ?? d.modes[0].key) === mo.key || (!b.mode && i === 0);
       return `<button type="button" data-a="mode" data-id="${b.id}" data-v="${esc(mo.key)}" aria-pressed="${on}" title="${esc(mo.text || mo.name)}">${esc(mo.name)}</button>`;
     }).join('')}</div>${d.modes.find((mo) => mo.key === (b.mode ?? d.modes[0].key))?.text ? `<p class="cl-dim">${esc(d.modes.find((mo) => mo.key === (b.mode ?? d.modes[0].key)).text)}</p>` : ''}` : '';
     let needs = '';
-    if (b.key === 'habitat') {
+    if (b.key === 'habitat' && next && R.habitatLevelReachable && !R.habitatLevelReachable(next)) {
+      needs = `<div class="cl-needs"><h5>${esc(d.levels?.[b.level - 1]?.name || 'This')} is the largest home for now</h5></div>`;
+    } else if (b.key === 'habitat') {
       const list = habitatNeeds(s, b);
       if (list && list.length) needs = `<div class="cl-needs"><h5>${next ? `Next level: ${esc(next.name || 'level ' + (b.level + 1))}` : 'Top level'}</h5><ul>${list.map((n) => `<li class="${n.ok ? 'ok' : 'no'}">${n.ok ? '✓' : '✗'} ${esc(n.label)}</li>`).join('')}</ul></div>`;
       else if (next?.needs) needs = `<div class="cl-needs"><h5>Next level: ${esc(next.name || '')}</h5><ul>${next.needs.map((n) => `<li class="no">• ${esc({ allNeeds: 'Food, water, air and power for everyone', park: 'A park in range', clinic: 'A clinic in range (later)' }[n] || n)}</li>`).join('')}</ul></div>`;
     }
     const acts = [];
+    if (b.key === 'tailings') {
+      const has = typeof R.emptyTailings === 'function', r = !has ? { ok: false, msg: 'Emptying dumps is not ready yet.' } : !(b.fill > 0) ? { ok: false, msg: 'It is empty.' } : dry(s, (c) => R.emptyTailings(c, b.id));
+      const fee = R.EMPTY_TAILINGS?.credits ?? 50;
+      acts.push(`<button type="button" class="cl-btn sm primary" data-a="empty" data-id="${b.id}" ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? 'Empty the dump: fill back to 0' : r.msg)}">Empty <small>${fee} cr</small></button>`);
+    }
+    if (b.key === 'lab') acts.push(`<button type="button" class="cl-btn sm primary" data-a="research" data-id="${b.id}">Research</button>`);
     if (next?.cost) {
       const r = dry(s, (c) => R.upgrade(c, b.id));
-      acts.push(`<button type="button" class="cl-btn sm" data-a="upgrade" data-id="${b.id}" ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? 'Upgrade' : r.msg)}">Upgrade <small>${costText(next.cost)}</small></button>`);
+      acts.push(`<button type="button" class="cl-btn sm" data-a="upgrade" data-id="${b.id}" ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? `Upgrade${next.name ? ' to ' + next.name : ''}` : r.msg)}">Upgrade <small>${costText((() => { try { return R.costOf?.(s, next.cost, b.key) || next.cost; } catch { return next.cost; } })())}</small></button>`);
     }
     if (!d.fixed) {
       acts.push(`<button type="button" class="cl-btn sm" data-a="move" data-id="${b.id}" title="Move it (20% of its cost)">Move</button>`);
@@ -512,7 +642,7 @@ export function createUI(root, api) {
     return `<section class="cl-isec"><h4>Building ${status}</h4>
       <div class="cl-ibuild"><span class="cl-ipic">${api.art?.(`card/${b.key}`) ? `<img src="${esc(api.art(`card/${b.key}`))}" alt="">` : cardIcon(d)}</span>
       <div><div class="cl-iname">${esc(d.name)}</div><p class="cl-dim">${esc(d.text || '')}</p></div></div>
-      ${rows.join('')}${modes}${needs}
+      ${rows.join('')}${extra}${modes}${needs}
       ${!next && d.levels && b.key !== 'habitat' ? '<p class="cl-dim">Fully upgraded.</p>' : ''}
       <div class="cl-acts">${acts.join('')}</div></section>`;
   }
@@ -527,7 +657,7 @@ export function createUI(root, api) {
     const s = S();
     const i = inspAt.y * s.map.w + inspAt.x;
     const b = buildingAt(s, inspAt.x, inspAt.y, null), ch = chamberOf(s, inspAt.x, inspAt.y, null);
-    const sig = JSON.stringify([s.map.t[i], b, ch && [ch.status, ch.work, sealedCount(s, ch)], Math.floor(s.stock.credits / 50), Math.floor(s.stock.parts / 5), Math.floor(s.stock.air / 10), summary?.jobs, summary?.workers, s.day % 5 === 0 ? s.day : 0]);
+    const sig = JSON.stringify([s.map.t[i], b, ch && [ch.status, ch.work, sealedCount(s, ch)], Math.floor(s.stock.credits / 50), Math.floor(s.stock.parts / 5), Math.floor(s.stock.air / 10), summary?.jobs, summary?.workers, s.day % 5 === 0 ? s.day : 0, b?.key === 'lab' ? [s.research?.focus, Math.floor(s.research?.progress?.[s.research?.focus] || 0), s.stats?.last?.research] : 0]);
     if (sig === inspSig) return;
     inspSig = sig;
     inspBody.innerHTML = inspectorHtml(s, inspAt.x, inspAt.y);
@@ -543,12 +673,13 @@ export function createUI(root, api) {
   // ---------------------------------------------------------------- pop-up panels
   function openPop(name) {
     for (const [k, p] of Object.entries(pops)) p.hidden = k !== name;
+    closeResearch();
     if (name === 'happy') { happySig = ''; renderHappy(); }
     if (name === 'market') { marketSig = ''; renderMarket(); }
     if (name === 'settings') renderSettings();
   }
   function togglePop(name) { if (pops[name].hidden) openPop(name); else pops[name].hidden = true; }
-  function closePops() { let any = false; for (const p of Object.values(pops)) { any ||= !p.hidden; p.hidden = true; } return any; }
+  function closePops() { let any = closeResearch(); for (const p of Object.values(pops)) { any ||= !p.hidden; p.hidden = true; } return any; }
   for (const p of Object.values(pops)) p.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) p.hidden = true; });
 
   function renderHappy() {
@@ -582,8 +713,9 @@ export function createUI(root, api) {
   function renderMarket() {
     if (pops.market.hidden) return;
     const s = S();
-    const prices = SELLABLE.map((g) => { try { return R.price(s, g); } catch { return null; } });
-    const sig = JSON.stringify([prices, SELLABLE.map((g) => Math.floor(s.stock[g] || 0)), (s.guardians || []).map((g) => g.id)]);
+    const goods = SELLABLE.filter((g) => !LATE[g] || lateShown(s, g));
+    const prices = goods.map((g) => { try { return R.price(s, g); } catch { return null; } });
+    const sig = JSON.stringify([goods, prices, goods.map((g) => Math.floor(s.stock[g] || 0)), (s.guardians || []).map((g) => g.id)]);
     if (sig === marketSig) return;
     marketSig = sig;
     const hasDock = s.buildings.some((b) => b.key === 'dock' && !b.build);
@@ -592,7 +724,7 @@ export function createUI(root, api) {
       <h3>Market <small>wanderers' traders at the dock</small></h3>
       ${hasDock ? '' : '<p class="cl-why">No finished dock: the traders have nowhere to land.</p>'}
       <table class="cl-table cl-mkt"><thead><tr><th>Good</th><th class="n">Stock</th><th class="n">Price</th><th>Sell</th></tr></thead><tbody>
-      ${SELLABLE.map((g, i) => { const have = Math.floor(s.stock[g] || 0), p = prices[i]; return `<tr><td>${GOOD_NAME[g]}</td><td class="n">${num(have)}</td><td class="n">${p == null ? '–' : (+p).toFixed(2)} <small>cr</small></td>
+      ${goods.map((g, i) => { const have = Math.floor(s.stock[g] || 0), p = prices[i]; return `<tr><td>${GOOD_NAME[g]}</td><td class="n">${num(have)}</td><td class="n">${p == null ? '–' : (+p).toFixed(2)} <small>cr</small></td>
         <td class="cl-sellbtns">${[10, 100].map((q) => `<button type="button" class="cl-btn xs" data-sell="${g}" data-q="${q}" ${have < 1 ? 'disabled' : ''}>${q}</button>`).join('')}<button type="button" class="cl-btn xs" data-sell="${g}" data-q="all" ${have < 1 ? 'disabled' : ''} title="${p != null ? `≈ ${num(have * p)} cr` : ''}">All</button></td></tr>`; }).join('')}
       </tbody></table>
       <p class="cl-dim">Every 10 units sold lowers that price 2%; prices recover a little each day.</p>
@@ -607,9 +739,14 @@ export function createUI(root, api) {
       <h3>Settings</h3>
       <label class="cl-check"><input type="checkbox" data-set="pauseOnEvents" ${st.pauseOnEvents ? 'checked' : ''}><span></span><em>Pause on events<small>Decisions stop the clock until answered.</small></em></label>
       <label class="cl-check"><input type="checkbox" data-set="snap" ${st.snap ? 'checked' : ''}><span></span><em>Snap rotation to 90°<small>Quarter turns instead of a free orbit.</small></em></label>
+      <label class="cl-check"><input type="checkbox" data-set="minimap" ${st.minimap !== false ? 'checked' : ''}><span></span><em>Minimap<small>All of Eden in the corner: click or drag on it to jump there.</small></em></label>
+      <label class="cl-check"><input type="checkbox" data-set="navButtons" ${st.navButtons !== false ? 'checked' : ''}><span></span><em>Navigation buttons<small>Zoom, rotate, tilt and home buttons over the map, for trackpads.</small></em></label>
+      <label class="cl-field"><em>Scrolling<small>Two-finger scroll on a trackpad, or a mouse wheel. Pinch (or Ctrl + scroll) always zooms.</small></em>
+        <select data-setsel="wheel">${[['auto', 'Auto: pan on a trackpad, zoom with a mouse wheel'], ['pan', 'Pan the map (trackpad)'], ['zoom', 'Zoom (mouse wheel)']].map(([v, l]) => `<option value="${v}" ${(st.wheel || 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       ${musicHtml()}
-      <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · M music · Esc cancel · F1 or ? how to play.</p>`;
-    for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => api.setSetting(c.dataset.set, c.checked);
+      <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · T research · M music · WASD / arrows pan · Q / E rotate · Esc cancel · F1 or ? how to play.</p>`;
+    for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => { api.setSetting(c.dataset.set, c.checked); helpersShown(); };
+    for (const c of pops.settings.querySelectorAll('[data-setsel]')) c.onchange = () => api.setSetting(c.dataset.setsel, c.value);
     const mus = pops.settings.querySelector('[data-music]'), setup = pops.settings.querySelector('[data-musicsetup]');
     if (mus) mus.onchange = () => api.audio.setMuted(!mus.checked);
     if (setup) setup.onclick = () => { setup.disabled = true; api.audio.setUp().then(() => { renderSettings(); toast('Earth Light music is ready.', 'good'); }).catch((e) => { setup.disabled = false; toast(e.message || 'No ROM chosen.', 'bad'); }); };
@@ -623,6 +760,143 @@ export function createUI(root, api) {
       : `<div class="cl-field"><em>Music<small>${esc(a.why || 'Earth Light music needs your ROM once.')}</small></em>
          <button type="button" class="cl-btn sm" data-musicsetup>Set up Earth Light music</button></div>`;
   }
+
+  // ---------------------------------------------------------------- research panel (version 2)
+  // Four branches as columns (stacked on phones); a card per tech. The structure re-renders when a
+  // tech's state changes; progress bars and numbers are updated in place every tick.
+  const resEl = $('.cl-research'), resCols = $('[data-rcols]'), resStats = $('[data-rstats]'), resNote = $('[data-rnote]');
+  let resSig = '', resFlash = null;
+  const effectText = (e) => {
+    const nm = BUILDING[e.key]?.name || e.key, pct = (m) => `${m > 1 ? '+' : '−'}${Math.round(Math.abs(m - 1) * 100)}%`;
+    if (e.kind === 'output') return `${nm}: output ${pct(e.mult)}`;
+    if (e.kind === 'storage') return `${nm}: storage ${pct(e.mult)}`;
+    if (e.kind === 'cost') return `${nm}: cost ${pct(e.mult)}`;
+    if (e.kind === 'pressurise') return `Pressurising: air ${pct(e.mult)}`;
+    if (e.kind === 'survey') return `Surveys: cost ${pct(e.mult)}${e.days ? `, ${e.days} day${e.days === 1 ? '' : 's'}` : ''}`;
+    return e.kind;
+  };
+  const pic = (key) => { const u = api.art?.(`card/${key}`); return u ? `<img src="${esc(u)}" alt="" loading="lazy">` : BUILDING[key] ? cardIcon(BUILDING[key]) : ''; };
+  const techState = (t) => t.done ? 'done' : t.focus ? 'focus' : t.available ? 'avail' : 'locked';
+
+  function techCard(t, byKey, perDay) {
+    const st = techState(t), T0 = TECH[t.key] || {}, needs = t.needs || T0.needs || [], unlocks = t.unlocks || T0.unlocks || [];
+    const missing = needs.filter((n) => !byKey[n]?.done).map((n) => byKey[n]?.name || TECH[n]?.name || n);
+    const badge = { done: '✓ Done', focus: '◉ Studying', avail: 'Study', locked: '🔒 Locked' }[st];
+    const un = unlocks.map((k) => `<span class="cl-tun" title="${esc(BUILDING[k]?.text || '')}"><span class="cl-tunpic">${pic(k)}</span><small>${esc(BUILDING[k]?.name || k)}</small></span>`).join('');
+    const fx = (T0.effects || []).map((e) => `<li>▲ ${esc(effectText(e))}</li>`).join('');
+    return `<article class="cl-tech st-${st}" data-tech="${esc(t.key)}" style="--bc:${BRANCH_COLOR[t.branch] || 'var(--cyan)'}"${st === 'avail' ? ` tabindex="0" role="button" aria-label="Study ${esc(t.name)}"` : ''}>
+      <header><b>${esc(t.name)}</b><span class="cl-tstate">${badge}</span></header>
+      <div class="cl-tprog"><span class="cl-tbar"><span data-tbar style="width:${Math.min(100, Math.round(100 * (t.progress || 0) / (t.cost || 1)))}%"></span></span>
+        <small data-tnum>${techNum(t, perDay)}</small></div>
+      ${un ? `<div class="cl-tunlocks">${un}</div>` : ''}
+      ${fx ? `<ul class="cl-tfx">${fx}</ul>` : ''}
+      <p class="cl-ttext">${esc(t.text || T0.text || '')}</p>
+      ${needs.length ? `<p class="cl-tneeds">${missing.length && !t.done ? `Needs <b>${missing.map(esc).join('</b> and <b>')}</b>` : `After ${needs.map((n) => esc(byKey[n]?.name || TECH[n]?.name || n)).join(' and ')} ✓`}</p>` : ''}
+    </article>`;
+  }
+  function techNum(t, perDay) {
+    if (t.done) return `${num(t.cost)} pts`;
+    const left = Math.max(0, (t.cost || 0) - (t.progress || 0));
+    return `${num(t.progress || 0)} / ${num(t.cost)} pts${t.focus && perDay > 0 ? ` · ~${Math.ceil(left / perDay)} d` : ''}`;
+  }
+
+  function renderResearch(force) {
+    if (resEl.hidden) return;
+    const s = S(), list = techList(s), rs = researchOf(s), li = labInfo(s);
+    const byKey = Object.fromEntries(list.map((t) => [t.key, t]));
+    const sig = JSON.stringify(list.map((t) => [t.key, techState(t)])) + '|' + li.labs + '|' + (s.pop >= 80) + '|' + s.unlocked?.includes?.('lab');
+    if (force || sig !== resSig) {
+      resSig = sig;
+      resCols.innerHTML = BRANCHES.map((br) => `<section class="cl-rbranch" style="--bc:${BRANCH_COLOR[br.key] || 'var(--cyan)'}">
+        <h4>${esc(br.name)}<small>${esc(br.text)}</small></h4>
+        ${list.filter((t) => t.branch === br.key).map((t) => techCard(t, byKey, li.perDay)).join('')}</section>`).join('');
+      if (!li.labs) {
+        const can = s.unlocked?.includes?.('lab') || s.pop >= 80;
+        resNote.innerHTML = `<b>Build a Research Lab (at 80 colonists) to start research.</b> ${can ? 'The lab is in the Services menu.' : `You have ${num(s.pop)} colonists now.`} Meanwhile, look over the tree and pick what to study first.
+          ${can ? '<button type="button" class="cl-btn sm primary" data-rshow>Show me: Research Lab</button>' : ''}`;
+        resNote.hidden = false;
+      } else resNote.hidden = true;
+      if (resFlash) {
+        const c = resCols.querySelector(`[data-tech="${CSS.escape(resFlash)}"]`);
+        if (c) { c.classList.add('flash'); c.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+        resFlash = null;
+      }
+    } else {
+      for (const t of list) {   // numbers in place
+        const c = resCols.querySelector(`[data-tech="${CSS.escape(t.key)}"]`); if (!c) continue;
+        const w = `${Math.min(100, Math.round(100 * (t.progress || 0) / (t.cost || 1)))}%`, bar = c.querySelector('[data-tbar]'), n = c.querySelector('[data-tnum]'), txt = techNum(t, li.perDay);
+        if (bar && bar.style.width !== w) bar.style.width = w;
+        if (n && n.textContent !== txt) n.textContent = txt;
+      }
+    }
+    const f = list.find((t) => t.focus), done = list.filter((t) => t.done).length;
+    const html = `<span class="cl-rst" title="Research points a day from all labs (staffing and power count)"><i>Labs</i><b>${li.labs ? `+${num(li.perDay)}<small>/day</small>` : '–'}</b><em>${li.labs ? `${li.live} working${li.building ? ` · ${li.building} building` : ''}` : 'no lab yet'}</em></span>
+      <span class="cl-rst" title="Points made while nothing is studied; they flow into the next tech"><i>Banked</i><b>${num(rs.points || 0)}</b><em>pts</em></span>
+      <span class="cl-rst wide" title="The tech the labs work on"><i>Studying</i><b>${f ? esc(f.name) : '<span class="cl-dim">nothing</span>'}</b><em>${f ? esc(techNum(f, li.perDay)) : 'click a tech to study it'}</em></span>
+      <span class="cl-rst" title="Techs finished"><i>Done</i><b>${done}<small>/${list.length}</small></b><em>techs</em></span>`;
+    if (resStats.innerHTML !== html) resStats.innerHTML = html;
+  }
+  resCols.addEventListener('click', (e) => {
+    const c = e.target.closest('.cl-tech.st-avail'); if (!c) return;
+    study(c.dataset.tech);
+  });
+  resCols.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const c = e.target.closest?.('.cl-tech.st-avail'); if (!c) return;
+    e.preventDefault(); study(c.dataset.tech);
+  });
+  resNote.addEventListener('click', (e) => { if (e.target.closest('[data-rshow]')) { closeResearch(); api.show?.({ build: 'lab' }); } });
+  resEl.addEventListener('click', (e) => { if (e.target.closest('[data-close=research]')) closeResearch(); });
+  function study(key) {
+    const s = S();
+    const r = typeof R.research === 'function' ? R.research(s, key) : { ok: false, msg: 'Research is not ready in this build yet.' };
+    result(r && r.ok !== false && !r.msg ? { ok: true, msg: `Studying ${TECH[key]?.name || key}.` } : r);
+    renderResearch(true);
+  }
+  function openResearch(key) {
+    for (const p of Object.values(pops)) p.hidden = true;
+    resFlash = key || null;
+    resEl.hidden = false;
+    $('.cl-build')?.classList.remove('open');
+    renderResearch(true);
+    if (!key) resCols.querySelector('.st-focus, .st-avail')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+  function closeResearch() { if (resEl.hidden) return false; resEl.hidden = true; return true; }
+  function toggleResearch(key) { if (resEl.hidden || key) openResearch(key); else closeResearch(); }
+
+  // ---------------------------------------------------------------- the map's free area
+  // The view draws its minimap (bottom right) and navigation buttons (top right) inside the area
+  // the panels leave free; publish that area as CSS custom properties on the game screen
+  // (--cl-safe-top/right/bottom/left, px from each edge) so view3d can read them.
+  const midEl = $('.cl-mid'), gameEl = root.parentElement;
+  let safeSig = '';
+  function measureSafe() {
+    if (!gameEl || !midEl) return;
+    const g = gameEl.getBoundingClientRect(), m = midEl.getBoundingClientRect();
+    if (!g.width || !m.width) return;
+    const v = { top: m.top - g.top, right: g.right - m.right, bottom: g.bottom - m.bottom, left: m.left - g.left };
+    const sig = Object.values(v).map(Math.round).join(',');
+    if (sig === safeSig) return;
+    safeSig = sig;
+    for (const [k, px] of Object.entries(v)) gameEl.style.setProperty(`--cl-safe-${k}`, `${Math.round(px)}px`);
+    // view3d's own knobs (minimap.js, navpad.js): the minimap in the bottom-right corner of the free
+    // area (on phones above the overlay switch, which shares that edge), the buttons in its top right.
+    const ovl = $('.cl-ovl'), lift = phone() && ovl ? ovl.offsetHeight + 6 : 0;
+    gameEl.style.setProperty('--cv-minimap-right', `${Math.round(v.right)}px`);
+    gameEl.style.setProperty('--cv-minimap-bottom', `${Math.round(v.bottom + lift)}px`);
+    gameEl.style.setProperty('--cv-nav-right', `${Math.round(v.right)}px`);
+    gameEl.style.setProperty('--cv-nav-top', `${Math.round(v.top)}px`);
+    try { api.safeArea?.(v); } catch { }
+  }
+  // What the map's corners hold, so the placement hint and the toasts keep clear of them.
+  function helpersShown() {
+    gameEl?.classList.toggle('cl-mm', api.settings?.minimap !== false);
+    gameEl?.classList.toggle('cl-nb', api.settings?.navButtons !== false);
+  }
+  helpersShown();
+  const safeRO = typeof ResizeObserver === 'function' ? new ResizeObserver(() => measureSafe()) : null;
+  safeRO?.observe(midEl); safeRO?.observe(root);
+  requestAnimationFrame(measureSafe);
 
   // ---------------------------------------------------------------- log, toasts, tip
   logEl.addEventListener('click', () => { logOpen = !logOpen; logEl.classList.toggle('open', logOpen); logSig = ''; renderLog(); });
@@ -723,7 +997,7 @@ export function createUI(root, api) {
   // "1 / 2 fields" gives 0.5 for the bar; null when the text holds no fraction.
   const fraction = (t) => { const m = /(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/.exec(t || ''); return m && +m[2] > 0 ? Math.min(1, +m[1] / +m[2]) : null; };
   const grantText = (r) => r ? [r.credits ? `+${num(r.credits)} cr` : '', r.parts ? `+${num(r.parts)} parts` : ''].filter(Boolean).join(' · ') : '';
-  const showLabel = (sh) => !sh ? '' : sh.build ? `Show me: ${BUILDING[sh.build]?.name || sh.build}` : sh.market ? 'Show me: the Market' : sh.roads ? 'Show me: Roads' : sh.chamber != null ? 'Show me the chamber' : sh.tile ? 'Show me where' : 'Show me';
+  const showLabel = (sh) => !sh ? '' : sh.build ? `Show me: ${BUILDING[sh.build]?.name || sh.build}` : sh.market ? 'Show me: the Market' : sh.roads ? 'Show me: Roads' : sh.research ? `Show me: ${typeof sh.research === 'string' && TECH[sh.research] ? TECH[sh.research].name : 'Research'}` : sh.chamber != null ? 'Show me the chamber' : sh.tile ? 'Show me where' : 'Show me';
 
   function renderGoals() {
     const G = api.goals;
@@ -809,7 +1083,7 @@ export function createUI(root, api) {
   function update(force) {
     const s = S();
     try { summary = R.summary(s); } catch (e) { summary = null; console.warn('summary failed', e); }
-    if (force) { cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; }
+    if (force) { cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; resSig = ''; }
     hud();
     renderGoals();
     renderAdvice(force || dirty);
@@ -818,16 +1092,19 @@ export function createUI(root, api) {
     refreshInspector();
     renderHappy();
     renderMarket();
+    renderResearch();
     renderLog();
     renderEvent();
   }
 
   return {
-    update, inspect, closeInspector, toast, tip, setPlacing, setSpeed, closePops, openBuild, welcomeDone,
+    update, inspect, closeInspector, toast, tip, setPlacing, setSpeed, closePops, openBuild, welcomeDone, openResearch, toggleResearch,
+    researchOpen: () => !resEl.hidden,
+    firstAvailableTech: () => techList(S()).find((t) => t.available && !t.done && !t.focus)?.key || null,
     changed: () => { dirty = true; },
     openMarket: () => openPop('market'),
     eventOpen: () => !modal.hidden,
     inspecting: () => inspAt,
-    destroy() { root.innerHTML = ''; },
+    destroy() { safeRO?.disconnect(); root.innerHTML = ''; },
   };
 }

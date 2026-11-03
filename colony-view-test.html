@@ -7,7 +7,10 @@
 <!-- Dev page for js/colony/view3d/view.js. By default a real colony (state.js newGame, seed 2 or
      ?seed=N) with demo buildings placed through rules.js build(); "Demo roads" lays a road network
      with rules.js buildRoad(). ?showcase shows every kit on a hand-made state instead (?fake on the
-     stand-in map). window.view / window.state / window.tick / window.demo are for tests. -->
+     stand-in map). "V2 kits" (or ?v2) lays a showcase row of the 18 version 2 buildings and their
+     levels / modes / fills below the dock. The minimap (bottom right) and the camera buttons (top
+     right, where the game's right column leaves room) are on by default; the HUD toggles them.
+     window.view / window.state / window.tick / window.demo / window.showcaseV2 are for tests. -->
 <script type="importmap">{"imports":{"three":"./js/vendor/three/three.module.min.js"}}</script>
 <style>
   html, body { margin: 0; height: 100%; background: #010205; color: #cfd6e4; font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
@@ -34,6 +37,10 @@
   <div class="row">Movers
     <button id="roads">Demo roads</button><button id="arrive">Transport</button>
     Speed <select id="speed"><option value="0">pause</option><option value="1" selected>x1</option><option value="2">x2</option><option value="4">x4</option></select>
+  </div>
+  <div class="row">V2 <button id="v2">V2 kits</button>
+    <label><input type="checkbox" id="mini" checked> minimap</label> <label><input type="checkbox" id="navb" checked> buttons</label>
+    wheel <select id="wheel"><option>auto</option><option>zoom</option><option>pan</option></select> <span id="wk"></span>
   </div>
   <div class="row">Pop <input id="pop" type="number" min="0" max="5000" step="20" style="width:60px">
     <label><input type="checkbox" id="glum"> glum (happy 30)</label> <button id="stress">Stress</button>
@@ -383,6 +390,43 @@ function stress(state) {
   return state.buildings.filter((b) => b.key === 'road').length;
 }
 
+// A showcase row of the version 2 kits, placed on free tiles below the dock whatever the terrain
+// (this is a look at the kits, not a legal colony): the obs deck on the bottom hull, the gas scoop
+// over the atmosphere, everything else in rows in near space. Returns the row's centre tile.
+const V2_ROW = [
+  ['lab', { level: 1 }], ['lab', { level: 2 }], ['lab', { level: 3 }], ['reclaimer', { level: 1 }], ['reclaimer', { level: 3 }],
+  ['iceharvester'], ['orchard'], ['fishery'], ['canteen'], ['canteen', { mode: 'ration' }], ['seedvault'], ['smelter'], ['fabricator'], ['sweeper'],
+  ['tailings', { fill: 0 }], ['tailings', { fill: 50 }], ['tailings', { fill: 100 }], ['plasmaskimmer'], ['tether'], ['dronebay'],
+  ['clinic', { level: 1 }], ['clinic', { level: 2 }], ['clinic', { level: 3 }], ['safetypost'],
+];
+function showcaseV2(state) {
+  const occ = new Uint8Array(W * H), t = state.map.t;
+  for (const b of state.buildings) { const n = BUILDING[b.key]?.size || 1; for (let j = b.y; j < b.y + n; j++) for (let i = b.x; i < b.x + n; i++) occ[j * W + i] = 1; }
+  let nextId = Math.max(0, ...state.buildings.map((b) => b.id)) + 1;
+  const free = (x, y, n, ok) => { for (let j = y - 1; j <= y + n; j++) for (let i = x - 1; i <= x + n; i++) { if (i < 0 || j < 0 || i >= W || j >= H) return false; if (occ[j * W + i]) return false; if (j >= y && j < y + n && i >= x && i < x + n && !ok(t[j * W + i])) return false; } return true; };
+  const place = (key, x, y, extra = {}) => {
+    const n = BUILDING[key].size;
+    for (let j = y; j < y + n; j++) for (let i = x; i < x + n; i++) occ[j * W + i] = 1;
+    const b = { id: nextId++, key, x, y, level: 1, mode: BUILDING[key].modes?.[0]?.key ?? null, build: 0, off: false, ...extra };
+    state.buildings.push(b);
+    return b;
+  };
+  const dock = state.buildings.find((b) => b.key === 'dock');
+  const space = (v) => TERRAIN[v].zone === 'space';
+  let x = dock.x - 30, y = dock.y + 5;
+  for (const [key, extra] of V2_ROW) {
+    const n = BUILDING[key].size;
+    for (let guard = 0; guard < 400 && !free(x, y, n, space); guard++) { x++; if (x > dock.x + 34) { x = dock.x - 30; y += 3; } }
+    place(key, x, y, extra);
+    x += n + 1;
+    if (x > dock.x + 34) { x = dock.x - 30; y += 3; }
+  }
+  // the deck on the bottom hull, the scoop over the atmosphere
+  for (let dx = 3; dx < 60; dx++) { const hx = dock.x + (dx % 2 ? dx : -dx); if (free(hx, dock.y, 2, (v) => v === T.HULL)) { place('obsdeck', hx, dock.y); break; } }
+  for (let gx = dock.x - 4; gx < dock.x + 40; gx++) if (free(gx, 146, 2, (v) => v === T.ATMOSPHERE)) { place('gasscoop', gx, 146); break; }
+  return [dock.x + 2, dock.y + 9];
+}
+
 let gen = null, src, state;
 const showcase = qs.has('showcase') || qs.has('fake');
 if (showcase) {
@@ -455,7 +499,13 @@ setInterval(() => {
   const m = view.debug.movers.stats();
   mv.textContent = `people ${m.people}/${m.peopleTarget} (walking ${m.peopleWalking}) · newcomers ${m.newcomers}\nrovers ${m.rovers}/${m.roverTarget} · crews ${m.crews} · barges ${m.barges} · haulers ${m.haulers} · drones ${m.drones}\ntransport ${m.transport || '-'} · roads ${m.roads} (${m.roadNetworks} nets) · total ${m.total} · ${m.msAvg} ms/frame`;
 }, 500);
-Object.assign(window, { view, state, gen, landing: lm, demo: { demoRoads, stress, realState } });
+document.getElementById('v2').onclick = () => { const [cx, cy] = showcaseV2(state); view.refresh(state); view.focus(cx, cy); };
+if (qs.has('v2')) { const [cx, cy] = showcaseV2(state); view.refresh(state); view.focus(cx, cy); }
+document.getElementById('mini').onchange = (e) => view.setMinimap(e.target.checked);
+document.getElementById('navb').onchange = (e) => view.setNavButtons(e.target.checked);
+document.getElementById('wheel').onchange = (e) => view.setWheelMode(e.target.value);
+setInterval(() => { document.getElementById('wk').textContent = `last: ${view.debug.wheelKind()}`; }, 400);
+Object.assign(window, { view, state, gen, landing: lm, demo: { demoRoads, stress, realState }, showcaseV2 });
 window.__cam = (tx, tz, d, polar, theta) => view.debug.placeCamera(tx, tz, d, polar, theta);
 </script>
 </body>
