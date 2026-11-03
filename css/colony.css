@@ -815,10 +815,10 @@ button.cl-mwhy:hover { color: var(--gold-hi); text-decoration: underline; }
   .cl-dtabs { padding: 6px 8px 0; gap: 3px; }
   .cl-dtabs button { padding: 7px 7px 6px; font-size: 10.5px; letter-spacing: .04em; gap: 4px; }
   .cl-dbody { padding: 2px 12px 28px; }
-  .cl-grow { grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: "icon name name stat" "lv hp hp hp" "cmd cmd cmd cmd" "pow pow upk sell"; gap: 4px 8px; padding: 6px 8px; }
+  .cl-grow { grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: "icon name name sell" "lv hp hp hp" "cmd cmd cmd cmd" "pow pow upk stat"; gap: 4px 8px; padding: 6px 8px; }
   .cl-grow .cl-gicon { grid-area: icon; width: 34px; height: 34px; }
   .cl-grow .cl-gname { grid-area: name; }
-  .cl-grow .cl-gstat { grid-area: stat; display: block; }
+  .cl-grow .cl-gstat { grid-area: stat; display: block; justify-self: end; }
   .cl-grow .cl-glv { grid-area: lv; }
   .cl-grow .cl-glv .cl-pips { display: none; }
   .cl-grow .cl-ghp { grid-area: hp; }

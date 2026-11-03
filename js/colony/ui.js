@@ -51,7 +51,6 @@ const RAID_TIER = { 1: 'scavengers', 2: 'pirates', 3: 'a warband', 4: 'a remnant
 const WEAPON_MODE = ['Beam', 'Railgun', 'Missile'];
 // The tech that unlocks each machine tier (data/tech.js effects { kind: 'machines', tier }).
 const TIER_TECH = Object.fromEntries(TECHS.flatMap((t) => (t.effects || []).filter((e) => e.kind === 'machines').map((e) => [e.tier, t.key])));
-const GRADE_ORDER = 'SABCD';
 // The happiness the tax costs or gives (rules: 0% +8, 10% 0, 20% −14, 30% −32, interpolated).
 const taxHappy = (t) => { const P = [[0, 8], [10, 0], [20, -14], [30, -32]]; for (let i = 1; i < P.length; i++) if (t <= P[i][0]) { const [a, va] = P[i - 1], [b, vb] = P[i]; return va + (vb - va) * (t - a) / (b - a); } return -32; };
 const STATUS = {
