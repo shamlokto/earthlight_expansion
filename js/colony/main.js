@@ -25,7 +25,7 @@ let raf = 0, last = 0, acc = 0, pointer = { x: 0, y: 0 };
 const settings = loadSettings();
 
 function loadSettings() {
-  const d = { pauseOnEvents: true, snap: false, minimap: true, navButtons: true };
+  const d = { pauseOnEvents: true, snap: false, minimap: true, navButtons: true, wheel: 'auto' };
   try { return { ...d, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }; } catch { return d; }
 }
 function storeSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { } }
@@ -188,6 +188,7 @@ function startGame(s, isNew = false) {
 function viewHelpers() {
   try { view?.setMinimap?.(settings.minimap !== false); } catch (e) { console.warn('setMinimap', e); }
   try { view?.setNavButtons?.(settings.navButtons !== false); } catch (e) { console.warn('setNavButtons', e); }
+  try { view?.setWheelMode?.(settings.wheel || 'auto'); } catch (e) { console.warn('setWheelMode', e); }
 }
 
 const api = {
@@ -225,7 +226,7 @@ const api = {
   setSetting: (k, v) => {
     settings[k] = v; storeSettings();
     if (k === 'snap') view?.setSnap?.(v);
-    if (k === 'minimap' || k === 'navButtons') viewHelpers();
+    if (k === 'minimap' || k === 'navButtons' || k === 'wheel') viewHelpers();
   },
   openResearch: (key) => ui?.openResearch(key),
   audio,

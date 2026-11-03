@@ -741,9 +741,12 @@ export function createUI(root, api) {
       <label class="cl-check"><input type="checkbox" data-set="snap" ${st.snap ? 'checked' : ''}><span></span><em>Snap rotation to 90°<small>Quarter turns instead of a free orbit.</small></em></label>
       <label class="cl-check"><input type="checkbox" data-set="minimap" ${st.minimap !== false ? 'checked' : ''}><span></span><em>Minimap<small>All of Eden in the corner: click or drag on it to jump there.</small></em></label>
       <label class="cl-check"><input type="checkbox" data-set="navButtons" ${st.navButtons !== false ? 'checked' : ''}><span></span><em>Navigation buttons<small>Zoom, rotate, tilt and home buttons over the map, for trackpads.</small></em></label>
+      <label class="cl-field"><em>Scrolling<small>Two-finger scroll on a trackpad, or a mouse wheel. Pinch (or Ctrl + scroll) always zooms.</small></em>
+        <select data-setsel="wheel">${[['auto', 'Auto: pan on a trackpad, zoom with a mouse wheel'], ['pan', 'Pan the map (trackpad)'], ['zoom', 'Zoom (mouse wheel)']].map(([v, l]) => `<option value="${v}" ${(st.wheel || 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       ${musicHtml()}
       <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · T research · M music · WASD / arrows pan · Q / E rotate · Esc cancel · F1 or ? how to play.</p>`;
     for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => { api.setSetting(c.dataset.set, c.checked); helpersShown(); };
+    for (const c of pops.settings.querySelectorAll('[data-setsel]')) c.onchange = () => api.setSetting(c.dataset.setsel, c.value);
     const mus = pops.settings.querySelector('[data-music]'), setup = pops.settings.querySelector('[data-musicsetup]');
     if (mus) mus.onchange = () => api.audio.setMuted(!mus.checked);
     if (setup) setup.onclick = () => { setup.disabled = true; api.audio.setUp().then(() => { renderSettings(); toast('Earth Light music is ready.', 'good'); }).catch((e) => { setup.disabled = false; toast(e.message || 'No ROM chosen.', 'bad'); }); };
