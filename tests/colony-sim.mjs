@@ -206,7 +206,14 @@ for (const [name, gen] of gens) {
   console.log(`\n== map: ${name}`);
   const s0 = newGame({ seed: 7, generate: gen });
   const keys = s0.buildings.map((b) => b.key).sort().join(',');
-  check(keys === 'command,dock,farm,habitat,habitat,riverpump', `start buildings: ${keys}`);
+  check(keys.replace(/,road/g, '') === 'command,dock,farm,habitat,habitat,riverpump', `start buildings: ${keys}`);
+  // the starter road joins every starting building to the Command Centre's road (D16)
+  {
+    const { w } = s0.map, roads = new Set(s0.buildings.filter((b) => b.key === 'road').map((b) => b.y * w + b.x));
+    const touches = (b) => [...rules.tilesOf(s0, b)].some((i) => [i - 1, i + 1, i - w, i + w].some((j) => roads.has(j)));
+    // (the real generator puts the dock against the landing floor; the stand-in map does not)
+    if (name === 'mapgen') check(roads.size > 0 && s0.buildings.filter((b) => b.key !== 'road').every(touches), 'starter road reaches every starting building');
+  }
   check(s0.pop === 40 && s0.stock.credits === 3000 && s0.chambers.filter((c) => c.status === 'open').length === 1, 'start numbers');
 
   // Placement rules.

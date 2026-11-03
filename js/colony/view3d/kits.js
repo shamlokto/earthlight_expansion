@@ -21,6 +21,16 @@ const HALF_PI = Math.PI / 2;
 const WIN = '#7fe0ff', BEACON = '#ff4a3a', STEEL = '#9aa3ad', DARK = '#3d444d', HAZARD = '#e8b52a';
 const DEPOT_COLOR = { food: '#7cc04a', water: '#4a9ae0', air: '#e8eef4', parts: '#e08a3a', ore: '#9a7a5a' };
 
+// Roads (buildings.js 'road') are not drawn from kits: view.js lays them as two InstancedMeshes
+// that join up by 4-neighbours (slabs and kerbs, lane dashes). These are their measures; the kit
+// below is only the placement ghost. Road tops are level (soil noise would make them step) and
+// movers.js walks on the same heights.
+export const ROAD = {
+  top: 0.22, gateTop: 0.34, slab: 0.1,                  // surface height on floor / on a gate tile; slab depth
+  asphalt: '#2c3038', junction: '#353a44', kerb: '#9aa2ac', dash: '#d9c06a',
+  kerbW: 0.07, kerbH: 0.035, dashW: 0.04, dashL: 0.3,
+};
+
 const tree = (x, z, s, round) => [
   cyl([0.06 * s, 0.18 * s, 0.06 * s], [x, 0.04, z], '#6a4a2a'),
   round ? dome([0.36 * s, 0.32 * s, 0.36 * s], [x, 0.14 * s, z], '#4f9a3a')
@@ -186,6 +196,11 @@ export const KITS = {
     if (lv === 3) parts.push(box([0.5, 0.15, 0.5], [0, 0.05 + h, 0], '#c4b8a0'), cyl([0.04, 0.4, 0.04], [0.2, 0.2 + h, 0.2], STEEL), dome([0.08, 0.06, 0.08], [0.2, 0.6 + h, 0.2], BEACON, GLOW));
     return parts;
   },
+  // 1×1: a strip of road (the ghost only; view.js draws placed roads itself).
+  road: () => [
+    box([1, 0.07, 1], [0, 0, 0], ROAD.asphalt),
+    box([ROAD.dashW, 0.01, 0.8], [0, 0.07, 0], ROAD.dash, GLOW),
+  ],
   // 1×1: lawn, a pond and round trees.
   park: () => [
     box([0.96, 0.05, 0.96], [0, 0, 0], '#6fbf4a'),

@@ -3,7 +3,7 @@
 import { generateMap } from './mapgen.js';
 import { BUILDING, BUILDINGS } from './data/buildings.js';
 import { T } from './data/terrain.js';
-import { findSpot, log, unitPrice, chamberOf, addPending } from './rules.js';
+import { findSpot, log, unitPrice, chamberOf, addPending, placeCheck, occupancy, tilesOf } from './rules.js';
 import { farmSoil } from './sim.js';
 
 export const SAVE_KEY = 'el-colony';
@@ -57,6 +57,7 @@ export function newGame({ seed = 1, importSave = null, beta = false, types = nul
   at('farm', (x, y) => -farmSoil(state, { key: 'farm', x, y }) * 100 + dist(x, y, 2));
   at('habitat', (x, y) => dist(x, y) + keepClear(x, y));
   at('habitat', (x, y) => dist(x, y) + keepClear(x, y));
+  layStarterRoads(state, cmd);
 
   const roster = readRoster(importSave);
   if (roster) {
@@ -77,6 +78,40 @@ export function newGame({ seed = 1, importSave = null, beta = false, types = nul
     + 'seal its breaches and pump in air: every chamber we give back is more room to live.');
   hello.speaker = 'ruess';
   return state;
+}
+
+// The landing crews' first road: the shortest paths over open floor from the Command Centre to the
+// dock and every other starting building, as one tree. People and rovers move only on roads (D16),
+// so the colony shows life from the first day and the player sees what roads are for.
+function layStarterRoads(state, cmd) {
+  const { w, h } = state.map, occ = occupancy(state), road = new Uint8Array(w * h);
+  const free = (i) => placeCheck(state, 'road', i % w, (i / w) | 0, { occ, free: true }) === null;
+  const around = (b) => {
+    const inside = new Set(tilesOf(state, b)), out = new Set();
+    for (const i of inside) for (const j of [i - 1, i + 1, i - w, i + w]) if (!inside.has(j) && j >= 0 && j < w * h) out.add(j);
+    return out;
+  };
+  const lay = (i) => {
+    if (road[i]) return;
+    const r = { id: state.nextId++, key: 'road', x: i % w, y: (i / w) | 0, level: 1, mode: null, build: 0, off: false };
+    state.buildings.push(r); occ[i] = r.id; road[i] = 1;
+  };
+  const seeds = [...around(cmd)].filter(free);
+  if (!seeds.length) return;
+  const targets = state.buildings.filter((b) => b !== cmd && b.key !== 'road')
+    .sort((a, b) => Math.abs(a.x - cmd.x) + Math.abs(a.y - cmd.y) - Math.abs(b.x - cmd.x) - Math.abs(b.y - cmd.y));
+  for (const b of targets) {
+    const goal = around(b), prev = new Int32Array(w * h).fill(-2), queue = [];
+    for (let i = 0; i < w * h; i++) if (road[i]) { prev[i] = -1; queue.push(i); }
+    if (!queue.length) for (const i of seeds) { prev[i] = -1; queue.push(i); }
+    let hit = -1;
+    for (let q = 0; q < queue.length && hit < 0; q++) {
+      const i = queue[q];
+      if (goal.has(i)) { hit = i; break; }
+      for (const j of [i - 1, i + 1, i - w, i + w]) if (j >= 0 && j < w * h && prev[j] === -2 && free(j)) { prev[j] = i; queue.push(j); }
+    }
+    for (let i = hit; i >= 0; i = prev[i]) lay(i);   // no path: that building waits for the player's roads
+  }
 }
 
 // ---------------------------------------------------------------- save / load
