@@ -1108,5 +1108,7 @@ export function createView(container, opts = {}) {
 
   // `debug` is for dev pages and tests only (colony-view-test.html), not part of the contract.
   return { setState, refresh, setOverlay, setGhost, focus, setSnap, setSpeed, destroy, setMinimap, setNavButtons, setWheelMode, nav, home,
-    debug: { scene, camera, controls, renderer, placeCamera, pick, movers, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse') } };
+    debug: { scene, camera, controls, renderer, placeCamera, pick, movers, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse'),
+      // n camera steps of 1/60 s now, without rendering (tests on slow software GL)
+      tick(n = 1) { for (let k = 0; k < n && st; k++) stepCamera(1 / 60, performance.now()); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z]); } } };
 }

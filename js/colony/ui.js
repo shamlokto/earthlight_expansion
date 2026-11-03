@@ -150,10 +150,10 @@ export function helpHtml(art, diff) {
   ${sec('nav', 'Navigating with a trackpad', '', `
     <ul class="cl-hsteps">
       <li><b>Two-finger scroll</b> pans the map. <b>Pinch</b> zooms in and out.</li>
-      <li><b>Shift + scroll</b> rotates the view.</li>
+      <li><b>Shift + scroll</b> rotates the view; <b>Alt (Option) + scroll</b> tilts it.</li>
       <li>The <b>buttons on the map</b> (top right) zoom, rotate, tilt and fly <b>home</b> to the Command Centre.</li>
       <li>The <b>minimap</b> (bottom right) shows all of Eden: <b>click or drag on it</b> to jump there. The outline is what you see now.</li>
-      <li>Keys: <b>W A S D</b> or the <b>arrows</b> pan, <b>Q / E</b> rotate, <b>+ / −</b> zoom, <b>Home</b> back to the Command Centre.</li>
+      <li>Keys: <b>W A S D</b> or the <b>arrows</b> pan, <b>Q / E</b> rotate, <b>+ / −</b> zoom, <b>PgUp / PgDn</b> tilt, <b>Home</b> back to the Command Centre.</li>
     </ul>
     <p>With a mouse: drag to rotate, right-drag to pan, the wheel zooms. The map buttons and the minimap can be switched off in Settings (⚙).</p>`)}
   ${sec('tips', 'Your first 10 days', '', `
@@ -184,7 +184,7 @@ export function createUI(root, api) {
       <button type="button" data-speed="4" title="×4 (3)">×4</button>
     </div>
     <div class="cl-stats">
-      ${GOODS.map((g) => `<div class="cl-stat" data-g="${g}"${LATE[g] ? ' hidden' : ''} title="${GOOD_NAME[g]}: stock / capacity, change per day"><i>${GOOD_NAME[g]}</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>`).join('')}
+      ${GOODS.map((g) => `<div class="cl-stat" data-g="${g}"${LATE[g] ? ' hidden' : ''} title="${GOOD_NAME[g]}: stock / capacity, change per day"><i>${g === 'helium' ? 'Helium' : GOOD_NAME[g]}</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>`).join('')}
       <button type="button" class="cl-stat cl-resstat" data-g="research" hidden title="Research a day from the labs"><i>Research</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
       <div class="cl-stat" data-g="power" title="Power: supply / demand (MW), battery"><i>Power</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
       <div class="cl-stat" data-g="pop" title="Colonists / housing; next transport"><i>Colonists</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
@@ -740,7 +740,7 @@ export function createUI(root, api) {
       <label class="cl-check"><input type="checkbox" data-set="navButtons" ${st.navButtons !== false ? 'checked' : ''}><span></span><em>Navigation buttons<small>Zoom, rotate, tilt and home buttons over the map, for trackpads.</small></em></label>
       ${musicHtml()}
       <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · T research · M music · WASD / arrows pan · Q / E rotate · Esc cancel · F1 or ? how to play.</p>`;
-    for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => api.setSetting(c.dataset.set, c.checked);
+    for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => { api.setSetting(c.dataset.set, c.checked); helpersShown(); };
     const mus = pops.settings.querySelector('[data-music]'), setup = pops.settings.querySelector('[data-musicsetup]');
     if (mus) mus.onchange = () => api.audio.setMuted(!mus.checked);
     if (setup) setup.onclick = () => { setup.disabled = true; api.audio.setUp().then(() => { renderSettings(); toast('Earth Light music is ready.', 'good'); }).catch((e) => { setup.disabled = false; toast(e.message || 'No ROM chosen.', 'bad'); }); };
@@ -873,8 +873,21 @@ export function createUI(root, api) {
     if (sig === safeSig) return;
     safeSig = sig;
     for (const [k, px] of Object.entries(v)) gameEl.style.setProperty(`--cl-safe-${k}`, `${Math.round(px)}px`);
+    // view3d's own knobs (minimap.js, navpad.js): the minimap in the bottom-right corner of the free
+    // area (on phones above the overlay switch, which shares that edge), the buttons in its top right.
+    const ovl = $('.cl-ovl'), lift = phone() && ovl ? ovl.offsetHeight + 6 : 0;
+    gameEl.style.setProperty('--cv-minimap-right', `${Math.round(v.right)}px`);
+    gameEl.style.setProperty('--cv-minimap-bottom', `${Math.round(v.bottom + lift)}px`);
+    gameEl.style.setProperty('--cv-nav-right', `${Math.round(v.right)}px`);
+    gameEl.style.setProperty('--cv-nav-top', `${Math.round(v.top)}px`);
     try { api.safeArea?.(v); } catch { }
   }
+  // What the map's corners hold, so the placement hint and the toasts keep clear of them.
+  function helpersShown() {
+    gameEl?.classList.toggle('cl-mm', api.settings?.minimap !== false);
+    gameEl?.classList.toggle('cl-nb', api.settings?.navButtons !== false);
+  }
+  helpersShown();
   const safeRO = typeof ResizeObserver === 'function' ? new ResizeObserver(() => measureSafe()) : null;
   safeRO?.observe(midEl); safeRO?.observe(root);
   requestAnimationFrame(measureSafe);

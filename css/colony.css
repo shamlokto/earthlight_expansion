@@ -130,6 +130,8 @@ small { color: var(--dim); font-weight: 400; }
 .cl-check em { font-style: normal; display: grid; }
 .cl-check em small { margin: 0; font-size: 12px; }
 .cl-pop .cl-check { margin: 10px 0; }
+.cl-pop .cl-field em { font-style: normal; display: grid; }
+.cl-pop .cl-field em small { font-size: 12px; }
 .cl-ui:has(.cl-pop:not([hidden])) .cl-insp { display: none; }
 .cl-note { margin: 4px 0 0 48px; font-size: 13px; color: var(--dim); line-height: 1.5; }
 
@@ -312,6 +314,7 @@ small { color: var(--dim); font-weight: 400; }
 .cl-table td { padding: 4px; border-bottom: 1px solid rgba(111, 211, 255, .1); }
 .cl-table .n, .cl-table th.n { text-align: right; font-family: var(--f-data); white-space: nowrap; }
 .cl-table tfoot td { font-weight: 600; border-top: 1px solid var(--edge-hi); border-bottom: 0; }
+.cl-mkt td:first-child { white-space: nowrap; }
 .cl-sellbtns { display: flex; gap: 3px; justify-content: flex-end; }
 .cl-guards { display: grid; gap: 4px; }
 .cl-guard { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: auto auto; align-items: center; column-gap: 8px; padding: 5px 8px; border: 1px solid var(--edge); background: rgba(255, 143, 216, .05); }
@@ -454,7 +457,7 @@ small { color: var(--dim); font-weight: 400; }
 .cl-hsteps li::marker { color: var(--gold); font-family: var(--f-display); font-weight: 700; }
 
 /* ------------------------------------------------------------------ research panel (version 2) */
-.cl-research { --br: #c3a6ff; grid-row: 2; grid-column: 1 / -1; justify-self: center; align-self: start; width: min(1180px, 100%); max-height: 100%; min-height: 0;
+.cl-research { --br: #c3a6ff; --glass: rgba(7, 11, 36, .95); grid-row: 2; grid-column: 1 / -1; justify-self: center; align-self: start; width: min(1180px, 100%); max-height: 100%; min-height: 0;
   display: flex; flex-direction: column; position: relative; z-index: 6; border-color: rgba(195, 166, 255, .4); animation: toast-in .2s var(--ease); }
 .cl-rhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 12px 48px 10px 16px; border-bottom: 1px solid rgba(111, 211, 255, .16); }
 .cl-rtitle h3 { margin: 0; font: 700 18px var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
@@ -507,13 +510,22 @@ small { color: var(--dim); font-weight: 400; }
 .cl-tech.flash { animation: techflash 1.2s var(--ease) 2; }
 @keyframes techflash { 30% { box-shadow: 0 0 0 2px #c3a6ff, 0 0 30px rgba(195, 166, 255, .7); opacity: 1; filter: none; } }
 .cl-ui:has(.cl-research:not([hidden])) .cl-ovl { visibility: hidden; }
+/* keep clear of the view's minimap (bottom right of the map, 262 px; 134 on phones) and buttons (top right, ~120 px) */
+@media (min-width: 761px) {
+  .cl-mm .cl-placing { justify-self: start; margin-bottom: 44px; max-width: calc(100% - 276px); }
+  .cl-nb .cl-toasts { max-width: calc(100% - 260px); }
+  .cl-nb .cl-toast { max-width: 100%; }
+}
 
 /* ------------------------------------------------------------------ narrower screens */
 @media (max-width: 1500px) and (min-width: 761px) {
   .cl-top { gap: 8px 10px; padding: 5px 10px; }
   .cl-date { min-width: 0; }
   .cl-stat { min-width: 0; padding: 3px 6px; }
+  .cl-stat i { letter-spacing: .1em; }
   .cl-stats { flex-wrap: nowrap; }
+  .cl-stats:has(> [data-g=alloy]:not([hidden])) .cl-stat { padding: 3px 5px; }
+  .cl-stats:has(> [data-g=alloy]:not([hidden])) .cl-stat i { letter-spacing: .06em; }
   .cl-tools .cl-btn:not(.cl-resbtn) .cl-lbl { display: none; }
   .cl-tools .cl-btn:not(.cl-resbtn) .cl-ico { display: inline; font-size: 15px; letter-spacing: 0; }
   .cl-tools .cl-btn.sm { padding: 5px 8px; }

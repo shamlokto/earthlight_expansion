@@ -554,7 +554,7 @@ async function main() {
   }
   showTitle();
   audio.init().then((ok) => { if (ok && !$('#sTitle').hidden) audio.play('title'); });
-  window.__colony = { get state() { return state; }, get view() { return view; }, get ui() { return ui; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings };
+  window.__colony = { get state() { return state; }, get view() { return view; }, get ui() { return ui; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings, show: doShow };
   // colony.html?from=remnant|classic: straight on from the expansion's ending, its army already found
   const from = new URLSearchParams(location.search).get('from');
   if (from && EXPANSION[from]) newDialog(from);
