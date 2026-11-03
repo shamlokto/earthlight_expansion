@@ -21,6 +21,7 @@ this document is the plan we agree on first.
 | D9 | **Setting**: the remnant of a badly damaged space colony. **Lanternfall terrains inside** (fertile soil, artificial rivers, forests, hills), **Earthlight terrains outside** (magnetic fields give power, asteroid fields are best for ore). Some parts have no air and must be repaired. |
 | D10 | **Building variety is the heart of the game**: deep research into SimCity, space colony and space mining games for reference (§11). |
 | D11 | **Designed to be beautified with xAI later**: every visual is a named art slot with a procedural fallback (§7). |
+| D12 | **The map's shape**: a large, partly broken colony lying in Earthlight-style space terrain; once repaired its interior is huge (farms, homes, more); buildings extend into the space terrain for mining and power; **Earth's atmosphere runs along the bottom of the map**. The map is expanded later with more elements. |
 
 ## 1. Ground rules
 
@@ -68,7 +69,7 @@ Earth's seas are poisoned and most colonies are dead hulks. The fleet that beat 
 nothing left to fight. **The General is made Governor** of the first reconstruction site, and
 that is who the player is now: the same person, a different job.
 
-**The site: F2 Eden**, a colony cylinder the war wrecked rather than destroyed. Half its hull is
+**The site: F2 Eden**, a colony the war wrecked rather than destroyed, hanging just above Earth's atmosphere. Half its hull is
 holed, whole districts are airless, rivers are dry or flooded, but its fields still hold soil,
 and it is near Earth. (`docs/EXPANSION.md` notes Eden was hardly a battlefield in the original,
 so its fate is ours to write.)
@@ -123,32 +124,48 @@ day tick (pure, js/colony/sim.js)
 
 ## 5. The map (D2, D8, D9)
 
-### 5.1 Shape: an unrolled cylinder
+### 5.1 Shape: a broken colony in Earthlight space (owner, D12)
 
-Eden is a cylinder; the map is the cylinder **unrolled into a long rectangle**. The middle band
-is the **interior** (the land); along both long edges runs the **hull**; beyond it is **space**;
-at the two short ends are the **end caps**, where the spaceports and docks are.
+The map is a stretch of **space with Earthlight landscapes**: asteroid belts, magnetic fields,
+meteoroid drifts, comet tails, plasma clouds. In the middle lies **Eden itself**: a huge,
+partly broken colony, its hull a wall around a vast interior of Lanternfall land. **Along the
+bottom of the map is Earth's atmosphere**, with Earth filling the view below.
+
+* **Inside the hull**, once repaired, there is room for everything a city needs: farms on the old
+  fields, living quarters, rivers, forests, industry. This is where most of the city goes.
+* **Outside the hull**, buildings **reach into the space terrain** on docks, tethers and
+  platforms: mines on asteroids, induction collectors on magnetic fields, ice harvesters on
+  comet tails, helium-3 skimmers in plasma.
+* **The atmosphere band** at the bottom: gas scoops for air, relief drops down to Earth, and a
+  descent lane raiders can climb up from.
 
 ```
-  space   . . : a a . m m . . t t . : a . . p p . . g g . ~ ~ ~ ~ ~ ~ ~   (Earthlight terrains)
-  hull    ===#####=======######===========####======######=========###
-  land    rubble  fields  river  forest  [LANDING]  hills  lake  ruins      (Lanternfall terrains)
-  land    breach  fields  river  marsh    district  rock   lake  breach
-  hull    ===#####=======######===========####======######=========###
-  space   . a a . . m . . : : . . t t . . a a . . . p . . . . . . ~ ~ ~
-         ^ end cap (dock)                                         end cap ^
+  row 0-1   . . a a a . . m m m . . . : : . . t t t t . . . p p . . . a a .   deep space
+  row 2     a a . ┌──────────────────────────────────────────────────┐ . m m
+  row 3     a a . │ rubble  breach  fields  river   forest   ruins   │ D m m
+  row 4     . . D │ fields  river  [LANDING]  hills  lake   breach   │ . m .   Eden
+  row 5     : : . │ marsh   forest  district  rock   lake   fields   │ . . .   (Lanternfall
+  row 6     : : . │ breach  fields  river     hills  rubble breach   │ . p p    terrain inside)
+  row 7     . . . └────────────────── D ───────────────────────────────┘ . p p
+  row 8     . t t . . . . : : . . . . . . . . a a . . . . . . . t t . . . .   near space
+  row 9     ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~   Earth's atmosphere
+                                                                          D = dock on the hull
 ```
 
 ### 5.2 Size and sectors
 
 * Tiles are square. A **sector** is **16 × 16 tiles**, the unit of expansion, rendering and saving.
-* The **starter colony** is charted at **16 × 10 sectors = 256 × 160 tiles (40 960 tiles)**:
-  6 sector rows of interior, 2 rows of space on each side.
+* The **starter map** is **16 × 10 sectors = 256 × 160 tiles (40 960 tiles)**. Eden's hull
+  encloses about **10 × 5 sectors (160 × 80 tiles, 12 800 tiles of land)**. Space surrounds it on
+  three sides, and the bottom sector row is atmosphere.
 * The player starts with **2 × 2 interior sectors** pressurised around the landing district,
-  plus the nearer end-cap dock. Everything else must be won back.
-* Sectors are stored by key (`"sx,sy"`), so the map can grow in **any direction** in later
-  updates without redrawing anything: new hull sections, a second cylinder towed alongside, an
-  asteroid outpost as its own map. The save format never assumes a fixed size.
+  plus the **Earth-facing dock**. The rest of the interior must be repaired, and the space around
+  it claimed.
+* Sectors are stored by key (`"sx,sy"`), so the map can **grow in any direction** in later
+  updates without redrawing anything: more space to the sides and above, wrecks and smaller
+  colony fragments drifting in, a second colony towed alongside, new elements and events. The save
+  format never assumes a fixed size. (Owner: "later we can expand the map and add elements to
+  make it even more fun.")
 
 ### 5.3 Sector states (how the colony grows)
 
@@ -214,12 +231,13 @@ salvage wreck · excavate data core · tow asteroid (moves an asteroid tile into
 ## 6. The 3D view (D2)
 
 * **three.js**, rendered from the pure state. Free orbit (rotate, tilt, zoom, pan), with an
-  optional SimCity-style **90° snap**. A minimap of the whole cylinder; click to jump.
+  optional SimCity-style **90° snap**. A minimap of the whole map; click to jump.
 * **Chunked by sector**: each sector is one group of instanced meshes, built when first seen and
   rebuilt when it changes; off-screen sectors are culled. 40 960 tiles is light work for
   instancing; the design holds to several times that.
 * **Tiles** have height (hills, river beds, rubble heaps), so the land reads in 3D. Water is a
-  plane; space sectors are dark with drifting asteroid and plasma meshes; the hull is a wall
+  plane; space sectors are dark with drifting asteroid and plasma meshes; the atmosphere band
+  glows blue over Earth's curve below; the hull is a wall
   you can see through when the camera tilts.
 * **Buildings are parametric kits**: each building in data lists parts (box, cylinder, dome,
   cone, torus, truss) with sizes, colours and **texture slot names**. Procedural now; textured by
@@ -227,7 +245,9 @@ salvage wreck · excavate data core · tow asteroid (moves an asteroid tile into
 * **Overlays** (Aven Colony): power, water, air, happiness, jobs, service coverage, heat, raid lanes.
 * **Airless sectors** render dim and blue-grey, with breach markers; pressurising one floods
   it with colour.
-* **Stretch** (later): curve the land up the cylinder wall so the far side hangs overhead.
+* **The roof**: the interior sits under hull and glass panels, faded out when the camera looks
+  in, so the land inside and the space outside are seen in one view.
+* **Stretch** (later): Earth's day and night sweeping across the atmosphere band.
 * A plain 2D top-down canvas renderer reads the same state, for tests and very old machines.
 
 ---
@@ -243,7 +263,7 @@ that follow reference pictures for style). So the 3D world is designed around **
 | **Material texture** (seamless) | `mat/hab-facade`, `mat/greenhouse-glass`, `mat/hull-plate` | Building kit surfaces |
 | **Building card** | `card/hydroponics` | Build menu, info panel, wiki |
 | **Portrait** | `portrait/ruess`, `portrait/wanderer-07` | Commanders, wanderers, comms |
-| **Skybox / panorama** | `sky/earth-rise`, `sky/cylinder-far-side` | Backdrop |
+| **Skybox / panorama** | `sky/earth-below`, `sky/starfield`, `sky/atmosphere-glow` | Backdrop |
 | **Decal** (alpha) | `decal/breach`, `decal/scorch`, `decal/crater` | Damage, raids |
 | **Illustration** | `event/first-harvest`, `title/landfall` | Events, title, endings |
 
