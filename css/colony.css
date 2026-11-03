@@ -175,6 +175,7 @@ small { color: var(--dim); font-weight: 400; }
 .cl-tax i span { color: var(--gold); letter-spacing: .04em; }
 .cl-tax input { width: 100%; accent-color: var(--gold); margin: 3px 0 0; height: 14px; }
 .cl-tools { display: flex; gap: 6px; margin-left: auto; }
+.cl-tools .cl-ico { display: none; }
 
 /* build menu */
 .cl-build { grid-area: build; align-self: start; max-height: 100%; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
@@ -326,11 +327,17 @@ small { color: var(--dim); font-weight: 400; }
   .cl-build:not(.open) .cl-buildbody { display: none; }
   .cl-build.open { z-index: 4; }
   .cl-insp, .cl-pop { grid-area: mid; align-self: end; max-height: 62%; width: 100%; z-index: 4; }
-  .cl-ovl { grid-area: mid; align-self: start; justify-self: end; }
+  .cl-ovl { grid-area: mid; align-self: end; justify-self: end; }
+  .cl-tools .cl-lbl { display: none; }
+  .cl-tools .cl-ico { display: inline; font-size: 15px; letter-spacing: 0; }
+  .cl-tools .cl-btn { padding: 4px 9px; }
+  .cl-speeds button { min-width: 30px; padding: 6px 7px; }
   .cl-ovl i { display: none; }
-  .cl-placing { grid-area: mid; margin-bottom: 8px; font-size: 12px; }
+  .cl-placing { grid-area: mid; margin-bottom: 44px; font-size: 12px; justify-self: stretch; }
   .cl-log { max-height: 40px; font-size: 11px; }
   .cl-note { margin-left: 0; }
+  .cl-premise br { display: none; }
+  .cl-build:not(.open) { width: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   .cl-titlebox, .cl-event, .cl-event::after, .cl-toast, .cl-pop { animation: none !important; }

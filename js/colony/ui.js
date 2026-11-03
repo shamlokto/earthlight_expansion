@@ -80,8 +80,8 @@ export function createUI(root, api) {
       <label class="cl-stat cl-tax" title="Tax rate: 0% +8 happiness, 10% 0, 20% −14, 30% −32"><i>Tax <span data-tax></span></i><input type="range" min="0" max="30" step="1" data-taxin></label>
     </div>
     <div class="cl-tools">
-      <button type="button" class="cl-btn sm" data-tool="market" title="Sell goods and guardians">Market</button>
-      <button type="button" class="cl-btn sm" data-tool="save" title="Save the colony in this browser">Save</button>
+      <button type="button" class="cl-btn sm" data-tool="market" title="Sell goods and guardians"><span class="cl-ico">⚖</span><span class="cl-lbl">Market</span></button>
+      <button type="button" class="cl-btn sm" data-tool="save" title="Save the colony in this browser"><span class="cl-ico">⤓</span><span class="cl-lbl">Save</span></button>
       <button type="button" class="cl-btn sm icon" data-tool="settings" title="Settings">⚙</button>
       <button type="button" class="cl-btn sm icon" data-tool="title" title="Back to the title">⏏</button>
     </div>

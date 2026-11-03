@@ -1,14 +1,12 @@
 // Earthlight Space Colony Rebuild: page wiring (colony.html). Title screen, the new-colony dialog
 // (seed, expansion save import, beta guardians), the game loop (live days, decisions pause the
 // clock: docs/COLONY.md §4), placement mode, keyboard, saving. Panels live in js/colony/ui.js.
-// Contract: docs/COLONY-V1.md. `?stub=1` runs on js/colony/dev-stubs.js while the real modules
-// are missing (development only).
+// Contract: docs/COLONY-V1.md.
 import { parseSave, mountSaveButtons } from '../savefile.js';
 import { BUILDING } from './data/buildings.js';
 import { createUI, esc } from './ui.js';
 
 const KEY = 'el-colony', SETTINGS_KEY = 'el-colony-settings';
-const STUB = new URLSearchParams(location.search).has('stub');
 const $ = (s) => document.querySelector(s);
 
 let M = null;                 // { state: stateMod, rules, sim, view: viewMod, art }
@@ -26,7 +24,6 @@ function storeSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringi
 
 // ---------------------------------------------------------------- modules
 async function loadModules() {
-  if (STUB) return (await import('./dev-stubs.js')).modules;
   const [stateMod, rules, sim, viewMod, artMod] = await Promise.all([
     import('./state.js'), import('./rules.js'), import('./sim.js'), import('./view3d/view.js'),
     import('./art.js').catch(() => null),
@@ -157,7 +154,12 @@ const api = {
   setSpeed,
   setOverlay: (name) => { overlay = name; applyOverlay(); },
   save: () => save(true),
-  toTitle: () => { save(false); showTitle(); },
+  toTitle: () => {
+    save(false);
+    setPlacing(null);
+    if (view) { try { view.destroy(); } catch { } view = null; }   // stop rendering behind the title
+    showTitle();
+  },
   focus: (x, y) => view?.focus?.(x, y),
   setSetting: (k, v) => { settings[k] = v; storeSettings(); if (k === 'snap') view?.setSnap?.(v); },
 };
