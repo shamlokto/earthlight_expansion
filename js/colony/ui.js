@@ -113,7 +113,7 @@ export function helpHtml(art, diff) {
     <ol class="cl-hsteps">
       <li><b>Survey</b>: click a dark chamber next to an open one and press Survey (2 days).</li>
       <li><b>Seal</b>: the <b class="cl-bad">red tiles</b> in its walls are breaches. Build a <b>Bulkhead Seal</b> on each one (Water &amp; air menu).</li>
-      <li><b>Pressurise</b>: press Pressurise. It uses air from your stores (a quarter of the floor tiles) and takes 5 days.</li>
+      <li><b>Pressurise</b>: press Pressurise. It uses air from your stores (a quarter of the floor tiles, a fifth on Easy) and takes 5 days.</li>
       <li><b>Build</b>: the chamber is open. Build anything inside it.</li>
     </ol>`)}
   ${sec('homes', 'Homes & happiness', card('habitat') + card('park'), `
@@ -454,7 +454,7 @@ export function createUI(root, api) {
       const surveyR = ch.status === 'sealed' ? dry(s, (c) => R.chamberAction(c, ch.id, 'survey')) : { ok: false, msg: ch.status === 'surveying' ? 'Survey under way.' : 'Already surveyed.' };
       const pressR = ch.status === 'surveyed' ? dry(s, (c) => R.chamberAction(c, ch.id, 'pressurise'))
         : { ok: false, msg: ch.status === 'open' ? 'Already open.' : ch.status === 'pressurising' ? 'Pressurising now.' : 'Survey it first.' };
-      const air = Math.ceil((ch.tiles || 0) / 4);
+      const air = R.pressuriseAir ? R.pressuriseAir(s, ch) : Math.ceil((ch.tiles || 0) / 4);
       let fee = 100; try { fee = R.costOf?.(s, { credits: 100 })?.credits ?? 100; } catch { }
       parts.push(`<section class="cl-isec"><h4>Chamber <span class="cl-badge st-${esc(ch.status)}">${esc(st[0])}</span></h4>
         <div class="cl-iname">${esc(ch.name || 'Chamber ' + ch.id)} <small>${esc(ch.kind || '')} · ${num(ch.tiles)} tiles</small></div>
@@ -607,8 +607,21 @@ export function createUI(root, api) {
       <h3>Settings</h3>
       <label class="cl-check"><input type="checkbox" data-set="pauseOnEvents" ${st.pauseOnEvents ? 'checked' : ''}><span></span><em>Pause on events<small>Decisions stop the clock until answered.</small></em></label>
       <label class="cl-check"><input type="checkbox" data-set="snap" ${st.snap ? 'checked' : ''}><span></span><em>Snap rotation to 90°<small>Quarter turns instead of a free orbit.</small></em></label>
-      <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · Esc cancel · F1 or ? how to play.</p>`;
+      ${musicHtml()}
+      <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · M music · Esc cancel · F1 or ? how to play.</p>`;
     for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => api.setSetting(c.dataset.set, c.checked);
+    const mus = pops.settings.querySelector('[data-music]'), setup = pops.settings.querySelector('[data-musicsetup]');
+    if (mus) mus.onchange = () => api.audio.setMuted(!mus.checked);
+    if (setup) setup.onclick = () => { setup.disabled = true; api.audio.setUp().then(() => { renderSettings(); toast('Earth Light music is ready.', 'good'); }).catch((e) => { setup.disabled = false; toast(e.message || 'No ROM chosen.', 'bad'); }); };
+  }
+  // Earth Light's own music, from the expansion's sound pack (js/colony/audio.js).
+  function musicHtml() {
+    const a = api.audio;
+    if (!a) return '';
+    return a.available
+      ? `<label class="cl-check"><input type="checkbox" data-music ${a.muted ? '' : 'checked'}><span></span><em>Music<small>Earth Light's own songs, from your ROM's sound pack.</small></em></label>`
+      : `<div class="cl-field"><em>Music<small>${esc(a.why || 'Earth Light music needs your ROM once.')}</small></em>
+         <button type="button" class="cl-btn sm" data-musicsetup>Set up Earth Light music</button></div>`;
   }
 
   // ---------------------------------------------------------------- log, toasts, tip

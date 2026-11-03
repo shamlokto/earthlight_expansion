@@ -4,6 +4,11 @@
 // "Show me". Panels live in js/colony/ui.js.
 // Contract: docs/COLONY-V1.md.
 import { parseSave, mountSaveButtons } from '../savefile.js';
+import { createAudio } from './audio.js';
+
+// Earth Light's own music (owner, 2026-11-03), when this browser has the expansion's sound pack.
+const audio = createAudio();
+for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, () => audio.unlock(), { capture: true });
 import { BUILDING } from './data/buildings.js';
 import { createUI, esc, helpHtml } from './ui.js';
 
@@ -60,6 +65,7 @@ const rngFor = (s) => mulberry32((hashStr(s.seed) ^ Math.imul(s.day + 1, 0x9E377
 // ---------------------------------------------------------------- title screen
 function showTitle() {
   stopLoop();
+  audio.play('title');
   $('#sGame').hidden = true; $('#sTitle').hidden = false;
   const saved = localStorage.getItem(KEY);
   $('#bContinue').hidden = !saved;
@@ -150,6 +156,7 @@ function boot(on) { $('#boot').hidden = !on; }
 let fresh = false;   // a brand-new colony: the welcome leads into the goals (first run)
 function startGame(s, isNew = false) {
   state = s; fresh = isNew;
+  audio.play('colony');
   if (!state.speed && state.speed !== 0) state.speed = 1;
   lastSpeed = state.speed || 1;
   $('#sTitle').hidden = true; $('#sGame').hidden = false;
@@ -208,6 +215,7 @@ const api = {
     }
   },
   setSetting: (k, v) => { settings[k] = v; storeSettings(); if (k === 'snap') view?.setSnap?.(v); },
+  audio,
 };
 
 function afterAction(r, quiet) {
@@ -442,6 +450,7 @@ function onKey(e) {
     case '1': setSpeed(1); break;
     case '2': setSpeed(2); break;
     case '3': setSpeed(4); break;
+    case 'm': case 'M': if (!e.ctrlKey && !e.metaKey) { audio.setMuted(!audio.muted); ui.toast(audio.available ? (audio.muted ? 'Music off.' : 'Music on.') : audio.why, audio.available ? 'good' : 'bad'); } break;
     case 'r': case 'R': if (!e.ctrlKey && !e.metaKey && lastKey) api.pick(lastKey); break;
     case 'Escape':
       if (placing?.roadStart) { placing.roadStart = null; applyOverlay(); if (hover) ghostAt(hover.x, hover.y); }
@@ -524,6 +533,7 @@ async function main() {
     return;
   }
   showTitle();
+  audio.init().then((ok) => { if (ok && !$('#sTitle').hidden) audio.play('title'); });
   window.__colony = { get state() { return state; }, get view() { return view; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings };
   // colony.html?from=remnant|classic: straight on from the expansion's ending, its army already found
   const from = new URLSearchParams(location.search).get('from');

@@ -40,6 +40,9 @@ export const GOALS = [
   { id: 'park', speaker: 'ruess', title: 'A park beside the homes',
     text: 'Homes grow into bigger homes when every need is met and a park or a grove is close by. Put a Park next to the Habitats: it costs a little water, no power.',
     done: (s) => finished(s, 'park') + finished(s, 'grove') >= 1, show: () => ({ build: 'park' }) },
+  { id: 'solar', speaker: 'ruess', title: 'Power for the homes',
+    text: 'The Command Centre\'s reactor is small, and every home and workshop draws on it. Put two Solar Arrays on the hull (the grey wall) or in open space near the dock: power is the one thing we cannot store without batteries.',
+    done: (s) => finished(s, 'solar') >= 2, progress: (s) => `${finished(s, 'solar')} / 2 arrays`, show: () => ({ build: 'solar' }) },
   { id: 'habitat', speaker: 'ruess', title: 'Homes for the next ship',
     text: 'A transport only docks when there are free homes. Build two more Habitats near the Command Centre, then keep the roads joined to them so people can walk out.',
     done: (s) => finished(s, 'habitat') >= 4, progress: (s) => `${finished(s, 'habitat')} / 4 habitats`, show: () => ({ build: 'habitat' }) },
@@ -128,6 +131,7 @@ export function advise(state) {
     else if (days < 15) out.push({ level: days < 5 ? 'bad' : 'warn', text: `${g[0].toUpperCase() + g.slice(1)} runs out in ${days} day${days === 1 ? '' : 's'} (${Math.round(delta)} a day). ${FIX[g][0]}.`, show: FIX[g][1] });
   }
   if (s.power.demand > s.power.supply + 1e-6) out.push({ level: s.power.battery > 0 ? 'warn' : 'bad', text: `Power is short (${Math.round(s.power.supply)} made, ${Math.round(s.power.demand)} needed): everything powered slows down. Build Solar Arrays on the hull.`, show: { build: 'solar' } });
+  else if (s.power.demand > 0.85 * s.power.supply) out.push({ level: 'tip', text: `Power is nearly used up (${Math.round(s.power.demand)} of ${Math.round(s.power.supply)}): the next homes or workshops will need more. Add a Solar Array on the hull.`, show: { build: 'solar' } });
   if (state.flags.unpaid) out.push({ level: 'bad', text: 'The treasury is empty: upkeep goes unpaid and work slows. Sell goods at the Market or switch off what you don\'t need.', show: { market: true } });
   else {
     const c = s.stock.credits;
