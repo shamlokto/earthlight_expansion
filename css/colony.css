@@ -277,9 +277,43 @@ small { color: var(--dim); font-weight: 400; }
 .cl-ovl button { border: 1px solid transparent; background: none; color: var(--dim); font: 600 11px var(--f-display); letter-spacing: .08em; text-transform: uppercase; padding: 4px 9px; cursor: pointer; border-radius: 2px; }
 .cl-ovl button:hover { color: var(--ink); }
 .cl-ovl button[aria-pressed=true] { color: #04101c; background: var(--cyan); }
-.cl-placing { grid-area: mid; align-self: end; justify-self: center; margin-bottom: 44px; display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 14px; font-size: 13px;
+.cl-placing { grid-area: mid; align-self: end; justify-self: center; margin-bottom: 96px; display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 14px; font-size: 13px;
   background: rgba(30, 22, 4, .88); border: 1px solid var(--gold); border-radius: 3px; box-shadow: 0 0 24px rgba(245, 197, 66, .25); }
 .cl-placing b { color: var(--gold); }
+/* version 4: the deck switcher sits on the overlay switch (bottom left of the map), upper to lower */
+.cl-ui { --deck-upper: #9fd0e8; --deck-main: #f5c542; --deck-lower: #ff9a52; }
+.cl-decks { grid-area: mid; align-self: end; justify-self: start; margin-bottom: 40px; display: flex; align-items: stretch; gap: 2px; padding: 4px; background: rgba(6, 10, 36, .82); border: 1px solid var(--edge); border-radius: 3px; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.cl-decks > i { align-self: center; font: 600 10px var(--f-display); font-style: normal; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); padding: 0 6px; }
+.cl-decks button { --dc: var(--deck-main); display: grid; justify-items: center; gap: 1px; min-width: 62px; border: 1px solid transparent; border-bottom: 2px solid color-mix(in srgb, var(--dc) 45%, transparent); background: none; color: var(--dim); padding: 3px 8px 2px; cursor: pointer; border-radius: 2px; }
+.cl-decks button[data-deck=upper] { --dc: var(--deck-upper); }
+.cl-decks button[data-deck=lower] { --dc: var(--deck-lower); }
+.cl-decks button b { font: 600 11px var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
+.cl-decks button small { font: 500 11px var(--f-data); color: inherit; opacity: .85; }
+.cl-decks button:hover:not(:disabled) { color: var(--ink); border-color: color-mix(in srgb, var(--dc) 40%, transparent); }
+.cl-decks button[aria-pressed=true] { color: #04101c; background: var(--dc); border-bottom-color: var(--dc); }
+.cl-decks button:disabled { opacity: .35; cursor: not-allowed; }
+.cl-deckname { font: 600 10px var(--f-display); font-style: normal; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: var(--deck-main); }
+.cl-deckname[data-deck=upper] { color: var(--deck-upper); }
+.cl-deckname[data-deck=lower] { color: var(--deck-lower); }
+.cl-ideck { color: var(--deck-main); }
+.cl-ideck[data-deck=upper] { color: var(--deck-upper); }
+.cl-ideck[data-deck=lower] { color: var(--deck-lower); }
+.cl-ui:has(.cl-research:not([hidden])) .cl-decks, .cl-ui:has(.cl-defence:not([hidden])) .cl-decks { visibility: hidden; }
+/* the inspector's lift shaft: the chamber it passes through on each deck */
+.cl-lifts { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.cl-lifts li { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 4px 6px; font-size: 12.5px; background: rgba(111, 211, 255, .05); border-left: 2px solid var(--edge); }
+.cl-lifts li.here { background: rgba(245, 197, 66, .08); border-left-color: var(--gold); }
+.cl-lnum { font: 600 10px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--deck-main); }
+.cl-lnum[data-deck=upper] { color: var(--deck-upper); }
+.cl-lnum[data-deck=lower] { color: var(--deck-lower); }
+.cl-lch { min-width: 0; }
+.cl-lch b { font-weight: 600; }
+.cl-lch small { font: 11px var(--f-data); color: var(--gold); }
+.cl-lacts { display: flex; gap: 4px; }
+.cl-card.decklock { cursor: pointer; }
+.cl-card.decklock .cl-cardwhy { color: #bfe6f5; }
+.cl-card.decklock .cl-cardwhy i { font-style: normal; color: var(--gold); }
+.cl-card.decklock:hover { opacity: .8; filter: grayscale(.4); border-color: var(--cyan); }
 .cl-toasts { grid-area: mid; align-self: start; justify-self: center; display: grid; gap: 6px; justify-items: center; }
 .cl-toast { max-width: min(520px, 80vw); padding: 7px 14px; font-size: 13.5px; background: rgba(6, 12, 40, .92); border: 1px solid var(--edge-hi); border-radius: 3px; box-shadow: 0 8px 24px rgba(0, 0, 0, .5); animation: toast-in .25s var(--ease) both; }
 .cl-toast.bad { border-color: var(--bad); color: #ffe0e0; background: rgba(50, 8, 16, .92); }
@@ -727,7 +761,7 @@ button.cl-mwhy:hover { color: var(--gold-hi); text-decoration: underline; }
 .cl-ui:has(.cl-defence:not([hidden])) .cl-ovl { visibility: hidden; }
 /* keep clear of the view's minimap (bottom right of the map, 262 px; 134 on phones) and buttons (top right, ~120 px) */
 @media (min-width: 761px) {
-  .cl-mm .cl-placing { justify-self: start; margin-bottom: 44px; max-width: calc(100% - 276px); }
+  .cl-mm .cl-placing { justify-self: start; margin-bottom: 96px; max-width: calc(100% - 276px); }
   .cl-nb .cl-toasts { max-width: calc(100% - 260px); }
   .cl-nb .cl-toast { max-width: 100%; }
 }
@@ -847,7 +881,11 @@ button.cl-mwhy:hover { color: var(--gold-hi); text-decoration: underline; }
   .cl-tools .cl-btn { padding: 4px 9px; }
   .cl-speeds button { min-width: 30px; padding: 6px 7px; }
   .cl-ovl i { display: none; }
-  .cl-placing { grid-area: mid; margin-bottom: 44px; font-size: 12px; justify-self: stretch; }
+  .cl-placing { grid-area: mid; margin-bottom: 90px; font-size: 12px; justify-self: stretch; }
+  .cl-decks { margin-bottom: 38px; }
+  .cl-decks > i { display: none; }
+  .cl-decks button { min-width: 54px; padding: 3px 6px 2px; }
+  .cl-decks button b { font-size: 10.5px; letter-spacing: .05em; }
   .cl-log { max-height: 40px; font-size: 11px; }
   .cl-note { margin-left: 0; }
   .cl-premise br { display: none; }

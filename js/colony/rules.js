@@ -9,6 +9,8 @@ import { MACHINES, MACHINE, MACHINE_COST } from './data/machines.js';
 import {
   COMMANDER, GENERAL, STARTERS, WANDERERS, GRADE, GENERAL_POWER, GENERAL_EVASION, DEPARTMENTS, BASE_COMMANDERS, PER_QUARTERS,
 } from './data/commanders.js';
+import { generateDecks, DECKS, DECK_NAME } from './decks.js';
+export { DECKS, DECK_NAME };
 
 // alloy and helium(-3) arrived with version 2 (docs/COLONY-V2.md "New goods").
 export const STORED = ['food', 'water', 'air', 'parts', 'ore', 'alloy', 'helium'];
@@ -67,7 +69,69 @@ export function upgradeState(state) {
   const rd = state.raid;
   rd.heat ??= 0; rd.next ??= null; rd.warned ??= false; rd.coming ??= null; rd.last ??= null;
   rd.count ??= 0; rd.won ??= 0; rd.lost ??= 0; rd.paid ??= 0; rd.moods ??= []; rd.sales ??= [];
+  // version 4 (docs/COLONY-V4.md): the upper and lower decks, generated from the seed for a colony
+  // saved without them; the deck buildings (no tech, no milestone) are on the menu from the start
+  ensureDecks(state);
+  if (state.unlocked) for (const d of BUILDINGS) if (d.decks && !d.tech && !d.unlock && !d.fixed && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
   return state;
+}
+
+// ---------------------------------------------------------------- decks (version 4)
+
+// A building's or chamber's deck: 'upper' | 'main' | 'lower' (absent = main).
+export const deckOf = (o) => o?.deck || 'main';
+// The deck's map { w, h, t, r, ch, sv }: the main deck is state.map; null for an unknown deck.
+export function mapOf(state, deck = 'main') {
+  if (!deck || deck === 'main') return state.map;
+  return state.decks?.[deck] || null;
+}
+// The decks a building may stand on (absent = the main deck only), and why not elsewhere. Roads and
+// Bulkhead Seals belong to every deck: chambers up and down are sealed and joined like the main
+// deck's (the contract's flow), though the table gives them no `decks`.
+const EVERY_DECK = new Set(['road', 'seal']);
+export const decksOf = (d) => d?.decks || (EVERY_DECK.has(d?.key) ? DECKS : ['main']);
+const deckList = (ds) => ds.join(', ').replace(/, ([^,]+)$/, ' and $1');
+export const deckWhy = (d) => { const l = deckList(decksOf(d)); return `${l[0].toUpperCase()}${l.slice(1)} deck${decksOf(d).length > 1 ? 's' : ''} only.`; };
+// Generate the upper and lower decks (and stamp the lift shafts into the main map) for a colony that
+// has none: a new game right after its Command Centre and dock are placed, or an older save. The
+// shafts keep clear of every building already standing. Deterministic from the seed and the map.
+export function ensureDecks(state) {
+  if (state.decks || !state.map?.t || !Array.isArray(state.chambers) || !Array.isArray(state.buildings)) return;
+  const main = state.map, { w, h } = main, occ = occupancy(state), avoid = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) if (occ[i]) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const j = i + dy * w + dx; if (j >= 0 && j < w * h) avoid[j] = 1; }
+  const cmd = state.buildings.find((b) => b.key === 'command');
+  const mainCh = state.chambers.filter((c) => !c.deck);
+  const land = mainCh.find((c) => c.kind === 'landing') || (cmd && chamberOf(state, main.ch[idx(state, cmd.x, cmd.y)])) || mainCh.find((c) => c.status === OPEN);
+  const startId = state.chambers.reduce((m, c) => Math.max(m, c.id + 1), 0);
+  const g = generateDecks(state.seed, main, mainCh, startId, { avoid, landing: land?.id ?? null, command: cmd ? { x: cmd.x, y: cmd.y } : null });
+  state.decks = { upper: g.upper, lower: g.lower, shafts: g.shafts };
+  state.chambers.push(...g.chambers);
+}
+// The lift shafts: [{ x, y, landing? }] (top-left of each 2 × 2 site, the same on every deck).
+export const shaftsOf = (state) => state.decks?.shafts || [];
+// The finished Lift serving the shaft under tile (x, y), on whichever deck it was built; or null.
+export function liftAt(state, x, y) {
+  for (const b of state.buildings) if (b.key === 'lift' && finished(b) && x >= b.x && y >= b.y && x < b.x + 2 && y < b.y + 2) return b;
+  return null;
+}
+// Tiles (indices) of every shaft a finished Lift serves: they count as road on every deck.
+export function liftTiles(state) {
+  const out = new Set();
+  for (const b of state.buildings) if (b.key === 'lift' && finished(b)) for (const i of tilesOf(state, b)) out.add(i);
+  return out;
+}
+// Does a finished Lift on another deck pass through this chamber? (The lift's own chamber is open:
+// a Lift stands only in an open chamber.)
+export function liftReach(state, c) {
+  const m = mapOf(state, deckOf(c));
+  return !!m && state.buildings.some((b) => b.key === 'lift' && finished(b) && deckOf(b) !== deckOf(c) && m.ch[idx(state, b.x, b.y)] === c.id);
+}
+// Per deck: { open, total } chambers (the deck switcher).
+export function deckSummary(state) {
+  const out = {};
+  for (const d of DECKS) out[d] = { open: 0, total: 0 };
+  for (const c of state.chambers) { const o = out[deckOf(c)]; if (!o) continue; o.total++; if (c.status === OPEN) o.open++; }
+  return out;
 }
 
 // ---------------------------------------------------------------- research (version 2)
@@ -147,9 +211,9 @@ const onSets = new Map();
 const onSet = (d) => { let s = onSets.get(d.key); if (!s) onSets.set(d.key, (s = new Set(d.on.map((k) => TKEY[k])))); return s; };
 
 // Tile -> id of the building standing on it (0 = free). `ignore` leaves one building out (moves).
-export function occupancy(state, ignore = -1) {
+export function occupancy(state, ignore = -1, deck = 'main') {
   const occ = new Int32Array(state.map.w * state.map.h);
-  for (const b of state.buildings) if (b.id !== ignore) for (const i of tilesOf(state, b)) occ[i] = b.id;
+  for (const b of state.buildings) if (b.id !== ignore && deckOf(b) === deck) for (const i of tilesOf(state, b)) occ[i] = b.id;
   return occ;
 }
 
@@ -226,39 +290,46 @@ export function bottomHull(state, x, y) {
   return t[y * w + x] === T.HULL && low[x] >= 0 && y > low[x];
 }
 
-// Chamber id -> Set of chambers across one wall tile (bulkheads, gates, breaches). Cached per map.
+// Chamber id -> Set of chambers across one wall tile (bulkheads, gates, breaches), on every deck
+// (each deck's walls join that deck's chambers only; ids are unique across decks). Cached per map.
 const linkCache = new WeakMap();
 export function chamberLinks(state) {
-  const { w, h, t, ch } = state.map;
-  let links = linkCache.get(ch);
-  if (links) return links;
-  links = new Map(state.chambers.map((c) => [c.id, new Set()]));
-  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
-    const i = y * w + x;
-    if (ch[i] !== 255 || zoneOf(t[i]) !== 'wall') continue;
-    const near = [ch[i - 1], ch[i + 1], ch[i - w], ch[i + w]].filter((c) => c !== 255);
-    for (const a of near) for (const b of near) if (a !== b) links.get(a)?.add(b);
+  const key = state.map.ch;
+  const hit = linkCache.get(key);
+  if (hit && hit.decks === state.decks && hit.n === state.chambers.length) return hit.links;
+  const links = new Map(state.chambers.map((c) => [c.id, new Set()]));
+  for (const deck of DECKS) {
+    const m = mapOf(state, deck);
+    if (!m) continue;
+    const { w, h, t, ch } = m;
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      if (ch[i] !== 255 || zoneOf(t[i]) !== 'wall') continue;
+      const near = [ch[i - 1], ch[i + 1], ch[i - w], ch[i + w]].filter((c) => c !== 255);
+      for (const a of near) for (const b of near) if (a !== b) links.get(a)?.add(b);
+    }
   }
   for (const c of state.chambers) for (const i of c.breaches) for (const d of state.chambers) {
-    if (d !== c && d.breaches.includes(i)) links.get(c.id)?.add(d.id);
+    if (d !== c && deckOf(d) === deckOf(c) && d.breaches.includes(i)) links.get(c.id)?.add(d.id);
   }
-  linkCache.set(ch, links);
+  linkCache.set(key, { decks: state.decks, n: state.chambers.length, links });
   return links;
 }
-const sealAt = (state, i) => state.buildings.some((b) => b.key === 'seal' && finished(b) && idx(state, b.x, b.y) === i);
-export const openBreaches = (state, c) => c.breaches.filter((i) => !sealAt(state, i));
+const sealAt = (state, i, deck = 'main') => state.buildings.some((b) => b.key === 'seal' && finished(b) && deckOf(b) === deck && idx(state, b.x, b.y) === i);
+export const openBreaches = (state, c) => c.breaches.filter((i) => !sealAt(state, i, deckOf(c)));
 const touchesOpen = (state, c) => [...(chamberLinks(state).get(c.id) || [])].some((id) => chamberOf(state, id)?.status === OPEN);
 
 // Coverage of parks and groves: the best rating reaching each tile. Coverage spreads tile by tile
 // (8 directions) through open chambers and gates, never through bulkheads (docs/COLONY.md §10.1).
+// Each deck has its own (version 4): coverage stays on its deck.
 let seen = new Int32Array(0), stamp = 0;
-export function parkField(state) {
-  const { w, h, t, ch } = state.map, n = w * h, field = new Float32Array(n);
+export function parkField(state, deck = 'main') {
+  const { w, h, t, ch } = mapOf(state, deck), n = w * h, field = new Float32Array(n);
   if (seen.length !== n) { seen = new Int32Array(n); stamp = 0; }
   const passable = (i) => t[i] === T.GATE || (ch[i] !== 255 && chamberOf(state, ch[i])?.status === OPEN);
   for (const b of state.buildings) {
     const s = spec(b);
-    if (!s.park || !active(b)) continue;
+    if (!s.park || !active(b) || deckOf(b) !== deck) continue;
     stamp++;
     let q = [...tilesOf(state, b)], d = 0;
     for (const i of q) seen[i] = stamp;
@@ -279,20 +350,27 @@ export function parkField(state) {
   return field;
 }
 // Best park rating over a building's footprint.
-export const parkAt = (state, b, field = parkField(state)) => Math.max(0, ...[...tilesOf(state, b)].map((i) => field[i]));
+export const parkAt = (state, b, field = parkField(state, deckOf(b))) => Math.max(0, ...[...tilesOf(state, b)].map((i) => field[i]));
 
 // ---------------------------------------------------------------- placement
 
-// Why `key` cannot stand at (x, y), or null. opts: { occ, ignore, free (skip the cost) }.
+// Why `key` cannot stand at (x, y), or null. opts: { occ, ignore, free (skip the cost), deck }.
 export function placeCheck(state, key, x, y, opts = {}) {
   const d = BUILDING[key];
   if (!d) return 'There is no such building.';
   if (d.fixed) return `The ${d.name} cannot be built.`;
+  const deck = opts.deck || 'main', m = mapOf(state, deck);
+  if (!m) return 'There is no such deck.';
   if (!state.unlocked.includes(key)) return lockedWhy(d);
-  const { w, h, t, ch } = state.map;
+  if (!decksOf(d).includes(deck)) return `A ${d.name} stands only on the ${deckList(decksOf(d))} deck${decksOf(d).length > 1 ? 's' : ''}.`;
+  const { w, h, t, ch } = m;
   if (x < 0 || y < 0 || x + d.size > w || y + d.size > h) return 'That is off the edge of the map.';
+  if (key === 'lift') {   // one Lift a shaft serves all three decks
+    const other = state.buildings.find((b) => b.key === 'lift' && b.id !== opts.ignore && b.x === x && b.y === y);
+    if (other) return `This shaft already has a Lift (on the ${deckOf(other)} deck): one Lift serves all three decks.`;
+  }
   const on = onSet(d), reach = opts.reach || reachTest(reachSources(state));
-  const occ = opts.occ || occupancy(state, opts.ignore ?? -1);
+  const occ = opts.occ || occupancy(state, opts.ignore ?? -1, deck);
   for (let dy = 0; dy < d.size; dy++) for (let dx = 0; dx < d.size; dx++) {
     const i = (y + dy) * w + x + dx, ti = t[i];
     if (!on.has(ti)) return `A ${d.name} stands only on ${names(d.on)}, not on ${TERRAIN[ti].name.toLowerCase()}.`;
@@ -305,11 +383,11 @@ export function placeCheck(state, key, x, y, opts = {}) {
     if (d.zone === 'any' && !(interior || near || ti === T.HULL)) {
       return space ? `That is beyond reach (${DOCK_REACH} tiles of a dock, 16 of a Tether Mast): build closer.` : c ? `${c.name} is not pressurised yet.` : `A ${d.name} cannot stand here.`;
     }
-    if (d.zone === 'road' && !(interior || (ti === T.GATE && gateOpen(state, i)))) {
+    if (d.zone === 'road' && !(interior || (ti === T.GATE && gateOpen(state, i, deck)))) {
       return ti === T.GATE ? 'A road can pass a gate only when the chambers on both sides are open.' : c ? `${c.name} is not pressurised yet.` : 'Roads run on open chamber floors and through gates.';
     }
     if (d.zone === 'wall') {
-      const behind = state.chambers.filter((k) => k.breaches.includes(i));
+      const behind = state.chambers.filter((k) => deckOf(k) === deck && k.breaches.includes(i));
       if (!behind.some((k) => k.status !== 'sealed' && k.status !== 'surveying')) return 'Survey the chamber behind this breach first.';
     }
     if (occ[i] && occ[i] !== opts.ignore) return 'Something is already built there.';
@@ -342,12 +420,14 @@ function afford(state, raw, key) {
 const pay = (state, raw, key) => { const cost = costOf(state, raw, key); state.stock.credits -= cost.credits; state.stock.parts -= cost.parts; };
 
 // Best free spot for `key` (lowest score) in a box of tiles; null if none. For setup and bots.
-export function findSpot(state, key, { box, score = () => 0, free = false } = {}) {
-  const occ = occupancy(state), reach = reachTest(reachSources(state)), d = BUILDING[key], on = d && onSet(d), { w, t } = state.map;
-  const b = box || { x0: 0, y0: 0, x1: state.map.w - 1, y1: state.map.h - 1 };
+export function findSpot(state, key, { box, score = () => 0, free = false, deck = 'main' } = {}) {
+  const m = mapOf(state, deck);
+  if (!m) return null;
+  const occ = occupancy(state, -1, deck), reach = reachTest(reachSources(state)), d = BUILDING[key], on = d && onSet(d), { w, t } = m;
+  const b = box || { x0: 0, y0: 0, x1: m.w - 1, y1: m.h - 1 };
   let best = null;
-  for (let y = Math.max(0, b.y0); y <= Math.min(state.map.h - 1, b.y1); y++) for (let x = Math.max(0, b.x0); x <= Math.min(w - 1, b.x1); x++) {
-    if (!on?.has(t[y * w + x]) || occ[y * w + x] || placeCheck(state, key, x, y, { occ, reach, free: true })) continue;
+  for (let y = Math.max(0, b.y0); y <= Math.min(m.h - 1, b.y1); y++) for (let x = Math.max(0, b.x0); x <= Math.min(w - 1, b.x1); x++) {
+    if (!on?.has(t[y * w + x]) || occ[y * w + x] || placeCheck(state, key, x, y, { occ, reach, free: true, deck })) continue;
     const s = score(x, y);
     if (s !== null && (!best || s < best.s)) best = { x, y, s };
   }
@@ -357,11 +437,11 @@ export function findSpot(state, key, { box, score = () => 0, free = false } = {}
 
 // ---------------------------------------------------------------- actions
 
-export const canBuild = (state, key, x, y) => placeCheck(state, key, x, y);
+export const canBuild = (state, key, x, y, deck = 'main') => placeCheck(state, key, x, y, { deck });
 
 // A gate a road may cross: every chamber beside it is open.
-export function gateOpen(state, i) {
-  const { w, ch } = state.map;
+export function gateOpen(state, i, deck = 'main') {
+  const { w, ch } = mapOf(state, deck);
   const near = [ch[i - 1], ch[i + 1], ch[i - w], ch[i + w]].filter((c) => c !== 255);
   return near.length >= 2 && near.every((c) => chamberOf(state, c)?.status === OPEN);
 }
@@ -374,21 +454,25 @@ export function roadLine(x0, y0, x1, y1) {
   return out;
 }
 
-// What a road line would do: [{ x, y, why }] (why null = buildable, 'have' = already a road).
-export function planRoad(state, x0, y0, x1, y1) {
-  const occ = occupancy(state), roads = new Set(state.buildings.filter((b) => b.key === 'road').map((b) => b.y * state.map.w + b.x));
-  return roadLine(x0, y0, x1, y1).map(([x, y]) => ({ x, y, why: roads.has(y * state.map.w + x) ? 'have' : placeCheck(state, 'road', x, y, { occ, free: true }) }));
+// What a road line would do: [{ x, y, why }] (why null = buildable, 'have' = already a road). A
+// finished Lift's shaft counts as road on every deck where its chamber is open (version 4).
+export function planRoad(state, x0, y0, x1, y1, deck = 'main') {
+  const m = mapOf(state, deck), w = state.map.w, occ = occupancy(state, -1, deck);
+  const roads = new Set(state.buildings.filter((b) => b.key === 'road' && deckOf(b) === deck).map((b) => b.y * w + b.x));
+  const lifts = liftTiles(state);
+  const have = (i) => roads.has(i) || (lifts.has(i) && chamberOf(state, m.ch[i])?.status === OPEN);
+  return roadLine(x0, y0, x1, y1).map(([x, y]) => ({ x, y, why: have(y * w + x) ? 'have' : placeCheck(state, 'road', x, y, { occ, free: true, deck }) }));
 }
 
 // Build every buildable tile of a road line that the colony can pay for; skips the rest.
-export function buildRoad(state, x0, y0, x1, y1) {
-  const plan = planRoad(state, x0, y0, x1, y1), d = BUILDING.road;
+export function buildRoad(state, x0, y0, x1, y1, deck = 'main') {
+  const plan = planRoad(state, x0, y0, x1, y1, deck), d = BUILDING.road;
   let built = 0, skipped = 0, firstWhy = null;
   for (const p of plan) {
     if (p.why === 'have') continue;
     if (p.why || afford(state, d.cost)) { skipped++; firstWhy ??= p.why || afford(state, d.cost); continue; }
     pay(state, d.cost);
-    state.buildings.push({ id: state.nextId++, key: 'road', x: p.x, y: p.y, level: 1, mode: null, build: 0, off: false });
+    state.buildings.push({ id: state.nextId++, key: 'road', x: p.x, y: p.y, ...(deck !== 'main' ? { deck } : {}), level: 1, mode: null, build: 0, off: false });
     built++;
   }
   if (!built) return no(firstWhy || 'That road is already built.');
@@ -396,15 +480,16 @@ export function buildRoad(state, x0, y0, x1, y1) {
   return ok(`${built} tiles of road laid${skipped ? `; ${skipped} skipped (${firstWhy})` : ''}.`, { built, skipped });
 }
 
-export function build(state, key, x, y) {
-  const why = canBuild(state, key, x, y);
+export function build(state, key, x, y, deck = 'main') {
+  deck ||= 'main';
+  const why = canBuild(state, key, x, y, deck);
   if (why) return no(why);
   const d = BUILDING[key];
   pay(state, d.cost, key);
-  const b = { id: state.nextId++, key, x, y, level: 1, mode: d.modes ? d.modes[0].key : null, build: d.days, off: false };
+  const b = { id: state.nextId++, key, x, y, ...(deck !== 'main' ? { deck } : {}), level: 1, mode: d.modes ? d.modes[0].key : null, build: d.days, off: false };
   if (key === 'tailings') b.fill = 0;
   state.buildings.push(b);
-  log(state, `${d.name} ordered.`);
+  log(state, `${d.name} ordered${deck !== 'main' ? ` on the ${deck} deck` : ''}.`);
   return ok(`${d.name} placed: ${d.days} days of work for a crew.`, { id: b.id });
 }
 
@@ -415,7 +500,7 @@ const spent = (b) => {
 };
 function holdsAir(state, b) {
   if (b.key !== 'seal') return null;
-  const i = idx(state, b.x, b.y), c = state.chambers.find((k) => k.breaches.includes(i) && (k.status === OPEN || k.status === 'pressurising'));
+  const i = idx(state, b.x, b.y), c = state.chambers.find((k) => deckOf(k) === deckOf(b) && k.breaches.includes(i) && (k.status === OPEN || k.status === 'pressurising'));
   return c ? `This seal holds ${c.name}'s air: removing it would vent the chamber.` : null;
 }
 
@@ -441,7 +526,7 @@ export function move(state, id, x, y) {
   if (d.fixed) return no(`The ${d.name} cannot be moved.`);
   if (b.key === 'seal') return no('A seal belongs to its breach: demolish it and build another instead.');
   if (b.x === x && b.y === y) return no('It already stands there.');
-  const why = placeCheck(state, b.key, x, y, { ignore: b.id, free: true });
+  const why = placeCheck(state, b.key, x, y, { ignore: b.id, free: true, deck: deckOf(b) });
   if (why) return no(why);
   const fee = { credits: Math.ceil(d.cost.credits * MOVE_FEE), parts: Math.ceil((d.cost.parts || 0) * MOVE_FEE) };
   const poor = afford(state, fee, b.key);
@@ -490,11 +575,12 @@ export function toggle(state, id) {
   return ok(`${d.name} switched ${b.off ? 'off: it draws no power and employs nobody' : 'back on'}.`);
 }
 
-export function buildable(state) {
+// The build menu. With a deck, a building that cannot stand there says so ("Upper deck only.").
+export function buildable(state, deck) {
   return BUILDINGS.filter((d) => !d.fixed).map((d) => {
-    const unlocked = state.unlocked.includes(d.key);
-    const why = unlocked ? afford(state, d.cost, d.key) : d.tech && TECH[d.tech] ? `Research ${TECH[d.tech].name}.` : `Unlocks at ${d.unlock?.pop ?? 80} colonists.`;
-    return { key: d.key, name: d.name, cat: d.cat, cost: costOf(state, d.cost, d.key), unlocked, why };
+    const unlocked = state.unlocked.includes(d.key), onDeck = !deck || decksOf(d).includes(deck);
+    const why = !onDeck ? deckWhy(d) : unlocked ? afford(state, d.cost, d.key) : d.tech && TECH[d.tech] ? `Research ${TECH[d.tech].name}.` : `Unlocks at ${d.unlock?.pop ?? 80} colonists.`;
+    return { key: d.key, name: d.name, cat: d.cat, cost: costOf(state, d.cost, d.key), unlocked, why, decks: decksOf(d), onDeck };
   });
 }
 
@@ -503,7 +589,7 @@ export const pressuriseAir = (state, c) => Math.ceil(c.tiles * PRESSURISE.airPer
 
 // A finished Survey Drone Bay whose radius (Chebyshev, from its centre) holds the chamber's whole box.
 export function droneReach(state, c) {
-  return state.buildings.some((b) => b.key === 'dronebay' && active(b) && [[c.x0, c.y0], [c.x1, c.y0], [c.x0, c.y1], [c.x1, c.y1]].every(([x, y]) => cheb(x, y, centre(b)) <= spec(b).radius));
+  return state.buildings.some((b) => b.key === 'dronebay' && active(b) && deckOf(b) === deckOf(c) && [[c.x0, c.y0], [c.x1, c.y0], [c.x0, c.y1], [c.x1, c.y1]].every(([x, y]) => cheb(x, y, centre(b)) <= spec(b).radius));
 }
 // What a survey costs and takes now: { credits, days } (Survey Drones halve the cost, one day).
 export function surveyCost(state) {
@@ -516,7 +602,10 @@ export function chamberAction(state, chamberId, action) {
   if (!c) return no('There is no such chamber.');
   if (action === 'survey') {
     if (c.status !== 'sealed') return no(`${c.name} has already been surveyed.`);
-    if (!touchesOpen(state, c) && !droneReach(state, c)) return no(`${c.name} does not touch an open chamber: open a neighbour first${state.buildings.some((b) => b.key === 'dronebay') ? ', or bring a Survey Drone Bay within 40 tiles' : ''}.`);
+    if (!touchesOpen(state, c) && !droneReach(state, c) && !liftReach(state, c)) {
+      return no(c.deck ? `${c.name} (${c.deck} deck) is out of reach: repair a Lift on a shaft that passes through it, or open a neighbour on its deck first.`
+        : `${c.name} does not touch an open chamber: open a neighbour first${state.buildings.some((b) => b.key === 'dronebay') ? ', or bring a Survey Drone Bay within 40 tiles' : ''}.`);
+    }
     const { credits: fee, days } = surveyCost(state);
     if (state.stock.credits < fee) return no(`A survey costs ${fee} credits.`);
     state.stock.credits -= fee;
@@ -657,23 +746,26 @@ export function serviceValue(b) {
   if (b.key === 'canteen' && b.mode === 'ration') return 0;
   return s.service;
 }
-export const covers = (svc, b) => { const c = centre(b); return cheb(c.x - 0.5, c.y - 0.5, centre(svc)) <= spec(svc).radius; };
+export const covers = (svc, b) => { if (deckOf(svc) !== deckOf(b)) return false; const c = centre(b); return cheb(c.x - 0.5, c.y - 0.5, centre(svc)) <= spec(svc).radius; };
 export function serviceAt(state, home, key, list = state.buildings) {
   let best = 0;
   for (const s of list) if (s.key === key && active(s) && covers(s, home)) best = Math.max(best, serviceValue(s));
   return best;
 }
 
-export function tileInfo(state, x, y) {
-  const { w, h, t, r, ch } = state.map;
+export function tileInfo(state, x, y, deck = 'main') {
+  const m = mapOf(state, deck);
+  if (!m) return null;
+  const { w, h, t, r, ch } = m;
   if (x < 0 || y < 0 || x >= w || y >= h) return null;
   const i = y * w + x, c = chamberOf(state, ch[i]);
   const hidden = c && (c.status === 'sealed' || c.status === 'surveying');
-  const b = state.buildings.find((k) => { const s = BUILDING[k.key].size; return x >= k.x && y >= k.y && x < k.x + s && y < k.y + s; }) || null;
+  const b = state.buildings.find((k) => { const s = BUILDING[k.key].size; return deckOf(k) === deck && x >= k.x && y >= k.y && x < k.x + s && y < k.y + s; }) || null;
   return {
-    terrain: TERRAIN[t[i]], artifact: hidden ? ARTIFACT[R.NONE] : ARTIFACT[r[i]], salvage: state.map.sv[i],
-    chamber: c, building: b, reach: spaceLike(t[i]) && inReach(state, x, y),
-    coverage: { park: parkField(state)[i] },
+    terrain: TERRAIN[t[i]], artifact: hidden ? ARTIFACT[R.NONE] : ARTIFACT[r[i]], salvage: m.sv[i],
+    chamber: c, building: b, reach: deck === 'main' && spaceLike(t[i]) && inReach(state, x, y),
+    coverage: { park: parkField(state, deck)[i] },
+    deck, lift: t[i] === T.SHAFT ? liftAt(state, x, y) : null,
   };
 }
 
@@ -686,16 +778,18 @@ export function summary(state) {
     stock, power: { supply: p.supply, demand: p.demand, battery: state.battery, cap: cap.power },
     pop: state.pop, housing: housingOf(state), jobs, workers: Math.min(state.pop, jobs),
     happy: state.happy, happyParts: state.happyParts, nextArrival: diffOf(state).transportEvery - (state.day % diffOf(state).transportEvery),
+    decks: deckSummary(state),
     research: { perDay: last.research || 0, focus: state.research?.focus ?? null, banked: state.research?.points || 0 },
   };
 }
 
 // Per-tile overlay values: 'park' (rating), 'reach' (1 = space buildable), 'power' (supply
 // fraction of each building's tiles), 'happiness' (0..1 over open floor).
-export function coverage(state, kind) {
-  const { w, h, t, ch } = state.map, n = w * h, out = new Float32Array(n);
-  if (kind === 'park') return parkField(state);
+export function coverage(state, kind, deck = 'main') {
+  const m = mapOf(state, deck) || state.map, { w, h, t, ch } = m, n = w * h, out = new Float32Array(n);
+  if (kind === 'park') return parkField(state, deck);
   if (kind === 'reach') {
+    if (deck !== 'main') return out;   // space lies beside the main deck only
     const reach = reachTest(reachSources(state));
     for (let i = 0; i < n; i++) if (spaceLike(t[i]) && reach(i % w, (i / w) | 0)) out[i] = 1;
     return out;
@@ -704,13 +798,13 @@ export function coverage(state, kind) {
     const pf = state.stats?.last?.power?.factor ?? 1;
     for (const b of state.buildings) {
       const s = spec(b);
-      if (!s.power) continue;
+      if (!s.power || deckOf(b) !== deck) continue;
       for (const i of tilesOf(state, b)) out[i] = !active(b) ? 0 : s.power > 0 ? 1 : pf;
     }
     return out;
   }
   if (kind === 'happiness') {
-    const field = parkField(state);
+    const field = parkField(state, deck);
     for (let i = 0; i < n; i++) if (ch[i] !== 255 && chamberOf(state, ch[i])?.status === OPEN) out[i] = Math.min(1, (state.happy + field[i]) / 100);
     return out;
   }
@@ -1108,7 +1202,7 @@ const SAFE_CATS = new Set(['life', 'food', 'homes', 'power']);
 const SAFE_KEYS = new Set(['road', 'seal', 'command', 'dock']);
 export function shielded(state, b, pylons = state.buildings.filter((p) => p.key === 'shieldpylon' && active(p))) {
   const c = centre(b);
-  return pylons.some((p) => cheb(c.x - 0.5, c.y - 0.5, centre(p)) <= spec(p).radius);
+  return pylons.some((p) => deckOf(p) === deckOf(b) && cheb(c.x - 0.5, c.y - 0.5, centre(p)) <= spec(p).radius);
 }
 export function raidTargets(state, from) {
   const cand = state.buildings.filter((b) => finished(b) && !SAFE_KEYS.has(b.key) && !SAFE_CATS.has(BUILDING[b.key].cat));

@@ -21,7 +21,9 @@
 //        toTitle(), focus(x, y), settings: { pauseOnEvents, snap }, setSetting(key, value),
 //        goals (js/colony/goals.js or null), diff(state) → difficulty row or null,
 //        show(show) performs a goal's or the advisor's "Show me", help() opens How to play,
-//        answered(pending, choiceKey) after an event is answered, openResearch(techKey) }
+//        answered(pending, choiceKey) after an event is answered, openResearch(techKey),
+//        version 4: deck() the deck on show, decks() the decks this colony has, setDeck(deck),
+//        stepDeck('up' | 'down'), mapOf(deck), decksFor(key), goDeck(deck, x, y) }
 import { CATEGORIES, BUILDINGS, BUILDING, NEEDS, CHAMBER_AIR_PER_100 } from './data/buildings.js';
 import { TERRAIN, ARTIFACT, T } from './data/terrain.js';
 import { BRANCHES, TECHS, TECH } from './data/tech.js';
@@ -54,7 +56,7 @@ const TIER_TECH = Object.fromEntries(TECHS.flatMap((t) => (t.effects || []).filt
 // The happiness the tax costs or gives (rules: 0% +8, 10% 0, 20% −14, 30% −32, interpolated).
 const taxHappy = (t) => { const P = [[0, 8], [10, 0], [20, -14], [30, -32]]; for (let i = 1; i < P.length; i++) if (t <= P[i][0]) { const [a, va] = P[i - 1], [b, vb] = P[i]; return va + (vb - va) * (t - a) / (b - a); } return -32; };
 const STATUS = {
-  sealed: ['Sealed', 'Airless and unknown. Survey it from an open neighbour.'],
+  sealed: ['Sealed', 'Airless and unknown. Survey it from an open neighbour, or through a working Lift.'],
   surveying: ['Surveying', 'Ruess\'s team is mapping it.'],
   surveyed: ['Surveyed', 'Seal every breach, then pressurise it.'],
   pressurising: ['Pressurising', 'Filling it with air.'],
@@ -64,6 +66,14 @@ const OVERLAYS = [[null, 'None'], ['reach', 'Reach'], ['park', 'Parks'], ['power
 const KIND_LABEL = { goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost', tech: 'Research complete',
   raid: 'Raid', raidwarn: 'Raid warning', wanderer: 'Wanderer', raidreport: 'After the raid', report: 'After the raid', commander: 'Commanders', machine: 'Arsenal' };
 const SPEAKER = { ruess: 'Prof. Ruess', sato: 'Capt. Sato' };
+// Version 4 (docs/COLONY-V4.md): the three decks, top to bottom.
+const DECKS = ['upper', 'main', 'lower'];
+const DECK_NAME = { upper: 'Upper', main: 'Main', lower: 'Lower' };
+const DECK_TEXT = { upper: 'Habitat rings under the sky panels: homes, sky gardens, galleries.', main: 'The fields, the river, industry and the docks to space.', lower: 'Machinery halls and flooded tunnels: power, water and heavy industry.' };
+const deckOf = (o) => o?.deck || 'main';
+// "Upper deck only", "Main or lower deck", "Upper, main or lower"
+const decksText = (list) => list.length === 1 ? `${DECK_NAME[list[0]]} deck only` : list.length === 3 ? 'Upper, main or lower'
+  : `${list.map((d, i) => i ? DECK_NAME[d].toLowerCase() : DECK_NAME[d]).slice(0, -1).join(', ')} or ${DECK_NAME[list.at(-1)].toLowerCase()} deck`;
 const UI_KEY = 'el-colony-ui';   // per-viewer panel state (collapsed or not)
 const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}') || {}; } catch { return {}; } };
 const storeUI = (o) => { try { localStorage.setItem(UI_KEY, JSON.stringify(o)); } catch { } };
@@ -103,7 +113,7 @@ function cardIcon(b) {
 // The help dialog's sections (colony.html #dHelp). Short sentences, pictures from the card art.
 // diff: the difficulty row (js/colony/difficulty.js) the numbers are quoted for, or null.
 export const HELP_SECTIONS = [['goal', 'The goal'], ['time', 'Time'], ['build', 'Building'], ['res', 'Resources'], ['chambers', 'Chambers'],
-  ['homes', 'Homes & happiness'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
+  ['homes', 'Homes & happiness'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
 export function helpHtml(art, diff) {
   const pic = (slot, alt = '') => { const u = art?.(slot); return u ? `<img src="${esc(u)}" alt="${esc(alt)}" loading="lazy">` : ''; };
   const card = (key) => { const u = art?.(`card/${key}`); return `<figure class="cl-hfig">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : cardIcon(BUILDING[key])}<figcaption>${esc(BUILDING[key]?.name || key)}</figcaption></figure>`; };
@@ -184,6 +194,15 @@ export function helpHtml(art, diff) {
       <li><b>Fight</b>: the crewed guardians and the batteries against the raiders. The raid window shows the <b>win chance</b> and the machines you will likely lose. A win pays salvage; a loss means stolen goods, damaged buildings (unless a <b>Shield Pylon</b> covers them) and a scared colony.</li>
       <li><b>Pay tribute</b>: credits (or food) and they leave. Heat goes up and morale down a little.</li>
     </ul>`)}
+  ${sec('decks', 'Decks and lifts', card('lift') + card('skygarden') + card('geotap'), `
+    <p>Eden has <b>three decks</b>, one above the other, each with its own chambers. Switch with the <b>Deck</b> buttons (bottom left of the map, with each deck's open / all chambers), the <b>▲ ▼</b> map buttons, or <b>PageUp / PageDown</b>. The top bar says which deck you are on.</p>
+    <ul class="cl-hsteps">
+      <li><b>Upper</b>: habitat rings under the sky panels. <b>Sky Gardens</b> (air and the best park rating) and <b>Galleries</b> (happiness).</li>
+      <li><b>Main</b>: where you land. Fields, the river, industry and the docks to space.</li>
+      <li><b>Lower</b>: machinery halls and flooded tunnels. <b>Geothermal Taps</b> (big power), <b>Water Cisterns</b>, and <b>Pump Stations</b> that drain flooded ground.</li>
+    </ul>
+    <p><b>Lift shafts</b> (gold-rimmed pits) run through all three decks at the same spot. One is in your landing chamber. Build a <b>Lift</b> on it (Command menu): once it works, the chambers it passes through on the other decks can be <b>surveyed through the lift</b>. Click the Lift to see which decks it links and go there.</p>
+    <p>A chamber on another deck opens as usual: survey, seal its breaches, pressurise. Each open chamber needs air. Parks and services only reach their own deck; lifts carry roads, colonists and rovers between decks. A greyed card says where it stands (<b>Upper deck only</b>): click it to go there.</p>`)}
   ${sec('commanders', 'Commanders', `<figure class="cl-hfig portrait">${pic('portrait/sato', 'Capt. Mira Sato')}<figcaption>Capt. Sato</figcaption></figure>`, `
     <p>A commander in a machine makes it fight better. You start with two: <b>the General</b> (three times the power in any machine) and <b>Capt. Sato</b>, best in ships. See them in <b>Defence › Commanders</b>.</p>
     <ul class="cl-hsteps">
@@ -197,9 +216,9 @@ export function helpHtml(art, diff) {
     <ul class="cl-hsteps">
       <li><b>Two-finger scroll</b> pans the map. <b>Pinch</b> zooms in and out.</li>
       <li><b>Shift + scroll</b> rotates the view; <b>Alt (Option) + scroll</b> tilts it.</li>
-      <li>The <b>buttons on the map</b> (top right) zoom, rotate, tilt and fly <b>home</b> to the Command Centre.</li>
+      <li>The <b>buttons on the map</b> (top right) zoom, rotate, tilt, move a <b>deck up or down</b> (▲ ▼) and fly <b>home</b> to the Command Centre.</li>
       <li>The <b>minimap</b> (bottom right) shows all of Eden: <b>click or drag on it</b> to jump there. The outline is what you see now.</li>
-      <li>Keys: <b>W A S D</b> or the <b>arrows</b> pan, <b>Q / E</b> rotate, <b>+ / −</b> zoom, <b>PgUp / PgDn</b> tilt, <b>Home</b> back to the Command Centre.</li>
+      <li>Keys: <b>W A S D</b> or the <b>arrows</b> pan, <b>Q / E</b> rotate, <b>+ / −</b> zoom, <b>PgUp / PgDn</b> one deck up or down, <b>Home</b> back to the Command Centre.</li>
     </ul>
     <p>With a mouse: drag to rotate, right-drag to pan, the wheel zooms. The map buttons and the minimap can be switched off in Settings (⚙).</p>`)}
   ${sec('tips', 'Your first 10 days', '', `
@@ -213,7 +232,7 @@ export function helpHtml(art, diff) {
       <li>Short of credits? Sell some food at the Market, or set a farm to cash crops.</li>
     </ol>
     ${diff?.relief ? `<p>On <b>${esc(name)}</b>, if the treasury runs dry or colonists go hungry, the Council sends <b>${num(diff.relief.credits)} credits</b> and <b>${num(diff.relief.food)} food</b> (at most once every ${diff.relief.every} days).</p>` : ''}
-    <p class="cl-dim">Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · Esc cancel · F1 or ? this guide.</p>`)}
+    <p class="cl-dim">Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · PgUp / PgDn deck · Esc cancel · F1 or ? this guide.</p>`)}
   </div>`;
 }
 
@@ -222,7 +241,7 @@ export function createUI(root, api) {
   const S = () => api.state();
   root.innerHTML = `
   <header class="cl-top">
-    <div class="cl-date"><i>Eden</i><b data-h="day">Day 0</b></div>
+    <div class="cl-date"><i>Eden</i><b data-h="day">Day 0</b><em class="cl-deckname" data-h="deck" data-deck="main" title="The deck on show (PageUp / PageDown)">Main deck</em></div>
     <div class="cl-speeds" role="group" aria-label="Speed">
       <button type="button" data-speed="0" title="Pause (space)">❚❚</button>
       <button type="button" data-speed="1" title="×1 (1)">×1</button>
@@ -308,6 +327,7 @@ export function createUI(root, api) {
     <div class="cl-dtabs" role="tablist">${DEF_TABS.map(([k, n]) => `<button type="button" role="tab" data-dtab="${k}" aria-selected="false">${n}<span data-dtabn="${k}"></span></button>`).join('')}</div>
     <div class="cl-dbody" data-dbody></div>
   </section>
+  <div class="cl-decks" role="group" aria-label="Deck" title="Decks: open / all chambers on each. PageUp / PageDown move between them."><i>Deck</i>${DECKS.map((d) => `<button type="button" data-deck="${d}" aria-pressed="${d === 'main'}"><b>${DECK_NAME[d]}</b><small data-deckn="${d}"></small></button>`).join('')}</div>
   <div class="cl-ovl" role="group" aria-label="Overlay"><i>Overlay</i>${OVERLAYS.map(([k, n]) => `<button type="button" data-ovl="${k ?? ''}" aria-pressed="${k === null}">${n}</button>`).join('')}</div>
   <div class="cl-placing" hidden><span data-placing></span> <button type="button" class="cl-btn sm" data-cancel>Cancel</button></div>
   <div class="cl-log" data-log title="Colony log (click to expand)"></div>
@@ -327,6 +347,37 @@ export function createUI(root, api) {
   let summary = null, dirty = false;
 
   const result = (r) => api.act(r);
+
+  // ---------------------------------------------------------------- decks (version 4)
+  const D = () => api.deck?.() || 'main';
+  const hasDeck = (s, d) => d === 'main' || !!s.decks?.[d]?.t;
+  // The deck's map { w, h, t, r, ch, sv } (main = state.map).
+  const mapOf = (s, d = D()) => {
+    if (d === 'main') return s.map;
+    try { const m = api.mapOf?.(d) || R.mapOf?.(s, d); if (m) return m; } catch { }
+    return s.decks?.[d] ? { w: s.map.w, h: s.map.h, ...s.decks[d] } : s.map;
+  };
+  const decksFor = (key) => { try { return api.decksFor?.(key) || BUILDING[key]?.decks || ['main']; } catch { return BUILDING[key]?.decks || ['main']; } };
+  const onDeck = (o, d = D()) => deckOf(o) === d;
+  $('.cl-decks').addEventListener('click', (e) => { const b = e.target.closest('[data-deck]'); if (b && !b.disabled) api.setDeck?.(b.dataset.deck); });
+  let deckSig = '';
+  function renderDecks() {
+    const s = S(), d = D();
+    const counts = DECKS.map((k) => { const cs = s.chambers.filter((c) => deckOf(c) === k); return [k, cs.filter((c) => c.status === 'open').length, cs.length, hasDeck(s, k)]; });
+    const sig = d + JSON.stringify(counts);
+    if (sig === deckSig) return;
+    deckSig = sig;
+    for (const [k, open, total, has] of counts) {
+      const b = $(`.cl-decks [data-deck="${k}"]`);
+      b.setAttribute('aria-pressed', String(k === d));
+      b.disabled = !has;
+      b.querySelector('[data-deckn]').textContent = has ? `${open}/${total}` : '–';
+      b.title = has ? `${DECK_NAME[k]} deck: ${open} of ${total} chambers open.\n${DECK_TEXT[k]}${k === d ? '' : `\nClick (or ${DECKS.indexOf(k) < DECKS.indexOf(d) ? 'PageUp' : 'PageDown'}) to go there.`}` : `${DECK_NAME[k]} deck: not in this colony yet.`;
+    }
+    const nm = $('[data-h=deck]');
+    nm.textContent = `${DECK_NAME[d]} deck`; nm.dataset.deck = d;
+    root.dataset.deck = d;
+  }
 
   // ---------------------------------------------------------------- research state (version 2; guarded: rules may predate it)
   const researchOf = (s) => s.research || { points: 0, focus: null, progress: {}, done: [] };
@@ -506,6 +557,11 @@ export function createUI(root, api) {
   cardsEl.addEventListener('click', (e) => {
     const c = e.target.closest('[data-key]'); if (!c) return;
     if (c.dataset.tech) { openResearch(c.dataset.tech); return; }   // locked behind a tech: show it in the tree
+    if (c.dataset.deckgo) {   // not on this deck: go to a deck where it stands, with a spot marked
+      if (matchMedia('(max-width: 760px)').matches) $('.cl-build').classList.remove('open');
+      api.show?.({ build: c.dataset.key });
+      return;
+    }
     if (c.getAttribute('aria-disabled') === 'true') return;
     api.pick(c.dataset.key);
     if (matchMedia('(max-width: 760px)').matches) $('.cl-build').classList.remove('open');
@@ -513,7 +569,8 @@ export function createUI(root, api) {
 
   function buildMenu() {
     const s = S();
-    let list; try { list = R.buildable(s); } catch { list = []; }
+    const dk = D();
+    let list; try { list = R.buildable(s, dk); } catch { list = []; }
     const by = Object.fromEntries((list || []).map((o) => [o.key, o]));
     const items = BUILDINGS.filter((b) => b.cat === cat && !b.fixed).map((b) => {
       const o = by[b.key] || { key: b.key, name: b.name, cost: b.cost, unlocked: !b.unlock && !b.tech, why: b.unlock ? `At ${b.unlock.pop} colonists` : '' };
@@ -521,22 +578,27 @@ export function createUI(root, api) {
       const poor = (cost.credits || 0) > (s.stock.credits || 0) || (cost.parts || 0) > (s.stock.parts || 0);
       // version 2: still locked behind its tech (whatever rules.buildable words it as)
       const tech = !o.unlocked && b.tech && !techDone(s, b.tech) ? b.tech : null;
-      return { b, o, cost, poor, tech };
+      // version 4: cannot stand on this deck ("Upper deck only"): click to go where it can
+      const decks = decksFor(b.key), offDeck = !decks.includes(dk);
+      return { b, o, cost, poor, tech, decks, offDeck };
     });
-    const sig = cat + '|' + items.map((i) => `${i.b.key}:${i.o.unlocked}:${i.o.why || ''}:${i.poor}:${i.tech}`).join(',') + '|' + api.placingKey?.();
+    const sig = cat + '|' + dk + '|' + items.map((i) => `${i.b.key}:${i.o.unlocked}:${i.o.why || ''}:${i.poor}:${i.tech}`).join(',') + '|' + api.placingKey?.();
     if (sig === cardSig) return;
     cardSig = sig;
     const placing = api.placingKey?.();
-    cardsEl.innerHTML = items.map(({ b, o, cost, poor, tech }) => {
+    cardsEl.innerHTML = items.map(({ b, o, cost, poor, tech, decks, offDeck }) => {
       const url = api.art?.(`card/${b.key}`);
-      const locked = !o.unlocked;
-      const why = !locked ? '' : tech ? `Research ${TECH[tech]?.name || tech}` : (o.why || (b.unlock ? `At ${b.unlock.pop} colonists` : 'Locked'));
-      return `<button type="button" class="cl-card${locked ? ' locked' : ''}${tech ? ' techlock' : ''}${placing === b.key ? ' on' : ''}" data-key="${b.key}"${tech ? ` data-tech="${esc(tech)}"` : ''} aria-disabled="${locked && !tech}" style="--cc:${CAT_COLOR[b.cat] || '#9aa'}" title="${esc(tech ? `${b.text}\nClick to see ${TECH[tech]?.name || tech} in Research.` : b.text)}">
+      const deckLock = o.unlocked && offDeck;
+      const locked = !o.unlocked || deckLock;
+      const why = deckLock ? decksText(decks) : !locked ? '' : tech ? `Research ${TECH[tech]?.name || tech}` : (o.why || (b.unlock ? `At ${b.unlock.pop} colonists` : 'Locked'));
+      const where = b.decks ? `\nStands on: ${decksText(decks)}.` : '';
+      const title = tech ? `${b.text}${where}\nClick to see ${TECH[tech]?.name || tech} in Research.` : deckLock ? `${b.text}\n${decksText(decks)}: click to go to the ${DECK_NAME[decks[0]].toLowerCase()} deck.` : b.text + where;
+      return `<button type="button" class="cl-card${locked ? ' locked' : ''}${tech ? ' techlock' : ''}${deckLock ? ' decklock' : ''}${placing === b.key ? ' on' : ''}" data-key="${b.key}"${tech ? ` data-tech="${esc(tech)}"` : ''}${deckLock ? ' data-deckgo="1"' : ''} aria-disabled="${locked && !tech && !deckLock}" style="--cc:${CAT_COLOR[b.cat] || '#9aa'}" title="${esc(title)}">
         <span class="cl-cardpic">${url ? `<img src="${esc(url)}" alt="" loading="lazy">` : cardIcon(b)}</span>
         <span class="cl-cardname">${esc(o.name || b.name)}</span>
         <span class="cl-cardcost${poor && !locked ? ' poor' : ''}">${costText(cost)}</span>
         <span class="cl-cardmeta">${b.size}×${b.size}${b.power ? ` · ${b.power > 0 ? '+' : ''}${b.power} MW` : ''}${b.jobs ? ` · ${b.jobs} jobs` : ''}${b.housing ? ` · ${b.housing} homes` : ''}</span>
-        ${locked ? `<span class="cl-cardwhy">${tech ? '⚗' : '🔒'} ${esc(why)}${tech ? ' <i>›</i>' : ''}</span>` : `<span class="cl-cardtext">${esc(b.text)}</span>`}
+        ${locked ? `<span class="cl-cardwhy">${tech ? '⚗' : deckLock ? (decks[0] === 'upper' ? '▲' : decks[0] === 'lower' ? '▼' : '◆') : '🔒'} ${esc(why)}${tech || deckLock ? ' <i>›</i>' : ''}</span>` : `<span class="cl-cardtext">${esc(b.text)}</span>`}
       </button>`;
     }).join('') || '<p class="cl-dim">Nothing to build here yet.</p>';
   }
@@ -561,40 +623,81 @@ export function createUI(root, api) {
       case 'research': openResearch(a.dataset.v || null); break;
       case 'defence': openDefence(a.dataset.v || null); break;
       case 'focus': api.focus(+a.dataset.x, +a.dataset.y); break;
+      case 'deck': api.goDeck?.(a.dataset.v, +a.dataset.x, +a.dataset.y); return;
     }
     inspSig = ''; refreshInspector();
   });
   $('[data-close=insp]').addEventListener('click', () => closeInspector());
 
-  const chamberOf = (s, x, y, info) => {
-    if (info?.chamber && typeof info.chamber === 'object') return info.chamber;
-    const id = typeof info?.chamber === 'number' ? info.chamber : s.map.ch[y * s.map.w + x];
+  // Tile read-outs on deck d (version 4): what tileInfo says when it is about that deck, else the
+  // deck's own map (so a rules.js that predates the decks cannot show the main deck by mistake).
+  const chamberOf = (s, x, y, info, d = D()) => {
+    if (info?.chamber && typeof info.chamber === 'object' && onDeck(info.chamber, d)) return info.chamber;
+    const m = mapOf(s, d), id = typeof info?.chamber === 'number' ? info.chamber : m.ch[y * m.w + x];
     if (id == null || id === 255) return null;
-    return s.chambers.find((c) => c.id === id) || s.chambers[id] || null;
+    const c = s.chambers.find((k) => k.id === id) || null;
+    return c && onDeck(c, d) ? c : null;
   };
-  const buildingAt = (s, x, y, info) => {
-    if (info?.building && typeof info.building === 'object') return info.building;
-    if (typeof info?.building === 'number') return s.buildings.find((b) => b.id === info.building) || null;
-    return s.buildings.find((b) => { const n = BUILDING[b.key]?.size || 1; return x >= b.x && x < b.x + n && y >= b.y && y < b.y + n; }) || null;
+  const covering = (b, x, y) => { const n = BUILDING[b.key]?.size || 1; return x >= b.x && x < b.x + n && y >= b.y && y < b.y + n; };
+  const buildingAt = (s, x, y, info, d = D()) => {
+    if (info?.building && typeof info.building === 'object' && onDeck(info.building, d)) return info.building;
+    if (typeof info?.building === 'number') { const b = s.buildings.find((k) => k.id === info.building); if (b && onDeck(b, d)) return b; }
+    return s.buildings.find((b) => onDeck(b, d) && covering(b, x, y)) || null;
   };
-  const terrainOf = (s, x, y, info) => {
-    const t = info?.terrain;
-    if (t && typeof t === 'object') return TERRAIN[t.id] || t;
-    if (typeof t === 'number') return TERRAIN[t];
-    if (typeof t === 'string') return TERRAIN.find((r) => r.key === t) || TERRAIN[s.map.t[y * s.map.w + x]];
-    return TERRAIN[s.map.t[y * s.map.w + x]];
+  const terrainOf = (s, x, y, info, d = D()) => {
+    const m = mapOf(s, d), own = TERRAIN[m.t[y * m.w + x]], t = info?.terrain;
+    let r = null;
+    if (t && typeof t === 'object') r = TERRAIN[t.id] || t;
+    else if (typeof t === 'number') r = TERRAIN[t];
+    else if (typeof t === 'string') r = TERRAIN.find((k) => k.key === t);
+    return r && (!own || r.id === own.id) ? r : own;
   };
-  const artifactOf = (s, x, y, info) => {
+  const artifactOf = (s, x, y, info, d = D()) => {
     const a = info?.artifact;
-    if (a && typeof a === 'object') return a.id ? ARTIFACT[a.id] || a : a.name ? a : null;
-    const id = typeof a === 'number' ? a : s.map.r[y * s.map.w + x];
+    if (d === 'main' && a && typeof a === 'object') return a.id ? ARTIFACT[a.id] || a : a.name ? a : null;
+    const m = mapOf(s, d), id = d === 'main' && typeof a === 'number' ? a : m.r?.[y * m.w + x];
     return id ? ARTIFACT[id] : null;
   };
   // breaches sealed: a finished Bulkhead Seal stands on it, or the wall is no longer a breach
   const sealedCount = (s, c) => {
     if (typeof R.openBreaches === 'function') { try { return c.breaches.length - R.openBreaches(s, c).length; } catch { } }
-    return (c.breaches || []).filter((i) => s.map.t[i] !== T.BREACH || s.buildings.some((b) => b.key === 'seal' && !b.build && b.y * s.map.w + b.x === i)).length;
+    const m = mapOf(s, deckOf(c));
+    return (c.breaches || []).filter((i) => m.t[i] !== T.BREACH || s.buildings.some((b) => b.key === 'seal' && !b.build && onDeck(b, deckOf(c)) && b.y * m.w + b.x === i)).length;
   };
+
+  // A lift shaft (version 4): the chambers it passes through on each deck, the Lifts on it, and
+  // what a working one opens. (x, y): a tile of the shaft; lift: the Lift building, if any.
+  function shaftHtml(s, x, y, lift) {
+    const d = D();
+    let shaft = null; try { shaft = (R.shaftsOf?.(s) || []).find((q) => x >= q.x && y >= q.y && x < q.x + 2 && y < q.y + 2) || null; } catch { }
+    const sx = lift ? lift.x : shaft ? shaft.x : x, sy = lift ? lift.y : shaft ? shaft.y : y;
+    const n = lift || shaft ? BUILDING.lift.size || 2 : 1;
+    const lifts = s.buildings.filter((b) => b.key === 'lift' && [...Array(n * n).keys()].some((k) => covering(b, sx + (k % n), sy + ((k / n) | 0))));
+    const decks = DECKS.filter((k) => hasDeck(s, k));
+    const rows = decks.map((k) => {
+      const m = mapOf(s, k), i = sy * m.w + sx, cid = m.ch[i], c = cid != null && cid !== 255 ? s.chambers.find((q) => q.id === cid) : null;
+      const l = lifts.find((b) => onDeck(b, k));
+      return { k, c, l, shaft: m.t[i] === T.SHAFT || !!l };
+    });
+    const works = (l) => l && l.build === 0;   // rules.liftReach: a finished Lift (it stands only in an open chamber)
+    const working = lifts.filter(works), building = lifts.filter((l) => l.build > 0);
+    const linked = rows.filter((r) => r.shaft && r.k !== d);
+    const st = (c) => c ? STATUS[c.status]?.[0] || c.status : 'no chamber';
+    const list = rows.filter((r) => r.shaft).map((r) => {
+      const here = r.k === d, c = r.c;
+      const survey = c && c.status === 'sealed' && working.length ? dry(s, (q) => R.chamberAction(q, c.id, 'survey')) : null;
+      return `<li class="${here ? 'here' : ''}" data-deckrow="${r.k}"><span class="cl-lnum" data-deck="${r.k}">${esc(DECK_NAME[r.k])}</span>
+        <span class="cl-lch"><b>${esc(c ? c.name || 'Chamber ' + c.id : '–')}</b> <span class="cl-badge st-${esc(c?.status || 'sealed')}">${esc(st(c))}</span>${r.l ? ` <small>${r.l.build > 0 ? `Lift ${r.l.build} d` : 'Lift'}</small>` : ''}</span>
+        ${here ? '<small class="cl-dim">here</small>' : `<span class="cl-lacts">${survey ? `<button type="button" class="cl-btn xs" data-a="survey" data-id="${c.id}" ${survey.ok ? '' : 'disabled'} title="${esc(survey.ok ? 'Survey it through the Lift' : survey.msg)}">Survey</button>` : ''}<button type="button" class="cl-btn xs" data-a="deck" data-v="${r.k}" data-x="${sx}" data-y="${sy}" title="Go to the ${esc(DECK_NAME[r.k].toLowerCase())} deck here">Go ${DECKS.indexOf(r.k) < DECKS.indexOf(d) ? '▲' : '▼'}</button></span>`}</li>`;
+    }).join('');
+    const sealedBeyond = linked.filter((r) => r.c && r.c.status === 'sealed');
+    const note = working.length
+      ? `The Lift works: it links the ${linked.map((r) => DECK_NAME[r.k].toLowerCase()).join(' and ')} deck${linked.length === 1 ? '' : 's'}. ${sealedBeyond.length ? `${sealedBeyond.map((r) => esc(r.c.name)).join(' and ')} can be surveyed through it.` : 'Roads, colonists and rovers ride it.'}`
+      : building.length ? `A Lift is being repaired here (${num(Math.max(...building.map((l) => l.build)))} days). Then the chambers above and below can be surveyed through it.`
+      : 'A lift shaft through all three decks. Build a <b>Lift</b> on it (in an open chamber) and the chambers it passes through on the other decks can be surveyed.';
+    return `<section class="cl-isec cl-shaft"><h4>Lift shaft ${working.length ? '<span class="cl-badge st-open">Working</span>' : building.length ? '<span class="cl-badge st-surveying">Repairing</span>' : '<span class="cl-badge st-sealed">No lift</span>'}</h4>
+      <p class="cl-dim">${note}</p><ul class="cl-lifts">${list}</ul></section>`;
+  }
 
   function habitatNeeds(s, b) {
     const fn = R.habitatNeeds || api.sim?.habitatNeeds;
@@ -611,11 +714,12 @@ export function createUI(root, api) {
   }
 
   function inspectorHtml(s, x, y) {
-    let info = null; try { info = R.tileInfo(s, x, y); } catch { }
+    const d = D();
+    let info = null; try { info = R.tileInfo(s, x, y, d); } catch { }
     const ter = terrainOf(s, x, y, info), art = artifactOf(s, x, y, info), ch = chamberOf(s, x, y, info), b = buildingAt(s, x, y, info);
     const parts = [];
     const hidden = ch && (ch.status === 'sealed' || ch.status === 'surveying');
-    parts.push(`<header class="cl-ihead"><small>Tile ${x}, ${y}${info?.reach ? ' · in reach' : ''}</small>
+    parts.push(`<header class="cl-ihead"><small>Tile ${x}, ${y} · <span class="cl-ideck" data-deck="${d}">${DECK_NAME[d]} deck</span>${info?.reach ? ' · in reach' : ''}</small>
       <h3>${esc(ter?.name || 'Unknown')}</h3><p>${esc(ter?.text || '')}</p>
       ${art && !hidden ? `<p class="cl-art">◆ <b>${esc(art.name)}</b> ${esc(art.text || '')}</p>` : ''}</header>`);
     if (ch) {
@@ -627,7 +731,7 @@ export function createUI(root, api) {
       const air = R.pressuriseAir ? R.pressuriseAir(s, ch) : Math.ceil((ch.tiles || 0) / 4);
       let fee = 100, sdays = 2; try { const sc = R.surveyCost?.(s); if (sc) { fee = sc.credits ?? fee; sdays = sc.days ?? sdays; } else fee = R.costOf?.(s, { credits: 100 })?.credits ?? 100; } catch { }
       parts.push(`<section class="cl-isec"><h4>Chamber <span class="cl-badge st-${esc(ch.status)}">${esc(st[0])}</span></h4>
-        <div class="cl-iname">${esc(ch.name || 'Chamber ' + ch.id)} <small>${esc(ch.kind || '')} · ${num(ch.tiles)} tiles</small></div>
+        <div class="cl-iname">${esc(ch.name || 'Chamber ' + ch.id)} <small>${esc(ch.kind || '')} · ${num(ch.tiles)} tiles · ${DECK_NAME[deckOf(ch)]} deck</small></div>
         <p class="cl-dim">${esc(st[1])}${ch.work ? ` ${ch.work} day${ch.work === 1 ? '' : 's'} left.` : ''}</p>
         <div class="cl-kv"><span>Breaches</span><b class="${total && sealed < total ? 'bad' : 'good'}">${hidden ? '?' : `${sealed} / ${total} sealed`}</b></div>
         ${ch.status !== 'open' ? `<div class="cl-acts">
@@ -637,6 +741,7 @@ export function createUI(root, api) {
       </section>`);
     }
     if (b) parts.push(buildingHtml(s, b));
+    if (b?.key === 'lift' || (!b && ter?.id === T.SHAFT)) parts.push(shaftHtml(s, x, y, b?.key === 'lift' ? b : null));
     return parts.join('');
   }
 
@@ -729,16 +834,18 @@ export function createUI(root, api) {
   }
 
   function inspect(x, y) {
-    inspAt = { x, y }; inspSig = ''; insp.hidden = false;
+    inspAt = { x, y, deck: D() }; inspSig = ''; insp.hidden = false;
     refreshInspector();
   }
   function closeInspector() { inspAt = null; insp.hidden = true; }
   function refreshInspector() {
     if (!inspAt) return;
     const s = S();
+    if (inspAt.deck !== D()) { closeInspector(); return; }   // the deck changed under it
     const i = inspAt.y * s.map.w + inspAt.x;
     const b = buildingAt(s, inspAt.x, inspAt.y, null), ch = chamberOf(s, inspAt.x, inspAt.y, null);
-    const sig = JSON.stringify([s.map.t[i], b, ch && [ch.status, ch.work, sealedCount(s, ch)], Math.floor(s.stock.credits / 50), Math.floor(s.stock.parts / 5), Math.floor(s.stock.air / 10), summary?.jobs, summary?.workers, s.day % 5 === 0 ? s.day : 0, BUILDING[b?.key]?.cat === 'defence' || b?.key === 'lodge' || b?.key === 'quarters' ? [s.production, (s.guardians || []).length, (s.wanderers || []).length, s.commanders?.length] : 0, b?.key === 'lab' ? [s.research?.focus, Math.floor(s.research?.progress?.[s.research?.focus] || 0), s.stats?.last?.research] : 0]);
+    const lifts = s.buildings.filter((k) => k.key === 'lift').map((k) => [k.id, k.build, k.off, deckOf(k)]);
+    const sig = JSON.stringify([inspAt.deck, mapOf(s).t[i], lifts, b?.key === 'lift' || mapOf(s).t[i] === T.SHAFT ? s.chambers.filter((c) => c.deck).map((c) => c.status) : 0, b, ch && [ch.status, ch.work, sealedCount(s, ch)], Math.floor(s.stock.credits / 50), Math.floor(s.stock.parts / 5), Math.floor(s.stock.air / 10), summary?.jobs, summary?.workers, s.day % 5 === 0 ? s.day : 0, BUILDING[b?.key]?.cat === 'defence' || b?.key === 'lodge' || b?.key === 'quarters' ? [s.production, (s.guardians || []).length, (s.wanderers || []).length, s.commanders?.length] : 0, b?.key === 'lab' ? [s.research?.focus, Math.floor(s.research?.progress?.[s.research?.focus] || 0), s.stats?.last?.research] : 0]);
     if (sig === inspSig) return;
     inspSig = sig;
     inspBody.innerHTML = inspectorHtml(s, inspAt.x, inspAt.y);
@@ -827,7 +934,7 @@ export function createUI(root, api) {
       <label class="cl-field"><em>Scrolling<small>Two-finger scroll on a trackpad, or a mouse wheel. Pinch (or Ctrl + scroll) always zooms.</small></em>
         <select data-setsel="wheel">${[['auto', 'Auto: pan on a trackpad, zoom with a mouse wheel'], ['pan', 'Pan the map (trackpad)'], ['zoom', 'Zoom (mouse wheel)']].map(([v, l]) => `<option value="${v}" ${(st.wheel || 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       ${musicHtml()}
-      <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · M music · WASD / arrows pan · Q / E rotate · Esc cancel · F1 or ? how to play.</p>`;
+      <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · M music · WASD / arrows pan · Q / E rotate · PgUp / PgDn deck · Esc cancel · F1 or ? how to play.</p>`;
     for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => { api.setSetting(c.dataset.set, c.checked); helpersShown(); };
     for (const c of pops.settings.querySelectorAll('[data-setsel]')) c.onchange = () => api.setSetting(c.dataset.setsel, c.value);
     const mus = pops.settings.querySelector('[data-music]'), setup = pops.settings.querySelector('[data-musicsetup]');
@@ -1645,7 +1752,7 @@ export function createUI(root, api) {
   // "1 / 2 fields" gives 0.5 for the bar; null when the text holds no fraction.
   const fraction = (t) => { const m = /(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/.exec(t || ''); return m && +m[2] > 0 ? Math.min(1, +m[1] / +m[2]) : null; };
   const grantText = (r) => r ? [r.credits ? `+${num(r.credits)} cr` : '', r.parts ? `+${num(r.parts)} parts` : ''].filter(Boolean).join(' · ') : '';
-  const showLabel = (sh) => !sh ? '' : sh.build ? `Show me: ${BUILDING[sh.build]?.name || sh.build}` : sh.market ? 'Show me: the Market' : sh.roads ? 'Show me: Roads' : sh.research ? `Show me: ${typeof sh.research === 'string' && TECH[sh.research] ? TECH[sh.research].name : 'Research'}` : sh.chamber != null ? 'Show me the chamber' : sh.tile ? 'Show me where' : 'Show me';
+  const showLabel = (sh) => !sh ? '' : sh.build && sh.deck && sh.deck !== D() ? `Show me: ${BUILDING[sh.build]?.name || sh.build} (${DECK_NAME[sh.deck]?.toLowerCase() || sh.deck} deck)` : sh.build ? `Show me: ${BUILDING[sh.build]?.name || sh.build}` : sh.market ? 'Show me: the Market' : sh.roads ? 'Show me: Roads' : sh.research ? `Show me: ${typeof sh.research === 'string' && TECH[sh.research] ? TECH[sh.research].name : 'Research'}` : sh.chamber != null ? 'Show me the chamber' : sh.tile ? 'Show me where' : 'Show me';
 
   function renderGoals() {
     const G = api.goals;
@@ -1731,8 +1838,9 @@ export function createUI(root, api) {
   function update(force) {
     const s = S();
     try { summary = R.summary(s); } catch (e) { summary = null; console.warn('summary failed', e); }
-    if (force) { cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; resSig = ''; liveSigs.delete(defBody); liveSigs.delete(defStats); }
+    if (force) { deckSig = ''; cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; resSig = ''; liveSigs.delete(defBody); liveSigs.delete(defStats); }
     hud();
+    renderDecks();
     renderGoals();
     renderAdvice(force || dirty);
     dirty = false;

@@ -2,7 +2,8 @@
 // subset of docs/COLONY.md §4, plus version 2 in docs/COLONY-V2.md: research, the ore -> alloy ->
 // parts chain, services, clinics and Apartments, tailings, sweeper strikes, seed vaults; and version 3
 // in docs/COLONY-V3.md: machine production, repairs, upkeep, commanders, wanderers, heat and raids,
-// fusion, mushroom walls and terrace homes).
+// fusion, mushroom walls and terrace homes; and version 4 in docs/COLONY-V4.md: buildings on the
+// upper and lower decks work like any other, coverage stays on its deck, Pump Stations drain).
 // Pure apart from rng(), a seeded generator the caller passes in.
 import { T, R, TERRAIN } from './data/terrain.js';
 import { BUILDING, NEEDS, CHAMBER_AIR_PER_100 } from './data/buildings.js';
@@ -12,6 +13,7 @@ import {
   powerOf, parkField, parkAt, openBreaches, habitatNeeds, PRICE, upgradeState, techEffect, SERVICE_KINDS, covers, serviceValue,
   HOME_KEYS, stateRng, V3, RAID, machineOf, maxHp, addGuardian, rehomeOrders, machineUpkeep, fitCommander, deptMult, deptHead,
   heatTarget, warnLead, raidsPossible, raidInterval, makeRaid, raidPreview, answerRaid, raidName, FACTIONS, FROM, releaseCommander, inviteChance,
+  mapOf, deckOf,
 } from './rules.js';
 import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { diffOf } from './difficulty.js';
@@ -42,6 +44,8 @@ export const SIM = {
   sealFast: 2,                       // Bulkhead Seals in a Safety Post's range: days of work a day
   // version 3
   fusionHelium: 2, overdriveHelium: 4, overdriveTrip: 0.01, overdriveDays: 5,
+  // version 4
+  drainEvery: 5,                     // Pump Station: one flooded tile in range drained every 5 days
 };
 // Department heads (version 3): which buildings each one's bonus multiplies.
 const DEPT_OF = {
@@ -59,7 +63,7 @@ const TAX_HAPPY = [[0, 8], [0.1, 0], [0.2, -14], [0.3, -32]];
 const SOIL = TERRAIN.map((t) => t.soil || 0);
 // A farm's soil multiplier: the average over its footprint, +25% beside the river.
 export function farmSoil(state, b) {
-  const { t, w, h } = state.map;
+  const { t, w, h } = mapOf(state, deckOf(b));
   let s = 0, n = 0, river = false;
   for (const i of tilesOf(state, b)) {
     s += SOIL[t[i]]; n++;
@@ -74,7 +78,7 @@ export function farmSoil(state, b) {
 
 // Salvage: strip up to `amount` from rubble and wrecks in range; exhausted rubble becomes soil.
 function strip(state, b, amount) {
-  const { w, h, t, r, ch, sv } = state.map, c = centre(b), rad = spec(b).radius;
+  const { w, h, t, r, ch, sv } = mapOf(state, deckOf(b)), c = centre(b), rad = spec(b).radius;
   amount = Math.round(amount);   // map.sv holds whole units
   let got = 0;
   for (let y = Math.max(0, Math.floor(c.y - rad)); y < Math.min(h, Math.ceil(c.y + rad)) && got < amount; y++) {
@@ -90,14 +94,15 @@ function strip(state, b, amount) {
   return got;
 }
 
-// The nearest poor tile (Chebyshev, ties in reading order) within a building's radius, or -1.
-function nearestPoor(state, b) {
-  const { w, h, t } = state.map, c = centre(b), rad = spec(b).radius;
+// The nearest tile of terrain `ter` (Chebyshev, ties in reading order) within a building's radius on
+// its deck, or -1. `ok(i)`: a further test (Pump Stations drain only open chambers).
+function nearestPoor(state, b, ter = T.POOR, ok = () => true) {
+  const { w, h, t } = mapOf(state, deckOf(b)), c = centre(b), rad = spec(b).radius;
   let best = -1, bd = Infinity;
   for (let y = Math.max(0, Math.floor(c.y - rad)); y < Math.min(h, Math.ceil(c.y + rad)); y++) {
     for (let x = Math.max(0, Math.floor(c.x - rad)); x < Math.min(w, Math.ceil(c.x + rad)); x++) {
       const i = y * w + x, d = Math.max(Math.abs(x + 0.5 - c.x), Math.abs(y + 0.5 - c.y));
-      if (t[i] === T.POOR && d <= rad && d < bd) { bd = d; best = i; }
+      if (t[i] === ter && d <= rad && d < bd && ok(i)) { bd = d; best = i; }
     }
   }
   return best;
@@ -138,7 +143,7 @@ export function dayTick(state, rng) {
     say('built', `${d.name}${b.level > 1 ? ` level ${b.level}` : ''} finished.`);
     if (b.key === 'seal') {
       const i = idx(state, b.x, b.y);
-      for (const c of state.chambers) if (c.breaches.includes(i) && c.status === 'surveyed' && !openBreaches(state, c).length) say('sealed', `Every breach of ${c.name} is sealed: it can be pressurised.`);
+      for (const c of state.chambers) if (deckOf(c) === deckOf(b) && c.breaches.includes(i) && c.status === 'surveyed' && !openBreaches(state, c).length) say('sealed', `Every breach of ${c.name} is sealed: it can be pressurised.`);
     }
   }
 
@@ -194,7 +199,7 @@ export function dayTick(state, rng) {
       if (b.mode === 'cash') { make('food', s.makes.food * soil * SIM.cash.food * r * m); make('credits', SIM.cash.credits * soil * r * m); }
       else make('food', s.makes.food * soil * r * m);
     } else if (b.key === 'oremine') {
-      const seam = [...tilesOf(state, b)].some((i) => state.map.r[i] === R.ORE_SEAM);
+      const seam = [...tilesOf(state, b)].some((i) => mapOf(state, deckOf(b)).r[i] === R.ORE_SEAM);
       make('ore', s.makes.ore * (seam ? SIM.seam : 1) * r * m * tailF);
     } else if (b.key === 'salvage') {
       const careful = b.mode === 'careful';
@@ -213,7 +218,8 @@ export function dayTick(state, rng) {
       if ((b.fallow = (b.fallow || 0) + 1) >= SIM.fallowDays) {
         b.fallow = 0;
         let mended = 0;
-        for (const i of tilesOf(state, b)) if (state.map.t[i] === T.POOR) { state.map.t[i] = T.PLAIN; mended++; }
+        const { t } = mapOf(state, deckOf(b));
+        for (const i of tilesOf(state, b)) if (t[i] === T.POOR) { t[i] = T.PLAIN; mended++; }
         if (mended) say('fallow', `A fallow field has mended: ${mended} tile${mended > 1 ? 's' : ''} of poor soil are plain again.`);
       }
       continue;
@@ -245,7 +251,16 @@ export function dayTick(state, rng) {
     if (b.key !== 'seedvault' || !active(b) || (b.mend = (b.mend || 0) + 1) < SIM.mendEvery) continue;
     b.mend = 0;
     const i = nearestPoor(state, b);
-    if (i >= 0) { state.map.t[i] = T.PLAIN; say('mend', 'A Seed Vault mended a tile of poor soil: it is plain again.'); }
+    if (i >= 0) { mapOf(state, deckOf(b)).t[i] = T.PLAIN; say('mend', 'A Seed Vault mended a tile of poor soil: it is plain again.'); }
+  }
+  // Pump Stations (version 4) drain the nearest flooded tile of an open chamber in range every 5
+  // days: deck plating on the lower deck, plain soil on the main deck.
+  for (const b of state.buildings) {
+    if (b.key !== 'pumpstation' || !active(b) || (b.drain = (b.drain || 0) + 1) < SIM.drainEvery) continue;
+    b.drain = 0;
+    const m = mapOf(state, deckOf(b));
+    const i = nearestPoor(state, b, T.MARSH, (j) => chamberOf(state, m.ch[j])?.status === 'open');
+    if (i >= 0) { m.t[i] = deckOf(b) === 'main' ? T.PLAIN : T.DECK; say('drain', `A Pump Station drained a tile of flooded ground on the ${deckOf(b)} deck.`); }
   }
 
   // 5b research: the labs' points go to the tech being studied (or into the bank, which flows into
@@ -296,9 +311,11 @@ export function dayTick(state, rng) {
     if (state.tax <= r1 + 1e-9) { tx = v0 + ((v1 - v0) * (state.tax - r0)) / (r1 - r0); break; }
   }
   parts.push({ label: `Tax ${Math.round(state.tax * 100)}%`, value: Math.round(tx) });
-  const field = parkField(state), homes = state.buildings.filter((b) => b.key === 'habitat' && active(b));
+  // park coverage stays on its deck (version 4): each home reads its own deck's field
+  const fields = {}, fieldOf = (b) => (fields[deckOf(b)] ??= parkField(state, deckOf(b)));
+  const homes = state.buildings.filter((b) => b.key === 'habitat' && active(b));
   const dwellings = state.buildings.filter((b) => HOME_KEYS.has(b.key) && active(b));   // habitats and terrace homes
-  const parkAvg = dwellings.length ? dwellings.reduce((t, b) => t + parkAt(state, b, field), 0) / dwellings.length : 0;
+  const parkAvg = dwellings.length ? dwellings.reduce((t, b) => t + parkAt(state, b, fieldOf(b)), 0) / dwellings.length : 0;
   parts.push({ label: 'Parks near homes', value: Math.round(parkAvg) });
   // services (version 2): the best of each kind covering a home, averaged over the homes; a
   // service works at its building's rate today (staff, power, a Canteen's food)
@@ -330,7 +347,7 @@ export function dayTick(state, rng) {
   // their own level's needs fail for a while.
   state.stats.last = { ...(state.stats.last || {}), met };
   for (const b of homes) {
-    const d = BUILDING.habitat, nextOk = habitatNeeds(state, b, field);
+    const field = fieldOf(b), d = BUILDING.habitat, nextOk = habitatNeeds(state, b, field);
     const canGrow = nextOk.length > 0 && nextOk.every((n) => n.met);
     const holds = b.level === 1 || habitatNeeds(state, { ...b, level: b.level - 1 }, field).every((n) => n.met);
     if (canGrow) b.grow = Math.max(0, b.grow || 0) + 1;

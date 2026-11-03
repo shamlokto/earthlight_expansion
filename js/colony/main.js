@@ -242,12 +242,13 @@ const api = {
   setDeck: (d) => setDeck(d),
   stepDeck: (dir) => stepDeck(dir),
   mapOf: (d) => mapOf(d),
+  decksFor: (key) => decksFor(key),
   // switch to deck d and inspect (x, y) there (the inspector's "Go" on a lift shaft)
   goDeck: (d, x, y) => { if (!setDeck(d)) return; if (x != null && y != null) { view?.focus?.(x, y); ui.inspect(x, y); } },
 };
 
 // ---------------------------------------------------------------- decks (version 4)
-export const DECKS = ['upper', 'main', 'lower'];
+const DECKS = ['upper', 'main', 'lower'];
 const DECK_NAME = { upper: 'Upper deck', main: 'Main deck', lower: 'Lower deck' };
 const deckOf = (o) => o?.deck || 'main';
 // A deck exists in this colony: the main one always, the others once state.decks has them.
@@ -260,13 +261,12 @@ function mapOf(d = deck) {
   const m = state.decks?.[d];
   return m ? { w: state.map.w, h: state.map.h, ...m } : null;
 }
-// The decks a building may stand on: data/buildings.js `decks` (absent = main only). Seals and
-// roads go wherever chambers and lifts are (every deck has breaches; lifts carry roads).
-const ANY_DECK = new Set(['seal', 'road']);
-export function decksFor(key) {
+// The decks a building may stand on: rules.decksOf (data/buildings.js `decks`; absent = main only).
+function decksFor(key) {
   const d = BUILDING[key];
   if (!d) return ['main'];
-  return d.decks || (ANY_DECK.has(key) ? DECKS : ['main']);
+  try { const r = M.rules.decksOf?.(d); if (Array.isArray(r) && r.length) return r; } catch { }
+  return d.decks || ['main'];
 }
 const openOn = (d) => d === 'main' || state.chambers.some((c) => deckOf(c) === d && c.status === 'open');
 
@@ -382,7 +382,7 @@ function doShow(sh) {
     ui.inspect(t.x, t.y);
     return;
   }
-  if (sh.tile) { setDeck(sh.tile.deck || sh.deck || deck, { quiet: true }); view?.focus?.(sh.tile.x, sh.tile.y); ui.inspect(sh.tile.x, sh.tile.y); }
+  if (sh.tile) { setDeck(sh.tile.deck || sh.deck || 'main', { quiet: true }); view?.focus?.(sh.tile.x, sh.tile.y); ui.inspect(sh.tile.x, sh.tile.y); }
 }
 
 // A floor tile of the chamber nearest its middle (the middle itself may be a wall).
