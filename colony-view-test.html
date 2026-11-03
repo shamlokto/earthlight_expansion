@@ -8,7 +8,11 @@
      ?seed=N) with demo buildings placed through rules.js build(); "Demo roads" lays a road network
      with rules.js buildRoad(). ?showcase shows every kit on a hand-made state instead (?fake on the
      stand-in map). "V2 kits" (or ?v2) lays a showcase row of the 18 version 2 buildings and their
-     levels / modes / fills below the dock. The minimap (bottom right) and the camera buttons (top
+     levels / modes / fills below the dock. "V3" (or ?v3) lays the 13 version 3 buildings (both
+     Emplacement modes, Fusion normal / overdrive, the Lodge's three levels), a dozen guardians and
+     a damaged building; the raid buttons set state.raid.coming (due tomorrow) from a side, then
+     Won / Lost / Tribute write state.raid.last for today (window.raid(from), window.resolve(how)).
+     The minimap (bottom right) and the camera buttons (top
      right, where the game's right column leaves room) are on by default; the HUD toggles them.
      window.view / window.state / window.tick / window.demo / window.showcaseV2 are for tests. -->
 <script type="importmap">{"imports":{"three":"./js/vendor/three/three.module.min.js"}}</script>
@@ -20,6 +24,7 @@
   #hud .row { margin: 3px 0; }
   #info, #movers { color: #9fb0d0; white-space: pre; }
   #movers { color: #8fd0b0; font-size: 12px; }
+  #def { color: #ff9a8a; font-size: 12px; white-space: pre; }
 </style>
 </head>
 <body>
@@ -42,6 +47,12 @@
     <label><input type="checkbox" id="mini" checked> minimap</label> <label><input type="checkbox" id="navb" checked> buttons</label>
     wheel <select id="wheel"><option>auto</option><option>zoom</option><option>pan</option></select> <span id="wk"></span>
   </div>
+  <div class="row">V3 <button id="v3">V3 kits</button> raid
+    <button data-raid="north">N</button><button data-raid="east">E</button><button data-raid="west">W</button><button data-raid="earth">Earth</button>
+    <button data-res="won">Won</button><button data-res="lost">Lost</button><button data-res="tribute">Tribute</button>
+    <label><input type="checkbox" id="nohe"> no He-3</label>
+  </div>
+  <div id="def"></div>
   <div class="row">Pop <input id="pop" type="number" min="0" max="5000" step="20" style="width:60px">
     <label><input type="checkbox" id="glum"> glum (happy 30)</label> <button id="stress">Stress</button>
   </div>
@@ -427,6 +438,77 @@ function showcaseV2(state) {
   return [dock.x + 2, dock.y + 9];
 }
 
+// A showcase of the version 3 kits (not a legal colony either): the interior ones on free floor of
+// the open chambers near the Command Centre, the hull ones on the bottom hull beside the dock, the
+// Jammer in space; then a dozen guardians, an empty raid record and one damaged building.
+const V3_IN = [['arsenal'], ['barracks'], ['scrapyard'], ['fusion'], ['fusion', { mode: 'overdrive' }], ['mushroom'], ['mushroom'], ['terrace'],
+  ['lodge', { level: 1 }], ['lodge', { level: 2 }], ['lodge', { level: 3 }], ['quarters'], ['quarters'], ['shieldpylon'], ['barracks', { damaged: 9 }]];
+const V3_GUARDIANS = [0, 1, 2, 8, 9, 10, 14, 15, 23, 26, 30, 38, 3, 39];
+function showcaseV3(state) {
+  const occ = new Uint8Array(W * H), t = state.map.t;
+  for (const b of state.buildings) { const n = BUILDING[b.key]?.size || 1; for (let j = b.y; j < b.y + n; j++) for (let i = b.x; i < b.x + n; i++) occ[j * W + i] = 1; }
+  let nextId = Math.max(0, ...state.buildings.map((b) => b.id)) + 1;
+  const open = new Set(state.chambers.filter((c) => c.status === 'open').map((c) => c.id));
+  const free = (x, y, n, ok) => { for (let j = y - 1; j <= y + n; j++) for (let i = x - 1; i <= x + n; i++) { if (i < 0 || j < 0 || i >= W || j >= H) return false; if (occ[j * W + i]) return false; if (j >= y && j < y + n && i >= x && i < x + n && !ok(j * W + i)) return false; } return true; };
+  const place = (key, x, y, extra = {}) => {
+    const n = BUILDING[key].size;
+    for (let j = y; j < y + n; j++) for (let i = x; i < x + n; i++) occ[j * W + i] = 1;
+    const b = { id: nextId++, key, x, y, level: 1, mode: BUILDING[key].modes?.[0]?.key ?? null, build: 0, off: false, ...extra };
+    state.buildings.push(b);
+    return b;
+  };
+  const near = (key, cx, cy, ok, extra) => {
+    const n = BUILDING[key].size;
+    for (let r = 0; r < 40; r++) for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++)
+      if (Math.max(Math.abs(x - cx), Math.abs(y - cy)) === r && free(x, y, n, ok)) return place(key, x, y, extra);
+    console.warn('v3: no spot for', key); return null;
+  };
+  const floor = (i) => open.has(state.map.ch[i]) && TERRAIN[t[i]].zone === 'interior' && t[i] !== T.RIVER && t[i] !== T.LAKE;
+  const cmd = state.buildings.find((b) => b.key === 'command'), dock = state.buildings.find((b) => b.key === 'dock');
+  const placed = [];
+  V3_IN.forEach(([key, extra], k) => placed.push(near(key, cmd.x - 14 + (k % 5) * 7, cmd.y - 16 + Math.floor(k / 5) * 5, floor, extra)));
+  // the bottom hull beside the dock: emplacements both ways, a sensor mast, a shield pylon
+  const hullOk = (i) => t[i] === T.HULL;
+  for (const [key, extra, dx] of [['emplacement', { mode: 'dragon' }, -5], ['emplacement', { mode: 'hydra' }, -7], ['emplacement', { mode: 'dragon' }, 6], ['emplacement', { mode: 'hydra' }, 8], ['sensormast', {}, -10], ['shieldpylon', {}, 11]])
+    near(key, dock.x + dx, dock.y + 1, hullOk, extra);
+  // the shipyard straddles the 2-tile hull and the space below it (3×3 cannot fit on the hull alone)
+  for (let dx = 14; dx < 60; dx++) { const x = dock.x + dx; if (free(x, dock.y, 3, (i) => t[i] === T.HULL || TERRAIN[t[i]].zone === 'space')) { place('shipyard', x, dock.y); break; } }
+  near('jammer', dock.x - 3, dock.y + 6, (i) => TERRAIN[t[i]].zone === 'space');
+  near('jammer', dock.x + 2, dock.y + 7, (i) => TERRAIN[t[i]].zone === 'space');
+  near('scrapyard', dock.x - 8, dock.y + 6, (i) => TERRAIN[t[i]].zone === 'space');
+  // a dozen guardians (state.guardians shape of docs/COLONY-V3.md), one of them hurt
+  state.guardians = V3_GUARDIANS.map((type, k) => ({ id: 900 + k, type, level: k % 4, hp: k === 4 ? 3 : 99, commander: null, free: 0 }));
+  state.raid = { heat: 40, next: state.day + 30, warned: false, coming: null, last: null, count: 0, won: 0, lost: 0 };
+  state.stock.helium = 50;
+  const ar = state.buildings.find((b) => b.key === 'arsenal');
+  return ar ? [ar.x + 1, ar.y + 1] : [cmd.x + 1, cmd.y - 10];
+}
+// A raid from a side, due tomorrow, as the sim would set it.
+window.raid = (from = 'earth', units = 8) => {
+  state.raid ||= { heat: 40, next: 0, warned: false, count: 0, won: 0, lost: 0 };
+  state.raid.coming = { day: state.day + 1, from, tier: 2, faction: 'Ashfall Cartel', strength: 320, units: Array.from({ length: units }, (_, k) => ({ type: k === units - 1 ? 39 : [8, 0, 14, 9][k % 4], level: 1 })) };
+  state.raid.warned = true;
+  view.refresh(state);
+};
+// The fight resolved today: 'won' | 'lost' | 'tribute' (lost guardians leave state.guardians,
+// damaged buildings near the raiders' side get b.damaged).
+window.resolve = (how = 'won') => {
+  const c = state.raid?.coming || { day: state.day, from: 'earth', faction: 'Ashfall Cartel' };
+  state.day = Math.max(state.day, c.day);
+  const won = how === 'won', lost = how === 'lost';
+  const report = { day: state.day, won, from: c.from, faction: c.faction, lostGuardians: [], damaged: [], stolen: {}, salvage: won ? { parts: 40, credits: 400 } : { parts: 0, credits: 0 }, tribute: how === 'tribute' ? { credits: 960 } : null };
+  if (lost) {
+    report.lostGuardians = state.guardians.splice(0, 2).map((g) => g.type);
+    const cmd = state.buildings.find((b) => b.key === 'command');
+    const side = { north: [cmd.x, 32], east: [207, cmd.y], west: [48, cmd.y], earth: [cmd.x, 111] }[c.from] || [cmd.x, 111];
+    const cands = state.buildings.filter((b) => !['road', 'command', 'dock'].includes(b.key) && b.build <= 0).sort((a, b) => Math.hypot(a.x - side[0], a.y - side[1]) - Math.hypot(b.x - side[0], b.y - side[1]));
+    for (const b of cands.slice(0, 3)) { b.damaged = 10; report.damaged.push(b.id); }
+  }
+  state.raid.coming = null; state.raid.last = report; state.raid.count++; if (won) state.raid.won++; else if (lost) state.raid.lost++;
+  view.refresh(state);
+  return report;
+};
+
 let gen = null, src, state;
 const showcase = qs.has('showcase') || qs.has('fake');
 if (showcase) {
@@ -462,7 +544,7 @@ view.setState(state);
 // one simulated day: construction ticks down, a pressurising chamber gets closer
 window.tick = () => {
   state.day++;
-  for (const b of state.buildings) if (b.build > 0) b.build--;
+  for (const b of state.buildings) { if (b.build > 0) b.build--; if (b.damaged > 0) b.damaged--; }
   for (const c of state.chambers) if (c.work > 0 && --c.work === 0) c.status = c.status === 'surveying' ? 'surveyed' : 'open';
   view.refresh(state);
 };
@@ -501,11 +583,18 @@ setInterval(() => {
 }, 500);
 document.getElementById('v2').onclick = () => { const [cx, cy] = showcaseV2(state); view.refresh(state); view.focus(cx, cy); };
 if (qs.has('v2')) { const [cx, cy] = showcaseV2(state); view.refresh(state); view.focus(cx, cy); }
+const v3 = () => { const [cx, cy] = showcaseV3(state); view.refresh(state); view.focus(cx, cy); };
+document.getElementById('v3').onclick = v3;
+if (qs.has('v3')) v3();
+for (const el of document.querySelectorAll('[data-raid]')) el.onclick = () => window.raid(el.dataset.raid);
+for (const el of document.querySelectorAll('[data-res]')) el.onclick = () => window.resolve(el.dataset.res);
+document.getElementById('nohe').onchange = (e) => { state.stock.helium = e.target.checked ? 0 : 50; view.refresh(state); };
+setInterval(() => { const d = view.debug.defence.stats(); document.getElementById('def').textContent = `guardians ${d.guardians} (+${d.ghosts} lost) · out ${d.sortie} · smoke ${d.emitters}\nraid ${d.raid ? `${d.raid.from} ${d.raid.phase} ${d.raid.outcome || ''} ${d.raid.raiders}/${d.raid.of} t ${d.raid.ft}` : '-'} · edge ${d.edge || '-'} · fx ${d.sparks}/${d.beams}/${d.missiles}`; }, 400);
 document.getElementById('mini').onchange = (e) => view.setMinimap(e.target.checked);
 document.getElementById('navb').onchange = (e) => view.setNavButtons(e.target.checked);
 document.getElementById('wheel').onchange = (e) => view.setWheelMode(e.target.value);
 setInterval(() => { document.getElementById('wk').textContent = `last: ${view.debug.wheelKind()}`; }, 400);
-Object.assign(window, { view, state, gen, landing: lm, demo: { demoRoads, stress, realState }, showcaseV2 });
+Object.assign(window, { view, state, gen, landing: lm, demo: { demoRoads, stress, realState }, showcaseV2, showcaseV3 });
 window.__cam = (tx, tz, d, polar, theta) => view.debug.placeCamera(tx, tz, d, polar, theta);
 </script>
 </body>

@@ -13,6 +13,8 @@
 //   ui.welcomeDone(offerHelp) first run: the goals panel opened, "Show me" pulsed, How to play offered
 //   ui.openResearch(techKey)  the Research panel (version 2), scrolled to and flashing that tech
 //   ui.toggleResearch()       key T
+//   ui.openDefence(tab)       the Defence panel (version 3): 'guardians' | 'production' | 'commanders' | 'raids'
+//   ui.toggleDefence()        key G
 //
 // api: { state(), rules, sim, art(slot) → url|null, types (expansion units by type, or null),
 //        act(result) → result, pick(key), move(id), setSpeed(s), setOverlay(name|null), save(),
@@ -826,7 +828,7 @@ export function createUI(root, api) {
       <label class="cl-field"><em>Scrolling<small>Two-finger scroll on a trackpad, or a mouse wheel. Pinch (or Ctrl + scroll) always zooms.</small></em>
         <select data-setsel="wheel">${[['auto', 'Auto: pan on a trackpad, zoom with a mouse wheel'], ['pan', 'Pan the map (trackpad)'], ['zoom', 'Zoom (mouse wheel)']].map(([v, l]) => `<option value="${v}" ${(st.wheel || 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       ${musicHtml()}
-      <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · T research · M music · WASD / arrows pan · Q / E rotate · Esc cancel · F1 or ? how to play.</p>`;
+      <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · M music · WASD / arrows pan · Q / E rotate · Esc cancel · F1 or ? how to play.</p>`;
     for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => { api.setSetting(c.dataset.set, c.checked); helpersShown(); };
     for (const c of pops.settings.querySelectorAll('[data-setsel]')) c.onchange = () => api.setSetting(c.dataset.setsel, c.value);
     const mus = pops.settings.querySelector('[data-music]'), setup = pops.settings.querySelector('[data-musicsetup]');
@@ -1497,27 +1499,102 @@ export function createUI(root, api) {
   $('[data-cancel]').addEventListener('click', () => api.pick(null));
 
   // ---------------------------------------------------------------- pending events
+  // Version 3 adds the raid (Fight / Pay tribute with the preview), the raid warning (what defends,
+  // how many days), the wanderer at the Lodge, and the after-raid report from state.raid.last.
+  const reportSig = (s) => { const l = s.raid?.last; return l ? `${l.day}|${s.raid.count ?? ''}|${l.won}` : ''; };
+  let repSeen = reportSig(S());
+  const plainL = (t) => esc(t), plainW = (p) => `style="width:${Math.max(0, Math.min(100, Math.round(+p || 0)))}%"`;
+  function wandererOf(p) {
+    const k = p.key ?? p.wanderer ?? p.who ?? p.data?.key;
+    if (k && COMMANDER[k]) return k;
+    const all = Object.values(COMMANDER).filter((c) => c.key?.startsWith('w_'));
+    return all.find((c) => `${p.title} ${p.text}`.includes(c.name))?.key || null;
+  }
+  function raidBody(s, p) {
+    const c = s.raid?.coming || p.raid || {}, pv = rule('raidPreview', s);
+    const n = c.units?.length ?? 0;
+    return `<div class="cl-raidfacts">
+        <div class="cl-kv"><span>From</span><b>${esc(fromText(c.from))}</b></div>
+        <div class="cl-kv"><span>Who</span><b>${esc(factionName(c.faction))}${RAID_TIER[c.tier] ? ` <small>(${RAID_TIER[c.tier]})</small>` : ''}</b></div>
+        <div class="cl-kv"><span>Raiders</span><b>${n ? `${plural(n, 'machine')}` : '?'}</b></div>
+        ${n ? `<p class="cl-raidunits">${esc(unitList(c.units))}</p>` : ''}
+      </div>
+      ${pv ? `<div class="cl-preview">${winBar(pv, plainL, plainW)}</div>` : '<p class="cl-dim">No battle preview in this build yet.</p>'}`;
+  }
+  function warnBody(s) {
+    const eta = raidEta(s), gs = s.guardians || [], crewedN = gs.filter((g, i) => isCrewed(s, g, i) && hpOf(g) > 0).length, emp = batteries(s).length;
+    return `<div class="cl-raidfacts">
+      ${eta != null ? `<div class="cl-kv"><span>Arrives in</span><b class="bad">${plural(eta, 'day')}</b></div>` : ''}
+      <div class="cl-kv"><span>Crewed guardians</span><b class="${crewedN ? '' : 'bad'}">${crewedN} of ${gs.length} · crews ${crewCap(s)}</b></div>
+      <div class="cl-kv"><span>Battery Emplacements</span><b class="${emp ? '' : 'cl-dim'}">${emp || 'none'}</b></div>
+      <div class="cl-kv"><span>Defence</span><b>${num(defenceTotal(s))}</b></div>
+      <p class="cl-dim">Arsenal machines, Guardian Barracks crews and Battery Emplacements defend Eden. Shield Pylons keep raiders' fire off buildings.</p></div>`;
+  }
+  function wandererBody(s, key) {
+    const C = COMMANDER[key]; if (!C) return '';
+    return `<div class="cl-evwand"><span class="cl-face">${face(key, 'ev')}</span><div>${statBars(C)}${gradesHtml(C)}${traits(C)}${C.flaw ? `<p class="cl-cflaw">⚠ ${esc(C.flaw)}</p>` : ''}
+      <p class="cl-dim">Wage ${C.wage} credits a day · invite chance about ${Math.round(inviteChance(s, { key, loyalty: (s.wanderers || []).find((w) => w.key === key)?.loyalty }) * 100)}%.</p></div></div>`;
+  }
+  function choiceLabel(s, p, c) {
+    if (p.kind !== 'raid') return esc(c.label);
+    const pv = rule('raidPreview', s);
+    if (c.key === 'fight') { const w = +pv?.winChance; return `${esc(c.label || 'Fight')}${Number.isFinite(w) ? ` <small>${Math.round(w <= 1 ? w * 100 : w)}% to win</small>` : ''}`; }
+    if (c.key === 'tribute') { const t = pv?.tribute; const txt = t ? [t.credits ? `${num(t.credits)} cr` : '', t.food ? `${num(t.food)} food` : ''].filter(Boolean).join(' + ') : ''; return `${esc(c.label || 'Pay tribute')}${txt ? ` <small>${txt}</small>` : ''}`; }
+    return esc(c.label);
+  }
   function renderEvent() {
     const s = S(), p = s.pending?.[0];
-    if (!p) { if (!modal.hidden) { modal.hidden = true; evId = null; } return; }
+    if (!p) {
+      const rs = reportSig(s);
+      if (rs && rs !== repSeen) { if (evId !== 'report:' + rs || modal.hidden) showReport(s, rs); return; }
+      if (!modal.hidden) { modal.hidden = true; evId = null; }
+      return;
+    }
     if (evId === p.id && !modal.hidden) return;
     evId = p.id;
-    const portrait = p.speaker && api.art?.(`portrait/${p.speaker}`);
-    modal.classList.toggle('soft', !api.settings.pauseOnEvents);
+    if (/report|result/.test(p.kind || '')) repSeen = reportSig(s);   // the sim's own report: no second one
+    const raid = p.kind === 'raid', warn = p.kind === 'raidwarn', wkey = p.kind === 'wanderer' ? wandererOf(p) : null;
+    const pic = eventFace(p.speaker);
+    modal.classList.toggle('soft', !api.settings.pauseOnEvents && !raid);
+    evBox.className = 'cl-win cl-event' + (raid ? ' cl-evraid' : warn ? ' cl-evwarn' : '');
+    const choices = p.choices?.length ? p.choices : [{ key: 'ok', label: 'Understood' }];
+    const tab = warn ? 'raids' : wkey ? 'commanders' : null;
     evBox.innerHTML = `<div class="cl-evkind">${esc(KIND_LABEL[p.kind] || p.kind || 'Event')} · Day ${s.day}${s.pending.length > 1 ? ` · ${s.pending.length - 1} more waiting` : ''}</div>
-      <div class="cl-evbody">${portrait ? `<img class="cl-portrait" src="${esc(portrait)}" alt="">` : ''}
+      <div class="cl-evbody">${pic}
       <div><h2 id="evTitle">${esc(p.title)}</h2><p>${esc(p.text)}</p></div></div>
-      <div class="cl-evchoices">${(p.choices?.length ? p.choices : [{ key: 'ok', label: 'Understood' }]).map((c, i) => `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}" data-choice="${esc(c.key)}">${esc(c.label)}</button>`).join('')}</div>
-      ${api.settings.pauseOnEvents ? '<p class="cl-dim cl-evpause">❚❚ The clock waits for your answer.</p>' : ''}`;
+      ${raid ? raidBody(s, p) : warn ? warnBody(s) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
+      <div class="cl-evchoices">${choices.map((c, i) => `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}">${choiceLabel(s, p, c)}</button>`).join('')}
+        ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : 'Meet them'}</button>` : ''}</div>
+      ${api.settings.pauseOnEvents || raid ? '<p class="cl-dim cl-evpause">❚❚ The clock waits for your answer.</p>' : ''}`;
     modal.hidden = false;
     evBox.querySelector('[data-choice]')?.focus({ preventScroll: true });
   }
+  function showReport(s, rs) {
+    evId = 'report:' + rs;
+    modal.classList.remove('soft');
+    const won = !!s.raid.last.won;
+    evBox.className = 'cl-win cl-event ' + (won ? 'cl-evwon' : 'cl-evraid');
+    evBox.innerHTML = `<div class="cl-evkind">${KIND_LABEL.report} · Day ${s.raid.last.day}</div>
+      <div class="cl-evbody">${eventFace('sato')}<div><h2 id="evTitle">${won ? 'Eden holds' : s.raid.last.tribute && !won ? 'They took the tribute' : 'The raiders got through'}</h2>
+      <p>${esc(won ? 'The raiders broke off. The salvage crews are already out.' : s.raid.last.tribute ? 'They took what we paid and left. Word will get around that Eden pays.' : 'We could not stop them. Repair crews are on the damage.')}</p></div></div>
+      ${reportHtml(s, s.raid.last)}
+      <div class="cl-evchoices"><button type="button" class="cl-btn primary" data-repok>Understood</button><button type="button" class="cl-btn" data-repok="raids">Raids panel</button></div>`;
+    modal.hidden = false;
+    evBox.querySelector('[data-repok]')?.focus({ preventScroll: true });
+  }
   evBox.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-choice]'); if (!b) return;
+    const ok = e.target.closest('[data-repok]');
+    if (ok) { repSeen = reportSig(S()); evId = null; modal.hidden = true; if (ok.dataset.repok) openDefence(ok.dataset.repok); renderEvent(); return; }
+    const b = e.target.closest('[data-choice],[data-evdef]'); if (!b) return;
     const p = S().pending?.[0]; if (!p) return;
+    const key = b.dataset.choice ?? (p.choices?.[0]?.key || 'ok');
     evId = null; modal.hidden = true;
-    const r = result(R.answer(S(), p.id, b.dataset.choice));
-    if (r?.ok !== false) api.answered?.(p, b.dataset.choice);
+    let r = R.answer(S(), p.id, key);
+    // a raid the generic answer() did not resolve: the rules' own raid answer
+    if (p.kind === 'raid' && r?.ok === false && typeof R.answerRaid === 'function' && S().pending?.some((x) => x.id === p.id)) { const r2 = rule('answerRaid', S(), key); if (r2) r = r2; }
+    r = result(r);
+    if (r?.ok !== false) api.answered?.(p, key);
+    if (b.dataset.evdef && r?.ok !== false) openDefence(b.dataset.evdef);
   });
 
   // ---------------------------------------------------------------- goals panel
@@ -1636,7 +1713,7 @@ export function createUI(root, api) {
   function update(force) {
     const s = S();
     try { summary = R.summary(s); } catch (e) { summary = null; console.warn('summary failed', e); }
-    if (force) { cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; resSig = ''; }
+    if (force) { cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; resSig = ''; liveSigs.delete(defBody); liveSigs.delete(defStats); }
     hud();
     renderGoals();
     renderAdvice(force || dirty);
@@ -1646,13 +1723,16 @@ export function createUI(root, api) {
     renderHappy();
     renderMarket();
     renderResearch();
+    renderDefence();
     renderLog();
     renderEvent();
   }
 
   return {
     update, inspect, closeInspector, toast, tip, setPlacing, setSpeed, closePops, openBuild, welcomeDone, openResearch, toggleResearch,
+    openDefence, toggleDefence, closeDefence,
     researchOpen: () => !resEl.hidden,
+    defenceOpen: () => !defEl.hidden,
     firstAvailableTech: () => techList(S()).find((t) => t.available && !t.done && !t.focus)?.key || null,
     changed: () => { dirty = true; },
     openMarket: () => openPop('market'),

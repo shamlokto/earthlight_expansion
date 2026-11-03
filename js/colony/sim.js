@@ -1,6 +1,8 @@
 // Earthlight Space Colony Rebuild: one day of the colony (docs/COLONY-V1.md "sim.js", the version 1
 // subset of docs/COLONY.md §4, plus version 2 in docs/COLONY-V2.md: research, the ore -> alloy ->
-// parts chain, services, clinics and Apartments, tailings, sweeper strikes, seed vaults).
+// parts chain, services, clinics and Apartments, tailings, sweeper strikes, seed vaults; and version 3
+// in docs/COLONY-V3.md: machine production, repairs, upkeep, commanders, wanderers, heat and raids,
+// fusion, mushroom walls and terrace homes).
 // Pure apart from rng(), a seeded generator the caller passes in.
 import { T, R, TERRAIN } from './data/terrain.js';
 import { BUILDING, NEEDS, CHAMBER_AIR_PER_100 } from './data/buildings.js';
@@ -8,11 +10,14 @@ import { TECH } from './data/tech.js';
 import {
   STORED, spec, active, finished, tilesOf, centre, log, addPending, chamberOf, idx, storageCaps, jobsOf, crewsOf,
   powerOf, parkField, parkAt, openBreaches, habitatNeeds, PRICE, upgradeState, techEffect, SERVICE_KINDS, covers, serviceValue,
+  HOME_KEYS, stateRng, V3, RAID, machineOf, maxHp, addGuardian, rehomeOrders, machineUpkeep, fitCommander, deptMult, deptHead,
+  heatTarget, warnLead, raidsPossible, raidInterval, makeRaid, raidPreview, answerRaid, raidName, FACTIONS, FROM, releaseCommander, inviteChance,
 } from './rules.js';
+import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { diffOf } from './difficulty.js';
 import { updateGoals } from './goals.js';
 
-export { habitatNeeds };
+export { habitatNeeds, stateRng };
 
 // Rules numbers the table has no column for.
 export const SIM = {
@@ -35,21 +40,21 @@ export const SIM = {
   strike: 0.02, strikeDays: 5,       // Meteoroid Sweeper: chance of a strike a day; days out
   minesFree: 4, minesPerDump: 4, dumpFull: 100, tailingsHalf: 0.5,   // Tailings Dumps
   sealFast: 2,                       // Bulkhead Seals in a Safety Post's range: days of work a day
+  // version 3
+  fusionHelium: 2, overdriveHelium: 4, overdriveTrip: 0.01, overdriveDays: 5,
+};
+// Department heads (version 3): which buildings each one's bonus multiplies.
+const DEPT_OF = {
+  farm: 'agriculture', orchard: 'agriculture', fishery: 'agriculture', mushroom: 'agriculture',
+  oremine: 'industry', smelter: 'industry', fabricator: 'industry', plasmaskimmer: 'industry', sweeper: 'industry',
+  lab: 'research',
 };
 // Production stages: a user of a good another user makes runs after it (Smelter before Fabricator).
 const STAGE = { alloy: 1 };
 const TAX_HAPPY = [[0, 8], [0.1, 0], [0.2, -14], [0.3, -32]];
 
-// A small seeded generator (mulberry32) whose state lives in the colony, so saves keep the dice.
-const hash = (v) => { let h = 2166136261; for (const c of String(v)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
-export function stateRng(state) {
-  return () => {
-    let a = (state.flags.rng = ((state.flags.rng ?? hash(state.seed)) + 0x6d2b79f5) >>> 0);
-    a = Math.imul(a ^ (a >>> 15), a | 1);
-    a ^= a + Math.imul(a ^ (a >>> 7), a | 61);
-    return ((a ^ (a >>> 14)) >>> 0) / 4294967296;
-  };
-}
+// stateRng: a small seeded generator (mulberry32) whose state lives in the colony, so saves keep the
+// dice. It lives in rules.js since version 3 (invitations and raids use it) and is re-exported here.
 
 const SOIL = TERRAIN.map((t) => t.soil || 0);
 // A farm's soil multiplier: the average over its footprint, +25% beside the river.
@@ -101,15 +106,27 @@ function nearestPoor(state, b) {
 export function dayTick(state, rng) {
   const events = [];
   const say = (kind, text, pause = false) => { events.push({ kind, text, pause }); log(state, text); };
-  const ask = (kind, title, text) => { addPending(state, kind, title, text); say(kind, text, true); };
+  const ask = (kind, title, text) => { const p = addPending(state, kind, title, text); say(kind, text, true); return p; };
   const f = state.flags;
   f.short ||= { food: 0, water: 0, air: 0, power: 0 };
   upgradeState(state);
+  // a raid left unanswered when the clock moves on is fought (raiders don't wait)
+  if (state.raid.coming && state.day >= state.raid.coming.day && state.raid.coming.arrived) {
+    state.pending = state.pending.filter((p) => p.kind !== 'raid');
+    const r = answerRaid(state, 'fight', rng);
+    if (r.ok) events.push({ kind: 'raidresult', text: r.msg, pause: false });
+  }
   state.day++;
 
   // 1 construction: each crew works on one building, oldest order first. A Safety Post's crews
   // put up Bulkhead Seals in its range twice as fast.
   let crews = crewsOf(state);
+  // raid damage (version 3) is repaired first, a crew a building, a day of damage a day
+  for (const b of state.buildings) {
+    if (!(b.damaged > 0) || crews <= 0) continue;
+    crews--;
+    if (--b.damaged <= 0) { delete b.damaged; say('repaired', `The ${BUILDING[b.key].name} is repaired and back at work.`); }
+  }
   const posts = state.buildings.filter((b) => b.key === 'safetypost' && active(b));
   for (const b of state.buildings) {
     if (b.build <= 0 || crews <= 0) continue;
@@ -137,6 +154,16 @@ export function dayTick(state, rng) {
   const moneyF = f.unpaid ? SIM.unpaid : 1;
 
   // 4 power: supply plus battery against demand; a shortfall throttles every consumer alike.
+  // Fusion Reactors burn their helium first: without it they make nothing (version 3).
+  const reactors = state.buildings.filter((b) => b.key === 'fusion' && active(b));
+  let fusionUsed = 0;
+  if (reactors.length) {
+    const want = reactors.reduce((t, b) => t + (b.mode === 'overdrive' ? SIM.overdriveHelium : SIM.fusionHelium) * (BUILDING.fusion.jobs ? staffing : 1), 0);
+    const share = want > 0 ? Math.min(1, state.stock.helium / want) : 1;
+    for (const b of reactors) b.fuel = share;
+    state.stock.helium -= want * share;
+    fusionUsed = want * share;
+  }
   const cap = storageCaps(state);
   const { supply, demand } = powerOf(state, staffing, moneyF);
   const pf = demand > 0 ? Math.min(1, (supply + state.battery) / demand) : 1;
@@ -149,7 +176,7 @@ export function dayTick(state, rng) {
   const use = (g, n) => { if (n > 0) { n = Math.min(n, st[g]); st[g] -= n; consumed[g] = (consumed[g] || 0) + n; } };
   const rate = (s) => (s.jobs ? staffing : 1) * (s.power < 0 ? pf : 1) * moneyF;
   const usesOf = (b, s) => (b.key === 'farm' && b.mode === 'fallow' ? null : s.uses);
-  const outMult = {}, om = (key) => (outMult[key] ??= techEffect(state, 'output', key));
+  const outMult = {}, om = (key) => (outMult[key] ??= techEffect(state, 'output', key) * (DEPT_OF[key] ? deptMult(state, DEPT_OF[key]) : 1));
   const rates = new Map();   // each building's working rate today (services scale with it)
   let researchMade = 0;
   // Tailings: more than 4 Ore Mines need a Dump (not full) per 4 beyond the first 4, else half output.
@@ -178,8 +205,9 @@ export function dayTick(state, rng) {
     }
   };
   const users = [];
+  if (fusionUsed) consumed.helium = fusionUsed;
   for (const b of state.buildings) {
-    if (!active(b)) continue;
+    if (!active(b) || b.key === 'fusion') continue;   // fusion burned its helium before the power step
     const s = spec(b);
     if (b.key === 'farm' && b.mode === 'fallow') {
       if ((b.fallow = (b.fallow || 0) + 1) >= SIM.fallowDays) {
@@ -269,7 +297,8 @@ export function dayTick(state, rng) {
   }
   parts.push({ label: `Tax ${Math.round(state.tax * 100)}%`, value: Math.round(tx) });
   const field = parkField(state), homes = state.buildings.filter((b) => b.key === 'habitat' && active(b));
-  const parkAvg = homes.length ? homes.reduce((t, b) => t + parkAt(state, b, field), 0) / homes.length : 0;
+  const dwellings = state.buildings.filter((b) => HOME_KEYS.has(b.key) && active(b));   // habitats and terrace homes
+  const parkAvg = dwellings.length ? dwellings.reduce((t, b) => t + parkAt(state, b, field), 0) / dwellings.length : 0;
   parts.push({ label: 'Parks near homes', value: Math.round(parkAvg) });
   // services (version 2): the best of each kind covering a home, averaged over the homes; a
   // service works at its building's rate today (staff, power, a Canteen's food)
@@ -277,10 +306,20 @@ export function dayTick(state, rng) {
     const list = state.buildings.filter((b) => b.key === k.key && active(b));
     if (!list.length) continue;
     const best = (h) => list.reduce((m, b) => (covers(b, h) ? Math.max(m, serviceValue(b) * Math.min(1, rates.get(b) ?? 1)) : m), 0);
-    parts.push({ label: k.label, value: Math.round(homes.length ? homes.reduce((t, h) => t + best(h), 0) / homes.length : 0) });
+    parts.push({ label: k.label, value: Math.round(dwellings.length ? dwellings.reduce((t, h) => t + best(h), 0) / dwellings.length : 0) });
   }
   if (state.buildings.some((b) => b.key === 'obsdeck' && active(b))) parts.push({ label: 'Observation Deck', value: SIM.obsHappy });
   if (ration) parts.push({ label: 'Rationing', value: SIM.rationHappy });
+  // version 3: a Welfare head (+ charm / 20), raid fear and tribute shame fading over 15 days,
+  // a hot-headed commander going unpaid
+  const welfare = deptHead(state, 'welfare');
+  if (welfare) parts.push({ label: 'Welfare', value: Math.round((COMMANDER[welfare.key].charm || 0) / 20) });
+  const rd = state.raid;
+  rd.moods = rd.moods.filter((m) => state.day - m.day < m.days);
+  const moods = {};
+  for (const m of rd.moods) moods[m.label] = (moods[m.label] || 0) + m.value * (1 - (state.day - m.day) / m.days);
+  for (const [label, v] of Object.entries(moods)) if (Math.round(v)) parts.push({ label, value: Math.round(v) });
+  if (f.wagesUnpaid && state.commanders.some((c) => c.key === 'w_brann')) parts.push({ label: 'Brann unpaid', value: -2 });
   if (pop > housing) parts.push({ label: 'Crowding', value: -Math.min(30, Math.floor((housing ? (pop - housing) / housing : 1) * 50)) });
   if (pop > 0 && (pop - jobs) / pop > 0.2) parts.push({ label: 'Unemployment', value: -5 });
   state.happyParts = parts;
@@ -315,7 +354,7 @@ export function dayTick(state, rng) {
   // Clinic births (full care): every 10 days, +1 colonist per 50 living in homes a clinic covers.
   const clinics = state.buildings.filter((b) => b.key === 'clinic' && b.mode !== 'triage' && active(b));
   if (clinics.length && state.day % SIM.birthEvery === 0 && housing > 0) {
-    const coveredHomes = homes.reduce((t, h) => t + (clinics.some((c) => covers(c, h)) ? spec(h).housing || 0 : 0), 0);
+    const coveredHomes = dwellings.reduce((t, h) => t + (clinics.some((c) => covers(c, h)) ? spec(h).housing || 0 : 0), 0);
     const n = Math.min(Math.max(0, housing - state.pop), Math.floor((state.pop * Math.min(1, coveredHomes / housing)) / SIM.birthPer));
     if (n > 0) { state.pop += n; say('births', `${n} child${n > 1 ? 'ren were' : ' was'} born in the Clinic's care.`); }
   }
@@ -339,11 +378,18 @@ export function dayTick(state, rng) {
 
   // 10 money: tax in, upkeep out. Unpaid upkeep slows everything the next day.
   const tax = state.pop * SIM.taxPerPop * (state.tax / 0.1);
-  const upkeep = diffOf(state).upkeep * state.buildings.reduce((t, b) => t + (b.build === 0 ? (BUILDING[b.key].upkeep || 0) * (b.key === 'clinic' && b.mode === 'triage' ? 0.5 : 1) : 0), 0);
+  // version 3: guardians' upkeep (free while `free` days remain), then commanders' wages (from the
+  // 80-colonist milestone: before it the officers serve as the Council's staff)
+  const machines = machineUpkeep(state);
+  for (const g of state.guardians) if (g.free > 0) g.free--;
+  const upkeep = diffOf(state).upkeep * state.buildings.reduce((t, b) => t + (b.build === 0 ? (BUILDING[b.key].upkeep || 0) * (b.key === 'clinic' && b.mode === 'triage' ? 0.5 : 1) : 0), 0) + machines;
   make('credits', tax);
   const paid = Math.min(upkeep, st.credits);
   use('credits', paid);
   f.unpaid = paid < upkeep - 1e-9;
+  const wages = f.unlock80 ? state.commanders.reduce((t, c) => t + (COMMANDER[c.key]?.wage || 0), 0) : 0;
+  f.wagesUnpaid = wages > 0 && st.credits < wages;
+  if (!f.wagesUnpaid) use('credits', wages);
   if (f.unpaid && state.day % 5 === 0) say('broke', 'The treasury is empty: upkeep goes unpaid and work slows down.');
   // Easy: Council relief when the colony is broke or hungry (difficulty.js relief), so a beginner's
   // colony cannot spiral into starvation for want of money to build farms.
@@ -359,12 +405,17 @@ export function dayTick(state, rng) {
   // 11 market: prices drift back toward their base.
   for (const g in state.market) state.market[g] += (1 - state.market[g]) * PRICE.recover;
 
-  // 11b meteoroid strikes: a working sweeper may be knocked out for a few days.
+  // 11b meteoroid strikes: a working sweeper may be knocked out for a few days. A Fusion Reactor in
+  // overdrive may trip into a 5-day shutdown (version 3).
   for (const b of state.buildings) {
-    if (b.key !== 'sweeper' || !finished(b)) continue;
+    if ((b.key !== 'sweeper' && b.key !== 'fusion') || !finished(b)) continue;
     if (b.down > 0) b.down--;
-    else if (!b.off && rng() < SIM.strike) { b.down = SIM.strikeDays; say('strike', `A meteoroid struck a Meteoroid Sweeper: it is out of action for ${SIM.strikeDays} days.`); }
+    else if (b.key === 'sweeper' && !b.off && rng() < SIM.strike) { b.down = SIM.strikeDays; say('strike', `A meteoroid struck a Meteoroid Sweeper: it is out of action for ${SIM.strikeDays} days.`); }
+    else if (b.key === 'fusion' && b.mode === 'overdrive' && active(b) && rng() < SIM.overdriveTrip) { b.down = SIM.overdriveDays; say('shutdown', `A Fusion Reactor in overdrive tripped its safeties: shut down for ${SIM.overdriveDays} days.`); }
   }
+
+  // 11c version 3: machines, repairs, commanders, wanderers, heat and the raid clock.
+  guardTick(state, { staffing, pf, moneyF, rng, say, ask });
 
   // 12 milestones.
   if (state.pop >= SIM.unlockPop && !f.unlock80) {
@@ -374,11 +425,122 @@ export function dayTick(state, rng) {
     ask('unlock', 'Eighty colonists', `Eden has ${state.pop} colonists. New buildings: ${keys.map((k) => BUILDING[k].name).join(', ')}.`);
   }
 
-  state.stats.last = { produced, consumed, met, staffing, jobs, power: { supply, demand, factor: pf }, tax, upkeep, research: researchMade };
+  state.stats.last = { produced, consumed, met, staffing, jobs, power: { supply, demand, factor: pf }, tax, upkeep, research: researchMade, machines, wages: f.wagesUnpaid ? 0 : wages };
   // 13 guided goals: a finished goal pays the Council grant and names the next (js/colony/goals.js)
   const goal = updateGoals(state);
   if (goal) events.push({ kind: 'goal', text: state.log[state.log.length - 1].text, pause: true });
   return { events };
+}
+
+// ---------------------------------------------------------------- version 3: the guard's day
+
+const r2 = (v) => Math.round(v * 100) / 100;
+const cname = (key) => COMMANDER[key]?.name || key;
+function guardTick(state, { staffing, pf, moneyF, rng, say, ask }) {
+  const f = state.flags, rd = state.raid, st = state.stock;
+  // production: the first order at each working Arsenal / Shipyard advances at its rate
+  if (state.production.length) {
+    rehomeOrders(state);
+    const seen = new Set();
+    for (const o of [...state.production]) {
+      if (seen.has(o.at)) continue;
+      seen.add(o.at);
+      const b = state.buildings.find((x) => x.id === o.at);
+      if (!b || !active(b)) continue;
+      const s = spec(b);
+      o.days = r2(Math.max(0, o.days - (s.jobs ? staffing : 1) * (s.power < 0 ? pf : 1) * moneyF));
+      if (o.days > 0) continue;
+      state.production.splice(state.production.indexOf(o), 1);
+      addGuardian(state, o.type);
+      say('machine', `A ${machineOf(state, o.type).name} rolls out of the ${BUILDING[b.key].name}: Eden has ${state.guardians.length} guardian machine${state.guardians.length === 1 ? '' : 's'}.`);
+    }
+  }
+  // repairs: each working Scrapyard mends 2 HP a day of every damaged guardian, a part per HP
+  // (half for a Mechanic's machine)
+  const yards = state.buildings.filter((b) => b.key === 'scrapyard' && active(b)).length;
+  if (yards) for (const g of state.guardians) {
+    const max = maxHp(state, g);
+    if (g.hp >= max) continue;
+    const perHp = V3.repairPart * (COMMANDER[fitCommander(state, g.commander)?.key]?.perk === 'mechanic' ? 0.5 : 1);
+    const hp = Math.min(V3.repairHp * yards, max - g.hp, st.parts / perHp);
+    if (hp <= 0) continue;
+    g.hp = Math.min(max, Math.round((g.hp + hp) * 10) / 10);
+    st.parts = Math.max(0, st.parts - hp * perHp);
+  }
+  // commanders: injuries heal; loyalty drifts toward 40 + happiness / 2, falls while unpaid; the
+  // disloyal may leave (Steady never does) and turn up at the Lodge again later
+  for (const c of [...state.commanders]) {
+    const d = COMMANDER[c.key] || {};
+    if (c.injured > 0 && --c.injured === 0) say('recovered', `${cname(c.key)} is fit for duty again.`);
+    const target = 40 + state.happy / 2;
+    let delta = Math.sign(target - c.loyalty) * Math.min(V3.drift, Math.abs(target - c.loyalty));
+    if (f.wagesUnpaid && d.wage) delta -= V3.unpaidLoyalty;
+    if (c.key === 'w_thorne' && delta < 0) delta *= 2;   // deserted once: loyalty falls twice as fast
+    c.loyalty = r2(Math.max(0, Math.min(100, c.loyalty + delta)));
+    const floor = c.key === 'w_vashti' ? V3.leaveBelow + 10 : V3.leaveBelow;   // restless
+    if (d.perk !== 'steady' && !d.general && c.loyalty < floor && rng() < V3.leaveChance) {
+      releaseCommander(state, c.key);
+      const p = ask('commander', 'A commander leaves', `${cname(c.key)} has had enough and leaves Eden on the next ship. Pay and a happy colony keep commanders loyal; they may pass by the Lodge again some day.`);
+      p.speaker = 'sato';
+    }
+  }
+  // wanderers: one arrives at a working Lodge every 15 days (Inn 10, Grand Lodge 7) and stays 20
+  state.wanderers = state.wanderers.filter((w) => { if (w.until > state.day) return true; say('wanderer', `${cname(w.key)} moved on from the Lodge.`); return false; });
+  const lodge = state.buildings.reduce((m, b) => (b.key === 'lodge' && active(b) ? Math.max(m, b.level) : m), 0);
+  if (lodge) {
+    const every = V3.lodgeEvery[Math.min(V3.lodgeEvery.length, lodge) - 1];
+    f.lodgeDay ??= state.day - every;
+    if (state.day - f.lodgeDay >= every) {
+      f.lodgeDay = state.day;
+      const away = f.away || {};
+      const pool = [...new Set([...WANDERERS.map((w) => w.key), ...Object.keys(away)])]
+        .filter((k) => !COMMANDER[k]?.general && !state.commanders.some((c) => c.key === k) && !state.wanderers.some((w) => w.key === k) && !((away[k] ?? -1) > state.day));
+      if (pool.length) {
+        const key = pool[Math.floor(rng() * pool.length)], d = COMMANDER[key];
+        const w = { key, until: state.day + V3.stay, asked: 0, loyalty: d.loyalty ?? 60 };
+        state.wanderers.push(w);
+        const text = `${d.name}, ${d.title.toLowerCase()}, has taken a room at the Lodge for ${V3.stay} days. ${d.text || ''}${d.flaw ? ` ${d.flaw}` : ''} `
+          + `An invitation costs a ${V3.invite.gift}-credit gift; the chance is ${Math.round(inviteChance(state, key) * 100)}%.`;
+        const p = addPending(state, 'wanderer', `A wanderer: ${d.name}`, text.replace(/ +/g, ' ').trim(), [{ key: 'ok', label: 'Later' }, { key: 'invite', label: `Invite (${V3.invite.gift} credits)` }]);
+        p.speaker = 'sato'; p.wanderer = key;
+        say('wanderer', `${d.name} arrives at the Lodge.`, true);
+      }
+    }
+  } else f.lodgeDay = undefined;
+  // heat eases 10% a day toward its target; sales are remembered for 30 days
+  const sold = f.sold || 0;
+  rd.sales[state.day % 30] = Math.round(sold - (f.soldSeen ?? sold));
+  f.soldSeen = sold;
+  rd.heat = r2(rd.heat + (heatTarget(state).target - rd.heat) * RAID.heat.ease);
+  // the raid clock: running from 80 colonists; a warning `warnLead` days ahead, then the raid
+  if (f.lost || !raidsPossible(state)) return;
+  const dk = state.difficulty === 'easy' ? 'easy' : 'normal';
+  if (!rd.coming) {
+    if (rd.next === null) rd.next = Math.max(RAID.start[dk] + RAID.firstGap, state.day + raidInterval(state, rng));
+    if (state.day < RAID.start[dk] || state.day < rd.next - warnLead(state)) return;
+    const raid = rd.coming = makeRaid(state, rng, Math.max(rd.next, state.day + 1));
+    rd.warned = true;
+    const days = raid.day - state.day, defended = state.guardians.length || state.buildings.some((b) => b.key === 'emplacement' && b.build === 0);
+    const text = `Governor, long-range contact: ${FACTIONS[raid.faction].name}, ${raid.units.length} machine${raid.units.length > 1 ? 's' : ''} (${FACTIONS[raid.faction].text}), `
+      + `coming from ${FROM[raid.from]}. They will be here in ${days} day${days > 1 ? 's' : ''}. `
+      + (defended ? 'The guard is standing to: machines with crews and the hull batteries will meet them.' : 'We have nothing to meet them with.')
+      + ' Machines from an Arsenal, crews from a Guardian Barracks and Battery Emplacements on the hull defend Eden; or we can pay them to leave.';
+    const p = addPending(state, 'raidwarn', 'Raiders sighted', text);
+    p.speaker = 'sato'; p.raid = raid;
+    say('raidwarn', text, true);
+    return;
+  }
+  if (rd.coming.arrived || state.day < rd.coming.day) return;
+  rd.coming.arrived = true;
+  const raid = rd.coming, pv = raidPreview(state), t = pv.tribute;
+  const losses = pv.expectedLost.length ? `Likely losses: ${pv.expectedLost.map((k) => machineOf(state, k).name).join(', ')}.` : 'We should lose no machines.';
+  const text = `${raidName(raid)} from ${FROM[raid.from]}: ${raid.units.length} machine${raid.units.length > 1 ? 's' : ''}, strength ${raid.strength}. `
+    + `Our defence: ${Math.round(pv.defence)} (${pv.breakdown.crewed} crewed machine${pv.breakdown.crewed === 1 ? '' : 's'}, ${pv.breakdown.batteries} batter${pv.breakdown.batteries === 1 ? 'y' : 'ies'}). `
+    + `Chance to win: ${Math.round(pv.winChance * 100)}%. ${losses} If we lose they take stores and knock out up to ${RAID.damage[1]} buildings. `
+    + `Tribute: ${t.credits} credits${pv.canPay ? '' : ' (we cannot pay it)'}${st.credits < t.credits ? ` or ${t.food} food` : ''}.`;
+  const p = addPending(state, 'raid', 'Raiders at the gates', text, [{ key: 'fight', label: 'Fight' }, { key: 'tribute', label: `Pay tribute (${st.credits >= t.credits ? `${t.credits} credits` : `${t.food} food`})` }]);
+  p.speaker = 'sato'; p.raid = raid; p.preview = { winChance: pv.winChance, defence: pv.defence, attack: pv.attack, expectedLost: pv.expectedLost, expectedDamage: pv.expectedDamage, tribute: t, canPay: pv.canPay };
+  say('raid', text, true);
 }
 
 // Runs whole days (tests, fast-forward). Returns every event.

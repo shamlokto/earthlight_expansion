@@ -712,3 +712,525 @@ export function coverage(state, kind) {
   }
   return out;
 }
+
+// ================================================================ version 3: guardians, production,
+// commanders, wanderers and raids (docs/COLONY-V3.md). The sim (sim.js) runs the clock; the rules
+// here are the player's actions and the read-outs. Numbers are first guesses for the balance pass
+// (tests/colony-v3.mjs).
+
+export const V3 = {
+  betaFree: 60,                 // days of free upkeep for the imported army (D7)
+  starterLoyalty: 80,           // Sato's loyalty at the start (the General's is 100)
+  crewsCommand: 4,              // machines the Command Centre crews; each Barracks adds its `crews` (6)
+  orderMin: 2, orderPer: 4,     // production days = max(2, ceil(price / 4))
+  upkeepPer: 8,                 // machine upkeep: ceil(price / 8) credits a day, × the difficulty's upkeep
+  builtSale: 0.8,               // a machine built in the colony sells for 80% of what it cost
+  scrapSale: 1.2,               // a finished Scrapyard: sales +20%
+  repairHp: 2, repairPart: 1,   // each working Scrapyard: HP a day per damaged guardian; parts per HP
+  levelPower: 0.08,             // power +8% a level
+  commanderMax: 1.6,            // no commander but the General makes a machine more than ×1.6
+  style: 0.15, ace: 0.1, bulwark: 0.75,
+  invite: { gift: 100, base: 0.3, charm: 220, crowd: 0.03, loyalty: 400, min: 0.05, max: 0.95, refusal: 8 },
+  away: 30,                     // days before a commander who left turns up as a wanderer again
+  stay: 20, lodgeEvery: [15, 10, 7],   // a wanderer stays 20 days; one arrives every 15 / 10 / 7 days by Lodge level
+  unpaidLoyalty: 2, leaveBelow: 20, leaveChance: 0.1, drift: 1,
+  injury: [20, 40],             // days a commander whose machine is destroyed is injured
+  maxLevel: 9,
+};
+export const RAID = {
+  start: { easy: 60, normal: 35 },              // no raid before this day (nor before 80 colonists)
+  interval: { easy: [30, 45], normal: [20, 35] },   // days between raids, × (1.4 − heat / 100)
+  strength: { easy: 0.6, normal: 1 },
+  menaceShift: { easy: 40, normal: 0 },          // tiers come later on Easy
+  firstGap: 12, minGap: 10,
+  warn: 3, warnPerMast: 3, warnMax: 9,           // warning days ahead; +3 per Sensor Mast (max 9 in all)
+  emplacement: 40, modeBonus: 0.3,               // a Battery Emplacement's power; Dragon ×1.3 on ships, Hydra on small craft
+  hurt: 0.8, hurtLost: 1.5,                      // a guardian loses hurt × a / (a + d) × (0.5..1.5) of its HP (× 1.5 losing)
+  steal: [0.1, 0.3], damage: [1, 4], damageDays: [5, 15], side: 30,
+  fear: { lost: -15, won: -5, tribute: -5, days: 15 },
+  tributePer: 3, tributeHeat: 10,
+  salvage: { credits: 5, parts: 0.5 }, hunter: 1.2,
+  heat: { pop: 20, value: 2000, chamber: 2, sales: 1000, jammer: 10, jammerMax: 30, rook: 5, ease: 0.1 },
+};
+// Raid tiers by menace (= day + 2 × heat, minus the difficulty's shift): who comes and how many.
+export const RAID_TIERS = [
+  { key: 'scavengers', name: 'Scavengers', menace: 0, n: [1, 3], tiers: [1, 1], levels: [0, 0] },
+  { key: 'pirates', name: 'Pirate band', menace: 120, n: [4, 8], tiers: [1, 2], levels: [0, 2] },
+  { key: 'warbands', name: 'Deserter warband', menace: 220, n: [8, 14], tiers: [1, 3], levels: [2, 4] },
+  { key: 'remnant', name: 'Remnant fleet', menace: 340, n: [15, 18], tiers: [1, 3], levels: [4, 6], capital: true },
+];
+export const RAID_TIER = Object.fromEntries(RAID_TIERS.map((t) => [t.key, t]));
+export const FACTIONS = {
+  scavengers: { name: 'Scavengers', text: 'leaderless scrap crews' },
+  cartel: { name: 'the Ashfall Cartel', text: 'Moraine\'s pirates' },
+  union: { name: 'Union deserters', text: 'trained pilots after food' },
+  galt: { name: 'Galt deserters', text: 'Galt veterans with nothing left to lose' },
+  remnant: { name: 'the Directorate remnant', text: 'Kessrin\'s last people, with a capital ship' },
+};
+export const FROM = { north: 'the north end cap', east: 'the east hull', west: 'the west hull', earth: 'up out of Earth\'s atmosphere' };
+const TIER_TECH = { 2: 'machineworks', 3: 'heavyworks', 4: 'kai' };
+
+// The colony's own dice (mulberry32 on state.flags.rng), so saves keep them; sim.js re-exports it.
+const hashSeed = (v) => { let h = 2166136261; for (const c of String(v)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
+export function stateRng(state) {
+  return () => {
+    let a = (state.flags.rng = ((state.flags.rng ?? hashSeed(state.seed)) + 0x6d2b79f5) >>> 0);
+    a = Math.imul(a ^ (a >>> 15), a | 1);
+    a ^= a + Math.imul(a ^ (a >>> 7), a | 61);
+    return ((a ^ (a >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const between = (rng, [lo, hi]) => lo + Math.floor(rng() * (hi - lo + 1));
+const round1 = (v) => Math.round(v * 10) / 10;
+const dkey = (state) => (state.difficulty === 'easy' ? 'easy' : 'normal');
+
+// ---------------------------------------------------------------- machines
+
+// Alternate forms of an expansion unit (Athena's fighter form, an empty Crab...) are that machine.
+const FORM = { 5: 4, 6: 4, 7: 4, 11: 10, 13: 12, 27: 26, 29: 28, 37: 36, 44: 43, 46: 45, 48: 47, 63: 62, 64: 62, 65: 62, 74: 73, 75: 73, 76: 73 };
+// Expansion units the colony cannot build that an imported roster may hold: [name, cls, hp, attack, defence].
+const OTHER = {
+  17: ['Pandora', 'support', 8, 60, 60], 18: ['Wisp', 'support', 8, 0, 80], 45: ['Msnp-Ii', 'ships', 8, 180, 45], 47: ['Msfb-5', 'ships', 8, 156, 60],
+  52: ['Pergamon', 'support', 8, 15, 20], 53: ['Solomon', 'support', 12, 20, 35], 54: ['Carthago', 'support', 20, 30, 20], 55: ['Goliath', 'support', 12, 65, 65],
+  56: ['Cortex', 'support', 8, 0, 45], 57: ['Adzam', 'support', 8, 0, 35], 59: ['Leviathan', 'ships', 60, 199, 50], 60: ['Directorate Talos', 'hu', 8, 109, 65],
+  77: ['Nineveh', 'ships', 90, 199, 60], 80: ['Directorate Medusa', 'hu', 8, 80, 50],
+};
+const others = new Map();
+// The machine (data/machines.js) a guardian or raider of this expansion type is.
+export function machineOf(state, type) {
+  const m = MACHINE[type] ?? MACHINE[FORM[type]];
+  if (m) return m;
+  let x = others.get(type);
+  if (!x) {
+    const o = OTHER[type] || [`Machine ${type}`, 'support', 8, 60, 40];
+    x = { type, name: o[0], code: '', cls: o[1], category: 0, hp: o[2], move: 0, evasion: 0, attack: o[3], defence: o[4], price: 24, at: 'arsenal', tier: 1, series: 'original', unique: false, other: true };
+    others.set(type, x);
+  }
+  return x;
+}
+// Each machine's strongest weapon from units.json: [mode (0 beam, 1 railgun, 2 missile), max range].
+const MAIN = {
+  0: [1, 1], 1: [1, 3], 2: [0, 1], 3: [2, 1], 4: [2, 2], 8: [0, 1], 9: [2, 1], 10: [2, 2], 12: [2, 2], 14: [0, 4], 15: [1, 4], 16: [2, 5], 20: [0, 2],
+  21: [1, 3], 22: [1, 3], 23: [0, 7], 24: [2, 6], 25: [0, 5], 28: [1, 1], 30: [0, 5], 31: [1, 4], 32: [2, 4], 33: [0, 4], 34: [0, 1], 35: [2, 3],
+  36: [1, 1], 38: [1, 1], 39: [0, 3], 40: [0, 1], 41: [2, 4], 42: [1, 1], 43: [2, 4], 49: [1, 1], 50: [2, 2], 51: [1, 1], 58: [0, 2], 61: [0, 4],
+  62: [2, 2], 66: [0, 2], 67: [2, 2], 68: [1, 4], 69: [1, 1], 70: [2, 6], 71: [1, 1], 72: [1, 4], 73: [2, 2], 78: [0, 5],
+};
+const MODE_STYLE = ['beam', 'railgun', 'missile'];
+// Does a commander's style match the machine's main weapon? Melee: range 1; Gunner: range 2+; or the mode.
+export function styleFits(style, type) {
+  const w = MAIN[type] ?? MAIN[FORM[type]];
+  if (!style || !w) return false;
+  return style === 'melee' ? w[1] === 1 : style === 'gunner' ? w[1] >= 2 : MODE_STYLE[w[0]] === style;
+}
+const priceOf = (state, g) => (g.built === undefined ? state.imported?.prices?.[g.type] : undefined) ?? machineOf(state, g.type).price;
+export const maxHp = (state, g) => machineOf(state, g.type).hp;
+const orderDays = (m) => Math.max(V3.orderMin, Math.ceil(m.price / V3.orderPer));
+
+// Why this machine cannot be ordered now, or null.
+function machineWhy(state, m, cost) {
+  if (m.tier > techEffect(state, 'machines')) return `Research ${TECH[TIER_TECH[m.tier]].name}.`;
+  if (!state.buildings.some((b) => b.key === m.at && finished(b))) return m.at === 'shipyard' ? 'Build a Shipyard.' : 'Build an Arsenal.';
+  if (m.unique && (state.guardians.some((g) => machineOf(state, g.type) === m) || state.production.some((o) => o.type === m.type))) return `Only one ${m.name} may serve at a time.`;
+  if (state.stock.credits < cost.credits) return `Needs ${Math.ceil(cost.credits - state.stock.credits)} more credits.`;
+  if (state.stock.parts < cost.parts) return `Needs ${Math.ceil(cost.parts - state.stock.parts)} more parts.`;
+  return null;
+}
+// The production list: every machine with its cost here, build days, and why it can't be ordered.
+export function machineList(state) {
+  upgradeState(state);
+  return MACHINES.map((m) => { const cost = costOf(state, MACHINE_COST(m)), why = machineWhy(state, m, cost); return { ...m, cost, days: orderDays(m), ok: !why, why }; });
+}
+const loadOf = (state, b) => state.production.reduce((t, o) => t + (o.at === b.id ? o.days : 0), 0);
+function leastBusy(state, kind) {
+  let best = null, bl = Infinity;
+  for (const b of state.buildings) if (b.key === kind && finished(b)) { const l = loadOf(state, b); if (l < bl) { bl = l; best = b; } }
+  return best;
+}
+// The orders waiting at one Arsenal or Shipyard, the one being built first.
+export const queueAt = (state, id) => state.production.filter((o) => o.at === id);
+
+export function orderMachine(state, type) {
+  upgradeState(state);
+  const m = MACHINE[type];
+  if (!m) return no('There is no such machine.');
+  const cost = costOf(state, MACHINE_COST(m)), why = machineWhy(state, m, cost);
+  if (why) return no(why);
+  const at = leastBusy(state, m.at), ahead = queueAt(state, at.id).length;
+  state.stock.credits -= cost.credits; state.stock.parts -= cost.parts;
+  const o = { id: state.nextId++, type: m.type, at: at.id, days: orderDays(m), paid: cost };
+  state.production.push(o);
+  log(state, `${m.name} ordered at the ${BUILDING[m.at].name}.`);
+  return ok(`${m.name} ordered for ${cost.credits} credits and ${cost.parts} parts: ${o.days} days of work${ahead ? ` after ${ahead} order${ahead > 1 ? 's' : ''} ahead of it` : ''}.`, { id: o.id });
+}
+
+export function cancelOrder(state, id) {
+  upgradeState(state);
+  const i = state.production.findIndex((o) => o.id === id);
+  if (i < 0) return no('That order is gone.');
+  const o = state.production[i], p = o.paid || costOf(state, MACHINE_COST(machineOf(state, o.type)));
+  state.production.splice(i, 1);
+  state.stock.credits += p.credits; state.stock.parts += p.parts;
+  return ok(`${machineOf(state, o.type).name} cancelled: ${p.credits} credits and ${p.parts} parts refunded.`);
+}
+// Orders whose Arsenal or Shipyard is gone move to another one, or are refunded.
+export function rehomeOrders(state) {
+  for (const o of [...state.production]) {
+    if (state.buildings.some((b) => b.id === o.at && finished(b))) continue;
+    const to = leastBusy(state, machineOf(state, o.type).at);
+    if (to) o.at = to.id;
+    else { cancelOrder(state, o.id); log(state, `With no ${BUILDING[machineOf(state, o.type).at].name} left, the ${machineOf(state, o.type).name} order was refunded.`); }
+  }
+}
+// A new guardian (production, tests). Ids never repeat.
+export function addGuardian(state, type, extra = {}) {
+  const id = Math.max(state.flags.gid || 0, ...state.guardians.map((g) => g.id)) + 1;
+  state.flags.gid = id;
+  const g = { id, type, level: 0, hp: machineOf(state, type).hp, commander: null, free: 0, built: state.day, ...extra };
+  state.guardians.push(g);
+  return g;
+}
+
+// ---------------------------------------------------------------- crews, upkeep, power
+
+export const crewCap = (state) => V3.crewsCommand + state.buildings.reduce((t, b) => t + (b.key === 'barracks' && active(b) ? spec(b).crews || 0 : 0), 0);
+// The guardians that have a crew: those a commander leads first, then the strongest.
+export function crewed(state) {
+  const cap = crewCap(state), pw = new Map(state.guardians.map((g) => [g, guardianPower(state, g)]));
+  const order = state.guardians.filter((g) => g.hp > 0).sort((a, b) => (!!fitCommander(state, b.commander) - !!fitCommander(state, a.commander)) || pw.get(b) - pw.get(a) || a.id - b.id);
+  return new Set(order.slice(0, cap).map((g) => g.id));
+}
+const serving = (state, key) => (key ? state.commanders.find((c) => c.key === key) || null : null);
+// A serving, uninjured commander (only they lead, head a department or use a perk).
+export const fitCommander = (state, key) => { const c = serving(state, key); return c && !(c.injured > 0) ? c : null; };
+export function guardianUpkeep(state, g) {
+  if (g.free > 0) return 0;
+  const qm = COMMANDER[fitCommander(state, g.commander)?.key]?.perk === 'quartermaster';
+  return Math.ceil(priceOf(state, g) / V3.upkeepPer) * (qm ? 0.5 : 1) * diffOf(state).upkeep;
+}
+export const machineUpkeep = (state) => (state.guardians || []).reduce((t, g) => t + guardianUpkeep(state, g), 0);
+
+// A commander's multiplier on a machine's power: the General ×3 (power ×2, evasion ×2 counted as
+// half again); others by their grade in its class scaled by might, +15% for a matching style, the
+// Ace perk on planes, never above ×1.6.
+export function leadMult(state, key, m) {
+  const c = fitCommander(state, key), d = c && COMMANDER[c.key];
+  if (!d) return 1;
+  if (d.general) return GENERAL_POWER * (1 + (GENERAL_EVASION - 1) / 2);
+  let mult = 1 + ((GRADE[d.grades?.[m.cls]] ?? 1) - 1) * d.might / 100;
+  if (styleFits(d.style, m.type)) mult *= 1 + V3.style;
+  if (d.perk === 'ace' && m.cls === 'planes') mult *= 1 + V3.ace;
+  return Math.min(V3.commanderMax, mult);
+}
+// A guardian's strength in a raid: (attack + defence) × hp share × (1 + 0.08 × level) × its commander.
+export function guardianPower(state, g) {
+  const m = machineOf(state, g.type), hp = Math.max(0, Math.min(1, g.hp / m.hp));
+  return (m.attack + m.defence) * hp * (1 + V3.levelPower * (g.level || 0)) * leadMult(state, g.commander, m);
+}
+// What the guard list shows: [{ ...guardian, machine, power, crewed, upkeep, sale, maxHp }].
+export function guardianList(state) {
+  upgradeState(state);
+  const crew = crewed(state);
+  return state.guardians.map((g) => ({ ...g, machine: machineOf(state, g.type), maxHp: maxHp(state, g), power: guardianPower(state, g), crewed: crew.has(g.id), upkeep: guardianUpkeep(state, g), sale: saleValue(state, g) }));
+}
+
+// ---------------------------------------------------------------- commanders
+
+export const commanderCap = (state) => BASE_COMMANDERS + PER_QUARTERS * state.buildings.filter((b) => b.key === 'quarters' && finished(b)).length;
+// The serving commanders with their data: [{ ...data, loyalty, injured, dept, guardian }].
+export function commanderList(state) {
+  upgradeState(state);
+  return state.commanders.map((c) => ({ ...COMMANDER[c.key], ...c, guardian: state.guardians.find((g) => g.commander === c.key)?.id ?? null }));
+}
+export function deptHead(state, dept) {
+  const c = state.commanders?.find((k) => k.dept === dept);
+  return c && !(c.injured > 0) ? c : null;
+}
+// A department head's bonus: + (stat / 10)% (Welfare's happiness is applied by the sim).
+export function deptMult(state, dept) {
+  const c = deptHead(state, dept), d = DEPARTMENTS[dept];
+  return c && d ? 1 + (COMMANDER[c.key][d.stat] || 0) / 1000 : 1;
+}
+const nameOf = (key) => COMMANDER[key]?.name || key;
+
+export function assignCommander(state, key, guardianId) {
+  upgradeState(state);
+  const c = serving(state, key);
+  if (!c) return no('That commander is not serving in Eden.');
+  const was = state.guardians.find((g) => g.commander === key);
+  if (guardianId === null || guardianId === undefined) {
+    if (!was) return ok(`${nameOf(key)} leads no machine.`);
+    was.commander = null;
+    return ok(`${nameOf(key)} stands down from the ${machineOf(state, was.type).name}.`);
+  }
+  const g = state.guardians.find((x) => x.id === guardianId);
+  if (!g) return no('That machine is not in the guard.');
+  if (c.injured > 0) return no(`${nameOf(key)} is recovering for ${c.injured} more days.`);
+  if (g.commander === key) return ok(`${nameOf(key)} already leads it.`);
+  const before = g.commander;
+  if (was) was.commander = null;
+  g.commander = key;
+  const m = machineOf(state, g.type);
+  return ok(`${nameOf(key)} leads the ${m.name}: ×${leadMult(state, key, m).toFixed(2)} power.${before ? ` ${nameOf(before)} stands down.` : ''}`);
+}
+
+export function setDepartment(state, key, dept) {
+  upgradeState(state);
+  const c = serving(state, key);
+  if (!c) return no('That commander is not serving in Eden.');
+  if (dept === null || dept === undefined) { const was = c.dept; c.dept = null; return ok(was ? `${nameOf(key)} no longer heads ${DEPARTMENTS[was].name}.` : `${nameOf(key)} heads no department.`); }
+  const d = DEPARTMENTS[dept];
+  if (!d) return no('There is no such department.');
+  if (c.dept === dept) return ok(`${nameOf(key)} already heads ${d.name}.`);
+  const other = state.commanders.find((k) => k.dept === dept);
+  if (other) other.dept = null;
+  c.dept = dept;
+  return ok(`${nameOf(key)} heads ${d.name}: +${(COMMANDER[key][d.stat] / 10).toFixed(1)}% (${d.text.toLowerCase()}).${other ? ` ${nameOf(other.key)} steps aside.` : ''}`);
+}
+
+// The chance a wanderer accepts an invitation (Lanternfall's formula).
+export function inviteChance(state, key) {
+  const w = state.wanderers?.find((x) => x.key === key);
+  const I = V3.invite, loyalty = w?.loyalty ?? COMMANDER[key]?.loyalty ?? 50;
+  const p = I.base + GENERAL.charm / I.charm - I.crowd * (state.commanders.length - 2) + (100 - loyalty) / I.loyalty;
+  return Math.min(I.max, Math.max(I.min, p));
+}
+// Invite a wanderer at the Lodge: a gift of 100 credits, then they say yes or no (the colony's dice).
+export function inviteWanderer(state, key, rng = stateRng(state)) {
+  upgradeState(state);
+  const w = state.wanderers.find((x) => x.key === key);
+  if (!w) return no('That wanderer is not at the Lodge.');
+  if (state.commanders.length >= commanderCap(state)) return no(`Eden has room for ${commanderCap(state)} commanders: build Officers' Quarters for two more.`);
+  if (state.stock.credits < V3.invite.gift) return no(`An invitation comes with a gift of ${V3.invite.gift} credits.`);
+  const p = inviteChance(state, key);
+  state.stock.credits -= V3.invite.gift;
+  w.asked = (w.asked || 0) + 1;
+  if (rng() < p) {
+    state.wanderers.splice(state.wanderers.indexOf(w), 1);
+    state.commanders.push({ key, loyalty: COMMANDER[key]?.loyalty ?? 60, injured: 0, dept: null });
+    log(state, `${nameOf(key)} joins Eden's commanders.`);
+    return ok(`${nameOf(key)} accepts and joins Eden's commanders.`, { joined: true });
+  }
+  w.loyalty = Math.max(0, (w.loyalty ?? COMMANDER[key]?.loyalty ?? 50) - V3.invite.refusal);
+  return ok(`${nameOf(key)} thanks you for the gift but says no, for now. Asking again is likelier to work (${Math.round(inviteChance(state, key) * 100)}%).`, { joined: false });
+}
+
+// A commander who leaves (dismissed, or of their own accord) turns up as a wanderer again later.
+export function releaseCommander(state, key) {
+  const c = serving(state, key);
+  if (!c) return;
+  for (const g of state.guardians) if (g.commander === key) g.commander = null;
+  state.commanders.splice(state.commanders.indexOf(c), 1);
+  (state.flags.away ??= {})[key] = state.day + V3.away;
+}
+export function dismissCommander(state, key) {
+  upgradeState(state);
+  if (!serving(state, key)) return no('That commander is not serving in Eden.');
+  if (COMMANDER[key]?.general) return no('The General is Eden\'s governor and cannot be dismissed.');
+  releaseCommander(state, key);
+  log(state, `${nameOf(key)} was dismissed.`);
+  return ok(`${nameOf(key)} leaves Eden's service. They may pass by the Lodge again some day.`);
+}
+
+// ---------------------------------------------------------------- heat and raids
+
+// Heat's target today: what makes Eden worth robbing. { target, parts: [{ label, value }] }.
+export function heatTarget(state) {
+  const H = RAID.heat, st = state.stock;
+  let value = st.credits || 0;
+  for (const g of STORED) value += (st[g] || 0) * (BASE_PRICE[g] || 0);
+  const sales = (state.raid?.sales || []).reduce((t, v) => t + (v || 0), 0);
+  const jammers = state.buildings.filter((b) => b.key === 'jammer' && active(b)).length;
+  const parts = [
+    { label: 'Colonists', value: state.pop / H.pop },
+    { label: 'Stored value', value: value / H.value },
+    { label: 'Open chambers', value: state.chambers.filter((c) => c.status === OPEN).length * H.chamber },
+    { label: 'Market sales', value: sales / H.sales },
+  ];
+  if (jammers) parts.push({ label: 'Jammers', value: -Math.min(H.jammerMax, jammers * H.jammer) });
+  if (serving(state, 'w_rook')) parts.push({ label: 'Cass Rook', value: H.rook });
+  return { target: Math.max(0, Math.min(100, parts.reduce((t, p) => t + p.value, 0))), parts };
+}
+export const warnLead = (state) => Math.min(RAID.warnMax, RAID.warn + RAID.warnPerMast * state.buildings.filter((b) => b.key === 'sensormast' && active(b)).length);
+// The raid clock runs from the 80-colonist milestone (no raid before RAID.start's day, though).
+export const raidsPossible = (state) => !!state.flags?.unlock80;
+export function raidInterval(state, rng) {
+  const base = between(rng, RAID.interval[dkey(state)]);
+  return Math.max(RAID.minGap, Math.round(base * (1.4 - (state.raid?.heat || 0) / 100)));
+}
+export const raiderPower = (u) => { const m = MACHINE[u.type]; return m ? (m.attack + m.defence) * (1 + V3.levelPower * (u.level || 0)) : 0; };
+const POOL = MACHINES.filter((m) => m.attack > 0 && !m.unique && m.type !== 79);
+const CAPITALS = MACHINES.filter((m) => m.cls === 'ships' && m.hp >= 18 && m.attack > 0 && !m.unique && m.tier <= 3);
+// Who comes: the tier from the menace (day and heat), a faction, the machines and their strength.
+export function makeRaid(state, rng, day = state.day) {
+  const heat = state.raid?.heat || 0, menace = day + 2 * heat - RAID.menaceShift[dkey(state)];
+  let ti = 0;
+  RAID_TIERS.forEach((t, i) => { if (menace >= t.menace) ti = i; });
+  if (ti > 0 && rng() < 0.25) ti--;   // now and then a weaker band
+  if (ti === 0 && state.imported?.choice === 'refuse' && rng() < 0.5) ti = 1;   // the cartel remembers
+  const T = RAID_TIERS[ti];
+  const faction = T.key === 'scavengers' ? 'scavengers' : T.key === 'pirates' ? 'cartel' : T.key === 'warbands' ? (rng() < 0.5 ? 'union' : 'galt') : 'remnant';
+  const n = between(rng, T.n), units = [];
+  const pool = POOL.filter((m) => m.tier >= T.tiers[0] && m.tier <= T.tiers[1]);
+  if (T.capital) units.push({ type: CAPITALS[Math.floor(rng() * CAPITALS.length)].type, level: between(rng, T.levels) });
+  while (units.length < n) units.push({ type: pool[Math.floor(rng() * pool.length)].type, level: between(rng, T.levels) });
+  const from = ['north', 'east', 'west', 'earth'][Math.floor(rng() * 4)];
+  const strength = Math.round(units.reduce((t, u) => t + raiderPower(u), 0) * RAID.strength[dkey(state)]);
+  return { day, from, tier: T.key, units, faction, strength };
+}
+const shipShare = (raid) => {
+  const all = raid.units.reduce((t, u) => t + raiderPower(u), 0);
+  return all ? raid.units.reduce((t, u) => t + (MACHINE[u.type]?.cls === 'ships' ? raiderPower(u) : 0), 0) / all : 0;
+};
+// The colony's defence against a raid: crewed guardians + Battery Emplacements, × the Security head.
+export function defenceOf(state, raid = state.raid?.coming) {
+  upgradeState(state);
+  const crew = crewed(state), share = raid ? shipShare(raid) : 0.5;
+  let guardians = 0, emplacements = 0, batteries = 0;
+  for (const g of state.guardians) if (crew.has(g.id)) guardians += guardianPower(state, g);
+  for (const b of state.buildings) if (b.key === 'emplacement' && active(b)) { batteries++; emplacements += RAID.emplacement * (1 + RAID.modeBonus * (b.mode === 'hydra' ? 1 - share : share)); }
+  const security = deptMult(state, 'security');
+  return { total: (guardians + emplacements) * security, guardians, emplacements, security, crewed: crew.size, idle: state.guardians.length - crew.size, batteries };
+}
+export const winChance = (d, a) => (a <= 0 ? 1 : (d * d) / (d * d + a * a));
+export function tributeOf(state, raid = state.raid?.coming) {
+  const credits = Math.ceil((raid?.strength || 0) * RAID.tributePer);
+  return { credits, food: Math.ceil(credits / BASE_PRICE.food) };
+}
+// Buildings raiders can knock out: on their side of the colony, not homes, life support, food or
+// power (raids never kill colonists by themselves), not roads, seals, the Command Centre or the dock.
+const SAFE_CATS = new Set(['life', 'food', 'homes', 'power']);
+const SAFE_KEYS = new Set(['road', 'seal', 'command', 'dock']);
+export function shielded(state, b, pylons = state.buildings.filter((p) => p.key === 'shieldpylon' && active(p))) {
+  const c = centre(b);
+  return pylons.some((p) => cheb(c.x - 0.5, c.y - 0.5, centre(p)) <= spec(p).radius);
+}
+export function raidTargets(state, from) {
+  const cand = state.buildings.filter((b) => finished(b) && !SAFE_KEYS.has(b.key) && !SAFE_CATS.has(BUILDING[b.key].cat));
+  if (!cand.length) return { exposed: [], shielded: [] };
+  const all = state.buildings.filter((b) => b.key !== 'road');
+  const sz = (b) => BUILDING[b.key].size;
+  const x0 = Math.min(...all.map((b) => b.x)), x1 = Math.max(...all.map((b) => b.x + sz(b))), y0 = Math.min(...all.map((b) => b.y)), y1 = Math.max(...all.map((b) => b.y + sz(b)));
+  const S = RAID.side;
+  const side = { north: (b) => b.y <= y0 + S, earth: (b) => b.y + sz(b) >= y1 - S, west: (b) => b.x <= x0 + S, east: (b) => b.x + sz(b) >= x1 - S }[from] || (() => true);
+  const pylons = state.buildings.filter((p) => p.key === 'shieldpylon' && active(p)), near = cand.filter(side);
+  return { exposed: near.filter((b) => !shielded(state, b, pylons)), shielded: near.filter((b) => shielded(state, b, pylons)) };
+}
+const bulwarkOf = (state, g) => (COMMANDER[fitCommander(state, g.commander)?.key]?.perk === 'bulwark' ? V3.bulwark : 1);
+// The preview of the coming raid: { winChance, defence, attack, expectedLost: [types], expectedDamage,
+// tribute: { credits, food }, ... } or null when no raid is coming.
+export function raidPreview(state) {
+  upgradeState(state);
+  const raid = state.raid.coming;
+  if (!raid) return null;
+  const d = defenceOf(state, raid), a = raid.strength, p = winChance(d.total, a), crew = crewed(state);
+  const hurt = (RAID.hurt * a) / (a + d.total || 1) * (p + (1 - p) * RAID.hurtLost);
+  const expectedLost = state.guardians.filter((g) => crew.has(g.id) && hurt * bulwarkOf(state, g) >= g.hp / maxHp(state, g)).map((g) => g.type);
+  const t = raidTargets(state, raid.from), tribute = tributeOf(state, raid);
+  const meanHits = (RAID.damage[0] + RAID.damage[1]) / 2;
+  return {
+    winChance: p, defence: d.total, attack: a, expectedLost,
+    expectedDamage: round1((1 - p) * Math.min(meanHits, t.exposed.length)),   // buildings likely knocked out
+    tribute, canPay: state.stock.credits >= tribute.credits || state.stock.food >= tribute.food,
+    atRisk: t.exposed.length, shielded: t.shielded.length, breakdown: d, raid,
+    eta: Math.max(0, raid.day - state.day), units: raid.units.length,
+  };
+}
+// Happiness lines that fade: [{ label, value, day, days }] (raid fear, tribute shame).
+function mood(state, label, value) { state.raid.moods.push({ label, value, day: state.day, days: RAID.fear.days }); }
+export const raidName = (raid) => `${RAID_TIER[raid.tier]?.name || 'Raiders'} (${FACTIONS[raid.faction]?.name || raid.faction})`;
+
+function fight(state, raid, rng) {
+  const d = defenceOf(state, raid), a = raid.strength, p = winChance(d.total, a), won = rng() < p;
+  const crew = crewed(state), share = a / (a + d.total || 1);
+  const lostGuardians = [], hurtGuardians = [];
+  for (const g of state.guardians.filter((x) => crew.has(x.id))) {
+    const max = maxHp(state, g), led = fitCommander(state, g.commander);
+    const frac = RAID.hurt * share * (won ? 1 : RAID.hurtLost) * (0.5 + rng()) * bulwarkOf(state, g);
+    g.hp = round1(g.hp - max * frac);
+    if (g.hp <= 0.05) {
+      lostGuardians.push(g.type);
+      if (g.commander) {
+        const c = serving(state, g.commander);
+        if (c) c.injured = between(rng, V3.injury);
+        log(state, `${nameOf(g.commander)} was pulled from the wreck of the ${machineOf(state, g.type).name}: injured for ${c?.injured} days.`);
+      }
+      state.guardians.splice(state.guardians.indexOf(g), 1);
+    } else {
+      if (g.hp < max) hurtGuardians.push(g.id);
+      g.level = Math.min(V3.maxLevel, (g.level || 0) + (led ? 2 : 1));
+    }
+  }
+  const report = { day: state.day, won, from: raid.from, faction: raid.faction, tier: raid.tier, strength: a, defence: Math.round(d.total), winChance: p,
+    lostGuardians, hurt: hurtGuardians, damaged: [], stolen: {}, salvage: { credits: 0, parts: 0 }, tribute: null };
+  if (won) {
+    const hunter = state.commanders.some((c) => !(c.injured > 0) && COMMANDER[c.key]?.perk === 'hunter') ? RAID.hunter : 1;
+    const value = raid.units.reduce((t, u) => t + (MACHINE[u.type]?.price || 0), 0);
+    report.salvage = { credits: Math.round(value * RAID.salvage.credits * hunter), parts: Math.round(value * RAID.salvage.parts * hunter) };
+    state.stock.credits += report.salvage.credits; state.stock.parts += report.salvage.parts;
+    mood(state, 'Raid', RAID.fear.won);
+    state.raid.won++;
+  } else {
+    const frac = RAID.steal[0] + rng() * (RAID.steal[1] - RAID.steal[0]);
+    for (const g of ['food', 'parts', 'alloy', 'credits']) {
+      const n = Math.floor((state.stock[g] || 0) * frac);
+      if (n > 0) { state.stock[g] -= n; report.stolen[g] = n; }
+    }
+    const pool = raidTargets(state, raid.from).exposed;
+    for (let k = between(rng, RAID.damage); k > 0 && pool.length; k--) {
+      const b = pool.splice(Math.floor(rng() * pool.length), 1)[0];
+      b.damaged = between(rng, RAID.damageDays);
+      report.damaged.push(b.id);
+    }
+    mood(state, 'Raid fear', RAID.fear.lost);
+    state.raid.lost++;
+  }
+  return report;
+}
+
+// Answer the raid at the gates: 'fight' (auto-resolve with the colony's dice) or 'tribute'. Also
+// reached through answer() on the raid's pending event; the sim fights a raid left unanswered.
+export function answerRaid(state, choice, rng = stateRng(state)) {
+  upgradeState(state);
+  const rd = state.raid, raid = rd.coming;
+  if (!raid) return no('No raiders are coming.');
+  if (state.day < raid.day) return no(`The raiders are still ${raid.day - state.day} day${raid.day - state.day === 1 ? '' : 's'} out: answer them when they arrive.`);
+  let report, text;
+  const who = raidName(raid);
+  if (choice === 'tribute') {
+    const t = tributeOf(state, raid);
+    let paid;
+    if (state.stock.credits >= t.credits) paid = { credits: t.credits, food: 0 };
+    else if (state.stock.food >= t.food) paid = { credits: 0, food: t.food };
+    else return no(`Eden cannot pay: they want ${t.credits} credits or ${t.food} food. Fight them.`);
+    state.stock.credits -= paid.credits; state.stock.food -= paid.food;
+    rd.heat = Math.min(100, rd.heat + RAID.tributeHeat);
+    mood(state, 'Tribute paid', RAID.fear.tribute);
+    rd.paid++;
+    report = { day: state.day, won: false, from: raid.from, faction: raid.faction, tier: raid.tier, strength: raid.strength, defence: 0, winChance: 0,
+      lostGuardians: [], hurt: [], damaged: [], stolen: {}, salvage: { credits: 0, parts: 0 }, tribute: paid };
+    text = `${who} took ${paid.credits ? `${paid.credits} credits` : `${paid.food} food`} and left. Word of an easy mark gets around: heat +${RAID.tributeHeat}.`;
+  } else if (choice === 'fight') {
+    report = fight(state, raid, rng);
+    const lost = report.lostGuardians.length ? ` Lost: ${report.lostGuardians.map((t) => machineOf(state, t).name).join(', ')}.` : '';
+    text = report.won
+      ? `The guard beat off ${who}. Salvage: ${report.salvage.credits} credits and ${report.salvage.parts} parts.${lost}`
+      : `${who} broke through.${Object.keys(report.stolen).length ? ` Stolen: ${Object.entries(report.stolen).map(([g, n]) => `${n} ${g}`).join(', ')}.` : ''}${report.damaged.length ? ` ${report.damaged.length} building${report.damaged.length > 1 ? 's' : ''} knocked out until repaired.` : ''}${lost}`;
+  } else return no('Fight them or pay tribute.');
+  rd.count++; rd.last = report; rd.coming = null; rd.warned = false;
+  rd.next = state.day + raidInterval(state, rng);
+  state.pending = state.pending.filter((p) => p.kind !== 'raid');
+  log(state, text);
+  return ok(text, { report });
+}
+
+// What the Raids tab shows: { possible, heat, target, warned, coming, eta, last, count, won, lost, paid }.
+export function raidStatus(state) {
+  upgradeState(state);
+  const rd = state.raid, h = heatTarget(state);
+  return { possible: raidsPossible(state), heat: rd.heat, target: h.target, heatParts: h.parts, warned: rd.warned, coming: rd.coming,
+    eta: rd.coming ? Math.max(0, rd.coming.day - state.day) : null, last: rd.last, count: rd.count, won: rd.won, lost: rd.lost, paid: rd.paid, lead: warnLead(state) };
+}
+
+// Fusion Reactor output share: its helium today (set by the sim; before a first day, whether there is
+// any helium), × 1.5 in overdrive.
+export const fusionFactor = (state, b) => (b.fuel ?? (state.stock.helium > 0 ? 1 : 0)) * (b.mode === 'overdrive' ? 1.5 : 1);

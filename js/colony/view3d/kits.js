@@ -580,8 +580,8 @@ export const KITS = {
     cone([0.5, 1.5, 0.5], [0, 0.1, 0], '#9aa6b4'),
     ...[0.35, 0.65, 0.95].map((y, k) => torus([0.46 - k * 0.1, 0.07, 0.46 - k * 0.1], [0, y, 0], '#5fc8ff', GLOW)),
     P('dome', [0.28, 0.32, 0.28], [0, 1.45, 0], '#bff0ff', GLOW),
-    dome([2.8, 1.5, 2.8], [0, 0.1, 0], '#2a6aa8', { shimmer: true }),
-    torus([2.8, 0.03, 2.8], [0, 0.1, 0], '#2f78c0', { shimmer: true }),
+    dome([2.8, 1.5, 2.8], [0, 0.1, 0], '#0f3158', { shimmer: true }),
+    torus([2.8, 0.03, 2.8], [0, 0.1, 0], '#1d5690', { shimmer: true }),
   ],
   // 1×1 in space: an array of thin antennae with violet tips and crossbars on a dark pad.
   jammer: () => [
@@ -621,12 +621,13 @@ export const KITS = {
     const parts = [box([0.9, 0.05, 0.9], [0, 0, 0], '#4a4440'), box([0.06, 1.05, 0.7], [-0.4, 0.05, 0], DARK), box([0.06, 1.05, 0.7], [0.4, 0.05, 0], DARK)];
     for (let k = 0; k < 4; k++) {
       const y = 0.08 + k * 0.26;
-      parts.push(box([0.8, 0.035, 0.72], [0, y, 0], '#6a5a4a'), box([0.74, 0.02, 0.66], [0, y + 0.035, 0], '#d8a8ff', GLOW));
-      for (let j = 0; j < 3; j++) {
-        const x = -0.24 + j * 0.24, z = (k + j) % 2 ? 0.12 : -0.12;
-        parts.push(cyl([0.04, 0.06, 0.04], [x, y + 0.04, z], '#efe6d2'), dome([0.17, 0.08, 0.17], [x, y + 0.1, z], (k + j) % 3 ? '#e8d8b8' : '#b48ae0'));
+      parts.push(box([0.8, 0.035, 0.72], [0, y, 0], '#6a5a4a'), box([0.78, 0.012, 0.03], [0, y + 0.035, 0.34], '#e0b8ff', GLOW));
+      for (let j = 0; j < 6; j++) {
+        const x = -0.26 + (j % 3) * 0.26, z = j < 3 ? -0.17 : 0.17, s = 0.22 + 0.05 * ((k + j) % 2);
+        parts.push(cyl([0.05, 0.07, 0.05], [x, y + 0.035, z], '#efe6d2'), dome([s, 0.11, s], [x, y + 0.1, z], (k + j) % 3 ? '#efdcb8' : '#c49aec'));
       }
     }
+    parts.push(dome([0.2, 0.1, 0.2], [0, 1.15, 0], '#d8a8ff', GLOW));
     return parts;
   },
   // 2×2 on the hills: three stepped tiers of white homes with green roofs and lit windows.

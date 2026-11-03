@@ -30,7 +30,7 @@ export const MAX_SHOWN = 12;                 // guardians drawn at once (the res
 const FIGHT_S = 9;                           // the skirmish, seconds of view time at x1
 const RAIDERS_MAX = 12;
 const CAP = { sparks: 900, smoke: 420, beams: 140, flashes: 12, emitters: 24 };
-const SPEED = { raider: 7.5, flee: 12, guardian: 8.5, ship: 4.5, ret: 6 };
+const SPEED = { raider: 7.5, flee: 12, guardian: 8.5, ship: 4.5, ret: 7, scramble: 16 };   // tiles a second
 const ALT = { battle: 5.2, standoff: 6.5, entry: 14 };
 const CLS = ['hu', 'planes', 'armour', 'ships', 'support'];
 // Class colours (the tinted parts): HU blue, fighters cyan, armour green, ships gold, support orange.
@@ -142,7 +142,7 @@ const RAIDER_SHIP = () => model([
   ...[-0.6, 0, 0.6].map((x) => ({ s: 'box', size: [0.06, 0.04, 0.06], pos: [x, 0.2, 0.36], c: RAID_GLOW, glow: 1 })),
 ]);
 const MODELS = { hu: MECHA, planes: FIGHTER, armour: TANK, ships: SHIP, support: SUPPORT, raider: RAIDER, raidship: RAIDER_SHIP };
-const SCALE = { hu: 1, planes: 1, armour: 1, ships: 1, support: 1, raider: 1, raidship: 1 };
+const SCALE = { hu: 1, planes: 1, armour: 1, ships: 1, support: 1, raider: 1.35, raidship: 1.25 };
 
 // ---- small helpers -----------------------------------------------------------------------------
 
@@ -428,7 +428,10 @@ export function createDefence(parent, helpers = {}) {
       const key = (cls === 'ships' ? 'a' : 'g') + host.id, arr = ghostSlots.get(key), k = ghostUsed.get(key) || 0;
       if (arr && k < arr.length) { s = arr[k]; ghostUsed.set(key, k + 1); }
       if (!s) { const n = sizeOf(host.key); s = [host.x + n / 2 + (j - 2) * 0.8, roofOf(host.x, host.y, n) + 0.6, host.y + n + 1.2]; }
-      guards.push({ id: 'ghost' + j, cls, ghost: true, dead: false, mode: 'idle', home: [...s], p: [...s], v: [0, 0, 0], hx: 0, hz: 1, ph: rnd() * 6.28, cd: rnd(), shade: 1, dieAt: 2.6 + j * 0.9 + rnd() * 0.5 });
+      // it scrambled with the others: start beside one already out, if any
+      const wing = guards.find((a, k) => !a.dead && a.mode === 'sortie' && k % lost.length === j) || guards.find((a) => !a.dead && a.mode === 'sortie');
+      const p = wing ? [wing.p[0] + (rnd() - 0.5) * 2, wing.p[1] + 0.6, wing.p[2] + (rnd() - 0.5) * 2] : [...s];
+      guards.push({ id: 'ghost' + j, cls, ghost: true, dead: false, mode: wing && FLIERS.has(cls) ? 'sortie' : 'idle', home: [...s], p, v: [0, 0, 0], hx: 0, hz: 1, ph: rnd() * 6.28, cd: rnd(), shade: 1, dieAt: 3.2 + j * 1.1 + rnd() * 0.5 });
     });
     // the buildings hit (lost): their roofs, for the raiders' strafing runs
     ep.targets = [];
@@ -451,13 +454,14 @@ export function createDefence(parent, helpers = {}) {
     if (info.reset) { played = new Set(); ep = null; lastComing = null; guardSig = ''; for (const a of guards) a.dead = true; guards = []; }
     syncGuardians();
     syncEmitters();
+    drawn = false;
     const raid = state.raid, day = state.day | 0, coming = raid?.coming, last = raid?.last;
     edge = coming && (raid.warned !== false || coming.day - day <= 1) ? sideOf(coming.from) : null;
     if (coming) lastComing = coming;
     if (last && last.day === day && !played.has('r' + last.day + sideOf(last.from))) {
       played.add('r' + last.day + sideOf(last.from));
       startFight(last);
-    } else if (coming && coming.day - day <= 1 && (!ep || ep.phase === 'done')) {
+    } else if (coming && coming.day - day <= 1 && coming.day >= day - 1 && !played.has('r' + coming.day + sideOf(coming.from)) && !(last && last.day >= coming.day) && (!ep || ep.phase === 'done' || ep.phase === 'leave')) {
       ep = newEpisode('c' + coming.day, coming.from, raiderMix(coming), false);
     } else if (ep && (ep.phase === 'approach' || ep.phase === 'hold') && !coming) {
       ep.phase = 'leave'; ep.outcome = 'gone';                    // resolved with no report this day
@@ -550,7 +554,7 @@ export function createDefence(parent, helpers = {}) {
       }
       seek(r, goal, sp, dt, r.kind === 'raidship' ? 1.2 : 2.5);
       if (r.flee && Math.abs(r.p[0] - W / 2) > W / 2 + 25 || r.flee && (r.p[2] < -25 || r.p[2] > H + 25)) r.gone = true;
-      if (fighting && ft >= r.dieAt) { r.alive = false; explode(r.p[0], r.p[1], r.p[2], r.kind === 'raidship' ? 1.8 : 0.9, true); }
+      if (fighting && ft >= r.dieAt) { r.alive = false; explode(r.p[0], r.p[1], r.p[2], r.kind === 'raidship' ? 2.4 : 1.3, true); }
       // raiders fire: at guardians in range, at the hull's buildings once they reach them (lost)
       if (fighting && !r.flee && ft > 1) {
         r.cd -= dt;
@@ -578,7 +582,7 @@ export function createDefence(parent, helpers = {}) {
         if (!emitters.some((e) => e.id === tg.id) && emitters.length < CAP.emitters) emitters.push({ id: tg.id, x: tg.x, y: tg.y, z: tg.z, n: tg.n, acc: 0 });
       }
       if (ft >= FIGHT_S) { E.phase = 'leave'; for (const r of E.raiders) if (r.alive) r.flee = true; }
-    } else if (E.phase === 'approach' && E.raiders.every((r) => E.t > r.delay && Math.hypot(r.p[0] - G.standoff[0] - r.off[0], r.p[2] - G.standoff[2] - r.off[2]) < 3)) E.phase = 'hold';
+    } else if (E.phase === 'approach' && (E.t > 12 || E.raiders.every((r) => E.t > r.delay && Math.hypot(r.p[0] - G.standoff[0] - r.off[0], r.p[2] - G.standoff[2] - r.off[2]) < 3.5))) E.phase = 'hold';
     if ((E.phase === 'leave' || fighting) && E.raiders.every((r) => !r.alive || r.gone) && guards.every((a) => a.mode === 'idle' || a.dead)) E.phase = 'done';
   }
 
@@ -588,15 +592,20 @@ export function createDefence(parent, helpers = {}) {
       const a = guards[k];
       if (a.dead) continue;
       const flier = FLIERS.has(a.cls);
-      if (fighting && a.mode === 'idle' && flier && E.ft > 0.3 + (k % 6) * 0.15) a.mode = 'sortie';
-      if (!fighting && a.mode === 'sortie') a.mode = 'return';
+      // the fliers scramble as soon as raiders show (a second or so after), and meet them in the fight
+      const alert = E && (E.phase === 'approach' || E.phase === 'hold') && E.t > 1 + (k % 6) * 0.2;
+      if ((alert || fighting && E.ft > 0.2 + (k % 6) * 0.12) && a.mode !== 'sortie' && flier && !a.dead) a.mode = 'sortie';
+      if (!fighting && !alert && a.mode === 'sortie') a.mode = 'return';
       if (a.mode === 'sortie') {
         const lat = (k % 7) - 3, ring = Math.sin(clock * 1.1 + a.ph) * 1.2;
-        const c = G.battle, back = a.cls === 'ships' ? 3.5 : 0.5;
+        // hold a screen between the hull and the raiders, then push out to meet them
+        const c = G.battle, back = (a.cls === 'ships' ? 3.5 : 0.5) + (fighting ? -Math.min(1, E.ft / 3) * 2.5 : 1.5);
         const goal = [c[0] - G.out[0] * back + G.lat[0] * lat * 1.5 + ring, c[1] - 0.8 + (k % 3) * 0.7 + (a.cls === 'ships' ? 1.2 : 0), c[2] - G.out[1] * back + G.lat[1] * lat * 1.5 + Math.cos(clock * 0.9 + a.ph) * 1.2];
-        seek(a, goal, a.cls === 'ships' ? SPEED.ship : SPEED.guardian, dt, a.cls === 'ships' ? 1.2 : 3);
+        const far = Math.hypot(goal[0] - a.p[0], goal[2] - a.p[2]) > 12;
+        seek(a, goal, far ? SPEED.scramble * (a.cls === 'ships' ? 0.6 : 1) : a.cls === 'ships' ? SPEED.ship : SPEED.guardian, dt, a.cls === 'ships' ? 1.2 : 3);
       } else if (a.mode === 'return') {
-        if (seek(a, a.home, SPEED.ret, dt, 3) < 0.08) { a.mode = 'idle'; a.v = [0, 0, 0]; a.pitch = 0; a.roll = 0; }
+        const far = Math.hypot(a.home[0] - a.p[0], a.home[2] - a.p[2]) > 12;
+        if (seek(a, a.home, far ? SPEED.scramble * (a.cls === 'ships' ? 0.6 : 1) : SPEED.ret, dt, 3) < 0.08) { a.mode = 'idle'; a.v = [0, 0, 0]; a.pitch = 0; a.roll = 0; }
       } else {
         // idle: a gentle bob on the apron, facing the camera's side (+z); ships hover and sway
         const bob = a.cls === 'ships' ? 0.12 : a.cls === 'planes' ? 0.06 : a.cls === 'hu' ? 0.025 : 0.012;
@@ -606,7 +615,7 @@ export function createDefence(parent, helpers = {}) {
         if (!fighting || flier) { a.hx += (tx - a.hx) * Math.min(1, dt * 3); a.hz += (tz - a.hz) * Math.min(1, dt * 3); const l = Math.hypot(a.hx, a.hz) || 1; a.hx /= l; a.hz /= l; }
         a.pitch = 0; a.roll = 0;
       }
-      if (a.ghost && fighting && E.ft >= a.dieAt) { a.dead = true; explode(a.p[0], a.p[1], a.p[2], a.cls === 'ships' ? 1.6 : 0.8, true); continue; }
+      if (a.ghost && fighting && E.ft >= a.dieAt) { a.dead = true; explode(a.p[0], a.p[1], a.p[2], a.cls === 'ships' ? 2.2 : 1.2, true); continue; }
       // fire at raiders in range (ground units too, from the apron)
       if (fighting && E.ft > 0.8 && E.ft < FIGHT_S - 0.6) {
         a.cd -= dt;
@@ -654,7 +663,7 @@ export function createDefence(parent, helpers = {}) {
       m.acc += dt;
       while (m.acc > 0.025) { m.acc -= 0.025; sparks.spawn(x, y, z, (rnd() - 0.5) * 0.2, 0.1, (rnd() - 0.5) * 0.2, 0.45, 0.09, 0.22, m.rgb); }
       sparks.spawn(x, y, z, 0, 0, 0, 0.04, 0.16, 0.16, FIRE[0]);
-      if (u >= 1) { explode(x, y, z, 0.45, false); missiles[i] = missiles[missiles.length - 1]; missiles.pop(); continue; }
+      if (u >= 1) { explode(x, y, z, 0.6, false); missiles[i] = missiles[missiles.length - 1]; missiles.pop(); continue; }
       i++;
     }
   }
@@ -782,6 +791,8 @@ export function createDefence(parent, helpers = {}) {
     refresh, update, reset, dispose, marks, stats: stats_, group,
     // tests: n seconds of view time now, in steps of h (ignores the speed)
     advance(sec, h = 1 / 30) { for (let t = 0; t < sec - 1e-9; t += h) step(Math.min(h, sec - t)); },
+    // the raiders' positions and the battle point (tests)
+    raiders: () => (ep ? { battle: ep.G.battle.map((v) => +v.toFixed(1)), standoff: ep.G.standoff.map((v) => +v.toFixed(1)), list: ep.raiders.filter((r) => r.alive && !r.gone).map((r) => r.p.map((v) => +v.toFixed(2))) } : null),
     // the guardians' positions (tests)
     positions: () => guards.filter((a) => !a.dead).map((a) => ({ id: a.id, cls: a.cls, mode: a.mode, ghost: !!a.ghost, p: a.p.map((v) => +v.toFixed(2)), home: a.home.map((v) => +v.toFixed(2)) })),
   };

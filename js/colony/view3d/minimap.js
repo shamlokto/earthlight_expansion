@@ -12,11 +12,13 @@
 //     container (or any ancestor): --cv-minimap-right, --cv-minimap-bottom, --cv-minimap-left,
 //     --cv-minimap-top (set left/top to a length and right/bottom to auto to use another corner),
 //     or by styling `.cv-minimap` directly. 1 CSS px per tile, half that at phone widths.
+//   * marks (version 3, from defence.js through view.js each frame): guardians as small blue dots,
+//     raiders as red dots during a raid, and a red glow along the edge a coming raid comes from
 import { TERRAIN, T } from '../data/terrain.js';
 import { BUILDING, DOCK_REACH } from '../data/buildings.js';
 
 // The build menu's category colours (ui.js CAT_COLOR), so a dot reads as its card.
-export const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8', services: '#c3a6ff' };
+export const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8', services: '#c3a6ff', defence: '#ff6a5a' };
 const ROAD_RGB = [176, 184, 198], REACH_RGB = [111, 211, 255], BUILD_RGB = [111, 216, 255];
 const rgbOf = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 const CAT_RGB = Object.fromEntries(Object.entries(CAT_COLOR).map(([k, v]) => [k, rgbOf(v)]));
@@ -75,7 +77,7 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
   const base = document.createElement('canvas'), bctx = base.getContext('2d');
 
   let W = 0, H = 0, st = null, terr = null, img = null, visible = true;
-  let baseDirty = true, drawSig = '', poly = null, target = null;
+  let baseDirty = true, drawSig = '', poly = null, target = null, marks = null;
   const phone = typeof matchMedia === 'function' ? matchMedia('(max-width: 760px)') : null;
   let scale = 1;
 
@@ -161,13 +163,16 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
   function draw() {
     if (!visible || !st || !W) return;
     if (baseDirty) compose();
-    const sig = poly ? poly.map((v) => v.toFixed(1)).join(',') : '';
+    const q = (a) => { let s = ''; for (let k = 0; k < a.length; k++) s += ((a[k] * 2) | 0) + ','; return s; };
+    const msig = marks ? `${marks.edge || ''}|${q(marks.raiders || [])}|${q(marks.guardians || [])}|${marks.edge ? Math.floor(performance.now() / 120) : ''}` : '';
+    const sig = (poly ? poly.map((v) => v.toFixed(1)).join(',') : '') + msig;
     if (sig === drawSig) return;
     drawSig = sig;
     const cw = canvas.width, chh = canvas.height, sx = cw / W, sz = chh / H;
     ctx.imageSmoothingEnabled = cw < W;   // downscaled on a phone at 1x: smooth; otherwise crisp
     ctx.clearRect(0, 0, cw, chh);
     ctx.drawImage(base, 0, 0, cw, chh);
+    if (marks) drawMarks(sx, sz, cw, chh);
     if (poly && poly.length >= 6) {
       ctx.save();
       ctx.beginPath();
@@ -188,6 +193,31 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
       }
       ctx.restore();
     }
+  }
+
+  // The coming raid's edge glows red (pulsing), guardians are blue dots, raiders red dots.
+  function drawMarks(sx, sz, cw, chh) {
+    ctx.save();
+    if (marks.edge) {
+      const k = 0.55 + 0.35 * Math.sin(performance.now() / 260), d = Math.max(6, Math.min(cw, chh) * 0.09);
+      const [x0, y0, x1, y1] = marks.edge === 'north' ? [0, 0, 0, d] : marks.edge === 'east' ? [cw, 0, cw - d, 0] : marks.edge === 'west' ? [0, 0, d, 0] : [0, chh, 0, chh - d];
+      const g = ctx.createLinearGradient(x0, y0, x1, y1);
+      g.addColorStop(0, `rgba(255, 40, 30, ${0.85 * k})`); g.addColorStop(1, 'rgba(255, 40, 30, 0)');
+      ctx.fillStyle = g;
+      if (marks.edge === 'north') ctx.fillRect(0, 0, cw, d); else if (marks.edge === 'east') ctx.fillRect(cw - d, 0, d, chh);
+      else if (marks.edge === 'west') ctx.fillRect(0, 0, d, chh); else ctx.fillRect(0, chh - d, cw, d);
+    }
+    const dot = (a, r, fill, rim) => {
+      for (let k = 0; k + 1 < a.length; k += 2) {
+        ctx.beginPath(); ctx.arc(a[k] * sx, a[k + 1] * sz, r, 0, Math.PI * 2);
+        ctx.fillStyle = rim; ctx.fill();
+        ctx.beginPath(); ctx.arc(a[k] * sx, a[k + 1] * sz, r * 0.62, 0, Math.PI * 2);
+        ctx.fillStyle = fill; ctx.fill();
+      }
+    };
+    dot(marks.guardians || [], Math.max(1.4, sx * 1.3), '#7fc8ff', 'rgba(10, 30, 80, 0.85)');
+    dot(marks.raiders || [], Math.max(2, sx * 1.9), '#ff3a2a', 'rgba(60, 0, 0, 0.9)');
+    ctx.restore();
   }
 
   // ---- input ------------------------------------------------------------------------------------
@@ -227,8 +257,9 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
     },
     // Chambers or buildings changed: recompose on the next draw (only if shown).
     refresh(state) { st = state; baseDirty = true; },
-    // The camera's ground footprint [x0, z0, x1, z1, ...] and target [x, z], in tiles; drawn only when changed.
-    frame(footprint, at) { poly = footprint; target = at; draw(); },
+    // The camera's ground footprint [x0, z0, x1, z1, ...] and target [x, z], in tiles, and the
+    // defence marks ({ raiders: [x, z, ...], guardians: [x, z, ...], edge }); drawn only when changed.
+    frame(footprint, at, m = null) { poly = footprint; target = at; marks = m; draw(); },
     setVisible(on) { visible = !!on; el.hidden = !visible; drawSig = ''; },
     get visible() { return visible; },
     layout,
