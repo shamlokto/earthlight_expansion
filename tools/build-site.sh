@@ -7,8 +7,8 @@ set -e
 P=$(cd "${1:-.}" && pwd); W=${2:-_site}
 rm -rf "$W" && mkdir -p "$W" && W=$(cd "$W" && pwd)
 cd "$P"
-cp -r css js missions README.md "$W/"
-for f in game editor expansion fightlab play soundlab wiki; do cp "$f.html" "$W/"; done
+cp -r css js missions art README.md "$W/"
+for f in game editor expansion colony fightlab play soundlab wiki; do cp "$f.html" "$W/"; done
 cp index.html "$W/lab.html"
 cd "$W"
 find . -name .DS_Store -delete
