@@ -3,7 +3,7 @@
 import { generateMap } from './mapgen.js';
 import { BUILDING, BUILDINGS } from './data/buildings.js';
 import { T } from './data/terrain.js';
-import { findSpot, log, unitPrice, chamberOf } from './rules.js';
+import { findSpot, log, unitPrice, chamberOf, addPending } from './rules.js';
 import { farmSoil } from './sim.js';
 
 export const SAVE_KEY = 'el-colony';
@@ -70,6 +70,12 @@ export function newGame({ seed = 1, importSave = null, beta = false, types = nul
   }
   state.housing = state.buildings.reduce((s, b) => s + (BUILDING[b.key].housing || 0), 0);
   log(state, 'Landfall. The Command Centre is running; Eden waits behind its bulkheads.');
+  // A first word from Ruess: what to do in the first weeks (the event pauses the clock, D1).
+  const hello = addPending(state, 'welcome', 'Landfall', 'Governor, the Command Centre keeps us breathing for now, but the food stores last about three weeks. '
+    + 'Plant Farm Fields on the fertile banks of the river and build Habitats for the next transport. '
+    + 'A park or a grove beside the homes lets them grow. When we have the parts, survey the next chamber, '
+    + 'seal its breaches and pump in air: every chamber we give back is more room to live.');
+  hello.speaker = 'ruess';
   return state;
 }
 

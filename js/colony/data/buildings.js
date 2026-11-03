@@ -39,7 +39,7 @@ export const BASE_PRICE = { ore: 3, food: 3, parts: 10, water: 1, air: 2 };
 
 export const BUILDINGS = [
   { key: 'command', name: 'Command Centre', cat: 'core', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor'], fixed: true,
-    cost: { credits: 0, parts: 0 }, days: 0, jobs: 0, upkeep: 0, power: 20, makes: { air: 30, water: 10, parts: 2 }, housing: 20,
+    cost: { credits: 0, parts: 0 }, days: 0, jobs: 0, upkeep: 0, power: 20, makes: { air: 60, water: 10, parts: 2 }, housing: 20,
     storage: { food: 300, water: 300, air: 200, parts: 300, ore: 200 },
     text: 'The Governor\'s seat: a small reactor, air plant, workshop and stores. Lose it and the colony is lost.' },
   { key: 'dock', name: 'Dock', cat: 'core', size: 2, zone: 'hull', on: ['hull'], cost: { credits: 400, parts: 40 }, days: 6, jobs: 4, upkeep: 6, power: -4, radius: 24,

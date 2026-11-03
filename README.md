@@ -10,6 +10,12 @@ your own `Earth Light (Japan)` ROM and, optionally, Nezz's English patch; nothin
   It runs on its own data (`js/expansion/data/`) and a graphics-and-sound pack copied once from
   your ROM, so after the first run it needs no ROM. Beta testing is on: unlimited supply, every
   machine, trades at any price (switch in the intermission's Campaign box).
+* **The colony game, *Earthlight Space Colony Rebuild*** (`colony.html`, the **Colony Rebuild** button):
+  after the expansion, the General sells the fleet to rebuild Eden, a broken colony above poisoned Earth.
+  A simple SimCity-style builder on a rotatable 3D map (three.js, vendored): repair chambers, farm the
+  river banks, mine asteroids and harvest magnetic fields in space. It needs no ROM. Import an expansion
+  save for extra starting funds, or (beta) to bring the whole army as guardians. Design: `docs/COLONY.md`;
+  version 1 contract: `docs/COLONY-V1.md`; tests: `node tests/colony-sim.mjs`, `node tests/colony-mapgen.mjs`.
 * Missions are built from text layouts: `node tools/build-missions.mjs --rom ROM` (`tools/missions/`).
 
 # Earth Light remake lab

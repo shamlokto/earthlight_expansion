@@ -756,6 +756,9 @@ Each version is a complete, playable game, and ends with a commit. Version 1 is 
 
 ### Version 1: Landfall (the first playable game)
 
+**Built 2026-11-03** (`colony.html`): map generator, simulation, 3D view, interface and the first
+36 xAI images; 123 simulation checks and 20 map seeds pass. Playable in the browser without a ROM.
+
 * **Map**: the full starter map, but only the landing chamber and its dock open. Interior
   terrains: plain and fertile soil, river, rubble, breached deck. Space: void, asteroid field,
   magnetic field, atmosphere band and Earth.

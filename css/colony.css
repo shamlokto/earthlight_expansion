@@ -127,6 +127,10 @@ small { color: var(--dim); font-weight: 400; }
 .cl-check input:focus-visible + span { outline: 2px solid var(--gold); outline-offset: 2px; }
 .cl-check b { font-weight: 600; }
 .cl-check small { margin-left: 4px; }
+.cl-check em { font-style: normal; display: grid; }
+.cl-check em small { margin: 0; font-size: 12px; }
+.cl-pop .cl-check { margin: 10px 0; }
+.cl-ui:has(.cl-pop:not([hidden])) .cl-insp { visibility: hidden; }
 .cl-note { margin: 4px 0 0 48px; font-size: 13px; color: var(--dim); line-height: 1.5; }
 
 /* ------------------------------------------------------------------ game layout */
