@@ -18,6 +18,8 @@
 //   modes                    [{ key, name, text }]; the first is the default
 //   levels                   per-level overrides (index 0 = level 1), when the building upgrades in place
 //   unlock                   { pop } colonists needed before it appears in the menu
+//   tech                     the tech (data/tech.js) that unlocks it (version 2)
+//   service                  happiness for habitats in its radius (clinic, canteen, safety post)
 //   fixed                    cannot be built, moved or demolished by the player
 //   text                     one line for the build menu
 export const CATEGORIES = [
@@ -27,6 +29,7 @@ export const CATEGORIES = [
   { key: 'food', name: 'Food' },
   { key: 'industry', name: 'Industry' },
   { key: 'homes', name: 'Homes & parks' },
+  { key: 'services', name: 'Services' },
 ];
 
 // What one colonist needs a day.
@@ -36,12 +39,12 @@ export const CHAMBER_AIR_PER_100 = 1;
 // Space buildings must stand within this many tiles (Chebyshev) of a finished dock's centre.
 export const DOCK_REACH = 24;
 // Wanderers of the market: base sale price in credits per unit (rules.sell moves it).
-export const BASE_PRICE = { ore: 3, food: 3, parts: 10, water: 1, air: 2 };
+export const BASE_PRICE = { ore: 3, food: 3, parts: 10, water: 1, air: 2, alloy: 12, helium: 30 };
 
 export const BUILDINGS = [
   { key: 'command', name: 'Command Centre', cat: 'core', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor'], fixed: true,
     cost: { credits: 0, parts: 0 }, days: 0, jobs: 0, upkeep: 0, power: 20, makes: { air: 60, water: 10, parts: 2, food: 15 }, housing: 20,
-    storage: { food: 300, water: 300, air: 300, parts: 300, ore: 200 },
+    storage: { food: 300, water: 300, air: 300, parts: 300, ore: 200, alloy: 100, helium: 50 },
     text: 'The Governor\'s seat: a small reactor, air plant, ration stores, workshop and stores. Lose it and the colony is lost.' },
   { key: 'dock', name: 'Dock', cat: 'core', size: 2, zone: 'hull', on: ['hull'], cost: { credits: 400, parts: 40 }, days: 6, jobs: 4, upkeep: 6, power: -4, radius: 24,
     text: 'Opens the hull to space: space buildings must stand within its reach. Transports land here.' },
@@ -49,7 +52,7 @@ export const BUILDINGS = [
     levels: [{ crews: 1 }, { crews: 2, cost: { credits: 300, parts: 40 } }, { crews: 3, cost: { credits: 500, parts: 80 } }],
     text: 'Ruess\'s crews. Each crew builds one thing at a time; more crews, more at once.' },
   { key: 'depot', name: 'Storage Depot', cat: 'core', size: 1, zone: 'any', on: ['deck', 'plain', 'fertile', 'poor', 'void', 'asteroid', 'hull'], cost: { credits: 80, parts: 5 }, days: 2, jobs: 0, upkeep: 1,
-    storage: { food: 300 }, modes: [{ key: 'food', name: 'Food' }, { key: 'water', name: 'Water' }, { key: 'air', name: 'Air' }, { key: 'parts', name: 'Parts' }, { key: 'ore', name: 'Ore' }],
+    storage: { food: 300 }, modes: [{ key: 'food', name: 'Food' }, { key: 'water', name: 'Water' }, { key: 'air', name: 'Air' }, { key: 'parts', name: 'Parts' }, { key: 'ore', name: 'Ore' }, { key: 'alloy', name: 'Alloy' }, { key: 'helium', name: 'Helium-3' }],
     text: 'Stores 300 of one good. Switch what it holds any time.' },
 
   { key: 'road', name: 'Road', cat: 'core', size: 1, zone: 'road', on: ['deck', 'plain', 'fertile', 'poor', 'gate'], cost: { credits: 5, parts: 1 }, days: 0, jobs: 0, upkeep: 0,
@@ -90,6 +93,51 @@ export const BUILDINGS = [
   { key: 'habitat', name: 'Habitat', cat: 'homes', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor'], cost: { credits: 100, parts: 5 }, days: 2, jobs: 0, upkeep: 2, power: -2, housing: 20,
     levels: [{ housing: 20, name: 'Shelter' }, { housing: 40, name: 'Quarters', needs: ['allNeeds', 'park'] }, { housing: 70, name: 'Apartments', needs: ['allNeeds', 'park', 'clinic'] }],
     text: 'Homes that grow by themselves when their needs are met. Its panel lists what is missing.' },
+  // ---------------------------------------------------------------- version 2 (docs/COLONY-V2.md)
+  // `tech` = the tech (data/tech.js) that unlocks it. Numbers are first guesses for the balance pass.
+  { key: 'lab', name: 'Research Lab', cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock'], cost: { credits: 400, parts: 30 }, days: 5, jobs: 4, upkeep: 4, power: -8, makes: { research: 4 }, unlock: { pop: 80 },
+    levels: [{ makes: { research: 4 } }, { makes: { research: 7 }, cost: { credits: 400, parts: 40 } }, { makes: { research: 11 }, cost: { credits: 700, parts: 80 } }],
+    text: 'Research points for the tech tree. Pick what to study in the Research panel.' },
+  { key: 'reclaimer', name: 'Water Reclaimer', cat: 'life', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock'], cost: { credits: 180, parts: 15 }, days: 3, jobs: 1, upkeep: 2, power: -3, makes: { water: 25 }, tech: 'reclaim',
+    levels: [{ makes: { water: 25 } }, { makes: { water: 40 }, cost: { credits: 150, parts: 15 } }, { makes: { water: 60 }, cost: { credits: 250, parts: 30 } }],
+    text: 'Recycles the colony\'s water: no river needed.' },
+  { key: 'iceharvester', name: 'Ice Harvester', cat: 'life', size: 2, zone: 'space', on: ['comet'], cost: { credits: 400, parts: 30 }, days: 5, jobs: 3, upkeep: 4, power: -6, makes: { water: 80 }, tech: 'cometice',
+    text: 'Melts the comet\'s icy tail into water. Only on the comet tail.' },
+  { key: 'gasscoop', name: 'Gas Scoop', cat: 'life', size: 2, zone: 'space', on: ['atmosphere'], cost: { credits: 450, parts: 35 }, days: 6, jobs: 3, upkeep: 5, power: -8, makes: { air: 50 }, tech: 'gasscoop',
+    text: 'Skims air from the top of Earth\'s atmosphere. Tether Masts carry the dock\'s reach down to it.' },
+  { key: 'orchard', name: 'Orchard Terrace', cat: 'food', size: 2, zone: 'interior', on: ['hills'], cost: { credits: 160, parts: 8 }, days: 4, jobs: 3, upkeep: 2, uses: { water: 4 }, makes: { food: 10, credits: 3 }, tech: 'orchards',
+    text: 'Fruit on the hills: food and a little money.' },
+  { key: 'fishery', name: 'Fishery', cat: 'food', size: 1, zone: 'interior', on: ['plain', 'fertile', 'poor', 'deck'], adj: 'river', cost: { credits: 140, parts: 8 }, days: 3, jobs: 2, upkeep: 2, makes: { food: 14 }, tech: 'orchards',
+    text: 'Fish from Eden\'s river. Must stand beside it.' },
+  { key: 'canteen', name: 'Canteen', cat: 'food', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor'], cost: { credits: 150, parts: 10 }, days: 3, jobs: 2, upkeep: 2, power: -3, uses: { food: 4 }, radius: 8, service: 5, tech: 'canteens',
+    modes: [{ key: 'meals', name: 'Hot meals', text: 'Happiness for homes in range.' },
+            { key: 'ration', name: 'Rationing', text: 'The colony eats a fifth less; everyone is a little less happy.' }],
+    text: 'Hot meals: happiness for the homes in range. Can ration food in a pinch.' },
+  { key: 'seedvault', name: 'Seed Vault', cat: 'food', size: 1, zone: 'interior', on: ['plain', 'fertile', 'poor'], cost: { credits: 200, parts: 15 }, days: 4, jobs: 1, upkeep: 2, radius: 5, tech: 'seeds',
+    text: 'Mends the soil around it: a poor tile in range becomes plain every 10 days.' },
+  { key: 'smelter', name: 'Smelter', cat: 'industry', size: 2, zone: 'interior', on: ['deck', 'plain', 'poor', 'rock'], cost: { credits: 350, parts: 25 }, days: 5, jobs: 4, upkeep: 4, power: -12, uses: { ore: 20 }, makes: { alloy: 10 }, tech: 'smelting',
+    text: 'Melts ore into alloy. Alloy sells well and feeds the Fabricator.' },
+  { key: 'fabricator', name: 'Fabricator', cat: 'industry', size: 2, zone: 'interior', on: ['deck', 'plain', 'poor', 'rock'], cost: { credits: 400, parts: 30 }, days: 5, jobs: 4, upkeep: 4, power: -10, uses: { alloy: 10 }, makes: { parts: 15 }, tech: 'fabrication',
+    text: 'Turns alloy into parts: the colony makes its own.' },
+  { key: 'sweeper', name: 'Meteoroid Sweeper', cat: 'industry', size: 1, zone: 'space', on: ['meteoroid'], cost: { credits: 150, parts: 12 }, days: 3, jobs: 1, upkeep: 2, power: -3, makes: { ore: 6, water: 6 }, tech: 'sweeping',
+    text: 'Gathers ore and ice from a meteoroid drift. Now and then a strike stops it for a few days.' },
+  { key: 'tailings', name: 'Tailings Dump', cat: 'industry', size: 2, zone: 'space', on: ['void', 'asteroid'], cost: { credits: 200, parts: 10 }, days: 3, jobs: 0, upkeep: 1, tech: 'smelting',
+    text: 'Takes the waste of the mines: more than four Ore Mines need one per four. It fills up; empty it (an order) before it is full.' },
+  { key: 'plasmaskimmer', name: 'Plasma Skimmer', cat: 'industry', size: 2, zone: 'space', on: ['plasma'], cost: { credits: 500, parts: 40 }, days: 6, jobs: 2, upkeep: 5, power: -6, makes: { helium: 6 }, tech: 'plasma',
+    text: 'Draws helium-3 from a plasma cloud: the most valuable cargo Earth will buy.' },
+  { key: 'tether', name: 'Tether Mast', cat: 'core', size: 1, zone: 'space', on: ['void', 'asteroid', 'magnetic', 'meteoroid', 'comet', 'plasma', 'atmosphere'], cost: { credits: 120, parts: 12 }, days: 3, jobs: 0, upkeep: 1, power: -1, radius: 16, tech: 'tethers',
+    text: 'Carries the dock\'s reach 16 tiles further: build space buildings around it. Masts can chain.' },
+  { key: 'dronebay', name: 'Survey Drone Bay', cat: 'core', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock'], cost: { credits: 250, parts: 20 }, days: 4, jobs: 2, upkeep: 2, power: -3, radius: 40, tech: 'drones',
+    text: 'Drones can survey any sealed chamber within 40 tiles, not only those next to open ones.' },
+  { key: 'clinic', name: 'Clinic', cat: 'services', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor'], cost: { credits: 250, parts: 20 }, days: 4, jobs: 3, upkeep: 3, power: -4, radius: 8, service: 6, tech: 'medicine',
+    levels: [{ name: 'Clinic', radius: 8 }, { name: 'Medical Centre', radius: 12, cost: { credits: 300, parts: 30 } }, { name: 'Hospital', radius: 16, cost: { credits: 600, parts: 60 } }],
+    modes: [{ key: 'full', name: 'Full care', text: 'Happiness and children in range.' },
+            { key: 'triage', name: 'Triage', text: 'Half the upkeep, half the happiness.' }],
+    text: 'Health care: happiness in range, children are born, and Habitats in range can grow into Apartments.' },
+  { key: 'safetypost', name: 'Safety Post', cat: 'services', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor'], cost: { credits: 180, parts: 12 }, days: 3, jobs: 2, upkeep: 2, power: -2, radius: 10, service: 4, tech: 'safety',
+    text: 'Wardens and breach crews: calmer homes in range, and Bulkhead Seals in range go up twice as fast.' },
+  { key: 'obsdeck', name: 'Observation Deck', cat: 'services', size: 2, zone: 'hull', on: ['hull'], cost: { credits: 300, parts: 20 }, days: 5, jobs: 1, upkeep: 2, power: -2, tech: 'observation',
+    text: 'A window on Earth below: +3 happiness for the whole colony (the first one). Only on the hull facing Earth.' },
   { key: 'park', name: 'Park', cat: 'homes', size: 1, zone: 'interior', on: ['plain', 'fertile', 'poor', 'deck'], cost: { credits: 60, parts: 0 }, days: 1, jobs: 0, upkeep: 1, uses: { water: 1 }, radius: 6, park: 8,
     text: 'Raises happiness in range, up to its rating. Costs water, not power.' },
 ];
