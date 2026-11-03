@@ -453,10 +453,13 @@ export function answer(state, pendingId, choiceKey) {
 
 // ---------------------------------------------------------------- read-outs
 
+// A level whose needs name a building the game doesn't have yet (the clinic) is not offered.
+export const habitatLevelReachable = (level) => !level?.needs?.some((n) => !['allNeeds', 'park'].includes(n) && !BUILDING[n]);
+
 // What a habitat needs for its next level: [{ need, label, met }] (Caesar III's panel, rule 10).
 export function habitatNeeds(state, b, field) {
   const d = BUILDING[b.key], next = d.levels?.[b.level];
-  if (!next?.needs) return [];
+  if (!next?.needs || !habitatLevelReachable(next)) return [];
   const met = state.stats?.last?.met || {};
   const out = [];
   for (const n of next.needs) {

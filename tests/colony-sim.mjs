@@ -334,7 +334,8 @@ for (const [name, gen] of gens) {
     const hab = s.buildings.find((b) => b.key === 'habitat');
     const n1 = habitatNeeds(s, hab);
     check(n1.some((n) => n.need === 'park' && !n.met) && n1.some((n) => n.need === 'food'), 'level 1 lists food and a park');
-    check(habitatNeeds(s, { ...hab, level: 2 }).some((n) => n.need === 'clinic' && !n.met), 'level 2 needs a clinic (missing in version 1)');
+    // Apartments need a clinic, which version 1 doesn't have: Quarters is the top for now, no checklist
+    check(habitatNeeds(s, { ...hab, level: 2 }).length === 0, 'no unreachable level offered (no clinic yet)');
   }
 
   // Import: credits from the sold army (non-beta), guardians (beta), sellGuardian.
