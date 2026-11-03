@@ -46,7 +46,7 @@ const HALF = Math.PI / 2;
 // ---- models (face +x; `tint` parts take the class colour) ------------------------------------
 
 const WHITE = '#eef1f5', STEEL = '#9aa3ad', DARK = '#3d444d', WIN = '#7fe0ff', CYAN = '#5ff0ff';
-const RAID_HULL = '#24262c', RAID_TRIM = '#c8202a', RAID_GLOW = '#ff3a2a';
+const RAID_HULL = '#2e3038', RAID_TRIM = '#d8242c', RAID_GLOW = '#ff3a2a';
 
 // An HU mecha ~0.75 tall: legs, a tinted torso and shoulders, white head with a green visor,
 // a rifle and a backpack with cyan thrusters.
@@ -116,12 +116,12 @@ const SUPPORT = () => model([
 // A raider ~0.9 long: a dark angular fuselage with forward prongs, red trim and red engines.
 const RAIDER = () => model([
   { s: 'box', size: [0.52, 0.1, 0.18], pos: [0, 0, 0], c: RAID_HULL },
-  { s: 'box', size: [0.5, 0.02, 0.05], pos: [0, 0.06, 0], c: RAID_TRIM },
+  { s: 'box', size: [0.5, 0.02, 0.05], pos: [0, 0.06, 0], c: RAID_TRIM, glow: 1 },
   ...[1, -1].flatMap((k) => [
     { s: 'box', size: [0.42, 0.05, 0.06], pos: [0.28, 0, k * 0.13], rot: [0, -k * 0.12, 0], c: RAID_HULL },
     { s: 'box', size: [0.06, 0.05, 0.065], pos: [0.5, 0, k * 0.155], c: RAID_TRIM, glow: 1 },
     { s: 'box', size: [0.26, 0.03, 0.42], pos: [-0.12, 0, k * 0.26], rot: [0, k * 0.5, k * 0.15], c: '#34363e' },
-    { s: 'box', size: [0.08, 0.035, 0.05], pos: [-0.2, 0.01, k * 0.46], c: RAID_TRIM, glow: 1 },
+    { s: 'box', size: [0.2, 0.035, 0.05], pos: [-0.17, 0.01, k * 0.44], rot: [0, k * 0.5, 0], c: RAID_TRIM, glow: 1 },
     { s: 'cyl', r: 0.04, h: 0.05, seg: 6, rot: [0, 0, HALF], pos: [-0.28, 0, k * 0.05], c: RAID_GLOW, glow: 1 },
   ]),
   { s: 'box', size: [0.1, 0.04, 0.08], pos: [0.12, 0.07, 0], c: '#ff8a5a', glow: 1 },
@@ -130,7 +130,7 @@ const RAIDER = () => model([
 const RAIDER_SHIP = () => model([
   { s: 'box', size: [2.0, 0.36, 0.7], pos: [0, 0, 0], c: RAID_HULL },
   { s: 'cone', r: 0.5, h: 0.9, seg: 4, spin: Math.PI / 4, rot: [0, 0, -HALF], scale: [1, 0.55, 1], pos: [1.45, 0, 0], c: RAID_HULL },
-  { s: 'box', size: [2.02, 0.06, 0.72], pos: [0, 0.08, 0], c: RAID_TRIM },
+  { s: 'box', size: [2.02, 0.06, 0.72], pos: [0, 0.08, 0], c: RAID_TRIM, glow: 1 },
   { s: 'box', size: [0.4, 0.4, 0.26], pos: [-0.5, 0.36, 0], c: '#30333a' },
   { s: 'box', size: [0.41, 0.05, 0.27], pos: [-0.5, 0.46, 0], c: '#ff7a5a', glow: 1 },
   ...[0.5, -0.5].flatMap((z) => [
@@ -227,7 +227,7 @@ export function createDefence(parent, helpers = {}) {
   const ball = new THREE.IcosahedronGeometry(0.5, 1), boxGeo = new THREE.BoxGeometry(1, 1, 1);
   const addMat = () => new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
   const sparkMat = addMat(), beamMat = addMat(), flashMat = addMat();
-  const smokeMat = new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.62, depthWrite: false });
+  const smokeMat = new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.56, depthWrite: false });
   const sparks = new Particles(group, ball, sparkMat, CAP.sparks, false);
   const smoke = new Particles(group, ball, smokeMat, CAP.smoke, true);
   sparks.mesh.renderOrder = 6; smoke.mesh.renderOrder = 5;
@@ -544,9 +544,10 @@ export function createDefence(parent, helpers = {}) {
       let goal, sp = SPEED.raider * (r.kind === 'raidship' ? 0.6 : 1);
       if (r.flee) { goal = G.flee.map((v, j) => v + r.off[j] * 2); sp = SPEED.flee * (r.kind === 'raidship' ? 0.6 : 1); }
       else if (E.phase === 'approach' || E.phase === 'hold') goal = [G.standoff[0] + r.off[0] + wob[0], G.standoff[1] + r.off[1] + wob[1], G.standoff[2] + r.off[2] + wob[2]];
-      else if (fighting && E.outcome === 'lost' && ft > 3.8 && E.targets.length) {
+      else if (fighting && E.outcome === 'lost' && ft > 3 && E.targets.length) {
         const tg = E.targets[k % E.targets.length];
         goal = [tg.x + Math.cos(clock * 1.4 + r.ph) * 2.2, tg.y + 2.2 + (r.kind === 'raidship' ? 2 : 0), tg.z + Math.sin(clock * 1.4 + r.ph) * 2.2];
+        sp *= 1.6;
       } else {
         const push = fighting ? Math.min(1, ft / 3) : 0;
         const c = [G.battle[0] + G.out[0] * 4 * (1 - push * 0.6), G.battle[1], G.battle[2] + G.out[1] * 4 * (1 - push * 0.6)];
@@ -561,12 +562,14 @@ export function createDefence(parent, helpers = {}) {
         if (r.cd <= 0) {
           r.cd = 0.55 + rnd() * 0.8;
           const muzzle = [r.p[0] + r.hx * 0.4, r.p[1], r.p[2] + r.hz * 0.4];
-          const tg = E.outcome === 'lost' && ft > 4.2 && E.targets.length ? E.targets[k % E.targets.length] : nearestAlive(guards, r.p, 16);
+          const bt = E.outcome === 'lost' && ft > 3 && E.targets.length ? E.targets[k % E.targets.length] : null;
+          const over = bt && Math.hypot(bt.x - r.p[0], bt.z - r.p[2]) < 6;
+          const tg = over ? bt : nearestAlive(guards, r.p, 16);
           if (tg) {
             const q = posOf(tg), aim = [q[0] + (rnd() - 0.5) * 0.6, q[1] + 0.25 + rnd() * 0.2, q[2] + (rnd() - 0.5) * 0.6];
             if (r.kind === 'raidship' && rnd() < 0.5) missile(muzzle, tg, BEAM_RGB.raider, 0.9);
             else beam(muzzle, aim, BEAM_RGB.raider, r.kind === 'raidship' ? 0.12 : 0.07, 0.16);
-            if (tg.n && ft > 4.2) { tg.hit = true; if (rnd() < 0.5) explode(aim[0], aim[1], aim[2], 0.7, true); }
+            if (over) { tg.hit = true; if (rnd() < 0.5) explode(aim[0], aim[1], aim[2], 0.7, true); }
           }
         }
       }
@@ -574,8 +577,8 @@ export function createDefence(parent, helpers = {}) {
     // the fight's arc
     if (fighting) {
       if (E.outcome === 'won' && ft > 6.6) for (const r of E.raiders) if (r.alive) r.flee = true;
-      if (E.outcome === 'lost' && ft > 7.8) for (const r of E.raiders) if (r.alive) r.flee = true;
-      if (E.outcome === 'lost') for (const tg of E.targets) if (ft > 4.4 && !tg.flashed) {
+      if (E.outcome === 'lost' && ft > 8.3) for (const r of E.raiders) if (r.alive) r.flee = true;
+      if (E.outcome === 'lost') for (const tg of E.targets) if ((tg.hit || ft > 7.2) && !tg.flashed) {
         tg.flashed = true;
         if (flashes.length < CAP.flashes) flashes.push({ x: tg.x, y: tg.y, z: tg.z, n: tg.n, t: 0, dur: 3.6 });
         explode(tg.x, tg.y + 0.3, tg.z, 1.3, true);
@@ -675,7 +678,7 @@ export function createDefence(parent, helpers = {}) {
       while (e.acc > every) {
         e.acc -= every;
         const s = 0.3 + 0.2 * Math.sqrt(e.n);
-        smoke.spawn(e.x + (rnd() - 0.5) * e.n * 0.5, e.y + 0.05, e.z + (rnd() - 0.5) * e.n * 0.5, 0.18 + (rnd() - 0.5) * 0.1, 0.55 + rnd() * 0.35, 0.08 + (rnd() - 0.5) * 0.1, 2.6 + rnd() * 1.2, s, s * 3.2, SMOKE[(rnd() * 3) | 0], 0.15);
+        smoke.spawn(e.x + (rnd() - 0.5) * e.n * 0.5, e.y + 0.05, e.z + (rnd() - 0.5) * e.n * 0.5, 0.18 + (rnd() - 0.5) * 0.1, 0.55 + rnd() * 0.35, 0.08 + (rnd() - 0.5) * 0.1, 2.4 + rnd() * 1.1, s, s * 2.6, SMOKE[(rnd() * 3) | 0], 0.15);
         if (rnd() < 0.3) sparks.spawn(e.x + (rnd() - 0.5) * e.n * 0.4, e.y + 0.1, e.z + (rnd() - 0.5) * e.n * 0.4, (rnd() - 0.5) * 0.3, 0.8 + rnd() * 0.6, (rnd() - 0.5) * 0.3, 0.9 + rnd() * 0.5, 0.08, 0.03, FIRE[2]);
       }
     }

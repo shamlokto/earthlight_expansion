@@ -145,7 +145,7 @@ export const BUILDINGS = [
   // Machines (data/machines.js) are built with credits and parts (owner): price × 10 credits, price parts.
   { key: 'arsenal', name: 'Arsenal', cat: 'defence', size: 3, zone: 'interior', on: ['deck', 'plain', 'poor', 'rock'], cost: { credits: 600, parts: 50 }, days: 6, jobs: 6, upkeep: 6, power: -10, unlock: { pop: 80 }, builds: 'arsenal',
     text: 'Builds Earth Light machines: HU mecha, fighters, armour and batteries, for credits and parts. One at a time; more research, stronger machines.' },
-  { key: 'shipyard', name: 'Shipyard', cat: 'defence', size: 3, zone: 'hull', on: ['hull'], cost: { credits: 1200, parts: 100 }, days: 10, jobs: 10, upkeep: 12, power: -20, tech: 'shipyard', builds: 'shipyard',
+  { key: 'shipyard', name: 'Shipyard', cat: 'defence', size: 2, zone: 'hull', on: ['hull'], cost: { credits: 1200, parts: 100 }, days: 10, jobs: 10, upkeep: 12, power: -20, tech: 'shipyard', builds: 'shipyard',
     text: 'Builds capital ships on the hull: carriers, cruisers and battleships.' },
   { key: 'barracks', name: 'Guardian Barracks', cat: 'defence', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock'], cost: { credits: 300, parts: 20 }, days: 4, jobs: 0, upkeep: 3, power: -3, crews: 6, unlock: { pop: 80 },
     text: 'Quarters for the crews of six machines. Machines without a crew stay in the hangar when raiders come.' },
