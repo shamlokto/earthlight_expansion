@@ -590,7 +590,8 @@ export function createUI(root, api) {
       const url = api.art?.(`card/${b.key}`);
       const deckLock = o.unlocked && offDeck;
       const locked = !o.unlocked || deckLock;
-      const why = deckLock ? decksText(decks) : !locked ? '' : tech ? `Research ${TECH[tech]?.name || tech}` : (o.why || (b.unlock ? `At ${b.unlock.pop} colonists` : 'Locked'));
+      // (rules.buildable words an off-deck building "Main deck only." even while it is still locked)
+      const why = deckLock ? decksText(decks) : !locked ? '' : tech ? `Research ${TECH[tech]?.name || tech}` : ((o.onDeck !== false && o.why) || (b.unlock ? `At ${b.unlock.pop} colonists` : 'Locked'));
       const where = b.decks ? `\nStands on: ${decksText(decks)}.` : '';
       const title = tech ? `${b.text}${where}\nClick to see ${TECH[tech]?.name || tech} in Research.` : deckLock ? `${b.text}\n${decksText(decks)}: click to go to the ${DECK_NAME[decks[0]].toLowerCase()} deck.` : b.text + where;
       return `<button type="button" class="cl-card${locked ? ' locked' : ''}${tech ? ' techlock' : ''}${deckLock ? ' decklock' : ''}${placing === b.key ? ' on' : ''}" data-key="${b.key}"${tech ? ` data-tech="${esc(tech)}"` : ''}${deckLock ? ' data-deckgo="1"' : ''} aria-disabled="${locked && !tech && !deckLock}" style="--cc:${CAT_COLOR[b.cat] || '#9aa'}" title="${esc(title)}">
