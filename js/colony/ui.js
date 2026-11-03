@@ -38,8 +38,8 @@ const GOOD_NAME = { food: 'Food', water: 'Water', air: 'Air', parts: 'Parts', or
 // Version 2 goods: in the top bar and the market only once the colony has any, or the tech that makes them is done.
 const LATE = { alloy: 'smelting', helium: 'plasma' };
 const SELLABLE = ['ore', 'food', 'parts', 'alloy', 'helium'];
-const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8', services: '#c3a6ff', defence: '#ff6b6b' };
-const BRANCH_COLOR = { life: '#5aa8ff', industry: '#ff9a52', society: '#ff8fd8', logistics: '#f5c542', defence: '#ff6b6b' };
+const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8', services: '#c3a6ff', defence: '#ff6a5a' };
+const BRANCH_COLOR = { life: '#5aa8ff', industry: '#ff9a52', society: '#ff8fd8', logistics: '#f5c542', defence: '#ff6a5a' };
 // Version 3 (docs/COLONY-V3.md): machine classes, the Defence panel's tabs, raid words.
 const CLASS_COLOR = { hu: '#6fd3ff', planes: '#c3a6ff', armour: '#ff9a52', ships: '#f5c542', support: '#8fe38a' };
 const CAT_CLASS = { 1: 'ships', 2: 'ships', 3: 'ships', 4: 'ships', 8: 'hu', 9: 'planes', 10: 'planes', 11: 'armour', 12: 'armour', 13: 'support', 14: 'support', 15: 'support' };
