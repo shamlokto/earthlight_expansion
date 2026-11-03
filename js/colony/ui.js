@@ -23,14 +23,33 @@
 import { CATEGORIES, BUILDINGS, BUILDING, NEEDS, CHAMBER_AIR_PER_100 } from './data/buildings.js';
 import { TERRAIN, ARTIFACT, T } from './data/terrain.js';
 import { BRANCHES, TECHS, TECH } from './data/tech.js';
+import { MACHINES, MACHINE, MACHINE_COST } from './data/machines.js';
+import { CLASSES, CLASS_NAME, STYLES, PERKS, DEPARTMENTS, COMMANDER, GENERAL, BASE_COMMANDERS, PER_QUARTERS } from './data/commanders.js';
+
+// The expansion's SVG busts (story characters) for commanders without a painted portrait; loaded
+// lazily so the colony still runs if the expansion's files are missing.
+let svgPortrait = null;
+import('../expansion/portraits.js').then((m) => { svgPortrait = m.portrait; }).catch(() => { });
 
 const GOODS = ['food', 'water', 'air', 'parts', 'ore', 'alloy', 'helium', 'credits'];
 const GOOD_NAME = { food: 'Food', water: 'Water', air: 'Air', parts: 'Parts', ore: 'Ore', alloy: 'Alloy', helium: 'Helium-3', credits: 'Credits', power: 'Power', research: 'Research' };
 // Version 2 goods: in the top bar and the market only once the colony has any, or the tech that makes them is done.
 const LATE = { alloy: 'smelting', helium: 'plasma' };
 const SELLABLE = ['ore', 'food', 'parts', 'alloy', 'helium'];
-const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8', services: '#c3a6ff' };
-const BRANCH_COLOR = { life: '#5aa8ff', industry: '#ff9a52', society: '#ff8fd8', logistics: '#f5c542' };
+const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8', services: '#c3a6ff', defence: '#ff6b6b' };
+const BRANCH_COLOR = { life: '#5aa8ff', industry: '#ff9a52', society: '#ff8fd8', logistics: '#f5c542', defence: '#ff6b6b' };
+// Version 3 (docs/COLONY-V3.md): machine classes, the Defence panel's tabs, raid words.
+const CLASS_COLOR = { hu: '#6fd3ff', planes: '#c3a6ff', armour: '#ff9a52', ships: '#f5c542', support: '#8fe38a' };
+const CAT_CLASS = { 1: 'ships', 2: 'ships', 3: 'ships', 4: 'ships', 8: 'hu', 9: 'planes', 10: 'planes', 11: 'armour', 12: 'armour', 13: 'support', 14: 'support', 15: 'support' };
+const DEF_TABS = [['guardians', 'Guardians'], ['production', 'Production'], ['commanders', 'Commanders'], ['raids', 'Raids']];
+const FROM_TEXT = { north: 'the north edge of Eden', south: 'the south edge of Eden', east: 'the east edge of Eden', west: 'the west edge of Eden', earth: 'up from the atmosphere, Earth side' };
+const FACTION_NAME = { scavengers: 'Scavengers', scavenger: 'Scavengers', cartel: 'The Ashfall Cartel', ashfall: 'The Ashfall Cartel', pirates: 'The Ashfall Cartel',
+  union: 'Union deserters', galt: 'Galt deserters', deserters: 'Deserters', remnant: 'The Directorate remnant', directorate: 'The Directorate remnant' };
+const RAID_TIER = { 1: 'scavengers', 2: 'pirates', 3: 'a warband', 4: 'a remnant fleet' };
+const WEAPON_MODE = ['Beam', 'Railgun', 'Missile'];
+// The tech that unlocks each machine tier (data/tech.js effects { kind: 'machines', tier }).
+const TIER_TECH = Object.fromEntries(TECHS.flatMap((t) => (t.effects || []).filter((e) => e.kind === 'machines').map((e) => [e.tier, t.key])));
+const GRADE_ORDER = 'SABCD';
 // The happiness the tax costs or gives (rules: 0% +8, 10% 0, 20% −14, 30% −32, interpolated).
 const taxHappy = (t) => { const P = [[0, 8], [10, 0], [20, -14], [30, -32]]; for (let i = 1; i < P.length; i++) if (t <= P[i][0]) { const [a, va] = P[i - 1], [b, vb] = P[i]; return va + (vb - va) * (t - a) / (b - a); } return -32; };
 const STATUS = {
@@ -41,7 +60,8 @@ const STATUS = {
   open: ['Open', 'Pressurised: build inside.'],
 };
 const OVERLAYS = [[null, 'None'], ['reach', 'Reach'], ['park', 'Parks'], ['power', 'Power']];
-const KIND_LABEL = { goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost', tech: 'Research complete' };
+const KIND_LABEL = { goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost', tech: 'Research complete',
+  raid: 'Raid', raidwarn: 'Raid warning', wanderer: 'Wanderer', raidreport: 'After the raid', report: 'After the raid', commander: 'Commanders', machine: 'Arsenal' };
 const SPEAKER = { ruess: 'Prof. Ruess', sato: 'Capt. Sato' };
 const UI_KEY = 'el-colony-ui';   // per-viewer panel state (collapsed or not)
 const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}') || {}; } catch { return {}; } };
@@ -82,7 +102,7 @@ function cardIcon(b) {
 // The help dialog's sections (colony.html #dHelp). Short sentences, pictures from the card art.
 // diff: the difficulty row (js/colony/difficulty.js) the numbers are quoted for, or null.
 export const HELP_SECTIONS = [['goal', 'The goal'], ['time', 'Time'], ['build', 'Building'], ['res', 'Resources'], ['chambers', 'Chambers'],
-  ['homes', 'Homes & happiness'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
+  ['homes', 'Homes & happiness'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
 export function helpHtml(art, diff) {
   const pic = (slot, alt = '') => { const u = art?.(slot); return u ? `<img src="${esc(u)}" alt="${esc(alt)}" loading="lazy">` : ''; };
   const card = (key) => { const u = art?.(`card/${key}`); return `<figure class="cl-hfig">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : cardIcon(BUILDING[key])}<figcaption>${esc(BUILDING[key]?.name || key)}</figcaption></figure>`; };
@@ -136,16 +156,41 @@ export function helpHtml(art, diff) {
     <p>Choose <b>Road</b> (Command menu). <b>Click where it starts</b>, then <b>click where it ends</b>: it lays an L-shaped line. Roads pass through gates once both chambers are open.</p>`)}
   ${sec('market', 'Market & guardians', card('dock'), `
     <p>Traders land at the <b>Dock</b>. Open the <b>Market</b> (top bar) to sell <b>ore, food and parts</b> (later <b>alloy</b> and <b>helium-3</b>) for credits. Each sale lowers the price a little; it recovers over a few days. Sell in batches.</p>
-    <p><b>Beta testers</b>: your <b>guardians</b> are your old army. They eat nothing. Sell machines at the Market for lots of credits and parts, or keep them.</p>`)}
+    <p><b>Guardians</b> are Eden's machines: built at an Arsenal, or, for <b>beta testers</b>, your old army. They eat nothing. Sell one at the Market for credits and parts (a fifth more with a <b>Scrapyard</b>), or keep it to fight raiders.</p>`)}
   ${sec('research', 'Research and new buildings', card('lab') + card('clinic'), `
     <p>At <b>80 colonists</b> you can build a <b>Research Lab</b> (Services menu). Labs make <b>research points</b> every day; more staff, power and lab levels make more.</p>
-    <p>Open <b>Research</b> (top bar, or key <b>T</b>). The tech tree has four branches: <b>Life Support</b>, <b>Industry</b>, <b>Society</b> and <b>Logistics</b>. Click a tech you can study: the labs' points flow into it. Points made while nothing is chosen are <b>banked</b> and flow into the next choice.</p>
+    <p>Open <b>Research</b> (top bar, or key <b>T</b>). The tech tree has five branches: <b>Life Support</b>, <b>Industry</b>, <b>Society</b>, <b>Logistics</b> and <b>Defence</b>. Click a tech you can study: the labs' points flow into it. Points made while nothing is chosen are <b>banked</b> and flow into the next choice.</p>
     <p>A finished tech <b>unlocks new buildings</b> (greyed cards in the build menu say <b>Research …</b>: click one to jump to its tech) or makes old ones better.</p>
     <ul class="cl-hsteps">
       <li><b>Clinics</b> make homes happier, bring children and let Habitats grow into <b>Apartments</b> (70 homes).</li>
       <li><b>Smelters</b> turn ore into <b>alloy</b>; <b>Fabricators</b> turn alloy into parts. Mines leave waste: past four Ore Mines, build a <b>Tailings Dump</b> per four and <b>empty</b> it (50 credits) before it is full.</li>
       <li><b>Canteens</b> and <b>Safety Posts</b> cheer the homes around them; an <b>Observation Deck</b> on the Earth-facing hull cheers everyone.</li>
       <li><b>Tether Masts</b> carry the dock's reach further into space, down to the atmosphere.</li>
+    </ul>`)}
+  ${sec('defence', 'Defence and raids', card('arsenal') + card('barracks'), `
+    <p>Eden is rich, and the war left plenty of hungry crews. At <b>80 colonists</b> the <b>Defence</b> menu opens: <b>Arsenal</b>, <b>Guardian Barracks</b>, <b>Scrapyard</b> and <b>Battery Emplacement</b>.</p>
+    <ul class="cl-hsteps">
+      <li><b>Machines.</b> Open <b>Defence</b> (top bar, or key <b>G</b>) and its <b>Production</b> tab: the Earth Light machines, by class, as in the expansion. A machine costs its price <b>× 10 credits</b> and its price in <b>parts</b>, paid at once. Each Arsenal builds one at a time; more orders wait in its queue (Cancel refunds them in full).</li>
+      <li><b>Stronger machines</b> need research: <b>Machine Works</b>, then <b>Heavy Works</b> and <b>Kai Refits</b> (Defence branch). Capital ships need a <b>Shipyard</b> on the hull. A locked machine says why; click the reason to see the tech.</li>
+      <li><b>Crews.</b> The Command Centre crews 4 machines and each <b>Barracks</b> 6 more. A machine without a crew stays in the hangar when raiders come.</li>
+      <li><b>Upkeep.</b> Each machine costs credits every day (an eighth of its price). Beta testers' machines are free for their first 60 days.</li>
+      <li><b>Repairs.</b> A <b>Scrapyard</b> mends damaged machines, 2 HP a day each for a part per HP. A machine at 0 HP is lost.</li>
+      <li><b>Battery Emplacements</b> on the hull fire on raiders: <b>Dragon</b> against ships, <b>Hydra</b> against small craft.</li>
+    </ul>
+    <p><b>Heat</b> (top bar, once raids are possible) is how tempting Eden looks: more colonists, full stores, open chambers and big sales raise it; <b>Jammer Arrays</b> lower it. Paying tribute raises it too. The hotter Eden is, the sooner the next raid.</p>
+    <p>Raids start after 80 colonists (from day 60 on Easy, day 35 on Normal). <b>Capt. Sato warns you</b> 3 days ahead; each <b>Sensor Mast</b> adds 3 more. When the raiders arrive you choose:</p>
+    <ul class="cl-hsteps">
+      <li><b>Fight</b>: the crewed guardians and the batteries against the raiders. The raid window shows the <b>win chance</b> and the machines you will likely lose. A win pays salvage; a loss means stolen goods, damaged buildings (unless a <b>Shield Pylon</b> covers them) and a scared colony.</li>
+      <li><b>Pay tribute</b>: credits (or food) and they leave. Heat goes up and morale down a little.</li>
+    </ul>`)}
+  ${sec('commanders', 'Commanders', `<figure class="cl-hfig portrait">${pic('portrait/sato', 'Capt. Mira Sato')}<figcaption>Capt. Sato</figcaption></figure>`, `
+    <p>A commander in a machine makes it fight better. You start with two: <b>the General</b> (three times the power in any machine) and <b>Capt. Sato</b>, best in ships. See them in <b>Defence › Commanders</b>.</p>
+    <ul class="cl-hsteps">
+      <li><b>Grades</b> S, A, B, C, D per machine class (HU, Planes, Armour, Ships, Support): an S pilot in their class adds the most, up to ×1.6. Their <b>style</b> adds 15% when it matches the machine's main weapon; a <b>perk</b> adds a knack (Ace, Bulwark, Mechanic, Quartermaster, Hunter, Steady).</li>
+      <li><b>Assign</b> a commander to a guardian with its <b>Pilots</b> menu. An injured commander sits out until healed.</li>
+      <li><b>Departments.</b> A commander can also <b>head</b> one department (Agriculture, Industry, Research, Security, Trade, Welfare): + their stat ÷ 10 % to what it does. One head each.</li>
+      <li><b>Wanderers.</b> Research <b>Leadership</b> and build a <b>Wanderers' Lodge</b>: pilots and captains adrift since the war stop by (one every 15 days; an Inn 10, a Grand Lodge 7) and stay 20 days. <b>Invite</b> one with a 100-credit gift; the window shows the chance. A refusal makes the next try likelier.</li>
+      <li><b>Room.</b> Eden keeps two commanders, plus two per <b>Officers' Quarters</b>. They draw a daily <b>wage</b>; unpaid or unhappy, their <b>loyalty</b> falls, and below 20 they may leave.</li>
     </ul>`)}
   ${sec('nav', 'Navigating with a trackpad', '', `
     <ul class="cl-hsteps">
@@ -167,7 +212,7 @@ export function helpHtml(art, diff) {
       <li>Short of credits? Sell some food at the Market, or set a farm to cash crops.</li>
     </ol>
     ${diff?.relief ? `<p>On <b>${esc(name)}</b>, if the treasury runs dry or colonists go hungry, the Council sends <b>${num(diff.relief.credits)} credits</b> and <b>${num(diff.relief.food)} food</b> (at most once every ${diff.relief.every} days).</p>` : ''}
-    <p class="cl-dim">Keys: space pause · 1 / 2 / 3 speed · R build again · T research · Esc cancel · F1 or ? this guide.</p>`)}
+    <p class="cl-dim">Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · Esc cancel · F1 or ? this guide.</p>`)}
   </div>`;
 }
 
@@ -189,11 +234,13 @@ export function createUI(root, api) {
       <div class="cl-stat" data-g="power" title="Power: supply / demand (MW), battery"><i>Power</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
       <div class="cl-stat" data-g="pop" title="Colonists / housing; next transport"><i>Colonists</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
       <button type="button" class="cl-stat cl-happybtn" data-g="happy" title="Happiness: click for the breakdown"><i>Happiness</i><b><span data-v></span></b><em data-d></em></button>
+      <button type="button" class="cl-stat cl-heatstat" data-g="heat" hidden title="Heat: how tempting Eden looks to raiders"><i>Heat</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
       <div class="cl-stat cl-tax" title="Tax rate: 0% +8 happiness, 10% 0, 20% −14, 30% −32. Shift-click steps 5%."><i>Tax</i>
         <b class="cl-taxctl"><button type="button" data-taxstep="-1" aria-label="Lower the tax">−</button><span data-tax></span><button type="button" data-taxstep="1" aria-label="Raise the tax">+</button></b><em data-taxfx></em></div>
     </div>
     <div class="cl-tools">
       <button type="button" class="cl-btn sm cl-resbtn" data-tool="research" title="Research: the tech tree (T)"><span class="cl-ico">⚗</span><span class="cl-lbl">Research</span></button>
+      <button type="button" class="cl-btn sm cl-defbtn" data-tool="defence" title="Defence: guardians, production, commanders and raids (G)"><span class="cl-ico">⛨</span><span class="cl-lbl">Defence</span></button>
       <button type="button" class="cl-btn sm" data-tool="market" title="Sell goods and guardians"><span class="cl-ico">⚖</span><span class="cl-lbl">Market</span></button>
       <button type="button" class="cl-btn sm" data-tool="save" title="Save the colony in this browser"><span class="cl-ico">⤓</span><span class="cl-lbl">Save</span></button>
       <button type="button" class="cl-btn sm icon cl-helpbtn" data-tool="help" title="How to play (F1 or ?)" aria-label="How to play">?</button>
@@ -251,6 +298,15 @@ export function createUI(root, api) {
     <div class="cl-rnote" data-rnote hidden></div>
     <div class="cl-rcols" data-rcols></div>
   </section>
+  <section class="cl-defence cl-win" hidden role="dialog" aria-label="Defence">
+    <header class="cl-rhead cl-dhead">
+      <div class="cl-rtitle"><h3>Defence</h3><small>guardians and raids · G</small></div>
+      <div class="cl-rstats" data-dstats></div>
+      <button type="button" class="cl-x" data-close="defence" title="Close (Esc or G)" aria-label="Close">×</button>
+    </header>
+    <div class="cl-dtabs" role="tablist">${DEF_TABS.map(([k, n]) => `<button type="button" role="tab" data-dtab="${k}" aria-selected="false">${n}<span data-dtabn="${k}"></span></button>`).join('')}</div>
+    <div class="cl-dbody" data-dbody></div>
+  </section>
   <div class="cl-ovl" role="group" aria-label="Overlay"><i>Overlay</i>${OVERLAYS.map(([k, n]) => `<button type="button" data-ovl="${k ?? ''}" aria-pressed="${k === null}">${n}</button>`).join('')}</div>
   <div class="cl-placing" hidden><span data-placing></span> <button type="button" class="cl-btn sm" data-cancel>Cancel</button></div>
   <div class="cl-log" data-log title="Colony log (click to expand)"></div>
@@ -297,6 +353,7 @@ export function createUI(root, api) {
   $('.cl-tools').addEventListener('click', (e) => {
     const t = e.target.closest('[data-tool]')?.dataset.tool;
     if (t === 'research') toggleResearch();
+    else if (t === 'defence') toggleDefence();
     else if (t === 'market') togglePop('market');
     else if (t === 'save') api.save();
     else if (t === 'settings') togglePop('settings');
@@ -412,6 +469,17 @@ export function createUI(root, api) {
       stat('research', '+' + num(li.perDay), '/d', f ? short(f.name) : rs.points ? `bank ${num(rs.points)}` : 'pick a tech', f ? 'up' : 'idle');
       setTitle('research', researchWhy(s, li, rs, list));
     }
+    // version 3: the Defence panel (phones show its button once there is something to defend), heat once raids can come
+    const v3 = !!(s.guardians?.length || s.unlocked?.includes?.('arsenal') || s.pop >= 80 || s.flags?.unlock80);
+    if (root.classList.contains('cl-v3') !== v3) root.classList.toggle('cl-v3', v3);
+    const rd = s.raid, heatOn = raidsPossible(s);
+    show('heat', heatOn);
+    if (heatOn) {
+      const heat = Math.round(rd.heat || 0), eta = raidEta(s);
+      stat('heat', String(heat), '', rd.coming ? (eta > 0 ? `raid in ${eta}d` : 'raiders!') : rd.warned && eta != null ? `raid in ${eta}d` : heat >= 60 ? 'hot' : heat >= 30 ? 'watched' : 'quiet',
+        rd.coming || rd.warned ? 'alert' : heat >= 60 ? 'down' : heat < 30 ? 'up' : '');
+      setTitle('heat', heatWhy(s));
+    }
     setTitle('power', powerWhy(s, m));
     setTitle('pop', popWhy(s, m));
     stat('power', num(p.supply ?? 0), `/${num(p.demand ?? 0)}`, p.cap ? `bat ${num(p.battery ?? 0)}/${num(p.cap)}` : '', (p.supply ?? 0) < (p.demand ?? 0) ? 'down' : 'up');
@@ -490,6 +558,7 @@ export function createUI(root, api) {
       case 'market': openPop('market'); break;
       case 'empty': result(typeof R.emptyTailings === 'function' ? R.emptyTailings(s, id) : { ok: false, msg: 'Emptying dumps is not ready yet.' }); break;
       case 'research': openResearch(a.dataset.v || null); break;
+      case 'defence': openDefence(a.dataset.v || null); break;
       case 'focus': api.focus(+a.dataset.x, +a.dataset.y); break;
     }
     inspSig = ''; refreshInspector();
@@ -575,7 +644,7 @@ export function createUI(root, api) {
     const lv = d.levels?.[b.level - 1] || {}, next = d.levels?.[b.level];
     const m = summary || {};
     const staff = d.jobs ? (m.jobs ? Math.min(1, (m.workers ?? s.pop) / m.jobs) : 1) : null;
-    const status = b.build > 0 ? `<span class="cl-badge st-surveying">Building · ${b.build} d</span>` : b.off ? '<span class="cl-badge st-sealed">Off</span>' : '<span class="cl-badge st-open">Working</span>';
+    const status = b.build > 0 ? `<span class="cl-badge st-surveying">Building · ${b.build} d</span>` : b.damaged > 0 ? `<span class="cl-badge st-sealed" title="Raid damage: out of action until a crew repairs it">Damaged · ${b.damaged} d</span>` : b.off ? '<span class="cl-badge st-sealed">Off</span>' : '<span class="cl-badge st-open">Working</span>';
     const sp = { ...d, ...lv, ...specOf(b) };   // this level's numbers (rules.spec), the table's as a fallback
     const power = sp.power, housing = sp.housing, mode = b.mode ?? d.modes?.[0]?.key;
     const kv = (k, v, cls = '') => `<div class="cl-kv"><span>${k}</span><b class="${cls}">${v}</b></div>`;
@@ -609,6 +678,15 @@ export function createUI(root, api) {
         ${fill >= 100 ? '<p class="cl-why">Full: empty it, or mines beyond four run at half output.</p>' : ''}`;
     }
     if (b.key === 'lab') extra = `<p class="cl-dim">Choose what the labs study in the Research panel (T).</p>`;
+    // version 3: what the defence buildings are doing
+    if (d.builds) {
+      const list = (s.production || []).filter((o) => o.at === b.id), o = list[0];
+      rows.push(kv('Building', o ? `${esc(mInfo(o.type).name)} · ${num(o.days)} d left${list.length > 1 ? ` · ${list.length - 1} waiting` : ''}` : 'nothing: order in Production', o ? 'good' : 'bad'));
+    }
+    if (b.key === 'barracks' || b.key === 'command') { const gs = s.guardians || []; if (b.key === 'barracks' || gs.length) rows.push(kv('Guardian crews', `${num(crewCap(s))} in all · ${num(gs.length)} machine${gs.length === 1 ? '' : 's'}`, gs.length > crewCap(s) ? 'bad' : '')); }
+    if (b.key === 'scrapyard') { const hurt = (s.guardians || []).filter((g) => hpOf(g) < maxHp(g)).length; rows.push(kv('Repairing', hurt ? `${hurt} machine${hurt === 1 ? '' : 's'} · 2 HP a day each` : 'nothing damaged')); }
+    if (b.key === 'lodge') rows.push(kv('Wanderers here', num((s.wanderers || []).length)));
+    if (b.key === 'quarters') rows.push(kv('Commanders', `${commanders(s).length} / ${cmdCap(s)}`));
     if (b.key === 'clinic' && next) extra = `<p class="cl-dim">Next: <b>${esc(next.name || 'level ' + (b.level + 1))}</b>, range ${next.radius ?? sp.radius} tiles. Habitats in range can grow into Apartments.</p>`;
     const modes = d.modes ? `<div class="cl-modes" role="group" aria-label="Mode">${d.modes.map((mo, i) => {
       const on = (b.mode ?? d.modes[0].key) === mo.key || (!b.mode && i === 0);
@@ -629,6 +707,8 @@ export function createUI(root, api) {
       acts.push(`<button type="button" class="cl-btn sm primary" data-a="empty" data-id="${b.id}" ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? 'Empty the dump: fill back to 0' : r.msg)}">Empty <small>${fee} cr</small></button>`);
     }
     if (b.key === 'lab') acts.push(`<button type="button" class="cl-btn sm primary" data-a="research" data-id="${b.id}">Research</button>`);
+    const dtab = { arsenal: 'production', shipyard: 'production', barracks: 'guardians', scrapyard: 'guardians', lodge: 'commanders', quarters: 'commanders', sensormast: 'raids', jammer: 'raids', shieldpylon: 'raids', emplacement: 'raids' }[b.key];
+    if (dtab) acts.push(`<button type="button" class="cl-btn sm primary" data-a="defence" data-v="${dtab}" data-id="${b.id}">${esc(DEF_TABS.find(([k]) => k === dtab)[1])}</button>`);
     if (next?.cost) {
       const r = dry(s, (c) => R.upgrade(c, b.id));
       acts.push(`<button type="button" class="cl-btn sm" data-a="upgrade" data-id="${b.id}" ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? `Upgrade${next.name ? ' to ' + next.name : ''}` : r.msg)}">Upgrade <small>${costText((() => { try { return R.costOf?.(s, next.cost, b.key) || next.cost; } catch { return next.cost; } })())}</small></button>`);
@@ -657,7 +737,7 @@ export function createUI(root, api) {
     const s = S();
     const i = inspAt.y * s.map.w + inspAt.x;
     const b = buildingAt(s, inspAt.x, inspAt.y, null), ch = chamberOf(s, inspAt.x, inspAt.y, null);
-    const sig = JSON.stringify([s.map.t[i], b, ch && [ch.status, ch.work, sealedCount(s, ch)], Math.floor(s.stock.credits / 50), Math.floor(s.stock.parts / 5), Math.floor(s.stock.air / 10), summary?.jobs, summary?.workers, s.day % 5 === 0 ? s.day : 0, b?.key === 'lab' ? [s.research?.focus, Math.floor(s.research?.progress?.[s.research?.focus] || 0), s.stats?.last?.research] : 0]);
+    const sig = JSON.stringify([s.map.t[i], b, ch && [ch.status, ch.work, sealedCount(s, ch)], Math.floor(s.stock.credits / 50), Math.floor(s.stock.parts / 5), Math.floor(s.stock.air / 10), summary?.jobs, summary?.workers, s.day % 5 === 0 ? s.day : 0, BUILDING[b?.key]?.cat === 'defence' || b?.key === 'lodge' || b?.key === 'quarters' ? [s.production, (s.guardians || []).length, (s.wanderers || []).length, s.commanders?.length] : 0, b?.key === 'lab' ? [s.research?.focus, Math.floor(s.research?.progress?.[s.research?.focus] || 0), s.stats?.last?.research] : 0]);
     if (sig === inspSig) return;
     inspSig = sig;
     inspBody.innerHTML = inspectorHtml(s, inspAt.x, inspAt.y);
@@ -673,13 +753,13 @@ export function createUI(root, api) {
   // ---------------------------------------------------------------- pop-up panels
   function openPop(name) {
     for (const [k, p] of Object.entries(pops)) p.hidden = k !== name;
-    closeResearch();
+    closeResearch(); closeDefence();
     if (name === 'happy') { happySig = ''; renderHappy(); }
     if (name === 'market') { marketSig = ''; renderMarket(); }
     if (name === 'settings') renderSettings();
   }
   function togglePop(name) { if (pops[name].hidden) openPop(name); else pops[name].hidden = true; }
-  function closePops() { let any = closeResearch(); for (const p of Object.values(pops)) { any ||= !p.hidden; p.hidden = true; } return any; }
+  function closePops() { let any = closeResearch(); any = closeDefence() || any; for (const p of Object.values(pops)) { any ||= !p.hidden; p.hidden = true; } return any; }
   for (const p of Object.values(pops)) p.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) p.hidden = true; });
 
   function renderHappy() {
@@ -698,6 +778,7 @@ export function createUI(root, api) {
   }
 
   pops.market.addEventListener('click', (e) => {
+    if (e.target.closest('[data-mdef]')) { openDefence(e.target.closest('[data-mdef]').dataset.mdef); return; }
     const b = e.target.closest('[data-sell],[data-guard]'); if (!b || b.disabled) return;
     const s = S();
     if (b.dataset.sell) {
@@ -708,14 +789,13 @@ export function createUI(root, api) {
     marketSig = ''; renderMarket();
   });
 
-  const unitName = (type) => api.types?.[type]?.name || `Machine ${type}`;
-  const unitPrice = (type) => { const p = S().imported?.prices?.[type]; if (p != null) return p; const t = api.types?.[type]; return t ? Math.max(1, t.value) * t.hp : null; };
   function renderMarket() {
     if (pops.market.hidden) return;
     const s = S();
     const goods = SELLABLE.filter((g) => !LATE[g] || lateShown(s, g));
     const prices = goods.map((g) => { try { return R.price(s, g); } catch { return null; } });
-    const sig = JSON.stringify([goods, prices, goods.map((g) => Math.floor(s.stock[g] || 0)), (s.guardians || []).map((g) => g.id)]);
+    const yard = finishedOf(s, 'scrapyard').length > 0;
+    const sig = JSON.stringify([goods, prices, goods.map((g) => Math.floor(s.stock[g] || 0)), (s.guardians || []).map((g) => [g.id, g.level, g.hp]), yard]);
     if (sig === marketSig) return;
     marketSig = sig;
     const hasDock = s.buildings.some((b) => b.key === 'dock' && !b.build);
@@ -728,9 +808,11 @@ export function createUI(root, api) {
         <td class="cl-sellbtns">${[10, 100].map((q) => `<button type="button" class="cl-btn xs" data-sell="${g}" data-q="${q}" ${have < 1 ? 'disabled' : ''}>${q}</button>`).join('')}<button type="button" class="cl-btn xs" data-sell="${g}" data-q="all" ${have < 1 ? 'disabled' : ''} title="${p != null ? `≈ ${num(have * p)} cr` : ''}">All</button></td></tr>`; }).join('')}
       </tbody></table>
       <p class="cl-dim">Every 10 units sold lowers that price 2%; prices recover a little each day.</p>
-      ${guards.length ? `<h4>Guardians <small>${guards.length} machines · the original army</small></h4>
-      <div class="cl-guards">${guards.map((g) => { const p = unitPrice(g.type); return `<div class="cl-guard"><b>${esc(unitName(g.type))}</b><small>L${g.level ?? 0}</small>
-        <span>${p != null ? `${num(p * 10)} cr · ${num(p)} parts` : ''}</span><button type="button" class="cl-btn xs" data-guard="${g.id}">Sell</button></div>`; }).join('')}</div>` : ''}`;
+      ${guards.length ? `<h4>Guardians <small>${guards.length} machine${guards.length === 1 ? '' : 's'}${yard ? ' · Scrapyard: +20%' : ''}</small></h4>
+      ${yard ? '' : '<p class="cl-dim">A Scrapyard sells machines for a fifth more.</p>'}
+      <div class="cl-guards">${guards.map((g) => { const sp = salePrice(s, g), base = yard ? Math.round(sp.credits / 1.2) : null; return `<div class="cl-guard"><b>${esc(mInfo(g.type).name)}</b><small>L${g.level ?? 0}${g.hp != null && g.hp < maxHp(g) ? ` · ${num(g.hp)}/${num(maxHp(g))} HP` : ''}</small>
+        <span>${num(sp.credits)} cr · ${num(sp.parts)} parts${yard ? ` <em class="cl-bonus" title="Scrapyard bonus: ${num(base)} cr without it">+20% Scrapyard</em>` : ''}</span><button type="button" class="cl-btn xs" data-guard="${g.id}" ${sp.ok || !R.sellGuardian ? '' : 'disabled'} title="${esc(sp.ok ? '' : sp.msg)}">Sell</button></div>`; }).join('')}</div>
+      <p class="cl-dim"><button type="button" class="cl-linkbtn" data-mdef="guardians">Defence panel ›</button> repairs, crews and commanders.</p>` : ''}`;
   }
 
   function renderSettings() {
@@ -773,6 +855,7 @@ export function createUI(root, api) {
     if (e.kind === 'cost') return `${nm}: cost ${pct(e.mult)}`;
     if (e.kind === 'pressurise') return `Pressurising: air ${pct(e.mult)}`;
     if (e.kind === 'survey') return `Surveys: cost ${pct(e.mult)}${e.days ? `, ${e.days} day${e.days === 1 ? '' : 's'}` : ''}`;
+    if (e.kind === 'machines') return `Arsenal: tier ${e.tier} machines`;
     return e.kind;
   };
   const pic = (key) => { const u = api.art?.(`card/${key}`); return u ? `<img src="${esc(u)}" alt="" loading="lazy">` : BUILDING[key] ? cardIcon(BUILDING[key]) : ''; };
@@ -855,6 +938,7 @@ export function createUI(root, api) {
   }
   function openResearch(key) {
     for (const p of Object.values(pops)) p.hidden = true;
+    closeDefence();
     resFlash = key || null;
     resEl.hidden = false;
     $('.cl-build')?.classList.remove('open');
@@ -863,6 +947,475 @@ export function createUI(root, api) {
   }
   function closeResearch() { if (resEl.hidden) return false; resEl.hidden = true; return true; }
   function toggleResearch(key) { if (resEl.hidden || key) openResearch(key); else closeResearch(); }
+
+  // ---------------------------------------------------------------- version 3: the Defence panel
+  // Guardians, Production (the expansion's production list, by class), Commanders (and the wanderers
+  // at the Lodge) and Raids (heat, the next raid, the last report). Every order goes through rules.js
+  // (machineList, orderMachine, cancelOrder, assignCommander, setDepartment, inviteWanderer, ...);
+  // each call is guarded, so a missing rule shows a "not ready" message instead of breaking the page.
+  const rule = (name, s, ...a) => {
+    const f = R[name]; if (typeof f !== 'function') return undefined;
+    try { return f(s, ...a); } catch (e) { console.warn(`rules.${name} failed`, e); return undefined; }
+  };
+  const notReady = (what) => ({ ok: false, msg: `${what} is not ready in this build yet.` });
+  const finishedOf = (s, key) => s.buildings.filter((b) => b.key === key && b.build === 0);
+  // A machine's numbers: data/machines.js, else the expansion's units.json (beta guardians of other types).
+  function mInfo(type) {
+    const m = MACHINE[type]; if (m) return m;
+    const t = api.types?.[type], pr = S().imported?.prices?.[type];
+    if (t) return { type, name: t.name, code: String(t.code || '').trim(), cls: CAT_CLASS[t.category] || 'support', hp: t.hp, move: t.move, attack: t.attack ?? 0, defence: t.defence ?? 0, price: pr ?? Math.max(1, t.value) * t.hp, tier: 1 };
+    return { type, name: `Machine ${type}`, code: '', cls: 'support', hp: 8, move: 0, attack: 0, defence: 0, price: pr ?? 24, tier: 1 };
+  }
+  const mainMode = (type) => { const w = (api.types?.[type]?.weapons || []).filter((x) => x && x.power).sort((a, b) => b.power - a.power)[0]; return w ? WEAPON_MODE[w.mode] || null : null; };
+  const maxHp = (g) => mInfo(g.type).hp || g.hp || 1;
+  const hpOf = (g) => Math.max(0, g.hp ?? maxHp(g));
+  const crewCap = (s) => { const r = rule('crewCap', s); return Number.isFinite(r) ? r : 4 + 6 * finishedOf(s, 'barracks').length; };
+  const cmdCap = (s) => { const r = rule('commanderCap', s); return Number.isFinite(r) ? r : BASE_COMMANDERS + PER_QUARTERS * finishedOf(s, 'quarters').length; };
+  const commanders = (s) => Array.isArray(s.commanders) ? s.commanders : [{ key: 'general', loyalty: 100, injured: 0, dept: null }, { key: 'sato', loyalty: 80, injured: 0, dept: null }];
+  // crewed: the rules' own flag when they keep one, else the first crewCap guardians in the list
+  const isCrewed = (s, g, i) => g.crewed != null ? !!g.crewed : i < crewCap(s);
+  function upkeepOf(g) {
+    if ((g.free || 0) > 0) return 0;
+    const base = Math.ceil((mInfo(g.type).price || 0) / 8);
+    return COMMANDER[g.commander]?.perk === 'quartermaster' ? base / 2 : base;
+  }
+  function upkeepTotal(s) {
+    const r = rule('machineUpkeep', s);
+    if (Number.isFinite(r)) return r;
+    if (Number.isFinite(r?.total)) return r.total;
+    return (s.guardians || []).reduce((t, g) => t + upkeepOf(g), 0);
+  }
+  function gPower(s, g) {
+    const r = rule('guardianPower', s, g); if (Number.isFinite(r)) return r;
+    const m = mInfo(g.type); return ((m.attack || 0) + (m.defence || 0)) * hpOf(g) / maxHp(g) * (1 + 0.08 * (g.level || 0));
+  }
+  const batteries = (s) => finishedOf(s, 'emplacement').filter((b) => !(b.damaged > 0));
+  function defenceTotal(s) {
+    let d = 0;
+    (s.guardians || []).forEach((g, i) => { if (isCrewed(s, g, i) && hpOf(g) > 0) d += gPower(s, g); });
+    return d + 40 * batteries(s).length;
+  }
+  function raidsPossible(s) { const r = s.raid; return !!r && (s.pop >= 80 || !!s.flags?.unlock80 || r.count > 0 || !!r.coming || !!r.warned); }
+  function raidEta(s) {
+    const r = s.raid; if (!r) return null;
+    if (r.coming?.day != null) return Math.max(0, r.coming.day - s.day);
+    if (r.warned && Number.isFinite(r.next)) return Math.max(0, r.next - s.day);
+    return null;
+  }
+  const raidStartDay = (s) => ((api.diff?.(s)?.key ?? s.difficulty) === 'easy' ? 60 : 35);
+  const factionName = (f) => FACTION_NAME[String(f || '').toLowerCase()] || (f ? String(f).charAt(0).toUpperCase() + String(f).slice(1) : 'Unknown raiders');
+  const fromText = (f) => FROM_TEXT[f] || (f ? `the ${f}` : 'somewhere out in the dark');
+  const unitList = (units) => { const n = {}; for (const u of units || []) { const nm = mInfo(u?.type ?? u).name; n[nm] = (n[nm] || 0) + 1; } return Object.entries(n).map(([k, v]) => v > 1 ? `${k} ×${v}` : k).join(', '); };
+  const sensorDays = (s) => 3 + 3 * Math.min(3, finishedOf(s, 'sensormast').length);
+  const plural = (n, w) => `${num(n)} ${w}${n === 1 ? '' : 's'}`;
+
+  // What makes heat (docs/COLONY-V3.md "Heat"), worked out from the state: the sim owns the number.
+  function heatParts(s) {
+    if (Array.isArray(s.raid?.heatParts)) return s.raid.heatParts.map((p) => [p.label ?? p[0], +(p.value ?? p[1]) || 0]);
+    const parts = [['Colonists', s.pop / 20]];
+    let v = s.stock.credits || 0;
+    for (const g of SELLABLE) { try { v += (s.stock[g] || 0) * R.price(s, g); } catch { } }
+    parts.push(['Riches in store', v / 2000]);
+    parts.push(['Open chambers', 2 * s.chambers.filter((c) => c.status === 'open').length]);
+    const sales = s.raid?.sales ?? s.raid?.sold;
+    if (Number.isFinite(sales)) parts.push(['Sales, last 30 days', sales / 1000]);
+    const jam = finishedOf(s, 'jammer').length;
+    if (jam) parts.push(['Jammer Arrays', -Math.min(30, 10 * jam)]);
+    if (commanders(s).some((c) => c.key === 'w_rook')) parts.push(['Cass Rook serving', 5]);
+    return parts;
+  }
+  function heatWhy(s) {
+    const r = s.raid || {}, eta = raidEta(s);
+    return [`Heat ${Math.round(r.heat || 0)} / 100: how tempting Eden looks to raiders. The hotter it is, the sooner the next raid.`,
+      'It drifts toward: ' + heatParts(s).map(([l, v]) => `${l.toLowerCase()} ${v >= 0 ? '+' : '−'}${num(Math.abs(v))}`).join(', ') + '. Paying tribute adds 10.',
+      r.coming ? `Raiders on the way: ${eta ? plural(eta, 'day') + ' out' : 'here now'}.` : r.warned && eta != null ? `Sato's sensors: a raid in ${plural(eta, 'day')}.` : `No contact yet. Warnings come ${sensorDays(s)} days ahead (each Sensor Mast adds 3).`,
+      'Click to open Defence (G).'].join('\n');
+  }
+
+  // ---- pictures: commanders' portraits (painted art, the expansion's SVG bust, or a drawn initial) and machine glyphs
+  function face(key, ctx = '') {
+    const c = COMMANDER[key] || { key, name: key };
+    const url = c.portrait && api.art?.(c.portrait);
+    if (url) return `<img src="${esc(url)}" alt="${esc(c.name)}" loading="lazy">`;
+    const svg = c.svg && svgPortrait?.(c.svg);
+    if (svg) { const u = `${c.svg}${String(ctx).replace(/\W/g, '')}x`; return svg.split(`id="${c.svg}`).join(`id="${u}`).split(`url(#${c.svg}`).join(`url(#${u}`); }
+    const nm = String(c.name || key).replace(/^(Capt\.|The)\s+/, '');
+    const ini = c.general ? '★' : nm.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+    let h = 7; for (const ch of String(key)) h = (h * 31 + ch.charCodeAt(0)) % 360;
+    const col = c.general ? '#f5c542' : `hsl(${h} 75% 70%)`;
+    return `<svg viewBox="0 0 100 120" role="img" aria-label="${esc(c.name || key)}"><rect width="100" height="120" fill="${c.general ? '#2a2108' : `hsl(${h} 40% 13%)`}"/>
+      <circle cx="50" cy="50" r="36" fill="none" stroke="${col}" stroke-opacity=".35" stroke-dasharray="3 4"/><path d="M12 120 C16 96 32 86 50 86 C68 86 84 96 88 120 Z" fill="${col}" fill-opacity=".2"/>
+      <text x="50" y="${c.general ? 66 : 62}" text-anchor="middle" font-family="Chakra Petch, sans-serif" font-weight="700" font-size="${c.general ? 44 : 32}" fill="${col}">${esc(ini)}</text></svg>`;
+  }
+  function eventFace(speaker) {
+    const url = speaker && api.art?.(`portrait/${speaker}`);
+    if (url) return `<img class="cl-portrait" src="${esc(url)}" alt="">`;
+    const svg = speaker && svgPortrait?.(speaker);
+    return svg ? `<span class="cl-portrait cl-svgface">${svg.split(`id="${speaker}`).join(`id="${speaker}ev`).split(`url(#${speaker}`).join(`url(#${speaker}ev`)}</span>` : '';
+  }
+  const ICON = {
+    hu: 'M27 7h10v8H27z M19 17h26l4 17h-6l-3-9v13l4 19h-7l-3-14h-4l-3 14h-7l4-19V25l-3 9h-6z',
+    planes: 'M32 5l5 18 20 13v6l-20-6-2 13 7 5v4l-10-3-10 3v-4l7-5-2-13-20 6v-6l20-13z',
+    armour: 'M8 38h48l4 7-6 9H10l-6-9z M17 27h24l5 11H13z M41 30h19v4H41z',
+    ships: 'M3 38h58l-9 12H13z M15 30h28v8H15z M23 21h9v9h-9z M44 33h14v5H44z',
+    support: 'M13 52h38l-4-11H17z M21 41l5-13h12l5 13z M35 30l19-13 3 3-19 13z',
+  };
+  const machineIcon = (cls) => `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="${CLASS_COLOR[cls] || '#9aa'}" fill-opacity=".08"/><path d="${ICON[cls] || ICON.support}" fill="${CLASS_COLOR[cls] || '#9aa'}" fill-opacity=".75" stroke="#fff" stroke-opacity=".35" stroke-width="1"/></svg>`;
+  const gradesHtml = (c) => `<div class="cl-grades">${CLASSES.map((k) => { const g = c.grades?.[k] || '–'; return `<span class="cl-grade g-${esc(g)}" title="${CLASS_NAME[k]}: grade ${esc(g)}"><i>${CLASS_NAME[k]}</i><b>${esc(g)}</b></span>`; }).join('')}</div>`;
+  const statBars = (c) => `<div class="cl-cstats">${['might', 'wits', 'charm'].map((k) => `<span class="cl-cstat" title="${{ might: 'Might: battle', wits: 'Wits: management', charm: 'Charm: people' }[k]}"><i>${k}</i><span class="cl-cbar"><span style="width:${Math.max(0, Math.min(100, c[k] || 0))}%"></span></span><b>${c[k] ?? '–'}</b></span>`).join('')}</div>`;
+  const traits = (c) => `<p class="cl-ctraits">${c.style ? `<span title="${esc(STYLES[c.style] || '')}"><i>Style</i> ${esc(c.style.charAt(0).toUpperCase() + c.style.slice(1))}</span>` : ''}${c.perk && PERKS[c.perk] ? `<span title="${esc(PERKS[c.perk].text)}"><i>Perk</i> ${esc(PERKS[c.perk].name)}</span>` : ''}${c.general ? '<span title="Power ×2, evasion ×2, level 9 in any machine"><i>General</i> ×3 power</span>' : ''}</p>`;
+
+  // ---- live rendering: the structure re-renders only when it changes; numbers marked L() / W() update in place
+  const liveSigs = new WeakMap();
+  function liveRender(el, build) {
+    const live = [];
+    const L = (text, cls = '') => { live.push(String(text ?? '')); return `<span data-live="${live.length - 1}"${cls ? ` class="${cls}"` : ''}></span>`; };
+    const W = (pct) => { live.push(Math.max(0, Math.min(100, Math.round(+pct || 0)))); return `data-livew="${live.length - 1}"`; };
+    const html = build(L, W);
+    if (liveSigs.get(el) !== html) { liveSigs.set(el, html); el.innerHTML = html; }
+    for (const n of el.querySelectorAll('[data-live]')) { const v = live[+n.dataset.live] ?? ''; if (n.textContent !== v) n.textContent = v; }
+    for (const n of el.querySelectorAll('[data-livew]')) { const v = `${live[+n.dataset.livew] ?? 0}%`; if (n.style.width !== v) n.style.width = v; }
+  }
+
+  // ---- the panel
+  const defEl = $('.cl-defence'), defBody = $('[data-dbody]'), defStats = $('[data-dstats]');
+  const DEF_KEY = 'el-colony-defence';
+  const defPrefs = (() => { try { return JSON.parse(localStorage.getItem(DEF_KEY) || '{}') || {}; } catch { return {}; } })();
+  const storeDef = () => { try { localStorage.setItem(DEF_KEY, JSON.stringify(defPrefs)); } catch { } };
+  let defTab = DEF_TABS.some(([k]) => k === defPrefs.tab) ? defPrefs.tab : 'guardians';
+  defPrefs.fold ??= {}; defPrefs.sort ??= 'price';
+
+  function renderDefence(force) {
+    if (defEl.hidden) return;
+    const s = S();
+    if (force) { liveSigs.delete(defBody); liveSigs.delete(defStats); }
+    for (const t of defEl.querySelectorAll('[data-dtab]')) {
+      const on = t.dataset.dtab === defTab;
+      if (t.getAttribute('aria-selected') !== String(on)) t.setAttribute('aria-selected', String(on));
+    }
+    const counts = { guardians: (s.guardians || []).length || '', production: (s.production || []).length || '', commanders: (s.wanderers || []).length ? `+${s.wanderers.length}` : '', raids: s.raid?.coming || s.raid?.warned ? '!' : '' };
+    for (const n of defEl.querySelectorAll('[data-dtabn]')) { const v = String(counts[n.dataset.dtabn] ?? ''); if (n.textContent !== v) n.textContent = v; }
+    liveRender(defStats, (L) => defStatsHtml(s, L));
+    const fn = { guardians: guardiansHtml, production: productionHtml, commanders: commandersHtml, raids: raidsHtml }[defTab];
+    liveRender(defBody, (L, W) => `<div class="cl-dtab-${defTab}">${fn(s, L, W)}</div>`);
+  }
+  function defStatsHtml(s, L) {
+    const gs = s.guardians || [], cap = crewCap(s), crewedN = gs.filter((g, i) => isCrewed(s, g, i)).length, free = gs.filter((g) => (g.free || 0) > 0).length;
+    const cm = commanders(s), heatOn = raidsPossible(s), eta = raidEta(s);
+    return `<span class="cl-rst" title="Guardian machines; the crewed ones fight. The Command Centre crews 4, each Guardian Barracks 6 more."><i>Guardians</i><b>${L(gs.length)}</b><em>${L(`${crewedN} / ${cap} crewed`)}</em></span>
+      <span class="cl-rst" title="Strength in a raid: the crewed, working guardians plus 40 per Battery Emplacement"><i>Defence</i><b>${L(num(defenceTotal(s)))}</b><em>${L(`${batteries(s).length} ${batteries(s).length === 1 ? 'battery' : 'batteries'}`)}</em></span>
+      <span class="cl-rst" title="Credits a day for the machines (an eighth of each price; free while a beta machine's free days last)"><i>Upkeep</i><b>${L(num(upkeepTotal(s)))}<small>/day</small></b><em>${L(free ? `${free} free` : 'credits')}</em></span>
+      <span class="cl-rst" title="Commanders serving / room (two, plus two per Officers' Quarters)"><i>Commanders</i><b>${L(`${cm.length}`)}<small>${L(`/${cmdCap(s)}`)}</small></b><em>${L((s.wanderers || []).length ? `${s.wanderers.length} at the Lodge` : 'serving')}</em></span>
+      ${heatOn ? `<span class="cl-rst cl-rsheat" title="${esc(heatWhy(s))}"><i>Heat</i><b>${L(Math.round(s.raid.heat || 0))}</b><em>${L(s.raid.coming ? (eta ? `raid in ${eta} d` : 'raiders here') : s.raid.warned && eta != null ? `raid in ${eta} d` : 'no contact')}</em></span>` : ''}`;
+  }
+  const note = (html, cls = '') => `<div class="cl-rnote cl-dnote ${cls}">${html}</div>`;
+  const showBtn1 = (key) => `<button type="button" class="cl-btn sm primary" data-dshow="${esc(key)}">Show me: ${esc(BUILDING[key]?.name || key)}</button>`;
+
+  // -- Guardians
+  function guardiansHtml(s, L, W) {
+    const gs = s.guardians || [];
+    if (!gs.length) return note(`<b>No guardians yet.</b> ${s.unlocked?.includes?.('arsenal') ? 'Build an <b>Arsenal</b> (Defence menu), then order machines in Production.' : `The Arsenal opens at 80 colonists (you have ${num(s.pop)}).`}
+      ${s.unlocked?.includes?.('arsenal') ? showBtn1('arsenal') : ''}<button type="button" class="cl-btn sm" data-dgo="production">Production</button>`);
+    const cap = crewCap(s), cm = commanders(s), yard = finishedOf(s, 'scrapyard').length > 0;
+    const uncrewed = gs.filter((g, i) => !isCrewed(s, g, i)).length;
+    const opts = (g) => `<option value="">No commander</option>${cm.map((c) => { const C = COMMANDER[c.key] || {}, other = (s.guardians || []).find((x) => x.commander === c.key && x.id !== g.id);
+      return `<option value="${esc(c.key)}" ${g.commander === c.key ? 'selected' : ''} ${c.injured > 0 ? 'disabled' : ''}>${esc(C.name || c.key)}${c.injured > 0 ? ' (injured)' : other ? ` (in ${esc(mInfo(other.type).name)})` : ''}</option>`; }).join('')}`;
+    const rows = gs.map((g, i) => {
+      const m = mInfo(g.type), mh = maxHp(g), hp = hpOf(g), crew = isCrewed(s, g, i), up = upkeepOf(g), sale = salePrice(s, g);
+      const status = hp <= 0 ? '<b class="bad">Wrecked</b>' : !crew ? '<b class="bad">No crew</b>' : hp < mh ? (yard ? '<b class="warn">Repairing</b>' : '<b class="warn">Damaged</b>') : '<b class="good">Ready</b>';
+      const lv = Math.max(0, Math.min(9, g.level || 0));
+      return `<article class="cl-grow${crew ? '' : ' nocrew'}${hp < mh ? ' hurt' : ''}" style="--mc:${CLASS_COLOR[m.cls] || '#9aa'}">
+        <span class="cl-gicon">${machineIcon(m.cls)}</span>
+        <div class="cl-gname"><b>${esc(m.name)}</b><small>${esc(m.code || '')}${m.code ? ' · ' : ''}${esc(CLASS_NAME[m.cls] || m.cls)}</small></div>
+        <div class="cl-glv" title="Level ${lv}: +${lv * 8}% power"><span class="cl-pips">${Array.from({ length: 9 }, (_, k) => `<i${k < lv ? ' class="on"' : ''}></i>`).join('')}</span><small>L${lv}</small></div>
+        <div class="cl-ghp" title="Hull points${hp < mh ? (yard ? ': the Scrapyard repairs 2 a day for a part each' : ': build a Scrapyard to repair it') : ''}"><span class="cl-hpbar${hp / mh < 0.34 ? ' low' : hp < mh ? ' mid' : ''}"><span ${W(100 * hp / mh)}></span></span><small>${L(`${num(hp)} / ${num(mh)} HP`)}</small></div>
+        <label class="cl-gcmd" title="The commander flying it">${g.commander ? `<span class="cl-mface">${face(g.commander, 'g' + g.id)}</span>` : ''}<select data-gassign="${g.id}" aria-label="Commander of this ${esc(m.name)}">${opts(g)}</select></label>
+        <div class="cl-gnum" title="Strength in a raid"><i>Power</i><b>${L(num(gPower(s, g)))}</b></div>
+        <div class="cl-gnum" title="Upkeep a day${(g.free || 0) > 0 ? ': free while its free days last' : ''}"><i>Upkeep</i><b>${(g.free || 0) > 0 ? `<span class="good">free</span> <small>${L(`${Math.ceil(g.free)} d`)}</small>` : `${num(up)} <small>cr/d</small>`}</b></div>
+        <div class="cl-gstat">${status}</div>
+        <button type="button" class="cl-btn xs" data-gsell="${g.id}" ${sale.ok ? '' : 'disabled'} title="${esc(sale.ok ? `Sell at the dock for ${num(sale.credits)} credits and ${num(sale.parts)} parts${yard ? ' (Scrapyard: a fifth more)' : ''}` : sale.msg)}">Sell <small>${num(sale.credits)} cr</small></button>
+      </article>`;
+    }).join('');
+    return `${uncrewed ? note(`<b>${plural(uncrewed, 'machine')} without a crew</b> stay${uncrewed === 1 ? 's' : ''} in the hangar when raiders come. Crews: ${cap} (the Command Centre 4, each Guardian Barracks 6).${s.unlocked?.includes?.('barracks') ? showBtn1('barracks') : ''}`, 'warn') : ''}
+      ${gs.some((g) => hpOf(g) < maxHp(g)) && !yard ? note(`Damaged machines fight weaker. A <b>Scrapyard</b> repairs them, 2 HP a day each for a part per HP.${s.unlocked?.includes?.('scrapyard') ? showBtn1('scrapyard') : ''}`) : ''}
+      <div class="cl-glist">${rows}</div>
+      <p class="cl-dim">Machines are sold at the dock${yard ? ' (the Scrapyard adds a fifth)' : ''}. Guardians eat no food. Survivors of a raid gain levels.</p>`;
+  }
+  // What a guardian sells for: the rules' sellGuardian tried on a light copy (it only touches these fields).
+  function salePrice(s, g) {
+    const c = { ...s, guardians: (s.guardians || []).map((x) => ({ ...x })), stock: { ...s.stock }, log: [], flags: { ...s.flags }, commanders: s.commanders?.map((x) => ({ ...x })), raid: s.raid && { ...s.raid } };
+    const cr = c.stock.credits || 0, pa = c.stock.parts || 0, r = rule('sellGuardian', c, g.id);
+    if (r && r.ok !== false) return { ok: true, credits: (c.stock.credits || 0) - cr, parts: (c.stock.parts || 0) - pa };
+    const p = mInfo(g.type).price, f = finishedOf(s, 'scrapyard').length ? 1.2 : 1;
+    return { ok: false, msg: r?.msg || 'Selling is not ready in this build yet.', credits: Math.round(p * 10 * f), parts: Math.round(p * f) };
+  }
+
+  // -- Production
+  function machineTier(s) {
+    const r = rule('techEffect', s, 'machines');
+    if (Number.isFinite(r) && r >= 1) return r;
+    let t = 1; for (const k of researchOf(s).done || []) for (const e of TECH[k]?.effects || []) if (e.kind === 'machines') t = Math.max(t, e.tier);
+    return t;
+  }
+  function machineRows(s) {
+    const r = rule('machineList', s);
+    if (Array.isArray(r) && r.length) return r;
+    const tier = machineTier(s), yard = finishedOf(s, 'shipyard').length > 0, ars = finishedOf(s, 'arsenal').length > 0;
+    return MACHINES.map((m) => {
+      let cost = MACHINE_COST(m); try { cost = R.costOf?.(s, cost) || cost; } catch { }
+      const owned = (s.guardians || []).some((g) => g.type === m.type) || (s.production || []).some((o) => o.type === m.type);
+      const why = m.tier > tier ? `Research ${TECH[TIER_TECH[m.tier]]?.name || 'more machine tech'}.` : m.at === 'shipyard' && !yard ? 'Build a Shipyard.' : !ars && m.at === 'arsenal' ? 'Build an Arsenal.'
+        : m.unique && owned ? `Only one ${m.name} may serve at a time.` : (s.stock.credits || 0) < cost.credits ? `Needs ${num(cost.credits)} credits.` : (s.stock.parts || 0) < cost.parts ? `Needs ${num(cost.parts)} parts.` : '';
+      return { ...m, cost, ok: !why, why };
+    });
+  }
+  const buildDays = (m) => Math.max(2, Math.ceil((m.price || 0) / 4));
+  // A lock reason that points somewhere: a tech (Research) or a building to put up.
+  function lockLink(s, m) {
+    const why = m.why || '', tier = machineTier(s);
+    if (m.tier > tier && TIER_TECH[m.tier]) return { tech: TIER_TECH[m.tier] };
+    if (/research/i.test(why)) { const t = TECHS.find((x) => why.includes(x.name)); if (t) return { tech: t.key }; }
+    if (/shipyard/i.test(why)) return techDone(s, 'shipyard') ? { build: 'shipyard' } : { tech: 'shipyard' };
+    if (/arsenal/i.test(why)) return { build: 'arsenal' };
+    return null;
+  }
+  function productionHtml(s, L, W) {
+    const yards = s.buildings.filter((b) => BUILDING[b.key]?.builds);
+    const orders = s.production || [];
+    let queue;
+    if (!yards.length && !orders.length) {
+      queue = note(`<b>Machines are built at an Arsenal</b>${s.unlocked?.includes?.('arsenal') ? ' (Defence menu).' : `, which opens at 80 colonists (you have ${num(s.pop)}).`} Capital ships need a Shipyard (research). Meanwhile, look over what it could build.${s.unlocked?.includes?.('arsenal') ? showBtn1('arsenal') : ''}`);
+    } else {
+      const byAt = new Map(yards.map((b) => [b.id, []]));
+      const lost = [];
+      for (const o of orders) (byAt.get(o.at) || lost).push(o);
+      const orderRow = (o, k) => {
+        const m = mInfo(o.type), total = buildDays(m), left = Math.max(0, o.days ?? total);
+        return `<div class="cl-order${k === 0 ? ' on' : ''}" style="--mc:${CLASS_COLOR[m.cls] || '#9aa'}"><span class="cl-oicon">${machineIcon(m.cls)}</span>
+          <span class="cl-oname"><b>${esc(m.name)}</b><small>${k === 0 ? 'building' : `waiting · #${k + 1}`}</small></span>
+          <span class="cl-obar"><span ${W(k === 0 ? 100 * (1 - left / total) : 0)}></span></span>
+          <span class="cl-odays">${L(k === 0 ? `${num(left)} d left` : `${num(total)} d`)}</span>
+          <button type="button" class="cl-btn xs" data-ocancel="${o.id}" title="Cancel: the full price comes back">Cancel</button></div>`;
+      };
+      queue = `<div class="cl-yards">${yards.map((b) => {
+        const d = BUILDING[b.key], list = byAt.get(b.id) || [];
+        const st = b.build > 0 ? `being built · ${b.build} d` : b.damaged > 0 ? `damaged · ${b.damaged} d` : b.off ? 'switched off' : list.length ? 'working' : 'idle';
+        return `<div class="cl-yard"><header><b>${esc(d.name)}</b><small class="${b.build > 0 || b.damaged > 0 || b.off ? 'bad' : list.length ? 'good' : ''}">${esc(st)}</small></header>
+          ${list.map(orderRow).join('') || '<p class="cl-dim">Nothing ordered: pick a machine below.</p>'}</div>`;
+      }).join('')}${lost.length ? `<div class="cl-yard"><header><b>Waiting for a yard</b></header>${lost.map(orderRow).join('')}</div>` : ''}</div>`;
+    }
+    const rows = machineRows(s), tier = machineTier(s);
+    const key = { price: (a, b) => a.price - b.price || a.name.localeCompare(b.name), name: (a, b) => a.name.localeCompare(b.name), tier: (a, b) => a.tier - b.tier || a.price - b.price, attack: (a, b) => b.attack - a.attack }[defPrefs.sort] || ((a, b) => a.price - b.price);
+    const card = (m) => {
+      const link = m.ok ? null : lockLink(s, m), afford = !m.ok && !link, cost = m.cost || MACHINE_COST(m), mode = mainMode(m.type);
+      return `<article class="cl-mach${m.ok ? ' ok' : link ? ' locked' : ' poor'}" style="--mc:${CLASS_COLOR[m.cls] || '#9aa'}" title="${esc(`${m.name} (${m.code}): HP ${m.hp}, move ${m.move}, evasion ${m.evasion ?? '?'}, attack ${m.attack}, defence ${m.defence}${mode ? `, mainly ${mode.toLowerCase()}` : ''}. Upkeep ${Math.ceil(m.price / 8)} credits a day.`)}">
+        <span class="cl-micon">${machineIcon(m.cls)}</span>
+        <div class="cl-mhead"><b>${esc(m.name)}</b><small>${esc(m.code)} · T${m.tier}${m.at === 'shipyard' ? ' · shipyard' : ''}${m.unique ? ' · unique' : ''}</small></div>
+        <div class="cl-mstats"><span><i>HP</i><b>${m.hp}</b></span><span><i>Move</i><b>${m.move}</b></span><span><i>Atk</i><b>${m.attack}</b></span><span><i>Def</i><b>${m.defence}</b></span></div>
+        <div class="cl-mfoot"><span class="cl-mcost${afford ? ' poor' : ''}">${num(cost.credits)} <small>cr</small> · ${num(cost.parts)} <small>parts</small> · ${buildDays(m)} <small>d</small></span>
+          <button type="button" class="cl-btn xs${m.ok ? ' primary' : ''}" data-morder="${m.type}" ${m.ok ? '' : 'disabled'}>Order</button></div>
+        ${m.ok ? '' : link ? `<button type="button" class="cl-mwhy" ${link.tech ? `data-mtech="${esc(link.tech)}"` : `data-dshow="${esc(link.build)}"`}>${link.tech ? '⚗' : '🔒'} ${esc(m.why || `Research ${TECH[link.tech]?.name}.`)} <i>›</i></button>` : `<p class="cl-mwhy poor">${esc(m.why)}</p>`}
+      </article>`;
+    };
+    const groups = CLASSES.map((c) => [c, rows.filter((m) => m.cls === c).sort(key)]).filter(([, l]) => l.length).map(([c, l]) => {
+      const ready = l.filter((m) => m.ok).length;
+      return `<details class="cl-mclass" data-mfold="${c}" ${defPrefs.fold[c] ? '' : 'open'} style="--mc:${CLASS_COLOR[c]}"><summary>${esc(CLASS_NAME[c])} <small>${l.length} · ${ready} ready</small></summary><div class="cl-mgrid">${l.map(card).join('')}</div></details>`;
+    }).join('');
+    return `<section class="cl-dsec"><h4>Queue <small>one machine at a time per yard; Cancel refunds in full</small></h4>${queue}</section>
+      <section class="cl-dsec"><h4>Machines <small>tier ${tier} of 4 · credits = price × 10, parts = price</small>
+        <select class="cl-msort" data-msort title="Sort">${[['price', 'price'], ['tier', 'tier'], ['attack', 'attack'], ['name', 'name']].map(([k, n]) => `<option value="${k}" ${defPrefs.sort === k ? 'selected' : ''}>Sort: ${n}</option>`).join('')}</select></h4>
+        <p class="cl-dim">Each machine comes with a crew at level 0. Credits ${L(num(s.stock.credits))} · parts ${L(num(s.stock.parts))}.</p>${groups}</section>`;
+  }
+
+  // -- Commanders
+  function inviteChance(s, w) {
+    const r = rule('inviteChance', s, w.key); if (Number.isFinite(r)) return r;
+    const loyalty = w.loyalty ?? COMMANDER[w.key]?.loyalty ?? 50;
+    return Math.max(0.05, Math.min(0.95, 0.3 + GENERAL.charm / 220 - 0.03 * (commanders(s).length - 2) + (100 - loyalty) / 400));
+  }
+  function commandersHtml(s, L, W) {
+    const cm = commanders(s), cap = cmdCap(s), gs = s.guardians || [], heads = {};
+    for (const c of cm) if (c.dept) heads[c.dept] = c.key;
+    const ready = Array.isArray(s.commanders);
+    const card = (c) => {
+      const C = COMMANDER[c.key] || { name: c.key, grades: {} }, g = gs.find((x) => x.commander === c.key), loy = Math.round(c.loyalty ?? C.loyalty ?? 50);
+      return `<article class="cl-cmd${c.injured > 0 ? ' injured' : ''}${C.general ? ' gen' : ''}">
+        <span class="cl-face">${face(c.key, 'c')}</span>
+        <div class="cl-cbody">
+          <header><b>${esc(C.name)}</b><small>${esc(C.title || '')}</small></header>
+          ${statBars(C)}${gradesHtml(C)}${traits(C)}
+          <div class="cl-cmeta">
+            ${C.general ? '<span><i>Loyalty</i><b class="good">always</b></span>' : `<span title="Drifts toward 40 + happiness ÷ 2; unpaid wages lower it. Below 20 they may leave${C.perk === 'steady' ? ' (Steady: never)' : ''}."><i>Loyalty</i><span class="cl-cbar loy${loy < 25 ? ' low' : ''}"><span ${W(loy)}></span></span><b>${L(loy)}</b></span>`}
+            <span><i>Wage</i><b>${C.wage ? `${C.wage} <small>cr/d</small>` : '–'}</b></span>
+            ${c.injured > 0 ? `<span class="bad"><i>Injured</i><b>${L(`${Math.ceil(c.injured)} d`)}</b></span>` : ''}
+            <span><i>Flies</i><b>${g ? esc(mInfo(g.type).name) : '<span class="cl-dim">nothing</span>'}</b></span>
+          </div>
+          ${C.text ? `<p class="cl-ctext">${esc(C.text)}</p>` : ''}
+          <div class="cl-cacts">
+            <label><i>Pilots</i><select data-cassign="${esc(c.key)}" ${ready && !(c.injured > 0) ? '' : 'disabled'}><option value="">No machine</option>${gs.map((x) => { const o = x.commander && x.commander !== c.key ? COMMANDER[x.commander]?.name : '';
+              return `<option value="${x.id}" ${x.commander === c.key ? 'selected' : ''}>${esc(mInfo(x.type).name)} L${x.level || 0}${o ? ` (${esc(o)})` : ''}</option>`; }).join('')}</select></label>
+            <label><i>Heads</i><select data-cdept="${esc(c.key)}" ${ready ? '' : 'disabled'}><option value="">No department</option>${Object.entries(DEPARTMENTS).map(([k, d]) => `<option value="${k}" ${c.dept === k ? 'selected' : ''}>${esc(d.name)} (+${Math.round((C[d.stat] || 0) / 10)}%)${heads[k] && heads[k] !== c.key ? ` · ${esc(COMMANDER[heads[k]]?.name || heads[k])}` : ''}</option>`).join('')}</select></label>
+            ${C.general || c.key === 'sato' ? '' : `<button type="button" class="cl-btn xs warn" data-cdismiss="${esc(c.key)}" title="They leave, and may come back to the Lodge later">Dismiss</button>`}
+          </div>
+        </div></article>`;
+    };
+    const lodge = s.buildings.filter((b) => b.key === 'lodge' && b.build === 0);
+    const ws = s.wanderers || [];
+    const wcard = (w) => {
+      const C = COMMANDER[w.key] || { name: w.key, grades: {} }, ch = inviteChance(s, w), left = w.until != null ? Math.max(0, w.until - s.day) : null;
+      const full = cm.length >= cap, poor = (s.stock.credits || 0) < 100;
+      const why = full ? `No room: ${cm.length} / ${cap} commanders. Officers' Quarters make room for two more.` : poor ? 'The gift is 100 credits.' : '';
+      return `<article class="cl-cmd wand">
+        <span class="cl-face">${face(w.key, 'w')}</span>
+        <div class="cl-cbody">
+          <header><b>${esc(C.name)}</b><small>${esc(C.title || '')}</small></header>
+          ${statBars(C)}${gradesHtml(C)}${traits(C)}
+          ${C.flaw ? `<p class="cl-cflaw">⚠ ${esc(C.flaw)}</p>` : ''}
+          <div class="cl-cmeta"><span><i>Wage</i><b>${C.wage} <small>cr/d</small></b></span><span><i>Loyalty</i><b>${Math.round(w.loyalty ?? C.loyalty ?? 50)}</b></span>${left != null ? `<span><i>Leaves in</i><b>${L(`${left} d`)}</b></span>` : ''}${w.asked ? `<span><i>Asked</i><b>${w.asked}×</b></span>` : ''}</div>
+          <div class="cl-cacts"><span class="cl-chance" title="Chance they accept: better with the General's charm, worse the more commanders serve; each refusal makes the next try likelier"><span class="cl-cbar"><span ${W(ch * 100)}></span></span><b>${L(`${Math.round(ch * 100)}%`)}</b></span>
+            <button type="button" class="cl-btn xs primary" data-winvite="${esc(w.key)}" ${why ? 'disabled' : ''} title="${esc(why || 'Invite them to serve, with a gift of 100 credits')}">Invite <small>100 cr</small></button></div>
+          ${why ? `<p class="cl-why">${esc(why)}</p>` : ''}
+        </div></article>`;
+    };
+    const lodgeNote = !lodge.length ? note(`<b>Wanderers</b> stop at a <b>Wanderers' Lodge</b>: pilots, captains and engineers adrift since the war. ${techDone(s, 'leadership') ? 'Build one (Services menu).' + showBtn1('lodge') : 'Research <b>Leadership</b> (Society) to build one.<button type="button" class="cl-btn sm" data-mtech="leadership">Research: Leadership</button>'}`)
+      : !ws.length ? `<p class="cl-dim">Nobody at the Lodge right now. A wanderer stops by every ${{ 1: 15, 2: 10, 3: 7 }[Math.max(...lodge.map((b) => b.level || 1))] || 15} days and stays 20.</p>` : '';
+    return `${ready ? '' : note('Commanders are not ready in this build yet: these are the two you will start with.', 'warn')}
+      <section class="cl-dsec"><h4>Commanders <small>${cm.length} / ${cap} · wages ${num(cm.reduce((t, c) => t + (COMMANDER[c.key]?.wage || 0), 0))} cr a day</small></h4>
+        <div class="cl-cgrid">${cm.map(card).join('')}</div>
+        ${cm.length >= cap && techDone(s, 'leadership') ? `<p class="cl-dim">Room for no more: each <b>Officers' Quarters</b> houses two more commanders.</p>` : ''}</section>
+      <section class="cl-dsec"><h4>Wanderers at the Lodge <small>${ws.length ? `${ws.length} here` : ''}</small></h4>${lodgeNote}<div class="cl-cgrid">${ws.map(wcard).join('')}</div></section>
+      <section class="cl-dsec"><h4>Departments <small>one head each: + stat ÷ 10 %</small></h4><div class="cl-depts">${Object.entries(DEPARTMENTS).map(([k, d]) => {
+        const h = heads[k], C = COMMANDER[h];
+        return `<div class="cl-dept${h ? ' on' : ''}"><span class="cl-mface">${h ? face(h, 'd' + k) : ''}</span><div><b>${esc(d.name)}</b><small>${esc(d.text)} · ${esc(d.stat)}</small><em>${C ? `${esc(C.name)} · +${Math.round((C[d.stat] || 0) / 10)}%` : 'no head'}</em></div></div>`;
+      }).join('')}</div></section>`;
+  }
+
+  // -- Raids
+  function reportHtml(s, rep) {
+    if (!rep) return '<p class="cl-dim">No raid yet.</p>';
+    const paid = rep.tribute && !rep.won && (typeof rep.tribute === 'number' ? rep.tribute > 0 : Object.values(rep.tribute).some((v) => v > 0));
+    const kind = paid ? 'tribute' : rep.won ? 'won' : 'lost';
+    const goods = (o) => Object.entries(o || {}).filter(([, v]) => v > 0).map(([k, v]) => `${num(v)} ${(GOOD_NAME[k] || k).toLowerCase()}`).join(', ');
+    const dmg = (rep.damaged || []).map((id) => BUILDING[s.buildings.find((b) => b.id === id)?.key]?.name || 'a building');
+    const trib = typeof rep.tribute === 'number' ? `${num(rep.tribute)} credits` : goods(rep.tribute);
+    const kv = (k, v, cls = '') => `<div class="cl-kv"><span>${k}</span><b class="${cls}">${v}</b></div>`;
+    return `<div class="cl-report ${kind}"><header><b>${{ won: 'Raid beaten off', lost: 'Raid lost', tribute: 'Tribute paid' }[kind]}</b><small>Day ${rep.day} · ${esc(factionName(rep.faction))} from ${esc(fromText(rep.from))}</small></header>
+      ${kind !== 'tribute' ? kv('Machines lost', rep.lostGuardians?.length ? esc(unitList(rep.lostGuardians.map((t) => ({ type: t })))) : 'none', rep.lostGuardians?.length ? 'bad' : 'good') : ''}
+      ${dmg.length ? kv('Buildings damaged', esc(dmg.join(', ')), 'bad') : ''}
+      ${goods(rep.stolen) ? kv('Stolen', esc(goods(rep.stolen)), 'bad') : ''}
+      ${goods(rep.salvage) ? kv('Salvage', '+' + esc(goods(rep.salvage)), 'good') : ''}
+      ${paid ? kv('Tribute', esc(trib)) : ''}</div>`;
+  }
+  function raidsHtml(s, L, W) {
+    const r = s.raid;
+    if (!r) return note('Raids are not ready in this build yet.', 'warn');
+    const on = raidsPossible(s), eta = raidEta(s), heat = Math.round(r.heat || 0);
+    const gs = s.guardians || [], cap = crewCap(s), crewedN = gs.filter((g, i) => isCrewed(s, g, i) && hpOf(g) > 0).length;
+    const n = (k) => finishedOf(s, k).length, emp = finishedOf(s, 'emplacement');
+    const dragons = emp.filter((b) => (b.mode ?? 'dragon') === 'dragon').length;
+    const parts = heatParts(s);
+    let next;
+    if (!on) next = `<p>No raids yet. Raiders take notice once Eden has <b>80 colonists</b> (you have ${num(s.pop)}), and not before <b>day ${raidStartDay(s)}</b>.</p>`;
+    else if (r.coming) {
+      const c = r.coming, pv = rule('raidPreview', s);
+      next = `<div class="cl-raidnow"><b class="bad">Raiders ${eta ? `arrive in ${L(plural(eta, 'day'))}` : 'are here'}</b>
+        <p>${esc(factionName(c.faction))}${RAID_TIER[c.tier] ? ` (${RAID_TIER[c.tier]})` : ''} from ${esc(fromText(c.from))}: ${plural(c.units?.length || 0, 'machine')}${c.units?.length ? ` · ${esc(unitList(c.units))}` : ''}.</p>
+        ${pv ? winBar(pv, L, W) : ''}</div>`;
+    } else if (r.warned && eta != null) next = `<p><b class="warn">Sato's sensors: raiders in ${L(plural(eta, 'day'))}.</b>${r.from ? ` From ${esc(fromText(r.from))}.` : ''} Get the guardians crewed and repaired.</p>`;
+    else next = `<p>No contact. Sato warns you <b>${sensorDays(s)} days</b> before a raid${n('sensormast') < 3 ? '; each Sensor Mast adds 3 (up to 9)' : ''}.</p>`;
+    return `<div class="cl-raidcols">
+      <section class="cl-dsec"><h4>Heat <small>how tempting Eden looks</small></h4>
+        <div class="cl-heat"><span class="cl-heatbar"><span ${W(heat)}></span></span><b>${L(heat)}</b></div>
+        <p class="cl-dim">The hotter Eden is, the sooner the next raid comes. Heat moves a tenth of the way each day toward:</p>
+        <table class="cl-table"><tbody>${parts.map(([l, v]) => `<tr><td>${esc(l)}</td><td class="n ${v > 0 ? 'bad' : v < 0 ? 'good' : ''}">${L(`${v >= 0 ? '+' : '−'}${num(Math.abs(v))}`)}</td></tr>`).join('')}</tbody>
+          <tfoot><tr><td>Target <small>(0–100)</small></td><td class="n">${L(num(Math.max(0, Math.min(100, parts.reduce((t, [, v]) => t + v, 0)))))}</td></tr></tfoot></table>
+        <p class="cl-dim">Paying tribute adds 10. Jammer Arrays take 10 off each (up to 30).</p></section>
+      <section class="cl-dsec"><h4>Next raid</h4>${next}</section>
+      <section class="cl-dsec"><h4>Defences <small>total ${L(num(defenceTotal(s)))}</small></h4>
+        <div class="cl-kv"><span>Crewed guardians</span><b class="${crewedN ? '' : 'bad'}">${L(`${crewedN} of ${gs.length} · crews ${cap}`)}</b></div>
+        <div class="cl-kv"><span>Battery Emplacements</span><b>${emp.length ? `${emp.length} (${dragons} Dragon, ${emp.length - dragons} Hydra)` : '<span class="cl-dim">none</span>'}</b></div>
+        <div class="cl-kv"><span>Shield Pylons</span><b>${n('shieldpylon') || '<span class="cl-dim">none</span>'}</b></div>
+        <div class="cl-kv"><span>Sensor Masts</span><b>${n('sensormast') ? `${n('sensormast')} · warning ${sensorDays(s)} d` : '<span class="cl-dim">none</span>'}</b></div>
+        <div class="cl-kv"><span>Jammer Arrays</span><b>${n('jammer') || '<span class="cl-dim">none</span>'}</b></div>
+        ${(() => { const h = commanders(s).find((c) => c.dept === 'security'); return h ? `<div class="cl-kv"><span>Security head</span><b>${esc(COMMANDER[h.key]?.name || h.key)} +${Math.round((COMMANDER[h.key]?.might || 0) / 10)}%</b></div>` : ''; })()}
+        <div class="cl-acts"><button type="button" class="cl-btn sm" data-dgo="guardians">Guardians</button><button type="button" class="cl-btn sm" data-dgo="production">Production</button></div></section>
+      <section class="cl-dsec"><h4>Last raid <small>${r.count ? `${r.count} so far · ${r.won || 0} won · ${r.lost || 0} lost` : ''}</small></h4>${reportHtml(s, r.last)}</section></div>`;
+  }
+  function winBar(pv, L, W) {
+    const raw = +pv.winChance, pct = Number.isFinite(raw) ? Math.round(raw <= 1 ? raw * 100 : raw) : null;
+    const lost = pv.expectedLost || [];
+    const dmg = pv.expectedDamage;
+    const trib = pv.tribute ? [pv.tribute.credits ? `${num(pv.tribute.credits)} credits` : '', pv.tribute.food ? `${num(pv.tribute.food)} food` : ''].filter(Boolean).join(' + ') : '';
+    return `<div class="cl-win-chance${pct == null ? '' : pct >= 65 ? ' good' : pct >= 40 ? ' even' : ' bad'}"><i>Win chance</i><span class="cl-wbar"><span ${W(pct ?? 0)}></span></span><b>${L(pct == null ? '?' : `${pct}%`)}</b></div>
+      <div class="cl-kv"><span>Defence vs attack</span><b>${L(`${num(pv.defence ?? 0)} vs ${num(pv.attack ?? 0)}`)}</b></div>
+      <div class="cl-kv"><span>Likely losses</span><b class="${lost.length ? 'bad' : 'good'}">${L(lost.length ? unitList(lost.map((t) => ({ type: t?.type ?? t }))) : 'none expected')}</b></div>
+      ${dmg != null && dmg !== 0 ? `<div class="cl-kv"><span>If we lose</span><b class="bad">${L(typeof dmg === 'number' ? `${plural(Math.round(dmg), 'building')} damaged, stores raided` : String(dmg))}</b></div>` : ''}
+      ${trib ? `<div class="cl-kv"><span>Tribute to make them leave</span><b>${L(trib)}</b></div>` : ''}`;
+  }
+
+  // ---- panel events
+  defEl.addEventListener('click', (e) => {
+    const s = S(), t = e.target;
+    if (t.closest('[data-close=defence]')) { closeDefence(); return; }
+    const tab = t.closest('[data-dtab],[data-dgo]');
+    if (tab) { openDefence(tab.dataset.dtab || tab.dataset.dgo); return; }
+    const sh = t.closest('[data-dshow]');
+    if (sh) { closeDefence(); api.show?.({ build: sh.dataset.dshow }); return; }
+    const tech = t.closest('[data-mtech]');
+    if (tech) { openResearch(tech.dataset.mtech); return; }
+    const b = t.closest('button'); if (!b || b.disabled) return;
+    if (b.dataset.morder != null) {
+      const type = +b.dataset.morder, r = rule('orderMachine', s, type) ?? notReady('Production');
+      result(r && r.ok !== false && !r.msg ? { ok: true, msg: `${mInfo(type).name} ordered.` } : r);
+    } else if (b.dataset.ocancel != null) result(rule('cancelOrder', s, +b.dataset.ocancel) ?? notReady('Cancelling orders'));
+    else if (b.dataset.gsell != null) {
+      const g = (s.guardians || []).find((x) => x.id === +b.dataset.gsell); if (!g) return;
+      const p = salePrice(s, g);
+      if (!confirm(`Sell this ${mInfo(g.type).name} (level ${g.level || 0}) for ${num(p.credits)} credits and ${num(p.parts)} parts?`)) return;
+      result(rule('sellGuardian', S(), g.id) ?? notReady('Selling'));
+    } else if (b.dataset.winvite) {
+      const r = rule('inviteWanderer', s, b.dataset.winvite) ?? notReady('Invitations');
+      result(r);
+    } else if (b.dataset.cdismiss) {
+      const C = COMMANDER[b.dataset.cdismiss];
+      if (!confirm(`Dismiss ${C?.name || 'this commander'}? They may come back to the Lodge later.`)) return;
+      result(rule('dismissCommander', s, b.dataset.cdismiss) ?? notReady('Dismissing commanders'));
+    } else return;
+    renderDefence(true);
+  });
+  defEl.addEventListener('change', (e) => {
+    const t = e.target, s = S();
+    if (t.matches('[data-msort]')) { defPrefs.sort = t.value; storeDef(); renderDefence(true); return; }
+    if (t.matches('[data-gassign]')) {
+      const g = (s.guardians || []).find((x) => x.id === +t.dataset.gassign);
+      if (t.value) result(rule('assignCommander', s, t.value, +t.dataset.gassign) ?? notReady('Assigning commanders'));
+      else if (g?.commander) result(rule('assignCommander', s, g.commander, null) ?? notReady('Assigning commanders'));
+    }
+    else if (t.matches('[data-cassign]')) {
+      if (t.value) result(rule('assignCommander', s, t.dataset.cassign, +t.value) ?? notReady('Assigning commanders'));
+      else result(rule('assignCommander', s, t.dataset.cassign, null) ?? notReady('Assigning commanders'));
+    } else if (t.matches('[data-cdept]')) result(rule('setDepartment', s, t.dataset.cdept, t.value || null) ?? notReady('Departments'));
+    else return;
+    renderDefence(true);
+  });
+  defEl.addEventListener('toggle', (e) => {
+    const d = e.target.closest?.('[data-mfold]'); if (!d) return;
+    defPrefs.fold[d.dataset.mfold] = !d.open; storeDef();
+    liveSigs.delete(defBody);
+  }, true);
+  function openDefence(tab) {
+    if (tab && DEF_TABS.some(([k]) => k === tab)) { defTab = tab; defPrefs.tab = tab; storeDef(); }
+    for (const p of Object.values(pops)) p.hidden = true;
+    closeResearch();
+    $('.cl-build')?.classList.remove('open');
+    const was = defEl.hidden;
+    defEl.hidden = false;
+    renderDefence(true);
+    if (was || tab) defBody.scrollTop = 0;
+  }
+  function closeDefence() { if (defEl.hidden) return false; defEl.hidden = true; return true; }
+  function toggleDefence(tab) { if (defEl.hidden || tab) openDefence(tab); else closeDefence(); }
+  statEls.heat?.el.addEventListener('click', () => openDefence('raids'));
 
   // ---------------------------------------------------------------- the map's free area
   // The view draws its minimap (bottom right) and navigation buttons (top right) inside the area

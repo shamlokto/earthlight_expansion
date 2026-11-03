@@ -14,21 +14,28 @@
 
 const SIZE = { card: [256, 256], terrain: [256, 256], portrait: [256, 320], sky: [1024, 512], title: [1280, 720] };
 const CARD_REF = 'tools/art/colony/ref/card.png';
+const PORTRAIT_REF = 'art/colony/portrait/sato.webp';   // the wanderers' portraits follow Sato's style
 
-// Slots of version 1, then version 2 (docs/COLONY-V2.md "Art"). Add a slot here and a prompt file,
+// Slots of version 1, then version 2 (docs/COLONY-V2.md "Art"), then version 3 (docs/COLONY-V3.md "Art"). Add a slot here and a prompt file,
 // then run tools/art/colony-xai.mjs.
 const SLOTS = {
   card: ['command', 'dock', 'repairyard', 'depot', 'solar', 'induction', 'battery', 'riverpump', 'airplant',
     'grove', 'seal', 'farm', 'hydro', 'oremine', 'salvage', 'habitat', 'park',
     // version 2
     'lab', 'reclaimer', 'iceharvester', 'gasscoop', 'orchard', 'fishery', 'canteen', 'seedvault', 'smelter',
-    'fabricator', 'sweeper', 'tailings', 'plasmaskimmer', 'tether', 'dronebay', 'clinic', 'safetypost', 'obsdeck'],
+    'fabricator', 'sweeper', 'tailings', 'plasmaskimmer', 'tether', 'dronebay', 'clinic', 'safetypost', 'obsdeck',
+    // version 3
+    'arsenal', 'shipyard', 'barracks', 'scrapyard', 'emplacement', 'sensormast', 'shieldpylon', 'jammer', 'fusion',
+    'mushroom', 'terrace', 'lodge', 'quarters'],
   title: ['rebuild'],
   sky: ['earth-below'],
   terrain: ['void', 'asteroid', 'magnetic', 'atmosphere', 'hull', 'deck', 'plain', 'fertile', 'river', 'rubble', 'breach',
     // version 2
     'forest', 'hills', 'rock', 'meteoroid', 'comet', 'plasma', 'gravity'],
-  portrait: ['ruess', 'sato'],
+  portrait: ['ruess', 'sato',
+    // version 3: the wanderers (data/commanders.js WANDERERS)
+    'w_kestrel', 'w_brann', 'w_ilves', 'w_oduya', 'w_vashti', 'w_corran', 'w_maris', 'w_thorne', 'w_seln', 'w_okafor',
+    'w_rook', 'w_hale'],
 };
 
 // Pictures that exist. Kept up to date by `node tools/art/colony-xai.mjs --index`.
@@ -69,6 +76,10 @@ const FILES = {
   'card/clinic': 'art/colony/card/clinic.webp',
   'card/safetypost': 'art/colony/card/safetypost.webp',
   'card/obsdeck': 'art/colony/card/obsdeck.webp',
+  'card/arsenal': 'art/colony/card/arsenal.webp',
+  'card/shipyard': 'art/colony/card/shipyard.webp',
+  'card/emplacement': 'art/colony/card/emplacement.webp',
+  'card/jammer': 'art/colony/card/jammer.webp',
   'title/rebuild': 'art/colony/title/rebuild.webp',
   'sky/earth-below': 'art/colony/sky/earth-below.webp',
   'terrain/void': 'art/colony/terrain/void.webp',
@@ -91,6 +102,18 @@ const FILES = {
   'terrain/gravity': 'art/colony/terrain/gravity.webp',
   'portrait/ruess': 'art/colony/portrait/ruess.webp',
   'portrait/sato': 'art/colony/portrait/sato.webp',
+  'portrait/w_kestrel': 'art/colony/portrait/w_kestrel.webp',
+  'portrait/w_brann': 'art/colony/portrait/w_brann.webp',
+  'portrait/w_ilves': 'art/colony/portrait/w_ilves.webp',
+  'portrait/w_oduya': 'art/colony/portrait/w_oduya.webp',
+  'portrait/w_vashti': 'art/colony/portrait/w_vashti.webp',
+  'portrait/w_corran': 'art/colony/portrait/w_corran.webp',
+  'portrait/w_maris': 'art/colony/portrait/w_maris.webp',
+  'portrait/w_thorne': 'art/colony/portrait/w_thorne.webp',
+  'portrait/w_seln': 'art/colony/portrait/w_seln.webp',
+  'portrait/w_okafor': 'art/colony/portrait/w_okafor.webp',
+  'portrait/w_rook': 'art/colony/portrait/w_rook.webp',
+  'portrait/w_hale': 'art/colony/portrait/w_hale.webp',
 };
 // @files-end
 
@@ -103,7 +126,7 @@ for (const [kind, names] of Object.entries(SLOTS)) {
       size: SIZE[kind],
       seamless: kind === 'terrain',
       prompt: `tools/art/colony/prompts/${kind}-${name}.txt`,
-      refs: kind === 'card' && name !== 'command' ? [CARD_REF] : [],
+      refs: kind === 'card' && name !== 'command' ? [CARD_REF] : kind === 'portrait' && name.startsWith('w_') ? [PORTRAIT_REF] : [],
       file: FILES[slot] || null,
     };
   }

@@ -5,6 +5,10 @@ import { T, R, TERRAIN, ARTIFACT, zoneOf } from './data/terrain.js';
 import { diffOf } from './difficulty.js';
 import { BUILDING, BUILDINGS, BASE_PRICE, DOCK_REACH, NEEDS } from './data/buildings.js';
 import { TECH, TECHS } from './data/tech.js';
+import { MACHINES, MACHINE, MACHINE_COST } from './data/machines.js';
+import {
+  COMMANDER, GENERAL, STARTERS, WANDERERS, GRADE, GENERAL_POWER, GENERAL_EVASION, DEPARTMENTS, BASE_COMMANDERS, PER_QUARTERS,
+} from './data/commanders.js';
 
 // alloy and helium(-3) arrived with version 2 (docs/COLONY-V2.md "New goods").
 export const STORED = ['food', 'water', 'air', 'parts', 'ore', 'alloy', 'helium'];
@@ -46,8 +50,23 @@ export function upgradeState(state) {
   for (const g of STORED) state.stock[g] ??= 0;
   state.market ??= {};
   for (const g of Object.keys(BASE_PRICE)) state.market[g] ??= 1;
-  // a colony that passed 80 colonists before the lab existed still gets it
+  // a colony that passed 80 colonists before the lab existed still gets it (and, since version 3,
+  // the Arsenal, Barracks, Scrapyard and Battery Emplacement)
   if (state.flags?.unlock80) for (const d of BUILDINGS) if (d.unlock && d.unlock.pop <= 80 && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
+  // version 3 (docs/COLONY-V3.md): guardians with HP, crews and free days; production; commanders;
+  // wanderers; the raid clock. Beta guardians of an older save gain full HP and 60 free days (D7).
+  state.guardians ??= [];
+  for (const g of state.guardians) {
+    if (g.hp === undefined) { g.hp = machineOf(state, g.type).hp; g.free ??= V3.betaFree; }
+    g.level ??= 0; g.commander ??= null; g.free ??= 0;
+  }
+  state.production ??= [];
+  state.commanders ??= [{ key: GENERAL.key, loyalty: 100, injured: 0, dept: null }, ...STARTERS.map((c) => ({ key: c.key, loyalty: V3.starterLoyalty, injured: 0, dept: null }))];
+  state.wanderers ??= [];
+  state.raid ??= {};
+  const rd = state.raid;
+  rd.heat ??= 0; rd.next ??= null; rd.warned ??= false; rd.coming ??= null; rd.last ??= null;
+  rd.count ??= 0; rd.won ??= 0; rd.lost ??= 0; rd.paid ??= 0; rd.moods ??= []; rd.sales ??= [];
   return state;
 }
 
@@ -55,7 +74,13 @@ export function upgradeState(state) {
 
 // The product of `mult` over finished techs' effects of this kind (and key, for output, storage
 // and cost); 1 when none. 'survey' returns { mult, days } (days: the shortest a tech allows).
+// 'machines' (version 3) returns the highest machine tier unlocked: 1 with no tech.
 export function techEffect(state, kind, key) {
+  if (kind === 'machines') {
+    let tier = 1;
+    for (const k of state.research?.done || []) for (const e of TECH[k]?.effects || []) if (e.kind === 'machines') tier = Math.max(tier, e.tier);
+    return tier;
+  }
   let mult = 1, days = SURVEY.days;
   for (const k of state.research?.done || []) for (const e of TECH[k]?.effects || []) {
     if (e.kind !== kind || (e.key ?? null) !== (key ?? null)) continue;
@@ -104,8 +129,9 @@ export function spec(b) {
   }
   return s;
 }
-// `down`: days a building is knocked out (a meteoroid strike on a sweeper).
-export const active = (b) => b.build === 0 && !b.off && !(b.down > 0);
+// `down`: days a building is knocked out (a meteoroid strike on a sweeper, a fusion shutdown);
+// `damaged`: days of raid damage left (version 3; a crew repairs it like construction).
+export const active = (b) => b.build === 0 && !b.off && !(b.down > 0) && !(b.damaged > 0);
 export const finished = (b) => b.build === 0;
 export const idx = (state, x, y) => y * state.map.w + x;
 export function* tilesOf(state, b, size = BUILDING[b.key].size) {
@@ -153,7 +179,7 @@ export function powerOf(state, staffing = staffingOf(state), moneyF = 1) {
   for (const b of state.buildings) {
     if (!active(b)) continue;
     const s = spec(b);
-    if (s.power > 0) supply += s.power * (s.jobs ? staffing : 1) * moneyF;
+    if (s.power > 0) supply += s.power * (s.jobs ? staffing : 1) * moneyF * (b.key === 'fusion' ? fusionFactor(state, b) : 1);
     else if (s.power < 0) demand -= s.power;
   }
   return { supply, demand };
@@ -403,6 +429,7 @@ export function demolish(state, id) {
   const c = costOf(state, spent(b), b.key), back = { credits: Math.floor(c.credits / 2), parts: Math.floor(c.parts / 2) };
   state.buildings.splice(state.buildings.indexOf(b), 1);
   state.stock.credits += back.credits; state.stock.parts += back.parts;
+  if (d.builds) rehomeOrders(state);
   log(state, `${d.name} demolished.`);
   return ok(`${d.name} demolished: ${back.credits} credits and ${back.parts} parts recovered.`);
 }
@@ -542,21 +569,31 @@ export function sell(state, good, qty) {
   const step = Math.pow(1 - PRICE.drop, 1 / PRICE.lot);
   let f = state.market[good] ?? 1, gain = 0;
   for (let k = 0; k < qty; k++) { gain += BASE_PRICE[good] * f; f = Math.max(PRICE.floor, f * step); }
-  gain = Math.floor(gain);
+  gain = Math.floor(gain * deptMult(state, 'trade'));
   state.stock[good] -= qty; state.stock.credits += gain; state.market[good] = f;
   state.flags.sold = (state.flags.sold || 0) + gain;
   return ok(`Sold ${qty} ${good} for ${gain} credits.`, { credits: gain });
 }
 
+// A guardian's sale: the expansion's price × 10 credits and price parts for the original army; a
+// machine built in the colony fetches 80% of what it cost; a finished Scrapyard adds a fifth.
+export function saleValue(state, g) {
+  const scrap = state.buildings.some((b) => b.key === 'scrapyard' && finished(b)) ? V3.scrapSale : 1;
+  const base = g.built !== undefined ? scaleCost(costOf(state, MACHINE_COST(machineOf(state, g.type))), V3.builtSale) : (() => { const p = state.imported?.prices?.[g.type] ?? MACHINE[g.type]?.price ?? 24; return { credits: p * 10, parts: p }; })();
+  return scrap === 1 ? base : scaleCost(base, scrap);
+}
+const scaleCost = (c, m) => ({ credits: Math.floor(c.credits * m), parts: Math.floor(c.parts * m) });
+
 export function sellGuardian(state, id) {
   const i = state.guardians.findIndex((g) => g.id === id);
   if (i < 0) return no('That machine is not in the guard.');
   if (!hasDock(state)) return no('Machines are sold at a finished dock.');
-  const g = state.guardians[i], p = state.imported?.prices?.[g.type] ?? 24;
+  const g = state.guardians[i], v = saleValue(state, g);
   state.guardians.splice(i, 1);
-  state.stock.credits += p * 10; state.stock.parts += p;
-  log(state, `A guardian machine was sold for ${p * 10} credits and ${p} parts.`);
-  return ok(`Sold for ${p * 10} credits and ${p} parts.`);
+  state.stock.credits += v.credits; state.stock.parts += v.parts;
+  const lead = g.commander ? ` ${COMMANDER[g.commander]?.name || 'Its commander'} stands down from it.` : '';
+  log(state, `A guardian machine (${machineOf(state, g.type).name}) was sold for ${v.credits} credits and ${v.parts} parts.`);
+  return ok(`Sold for ${v.credits} credits and ${v.parts} parts.${lead}`, v);
 }
 
 export function setTax(state, rate) {
@@ -571,7 +608,14 @@ export function answer(state, pendingId, choiceKey) {
   const p = state.pending[i];
   const c = p.choices.find((k) => k.key === choiceKey);
   if (!c) return no('That is not one of the choices.');
+  // version 3: a raid is fought or paid off here; a wanderer can be invited from the announcement
+  if (p.kind === 'raid') {
+    const r = answerRaid(state, choiceKey);
+    if (r.ok) state.pending = state.pending.filter((x) => x.id !== pendingId);
+    return r;
+  }
   state.pending.splice(i, 1);
+  if (p.kind === 'wanderer' && choiceKey === 'invite') return inviteWanderer(state, p.wanderer);
   return ok(`${p.title}: ${c.label}.`);
 }
 
@@ -599,7 +643,9 @@ export function habitatNeeds(state, b, field) {
 // Services (version 2): a service building covers a home when the home's centre lies within its
 // radius (Chebyshev, from the service's centre). serviceAt: the best `service` value of that
 // building kind covering the home (Clinic triage halves it; a Canteen on rationing gives none).
-export const SERVICE_KINDS = [{ key: 'clinic', label: 'Clinic' }, { key: 'canteen', label: 'Canteen' }, { key: 'safetypost', label: 'Safety' }];
+export const SERVICE_KINDS = [{ key: 'clinic', label: 'Clinic' }, { key: 'canteen', label: 'Canteen' }, { key: 'safetypost', label: 'Safety' }, { key: 'terrace', label: 'Terraces' }];
+// Homes for service averages (version 3: Terrace Homes count beside Habitats).
+export const HOME_KEYS = new Set(['habitat', 'terrace']);
 export function serviceValue(b) {
   const s = spec(b);
   if (!s.service || !active(b)) return 0;

@@ -5,6 +5,7 @@
 //   pos    centre of the part's base, in tiles from the footprint's centre at ground level
 //   rot    radians, about the part's own centre (a rotated part keeps its centre, not its base)
 //   glow   unlit (windows, beacons, coils), so it reads at night-dark zoom levels
+//   shimmer  additive and see-through, gently pulsing (the Shield Pylon's dome); never picked
 // Kits are sized to the footprint (buildings.js `size`) and coloured to read from straight above,
 // where only the roofs show: a stepped white tower, green rows, blue panels, copper coils.
 import { BUILDING } from '../data/buildings.js';
@@ -464,17 +465,231 @@ export const KITS = {
     box([1.02, 0.06, 0.52], [-0.3, 0.3, -0.65], WIN, GLOW),
     cyl([0.12, 0.4, 0.12], [0.62, 0.08, -0.6], '#3d444d', { rot: [0.6, 0, 0] }),
   ],
+
+  // ---------------------------------------------------------------- version 3 (docs/COLONY-V3.md)
+  // Defence reads gunmetal with Earth Light's blue-and-hazard trim and red warning lights; the
+  // homes and services of version 3 keep the warm white-and-amber of the habitats.
+
+  // 3×3: a big barrel-roofed hangar facing +z (towards the default camera), its tall door half open
+  // on a lit bay, hazard stripes round the door, a striped apron, a roof crane and a red beacon.
+  arsenal: () => [
+    box([2.94, 0.08, 2.94], [0, 0, 0], '#4e555e', { slot: 'mat/hull-plate' }),
+    box([2.5, 0.85, 2.0], [0, 0.08, -0.4], '#6e7884'),
+    cyl([2.5, 2.0, 1.1], [0, 0.38, -0.4], '#7c8794', { rot: [HALF_PI, 0, 0], slot: 'mat/hull-plate' }),
+    ...[-0.95, -0.4, 0.15].map((z) => torus([2.55, 0.06, 1.14], [0, 0.36, z], '#59616b', { rot: [HALF_PI, 0, 0] })),
+    box([2.56, 0.1, 0.06], [0, 0.08, 0.6], '#2a2f36'),
+    box([1.7, 1.02, 0.05], [0, 0.08, 0.62], '#ffd27a', GLOW),                 // the lit bay through the door
+    box([0.62, 1.02, 0.07], [-0.55, 0.08, 0.64], '#9aa6b4'),                  // door leaves, half open
+    box([0.62, 1.02, 0.07], [0.55, 0.08, 0.64], '#9aa6b4'),
+    box([1.82, 0.1, 0.08], [0, 1.1, 0.64], HAZARD),
+    ...[-0.95, 0.95].map((x) => box([0.12, 1.12, 0.08], [x, 0.08, 0.64], HAZARD)),
+    box([2.2, 0.02, 0.6], [0, 0.08, 1.05], '#3a4048'),                        // apron with landing marks
+    ...[-0.7, 0, 0.7].map((x) => box([0.36, 0.025, 0.08], [x, 0.08, 1.05], '#ffe08a', GLOW)),
+    box([0.08, 0.6, 0.08], [1.1, 1.23, -1.1], STEEL),
+    box([1.2, 0.08, 0.08], [0.55, 1.8, -1.1], HAZARD),
+    dome([0.14, 0.12, 0.14], [1.1, 1.85, -1.1], BEACON, GLOW),
+    box([0.36, 0.06, 1.6], [0, 1.47, -0.4], '#5f8fd8'),                       // the blue roof stripe
+  ],
+  // 3×3 on the hull: a sunken slipway with a half-built hull on its cradle under two gantry cranes,
+  // a glowing launch rail down the slip and lights along its rim.
+  shipyard: () => {
+    const parts = [
+      box([2.94, 0.12, 2.94], [0, 0, 0], '#454c55', { slot: 'mat/hull-plate' }),
+      box([2.9, 0.04, 1.2], [0, 0.12, 0], '#1e2329'),                         // the slip
+      box([2.9, 0.025, 0.08], [0, 0.16, 0], '#6fd3ff', GLOW),                  // launch rail
+      box([1.9, 0.38, 0.62], [-0.1, 0.2, 0], '#dfe4ea'),                        // the hull on its cradle
+      cone([0.31, 0.6, 0.38], [1.15, 0.09, 0], '#dfe4ea', { rot: [0, 0, -HALF_PI] }),
+      box([1.92, 0.08, 0.64], [-0.1, 0.42, 0], '#3a6ad8'),
+      box([0.5, 0.3, 0.4], [-0.6, 0.58, 0], '#c9ced6'),
+      ...[-0.85, -0.35, 0.15, 0.65].map((x) => box([0.06, 0.08, 0.9], [x, 0.12, 0], '#d08a1a')),   // cradle ribs
+    ];
+    for (const x of [-0.75, 0.55]) {                                            // two gantries over the slip
+      parts.push(box([0.12, 1.6, 0.12], [x, 0.12, -0.85], HAZARD), box([0.12, 1.6, 0.12], [x, 0.12, 0.85], HAZARD),
+        box([0.16, 0.14, 1.86], [x, 1.72, 0], HAZARD), box([0.24, 0.16, 0.24], [x, 1.58, 0.2], DARK),
+        cyl([0.025, 0.7, 0.025], [x, 0.88, 0.2], STEEL));
+    }
+    for (let k = 0; k < 6; k++) parts.push(box([0.08, 0.05, 0.08], [-1.25 + k * 0.5, 0.12, 0.66], k % 2 ? '#ffd23a' : '#7fe0ff', GLOW), box([0.08, 0.05, 0.08], [-1.25 + k * 0.5, 0.12, -0.66], k % 2 ? '#ffd23a' : '#7fe0ff', GLOW));
+    parts.push(box([0.6, 0.5, 0.5], [1.05, 0.12, -1.1], '#8a929c'), box([0.62, 0.08, 0.52], [1.05, 0.48, -1.1], WIN, GLOW), dome([0.12, 0.1, 0.12], [1.2, 0.62, -1.15], BEACON, GLOW));
+    return parts;
+  },
+  // 2×2: two long olive-grey barrack blocks with lit window bands, a drill yard, a flag mast
+  // with a blue pennant and a red light.
+  barracks: () => [
+    box([1.94, 0.06, 1.94], [0, 0, 0], '#555c58'),
+    ...[-0.5, 0.15].flatMap((z) => [
+      box([1.6, 0.42, 0.5], [-0.1, 0.06, z], '#7a8470'),
+      box([1.62, 0.06, 0.52], [-0.1, 0.27, z], '#ffe3a0', GLOW),
+      box([1.66, 0.07, 0.56], [-0.1, 0.48, z], '#4a5248'),
+    ]),
+    box([1.5, 0.02, 0.4], [-0.1, 0.06, 0.7], '#8a8f86'),                       // the drill yard
+    cyl([0.03, 1.2, 0.03], [0.8, 0.06, 0.75], STEEL),
+    box([0.32, 0.18, 0.02], [0.64, 1.02, 0.75], '#3a7ae8'),
+    dome([0.06, 0.06, 0.06], [0.8, 1.26, 0.75], BEACON, GLOW),
+  ],
+  // 2×2: rusty heaps of machine scrap, a wrecked mecha arm, a crusher and a yellow crane with a magnet.
+  scrapyard: () => [
+    box([1.96, 0.06, 1.96], [0, 0, 0], '#4e4a46'),
+    cone([0.8, 0.5, 0.8], [-0.5, 0.06, 0.45], '#8a5a3a'),
+    cone([0.6, 0.38, 0.6], [0.1, 0.06, 0.62], '#6a6e78'),
+    cone([0.55, 0.32, 0.55], [-0.62, 0.06, -0.2], '#9a6a40'),
+    box([0.5, 0.12, 0.16], [-0.1, 0.12, 0.2], '#5f8fd8', { rot: [0, 0.7, 0.3] }),   // a mecha forearm
+    box([0.16, 0.16, 0.16], [0.1, 0.1, 0.05], '#4a5058', { rot: [0.4, 0.3, 0] }),
+    box([0.55, 0.45, 0.55], [0.55, 0.06, 0.5], '#4a5058'),
+    box([0.57, 0.05, 0.57], [0.55, 0.36, 0.5], '#ff7a1a', GLOW),
+    box([0.18, 1.7, 0.18], [0.6, 0.06, -0.6], HAZARD),
+    box([1.5, 0.12, 0.14], [0.0, 1.7, -0.6], HAZARD, { rot: [0, 0.25, 0] }),
+    cyl([0.03, 0.55, 0.03], [-0.62, 1.15, -0.42], STEEL),
+    cyl([0.3, 0.08, 0.3], [-0.62, 1.07, -0.42], '#c9302a'),
+  ],
+  // 1×1 on the hull: a battery turret, as in Earth Light. Dragon: a long twin-rail railgun with a
+  // glowing breech; Hydra: a boxy missile rack with lit tube mouths.
+  emplacement: (level, mode) => {
+    const parts = [
+      box([0.94, 0.08, 0.94], [0, 0, 0], '#454c55', { slot: 'mat/hull-plate' }),
+      cyl([0.72, 0.18, 0.72], [0, 0.08, 0], '#5a626c'),
+      torus([0.76, 0.06, 0.76], [0, 0.2, 0], HAZARD),
+      cyl([0.5, 0.18, 0.5], [0, 0.26, 0], '#7c8794'),
+    ];
+    if (mode === 'hydra') {
+      parts.push(box([0.5, 0.34, 0.5], [0, 0.44, 0.02], '#6a7480', { rot: [-0.35, 0, 0] }),
+        box([0.52, 0.06, 0.52], [0, 0.6, 0.02], '#c9302a', { rot: [-0.35, 0, 0] }));
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) parts.push(cyl([0.1, 0.05, 0.1], [-0.15 + i * 0.15, 0.55 + j * 0.13, 0.22 - j * 0.05], '#ff9a52', { rot: [HALF_PI - 0.35, 0, 0], ...GLOW }));
+    } else {
+      parts.push(box([0.34, 0.24, 0.42], [0, 0.44, -0.08], '#6a7480'),
+        box([0.36, 0.06, 0.44], [0, 0.58, -0.08], '#3a6ad8'),
+        ...[-0.07, 0.07].map((x) => box([0.06, 0.07, 1.25], [x, 0.53, 0.55], '#c9ced6', { rot: [-0.18, 0, 0] })),
+        box([0.2, 0.1, 0.1], [0, 0.5, 0.08], '#7fe0ff', GLOW),
+        box([0.2, 0.05, 0.06], [0, 0.66, 1.1], '#7fe0ff', GLOW));
+    }
+    return parts;
+  },
+  // 1×1: a lattice mast with a big tilted dish, a feed horn and a red beacon.
+  sensormast: () => [
+    box([0.7, 0.08, 0.7], [0, 0, 0], '#4a525c'),
+    ...[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([x, z]) => box([0.05, 1.5, 0.05], [x * 0.12, 0.08, z * 0.12], STEEL, { rot: [z * 0.06, 0, -x * 0.06] })),
+    ...[0.45, 0.95].map((y) => torus([0.38, 0.03, 0.38], [0, y, 0], HAZARD)),
+    dome([0.95, 0.3, 0.95], [0, 1.45, 0.05], '#eef1f5', { rot: [Math.PI - 0.6, 0, 0] }),
+    cyl([0.03, 0.42, 0.03], [0, 1.6, 0.22], STEEL, { rot: [0.6, 0, 0] }),
+    dome([0.08, 0.06, 0.08], [0, 1.78, 0.36], '#7fe0ff', GLOW),
+    dome([0.1, 0.08, 0.1], [0.3, 1.0, -0.3], BEACON, GLOW),
+  ],
+  // 1×1: a tapering pylon ringed in glowing blue coils, a crystal emitter on top and a faint
+  // shimmering dome of shield around it (the `shimmer` parts: additive and see-through).
+  shieldpylon: () => [
+    box([0.8, 0.1, 0.8], [0, 0, 0], '#3e4652'),
+    cone([0.5, 1.5, 0.5], [0, 0.1, 0], '#9aa6b4'),
+    ...[0.35, 0.65, 0.95].map((y, k) => torus([0.46 - k * 0.1, 0.07, 0.46 - k * 0.1], [0, y, 0], '#5fc8ff', GLOW)),
+    P('dome', [0.28, 0.32, 0.28], [0, 1.45, 0], '#bff0ff', GLOW),
+    dome([2.8, 1.5, 2.8], [0, 0.1, 0], '#2a6aa8', { shimmer: true }),
+    torus([2.8, 0.03, 2.8], [0, 0.1, 0], '#2f78c0', { shimmer: true }),
+  ],
+  // 1×1 in space: an array of thin antennae with violet tips and crossbars on a dark pad.
+  jammer: () => [
+    box([0.86, 0.08, 0.86], [0, 0, 0], '#2c2f3e'),
+    box([0.4, 0.22, 0.4], [0, 0.08, 0], '#5a5e70'),
+    ...[[-0.3, -0.3, 1.3], [0.3, -0.28, 1.0], [-0.28, 0.3, 0.9], [0.3, 0.3, 1.45], [0, 0, 1.7]].flatMap(([x, z, h]) => [
+      cyl([0.035, h, 0.035], [x, 0.08, z], '#c9ced6'),
+      box([0.3, 0.025, 0.025], [x, 0.08 + h * 0.6, z], STEEL, { rot: [0, (x + z) * 2, 0] }),
+      box([0.22, 0.025, 0.025], [x, 0.08 + h * 0.8, z], STEEL, { rot: [0, (x - z) * 2, 0] }),
+      dome([0.08, 0.07, 0.08], [x, 0.08 + h, z], '#c86aff', GLOW),
+    ]),
+  ],
+  // 3×3: a fusion torus on a containment ring, a central column, coolant tanks and four stacks.
+  // The torus glows cyan (normal), hot orange (overdrive), and goes dark with no helium-3.
+  fusion: (level, mode, b, ctx) => {
+    const cold = !!ctx?.noHelium, hot = mode === 'overdrive';
+    const core = cold ? '#3a4250' : hot ? '#ffa64a' : '#7fe8ff', ring = cold ? '#2a3038' : hot ? '#ff6a2a' : '#4ac0ff';
+    const parts = [
+      box([2.94, 0.12, 2.94], [0, 0, 0], '#4a5058', { slot: 'mat/hull-plate' }),
+      cyl([2.3, 0.3, 2.3], [0, 0.12, 0], '#6a7480'),
+      torus([2.2, 0.3, 2.2], [0, 0.48, 0], '#c9ced6'),
+      torus([1.95, 0.22, 1.95], [0, 0.55, 0], core, cold ? {} : GLOW),
+      cyl([0.5, 1.2, 0.5], [0, 0.42, 0], '#dfe4ea'),
+      cyl([0.54, 0.08, 0.54], [0, 0.95, 0], ring, cold ? {} : GLOW),
+      dome([0.5, 0.25, 0.5], [0, 1.62, 0], '#eef1f5'),
+      ...[0, 1, 2, 3].map((k) => box([0.9, 0.06, 0.12], [0.55 * Math.cos(k * HALF_PI + 0.785), 0.85, 0.55 * Math.sin(k * HALF_PI + 0.785)], STEEL, { rot: [0, -(k * HALF_PI + 0.785), 0] })),
+    ];
+    for (const [x, z] of [[-1.15, -1.15], [1.15, -1.15], [-1.15, 1.15], [1.15, 1.15]]) {
+      parts.push(cyl([0.32, 1.1, 0.32], [x, 0.12, z], '#8a929c'), cyl([0.34, 0.08, 0.34], [x, 1.0, z], HAZARD));
+    }
+    parts.push(cyl([0.46, 0.5, 0.46], [1.15, 0.12, 0], '#e8eef4', { slot: 'mat/tank' }), dome([0.46, 0.16, 0.46], [1.15, 0.62, 0], '#ff6ae8'),
+      cyl([0.46, 0.5, 0.46], [-1.15, 0.12, 0], '#e8eef4', { slot: 'mat/tank' }), dome([0.46, 0.16, 0.46], [-1.15, 0.62, 0], '#ff6ae8'));
+    return parts;
+  },
+  // 1×1: a steel frame of four stacked shelves of pale and violet mushroom caps under a soft glow.
+  mushroom: () => {
+    const parts = [box([0.9, 0.05, 0.9], [0, 0, 0], '#4a4440'), box([0.06, 1.05, 0.7], [-0.4, 0.05, 0], DARK), box([0.06, 1.05, 0.7], [0.4, 0.05, 0], DARK)];
+    for (let k = 0; k < 4; k++) {
+      const y = 0.08 + k * 0.26;
+      parts.push(box([0.8, 0.035, 0.72], [0, y, 0], '#6a5a4a'), box([0.74, 0.02, 0.66], [0, y + 0.035, 0], '#d8a8ff', GLOW));
+      for (let j = 0; j < 3; j++) {
+        const x = -0.24 + j * 0.24, z = (k + j) % 2 ? 0.12 : -0.12;
+        parts.push(cyl([0.04, 0.06, 0.04], [x, y + 0.04, z], '#efe6d2'), dome([0.17, 0.08, 0.17], [x, y + 0.1, z], (k + j) % 3 ? '#e8d8b8' : '#b48ae0'));
+      }
+    }
+    return parts;
+  },
+  // 2×2 on the hills: three stepped tiers of white homes with green roofs and lit windows.
+  terrace: () => {
+    const parts = [];
+    for (let r = 0; r < 3; r++) {
+      const z = 0.62 - r * 0.62, y = r * 0.22;
+      parts.push(box([1.94, 0.1 + y, 0.62], [0, 0, z], '#8a7a5a'));
+      for (let c = 0; c < 3 - (r === 2 ? 1 : 0); c++) {
+        const x = -0.6 + c * 0.6 + (r === 2 ? 0.3 : 0), h = 0.3 + 0.06 * ((r + c) % 2);
+        parts.push(box([0.48, h, 0.42], [x, 0.1 + y, z - 0.05], '#efe8da', { slot: 'mat/hab-facade' }),
+          box([0.5, 0.07, 0.44], [x, 0.1 + y + h * 0.45, z - 0.05], '#ffd98a', GLOW),
+          box([0.54, 0.06, 0.48], [x, 0.1 + y + h, z - 0.05], '#5fae4a'),
+          box([0.4, 0.03, 0.1], [x, 0.1 + y, z + 0.22], '#7cc04a'));
+      }
+    }
+    return parts;
+  },
+  // 2×2: a warm timber hall with a pitched red roof, lanterns, a hanging sign and a chimney. An Inn
+  // gains an upper storey, a Grand Lodge a lit tower.
+  lodge: (level) => {
+    const lv = Math.max(1, Math.min(3, level || 1)), h = lv >= 2 ? 0.85 : 0.5;
+    const parts = [
+      box([1.94, 0.05, 1.94], [0, 0, 0], '#6a6e74'),
+      box([1.5, h, 1.0], [-0.1, 0.05, -0.2], '#b88a5a'),
+      box([1.52, 0.1, 1.02], [-0.1, 0.24, -0.2], '#ffc56a', GLOW),
+      ...[-0.55, -0.1, 0.35].map((x) => box([0.08, h, 0.05], [x, 0.05, 0.31], '#6a4a2a')),
+      box([1.6, 0.06, 0.62], [-0.1, 0.05 + h + 0.1, -0.45], '#b03a2a', { rot: [0.55, 0, 0] }),
+      box([1.6, 0.06, 0.62], [-0.1, 0.05 + h + 0.1, 0.05], '#b03a2a', { rot: [-0.55, 0, 0] }),
+      cyl([0.12, 0.5, 0.12], [0.4, 0.05 + h, -0.5], '#7a7066'),
+      box([0.5, 0.03, 0.4], [-0.1, 0.05, 0.6], '#9a7450'),                        // the porch
+      ...[-0.45, 0.25].flatMap((x) => [cyl([0.025, 0.4, 0.025], [x, 0.05, 0.75], '#3d3632'), dome([0.09, 0.09, 0.09], [x, 0.45, 0.75], '#ffb84a', GLOW)]),
+      box([0.3, 0.16, 0.03], [0.68, 0.32, 0.36], '#ffd23a', GLOW),               // the sign
+    ];
+    if (lv >= 2) parts.push(box([1.53, 0.08, 1.03], [-0.1, 0.05 + h - 0.22, -0.2], '#ffc56a', GLOW));
+    if (lv >= 3) parts.push(box([0.42, 1.0, 0.42], [0.7, 0.05, -0.6], '#c9a070'), box([0.44, 0.1, 0.44], [0.7, 0.8, -0.6], '#ffc56a', GLOW),
+      cone([0.5, 0.4, 0.5], [0.7, 1.05, -0.6], '#b03a2a'), dome([0.08, 0.08, 0.08], [0.7, 1.45, -0.6], '#ffd23a', GLOW));
+    return parts;
+  },
+  // 1×1: a neat officers' block, navy roof with a gold trim band, lit windows and a flag mast.
+  quarters: () => [
+    box([0.92, 0.05, 0.92], [0, 0, 0], '#5a6068'),
+    box([0.74, 0.62, 0.62], [-0.04, 0.05, 0.04], '#e6e8ec'),
+    box([0.76, 0.07, 0.64], [-0.04, 0.22, 0.04], '#ffe3a0', GLOW),
+    box([0.76, 0.07, 0.64], [-0.04, 0.46, 0.04], '#ffe3a0', GLOW),
+    box([0.8, 0.08, 0.68], [-0.04, 0.67, 0.04], '#24346a'),
+    box([0.81, 0.03, 0.69], [-0.04, 0.64, 0.04], '#d9b23a'),
+    cyl([0.025, 0.7, 0.025], [0.36, 0.05, -0.36], STEEL),
+    box([0.2, 0.12, 0.02], [0.26, 0.6, -0.36], '#3a7ae8'),
+  ],
 };
 
 // A plain block for any key without a kit (later buildings), so the view never fails on new data.
 const fallback = (n) => [box([n * 0.9, 0.6, n * 0.9], [0, 0, 0], '#b0b4ba'), box([n * 0.92, 0.08, n * 0.92], [0, 0.45, 0], WIN, GLOW)];
 
 // `b` (optional) is the building itself, for kits that show more than level and mode: the
-// Tailings Dump's heap follows b.fill. view.js puts the same fields in its refresh signature.
-export function kitParts(key, level = 1, mode = null, b = null) {
+// Tailings Dump's heap follows b.fill. `ctx` (optional) is what the view knows of the colony:
+// { noHelium } darkens the Fusion Reactor's torus. view.js puts the same fields in its refresh
+// signature.
+export function kitParts(key, level = 1, mode = null, b = null, ctx = null) {
   const def = BUILDING[key], kit = KITS[key];
-  return kit ? kit(level, mode ?? def?.modes?.[0]?.key ?? null, b) : fallback(def?.size || 1);
+  return kit ? kit(level, mode ?? def?.modes?.[0]?.key ?? null, b, ctx) : fallback(def?.size || 1);
 }
 
 // Height of a kit's top above its base (picking and the ghost use it).
-export const kitHeight = (parts) => parts.reduce((m, p) => Math.max(m, p.pos[1] + (p.rot ? Math.max(...p.size) : p.size[1])), 0);
+export const kitHeight = (parts) => parts.reduce((m, p) => (p.shimmer ? m : Math.max(m, p.pos[1] + (p.rot ? Math.max(...p.size) : p.size[1]))), 0);
