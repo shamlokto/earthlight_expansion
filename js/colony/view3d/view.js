@@ -1,7 +1,8 @@
 // The colony's 3D view (docs/COLONY-V1.md "view3d/view.js", docs/COLONY.md §6): draws the pure
 // state with three.js and reports tiles under the pointer. It keeps no game rules.
 //   * terrain: one InstancedMesh per terrain type (a box column per tile, heights from terrain.js
-//     plus a little noise), per-instance colour for chamber status and overlays
+//     plus a little noise), per-instance colour for chamber status; overlays are a W×H texture
+//     the terrain shaders mix in, so changing one is a single small upload
 //   * buildings: parametric kits (kits.js) packed into one InstancedMesh per shape and material,
 //     so a whole colony is a handful of draw calls; refresh() diffs and swaps only what changed
 //   * Earth: a big (flattened) sphere beyond the bottom edge, its curve under the atmosphere band
@@ -65,7 +66,7 @@ const GLOW_TERRAIN = new Set(['plasma', 'breach']);   // unlit: plasma glows, br
 
 const lin = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
 const TERRAIN_RGB = TERRAIN.map((d) => lin(TOP_COLOR[d.key] || d.color));
-const RAMP = [lin('#2a5fd0'), lin('#2fd08a'), lin('#ffe14a')];
+const RAMP = [[58, 111, 240], [63, 224, 160], [255, 240, 122]];   // overlay sRGB: low, mid, high
 
 // Unit shapes, each spanning [-0.5, 0.5]³, so a part's size is its scale.
 function unitGeometries() {
@@ -136,14 +137,13 @@ class Pool {
 
 // Earth's texture when there is no art: ocean, value-noise continents with green and desert, clouds.
 function earthTexture() {
-  const w = 512, h = 256, cv = document.createElement('canvas');
+  const w = 512, h = 512, cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
   const ctx = cv.getContext('2d'), img = ctx.createImageData(w, h), d = img.data;
   const fbm = (x, y, o) => { let s = 0, a = 0.5, f = 1; for (let k = 0; k < o; k++) { s += a * smooth(x * f, y * f); a *= 0.5; f *= 2; } return s; };
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const u = x / 32, v = y / 32, land = fbm(u, v, 5), cloud = fbm(u * 1.6 + 40, v * 3 + 9, 4), lat = Math.abs(y / h - 0.5) * 2;
-    let c = land > 0.56 ? (fbm(u + 20, v, 3) > 0.5 ? [150, 130, 80] : [60, 110, 50]) : [18 + 30 * land, 60 + 70 * land, 140 + 60 * land];
-    if (lat > 0.85) c = [230, 240, 250];
+    const u = x / 40, v = y / 40, land = fbm(u, v, 5), cloud = fbm(u * 1.6 + 40, v * 2.4 + 9, 4);
+    const c = land > 0.56 ? (fbm(u + 20, v, 3) > 0.5 ? [150, 130, 80] : [60, 110, 50]) : [18 + 30 * land, 60 + 70 * land, 140 + 60 * land];
     const k = Math.max(0, (cloud - 0.52) * 3.2);
     const o = (y * w + x) * 4;
     for (let j = 0; j < 3; j++) d[o + j] = c[j] + (245 - c[j]) * Math.min(1, k);
@@ -151,7 +151,7 @@ function earthTexture() {
   }
   ctx.putImageData(img, 0, 0);
   const tex = new THREE.CanvasTexture(cv);
-  tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
 
@@ -184,14 +184,22 @@ function starfield(cx, cz) {
   return new THREE.Points(g, new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true, depthWrite: false }));
 }
 
-// Tile tops sample a texture by world position (four tiles per repeat), so seamless art does not
-// show a grid. Applies only to materials with a map.
-function worldUv(mat) {
+// Terrain shaders: tile tops sample their art by world position (four tiles per repeat), so a
+// seamless texture shows no grid, and the overlay texture (one texel per tile) is mixed in after
+// the art, so dark textures cannot swallow it.
+function terrainShader(mat, ov) {
   mat.onBeforeCompile = (sh) => {
-    sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>
+    Object.assign(sh.uniforms, ov);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vWorldXZ;')
+      .replace('#include <uv_vertex>', `#include <uv_vertex>
+      vWorldXZ = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xz;
       #ifdef USE_MAP
-        vMapUv = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xz * 0.25;
+        vMapUv = vWorldXZ * 0.25;
       #endif`);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+      varying vec2 vWorldXZ; uniform sampler2D uOverlay; uniform float uOverlayOn; uniform vec2 uMapSize;`)
+      .replace('#include <map_fragment>', `#include <map_fragment>
+      if (uOverlayOn > 0.5) { vec4 ov = texture(uOverlay, vWorldXZ / uMapSize); diffuseColor.rgb = mix(diffuseColor.rgb * 0.4, ov.rgb, ov.a); }`);
   };
   return mat;
 }
@@ -215,7 +223,7 @@ export function createView(container, opts = {}) {
   });
   controls.keys = {};   // our own key handler pans (it ignores text fields)
 
-  scene.add(new THREE.HemisphereLight('#c8d4ff', '#1a2233', 2.2));
+  scene.add(new THREE.HemisphereLight('#d8e0f4', '#1a2233', 2.2));
   const sun = new THREE.DirectionalLight('#fff1dc', 2.6), earthlight = new THREE.DirectionalLight('#5f9fff', 0.9);
   scene.add(sun, sun.target, earthlight, earthlight.target);
 
@@ -245,7 +253,8 @@ export function createView(container, opts = {}) {
   let occ = null;                                     // building id + 1 per tile, 0 = free
   const chamberSig = new Map(), chamberById = new Map(), built = new Map();
   let breachOwners = new Map();
-  let overlay = null, overlayName = null, overlayValues = null;
+  let overlayName = null, overlayValues = null;
+  const OV = { uOverlay: { value: null }, uOverlayOn: { value: 0 }, uMapSize: { value: new THREE.Vector2(1, 1) } };
   const textured = new Map(), dirty = new Set();   // terrain id → texture from the art slots
   let artMod = opts.art || null;
   let earthMat = null;
@@ -258,7 +267,7 @@ export function createView(container, opts = {}) {
     if (!owners) return null;   // not listed any more: patched
     return owners.some((id) => chamberById.get(id)?.status !== 'sealed');
   }
-  // Linear RGB of tile i into out[o..o+2]: base colour, chamber status, then the overlay.
+  // Linear RGB of tile i into out[o..o+2]: base colour, then chamber status.
   function tileRgb(i, out, o, src = baseRgb, so = i * 3) {
     let r = src[so], g = src[so + 1], b = src[so + 2];
     if (st.map.t[i] === T.BREACH) {
@@ -271,14 +280,6 @@ export function createView(container, opts = {}) {
         // airless: blue-grey; pressurising floods colour back in as its days run out
         const l = 0.3 * r + 0.59 * g + 0.11 * b, keep = ch.status === 'pressurising' ? 0.25 + 0.6 * (1 - (ch.work || 0) / 5) : 0.12;
         r = (l * 0.7 + 0.02) * (1 - keep) + r * keep; g = (l * 0.8 + 0.03) * (1 - keep) + g * keep; b = (l * 1.05 + 0.06) * (1 - keep) + b * keep;
-      }
-    }
-    if (overlay) {
-      const v = overlay[i];
-      r *= 0.3; g *= 0.3; b *= 0.3;
-      if (v > 0) {
-        const s = Math.min(1, v) * 2, k = Math.min(1, Math.floor(s)), f = s - k, A = RAMP[k], B = RAMP[Math.min(2, k + 1)], a = 0.55 + 0.4 * Math.min(1, v);
-        r = r * (1 - a) + (A[0] + (B[0] - A[0]) * f) * a; g = g * (1 - a) + (A[1] + (B[1] - A[1]) * f) * a; b = b * (1 - a) + (A[2] + (B[2] - A[2]) * f) * a;
       }
     }
     out[o] = r; out[o + 1] = g; out[o + 2] = b;
@@ -295,8 +296,8 @@ export function createView(container, opts = {}) {
   function terrainMaterial(def) {
     if (def.key === 'atmosphere') return new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
     const map = textured.get(def.id) || null;
-    if (GLOW_TERRAIN.has(def.key)) return worldUv(new THREE.MeshBasicMaterial({ map }));
-    return worldUv(new THREE.MeshLambertMaterial({ map }));
+    if (GLOW_TERRAIN.has(def.key)) return terrainShader(new THREE.MeshBasicMaterial({ map }), OV);
+    return terrainShader(new THREE.MeshLambertMaterial({ map }), OV);
   }
   function clearGroup(g) {
     for (const o of [...g.children]) { g.remove(o); o.dispose?.(); if (o.material && !Object.values(KIND_MAT).includes(o.material) && o.material !== ghost.footMat) o.material.dispose(); }
@@ -319,7 +320,7 @@ export function createView(container, opts = {}) {
       meshes[def.id] = mesh; terrainGroup.add(mesh);
     }
     const nWater = count[T.RIVER] + count[T.LAKE];
-    waterMesh = new THREE.InstancedMesh(PLANE, new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.8, emissive: '#0a2a50' }), Math.max(1, nWater));
+    waterMesh = new THREE.InstancedMesh(PLANE, terrainShader(new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.8, emissive: '#0a2a50' }), OV), Math.max(1, nWater));
     waterMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, nWater) * 3), 3);
     waterMesh.userData.base = new Float32Array(Math.max(1, nWater) * 3);
     waterMesh.frustumCulled = false; waterMesh.count = 0; waterMesh.renderOrder = 1;
@@ -334,7 +335,7 @@ export function createView(container, opts = {}) {
       for (let j = 0; j < 3; j++) baseRgb[i * 3 + j] = rgb[j] * bright;
       if (def.key === 'atmosphere') {   // fades from black space to bright blue over Earth
         const f = Math.min(1, Math.max(0, (y - 143) / 11));
-        for (let j = 0; j < 3; j++) baseRgb[i * 3 + j] = rgb[j] * (0.08 + 0.55 * f * f) * bright;
+        for (let j = 0; j < 3; j++) baseRgb[i * 3 + j] = rgb[j] * (0.06 + 0.4 * f * f) * bright;
       }
       const s = slot[i] = m.count++, a = m.instanceMatrix.array, o = s * 16;
       a[o] = 1; a[o + 10] = 1; a[o + 12] = x + 0.5; a[o + 14] = y + 0.5;
@@ -350,7 +351,7 @@ export function createView(container, opts = {}) {
       }
       // sparse low rocks on asteroid fields, pebbles on meteoroid drifts
       if (id === T.ASTEROID || id === T.METEOROID) {
-        const k = id === T.ASTEROID ? 1 + (hash(x, y + 5) < 0.45) + (hash(x, y + 9) < 0.15) : 1;
+        const k = id === T.ASTEROID ? (hash(x, y + 5) < 0.6) + (hash(x, y + 9) < 0.15) : hash(x, y + 5) < 0.5 ? 1 : 0;
         for (let n = 0; n < k; n++) {
           const sz = id === T.ASTEROID ? 0.22 + 0.28 * hash(x + n, y + 3) : 0.08 + 0.1 * hash(x + n, y + 3);
           rocks.push({ id, x: x + 0.2 + 0.6 * hash(x + n, y + 11), z: y + 0.2 + 0.6 * hash(x + n, y + 13), s: sz, a: hash(x, y + n) * 6.3, b: 0.7 + 0.5 * hash(x + 3, y + n) });
@@ -526,7 +527,7 @@ export function createView(container, opts = {}) {
     earthMat = new THREE.MeshLambertMaterial({ map: earthTexture(), emissive: '#06142a' });
     const earth = new THREE.Mesh(geo, earthMat);
     const haze = new THREE.Mesh(geo, glowMaterial('#6fb4ff', false, 2.5, 0.9));
-    const halo = new THREE.Mesh(geo, glowMaterial('#4f9fff', true, 1.6, 1.1));
+    const halo = new THREE.Mesh(geo, glowMaterial('#4f9fff', true, 1.6, 0.85));
     haze.scale.setScalar(1.004); halo.scale.setScalar(1.06);
     planet.add(earth, haze, halo);
     planet.scale.set(1, flat, 1);
@@ -542,20 +543,23 @@ export function createView(container, opts = {}) {
     if (!artMod || !st || typeof artMod.art !== 'function') return;
     const loader = new THREE.TextureLoader(), has = (s) => (artMod.hasArt ? artMod.hasArt(s) : !!artMod.art(s));
     const load = (url) => new Promise((ok) => loader.load(url, ok, undefined, () => ok(null)));
-    for (const def of TERRAIN) {
-      const m = meshes[def.id], s = 'terrain/' + def.key;
-      if (!m || def.key === 'atmosphere' || !has(s)) continue;
+    if (has('sky/earth-below')) {
+      // a panorama of Earth's limb with space above it: only its lower part is all Earth
+      load(artMod.art('sky/earth-below')).then((tex) => {
+        if (!tex || !earthMat) return;
+        tex.colorSpace = THREE.SRGBColorSpace; tex.repeat.set(1, 0.4);
+        earthMat.map?.dispose(); earthMat.map = tex; earthMat.needsUpdate = true;
+      });
+    }
+    await Promise.all(TERRAIN.map(async (def) => {
+      const s = 'terrain/' + def.key;
+      if (!meshes[def.id] || def.key === 'atmosphere' || !has(s)) return;
       const tex = await load(artMod.art(s));
-      if (!tex || !st) continue;
+      if (!tex) return;
       tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
       tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
       textured.set(def.id, tex);
-    }
-    if (has('sky/earth-below')) {
-      // a panorama of Earth's limb with space above it: only its lower part is all Earth
-      const tex = await load(artMod.art('sky/earth-below'));
-      if (tex) { tex.colorSpace = THREE.SRGBColorSpace; tex.repeat.set(1, 0.4); earthMat.map?.dispose(); earthMat.map = tex; earthMat.needsUpdate = true; }
-    }
+    }));
     if (textured.size && st) {   // white bases under the textures, new materials with the maps
       buildTerrain();
       for (const id of [...built.keys()]) removeBuilding(id);
@@ -768,7 +772,7 @@ export function createView(container, opts = {}) {
     buildTerrain();
     syncBuildings();
     buildArtifacts();
-    if (overlayName) { overlay = overlayValues || computeOverlay(overlayName); paintAll(); }
+    showOverlay();
     if (first) {
       buildSky();
       resize();
@@ -790,20 +794,40 @@ export function createView(container, opts = {}) {
       for (const id of [...built.keys()]) removeBuilding(id);
       syncBuildings();
       buildArtifacts();
-      if (overlayName) { overlay = overlayValues || computeOverlay(overlayName); paintAll(); }
+      showOverlay();
       return;
     }
     if (rc) rCopy = Uint8Array.from(r);
     const cc = syncChambers(false), bc = syncBuildings();
     if (cc || bc || rc) buildArtifacts();
-    if (overlayName && !overlayValues && bc) { overlay = computeOverlay(overlayName); paintAll(); }
+    if (overlayName && !overlayValues && bc) showOverlay();
+  }
+
+  // Writes the overlay (caller's values, else our own) into the per-tile texture the terrain samples.
+  function showOverlay() {
+    OV.uOverlayOn.value = overlayName && st ? 1 : 0;
+    if (!OV.uOverlayOn.value) return;
+    const v = overlayValues || computeOverlay(overlayName);
+    let tex = OV.uOverlay.value;
+    if (!tex || tex.image.width !== W || tex.image.height !== H) {
+      tex?.dispose();
+      tex = OV.uOverlay.value = new THREE.DataTexture(new Uint8Array(N * 4), W, H);
+      tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = tex.minFilter = THREE.NearestFilter;
+      OV.uMapSize.value.set(W, H);
+    }
+    const d = tex.image.data;
+    for (let i = 0; i < N; i++) {
+      const x = v[i] > 0 ? Math.min(1, v[i]) : 0, s = x * 2, k = Math.min(1, Math.floor(s)), f = s - k, A = RAMP[k], B = RAMP[Math.min(2, k + 1)];
+      for (let j = 0; j < 3; j++) d[i * 4 + j] = A[j] + (B[j] - A[j]) * f;
+      d[i * 4 + 3] = x > 0 ? 255 * (0.3 + 0.35 * x) : 0;
+    }
+    tex.needsUpdate = true;
   }
 
   function setOverlay(name, values = null) {
     overlayName = name || null;
     overlayValues = name && values ? values : null;
-    overlay = !overlayName ? null : overlayValues || (st ? computeOverlay(overlayName) : null);
-    if (st) paintAll();
+    showOverlay();
   }
 
   function focus(x, y) {
@@ -817,6 +841,7 @@ export function createView(container, opts = {}) {
     scene.traverse((o) => { o.geometry?.dispose(); if (o.material) [].concat(o.material).forEach((m) => { m.map?.dispose(); m.dispose(); }); });
     for (const g of [...Object.values(UNIT), COLUMN, PLANE, ROCK, GEM]) g.dispose();
     for (const m of Object.values(KIND_MAT)) m.dispose();
+    OV.uOverlay.value?.dispose();
     renderer.dispose(); canvas.remove(); st = null;
   }
 

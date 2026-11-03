@@ -198,6 +198,7 @@ function fakeState(gen) {
 
 let gen, src = 'fake map';
 try {
+  if (location.search.includes('fake')) throw new Error('404: ?fake asks for the fake map');
   const mod = await import('./js/colony/mapgen.js');
   gen = mod.generateMap(1); src = 'mapgen.js';
   if (gen.map.t[gen.start.dock.y * W + gen.start.dock.x] !== T.HULL) console.warn('mapgen dock not on hull');
@@ -214,6 +215,8 @@ const view = createView(document.getElementById('view'), {
     if (ghostKey) view.setGhost(ghostKey, x, y, (x + y) % 3 !== 0);
   },
   onTileClick(x, y, button) { console.log('click', x, y, button); info.textContent += `\nclicked (${x}, ${y}) button ${button}`; },
+  // ?noart shows the procedural look, as if js/colony/art.js had no pictures
+  art: location.search.includes('noart') ? { art: () => null, hasArt: () => false } : undefined,
 });
 view.setState(state);
 
