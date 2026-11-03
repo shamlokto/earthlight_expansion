@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Earthlight Space Colony Rebuild</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="css/colony.css">
+  <script type="importmap">{"imports":{"three":"./js/vendor/three/three.module.min.js"}}</script>
+</head>
+<body>
+  <!-- title -->
+  <section id="sTitle" class="cl-screen cl-title">
+    <div class="cl-backdrop" id="titleArt"></div>
+    <div class="cl-titlebox">
+      <div class="cl-eyebrow">Earth Light · after the war</div>
+      <h1 class="cl-h1">Earthlight Space Colony Rebuild</h1>
+      <p class="cl-premise">The General sold his ships and disbanded his army to rebuild Eden,<br>a broken colony hanging above a poisoned Earth.</p>
+      <div class="cl-row">
+        <button class="cl-btn primary big" id="bNew" type="button">New colony</button>
+        <button class="cl-btn big" id="bContinue" type="button" hidden>Continue</button>
+      </div>
+      <p class="cl-contsub" id="contInfo" hidden></p>
+      <div class="cl-row cl-saveio" id="saveIO"></div>
+      <nav class="cl-row cl-links"><a class="cl-btn ghost" href="expansion.html">Expansion</a><a class="cl-btn ghost" href="game.html">Original game</a></nav>
+      <p class="cl-err" id="loadErr" role="alert"></p>
+    </div>
+  </section>
+
+  <!-- new colony -->
+  <dialog id="dNew" class="cl-dialog cl-win">
+    <form method="dialog" id="fNew">
+      <h2>New colony</h2>
+      <label class="cl-field"><span>Seed <small>(optional: the same seed makes the same Eden)</small></span>
+        <input type="text" id="nSeed" placeholder="random" autocomplete="off" spellcheck="false"></label>
+      <div class="cl-field"><span>Import expansion save <small>(.json, from Export save)</small></span>
+        <label class="cl-btn cl-file">Choose file<input type="file" id="nFile" accept=".json,application/json" hidden></label>
+        <div id="nFound" class="cl-found">No save: the base start (3000 credits, no machines).</div>
+      </div>
+      <label class="cl-check"><input type="checkbox" id="nBeta"><span></span>
+        <b>Beta tester: bring the whole army as guardians</b></label>
+      <p class="cl-note" id="nBetaNote">The guardians are exactly the original army from your expansion save, levels and all. Sell them at the dock for credits and parts, or keep them. Without the box, the army was sold and its value raises your starting credits.</p>
+      <div class="cl-row cl-end">
+        <button class="cl-btn" value="cancel" type="submit" formnovalidate>Cancel</button>
+        <button class="cl-btn primary" id="nGo" value="go" type="submit">Land on Eden</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- game -->
+  <section id="sGame" class="cl-screen cl-game" hidden>
+    <div id="view" class="cl-view"></div>
+    <div id="ui" class="cl-ui"></div>
+  </section>
+
+  <div id="boot" class="cl-boot" hidden>Preparing Eden…</div>
+  <script type="module" src="js/colony/main.js"></script>
+</body>
+</html>

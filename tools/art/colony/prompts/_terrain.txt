@@ -1,0 +1,2 @@
+Subject: a seamless tileable texture for a game map tile. Strictly top-down orthographic view looking straight down, completely flat, no perspective, no horizon, no shadows cast from one side, evenly lit, the pattern fills the whole square edge to edge with uniform density everywhere and nothing in the centre that stands out. Medium detail that still reads when shrunk to a 32-pixel tile.
+Only the surface material itself: no buildings, machines, vehicles, objects, symbols or icons on it.

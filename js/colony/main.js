@@ -1,0 +1,340 @@
+// Earthlight Space Colony Rebuild: page wiring (colony.html). Title screen, the new-colony dialog
+// (seed, expansion save import, beta guardians), the game loop (live days, decisions pause the
+// clock: docs/COLONY.md §4), placement mode, keyboard, saving. Panels live in js/colony/ui.js.
+// Contract: docs/COLONY-V1.md.
+import { parseSave, mountSaveButtons } from '../savefile.js';
+import { BUILDING } from './data/buildings.js';
+import { createUI, esc } from './ui.js';
+
+const KEY = 'el-colony', SETTINGS_KEY = 'el-colony-settings';
+const $ = (s) => document.querySelector(s);
+
+let M = null;                 // { state: stateMod, rules, sim, view: viewMod, art }
+let state = null, view = null, ui = null, types = null;
+let placing = null;           // { key, moveId }
+let lastKey = null, hover = null, lastSpeed = 1, overlay = null, overlayDay = -1;
+let raf = 0, last = 0, acc = 0, pointer = { x: 0, y: 0 };
+const settings = loadSettings();
+
+function loadSettings() {
+  const d = { pauseOnEvents: true, snap: false };
+  try { return { ...d, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }; } catch { return d; }
+}
+function storeSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { } }
+
+// ---------------------------------------------------------------- modules
+async function loadModules() {
+  const [stateMod, rules, sim, viewMod, artMod] = await Promise.all([
+    import('./state.js'), import('./rules.js'), import('./sim.js'), import('./view3d/view.js'),
+    import('./art.js').catch(() => null),
+  ]);
+  return { state: stateMod, rules, sim, view: viewMod, art: artMod };
+}
+const art = (slot) => { try { return M?.art?.art?.(slot) || null; } catch { return null; } };
+
+async function loadTypes() {
+  if (types) return types;
+  try {
+    const j = await (await fetch('js/expansion/data/units.json')).json();
+    types = {}; for (const u of j.units || []) types[u.type] = u;
+  } catch { types = null; }
+  return types;
+}
+
+// ---------------------------------------------------------------- seeded randomness
+function mulberry32(a) {
+  return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+const hashStr = (s) => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const rngFor = (s) => mulberry32((hashStr(s.seed) ^ Math.imul(s.day + 1, 0x9E3779B1)) >>> 0);
+
+// ---------------------------------------------------------------- title screen
+function showTitle() {
+  stopLoop();
+  $('#sGame').hidden = true; $('#sTitle').hidden = false;
+  const saved = localStorage.getItem(KEY);
+  $('#bContinue').hidden = !saved;
+  const info = $('#contInfo');
+  info.hidden = true;
+  if (saved && M) {
+    try { const s = M.state.loadState(saved); info.textContent = `Day ${s.day} · ${s.pop} colonists · ${Math.round(s.stock?.credits ?? 0)} credits`; info.hidden = false; } catch { }
+  }
+  const url = art('title/rebuild');
+  $('#titleArt').style.backgroundImage = url ? `url("${url}")` : '';
+  $('#titleArt').classList.toggle('painted', !!url);
+}
+
+let importData = null, importName = '';
+function newDialog() {
+  importData = null;
+  $('#nSeed').value = ''; $('#nBeta').checked = false; $('#nFile').value = '';
+  showFound();
+  $('#dNew').showModal();
+}
+
+function rosterOf(data) {
+  const raw = data?.['el-expansion-campaign-remnant'] ?? data?.['el-expansion-campaign'];
+  if (!raw) return null;
+  try { const c = JSON.parse(raw); return Array.isArray(c.roster) ? c.roster : null; } catch { return null; }
+}
+
+async function showFound(err) {
+  const el = $('#nFound');
+  if (err) { el.innerHTML = `<span class="cl-bad">${esc(err)}</span>`; return; }
+  if (!importData) { el.textContent = 'No save: the base start (3000 credits, no machines).'; return; }
+  const roster = rosterOf(importData);
+  if (!roster) { el.innerHTML = '<span class="cl-bad">This save has no expansion campaign: nothing to bring.</span>'; return; }
+  const ty = await loadTypes();
+  const value = ty ? roster.reduce((t, r) => t + (ty[r.type] ? Math.max(1, ty[r.type].value) * ty[r.type].hp : 0), 0) : null;
+  const beta = $('#nBeta').checked;
+  const names = ty ? roster.slice(0, 8).map((r) => ty[r.type]?.name || '?').join(', ') + (roster.length > 8 ? '…' : '') : '';
+  el.innerHTML = `<small>${esc(importName)}</small><br>Found <b>${roster.length} machine${roster.length === 1 ? '' : 's'}</b>${names ? ` <small>(${esc(names)})</small>` : ''}.<br>`
+    + (beta ? `They come along as <b>guardians</b>: no extra credits.`
+      : `Sold to pay for the rebuild: <b class="cl-good">+${value != null ? (value * 10).toLocaleString() : '?'} credits</b> at the start.`);
+}
+
+async function startNew() {
+  const raw = $('#nSeed').value.trim();
+  const seed = raw === '' ? (Math.random() * 1e9) >>> 0 : /^\d+$/.test(raw) ? +raw : hashStr(raw);
+  const beta = $('#nBeta').checked;
+  boot(true);
+  await new Promise((r) => setTimeout(r, 30));      // let "Preparing Eden" paint before map generation
+  try {
+    const ty = await loadTypes();
+    const s = M.state.newGame({ seed, importSave: importData, beta, types: ty });
+    startGame(s);
+  } catch (e) { console.error(e); $('#loadErr').textContent = 'Could not start a colony: ' + e.message; boot(false); }
+}
+
+function continueGame() {
+  try { const s = M.state.loadState(localStorage.getItem(KEY)); loadTypes(); startGame(s); }
+  catch (e) { console.error(e); $('#loadErr').textContent = 'The saved colony could not be loaded: ' + e.message; }
+}
+
+function boot(on) { $('#boot').hidden = !on; }
+
+// ---------------------------------------------------------------- game screen
+function startGame(s) {
+  state = s;
+  if (!state.speed && state.speed !== 0) state.speed = 1;
+  lastSpeed = state.speed || 1;
+  $('#sTitle').hidden = true; $('#sGame').hidden = false;
+  if (view) { try { view.destroy(); } catch { } view = null; }
+  $('#view').innerHTML = '';
+  try {
+    view = M.view.createView($('#view'), { onTileClick, onTileHover });
+    view.setState(state);
+    view.setSnap?.(settings.snap);
+    const cc = state.buildings.find((b) => b.key === 'command');
+    if (cc) view.focus?.(cc.x + 1, cc.y + 1);
+  } catch (e) {
+    console.error(e);
+    $('#view').innerHTML = `<div class="cl-noview">The 3D view could not start (${esc(e.message)}). WebGL may be off in this browser.</div>`;
+    view = null;
+  }
+  if (ui) ui.destroy();
+  ui = createUI($('#ui'), api);
+  overlay = null; placing = null; hover = null;
+  ui.update(true);
+  boot(false);
+  startLoop();
+}
+
+const api = {
+  state: () => state,
+  get rules() { return M.rules; },
+  get sim() { return M.sim; },
+  art,
+  get types() { return types; },
+  settings,
+  act: (r) => afterAction(r),
+  pick: (key) => setPlacing(key ? { key } : null),
+  move: (id) => { const b = state.buildings.find((x) => x.id === id); if (b) setPlacing({ key: b.key, moveId: id }); },
+  placingKey: () => placing && !placing.moveId ? placing.key : null,
+  setSpeed,
+  setOverlay: (name) => { overlay = name; applyOverlay(); },
+  save: () => save(true),
+  toTitle: () => {
+    save(false);
+    setPlacing(null);
+    if (view) { try { view.destroy(); } catch { } view = null; }   // stop rendering behind the title
+    showTitle();
+  },
+  focus: (x, y) => view?.focus?.(x, y),
+  setSetting: (k, v) => { settings[k] = v; storeSettings(); if (k === 'snap') view?.setSnap?.(v); },
+};
+
+function afterAction(r, quiet) {
+  if (r && r.ok === false) ui.toast(r.msg || 'Not possible.', 'bad');
+  else if (r?.msg && !quiet) ui.toast(r.msg, 'good');
+  try { view?.refresh(state); } catch (e) { console.error(e); }
+  if (overlay) applyOverlay();
+  ui.update();
+  return r;
+}
+
+function applyOverlay() {
+  if (!view) return;
+  let data = null;
+  if (overlay) { try { data = M.rules.coverage(state, overlay); } catch { } }
+  try { view.setOverlay(overlay, data); } catch (e) { console.error(e); }
+  overlayDay = state.day;
+}
+
+function setSpeed(s) {
+  if (!state) return;
+  if (s > 0) lastSpeed = s;
+  state.speed = s; acc = 0;
+  ui?.setSpeed(s);
+}
+
+function save(announce) {
+  if (!state) return;
+  try { localStorage.setItem(KEY, M.state.saveState(state)); if (announce) ui?.toast(`Colony saved (day ${state.day}).`, 'good'); }
+  catch (e) { console.error(e); ui?.toast('Could not save: ' + e.message, 'bad'); }
+}
+
+// ---------------------------------------------------------------- placement
+function setPlacing(p) {
+  placing = p;
+  if (p && !p.moveId) lastKey = p.key;
+  ui.setPlacing(p?.key || null, !!p?.moveId);
+  if (p) { ui.closeInspector(); if (hover) ghostAt(hover.x, hover.y); }
+  else { try { view?.setGhost(null, 0, 0, false); } catch { } ui.tip(null); }
+  $('#view').classList.toggle('placing', !!p);
+}
+
+// The footprint is centred on the pointer; (x, y) of a building is its top-left tile.
+const origin = (key, x, y) => { const n = BUILDING[key]?.size || 1, o = Math.floor((n - 1) / 2); return { x: x - o, y: y - o }; };
+
+function placeCheck(x, y) {
+  const o = origin(placing.key, x, y);
+  let why;
+  if (placing.moveId) {
+    const r = (() => { try { const c = structuredClone(state); return M.rules.move(c, placing.moveId, o.x, o.y); } catch (e) { return { ok: false, msg: e.message }; } })();
+    why = r && r.ok === false ? r.msg || 'Cannot move here.' : null;
+  } else {
+    try { why = M.rules.canBuild(state, placing.key, o.x, o.y); } catch (e) { why = e.message; }
+  }
+  return { ...o, why };
+}
+
+function ghostAt(x, y) {
+  const c = placeCheck(x, y);
+  try { view?.setGhost(placing.key, c.x, c.y, c.why == null); } catch (e) { console.error(e); }
+  const d = BUILDING[placing.key];
+  const cost = placing.moveId ? `move: ${Math.ceil((d.cost.credits || 0) * 0.2)} cr` : [d.cost.credits ? `${d.cost.credits} cr` : '', d.cost.parts ? `${d.cost.parts} parts` : ''].filter(Boolean).join(' · ');
+  ui.tip(`<b>${esc(d.name)}</b> <small>${esc(cost)}</small><br>${c.why == null ? '<span class="ok">✓ Click to ' + (placing.moveId ? 'move' : 'build') + '</span>' : `<span class="no">✗ ${esc(c.why)}</span>`}`, pointer.x, pointer.y, c.why == null);
+}
+
+function onTileHover(x, y) {
+  if (x == null || y == null || x < 0 || y < 0) { hover = null; ui?.tip(null); return; }
+  hover = { x, y };
+  if (placing) ghostAt(x, y);
+}
+
+function onTileClick(x, y, button) {
+  if (!state || x == null || x < 0) return;
+  if (button === 2) { if (placing) setPlacing(null); return; }
+  if (placing) {
+    const { x: ox, y: oy } = origin(placing.key, x, y);
+    const r = placing.moveId ? M.rules.move(state, placing.moveId, ox, oy) : M.rules.build(state, placing.key, ox, oy);
+    afterAction(r, true);
+    if (r?.ok !== false) {
+      ui.toast(placing.moveId ? `${BUILDING[placing.key].name} moved.` : `${BUILDING[placing.key].name} ordered.`, 'good');
+      if (!shiftHeld || placing.moveId) setPlacing(null); else ghostAt(x, y);
+    }
+    return;
+  }
+  ui.closePops();
+  ui.inspect(x, y);
+}
+
+// ---------------------------------------------------------------- input
+let shiftHeld = false, downAt = null;
+function onKey(e) {
+  shiftHeld = e.shiftKey;
+  if (!state || $('#sGame').hidden || e.type !== 'keydown') return;
+  if (e.target.closest?.('input, textarea, select') && e.key !== 'Escape') return;
+  if (ui.eventOpen() && settings.pauseOnEvents && e.key !== 'Escape') return;
+  switch (e.key) {
+    case ' ': e.preventDefault(); setSpeed(state.speed ? 0 : lastSpeed || 1); break;
+    case '1': setSpeed(1); break;
+    case '2': setSpeed(2); break;
+    case '3': setSpeed(4); break;
+    case 'r': case 'R': if (!e.ctrlKey && !e.metaKey && lastKey) api.pick(lastKey); break;
+    case 'Escape':
+      if (placing) setPlacing(null);
+      else if (!ui.closePops() && ui.inspecting()) ui.closeInspector();
+      break;
+  }
+}
+addEventListener('keydown', onKey);
+addEventListener('keyup', (e) => { shiftHeld = e.shiftKey; });
+const viewEl = $('#view');
+viewEl.addEventListener('pointermove', (e) => { pointer = { x: e.clientX, y: e.clientY }; }, true);   // capture: before the view reports the hover
+viewEl.addEventListener('pointerleave', () => ui?.tip(null));
+viewEl.addEventListener('contextmenu', (e) => e.preventDefault());
+// right-click (without dragging the camera) cancels placement, whatever the view reports
+viewEl.addEventListener('pointerdown', (e) => { if (e.button === 2) downAt = { x: e.clientX, y: e.clientY }; });
+viewEl.addEventListener('pointerup', (e) => {
+  if (e.button === 2 && downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6 && placing) setPlacing(null);
+  downAt = null;
+});
+
+// ---------------------------------------------------------------- loop
+function tick() {
+  let res = null;
+  try { res = M.sim.dayTick(state, rngFor(state)); } catch (e) { console.error(e); setSpeed(0); ui.toast('The simulation stopped: ' + e.message, 'bad'); return; }
+  try { view?.refresh(state); } catch (e) { console.error(e); }
+  if (overlay && state.day - overlayDay >= 5) applyOverlay();
+  for (const ev of res?.events || []) if (ev?.text && !ev.pause && ev.kind !== 'log') ui.toast(ev.text, ev.kind === 'bad' || ev.kind === 'death' ? 'bad' : '');
+  if (state.day > 0 && state.day % 10 === 0) save(false);
+  if (placing && hover) ghostAt(hover.x, hover.y);
+  ui.update();
+}
+
+function frame(t) {
+  const dt = Math.min(250, t - (last || t)); last = t;
+  if (state) {
+    const blocked = settings.pauseOnEvents && state.pending?.length > 0;
+    if (state.speed > 0 && !blocked) {
+      acc += dt;
+      const step = 1000 / state.speed;
+      let n = 0;
+      while (acc >= step && n < 4) {
+        acc -= step; n++;
+        tick();
+        if (settings.pauseOnEvents && state.pending?.length) { acc = 0; break; }
+      }
+    } else acc = 0;
+  }
+  raf = requestAnimationFrame(frame);
+}
+function startLoop() { stopLoop(); last = 0; acc = 0; raf = requestAnimationFrame(frame); }
+function stopLoop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
+
+// ---------------------------------------------------------------- start
+async function main() {
+  mountSaveButtons($('#saveIO'), 'cl-btn sm');
+  $('#bNew').onclick = newDialog;
+  $('#bContinue').onclick = continueGame;
+  $('#nFile').onchange = async () => {
+    const f = $('#nFile').files[0]; if (!f) return;
+    try { importData = parseSave(await f.text()).data; importName = f.name; await showFound(); }
+    catch (e) { importData = null; showFound(e.message); }
+  };
+  $('#nBeta').onchange = () => showFound();
+  $('#fNew').addEventListener('submit', (e) => { if (e.submitter?.value === 'go') { e.preventDefault(); $('#dNew').close(); startNew(); } });
+  showTitle();
+  try { M = await loadModules(); }
+  catch (e) {
+    console.error(e);
+    $('#loadErr').textContent = 'The colony modules could not be loaded: ' + e.message;
+    $('#bNew').disabled = true; $('#bContinue').disabled = true;
+    return;
+  }
+  showTitle();
+  window.__colony = { get state() { return state; }, get view() { return view; }, get M() { return M; }, tick, setSpeed, settings };
+}
+main();
