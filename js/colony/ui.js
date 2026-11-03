@@ -403,6 +403,9 @@ export function createUI(root, api) {
     for (const g of GOODS) if (!statEls[g].el.hidden) setTitle(g, why(g, s, m));
     const li = labInfo(s);
     show('research', li.labs > 0);
+    // version 2 has begun (the lab is unlocked): phones show the Research button only from then on
+    const v2 = !!(s.unlocked?.includes?.('lab') || li.labs || researchOf(s).done?.length || researchOf(s).focus);
+    if (root.classList.contains('cl-v2') !== v2) root.classList.toggle('cl-v2', v2);
     if (li.labs) {
       const rs = researchOf(s), list = techList(s), f = list.find((t) => t.focus);
       const short = (n) => n.length > 13 ? n.slice(0, 12) + '…' : n;
@@ -628,7 +631,7 @@ export function createUI(root, api) {
     if (b.key === 'lab') acts.push(`<button type="button" class="cl-btn sm primary" data-a="research" data-id="${b.id}">Research</button>`);
     if (next?.cost) {
       const r = dry(s, (c) => R.upgrade(c, b.id));
-      acts.push(`<button type="button" class="cl-btn sm" data-a="upgrade" data-id="${b.id}" ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? `Upgrade${next.name ? ' to ' + next.name : ''}` : r.msg)}">Upgrade${next.name && b.key !== 'habitat' ? ` <small>→ ${esc(next.name)}</small>` : ''} <small>${costText((() => { try { return R.costOf?.(s, next.cost, b.key) || next.cost; } catch { return next.cost; } })())}</small></button>`);
+      acts.push(`<button type="button" class="cl-btn sm" data-a="upgrade" data-id="${b.id}" ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? `Upgrade${next.name ? ' to ' + next.name : ''}` : r.msg)}">Upgrade <small>${costText((() => { try { return R.costOf?.(s, next.cost, b.key) || next.cost; } catch { return next.cost; } })())}</small></button>`);
     }
     if (!d.fixed) {
       acts.push(`<button type="button" class="cl-btn sm" data-a="move" data-id="${b.id}" title="Move it (20% of its cost)">Move</button>`);
@@ -991,7 +994,7 @@ export function createUI(root, api) {
   // "1 / 2 fields" gives 0.5 for the bar; null when the text holds no fraction.
   const fraction = (t) => { const m = /(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/.exec(t || ''); return m && +m[2] > 0 ? Math.min(1, +m[1] / +m[2]) : null; };
   const grantText = (r) => r ? [r.credits ? `+${num(r.credits)} cr` : '', r.parts ? `+${num(r.parts)} parts` : ''].filter(Boolean).join(' · ') : '';
-  const showLabel = (sh) => !sh ? '' : sh.build ? `Show me: ${BUILDING[sh.build]?.name || sh.build}` : sh.market ? 'Show me: the Market' : sh.roads ? 'Show me: Roads' : sh.chamber != null ? 'Show me the chamber' : sh.tile ? 'Show me where' : 'Show me';
+  const showLabel = (sh) => !sh ? '' : sh.build ? `Show me: ${BUILDING[sh.build]?.name || sh.build}` : sh.market ? 'Show me: the Market' : sh.roads ? 'Show me: Roads' : sh.research ? `Show me: ${typeof sh.research === 'string' && TECH[sh.research] ? TECH[sh.research].name : 'Research'}` : sh.chamber != null ? 'Show me the chamber' : sh.tile ? 'Show me where' : 'Show me';
 
   function renderGoals() {
     const G = api.goals;

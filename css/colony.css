@@ -582,6 +582,7 @@ small { color: var(--dim); font-weight: 400; }
   .cl-build.open { z-index: 4; }
   .cl-insp, .cl-pop { grid-area: mid; align-self: end; max-height: 62%; width: 100%; z-index: 4; }
   .cl-ovl { grid-area: mid; align-self: end; justify-self: start; }
+  .cl-ui:not(.cl-v2) .cl-resbtn { display: none; }
   .cl-research { position: fixed; inset: 0; width: 100%; max-height: none; z-index: 8; border-radius: 0; padding-top: env(safe-area-inset-top, 0px); }
   .cl-rhead { padding: 10px 44px 8px 12px; gap: 6px 10px; }
   .cl-rstats { flex: 1 1 100%; }

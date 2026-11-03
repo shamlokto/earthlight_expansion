@@ -985,6 +985,7 @@ export function createView(container, opts = {}) {
   resize();
 
   let raf = 0, last = performance.now();
+  const dbg = { noRender: false };   // tests on slow software GL skip drawing (debug.setRender)
   function frame(now) {
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
@@ -996,7 +997,7 @@ export function createView(container, opts = {}) {
     for (const p of pools.values()) p.flush();
     for (const a of dirty) a.needsUpdate = true;
     dirty.clear();
-    renderer.render(scene, camera);
+    if (!dbg.noRender) renderer.render(scene, camera);
   }
   raf = requestAnimationFrame(frame);
 
@@ -1110,5 +1111,6 @@ export function createView(container, opts = {}) {
   return { setState, refresh, setOverlay, setGhost, focus, setSnap, setSpeed, destroy, setMinimap, setNavButtons, setWheelMode, nav, home,
     debug: { scene, camera, controls, renderer, placeCamera, pick, movers, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse'),
       // n camera steps of 1/60 s now, without rendering (tests on slow software GL)
+      setRender(on) { dbg.noRender = !on; },
       tick(n = 1) { for (let k = 0; k < n && st; k++) stepCamera(1 / 60, performance.now()); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z]); } } };
 }
