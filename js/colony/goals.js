@@ -2,7 +2,7 @@
 // instructions on how to play become important"; "even on beta testing it becomes too hard").
 // Pure: no DOM. The sim calls updateGoals() each day; the interface shows goalStatus() and advise().
 //   goal: { id, title, text, speaker, done(state), progress(state)?, show(state)?, only(state)? }
-//   show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true } | { research: true | techKey } | { defence: tab } | null
+//   show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true } | { research: true | techKey } | { defence: tab } | { journal: tab } | null
 import { BUILDING } from './data/buildings.js';
 import { summary, chamberLinks, openBreaches, chamberOf, addPending, log, centre, pressuriseAir, storageCaps } from './rules.js';
 import { diffOf } from './difficulty.js';
@@ -124,6 +124,19 @@ export const GOALS = [
   { id: 'lower', speaker: 'sato', title: 'Open a chamber on the lower deck',
     text: 'The lower deck is pumps, cisterns and flooded tunnels, and the old core still runs hot down there. People say the catacombs are not empty. Open a chamber below and see.',
     done: (s) => s.chambers.some((c) => c.deck === 'lower' && c.status === 'open'), show: (s) => deckChamber(s, 'lower') },
+  // ---- version 4, stage 2: the secrets (docs/COLONY-V4.md §2)
+  { id: 'logs5', speaker: 'ruess', title: 'Listen to Eden',
+    text: 'Our surveys keep turning up terminals, recorders, scratches on walls. Something happened here that was never in any report. Read what you find in the Discoveries journal (J): five logs to start.',
+    done: (s) => (s.secrets?.read?.length || 0) >= 5, progress: (s) => `${s.secrets?.read?.length || 0} / 5 logs read`, show: () => ({ journal: 'logs' }) },
+  { id: 'danger', speaker: 'sato', title: 'Clear the way',
+    text: 'Some chambers are guarded: sentry drones still on patrol, toxic air, radiation near the old core. Deal with one: send the guardians against the drones, or have Ruess\'s crews decontaminate.',
+    done: (s) => (s.secrets?.dangers || []).some((d) => d.done), show: () => ({ journal: 'dangers' }) },
+  { id: 'vault', speaker: 'ruess', title: 'Open a vault',
+    text: 'The Directorate left more than logs: sealed stores, a fuel cache, hangars with machines nobody has seen. Each vault has its own way in; the journal lists what each one needs.',
+    done: (s) => (s.secrets?.sites || []).some((x) => x.kind === 'vault' && x.done), show: () => ({ journal: 'vaults' }) },
+  { id: 'finalvault', speaker: 'sato', title: 'The Ninefold vault',
+    text: 'Five of the logs hold a part of a code each. With all five, and the way to the vault cleared, we can open the last door under the core, and find out what really happened to Eden.',
+    done: (s) => !!s.secrets?.finalOpened, progress: (s) => `${(s.secrets?.read || []).filter((id) => /^l(03|07|10|13|18)$/.test(id)).length} / 5 code parts`, show: () => ({ journal: 'vaults' }) },
 ];
 
 // The next chamber to open on another deck: one being worked on, else a sealed one a working lift reaches.
