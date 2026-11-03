@@ -22,6 +22,7 @@
 //   service                  happiness for habitats in its radius (clinic, canteen, safety post)
 //   builds                   'arsenal' | 'shipyard': builds the machines of data/machines.js with that `at`
 //   crews                    machines this building crews (version 3)
+//   decks                    decks it may stand on: 'upper' | 'main' | 'lower' (version 4; absent = main only)
 //   fixed                    cannot be built, moved or demolished by the player
 //   text                     one line for the build menu
 export const CATEGORIES = [
@@ -172,6 +173,20 @@ export const BUILDINGS = [
     text: 'Wanderers stop here: pilots, captains and engineers adrift since the war. Invite the best as commanders. Bigger lodges draw more.' },
   { key: 'quarters', name: 'Officers\' Quarters', cat: 'services', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor'], cost: { credits: 300, parts: 20 }, days: 4, jobs: 0, upkeep: 3, power: -2, tech: 'leadership',
     text: 'Room for two more commanders.' },
+  // ---------------------------------------------------------------- version 4 (docs/COLONY-V4.md): decks
+  // `decks`: which decks it may stand on ('upper' | 'main' | 'lower'); absent = the main deck only.
+  { key: 'lift', name: 'Lift', cat: 'core', size: 2, zone: 'interior', on: ['shaft'], decks: ['upper', 'main', 'lower'], cost: { credits: 400, parts: 40 }, days: 6, jobs: 1, upkeep: 3, power: -6,
+    text: 'Repairs a lift shaft: the chambers it passes through on every deck can be surveyed from here, and roads and people ride it.' },
+  { key: 'skygarden', name: 'Sky Garden', cat: 'homes', size: 2, zone: 'interior', on: ['plain', 'fertile', 'poor', 'deck'], decks: ['upper'], cost: { credits: 220, parts: 10 }, days: 4, jobs: 1, upkeep: 2, uses: { water: 3 }, makes: { air: 10 }, radius: 7, park: 10,
+    text: 'Gardens under the sky panels: air, and the best park rating in Eden for homes nearby.' },
+  { key: 'gallery', name: 'Gallery', cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'poor'], decks: ['upper'], cost: { credits: 350, parts: 20 }, days: 5, jobs: 3, upkeep: 3, power: -4, radius: 10, service: 5,
+    text: 'Concerts and exhibitions in the old galleries: happiness for homes in range.' },
+  { key: 'cistern', name: 'Water Cistern', cat: 'life', size: 2, zone: 'interior', on: ['deck', 'conduit', 'rock'], decks: ['lower'], cost: { credits: 250, parts: 15 }, days: 4, jobs: 0, upkeep: 1, storage: { water: 1000 },
+    text: 'A great tank in the lower deck: stores 1,000 water.' },
+  { key: 'geotap', name: 'Geothermal Tap', cat: 'power', size: 2, zone: 'interior', on: ['conduit', 'rock'], decks: ['lower'], cost: { credits: 600, parts: 50 }, days: 6, jobs: 3, upkeep: 6, power: 70,
+    text: 'Draws heat from the colony\'s old core under the lower deck: steady power with no fuel.' },
+  { key: 'pumpstation', name: 'Pump Station', cat: 'life', size: 1, zone: 'interior', on: ['deck', 'conduit', 'plain', 'poor', 'rock'], decks: ['main', 'lower'], cost: { credits: 200, parts: 15 }, days: 3, jobs: 1, upkeep: 2, power: -5, radius: 6,
+    text: 'Drains flooded ground in range, a tile every 5 days, leaving buildable floor.' },
   { key: 'park', name: 'Park', cat: 'homes', size: 1, zone: 'interior', on: ['plain', 'fertile', 'poor', 'deck'], cost: { credits: 60, parts: 0 }, days: 1, jobs: 0, upkeep: 1, uses: { water: 1 }, radius: 6, park: 8,
     text: 'Raises happiness in range, up to its rating. Costs water, not power.' },
 ];

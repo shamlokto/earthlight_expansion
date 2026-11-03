@@ -97,3 +97,79 @@ chamber, shown on the map and listed in a **Discoveries** journal.
    machines, survivors, dangers (drones, hazards, the reactor).
 3. Expeditions: the sector map, squadrons, events, rewards.
 4. The win: relief convoys, the victory check, the ending.
+
+---
+
+## Stage 1 build contract: the three decks
+
+The owner has authorised merging finished work without asking (2026-11-03).
+
+### Data (written)
+* `data/terrain.js`: GLASS (sky panel, upper), CONDUIT (lower machinery floor, buildable), CATACOMB
+  (lower tunnels, not buildable until stage 2's secrets), SHAFT (lift shaft site, buildable only by a
+  Lift), OUTSIDE (no floor: everything beyond the hull on the upper and lower decks; not drawn).
+  Flooded tunnels use the existing MARSH ("Flooded ground").
+* `data/buildings.js`: `decks` field (absent = main deck only); six deck buildings: Lift (on shafts,
+  any deck), Sky Garden and Gallery (upper), Water Cistern and Geothermal Tap (lower), Pump Station
+  (main and lower: drains flooded ground in range, a tile every 5 days).
+
+### State (state.js; old saves get the decks generated from their seed on load)
+```js
+state.map                     // the MAIN deck, unchanged (so every version 1-3 path keeps working)
+state.decks = { upper: { t, r, ch, sv }, lower: { t, r, ch, sv } }   // same 256 × 160 size and indexing
+chambers[i].deck              // 'upper' | 'lower'; absent = 'main'. Ids stay unique across decks.
+buildings[i].deck             // 'upper' | 'lower'; absent = 'main'
+```
+* `mapOf(state, deck)` → the deck's `{ w, h, t, r, ch, sv }` (main = state.map).
+* Saving stores the two extra decks' arrays like the main one.
+
+### Map generation (`js/colony/decks.js`, new; pure, deterministic from the seed and the main map)
+`generateDecks(seed, main, mainChambers, startId)` → `{ upper, lower, chambers, shafts }`:
+* Both decks cover Eden's footprint only (the main map's hull box); everything outside is OUTSIDE;
+  the hull ring is HULL. Each deck has 16–22 chambers separated by bulkheads with gates (the same
+  grammar as the main deck, chambers named for their deck: "Skyward Gallery", "Lantern Ring",
+  "Old Cistern", "Pump Hall", "Ossuary"…), every chamber `sealed` at the start.
+* **Upper**: galleries and habitat rings on deck plating, sky-garden soil (plain / fertile), rows of
+  GLASS sky panels over the main deck's fields, a few breaches in the panels and the hull.
+* **Lower**: CONDUIT halls, ROCK, RUBBLE, flooded tunnels (MARSH), CATACOMB passages (not buildable
+  yet), breaches as cracked bulkheads.
+* **6–8 lift shafts**: 2 × 2 SHAFT sites at the same (x, y) on all three decks (also stamped into the
+  main deck's map), spread across Eden; one shaft lies in the main deck's landing chamber, so the
+  first Lift can be built at home.
+* Every upper and lower chamber is reachable from some shaft through gates on its own deck.
+
+### Rules
+* Placement and every tile function take an optional deck: `canBuild(state, key, x, y, deck = 'main')`,
+  `build(state, key, x, y, deck)`, `tileInfo(state, x, y, deck)`, `coverage(state, kind, deck)`,
+  `planRoad / buildRoad(..., deck)`, `findSpot(state, key, { deck, ... })`. A building's `decks` must
+  include the deck. Space and the hull's outside exist only on the main deck.
+* **Lifts**: a finished Lift on a shaft (any deck, inside an open chamber) makes the chambers that the
+  shaft passes through on the other decks **surveyable** (in addition to the usual "next to an open
+  chamber on the same deck"). Roads may run onto a finished Lift's tiles, and people and rovers use it.
+* Chambers work as before on each deck (survey → seal breaches → pressurise → open); open upper and
+  lower chambers need air like any other. Coverage (parks, services) stays on its own deck.
+* Pump Station: every 5 days turns one MARSH tile in its radius into DECK (lower) or PLAIN (main).
+
+### Simulation: buildings work the same on every deck (staff, power, makes, uses are colony-wide).
+
+### Goals (the lead): after the version 3 goals: repair a Lift, open an upper chamber, open a lower chamber.
+
+### View
+* `view.setDeck('upper' | 'main' | 'lower')` and `view.deck` (default 'main'): the terrain, chambers,
+  buildings, movers and overlays of that deck. The deck above is not drawn; the deck below is not
+  drawn either, except that on the **upper** deck the GLASS panels show the main deck's fields dimly
+  beneath (a texture or a dark-green tint is enough). On the upper and lower decks space, Earth and
+  the starfield stay as the backdrop but OUTSIDE tiles are not drawn.
+* A smooth camera move (rise or sink) when the deck changes; the deck name shown briefly.
+* Picking returns tiles of the current deck; ghosts and overlays use it. The minimap shows the
+  current deck and marks the shafts (gold squares) and the lifts that work.
+* Kits for the six buildings (the Lift a frame tower with a cage), and the SHAFT tiles as a dark pit
+  with a gold rim.
+* The navigation pad gains deck buttons (▲ ▼) and keys PageUp / PageDown move between decks (tilt
+  moves to Alt + scroll and the pad's tilt buttons only).
+
+### Interface
+* A deck switcher (three buttons: Upper / Main / Lower, with each deck's open / total chambers) near
+  the overlay bar; the current deck in the top bar; the build menu greys buildings that cannot stand
+  on the current deck ("Upper deck only"); the inspector shows the deck; Show me switches decks when
+  the target is on another; How to play: a "Decks and lifts" section.
