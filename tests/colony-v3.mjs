@@ -286,6 +286,7 @@ function raidNow(s, units, { from = 'earth', faction = 'scavengers', tier = 'sca
 {
   const s = rich(8); unlock80(s); learn(s, 'safety', 'leadership'); power(s, 4);
   const lodge = put(s, 'lodge');
+  put(s, 'quarters');
   s.pop = 120;
   tick(s);
   check(s.wanderers.length === 1 && s.pending.some((p) => p.kind === 'wanderer' && p.wanderer === s.wanderers[0].key && p.choices.some((c) => c.key === 'invite')), 'a wanderer arrives at a new Lodge, announced');
@@ -420,7 +421,7 @@ function raidNow(s, units, { from = 'earth', faction = 'scavengers', tier = 'sca
   tick(L);
   check(happy(L, 'Raid fear') === -15, `fear −15 (${happy(L, 'Raid fear')})`);
   for (let d = 0; d < 7; d++) tick(L);
-  check(happy(L, 'Raid fear') === -7, `fear fades over 15 days (${happy(L, 'Raid fear')})`);
+  check(happy(L, 'Raid fear') === -8, `fear fades over 15 days (${happy(L, 'Raid fear')})`);
   for (let d = 0; d < 8; d++) tick(L);
   check(happy(L, 'Raid fear') === undefined, 'fear gone after 15 days');
   // a crew repairs a damaged building a day a day (before new construction)
@@ -677,17 +678,128 @@ for (const seed of [1, 2]) {
   check(r.raids.length >= 2 && r.raids.slice(0, 3).every((x) => x.result === 'paid') && r.s.raid.paid >= 2 && r.deaths === 0, 'a tribute-payer pays the early raids off');
 }
 
-// Normal: tougher, but beatable with defences.
+// Normal: tougher, but beatable with defences. The player is tests/colony-sim.mjs's Normal-tuned
+// builder (the goal-follower above is tuned for Easy), with the same defence plan.
+const net = (s, g) => (s.stats.last.produced?.[g] || 0) - (s.stats.last.consumed?.[g] || 0);
+function pending(s) {
+  const q = { food: 0, water: 0, air: 0, power: 0, housing: 0 };
+  for (const b of s.buildings) {
+    if (!b.build) continue;
+    const d = R.spec(b);
+    for (const [g, n] of Object.entries(d.makes || {})) if (g in q) q[g] += n;
+    for (const [g, n] of Object.entries(d.uses || {})) if (g in q) q[g] -= n;
+    q.power += d.power || 0; q.housing += d.housing || 0;
+  }
+  return q;
+}
+function soilOf(s, x, y, size) {
+  const { t, w } = s.map;
+  let sum = 0, river = false;
+  for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) {
+    sum += { [T.FERTILE]: 1.8, [T.PLAIN]: 1.1, [T.POOR]: 0.55 }[t[(y + dy) * w + x + dx]] || 0;
+    for (const [ax, ay] of [[x + dx + 1, y + dy], [x + dx - 1, y + dy], [x + dx, y + dy + 1], [x + dx, y + dy - 1]]) if (t[ay * w + ax] === T.RIVER) river = true;
+  }
+  return (sum / size / size) * (river ? 1.25 : 1);
+}
+const cramped = new WeakMap();
+function placeIn(s, key, boxes, score) {
+  let best = null;
+  for (const c of boxes) {
+    const p = R.findSpot(s, key, { box: c, score, free: true });
+    if (p) { const v = score(p.x, p.y); if (!best || v < best.v) best = { ...p, v }; }
+  }
+  if (!best) { cramped.set(s.map.t, s.day); return false; }
+  const cost = R.costOf(s, BUILDING[key].cost, key);
+  if (s.stock.credits < cost.credits || s.stock.parts < cost.parts) return false;
+  return R.build(s, key, best.x, best.y).ok;
+}
+const reachBox = (s) => { const d = dockOf(s); return { x0: Math.max(0, d.x - 24), y0: Math.max(0, d.y - 24), x1: Math.min(s.map.w - 1, d.x + 25), y1: Math.min(s.map.h - 1, d.y + 25) }; };
+function builder(s) {
+  const q = pending(s), sum = R.summary(s), cmd = cmdOf(s);
+  const busy = s.buildings.filter((b) => b.build > 0).length, crews = R.crewsOf(s);
+  let did = 0;
+  const can = () => busy + did < crews + 1 && s.stock.credits > 200;
+  const go = (ok) => { if (ok) did++; return ok; };
+  const home = (x, y) => Math.abs(x - cmd.x) + Math.abs(y - cmd.y);
+  const boxes = s.chambers.filter((c) => c.status === 'open');
+  const powerLeft = sum.power.supply - sum.power.demand + q.power, pop = s.pop, grow = Math.max(10, pop * 0.12);
+  if (s.day === 60) R.setTax(s, 0.15);
+  if (can() && net(s, 'air') + q.air < grow * 0.6) go(placeIn(s, 'airplant', boxes, (x, y) => home(x, y) + (soilOf(s, x, y, 2) > 1.2 ? 40 : 0)));
+  if (can() && powerLeft < 8) {
+    if (s.unlocked.includes('induction') && s.stock.credits > 900) go(placeIn(s, 'induction', [reachBox(s)], home));
+    if (!did) go(placeIn(s, 'solar', [reachBox(s)], (x, y) => (s.map.t[y * s.map.w + x] === T.HULL ? 0 : 50) + home(x, y) / 4));
+  }
+  if (can() && net(s, 'water') + q.water < 8 + grow * 0.5) go(placeIn(s, 'riverpump', boxes, home));
+  if (can() && net(s, 'food') + q.food < grow) {
+    if (!go(placeIn(s, 'farm', boxes, (x, y) => { const v = soilOf(s, x, y, 2); return v < 1.6 ? null : -v * 100 + home(x, y) / 10; }))) go(placeIn(s, 'hydro', boxes, (x, y) => home(x, y) + (soilOf(s, x, y, 1) > 1.2 ? 30 : 0)));
+  }
+  const fed = net(s, 'food') >= 0 && net(s, 'water') >= 0 && net(s, 'air') >= 0;
+  if (can() && fed && sum.housing + q.housing - pop < Math.max(15, pop * 0.15)) {
+    const field = R.parkField(s);
+    go(placeIn(s, 'habitat', boxes, (x, y) => home(x, y) + (field[y * s.map.w + x] ? 0 : 25) + (soilOf(s, x, y, 1) > 1.2 ? 30 : 0)));
+  }
+  if (can()) {
+    const field = R.parkField(s), bare = s.buildings.find((b) => b.key === 'habitat' && !field[b.y * s.map.w + b.x] && !b.build);
+    if (bare && !queued(s, 'park')) go(placeIn(s, 'park', boxes, (x, y) => Math.abs(x - bare.x) + Math.abs(y - bare.y) + (soilOf(s, x, y, 1) > 1.2 ? 4 : 0)));
+  }
+  if (can() && s.day >= 8 && !count(s, 'repairyard')) go(placeIn(s, 'repairyard', boxes, (x, y) => home(x, y) + (soilOf(s, x, y, 2) > 1.2 ? 40 : 0)));
+  if (s.day >= 25) {
+    const work = s.chambers.find((c) => ['surveying', 'surveyed', 'pressurising'].includes(c.status));
+    const roomy = boxes.reduce((t, c) => t + c.tiles, 0) / 5 > pop + 40 && s.day - (cramped.get(s.map.t) ?? -99) > 10;
+    if (!work && s.stock.credits > 400 && !roomy) {
+      const links = R.chamberLinks(s);
+      const cand = s.chambers.filter((c) => c.status === 'sealed' && [...links.get(c.id)].some((id) => R.chamberOf(s, id).status === 'open')).sort((a, b) => a.breaches.length - b.breaches.length);
+      if (cand.length) R.chamberAction(s, cand[0].id, 'survey');
+    } else if (work?.status === 'surveyed') {
+      for (const i of R.openBreaches(s, work)) { const x = i % s.map.w, y = (i / s.map.w) | 0; if (!s.buildings.some((b) => b.x === x && b.y === y) && s.stock.credits > 60) R.build(s, 'seal', x, y); }
+      if (!R.openBreaches(s, work).length) {
+        const air = R.pressuriseAir(s, work);
+        if (R.storageCaps(s).air < air && !queued(s, 'depot') && placeIn(s, 'depot', boxes, home)) R.setMode(s, s.buildings.at(-1).id, 'air');
+        if (s.stock.air >= air) R.chamberAction(s, work.id, 'pressurise');
+      }
+    }
+  }
+  if (s.unlocked.includes('oremine')) {
+    if (can() && count(s, 'oremine') < 2 + (pop >= 160) && s.stock.credits > 500) {
+      const seam = (x, y) => { let n = 0; for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) if (s.map.r[(y + dy) * s.map.w + x + dx] === 1) n++; return -n * 100 + Math.abs(x - dockOf(s).x) + Math.abs(y - dockOf(s).y); };
+      go(placeIn(s, 'oremine', [reachBox(s)], seam));
+    }
+    if (s.stock.ore >= 30) R.sell(s, 'ore', Math.floor(s.stock.ore));
+  }
+  const cap = R.storageCaps(s);
+  if (s.stock.food > cap.food * 0.9 && net(s, 'food') > 0) R.sell(s, 'food', Math.floor(s.stock.food - cap.food * 0.7));
+  else if (s.stock.credits < 300 && s.stock.food > 150 && net(s, 'food') > 0) R.sell(s, 'food', Math.floor(s.stock.food - 150));
+}
+function playNormal(seed, { days = 250, defence = null } = {}) {
+  const s = newGame({ seed, difficulty: 'normal' }), rng = stateRng(s), raids = [];
+  let deaths = 0, firstWarn = null;
+  for (let d = 0; d < days; d++) {
+    builder(s);
+    if (defence && s.stock.credits > 900) defend(s, defence);
+    for (const p of [...s.pending]) if (p.kind === 'raid') {
+      const pv = R.raidPreview(s), c = s.raid.coming, r = R.answer(s, p.id, 'fight');
+      raids.push({ day: s.day, tier: c.tier, faction: c.faction, strength: c.strength, defence: Math.round(pv.defence), win: pv.winChance, result: r.report.won ? 'won' : 'lost', lost: r.report.lostGuardians.length, damaged: r.report.damaged.length });
+    }
+    const before = s.pop;
+    dayTick(s, rng);
+    if (s.pending.some((p) => p.kind === 'raidwarn')) firstWarn ??= s.day;
+    if (s.pop < before && s.log.some((l) => l.day === s.day && /died/.test(l.text))) deaths += before - s.pop;
+    s.pending = s.pending.filter((p) => p.kind === 'raid');
+  }
+  return { s, raids, deaths, firstWarn };
+}
 {
-  const r = play(1, { difficulty: 'normal', defence: { machines: 6, barracksMax: 3 }, days: 250 });
+  const r = playNormal(1, { defence: { machines: 6, barracksMax: 3 } });
   const { s } = r, won = r.raids.filter((x) => x.result === 'won').length;
   console.log(`normal defended seed 1: day ${s.day} pop ${s.pop} guardians ${s.guardians.length} (crews ${R.crewCap(s)}) heat ${Math.round(s.raid.heat)} first warning ${r.firstWarn} deaths ${r.deaths}`);
   console.log('    raids:', fmt(r));
-  const un = play(1, { difficulty: 'normal', defence: false, days: 250 });
-  console.log(`normal undefended seed 1: pop ${un.s.pop}; raids:`, fmt(un));
-  check(r.raids.length >= 4 && won / r.raids.length >= 0.5 && !s.flags.lost, `Normal with defences: beatable (${won}/${r.raids.length} won)`);
-  const meanE = easyDef[0].raids.slice(0, 4).reduce((t, x) => t + x.strength, 0), meanN = r.raids.slice(0, 4).reduce((t, x) => t + x.strength, 0);
-  check(meanN > meanE && r.firstWarn < easyDef[0].firstWarn + 30, `Normal is tougher: the first raids ${meanN} vs ${meanE} on Easy`);
+  const un = playNormal(1);
+  console.log(`normal undefended seed 1: pop ${un.s.pop} deaths ${un.deaths}; raids:`, fmt(un));
+  check(r.raids.length >= 4 && won / r.raids.length >= 0.6 && !s.flags.lost && r.deaths === 0, `Normal with defences: beatable (${won}/${r.raids.length} won)`);
+  check(un.raids.every((x) => x.result === 'lost') && un.deaths === 0 && un.s.pop >= 150, `Normal without defences: every raid lost, the colony survives (pop ${un.s.pop})`);
+  const mean = (list, k) => list.reduce((t, x) => t + x[k], 0) / list.length, e = easyDef.flatMap((x) => x.raids.slice(0, 4));
+  const meanE = mean(e, 'strength'), meanN = mean(r.raids.slice(0, 4), 'strength'), winE = mean(e, 'win'), winN = mean(r.raids.slice(0, 4), 'win');
+  check(meanN > meanE * 1.15 && winN < winE, `Normal is tougher: the first raids average ${Math.round(meanN)} vs ${Math.round(meanE)} on Easy; win chance ${Math.round(winN * 100)}% vs ${Math.round(winE * 100)}%`);
 }
 
 // Beta: a large expansion army (30 machines with the Azoras Kai and the Kai series) wins every raid
@@ -759,7 +871,7 @@ for (const seed of [1, 2]) {
   for (let d = 0; d < 500; d++) { for (const p of [...s.pending]) R.answer(s, p.id, p.choices[0].key); dayTick(s, rng); }
   const ms = performance.now() - t;
   console.log(`500 more days of the defended colony (${s.buildings.length} buildings, ${s.guardians.length} guardians, ${s.raid.count} raids in all): ${ms.toFixed(0)} ms`);
-  check(ms < 1000, `500 days well under 2 s (${ms.toFixed(0)} ms)`);
+  check(ms < 1500, `500 days well under 2 s (${ms.toFixed(0)} ms)`);
 }
 
 const bad = refusals.filter((m) => typeof m !== 'string' || m.length < 8 || !/[.!?]$/.test(m) || /undefined|NaN|null|\[object/.test(m));

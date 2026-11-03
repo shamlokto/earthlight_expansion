@@ -614,8 +614,12 @@ export function answer(state, pendingId, choiceKey) {
     if (r.ok) state.pending = state.pending.filter((x) => x.id !== pendingId);
     return r;
   }
+  if (p.kind === 'wanderer' && choiceKey === 'invite') {
+    const r = inviteWanderer(state, p.wanderer);
+    if (r.ok) state.pending = state.pending.filter((x) => x.id !== pendingId);
+    return r;
+  }
   state.pending.splice(i, 1);
-  if (p.kind === 'wanderer' && choiceKey === 'invite') return inviteWanderer(state, p.wanderer);
   return ok(`${p.title}: ${c.label}.`);
 }
 
@@ -753,6 +757,7 @@ export const RAID = {
   heat: { pop: 20, value: 2000, chamber: 2, sales: 1000, jammer: 10, jammerMax: 30, rook: 5, ease: 0.1 },
 };
 // Raid tiers by menace (= day + 2 × heat, minus the difficulty's shift): who comes and how many.
+// Strength = Σ raiders' (attack + defence) × (1 + 0.08 × level), × the difficulty's factor, × (1 + heat / 100).
 export const RAID_TIERS = [
   { key: 'scavengers', name: 'Scavengers', menace: 0, n: [1, 3], tiers: [1, 1], levels: [0, 0] },
   { key: 'pirates', name: 'Pirate band', menace: 120, n: [4, 8], tiers: [1, 2], levels: [0, 2] },
@@ -1074,7 +1079,8 @@ export function makeRaid(state, rng, day = state.day) {
   if (T.capital) units.push({ type: CAPITALS[Math.floor(rng() * CAPITALS.length)].type, level: between(rng, T.levels) });
   while (units.length < n) units.push({ type: pool[Math.floor(rng() * pool.length)].type, level: between(rng, T.levels) });
   const from = ['north', 'east', 'west', 'earth'][Math.floor(rng() * 4)];
-  const strength = Math.round(units.reduce((t, u) => t + raiderPower(u), 0) * RAID.strength[dkey(state)]);
+  // heat makes them bolder: strength × (1 + heat / 100)
+  const strength = Math.round(units.reduce((t, u) => t + raiderPower(u), 0) * RAID.strength[dkey(state)] * (1 + heat / 100));
   return { day, from, tier: T.key, units, faction, strength };
 }
 const shipShare = (raid) => {

@@ -315,9 +315,10 @@ export function dayTick(state, rng) {
   const welfare = deptHead(state, 'welfare');
   if (welfare) parts.push({ label: 'Welfare', value: Math.round((COMMANDER[welfare.key].charm || 0) / 20) });
   const rd = state.raid;
-  rd.moods = rd.moods.filter((m) => state.day - m.day < m.days);
+  // (full on the day after, gone `days` days later)
+  rd.moods = rd.moods.filter((m) => state.day - m.day <= m.days);
   const moods = {};
-  for (const m of rd.moods) moods[m.label] = (moods[m.label] || 0) + m.value * (1 - (state.day - m.day) / m.days);
+  for (const m of rd.moods) moods[m.label] = (moods[m.label] || 0) + m.value * (1 - (state.day - m.day - 1) / m.days);
   for (const [label, v] of Object.entries(moods)) if (Math.round(v)) parts.push({ label, value: Math.round(v) });
   if (f.wagesUnpaid && state.commanders.some((c) => c.key === 'w_brann')) parts.push({ label: 'Brann unpaid', value: -2 });
   if (pop > housing) parts.push({ label: 'Crowding', value: -Math.min(30, Math.floor((housing ? (pop - housing) / housing : 1) * 50)) });

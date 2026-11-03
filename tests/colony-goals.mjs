@@ -70,6 +70,12 @@ function act(s) {
     const st = R.techStatus(s), want = ['smelting', 'medicine', 'fabrication', 'reclaim'].find((k) => st.find((t) => t.key === k && t.available && !t.done));
     if (want && s.research.focus !== want && !st.find((t) => t.key === s.research.focus && !t.done)) R.research(s, want);
     if (finished(s, 'lab') === 0 && !queued(s, 'lab')) placeAny(s, 'lab');
+  } else if (sh?.defence) {
+    // a player who opens Defence orders the cheapest machine the Arsenal can build
+    if (sh.defence === 'production' && !(s.production || []).length) {
+      const m = R.machineList(s).filter((x) => x.ok).sort((p, q) => p.price - q.price)[0];
+      if (m) R.orderMachine(s, m.type);
+    }
   } else if (sh?.market) { if (s.guardians.length && s.imported?.beta) R.sellGuardian(s, s.guardians[0].id); else if (s.stock.ore) R.sell(s, 'ore', s.stock.ore); else R.sell(s, 'food', 10); }
 }
 function play(opts, days = 300) {

@@ -260,8 +260,9 @@ for (const [name, gen] of gens) {
     act(rules.setTax(s, 0.5)); check(s.tax === 0.3, 'tax clamps');
     check(!act(rules.sell(s, 'ore', 10)).ok && !act(rules.sell(s, 'gold', 1)).ok && !act(rules.sellGuardian(s, 99)).ok, 'market refusals');
     const bl = rules.buildable(s);
-    // version 2 (docs/COLONY-V2.md): 17 version 1 buildings + 18 new ones, locked behind research
-    check(bl.length === 35 && bl.find((b) => b.key === 'road') && bl.find((b) => b.key === 'oremine').why.includes('80') && bl.find((b) => b.key === 'smelter').why === 'Research Smelting.', 'buildable list');
+    // version 2 (docs/COLONY-V2.md): 17 version 1 buildings + 18 new ones, locked behind research;
+    // version 3 (docs/COLONY-V3.md): + 13 more
+    check(bl.length === 48 && bl.find((b) => b.key === 'road') && bl.find((b) => b.key === 'oremine').why.includes('80') && bl.find((b) => b.key === 'smelter').why === 'Research Smelting.', 'buildable list');
     const ti = rules.tileInfo(s, cmd.x, cmd.y);
     check(ti.building?.key === 'command' && ti.chamber?.status === 'open', 'tileInfo');
     for (const k of ['park', 'reach', 'power', 'happiness']) check(rules.coverage(s, k).length === w * s.map.h, `coverage ${k}`);
@@ -350,7 +351,9 @@ for (const [name, gen] of gens) {
     const b = newGame({ seed: 1, generate: gen, importSave: { 'el-expansion-campaign': JSON.stringify({ roster }) } });
     check(b.stock.credits === 3000 + 10 * 24 * 3, 'import without types: 24 a machine');
     const c = newGame({ seed: 1, generate: gen, importSave: data, beta: true, types });
-    check(c.stock.credits === 3000 && JSON.stringify(c.guardians) === JSON.stringify(roster), 'beta: guardians = roster');
+    // version 3: each guardian also gets full HP, no commander and 60 days of free upkeep (D7)
+    check(c.stock.credits === 3000 && JSON.stringify(c.guardians.map(({ id, type, level }) => ({ id, type, level }))) === JSON.stringify(roster)
+      && c.guardians.every((g) => g.hp === rules.maxHp(c, g) && g.free === 60 && g.commander === null), 'beta: guardians = roster');
     const r = act(rules.sellGuardian(c, 1));
     check(r.ok && c.stock.credits === 3000 + price(30) * 10 && c.stock.parts === 250 + price(30) && c.guardians.length === 2, 'sellGuardian');
   }
