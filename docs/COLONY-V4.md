@@ -83,8 +83,11 @@ chamber, shown on the map and listed in a **Discoveries** journal.
 * **An Earth relief quota shipped**: food, air and helium-3 sent to Earth by **relief convoys** from the
   dock (or a Mass Driver), e.g. 20 convoys of 100 units.
 * A **Victory** screen with an ending (Ruess, Sato and the General), the colony's statistics, and an
-  extra epilogue if the final vault was opened. What happens after the ending (the game ends, or the
-  colony continues as a sandbox) is an open question for the owner.
+  extra epilogue if the final vault was opened. **Afterwards the player saves and keeps playing** (D25):
+  the colony continues as a sandbox, with the victory remembered in the save.
+* **Videos** (D26): a few short xAI clips for the big moments, the ending first (then candidates: the
+  opening landfall, the first raid, the final vault), made image-to-video from the game's own art so
+  they match; small files, each with a still-picture fallback, skippable.
 
 ## 5. Build order
 1. Decks: map generator for three decks, state and save, rules (deck in placement, lifts, per-deck

@@ -34,6 +34,8 @@ this document is the plan we agree on first.
 | D22 | **Secrets in the deserted colony** (owner): story logs building to a mystery, hidden vaults and blueprints, survivors in hiding, and dangers guarding the best rewards. |
 | D23 | **Expeditions** (owner): the stationed fleet explores the surroundings on a **sector map** around Eden; squadrons with a commander travel for days, face auto-resolved dangers, and bring back loot, blueprints, survivors, unique machines, or open new regions. |
 | D24 | **The win is Eden Restored** (owner): every chamber on every deck pressurised, a population target, and an Earth relief quota shipped. |
+| D25 | **After the win, keep playing** (owner, 2026-11-03): the ending plays, then the player can save and the colony continues as a sandbox. |
+| D26 | **A few xAI videos for the big moments** (owner): short clips (grok-imagine-video, image-to-video from the game's own art so they match), limited to a few: the ending above all; candidates the opening landfall, the first raid, the final vault. Kept small (480p–720p, about 10 s each), and every video has a still-image fallback. |
 
 ## 1. Ground rules
 
