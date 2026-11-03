@@ -173,3 +173,64 @@ buildings[i].deck             // 'upper' | 'lower'; absent = 'main'
   the overlay bar; the current deck in the top bar; the build menu greys buildings that cannot stand
   on the current deck ("Upper deck only"); the inspector shows the deck; Show me switches decks when
   the target is on another; How to play: a "Decks and lifts" section.
+
+---
+
+## Stage 2 build contract: the secrets
+
+### Data (written): `js/colony/data/secrets.js`
+`LOGS` (20 story logs; five carry `key` 1–5, the final vault's code), `VAULTS` (7, with `requires` and
+`reward`; the two prototypes are the original game's never-fielded MSNP-II (type 46) and MSFB-5 (type 48)),
+`SURVIVORS` (5 groups; two bring unique commanders `SURVIVOR_COMMANDERS`: Warden Ilse Marrow and Tobias
+Venn), `DANGERS` (drones, toxic, radiation, flooded, reactor).
+
+### Placement (`js/colony/secrets.js`, new; pure, deterministic from the seed)
+`placeSecrets(state)` puts every log, vault and survivor group into a chamber (their preferred deck; most on
+the lower deck), and dangers into chambers: drones in 3–4 lower chambers (guarding the prototype hangars
+and the final vault), radiation around the old core (the lower chamber of kind `core`), the reactor in that
+core chamber, toxic air in 2–3 others, flooding wherever a chamber has many MARSH tiles. Never in the
+landing chamber; at most one danger per chamber; vaults behind dangers per their `requires`. Each site has a
+tile (a free floor tile of its chamber). Old saves get secrets on load.
+
+```js
+state.secrets = {
+  sites: [{ id, kind: 'log' | 'vault' | 'survivors', ref, chamber, x, y, deck, found: false, done: false }],
+  dangers: [{ chamber, kind, strength?, work: 0, deadline?: day, done: false }],
+  read: [logIds], journal: [{ day, kind, ref }], finalOpened: false,
+}
+```
+
+### Rules and sim
+* A chamber's sites and danger are **found** when it is surveyed (pending event kind `discovery`, speaker
+  `ruess` or `sato`, listing what was found; logs found are readable at once in the journal).
+* **A danger blocks pressurising** its chamber until `done` (except the reactor): `clearDanger(state,
+  chamberId)` → for drones, an auto-resolved fight using the guardians (crewed, at home, like a raid:
+  win chance shown by `dangerPreview(state, chamberId)`; losses possible; on a win, salvage); for toxic and
+  radiation, pays the cost and starts crew work (days; a Shield Pylon on that deck halves radiation work);
+  flooded clears itself when the chamber has no MARSH left (Pump Stations). The reactor: when found,
+  `deadline = day + 60`; `clearDanger` pays and starts crew work; if the deadline passes undone, 1–4
+  buildings on its deck are damaged and two sealed-off-but-not-open chambers there go back to sealed (event).
+* **Vaults**: `openVault(state, siteId)` when the site's chamber is open and `requires` are met (`key`: that
+  log read; `drained`, `cleared`, `power: n` spare power, `code`: all five key logs read). Rewards: goods,
+  research points, a tech finished, a machine added to the guardians (the prototypes), poor soil made
+  fertile in its chamber, and for the final vault `secrets.finalOpened = true` (pending event kind
+  `finalvault`: the revelation, with the registry: Ruess, Sato and Marrow speak).
+* **Survivors** join when their chamber is opened (and `requires` met): pop added, the commander (if any)
+  joins the commanders (beyond the cap: they wait at Officers' Quarters / count as one extra each).
+* `secretStatus(state)` → `{ logs: { read, total }, vaults: { opened, total }, survivors: { joined, total },
+  dangers: [...], keys: n, finalOpened }` for the journal.
+* Goals (the lead): read five logs; clear a danger; open a vault; open the final vault (optional story goal).
+
+### View
+Site markers on found sites (a log terminal glowing cyan, a vault door, a survivors' lantern), drones as
+small red-eyed sentries patrolling their chamber until cleared, toxic chambers with a green haze, radiation
+with a faint violet shimmer and flickering lights, the reactor chamber with a pulsing red core, flooded
+tiles already render as marsh. A brief skirmish when drones are cleared (reuse the raid effects).
+
+### Interface
+A **Discoveries** journal (button and key J): logs in story order (unread ones locked as "not found yet"),
+the five code fragments as a row of slots, vaults with their requirements and Open buttons, survivors,
+dangers with Clear buttons and previews; the inspector shows a chamber's sites and danger; event windows
+for `discovery`, `finalvault` (a large, special window: the revelation text and Marrow reading the
+registry), drone fights and the reactor's deadline; the top bar shows a reactor countdown while one is
+pending. How to play: "Secrets of Eden".
