@@ -22,6 +22,7 @@ this document is the plan we agree on first.
 | D10 | **Building variety is the heart of the game**: deep research into SimCity, space colony and space mining games for reference (§11). |
 | D11 | **Designed to be beautified with xAI later**: every visual is a named art slot with a procedural fallback (§7). |
 | D12 | **The map's shape**: a large, partly broken colony lying in Earthlight-style space terrain; once repaired its interior is huge (farms, homes, more); buildings extend into the space terrain for mining and power; **Earth's atmosphere runs along the bottom of the map**. The map is expanded later with more elements. |
+| D13 | **Start simple**: a small first version, advanced parts later; landscapes that look like Earth Light's (§5.3, §16). |
 
 ## 1. Ground rules
 
@@ -167,20 +168,50 @@ bottom of the map is Earth's atmosphere**, with Earth filling the view below.
   format never assumes a fixed size. (Owner: "later we can expand the map and add elements to
   make it even more fun.")
 
-### 5.3 Sector states (how the colony grows)
+### 5.3 It looks like Earth Light (owner, 2026-11-03)
 
-**Interior**: `sealed` (dark, unknown) → `surveyed` (terrain, artifacts and damage visible; costs a
-survey drone trip) → `repaired` (hull breach sealed; parts and days) → `pressurised` (air pumped in;
-needs spare air capacity) → **buildable**.
+The colony art is original (D3), but the **landscape grammar is Earth Light's**, taken from what
+was measured on the original's 30 maps (`docs/EXPANSION.md`, "What the ROM's late maps do"):
 
-**Space**: `surveyed` → `claimed` (needs a dock or a tether mast within reach, and the right tech).
+* **Space features are organic**: plasma lakes, gravity-flux rivers, asteroid ridges, **diagonal
+  magnetic belts**, meteoroid drifts, a comet with its tail, all mixed together, never straight
+  bands. Near Eden space is fairly open (about 65% void, like the early maps); further out it gets
+  as busy as the late maps (26–37% void).
+* **The Earth edge** is drawn as in CLARKE and BABYLON: an **atmosphere band along the bottom**
+  (8 tiles here) with **Earth's body below it**, which cannot be built on.
+* **Eden is an Earth Light fortress grown into a city.** The original's stations (GOTLIEB) and
+  fortress mazes (VARAMU) are walled complexes of **chambers, decks and narrow gates**, with
+  **turret railways** along the walls, **docks** at the gates and a **command centre** in the
+  heart. Eden keeps that shape: an outer **hull wall**, inner **bulkheads** dividing it into
+  **chambers**, **gates** between them, railways along the hull, docks where the hull opens to
+  space, and the Command Centre in the middle. Only now the chamber floors are fields, rivers
+  and forests.
+* **Leftovers of the war**: Wisp minefields still drift in the lanes (a hazard to clear, and
+  salvage once cleared), wrecks of both navies, Decimator craters.
 
-Damage varies by sector: a light breach is a week of work, a district open to space is a
-season. Every claimed sector also raises **heat** and may open a new **raid approach** (§13),
-so growth is never free. This is the expansion mechanic in story form: you are not buying
-land, you are giving a dead place air again.
+### 5.4 Chambers (how the colony grows)
 
-### 5.4 Terrain
+The interior is split by bulkheads into about **24 chambers** of different sizes (roughly
+24 × 24 to 48 × 40 tiles), each with its own character: a field chamber on the old river, a
+forest chamber, a hill chamber, an industrial deck chamber, a rubble district. **The chamber is
+the unit you repair**, which makes growth a sequence of real decisions (which chamber next?)
+rather than painting squares.
+
+**A chamber's states**: `sealed` (dark, unknown) → `surveyed` (terrain, artifacts and breaches
+visible) → `sealed off` (every breach in its walls patched: parts and crew days per breach) →
+`pressurised` (air pumped in; needs spare air capacity) → **open**.
+
+A light chamber is a week's work; a district open to space is a season. Gates connect open
+chambers: a building's coverage passes through an open gate, not through a bulkhead.
+
+**Space** is claimed by sector (16 × 16 tiles): `surveyed` → `claimed` (within reach of a dock
+or tether mast, with the right tech).
+
+Every open chamber and claimed sector raises **heat** and may open a new **raid approach**
+(§13), so growth is never free. In story terms, you are not buying land; you are giving a dead
+place air again.
+
+### 5.5 Terrain
 
 **Interior (Lanternfall, owner's D9)** — soil multipliers as in Lanternfall's `land.js`:
 
@@ -212,7 +243,7 @@ land, you are giving a dead place air again.
 | **Void** | Light orbital modules; the lanes raiders come in by |
 | **Hull** | Shipyards, docks, turret mounts; breach points |
 
-### 5.5 Artifacts (Lanternfall's resources and ruins)
+### 5.6 Artifacts (Lanternfall's resources and ruins)
 
 One per tile at most, revealed by survey: **ore seam**, **ice vein**, **helium-3 pocket**, **old
 spring** (water; habitats here +happiness), **seed vault** (a farm here starts at fertile),
@@ -221,7 +252,7 @@ spring** (water; habitats here +happiness), **seed vault** (a farm here starts a
 bunker** (a wanderer may be hiding in it), **abandoned dock** (repair it for a free dock),
 **Decimator crater** (contaminated; rich ore once cleaned).
 
-### 5.6 Projects (Lanternfall's, extended)
+### 5.7 Projects (Lanternfall's, extended)
 
 Clear rubble (gives parts) · drain flood · seal breach · restore river pumps · decontaminate ·
 salvage wreck · excavate data core · tow asteroid (moves an asteroid tile into reach of a dock).
@@ -375,37 +406,187 @@ unlock later.
 
 ---
 
-## 10. Buildings, tiers and adjacency (rules)
+## 10. Buildings: the rules (from the research)
 
-* Most buildings take **1 tile**; large ones **2 × 2** or **3 × 3** (arcology, spaceport, fusion).
-* **Terrain and artifacts decide where** (Lanternfall): farms by soil, mines on seams, induction
-  collectors only on magnetic fields.
-* **Adjacency, not pipes**: utilities reach by coverage radius; neighbours give bonuses
-  (Lanternfall: farm +25% by a river, +20% next to a mill; market +1 per neighbouring housing).
-* **Diminishing returns** (Lanternfall): beyond three markets, half yield; stacking bonuses cap.
-* **Construction takes days** and needs workers; nothing works while building or damaged.
-* **Upgrade paths**: many buildings have levels (clinic → hospital) instead of separate entries.
+Building variety is the heart of the game (D10). Four research reports sit behind this
+(`docs/colony-research/`: SimCity lineage, space colony games, mining and markets, commanders).
+These are the rules the catalogue follows, each with the game it comes from:
+
+1. **Coverage is a field, not walkers or pipes.** Each service building has one radius number,
+   shown as an overlay (SimCity 2000). Coverage passes through open gates, not bulkheads. The
+   overlay shows the *real* reach (Cities: Skylines showed something else, and players argued for years).
+2. **Upgrade in place, on the same tiles** (Aven Colony): most buildings have **levels 1–3**, so
+   a layout made early still works late. What improves is **output per tile**, so space inside the
+   hull does the balancing (Cities: Skylines schools: 12.5 → 28.6 → 104 students a tile).
+3. **Modules instead of bigger buildings** (Cities: Skylines 2's extension wings): some
+   buildings take one module: **+capacity**, **+quality** or **+range**.
+4. **Work modes** (Tropico): one building, two or three behaviours with trade-offs, switched any
+   time. The most variety for the least art.
+5. **Terrain decides where** (Lanternfall, Pharaoh): many buildings only work on one terrain,
+   and Earth Light's terrains give the space buildings their reasons to exist.
+6. **Clusters pay** (IXION's specialisation, made visible): **four or more buildings of one kind
+   in one chamber** give that chamber a named bonus (a *Farm Belt*, an *Industrial Deck*). The
+   threshold is shown on screen.
+7. **Loop closers** (Surviving Mars, Oxygen Not Included): buildings that turn waste into
+   input: reclaimed water, hydrogen from the air plants as fuel, waste to mushrooms.
+8. **Decorations are cheap and raise a ceiling** (Surviving Mars): parks cost little, use **water,
+   not power**, and lift happiness only up to their rating, so spamming them doesn't pay.
+9. **Lifecycles** (Cities: Skylines' landfill): a tailings dump fills, spoils its neighbours, and
+   must be emptied before it can be removed.
+10. **Housing evolves to show what's missing** (Caesar III): a habitat grows through levels as its
+    needs are met, and its panel lists what the next level needs. That *is* the happiness readout.
+11. **Patents change the rules** (Offworld Trading Company): one-off purchases that edit a rule
+    for the whole colony.
+12. **Landmarks have two gates** (Cities: Skylines): a milestone **and** a behaviour; a couple
+    reward surviving a disaster. Once earned they stay unlocked, so nobody wrecks a colony to farm them.
+13. **Megastructures are chained** (Cities: Skylines' monuments): each needs landmarks from
+    different branches. **None deletes a system**; they make one cheaper. (Monuments that
+    delete a whole system, like the Hadron Collider, were the late-game complaint.)
+14. **Everything can be moved** for a fee. Buildings that can't be moved were the most hated
+    single decision in IXION and Planetbase.
+15. **Show the deficit forming**, not after it's fatal (Oxygen Not Included, Planetbase).
+
+**Sizes**: 1 × 1, 2 × 2, 3 × 3. **Construction** takes days and crew; nothing works while being
+built or damaged. **Upkeep** is paid in credits and, for machinery, in parts. A building short of
+parts looks broken and slows down, so the shortfall shows on the map (Per Aspera).
 
 ## 11. Building catalogue
 
-*Pending the deep research (owner's D10: SimCity, space colony and space mining references).
-Draft 1's tier-0 set stays as the baseline below.*
+**Version** says when it arrives (§16): **1** is the first playable game; later versions add the
+rest. Where = where it can stand (I = interior, S = space, H = hull, A = atmosphere band).
 
-| Building | Cost (parts) | Jobs | Produces /day | Consumes /day |
+### Command and logistics
+
+| Building | Ver | Where · size | What it does | Twist |
 |---|---|---|---|---|
-| Landing Pad | start | — | — | — |
-| Habitat Block | 20 | — | 40 housing | 4 power, 2 air |
-| Solar Array | 15 | 1 W | 25 power | — |
-| Ice Mine (space, comet tail) | 25 | 3 W | 30 water | 8 power |
-| Water Reclaimer | 20 | 2 W | 60% of water used returns | 6 power |
-| Hydroponics Bay | 30 | 4 W | 24 food | 10 water, 6 power |
-| Electrolysis Plant | 25 | 2 T | 40 air | 8 water, 12 power |
-| Granary / Tank / Air Tank / Battery | 10 each | — | buffers | 1 power |
-| Ore Mine (asteroid) | 30 | 4 W | 20 ore | 10 power |
+| **Command Centre** | 1 | I · 3×3, start | The Governor's seat (Lanternfall's keep). Surveys chambers; small storage; admin coverage | Its level is the colony's **charter**, which unlocks tiers. Lose it in a raid and the game is over |
+| **Dock** | 1 | H · 2×2, at a hull gate | Joins inside and outside: space buildings must be within its reach; transports land here | Levels add berths. In version 3 it also repairs machines, as docks do in Earth Light |
+| **Repair Yard** | 1 | I · 2×2 | Ruess's crews: seal breaches, clear rubble, run projects | Levels: more crews at once |
+| **Storage Depot** | 1 | I or S · 1×1 | Stores 300 of one good | **Mode**: food / water / air / parts / ore |
+| **Tether Mast** | 2 | S · 1×1 | Extends a dock's reach into space | A chain of masts is the space "road" |
+| **Survey Drone Bay** | 2 | I · 1×1 | Deep survey: reveals artifacts further away | **Module**: +range |
+| **Mass Driver** | 4 | H · 3×3 | Launches relief convoys to Earth cheaply | A convoy is 100 units plus fuel, a prepared event (§8.1) |
 
-Per colonist per day: **1 food, 1.2 water, 1 air, 0.15 power**.
+### Power
 
----
+| Building | Ver | Where · size | What it does | Twist |
+|---|---|---|---|---|
+| **Solar Array** | 1 | H or S · 1×1 | Power, levels 12 / 20 / 30 | In Earth's shadow it drops (later: day and night) |
+| **Induction Collector** | 1 | S · 2×2, **magnetic field only** | Steady power by field tiles covered (strong) | Raiders' beams can't touch it (beams do nothing in a magnetic field, as in battle) |
+| **Battery Bank** | 1 | anywhere · 1×1 | Stores power | Power is otherwise the one good with no buffer |
+| **Plasma Skimmer** | 2 | S · 2×2, **plasma only** | Helium-3 | |
+| **Fusion Reactor** | 3 | I · 3×3 | Burns He-3: huge power | **Mode**: normal / overdrive (+50%, chance of shutdown) |
+
+### Water
+
+| Building | Ver | Where · size | What it does | Twist |
+|---|---|---|---|---|
+| **River Pump** | 1 | I · 1×1, beside river or lake | Water | Dry rivers must be restored first (project); a restored river feeds every farm along it |
+| **Water Reclaimer** | 2 | I · 1×1 | Recovers 50 / 60 / 70% of the water used in its chamber | Loop closer: improves the ratio instead of the supply |
+| **Ice Harvester** | 2 | S · 2×2, **comet tail only** | Lots of water | The tail drifts over the seasons, so harvesters must follow it (moving is cheap) |
+
+### Air
+
+| Building | Ver | Where · size | What it does | Twist |
+|---|---|---|---|---|
+| **Air Plant** | 1 | I · 2×2 | Water + power → air | Gives off hydrogen: version 2 turns it into fuel |
+| **Forest Grove** | 1 | I · 1×1, soil | Air with no power, slowly; counts as a park | Lanternfall's forest, kept for its air |
+| **Gas Scoop** | 2 | A · 2×2, **atmosphere only** | Air and nitrogen (nitrogen: farms in range +10%) | Sits on the raiders' climb lane from Earth |
+| **Bulkhead Seal** | 1 | wall · 1 tile | Patches one breach | Several per chamber; a damaged seal leaks air |
+
+### Food
+
+| Building | Ver | Where · size | What it does | Twist |
+|---|---|---|---|---|
+| **Farm Field** | 1 | I · 2×2, soil | Food × soil (fertile 1.8, plain 1.1, poor 0.55); +25% beside a river (Lanternfall) | **Mode**: grain / cash crop (credits, less food) / fallow (restores poor soil to plain) |
+| **Hydroponics Bay** | 1 | I or deck · 1×1 | Steady food from power and water; ignores soil | Dull and reliable, the fallback |
+| **Orchard Terrace** | 2 | I · 2×2, hills | Food and a little credits; luxury food (+happiness) | Lanternfall's orchard |
+| **Fishery** | 2 | I · 1×1, river or lake | Food | More on a fish stock artifact |
+| **Canteen** | 2 | I · 1×1 | Food quality → happiness in range | **Mode**: rationing (−20% food used, −happiness) |
+| **Seed Vault** | 2 | I · 1×1, on the artifact | Turns one poor tile in range to plain each season | Only where a vault is found |
+| **Mushroom Wall** | 3 | I · 1×1 | Food from habitat waste, no water | Loop closer |
+
+### Mining and industry
+
+| Building | Ver | Where · size | What it does | Twist |
+|---|---|---|---|---|
+| **Ore Mine** | 1 | S · 2×2, **asteroid only** | Ore (version 1 sells it; version 2 refines it) | ×2 on an ore seam; seams deplete, research slows that until they last (Dyson Sphere Program) |
+| **Salvage Yard** | 1 | I or S · 2×2 | Turns rubble and wrecks in range into parts | **Mode**: careful (slow, double value) / fast (Hardspace: Shipbreaker) |
+| **Meteoroid Sweeper** | 2 | S · 1×1, **meteoroid field** | A little ore and ice | Meteor strikes damage it now and then |
+| **Smelter** | 2 | I · 2×2 | Ore → alloy | |
+| **Fabricator** | 2 | I · 2×2 | Alloy → parts | **Module**: +capacity, or precision (machine parts for the Arsenal) |
+| **Tailings Dump** | 2 | S · 2×2 | Needed once you run more than four mines | Fills up and spoils nearby output; empty it (project) before removing it |
+| **Gravity Foundry** | 4 | S · 3×3, **gravity flux only** | Ore → alloy at double rate | Earth Light's gravity flux, put to work |
+
+### Homes and people
+
+| Building | Ver | Where · size | What it does | Twist |
+|---|---|---|---|---|
+| **Habitat** | 1 | I · 1×1 | Housing that **evolves**: shelter 20 → quarters 40 → apartments 70 as needs are met | Its panel lists what the next level needs (Caesar III) |
+| **Terrace Homes** | 3 | I · 2×2, hills | Low density, high happiness | Trades space for contentment |
+| **Wanderers' Lodge** | 3 | I · 2×2 | Wanderers stay here (§13.3) | Levels: more arrivals |
+| **Officers' Quarters** | 3 | I · 1×1 | Raises how many commanders you can keep | |
+| **Arcology** | 5 | I · 3×3 | 500 people with part of their services built in | A megastructure (see the end of this section) |
+
+### Services (coverage)
+
+| Building | Ver | Where · size | What it does | Twist |
+|---|---|---|---|---|
+| **Clinic → Medical Centre → Hospital** | 2 | I · 1×1 → 2×2 | Health in range; natural growth needs it | **Mode**: triage (cheaper, lower quality) |
+| **Safety Post** | 2 | I · 1×1 | Security **and** breach response in one (Caesar III's prefecture) | Fewer buildings, two services |
+| **Research Lab** | 2 | I · 2×2 | Research points | +50% on a Galt data core |
+| **School → Academy** | 3 | I · 2×2 | Workers → technicians → scientists | |
+
+### Leisure (happiness ceilings)
+
+| Building | Ver | Where · size | What it does | Twist |
+|---|---|---|---|---|
+| **Park** | 1 | I · 1×1 | Raises the happiness ceiling in range; uses water | +more on a memorial grove |
+| **Observation Deck** | 2 | H · 2×2, facing Earth | Happiness: the view of home | Only on the hull above the atmosphere band |
+| **Arena** | 4 | I · 3×3 | Big entertainment | **Mode**: machine exhibition, which displays one guardian machine: +happiness, but that machine sits out raids |
+| **Broadcast Tower** | 4 | I · 1×1 | Colony-wide; cuts fear after raids | **Mode**: news / morale (more happiness, lower wanderer loyalty) |
+
+### Defence (version 3)
+
+| Building | Ver | Where · size | What it does | Twist |
+|---|---|---|---|---|
+| **Sensor Mast** | 3 | H or S · 1×1 | Raid warnings come earlier | Levels: more warning days |
+| **Battery Emplacement** | 3 | H · 1×1 | A Dragon or Hydra battery, as in Earth Light, for raids | +range on a turret railway |
+| **Shield Pylon** | 3 | I or H · 1×1 | Protects buildings in range during raids | |
+| **Jammer Array** | 3 | S · 1×1 | Lowers heat | |
+| **Guardian Barracks** | 3 | I · 2×2 | Crews for the machines | One per few machines |
+| **Arsenal** | 3 | I · 3×3 | Parts → supply; builds machines (the expansion's list) | |
+| **Scrapyard** | 3 | I · 2×2 | Sells machines for credits and alloy | The fleet the General sold went through one |
+
+### Patents (version 4): rule changes, bought once
+
+Research plus credits, one-off, each edits one rule for the whole colony: **Closed Loop**
+(reclaimers +20%), **Silent Running** (heat −30%), **Soil Bank** (farms never wear the soil),
+**Union Charter** (tax tolerance +5), **Perpetual Grid** (all power use −20%), **Galt Doctrine**
+(machine upkeep −25%). Six to start; more later.
+
+### Landmarks (version 4): a milestone and a behaviour
+
+| Landmark | Gate | Gives |
+|---|---|---|
+| **Governor's Garden** | 500 colonists **and** happiness ≥ 70 for 30 days | Happiness ceiling +10 colony-wide |
+| **Ruess's Workshop** | 10 chambers open **and** no breach reopened for 60 days | Repairs −30% |
+| **Sato's Watch** | 5 raids repelled **and** no tribute ever paid | Raid warnings +5 days |
+| **Moraine's Bazaar** | You dealt with Moraine **and** traded 10 000 credits with the cartel | Unique cartel goods in the market |
+| **Hall of Names** | Survived a raid that destroyed 5+ buildings | Fear decays twice as fast (a reward for surviving a disaster) |
+| **The Lantern** | Every chamber open | A light Earth can see: relief contracts pay +25% (and the title's promise kept) |
+
+### Megastructures (version 5): chained, and none deletes a system
+
+| Megastructure | Needs | Gives |
+|---|---|---|
+| **Arcology** | Governor's Garden + Ruess's Workshop | 500 homes on 3×3 |
+| **Orbital Elevator** | Ruess's Workshop + The Lantern | Relief contracts at a fraction of the cost; Earth trade opens |
+| **Eden Restored** | Governor's Garden + Hall of Names + The Lantern | Air use −30% colony-wide (cheaper, never free); the ending |
+
+That is **53 buildings, 6 patents, 6 landmarks and 3 megastructures**, with **17 in version 1**
+(version 2: 18, version 3: 13, version 4: 4, version 5: 1).
+More come with each map expansion.
 
 ## 12. Tech tree and upgrade points
 
@@ -567,23 +748,50 @@ a colony's food. Selling ships you no longer need is a good answer.
 
 ---
 
-## 16. Build plan (step by step)
+## 16. Build plan: start simple, add the advanced parts later (owner)
 
-| Step | What | Main files |
-|---|---|---|
-| 1 | **Sim core**: day tick, resources, tier-0 buildings, sector map data, a plain 2D view | `colony.html`, `js/colony/{state,sim,map,buildings}.js`, `js/colony/data/*.json` |
-| 2 | **The 3D view**: three.js, sectors as chunks, orbit camera, kits, overlays, minimap | `js/colony/view3d/*`, `js/vendor/three/` |
-| 3 | **Sectors**: survey, repair, pressurise, projects, artifacts | `js/colony/sectors.js` |
-| 4 | **People**: classes, housing, immigration, happiness, tax | `js/colony/population.js` |
-| 5 | **The catalogue** (§11) and adjacency rules | `data/buildings.json` |
-| 6 | **Progress**: tech tree, research, upgrade points | `js/colony/tech.js` |
-| 7 | **Military**: machines from the expansion, upkeep, Arsenal and Scrapyard | `js/colony/army.js` |
-| 8 | **Commanders and wanderers** | `js/colony/commanders.js` |
-| 9 | **Raids**: heat, clock, auto-resolve, tribute, command on a hex map | `js/colony/raid.js` |
-| 10 | **Carry-over**: import save, beta | `js/colony/import.js` |
-| 11 | **Story**: intro, comms, events, endings | `js/colony/story.js` |
-| 12 | **Art slots** and the xAI script | `js/colony/art/`, `tools/art/colony-xai.mjs` |
-| 13 | **Balance**: model and 500-day headless run | `tools/colony-model.mjs`, `tests/colony-sim.mjs` |
+Each version is a complete, playable game, and ends with a commit. Version 1 is deliberately small.
+
+### Version 1: Landfall (the first playable game)
+
+* **Map**: the full starter map, but only the landing chamber and its dock open. Interior
+  terrains: plain and fertile soil, river, rubble, breached deck. Space: void, asteroid field,
+  magnetic field, atmosphere band and Earth.
+* **17 buildings**: Command Centre, Dock, Repair Yard, Storage Depot, Solar Array, Induction
+  Collector, Battery Bank, River Pump, Air Plant, Forest Grove, Bulkhead Seal, Farm Field,
+  Hydroponics Bay, Ore Mine, Salvage Yard, Habitat, Park.
+* **6 resources**: power, water, air, food, parts, credits. Ore is sold directly.
+* **People**: one class; housing, immigration, the happiness list (needs and tax only).
+* **Growth**: survey, seal and pressurise chambers; claim space sectors near the dock.
+* **Time**: live days with pause and speeds; events pause the clock.
+* **View**: the 3D rotatable map with procedural art (every art slot falls back to drawing).
+* **No** raids, commanders, research or industry chain yet.
+* Files: `colony.html`, `js/colony/{state,sim,map,chambers,buildings,population}.js`,
+  `js/colony/view3d/`, `js/colony/data/{buildings,terrain,map}.json`, `js/vendor/three/`,
+  `tests/colony-sim.mjs`.
+
+### Version 2: Reclamation
+More terrains (forest, hills, lake, marsh, comet tail, plasma, meteoroid field), the industry
+chain (smelter, fabricator, tailings), services (clinic, safety post, lab), the tech tree and
+upgrade points, clusters, the market with its buyers (§8.1), and edicts.
+
+### Version 3: Guardians
+Machines from the expansion with upkeep, the Arsenal and Scrapyard, defences, heat and the raid
+clock, **auto-resolved raids** and tribute, **commanders and wanderers**, worker classes and
+schools, and the **beta save import** (the fleet arrives).
+
+### Version 4: Society
+Entertainment, patents, landmarks, Moraine's branch, the mass driver and relief convoys,
+gravity flux, commanding a raid on the expansion hex map (ROM needed for that only).
+
+### Version 5: Reconstruction
+Megastructures, the endgame and endings, the full story and comms, a balance pass with the model
+script and 500-day headless runs, and the art slots filled by xAI.
+
+### Later
+Map expansions: more space, drifting wrecks and colony fragments, a second colony, new terrains,
+artifacts and events (owner: "later we can expand the map and add elements to make it even more
+fun").
 
 ## 17. Open decisions
 
@@ -608,5 +816,5 @@ Commanders: [SRW Z formulas](https://lparchive.org/Super-Robot-Wars-Z/Update%203
 [Darkest Dungeon stagecoach](https://darkestdungeon.wiki.gg/wiki/Stage_Coach) ·
 [Fire Emblem affinity](https://fireemblemwiki.org/wiki/Affinity) ·
 [JA2 merc stats](https://fadden.com/gaming/ja2/stats.html).
-Full research reports: `docs/colony-research/` (commanders, mining and markets; buildings to follow).
+Full research reports: `docs/colony-research/` (SimCity buildings, space colony buildings, mining and markets, commanders).
 Lanternfall: `shamlokto/gemfire_remake`, `docs/LAND.md`, `js/land/land.js`, `js/data/vassals.js`.
