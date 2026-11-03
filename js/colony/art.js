@@ -134,6 +134,8 @@ const FILES = {
   'portrait/w_okafor': 'art/colony/portrait/w_okafor.webp',
   'portrait/w_rook': 'art/colony/portrait/w_rook.webp',
   'portrait/w_hale': 'art/colony/portrait/w_hale.webp',
+  'portrait/marrow': 'art/colony/portrait/marrow.webp',
+  'portrait/venn': 'art/colony/portrait/venn.webp',
 };
 // @files-end
 
