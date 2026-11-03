@@ -1,6 +1,6 @@
-# Earth Light: *Landfall* — colony-building game (design plan, draft 2)
+# Earthlight Space Colony Rebuild — colony-building game (design plan, draft 3)
 
-Working title: **Earth Light: Landfall** (alternatives: *Second Light*, *Homeport*, *Reconstruction*).
+Title: **Earthlight Space Colony Rebuild** (owner, 2026-11-03).
 
 A third mode beside the original campaign and the expansion: a **space colony builder** in the
 SimCity / Lanternfall tradition, set after the expansion's final battle. Nothing is built yet;
@@ -23,6 +23,8 @@ this document is the plan we agree on first.
 | D11 | **Designed to be beautified with xAI later**: every visual is a named art slot with a procedural fallback (§7). |
 | D12 | **The map's shape**: a large, partly broken colony lying in Earthlight-style space terrain; once repaired its interior is huge (farms, homes, more); buildings extend into the space terrain for mining and power; **Earth's atmosphere runs along the bottom of the map**. The map is expanded later with more elements. |
 | D13 | **Start simple**: a small first version, advanced parts later; landscapes that look like Earth Light's (§5.3, §16). |
+| D14 | **Answers** (owner, 2026-11-03): title *Earthlight Space Colony Rebuild*; the General **sold his ships and disbanded his army**, so a non-beta start has no machines; **importing a save raises a non-beta player's starting funds**, while a **beta tester's guardians are exactly the original army** (sell it again for money and resources, or keep it and be invincible); **the army eats no food** (its crews count as citizens and are too few to matter). |
+| D15 | **Build now**: version 1 with several agents in parallel; the owner provides **100 xAI images**; keep the early game as simple as Lanternfall's land view, and let depth grow with the tech tree and population. |
 
 ## 1. Ground rules
 
