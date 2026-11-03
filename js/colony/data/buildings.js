@@ -6,6 +6,7 @@
 //   size                     footprint N×N tiles; (x, y) of a building is its top-left tile
 //   on                       terrain keys every tile of the footprint must have
 //   zone                     'interior' (inside an open chamber) | 'space' (within a dock's reach) | 'hull' | 'any'
+//                            | 'road' (interior floor, or a gate whose chambers are all open)
 //   adj                      optional: terrain key one 4-neighbour of the footprint must have
 //   cost                     { credits, parts }   days: construction time
 //   jobs                     workers needed; output scales with min(1, staffing)
@@ -50,6 +51,9 @@ export const BUILDINGS = [
   { key: 'depot', name: 'Storage Depot', cat: 'core', size: 1, zone: 'any', on: ['deck', 'plain', 'fertile', 'poor', 'void', 'asteroid', 'hull'], cost: { credits: 80, parts: 5 }, days: 2, jobs: 0, upkeep: 1,
     storage: { food: 300 }, modes: [{ key: 'food', name: 'Food' }, { key: 'water', name: 'Water' }, { key: 'air', name: 'Air' }, { key: 'parts', name: 'Parts' }, { key: 'ore', name: 'Ore' }],
     text: 'Stores 300 of one good. Switch what it holds any time.' },
+
+  { key: 'road', name: 'Road', cat: 'core', size: 1, zone: 'road', on: ['deck', 'plain', 'fertile', 'poor', 'gate'], cost: { credits: 5, parts: 1 }, days: 0, jobs: 0, upkeep: 0,
+    text: 'Colonists walk and rovers drive only where there are roads. Click the start, then the end. Roads pass through gates between open chambers.' },
 
   { key: 'solar', name: 'Solar Array', cat: 'power', size: 1, zone: 'any', on: ['void', 'hull'], cost: { credits: 120, parts: 5 }, days: 2, jobs: 0, upkeep: 2, power: 12,
     levels: [{ power: 12 }, { power: 20, cost: { credits: 150, parts: 15 } }, { power: 30, cost: { credits: 250, parts: 30 } }],

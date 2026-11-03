@@ -227,6 +227,7 @@ export function dayTick(state, rng) {
       const top = SIM.transportMin + Math.round((SIM.transportMax - SIM.transportMin) * Math.min(1, (state.happy - SIM.transportHappy) / SIM.transportFull));
       const n = Math.min(free, SIM.transportMin + Math.floor(rng() * (top - SIM.transportMin + 1)));
       state.pop += n;
+      state.flags.arrival = { day: state.day, n };   // the view flies the transport in (view3d/movers.js)
       ask('transport', 'Transport', `A transport docks with ${n} colonists.`);
     }
   }

@@ -144,12 +144,22 @@ view.setOverlay(name | null);    // 'park' | 'reach' | 'power' | 'happiness' | n
 view.setGhost(key | null, x, y, ok);   // placement preview, green if ok, red if not
 view.focus(x, y);                // fly the camera to a tile
 view.setSnap(on);                // 90° rotation steps vs free orbit
+view.setSpeed(s);                // 0 paused, 1, 2, 4: movers freeze or hurry with the clock
 view.destroy();
 ```
 Terrain by InstancedMesh (one per terrain, coloured; heights from terrain.js); chambers that are
 `sealed` render dark, `surveyed` blue-grey with breach markers, `open` in full colour. Buildings
 from parametric kits in `view3d/kits.js` (boxes, cylinders, domes, cones; colours; art slot names).
 Earth: a large sphere below the bottom edge with an atmosphere glow; a starfield.
+
+**Movers** (`view3d/movers.js`, owner's D16): visual only, driven by the state; they never change it.
+Barges on open river stretches (1, +1 per 2 riverside farms, max 8); haulers between ore mines and the
+dock (2 on an ore seam); drones at induction collectors; a transport flies in when
+`state.flags.arrival` = `{ day, n }` is new. **People and rovers only on roads**: people
+≈ min(pop / 4, road tiles / 2, 300) between road-connected homes and destinations; rovers ≈
+connected producers / 2 (max 60); a repair crew drives to connected building sites. Roads are
+buildings with key `road` (`rules.planRoad` / `rules.buildRoad` lay an L-shaped line); a new colony
+starts with a road from the Command Centre to the dock and every starting building.
 
 ### art.js
 `art(slot) → URL | null`, `hasArt(slot)`, `MANIFEST` (slot → { kind, size, seamless, prompt, refs,

@@ -183,6 +183,9 @@ export function placeCheck(state, key, x, y, opts = {}) {
     if (d.zone === 'any' && !(interior || near || ti === T.HULL)) {
       return space ? `That is beyond the dock's reach (${DOCK_REACH} tiles): build closer to a dock.` : c ? `${c.name} is not pressurised yet.` : `A ${d.name} cannot stand here.`;
     }
+    if (d.zone === 'road' && !(interior || (ti === T.GATE && gateOpen(state, i)))) {
+      return ti === T.GATE ? 'A road can pass a gate only when the chambers on both sides are open.' : c ? `${c.name} is not pressurised yet.` : 'Roads run on open chamber floors and through gates.';
+    }
     if (d.zone === 'wall') {
       const behind = state.chambers.filter((k) => k.breaches.includes(i));
       if (!behind.some((k) => k.status !== 'sealed' && k.status !== 'surveying')) return 'Survey the chamber behind this breach first.';
@@ -224,6 +227,43 @@ export function findSpot(state, key, { box, score = () => 0, free = false } = {}
 // ---------------------------------------------------------------- actions
 
 export const canBuild = (state, key, x, y) => placeCheck(state, key, x, y);
+
+// A gate a road may cross: every chamber beside it is open.
+export function gateOpen(state, i) {
+  const { w, ch } = state.map;
+  const near = [ch[i - 1], ch[i + 1], ch[i - w], ch[i + w]].filter((c) => c !== 255);
+  return near.length >= 2 && near.every((c) => chamberOf(state, c)?.status === OPEN);
+}
+
+// The tiles of an L-shaped road from (x0, y0) to (x1, y1): along x first, then along y.
+export function roadLine(x0, y0, x1, y1) {
+  const out = [], sx = Math.sign(x1 - x0), sy = Math.sign(y1 - y0);
+  for (let x = x0; ; x += sx) { out.push([x, y0]); if (x === x1) break; }
+  if (sy) for (let y = y0 + sy; ; y += sy) { out.push([x1, y]); if (y === y1) break; }
+  return out;
+}
+
+// What a road line would do: [{ x, y, why }] (why null = buildable, 'have' = already a road).
+export function planRoad(state, x0, y0, x1, y1) {
+  const occ = occupancy(state), roads = new Set(state.buildings.filter((b) => b.key === 'road').map((b) => b.y * state.map.w + b.x));
+  return roadLine(x0, y0, x1, y1).map(([x, y]) => ({ x, y, why: roads.has(y * state.map.w + x) ? 'have' : placeCheck(state, 'road', x, y, { occ, free: true }) }));
+}
+
+// Build every buildable tile of a road line that the colony can pay for; skips the rest.
+export function buildRoad(state, x0, y0, x1, y1) {
+  const plan = planRoad(state, x0, y0, x1, y1), d = BUILDING.road;
+  let built = 0, skipped = 0, firstWhy = null;
+  for (const p of plan) {
+    if (p.why === 'have') continue;
+    if (p.why || afford(state, d.cost)) { skipped++; firstWhy ??= p.why || afford(state, d.cost); continue; }
+    pay(state, d.cost);
+    state.buildings.push({ id: state.nextId++, key: 'road', x: p.x, y: p.y, level: 1, mode: null, build: 0, off: false });
+    built++;
+  }
+  if (!built) return no(firstWhy || 'That road is already built.');
+  log(state, `${built} tiles of road laid.`);
+  return ok(`${built} tiles of road laid${skipped ? `; ${skipped} skipped (${firstWhy})` : ''}.`, { built, skipped });
+}
 
 export function build(state, key, x, y) {
   const why = canBuild(state, key, x, y);

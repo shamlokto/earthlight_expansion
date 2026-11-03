@@ -5,6 +5,10 @@
 //     the terrain shaders mix in, so changing one is a single small upload
 //   * buildings: parametric kits (kits.js) packed into one InstancedMesh per shape and material,
 //     so a whole colony is a handful of draw calls; refresh() diffs and swaps only what changed
+//   * roads: not kits but two InstancedMeshes (slabs + kerbs, lane dashes) rebuilt when a road
+//     changes; each tile joins its 4 road neighbours (straight, corner, T, cross, dead end)
+//   * movers (movers.js): barges, haulers, drones, the transport, people and rovers on the roads,
+//     derived from the state on refresh() and animated every frame; setSpeed(0) freezes them
 //   * Earth: a big (flattened) sphere beyond the bottom edge, its curve under the atmosphere band
 //   * camera: OrbitControls (rotate, tilt, zoom to cursor, right-drag / arrow-key pan), optional
 //     90° snap; picking walks the tile grid along the pointer ray, so it costs nothing per move
@@ -14,7 +18,8 @@ import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/three/addons/OrbitControls.js';
 import { TERRAIN, T, R } from '../data/terrain.js';
 import { BUILDING, DOCK_REACH } from '../data/buildings.js';
-import { kitParts, kitHeight } from './kits.js';
+import { kitParts, kitHeight, ROAD } from './kits.js';
+import { createMovers } from './movers.js';
 
 const BASE = -0.6;                       // tile columns start here, so steps in height show sides
 const PICK_LO = -1.5;
@@ -227,8 +232,9 @@ export function createView(container, opts = {}) {
   const sun = new THREE.DirectionalLight('#fff1dc', 2.6), earthlight = new THREE.DirectionalLight('#5f9fff', 0.9);
   scene.add(sun, sun.target, earthlight, earthlight.target);
 
-  const terrainGroup = new THREE.Group(), buildGroup = new THREE.Group(), fxGroup = new THREE.Group();
-  scene.add(terrainGroup, buildGroup, fxGroup);
+  const terrainGroup = new THREE.Group(), buildGroup = new THREE.Group(), fxGroup = new THREE.Group(), roadGroup = new THREE.Group();
+  scene.add(terrainGroup, buildGroup, fxGroup, roadGroup);
+  const movers = createMovers(scene);
   const UNIT = unitGeometries(), COLUMN = columnGeometry();
   const PLANE = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
   const ROCK = new THREE.IcosahedronGeometry(0.5, 0), GEM = new THREE.OctahedronGeometry(0.5);
@@ -441,6 +447,7 @@ export function createView(container, opts = {}) {
     return m4.compose(v4.set(cx + p.pos[0], g + p.pos[1] + p.size[1] / 2, cz + p.pos[2]), q4, s4.set(...p.size));
   }
   function addBuilding(b) {
+    if (b.key === 'road') return addRoad(b);
     const n = sizeOf(b.key), parts = kitParts(b.key, b.level, b.mode), g = groundOf(b.x, b.y, n);
     const cx = b.x + n / 2, cz = b.y + n / 2, building = b.build > 0;
     for (const p of parts) {
@@ -461,7 +468,8 @@ export function createView(container, opts = {}) {
   function removeBuilding(id) {
     const rec = built.get(id);
     if (!rec) return;
-    for (const p of pools.values()) p.remove(id);
+    if (rec.road) roadsDirty = true;
+    else for (const p of pools.values()) p.remove(id);
     for (let j = rec.y; j < rec.y + rec.n; j++) for (let i = rec.x; i < rec.x + rec.n; i++) if (i >= 0 && j >= 0 && i < W && j < H) { tops[j * W + i] = terrTop[j * W + i]; occ[j * W + i] = 0; }
     built.delete(id);
   }
@@ -476,7 +484,71 @@ export function createView(container, opts = {}) {
       addBuilding(b); changed = true;
     }
     for (const id of [...built.keys()]) if (!seen.has(id)) { removeBuilding(id); changed = true; }
+    syncRoads();
     return changed;
+  }
+
+  // ---- roads ---------------------------------------------------------------------------------
+  // A road tile is a level asphalt slab; kerbs close the sides with no road beside them, and lane
+  // dashes run from the centre towards each road neighbour (junctions of 3 or 4 get a lighter slab
+  // and no dashes). Two InstancedMeshes for every road on the map, rebuilt when one changes.
+
+  let roadsDirty = false, roadSlab = null, roadLane = null;
+  const roadTopAt = (i) => (st.map.t[i] === T.GATE ? ROAD.gateTop : ROAD.top);
+  function addRoad(b) {
+    const i = b.y * W + b.x;
+    if (b.x >= 0 && b.y >= 0 && b.x < W && b.y < H) { tops[i] = Math.max(terrTop[i], roadTopAt(i)); occ[i] = b.id + 1; }
+    built.set(b.id, { sig: sigOf(b), x: b.x, y: b.y, n: 1, road: true });
+    roadsDirty = true;
+  }
+  function syncRoads() {
+    if (!roadsDirty) return;
+    roadsDirty = false;
+    for (const m of [roadSlab, roadLane]) if (m) { roadGroup.remove(m); m.dispose(); m.material.dispose(); }
+    roadSlab = roadLane = null;
+    const list = [];
+    for (const rec of built.values()) if (rec.road && rec.x >= 0 && rec.y >= 0 && rec.x < W && rec.y < H) list.push(rec.y * W + rec.x);
+    if (!list.length) return;
+    const is = new Uint8Array(N);
+    for (const i of list) is[i] = 1;
+    const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    const conn = (i, k) => { const x = (i % W) + DIRS[k][0], y = ((i / W) | 0) + DIRS[k][1]; return x >= 0 && y >= 0 && x < W && y < H && is[y * W + x] === 1; };
+    let nSlab = 0, nLane = 0;
+    for (const i of list) { let c = 0; for (let k = 0; k < 4; k++) c += conn(i, k) ? 1 : 0; nSlab += 1 + (4 - c); if (c <= 2) nLane += c; }
+    const mk = (count, mat) => {
+      const m = new THREE.InstancedMesh(UNIT.box, mat, Math.max(1, count));
+      m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, count) * 3), 3);
+      m.frustumCulled = false; m.count = 0; roadGroup.add(m);
+      return m;
+    };
+    roadSlab = mk(nSlab, new THREE.MeshLambertMaterial()); roadLane = mk(nLane, new THREE.MeshBasicMaterial());
+    roadSlab.name = 'roads'; roadLane.name = 'road-lanes';
+    const rgb = (hex) => { c4.set(hex); return [c4.r, c4.g, c4.b]; };
+    const ASPHALT = rgb(ROAD.asphalt), JUNCTION = rgb(ROAD.junction), KERB = rgb(ROAD.kerb), DASH = rgb(ROAD.dash);
+    const put = (m, cx, cy, cz, sx, sy, sz, col) => {
+      const k = m.count++, a = m.instanceMatrix.array, o = k * 16;
+      a.fill(0, o, o + 16); a[o] = sx; a[o + 5] = sy; a[o + 10] = sz; a[o + 12] = cx; a[o + 13] = cy; a[o + 14] = cz; a[o + 15] = 1;
+      m.instanceColor.array.set(col, k * 3);
+    };
+    const lo = 0.04;   // slabs reach down under the lowest floor, so no gap shows beside them
+    for (const i of list) {
+      const x = i % W, y = (i / W) | 0, top = roadTopAt(i), cx = x + 0.5, cz = y + 0.5;
+      let c = 0;
+      for (let k = 0; k < 4; k++) c += conn(i, k) ? 1 : 0;
+      put(roadSlab, cx, (top + lo) / 2, cz, 1, top - lo, 1, c >= 3 ? JUNCTION : ASPHALT);
+      for (let k = 0; k < 4; k++) {
+        const [dx, dz] = DIRS[k], along = dx !== 0;
+        if (!conn(i, k)) {
+          const off = 0.5 - ROAD.kerbW / 2;
+          put(roadSlab, cx + dx * off, top + ROAD.kerbH / 2, cz + dz * off, along ? ROAD.kerbW : 1, ROAD.kerbH, along ? 1 : ROAD.kerbW, KERB);
+        } else if (c <= 2) {
+          const off = 0.09 + ROAD.dashL / 2;
+          put(roadLane, cx + dx * off, top + 0.006, cz + dz * off, along ? ROAD.dashL : ROAD.dashW, 0.012, along ? ROAD.dashW : ROAD.dashL, DASH);
+        }
+      }
+    }
+    roadSlab.instanceMatrix.needsUpdate = roadLane.instanceMatrix.needsUpdate = true;
+    roadSlab.instanceColor.needsUpdate = roadLane.instanceColor.needsUpdate = true;
   }
 
   // ---- overlays ------------------------------------------------------------------------------
@@ -564,6 +636,7 @@ export function createView(container, opts = {}) {
       buildTerrain();
       for (const id of [...built.keys()]) removeBuilding(id);
       syncBuildings();
+      movers.refresh(st, { terrTop, buildingsChanged: true });
     }
   }
 
@@ -753,6 +826,7 @@ export function createView(container, opts = {}) {
     if (st) stepCamera(dt, now);
     if (breachMat) breachMat.color.setScalar(0.75 + 0.25 * Math.sin(now / 260));   // breaches throb
     if (plasmaMat) plasmaMat.color.setScalar(0.9 + 0.1 * Math.sin(now / 900));
+    if (st) movers.update(dt, camera.position.distanceTo(controls.target));
     for (const p of pools.values()) p.flush();
     for (const a of dirty) a.needsUpdate = true;
     dirty.clear();
@@ -768,11 +842,14 @@ export function createView(container, opts = {}) {
     occ = new Int32Array(N);
     chamberById.clear(); chamberSig.clear(); built.clear();
     for (const p of pools.values()) p.clear();
+    roadsDirty = true;
     syncChambers(true);
     buildTerrain();
     syncBuildings();
     buildArtifacts();
     showOverlay();
+    movers.reset();
+    movers.refresh(st, { terrTop, reset: true, buildingsChanged: true, chambersChanged: true });
     if (first) {
       buildSky();
       resize();
@@ -795,12 +872,14 @@ export function createView(container, opts = {}) {
       syncBuildings();
       buildArtifacts();
       showOverlay();
+      movers.refresh(st, { terrTop, buildingsChanged: true, chambersChanged: true });
       return;
     }
     if (rc) rCopy = Uint8Array.from(r);
     const cc = syncChambers(false), bc = syncBuildings();
     if (cc || bc || rc) buildArtifacts();
     if (overlayName && !overlayValues && bc) showOverlay();
+    movers.refresh(st, { terrTop, buildingsChanged: bc, chambersChanged: cc });
   }
 
   // Writes the overlay (caller's values, else our own) into the per-tile texture the terrain samples.
@@ -837,7 +916,8 @@ export function createView(container, opts = {}) {
 
   function destroy() {
     cancelAnimationFrame(raf); ac.abort(); ro.disconnect(); controls.dispose();
-    for (const g of [terrainGroup, buildGroup, fxGroup, ghost.group]) clearGroup(g);
+    movers.dispose();
+    for (const g of [terrainGroup, buildGroup, fxGroup, roadGroup, ghost.group]) clearGroup(g);
     scene.traverse((o) => { o.geometry?.dispose(); if (o.material) [].concat(o.material).forEach((m) => { m.map?.dispose(); m.dispose(); }); });
     for (const g of [...Object.values(UNIT), COLUMN, PLANE, ROCK, GEM]) g.dispose();
     for (const m of Object.values(KIND_MAT)) m.dispose();
@@ -845,6 +925,10 @@ export function createView(container, opts = {}) {
     renderer.dispose(); canvas.remove(); st = null;
   }
 
+  // Mover time: 0 paused (everything freezes), 1, 2, 4 (movers hurry, SimCity style). Until this is
+  // called the movers follow state.speed.
+  const setSpeed = (s) => movers.setSpeed(s);
+
   // `debug` is for dev pages and tests only (colony-view-test.html), not part of the contract.
-  return { setState, refresh, setOverlay, setGhost, focus, setSnap, destroy, debug: { scene, camera, controls, renderer, placeCamera, pick } };
+  return { setState, refresh, setOverlay, setGhost, focus, setSnap, setSpeed, destroy, debug: { scene, camera, controls, renderer, placeCamera, pick, movers } };
 }

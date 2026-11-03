@@ -125,6 +125,7 @@ function startGame(s) {
     view = M.view.createView($('#view'), { onTileClick, onTileHover });
     view.setState(state);
     view.setSnap?.(settings.snap);
+    view.setSpeed?.(state.speed ?? 1);
     const cc = state.buildings.find((b) => b.key === 'command');
     if (cc) view.focus?.(cc.x + 1, cc.y + 1);
   } catch (e) {
@@ -186,6 +187,7 @@ function setSpeed(s) {
   if (s > 0) lastSpeed = s;
   state.speed = s; acc = 0;
   ui?.setSpeed(s);
+  try { view?.setSpeed?.(s); } catch { }   // movers freeze when paused, hurry at x2/x4
 }
 
 function save(announce) {
@@ -196,6 +198,7 @@ function save(announce) {
 
 // ---------------------------------------------------------------- placement
 function setPlacing(p) {
+  if (placing?.roadStart) applyOverlay();   // drop the road preview
   placing = p;
   if (p && !p.moveId) lastKey = p.key;
   ui.setPlacing(p?.key || null, !!p?.moveId);
@@ -219,12 +222,25 @@ function placeCheck(x, y) {
   return { ...o, why };
 }
 
+// Roads go down as a line: the first click fixes the start, the second builds an L to the end.
+function roadPreview(x, y) {
+  const s0 = placing.roadStart, plan = M.rules.planRoad(state, s0.x, s0.y, x, y), d = BUILDING.road;
+  const { w, h } = state.map, v = new Float32Array(w * h);
+  let fresh = 0, blocked = 0;
+  for (const p of plan) { v[p.y * w + p.x] = p.why == null ? 1 : p.why === 'have' ? 0.6 : 0.15; if (p.why == null) fresh++; else if (p.why !== 'have') blocked++; }
+  try { view?.setOverlay('roadplan', v); view?.setGhost('road', x, y, fresh > 0); } catch (e) { console.error(e); }
+  const cost = `${fresh * d.cost.credits} cr · ${fresh * d.cost.parts} parts`;
+  ui.tip(`<b>Road</b> <small>${fresh} tiles · ${cost}</small><br>${fresh ? '<span class="ok">✓ Click to lay it</span>' : '<span class="no">✗ Nothing to build on this line</span>'}${blocked ? `<br><small>${blocked} tiles skipped</small>` : ''}`, pointer.x, pointer.y, fresh > 0);
+}
+
 function ghostAt(x, y) {
+  if (placing.key === 'road' && placing.roadStart) return roadPreview(x, y);
   const c = placeCheck(x, y);
   try { view?.setGhost(placing.key, c.x, c.y, c.why == null); } catch (e) { console.error(e); }
   const d = BUILDING[placing.key];
   const cost = placing.moveId ? `move: ${Math.ceil((d.cost.credits || 0) * 0.2)} cr` : [d.cost.credits ? `${d.cost.credits} cr` : '', d.cost.parts ? `${d.cost.parts} parts` : ''].filter(Boolean).join(' · ');
-  ui.tip(`<b>${esc(d.name)}</b> <small>${esc(cost)}</small><br>${c.why == null ? '<span class="ok">✓ Click to ' + (placing.moveId ? 'move' : 'build') + '</span>' : `<span class="no">✗ ${esc(c.why)}</span>`}`, pointer.x, pointer.y, c.why == null);
+  const verb = placing.moveId ? 'move' : placing.key === 'road' ? 'start the road here' : 'build';
+  ui.tip(`<b>${esc(d.name)}</b> <small>${esc(cost)}${placing.key === 'road' ? ' a tile' : ''}</small><br>${c.why == null ? '<span class="ok">✓ Click to ' + verb + '</span>' : `<span class="no">✗ ${esc(c.why)}</span>`}`, pointer.x, pointer.y, c.why == null);
 }
 
 function onTileHover(x, y) {
@@ -236,6 +252,21 @@ function onTileHover(x, y) {
 function onTileClick(x, y, button) {
   if (!state || x == null || x < 0) return;
   if (button === 2) { if (placing) setPlacing(null); return; }
+  if (placing && placing.key === 'road' && !placing.moveId) {
+    if (!placing.roadStart) {
+      const why = M.rules.canBuild(state, 'road', x, y);
+      if (why && !state.buildings.some((b) => b.key === 'road' && b.x === x && b.y === y)) { ui.toast(why, 'bad'); return; }
+      placing.roadStart = { x, y };   // a road may also start from an existing road tile
+      roadPreview(x, y);
+      return;
+    }
+    const s0 = placing.roadStart, r = M.rules.buildRoad(state, s0.x, s0.y, x, y);
+    afterAction(r, true);
+    if (r?.ok !== false) ui.toast(r.msg, 'good');
+    placing.roadStart = null; applyOverlay();
+    if (!shiftHeld && r?.ok !== false) setPlacing(null); else ghostAt(x, y);
+    return;
+  }
   if (placing) {
     const { x: ox, y: oy } = origin(placing.key, x, y);
     const r = placing.moveId ? M.rules.move(state, placing.moveId, ox, oy) : M.rules.build(state, placing.key, ox, oy);
@@ -264,7 +295,8 @@ function onKey(e) {
     case '3': setSpeed(4); break;
     case 'r': case 'R': if (!e.ctrlKey && !e.metaKey && lastKey) api.pick(lastKey); break;
     case 'Escape':
-      if (placing) setPlacing(null);
+      if (placing?.roadStart) { placing.roadStart = null; applyOverlay(); if (hover) ghostAt(hover.x, hover.y); }
+      else if (placing) setPlacing(null);
       else if (!ui.closePops() && ui.inspecting()) ui.closeInspector();
       break;
   }

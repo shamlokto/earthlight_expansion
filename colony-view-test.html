@@ -4,8 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Colony 3D view test</title>
-<!-- Dev page for js/colony/view3d/view.js: renders a fake colony state (or mapgen.js's map when it
-     exists) without the sim or the interface. window.view / window.state / window.tick are for tests. -->
+<!-- Dev page for js/colony/view3d/view.js. By default a real colony (state.js newGame, seed 2 or
+     ?seed=N) with demo buildings placed through rules.js build(); "Demo roads" lays a road network
+     with rules.js buildRoad(). ?showcase shows every kit on a hand-made state instead (?fake on the
+     stand-in map). window.view / window.state / window.tick / window.demo are for tests. -->
 <script type="importmap">{"imports":{"three":"./js/vendor/three/three.module.min.js"}}</script>
 <style>
   html, body { margin: 0; height: 100%; background: #010205; color: #cfd6e4; font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
@@ -13,7 +15,8 @@
   #hud { position: fixed; left: 8px; top: 8px; background: #0b1020d0; border: 1px solid #2a3450; border-radius: 6px; padding: 8px 10px; max-width: 360px; }
   #hud button, #hud select { background: #1a2238; color: #dfe6f4; border: 1px solid #3a4870; border-radius: 4px; padding: 2px 7px; margin: 2px 2px 2px 0; font: inherit; cursor: pointer; }
   #hud .row { margin: 3px 0; }
-  #info { color: #9fb0d0; white-space: pre; }
+  #info, #movers { color: #9fb0d0; white-space: pre; }
+  #movers { color: #8fd0b0; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -28,6 +31,14 @@
     <select id="ghost"><option value="">none</option></select>
     <button id="day">+1 day</button><button id="home">Landing</button><button id="survey">Survey next</button>
   </div>
+  <div class="row">Movers
+    <button id="roads">Demo roads</button><button id="arrive">Transport</button>
+    Speed <select id="speed"><option value="0">pause</option><option value="1" selected>x1</option><option value="2">x2</option><option value="4">x4</option></select>
+  </div>
+  <div class="row">Pop <input id="pop" type="number" min="0" max="5000" step="20" style="width:60px">
+    <label><input type="checkbox" id="glum"> glum (happy 30)</label> <button id="stress">Stress</button>
+  </div>
+  <div id="movers"></div>
   <div id="info">hover a tile</div>
 </div>
 <script type="module">
@@ -193,18 +204,202 @@ function fakeState(gen) {
   if (sorted[1]) { sorted[1].status = 'pressurising'; sorted[1].work = 3; }
   if (sorted[2]) { sorted[2].status = 'surveying'; sorted[2].work = 1; }
   if (sorted[3]) sorted[3].status = 'open';
-  return { v: 1, seed: 1, day: 0, map, chambers, buildings, nextId, stock: {}, flags: {} };
+  // enough of a real state for rules.js (the demo roads) and the movers
+  return { v: 1, seed: 1, day: 0, map, chambers, buildings, nextId, stock: { credits: 1e6, parts: 1e5 }, flags: {},
+    unlocked: BUILDINGS.filter((d) => !d.fixed).map((d) => d.key), log: [], pop: 200, happy: 60, speed: 1 };
 }
 
-let gen, src = 'fake map';
-try {
-  if (location.search.includes('fake')) throw new Error('404: ?fake asks for the fake map');
-  const mod = await import('./js/colony/mapgen.js');
-  gen = mod.generateMap(1); src = 'mapgen.js';
-  if (gen.map.t[gen.start.dock.y * W + gen.start.dock.x] !== T.HULL) console.warn('mapgen dock not on hull');
-} catch (e) { if (!/Failed to fetch|Importing a module|404/i.test(String(e))) console.warn('mapgen.js failed, using the fake map:', e); gen = fakeMap(1); }
+// ---- the real colony: state.js newGame, buildings through rules.js build(), roads through buildRoad()
+
+const RU = await import('./js/colony/rules.js');
+const qs = new URLSearchParams(location.search);
+
+// A ring of free tiles around every building, so the demo roads can always reach them.
+function spotNear(state, key, cx, cy, box, extra) {
+  extra ||= () => 0;
+  const occ = RU.occupancy(state), n = BUILDING[key].size;
+  const clear = (x, y) => { for (let j = y - 1; j <= y + n; j++) for (let i = x - 1; i <= x + n; i++) if (i >= 0 && j >= 0 && i < W && j < H && occ[j * W + i]) return false; return true; };
+  return RU.findSpot(state, key, { box, free: true, score: (x, y) => (clear(x, y) ? Math.abs(x - cx) + Math.abs(y - cy) + extra(x, y) : null) });
+}
+function demoBuild(state, key, cx, cy, box, extra, more = {}) {
+  const p = spotNear(state, key, cx, cy, box, extra);
+  if (!p) { console.warn('demo: no spot for', key); return null; }
+  const r = RU.build(state, key, p.x, p.y);
+  if (!r.ok) { console.warn('demo: build failed', key, r.msg); return null; }
+  const b = RU.byId(state, r.id);
+  Object.assign(b, { build: 0 }, more);
+  return b;
+}
+async function realState(seed) {
+  const S = await import('./js/colony/state.js');
+  const state = S.newGame({ seed });
+  Object.assign(state.stock, { credits: 1e6, parts: 1e5 });
+  state.pending = []; state.pop = 260; state.happy = 62;
+  state.unlocked = BUILDINGS.filter((d) => !d.fixed).map((d) => d.key);
+  const cmd = state.buildings.find((b) => b.key === 'command'), dock = state.buildings.find((b) => b.key === 'dock');
+  const land = state.chambers.find((c) => c.status === 'open');
+  // open the landing chamber's neighbours, so the river runs on and roads may pass the gates
+  for (const id of RU.chamberLinks(state).get(land.id) || []) { const c = RU.chamberOf(state, id); c.status = 'open'; c.work = 0; }
+  const box = { x0: land.x0, y0: land.y0, x1: land.x1, y1: land.y1 }, cx = cmd.x + 1, cy = cmd.y + 1;
+  const river = (x, y, n) => { let d = 9; for (let j = y - 3; j < y + n + 3; j++) for (let i = x - 3; i < x + n + 3; i++) if (state.map.t[j * W + i] === T.RIVER) d = Math.min(d, Math.max(0, Math.abs(i - x) - n, Math.abs(j - y) - n)); return d * 3; };
+  for (let k = 0; k < 7; k++) demoBuild(state, 'habitat', cx + (k % 2 ? 6 : -6), cy - 4, box, null, { level: 1 + (k % 3) });
+  demoBuild(state, 'park', cx - 5, cy - 6, box); demoBuild(state, 'grove', cx + 6, cy - 7, box);
+  for (let k = 0; k < 4; k++) demoBuild(state, 'farm', cx + (k % 2 ? 8 : -8), cy - 12, box, (x, y) => river(x, y, 2), { mode: k === 3 ? 'cash' : 'grain' });
+  demoBuild(state, 'riverpump', cx + 10, cy - 12, box);
+  demoBuild(state, 'airplant', cx - 9, cy + 2, box); demoBuild(state, 'repairyard', cx + 9, cy + 2, box, null, { level: 2 });
+  demoBuild(state, 'hydro', cx - 4, cy + 4, box); demoBuild(state, 'hydro', cx + 4, cy + 4, box);
+  for (const mode of ['food', 'water', 'parts']) demoBuild(state, 'depot', cx + 3, cy + 5, box, null, { mode });
+  demoBuild(state, 'salvage', cx - 12, cy - 2, box);
+  demoBuild(state, 'habitat', cx - 2, cy - 8, box, null, { build: 4 });   // under construction: the crew rover parks beside it
+  // space: two ore mines (one on a seam if there is one), a collector, a few solar arrays
+  const sbox = { x0: dock.x - 24, y0: dock.y - 24, x1: dock.x + 25, y1: dock.y + 25 };
+  const seamAt = (x, y) => { let n = 0; for (let j = y; j < y + 2; j++) for (let i = x; i < x + 2; i++) if (state.map.r[j * W + i] === R.ORE_SEAM) n++; return n; };
+  demoBuild(state, 'oremine', dock.x, dock.y, sbox, (x, y) => -seamAt(x, y) * 40);
+  demoBuild(state, 'oremine', dock.x, dock.y, sbox);
+  demoBuild(state, 'induction', dock.x, dock.y, sbox);
+  for (let k = 0; k < 3; k++) demoBuild(state, 'solar', dock.x - 3 - k, dock.y, sbox);
+  return state;
+}
+
+// Lays a road network with rules.js buildRoad(): from the dock to every building of the landing
+// chamber and on through a gate, each leg routed over free road-buildable tiles (fewest turns),
+// then built as straight runs.
+function demoRoads(state) {
+  const land = state.chambers.find((c) => c.kind === 'landing') || state.chambers.find((c) => c.status === 'open');
+  const bx0 = land.x0 - 10, by0 = land.y0 - 10, bx1 = land.x1 + 10, by1 = land.y1 + 1;
+  const occ = RU.occupancy(state), road = new Uint8Array(W * H);
+  for (const b of state.buildings) if (b.key === 'road') road[b.y * W + b.x] = 1;
+  const okAt = new Int8Array(W * H).fill(-1);
+  const ok = (x, y) => {
+    if (x < bx0 || y < by0 || x > bx1 || y > by1) return false;
+    const i = y * W + x;
+    if (okAt[i] < 0) okAt[i] = road[i] || RU.placeCheck(state, 'road', x, y, { occ, free: true }) === null ? 1 : 0;
+    return okAt[i] === 1;
+  };
+  const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const net = new Set();
+  // seed the network with the free tile beside the dock
+  const dock = state.buildings.find((b) => b.key === 'dock');
+  const lay = (tiles) => {
+    let k = 0;
+    while (k < tiles.length) {   // split into straight runs
+      let j = k;
+      if (k + 1 < tiles.length) { const dx = tiles[k + 1][0] - tiles[k][0], dy = tiles[k + 1][1] - tiles[k][1]; while (j + 1 < tiles.length && tiles[j + 1][0] - tiles[j][0] === dx && tiles[j + 1][1] - tiles[j][1] === dy) j++; }
+      const r = RU.buildRoad(state, tiles[k][0], tiles[k][1], tiles[j][0], tiles[j][1]);
+      if (!r.ok && !/already/.test(r.msg)) console.warn('demo road:', r.msg);
+      k = j === k ? k + 1 : j;
+    }
+    for (const [x, y] of tiles) { net.add(y * W + x); road[y * W + x] = 1; okAt[y * W + x] = 1; }
+  };
+  const around = (b) => { const n = BUILDING[b.key].size, out = []; for (let k = 0; k < n; k++) out.push([b.x + k, b.y - 1], [b.x + k, b.y + n], [b.x - 1, b.y + k], [b.x + n, b.y + k]); return out.filter(([x, y]) => ok(x, y)); };
+  // Dijkstra over (tile, heading) from the network to any goal tile; a turn costs 4 steps.
+  function route(goals) {
+    const goal = new Set(goals.map(([x, y]) => y * W + x));
+    if ([...goal].some((i) => net.has(i))) return [];
+    const cost = new Map(), prev = new Map(), heap = [];
+    const push = (c, i, d) => { heap.push([c, i, d]); let k = heap.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
+    const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let k = 0; for (;;) { const l = 2 * k + 1, r = l + 1; let m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
+    for (const i of net) for (let d = 0; d < 4; d++) { cost.set(i * 4 + d, 0); push(0, i, d); }
+    while (heap.length) {
+      const [c, i, d] = pop();
+      if (c > cost.get(i * 4 + d)) continue;
+      if (goal.has(i)) { const out = []; for (let s = i * 4 + d; s !== undefined; s = prev.get(s)) out.push([(s >> 2) % W, ((s >> 2) / W) | 0]); return out.reverse().filter(([x, y]) => !net.has(y * W + x)); }
+      const x = i % W, y = (i / W) | 0;
+      for (let nd = 0; nd < 4; nd++) {
+        const nx = x + DIRS[nd][0], ny = y + DIRS[nd][1];
+        if (!ok(nx, ny)) continue;
+        const j = ny * W + nx, nc = c + 1 + (nd !== d ? 4 : 0) + (road[j] ? -0.6 : 0);
+        if (nc < (cost.get(j * 4 + nd) ?? Infinity)) { cost.set(j * 4 + nd, nc); prev.set(j * 4 + nd, i * 4 + d); push(nc, j, nd); }
+      }
+    }
+    return null;
+  }
+  const start = around(dock)[0];
+  if (!start) { console.warn('demo roads: nothing free beside the dock'); return 0; }
+  lay([start]);
+  const cmd = state.buildings.find((b) => b.key === 'command'), dist = (b) => Math.abs(b.x - dock.x) + Math.abs(b.y - dock.y);
+  const targets = state.buildings.filter((b) => b.key !== 'road' && b.key !== 'dock' && state.map.ch[b.y * W + b.x] === land.id).sort((a, b) => (a === cmd ? -1 : b === cmd ? 1 : dist(a) - dist(b)));
+  let legs = 0;
+  for (const b of targets) { const p = route(around(b)); if (p) { lay(p); legs++; } }
+  // on through the nearest gate whose chambers are open, and a few tiles beyond it
+  const gates = [];
+  for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) { const i = y * W + x; if (state.map.t[i] === T.GATE && RU.gateOpen(state, i) && ok(x, y)) gates.push([x, y]); }
+  const p = route(gates);
+  if (p && p.length) {
+    lay(p);
+    const [gx, gy] = p[p.length - 1], [px, py] = p.length > 1 ? p[p.length - 2] : [gx, gy];
+    const dx = gx - px, dy = gy - py, run = [];
+    for (let k = 1; k <= 4 && ok(gx + dx * k, gy + dy * k); k++) run.push([gx + dx * k, gy + dy * k]);
+    if (run.length) {
+      lay(run);
+      const [ex, ey] = run[run.length - 1], c = state.map.ch[ey * W + ex], other = RU.chamberOf(state, c);
+      if (other) {   // a habitat and a hydroponics bay beside the road in the next chamber
+        const ob = { x0: other.x0, y0: other.y0, x1: other.x1, y1: other.y1 };
+        for (const key of ['habitat', 'hydro', 'park']) { const b = demoBuild(state, key, ex + dy * 2, ey + dx * 2, ob); if (b) { const q = route(around(b)); if (q) lay(q); } }
+      }
+    }
+    legs++;
+  }
+  return legs;
+}
+
+// Many movers at once, for the per-frame cost: a big road grid with homes and producers.
+function stress(state) {
+  for (const c of state.chambers) { c.status = 'open'; c.work = 0; }
+  const land = state.chambers.find((c) => c.kind === 'landing');
+  state.pop = 4000; state.happy = 70;
+  const zone = state.chambers.filter((c) => Math.abs(c.x0 - land.x0) < 70 && Math.abs(c.y0 - land.y0) < 40);
+  for (const c of zone) {
+    for (let y = c.y0 + 1; y <= c.y1; y += 4) RU.buildRoad(state, c.x0, y, c.x1, y);
+    for (let x = c.x0 + 2; x <= c.x1; x += 6) RU.buildRoad(state, x, c.y0, x, c.y1);
+  }
+  const occ = RU.occupancy(state);
+  let k = 0;
+  for (const c of zone) for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) {
+    if (occ[y * W + x] || (y - c.y0 - 1) % 4 === 0) continue;
+    if (((y - c.y0 - 1) % 4 + 4) % 4 !== 1 && ((y - c.y0 - 1) % 4 + 4) % 4 !== 3) continue;
+    const key = ['habitat', 'hydro', 'habitat', 'depot', 'habitat', 'park'][k++ % 6];
+    const r = RU.build(state, key, x, y);
+    if (r.ok) { const b = RU.byId(state, r.id); b.build = 0; occ[y * W + x] = b.id; }
+  }
+  // farms along the river (more barges), mines and collectors in space (haulers, drones)
+  const occ2 = RU.occupancy(state), dock = state.buildings.find((b) => b.key === 'dock');
+  let farms = 0, mines = 0, coils = 0;
+  for (let i = 0; i < W * H && farms < 16; i++) {
+    if (state.map.t[i] !== T.RIVER) continue;
+    const x = i % W, y = (i / W) | 0;
+    for (const [fx, fy] of [[x, y + 1], [x, y - 2]]) if (!occ2[fy * W + fx] && !occ2[fy * W + fx + 1] && !occ2[(fy + 1) * W + fx] && !occ2[(fy + 1) * W + fx + 1]) {
+      const r = RU.build(state, 'farm', fx, fy);
+      if (r.ok) { RU.byId(state, r.id).build = 0; farms++; for (const j of [0, 1, W, W + 1]) occ2[fy * W + fx + j] = r.id; break; }
+    }
+  }
+  for (let y = dock.y - 22; y < dock.y + 24; y += 2) for (let x = dock.x - 22; x < dock.x + 24; x += 2) {
+    if (mines >= 10 && coils >= 3) break;
+    const key = mines < 10 && state.map.t[y * W + x] === T.ASTEROID ? 'oremine' : coils < 3 && state.map.t[y * W + x] === T.MAGNETIC ? 'induction' : null;
+    if (!key) continue;
+    const r = RU.build(state, key, x, y);
+    if (r.ok) { RU.byId(state, r.id).build = 0; if (key === 'oremine') mines++; else coils++; }
+  }
+  return state.buildings.filter((b) => b.key === 'road').length;
+}
+
+let gen = null, src, state;
+const showcase = qs.has('showcase') || qs.has('fake');
+if (showcase) {
+  src = 'fake map';
+  try {
+    if (qs.has('fake')) throw new Error('404: ?fake asks for the fake map');
+    const mod = await import('./js/colony/mapgen.js');
+    gen = mod.generateMap(1); src = 'mapgen.js showcase';
+    if (gen.map.t[gen.start.dock.y * W + gen.start.dock.x] !== T.HULL) console.warn('mapgen dock not on hull');
+  } catch (e) { if (!/Failed to fetch|Importing a module|404/i.test(String(e))) console.warn('mapgen.js failed, using the fake map:', e); gen = fakeMap(1); }
+  state = fakeState(gen);
+} else {
+  const seed = +(qs.get('seed') || 2);
+  state = await realState(seed);
+  src = `newGame seed ${seed}`;
+}
 document.getElementById('src').textContent = '· ' + src;
-const state = fakeState(gen);
 
 const info = document.getElementById('info');
 const view = createView(document.getElementById('view'), {
@@ -238,14 +433,29 @@ document.getElementById('overlay').onchange = (e) => {
 };
 document.getElementById('snap').onchange = (e) => view.setSnap(e.target.checked);
 document.getElementById('day').onclick = () => window.tick();
-const lm = state.chambers.find((c) => c.id === gen.start.landing);
+const lm = gen ? state.chambers.find((c) => c.id === gen.start.landing) : state.chambers.find((c) => c.kind === 'landing');
 document.getElementById('home').onclick = () => view.focus(Math.round((lm.x0 + lm.x1) / 2), Math.round((lm.y0 + lm.y1) / 2));
 document.getElementById('survey').onclick = () => { const c = state.chambers.find((k) => k.status === 'sealed'); if (c) { c.status = 'surveyed'; view.refresh(state); } };
 
 // fps meter
 let frames = 0, t0 = performance.now();
 (function count(now) { frames++; if (now - t0 > 1000) { document.getElementById('fps').textContent = `${Math.round(frames * 1000 / (now - t0))} fps`; frames = 0; t0 = now; } requestAnimationFrame(count); })(t0);
-Object.assign(window, { view, state, gen, landing: lm });
+document.getElementById('roads').onclick = () => { const n = demoRoads(state); view.refresh(state); console.log('demo roads: legs', n); };
+// the sim sets state.flags.arrival = { day, n } when colonists arrive; the view flies a transport in
+window.arrive = (n = 16) => { state.day++; state.flags.arrival = { day: state.day, n }; view.refresh(state); };
+document.getElementById('arrive').onclick = () => window.arrive();
+document.getElementById('speed').onchange = (e) => view.setSpeed(+e.target.value);
+const popIn = document.getElementById('pop');
+popIn.value = state.pop || 0;
+popIn.onchange = () => { state.pop = +popIn.value; view.refresh(state); };
+document.getElementById('glum').onchange = (e) => { state.happy = e.target.checked ? 30 : 62; view.refresh(state); };
+document.getElementById('stress').onclick = () => { stress(state); popIn.value = state.pop; view.refresh(state); };
+const mv = document.getElementById('movers');
+setInterval(() => {
+  const m = view.debug.movers.stats();
+  mv.textContent = `people ${m.people}/${m.peopleTarget} (walking ${m.peopleWalking}) · newcomers ${m.newcomers}\nrovers ${m.rovers}/${m.roverTarget} · crews ${m.crews} · barges ${m.barges} · haulers ${m.haulers} · drones ${m.drones}\ntransport ${m.transport || '-'} · roads ${m.roads} (${m.roadNetworks} nets) · total ${m.total} · ${m.msAvg} ms/frame`;
+}, 500);
+Object.assign(window, { view, state, gen, landing: lm, demo: { demoRoads, stress, realState } });
 window.__cam = (tx, tz, d, polar, theta) => view.debug.placeCamera(tx, tz, d, polar, theta);
 </script>
 </body>
