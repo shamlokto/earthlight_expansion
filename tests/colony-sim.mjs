@@ -251,7 +251,7 @@ for (const [name, gen] of gens) {
     act(rules.setTax(s, 0.5)); check(s.tax === 0.3, 'tax clamps');
     check(!act(rules.sell(s, 'ore', 10)).ok && !act(rules.sell(s, 'gold', 1)).ok && !act(rules.sellGuardian(s, 99)).ok, 'market refusals');
     const bl = rules.buildable(s);
-    check(bl.length === 16 && bl.find((b) => b.key === 'oremine').why.includes('80'), 'buildable list');
+    check(bl.length === 17 && bl.find((b) => b.key === 'road') && bl.find((b) => b.key === 'oremine').why.includes('80'), 'buildable list');
     const ti = rules.tileInfo(s, cmd.x, cmd.y);
     check(ti.building?.key === 'command' && ti.chamber?.status === 'open', 'tileInfo');
     for (const k of ['park', 'reach', 'power', 'happiness']) check(rules.coverage(s, k).length === w * s.map.h, `coverage ${k}`);

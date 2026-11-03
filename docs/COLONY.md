@@ -25,6 +25,7 @@ this document is the plan we agree on first.
 | D13 | **Start simple**: a small first version, advanced parts later; landscapes that look like Earth Light's (§5.3, §16). |
 | D14 | **Answers** (owner, 2026-11-03): title *Earthlight Space Colony Rebuild*; the General **sold his ships and disbanded his army**, so a non-beta start has no machines; **importing a save raises a non-beta player's starting funds**, while a **beta tester's guardians are exactly the original army** (sell it again for money and resources, or keep it and be invincible); **the army eats no food** (its crews count as citizens and are too few to matter). |
 | D15 | **Build now**: version 1 with several agents in parallel; the owner provides **100 xAI images**; keep the early game as simple as Lanternfall's land view, and let depth grow with the tech tree and population. |
+| D16 | **Movement like SimCity** (owner, 2026-11-03): boats on the river, haulers in space and arriving transports move from the start; **people and cars stay inside until there are roads**. Movement is visual and driven by the real numbers; it never decides the economy (SimCity 2013's agent simulation is the cautionary tale). Roads are cheap, instant and only visual in version 1; version 2 can give them a delivery bonus. |
 
 ## 1. Ground rules
 
@@ -464,6 +465,7 @@ rest. Where = where it can stand (I = interior, S = space, H = hull, A = atmosph
 | **Command Centre** | 1 | I · 3×3, start | The Governor's seat (Lanternfall's keep). Surveys chambers; small storage; admin coverage | Its level is the colony's **charter**, which unlocks tiers. Lose it in a raid and the game is over |
 | **Dock** | 1 | H · 2×2, at a hull gate | Joins inside and outside: space buildings must be within its reach; transports land here | Levels add berths. In version 3 it also repairs machines, as docks do in Earth Light |
 | **Repair Yard** | 1 | I · 2×2 | Ruess's crews: seal breaches, clear rubble, run projects | Levels: more crews at once |
+| **Road** | 1 | I · 1×1, and gates between open chambers | Laid in lines (click start, click end); colonists walk and rovers drive only on roads | Visual in version 1 (D16); a delivery bonus later |
 | **Storage Depot** | 1 | I or S · 1×1 | Stores 300 of one good | **Mode**: food / water / air / parts / ore |
 | **Tether Mast** | 2 | S · 1×1 | Extends a dock's reach into space | A chain of masts is the space "road" |
 | **Survey Drone Bay** | 2 | I · 1×1 | Deep survey: reveals artifacts further away | **Module**: +range |
@@ -586,7 +588,7 @@ Research plus credits, one-off, each edits one rule for the whole colony: **Clos
 | **Orbital Elevator** | Ruess's Workshop + The Lantern | Relief contracts at a fraction of the cost; Earth trade opens |
 | **Eden Restored** | Governor's Garden + Hall of Names + The Lantern | Air use −30% colony-wide (cheaper, never free); the ending |
 
-That is **53 buildings, 6 patents, 6 landmarks and 3 megastructures**, with **17 in version 1**
+That is **54 buildings, 6 patents, 6 landmarks and 3 megastructures**, with **18 in version 1** (the Road added later)
 (version 2: 18, version 3: 13, version 4: 4, version 5: 1).
 More come with each map expansion.
 
