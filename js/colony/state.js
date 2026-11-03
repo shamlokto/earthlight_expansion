@@ -3,14 +3,14 @@
 import { generateMap } from './mapgen.js';
 import { BUILDING, BUILDINGS } from './data/buildings.js';
 import { T } from './data/terrain.js';
-import { findSpot, log, unitPrice, chamberOf, addPending, placeCheck, occupancy, tilesOf } from './rules.js';
+import { findSpot, log, unitPrice, chamberOf, addPending, placeCheck, occupancy, tilesOf, upgradeState } from './rules.js';
 import { farmSoil } from './sim.js';
 import { DIFFICULTY } from './difficulty.js';
 
 export const SAVE_KEY = 'el-colony';
 export const TITLE = 'Earthlight Space Colony Rebuild';
 // Starting numbers (tuned by tests/colony-sim.mjs).
-export const START = { stock: { food: 300, water: 300, air: 200, parts: 250, ore: 0, credits: 3000 }, pop: 40, tax: 0.10 };
+export const START = { stock: { food: 300, water: 300, air: 200, parts: 250, ore: 0, alloy: 0, helium: 0, credits: 3000 }, pop: 40, tax: 0.10 };
 const ROSTER_KEYS = ['el-expansion-campaign-remnant', 'el-expansion-campaign'];
 
 // The expansion roster inside a parsed save file's data, or null.
@@ -35,10 +35,11 @@ export function newGame({ seed = 1, importSave = null, beta = false, types = nul
     map, chambers, buildings: [], nextId: 1,
     stock: { ...START.stock }, battery: 0, pop: START.pop, housing: 0,
     happy: 50, happyParts: [],
-    market: { ore: 1, food: 1, parts: 1, water: 1, air: 1 },
-    unlocked: BUILDINGS.filter((d) => !d.fixed && !d.unlock).map((d) => d.key),
+    market: { ore: 1, food: 1, parts: 1, water: 1, air: 1, alloy: 1, helium: 1 },
+    unlocked: BUILDINGS.filter((d) => !d.fixed && !d.unlock && !d.tech).map((d) => d.key),   // version 2 buildings wait on research
     log: [], pending: [], stats: { last: { produced: {}, consumed: {} } },
     imported: null, guardians: [], flags: { short: { food: 0, water: 0, air: 0, power: 0 } },
+    research: { points: 0, focus: null, progress: {}, done: [] },   // version 2 (docs/COLONY-V2.md)
   };
   const put = (key, x, y) => {
     const d = BUILDING[key], b = { id: state.nextId++, key, x, y, level: 1, mode: d.modes ? d.modes[0].key : null, build: 0, off: false };
@@ -140,6 +141,9 @@ export function loadState(text) {
   const s = typeof text === 'string' ? JSON.parse(text) : text;
   if (!s || s.v !== 1 || !s.map) throw new Error('This is not an Earthlight colony save.');
   for (const k of MAP_ARRAYS) s.map[k] = fromB64(s.map[k]);
+  upgradeState(s);   // colonies saved before version 2: research, alloy, helium, the lab
+  // a version 2 building is unlocked only by its tech (saves from builds that unlocked them early)
+  s.unlocked = s.unlocked.filter((k) => !BUILDING[k]?.tech || s.research.done.includes(BUILDING[k].tech));
   return s;
 }
 

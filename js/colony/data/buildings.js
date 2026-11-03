@@ -111,7 +111,7 @@ export const BUILDINGS = [
     text: 'Fish from Eden\'s river. Must stand beside it.' },
   { key: 'canteen', name: 'Canteen', cat: 'food', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor'], cost: { credits: 150, parts: 10 }, days: 3, jobs: 2, upkeep: 2, power: -3, uses: { food: 4 }, radius: 8, service: 5, tech: 'canteens',
     modes: [{ key: 'meals', name: 'Hot meals', text: 'Happiness for homes in range.' },
-            { key: 'ration', name: 'Rationing', text: 'The colony eats a fifth less; everyone is a little less happy.' }],
+            { key: 'ration', name: 'Rationing', text: 'The colony eats a fifth less; no hot meals, and everyone is a little less happy.' }],
     text: 'Hot meals: happiness for the homes in range. Can ration food in a pinch.' },
   { key: 'seedvault', name: 'Seed Vault', cat: 'food', size: 1, zone: 'interior', on: ['plain', 'fertile', 'poor'], cost: { credits: 200, parts: 15 }, days: 4, jobs: 1, upkeep: 2, radius: 5, tech: 'seeds',
     text: 'Mends the soil around it: a poor tile in range becomes plain every 10 days.' },
