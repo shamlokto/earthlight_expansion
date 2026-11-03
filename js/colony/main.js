@@ -22,6 +22,9 @@ let state = null, view = null, ui = null, types = null;
 let placing = null;           // { key, moveId }
 let lastKey = null, hover = null, lastSpeed = 1, overlay = null, overlayDay = -1;
 let raf = 0, last = 0, acc = 0, pointer = { x: 0, y: 0 };
+// Version 4 (docs/COLONY-V4.md): the deck on show. Every placement, overlay, road and tile query
+// passes it to the rules; the view draws it (view.setDeck).
+let deck = 'main';
 const settings = loadSettings();
 
 function loadSettings() {
@@ -164,7 +167,7 @@ function startGame(s, isNew = false) {
   if (view) { try { view.destroy(); } catch { } view = null; }
   $('#view').innerHTML = '';
   try {
-    view = M.view.createView($('#view'), { onTileClick, onTileHover });
+    view = M.view.createView($('#view'), { onTileClick, onTileHover, onDeck: (dir) => stepDeck(dir) });
     view.setState(state);
     view.setSnap?.(settings.snap);
     viewHelpers();
@@ -177,6 +180,8 @@ function startGame(s, isNew = false) {
     view = null;
   }
   if (ui) ui.destroy();
+  deck = 'main';
+  try { view?.setDeck?.('main'); } catch (e) { console.warn('setDeck', e); }
   ui = createUI($('#ui'), api);
   overlay = null; placing = null; hover = null;
   ui.update(true);
@@ -200,7 +205,7 @@ const api = {
   settings,
   act: (r) => afterAction(r),
   pick: (key) => setPlacing(key ? { key } : null),
-  move: (id) => { const b = state.buildings.find((x) => x.id === id); if (b) setPlacing({ key: b.key, moveId: id }); },
+  move: (id) => { const b = state.buildings.find((x) => x.id === id); if (b) { setDeck(deckOf(b), { quiet: true }); setPlacing({ key: b.key, moveId: id }); } },
   placingKey: () => placing && !placing.moveId ? placing.key : null,
   setSpeed,
   setOverlay: (name) => { overlay = name; applyOverlay(); },
@@ -231,7 +236,67 @@ const api = {
   openResearch: (key) => ui?.openResearch(key),
   openDefence: (tab) => ui?.openDefence?.(tab),
   audio,
+  // version 4: the decks
+  deck: () => deck,
+  decks: () => DECKS.filter(hasDeck),
+  setDeck: (d) => setDeck(d),
+  stepDeck: (dir) => stepDeck(dir),
+  mapOf: (d) => mapOf(d),
+  // switch to deck d and inspect (x, y) there (the inspector's "Go" on a lift shaft)
+  goDeck: (d, x, y) => { if (!setDeck(d)) return; if (x != null && y != null) { view?.focus?.(x, y); ui.inspect(x, y); } },
 };
+
+// ---------------------------------------------------------------- decks (version 4)
+export const DECKS = ['upper', 'main', 'lower'];
+const DECK_NAME = { upper: 'Upper deck', main: 'Main deck', lower: 'Lower deck' };
+const deckOf = (o) => o?.deck || 'main';
+// A deck exists in this colony: the main one always, the others once state.decks has them.
+const hasDeck = (d) => d === 'main' || !!(state?.decks?.[d]?.t);
+// The deck's map { w, h, t, r, ch, sv } (rules.mapOf when the rules have it).
+function mapOf(d = deck) {
+  if (!state) return null;
+  if (d === 'main') return state.map;
+  try { const m = M.rules.mapOf?.(state, d); if (m) return m; } catch { }
+  const m = state.decks?.[d];
+  return m ? { w: state.map.w, h: state.map.h, ...m } : null;
+}
+// The decks a building may stand on: data/buildings.js `decks` (absent = main only). Seals and
+// roads go wherever chambers and lifts are (every deck has breaches; lifts carry roads).
+const ANY_DECK = new Set(['seal', 'road']);
+export function decksFor(key) {
+  const d = BUILDING[key];
+  if (!d) return ['main'];
+  return d.decks || (ANY_DECK.has(key) ? DECKS : ['main']);
+}
+const openOn = (d) => d === 'main' || state.chambers.some((c) => deckOf(c) === d && c.status === 'open');
+
+// Show deck d: the view, the overlay, the panels. Returns false when this colony has no such deck.
+function setDeck(d, { quiet = false } = {}) {
+  if (!state || !DECKS.includes(d)) return false;
+  if (!hasDeck(d)) { if (!quiet) ui?.toast(`${DECK_NAME[d]}: not in this colony yet.`, 'bad'); return false; }
+  if (d === deck) { try { if (view && view.deck !== undefined && view.deck !== d) view.setDeck?.(d); } catch { } return true; }
+  deck = d;
+  if (placing?.roadStart) placing.roadStart = null;
+  hover = null;
+  try { view?.setGhost(null, 0, 0, false); } catch { }
+  ui?.tip(null);
+  try { view?.setDeck?.(d); } catch (e) { console.error(e); }
+  ui?.closeInspector();
+  applyOverlay();
+  ui?.update();
+  return true;
+}
+// One deck up (▲, PageUp) or down (▼, PageDown). dir: 'up' | 'down' | +1 (up) | -1 (down) | a deck name.
+function stepDeck(dir) {
+  if (DECKS.includes(dir)) return setDeck(dir);
+  const up = dir === 'up' || (typeof dir === 'number' && dir > 0);
+  const down = dir === 'down' || (typeof dir === 'number' && dir < 0);
+  if (!up && !down) return false;
+  const i = DECKS.indexOf(deck) + (up ? -1 : 1);
+  if (i < 0 || i >= DECKS.length) { ui?.toast(up ? 'This is the top deck.' : 'This is the bottom deck.', ''); return false; }
+  return setDeck(DECKS[i]);
+}
+
 
 function afterAction(r, quiet) {
   ui.changed?.();
@@ -246,7 +311,7 @@ function afterAction(r, quiet) {
 function applyOverlay() {
   if (!view) return;
   let data = null;
-  if (overlay) { try { data = M.rules.coverage(state, overlay); } catch { } }
+  if (overlay) { try { data = M.rules.coverage(state, overlay, deck); } catch { } }
   try { view.setOverlay(overlay, data); } catch (e) { console.error(e); }
   overlayDay = state.day;
 }
@@ -282,8 +347,9 @@ function doShow(sh) {
     ui.openDefence?.(typeof sh.defence === 'string' ? sh.defence : null);
     return;
   }
-  if (sh.market) { setPlacing(null); ui.openMarket(); const d = state.buildings.find((b) => b.key === 'dock'); if (d) view?.focus?.(d.x + 1, d.y + 1); return; }
+  if (sh.market) { setPlacing(null); setDeck('main', { quiet: true }); ui.openMarket(); const d = state.buildings.find((b) => b.key === 'dock'); if (d) view?.focus?.(d.x + 1, d.y + 1); return; }
   if (sh.roads) {
+    if (sh.deck) setDeck(sh.deck, { quiet: true });
     ui.openBuild('road'); setPlacing({ key: 'road' });
     ui.toast('Roads: click where the road starts, then where it ends.', '');
     return;
@@ -291,31 +357,37 @@ function doShow(sh) {
   if (sh.build) {
     const key = sh.build;
     if (!BUILDING[key]) return;
+    // the deck first: the one asked for, else where it can stand and a chamber is open
+    const target = buildTarget(key, sh.deck);
+    const moved = target.deck !== deck;
+    setDeck(target.deck, { quiet: true });
     ui.openBuild(key);
     setPlacing({ key });
-    const spot = lastSpot = suggestSpot(key);
+    const spot = lastSpot = target.spot !== undefined ? target.spot : suggestSpot(key, deck);
+    const where = moved ? ` (${DECK_NAME[deck]})` : '';
     if (spot) {
       const o = Math.floor(((BUILDING[key].size || 1) - 1) / 2);
       view?.focus?.(spot.x + o, spot.y + o);
-      try { view?.setGhost(key, spot.x, spot.y, M.rules.canBuild(state, key, spot.x, spot.y) == null); } catch { }
-      ui.toast(`${BUILDING[key].name}: a good spot is marked. Click it, or any spot where the ghost turns green.`, '');
-    } else ui.toast(`${BUILDING[key].name}: move over the map; green means you can build there.`, '');
+      try { view?.setGhost(key, spot.x, spot.y, M.rules.canBuild(state, key, spot.x, spot.y, deck) == null); } catch { }
+      ui.toast(`${BUILDING[key].name}${where}: a good spot is marked. Click it, or any spot where the ghost turns green.`, '');
+    } else ui.toast(`${BUILDING[key].name}${where}: move over the map; green means you can build there.`, '');
     return;
   }
   setPlacing(null);
   if (sh.chamber != null) {
     const c = state.chambers.find((k) => k.id === sh.chamber); if (!c) return;
+    setDeck(deckOf(c), { quiet: true });
     const t = tileOfChamber(c);
     view?.focus?.(t.x, t.y);
     ui.inspect(t.x, t.y);
     return;
   }
-  if (sh.tile) { view?.focus?.(sh.tile.x, sh.tile.y); ui.inspect(sh.tile.x, sh.tile.y); }
+  if (sh.tile) { setDeck(sh.tile.deck || sh.deck || deck, { quiet: true }); view?.focus?.(sh.tile.x, sh.tile.y); ui.inspect(sh.tile.x, sh.tile.y); }
 }
 
 // A floor tile of the chamber nearest its middle (the middle itself may be a wall).
 function tileOfChamber(c) {
-  const { w, ch } = state.map, mx = (c.x0 + c.x1) / 2, my = (c.y0 + c.y1) / 2;
+  const { w, ch } = mapOf(deckOf(c)) || state.map, mx = (c.x0 + c.x1) / 2, my = (c.y0 + c.y1) / 2;
   let best = { x: Math.round(mx), y: Math.round(my) }, bd = Infinity;
   for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) {
     if (ch[y * w + x] !== c.id) continue;
@@ -327,31 +399,61 @@ function tileOfChamber(c) {
 
 // Where a new player might put `key`: near the Command Centre; farms on the best soil, seals on
 // the next open breach. Null when nothing fits (the ghost then says why wherever the pointer is).
-function suggestSpot(key) {
+function suggestSpot(key, dk = deck) {
   const R = M.rules, d = BUILDING[key];
   try {
     if (key === 'seal' && R.openBreaches) {
+      const w = state.map.w;
       for (const c of state.chambers) {
-        if (c.status !== 'surveyed') continue;
+        if (c.status !== 'surveyed' || deckOf(c) !== dk) continue;
         for (const i of R.openBreaches(state, c)) {
-          const x = i % state.map.w, y = (i / state.map.w) | 0;
-          if (R.placeCheck ? R.placeCheck(state, 'seal', x, y, { free: true }) == null : true) return { x, y };
+          const x = i % w, y = (i / w) | 0;
+          if (R.placeCheck ? R.placeCheck(state, 'seal', x, y, { free: true, deck: dk }) == null : true) return { x, y };
         }
       }
       return null;
     }
     if (!R.findSpot || key === 'road') return null;
-    const cc = state.buildings.find((b) => b.key === 'command'), n = d.size || 1;
-    const cx = cc ? cc.x + 1.5 : state.map.w / 2, cy = cc ? cc.y + 1.5 : state.map.h / 2;
-    const dist = (x, y) => Math.abs(x + n / 2 - cx) + Math.abs(y + n / 2 - cy);
+    const n = d.size || 1, a = anchorOn(dk);
+    const dist = (x, y) => Math.abs(x + n / 2 - a.x) + Math.abs(y + n / 2 - a.y);
     let score = dist;
     if (key === 'farm' && M.sim.farmSoil) score = (x, y) => -M.sim.farmSoil(state, { key, x, y }) * 100 + dist(x, y);
-    if (key === 'park' || key === 'grove') {   // beside the homes
-      const homes = state.buildings.filter((b) => b.key === 'habitat');
+    if (key === 'park' || key === 'grove' || key === 'skygarden') {   // beside the homes
+      const homes = state.buildings.filter((b) => b.key === 'habitat' && deckOf(b) === dk);
       if (homes.length) score = (x, y) => Math.min(...homes.map((h) => Math.abs(h.x - x) + Math.abs(h.y - y))) * 3 + dist(x, y) * 0.2;
     }
-    return R.findSpot(state, key, { score, free: true });
+    return R.findSpot(state, key, { score, free: true, deck: dk });
   } catch (e) { console.warn('suggestSpot', e); return null; }
+}
+// Where to look first on a deck: the Command Centre on the main deck; elsewhere a Lift, else the
+// middle of the deck's open chambers.
+function anchorOn(dk) {
+  const on = (b) => deckOf(b) === dk;
+  const b = dk === 'main' ? state.buildings.find((k) => k.key === 'command') : state.buildings.find((k) => k.key === 'lift' && on(k)) || state.buildings.find(on);
+  if (b) { const n = BUILDING[b.key]?.size || 1; return { x: b.x + n / 2, y: b.y + n / 2 }; }
+  const open = state.chambers.filter((c) => deckOf(c) === dk && c.status === 'open');
+  if (open.length) return { x: open.reduce((t, c) => t + (c.x0 + c.x1) / 2, 0) / open.length, y: open.reduce((t, c) => t + (c.y0 + c.y1) / 2, 0) / open.length };
+  return { x: state.map.w / 2, y: state.map.h / 2 };
+}
+// The deck "Show me: build X" goes to: the one asked for; for a seal the deck of the first
+// surveyed chamber with an open breach; else the current deck when the building can stand there
+// and a chamber is open, then the building's decks in order: the first with a spot, else the
+// first with an open chamber. { deck, spot? } (spot when one was found on the way).
+function buildTarget(key, want) {
+  const ok = decksFor(key).filter(hasDeck);
+  if (want && hasDeck(want)) return { deck: want };
+  if (!ok.length) return { deck };
+  if (key === 'seal') {
+    for (const dk of [deck, ...DECKS.filter((x) => x !== deck)]) {
+      if (!ok.includes(dk)) continue;
+      const spot = suggestSpot(key, dk);
+      if (spot) return { deck: dk, spot };
+    }
+    return { deck: ok.includes(deck) ? deck : ok[0] };
+  }
+  const order = [...(ok.includes(deck) ? [deck] : []), ...ok.filter((x) => x !== deck)].filter(openOn);
+  for (const dk of order) { const spot = suggestSpot(key, dk); if (spot) return { deck: dk, spot }; }
+  return { deck: order[0] || (ok.includes(deck) ? deck : ok[0]) };
 }
 
 let lastSpot = null;   // the last spot "Show me" marked (tests read it through window.__colony)
@@ -391,17 +493,17 @@ function placeCheck(x, y) {
   const o = origin(placing.key, x, y);
   let why;
   if (placing.moveId) {
-    const r = (() => { try { const c = structuredClone(state); return M.rules.move(c, placing.moveId, o.x, o.y); } catch (e) { return { ok: false, msg: e.message }; } })();
+    const r = (() => { try { const c = structuredClone(state); return M.rules.move(c, placing.moveId, o.x, o.y, deck); } catch (e) { return { ok: false, msg: e.message }; } })();
     why = r && r.ok === false ? r.msg || 'Cannot move here.' : null;
   } else {
-    try { why = M.rules.canBuild(state, placing.key, o.x, o.y); } catch (e) { why = e.message; }
+    try { why = M.rules.canBuild(state, placing.key, o.x, o.y, deck); } catch (e) { why = e.message; }
   }
   return { ...o, why };
 }
 
 // Roads go down as a line: the first click fixes the start, the second builds an L to the end.
 function roadPreview(x, y) {
-  const s0 = placing.roadStart, plan = M.rules.planRoad(state, s0.x, s0.y, x, y), d = { cost: costOf(BUILDING.road.cost, 'road') };
+  const s0 = placing.roadStart, plan = M.rules.planRoad(state, s0.x, s0.y, x, y, deck), d = { cost: costOf(BUILDING.road.cost, 'road') };
   const { w, h } = state.map, v = new Float32Array(w * h);
   let fresh = 0, blocked = 0;
   for (const p of plan) { v[p.y * w + p.x] = p.why == null ? 1 : p.why === 'have' ? 0.6 : 0.15; if (p.why == null) fresh++; else if (p.why !== 'have') blocked++; }
@@ -431,13 +533,13 @@ function onTileClick(x, y, button) {
   if (button === 2) { if (placing) setPlacing(null); return; }
   if (placing && placing.key === 'road' && !placing.moveId) {
     if (!placing.roadStart) {
-      const why = M.rules.canBuild(state, 'road', x, y);
-      if (why && !state.buildings.some((b) => b.key === 'road' && b.x === x && b.y === y)) { ui.toast(why, 'bad'); return; }
+      const why = M.rules.canBuild(state, 'road', x, y, deck);
+      if (why && !state.buildings.some((b) => b.key === 'road' && b.x === x && b.y === y && deckOf(b) === deck)) { ui.toast(why, 'bad'); return; }
       placing.roadStart = { x, y };   // a road may also start from an existing road tile
       roadPreview(x, y);
       return;
     }
-    const s0 = placing.roadStart, r = M.rules.buildRoad(state, s0.x, s0.y, x, y);
+    const s0 = placing.roadStart, r = M.rules.buildRoad(state, s0.x, s0.y, x, y, deck);
     afterAction(r, true);
     if (r?.ok !== false) ui.toast(r.msg, 'good');
     placing.roadStart = null; applyOverlay();
@@ -446,7 +548,7 @@ function onTileClick(x, y, button) {
   }
   if (placing) {
     const { x: ox, y: oy } = origin(placing.key, x, y);
-    const r = placing.moveId ? M.rules.move(state, placing.moveId, ox, oy) : M.rules.build(state, placing.key, ox, oy);
+    const r = placing.moveId ? M.rules.move(state, placing.moveId, ox, oy, deck) : M.rules.build(state, placing.key, ox, oy, deck);
     afterAction(r, true);
     if (r?.ok !== false) {
       ui.toast(placing.moveId ? `${BUILDING[placing.key].name} moved.` : `${BUILDING[placing.key].name} ordered.`, 'good');
@@ -472,6 +574,13 @@ function onKey(e) {
   if (!state || $('#sGame').hidden) return;
   if (e.target.closest?.('input, textarea, select') && e.key !== 'Escape') return;
   if (ui.eventOpen() && settings.pauseOnEvents && e.key !== 'Escape') return;
+  // PageUp / PageDown: one deck up or down (the view's tilt moved to Alt + scroll and its buttons).
+  // Handled here, and kept from the view's own key handler, so one press moves one deck.
+  if ((e.key === 'PageUp' || e.key === 'PageDown') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (!e.repeat) stepDeck(e.key === 'PageUp' ? 'up' : 'down');
+    return;
+  }
   switch (e.key) {
     case ' ': e.preventDefault(); setSpeed(state.speed ? 0 : lastSpeed || 1); break;
     case '1': setSpeed(1); break;
@@ -563,7 +672,8 @@ async function main() {
   }
   showTitle();
   audio.init().then((ok) => { if (ok && !$('#sTitle').hidden) audio.play('title'); });
-  window.__colony = { get state() { return state; }, get view() { return view; }, get ui() { return ui; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings, show: doShow };
+  window.__colony = { get state() { return state; }, get view() { return view; }, get ui() { return ui; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings, show: doShow,
+    get deck() { return deck; }, setDeck, stepDeck, mapOf, get placing() { return placing; } };
   // colony.html?from=remnant|classic: straight on from the expansion's ending, its army already found
   const from = new URLSearchParams(location.search).get('from');
   if (from && EXPANSION[from]) newDialog(from);
