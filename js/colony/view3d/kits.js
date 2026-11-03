@@ -679,6 +679,112 @@ export const KITS = {
     cyl([0.025, 0.7, 0.025], [0.36, 0.05, -0.36], STEEL),
     box([0.2, 0.12, 0.02], [0.26, 0.6, -0.36], '#3a7ae8'),
   ],
+
+  // ---- version 4 (docs/COLONY-V4.md): the deck buildings
+  // 2×2 on a lift shaft (any deck): a steel frame tower over a plate that covers the pit, a lit cage
+  // with a yellow gate at its foot, cables up to the winding house, a sheave wheel and a beacon.
+  lift: () => {
+    const parts = [
+      box([2.04, 0.26, 2.04], [0, 0, 0], '#4a5058', { slot: 'mat/hull-plate' }),   // covers the pit and its gold rim
+      box([1.6, 0.025, 1.6], [0, 0.26, 0], HAZARD),
+      box([1.36, 0.03, 1.36], [0, 0.265, 0], '#2b3138'),
+    ];
+    const P = 0.8, top = 3.3;
+    for (const [x, z] of [[-P, -P], [P, -P], [-P, P], [P, P]]) parts.push(box([0.13, top, 0.13], [x, 0.26, z], STEEL));
+    for (const y of [1.3, 2.3, 3.4]) parts.push(
+      box([1.73, 0.08, 0.08], [0, y, -P], STEEL), box([1.73, 0.08, 0.08], [0, y, P], STEEL),
+      box([0.08, 0.08, 1.73], [-P, y, 0], STEEL), box([0.08, 0.08, 1.73], [P, y, 0], STEEL));
+    // cross braces on the two side faces between the ring beams
+    for (const [y0, s] of [[1.38, 1], [2.38, -1]]) for (const x of [-P, P]) parts.push(box([0.04, 0.04, 1.86], [x, y0 + 0.43, 0], '#7a838d', { rot: [s * 0.5, 0, 0] }));
+    parts.push(
+      box([1.05, 0.85, 1.05], [0, 0.29, 0], '#c9ced6'),                    // the cage
+      box([1.08, 0.16, 1.08], [0, 0.62, 0], WIN, GLOW),
+      box([1.1, 0.07, 1.1], [0, 1.14, 0], HAZARD),
+      box([0.56, 0.62, 0.04], [0, 0.3, 0.54], '#e8b52a'),                  // its gate
+      box([0.04, 0.6, 0.045], [-0.12, 0.31, 0.545], DARK), box([0.04, 0.6, 0.045], [0.12, 0.31, 0.545], DARK),
+      cyl([0.035, 2.2, 0.035], [-0.22, 1.21, 0], '#2b3138'), cyl([0.035, 2.2, 0.035], [0.22, 1.21, 0], '#2b3138'),
+      box([1.86, 0.22, 1.86], [0, 3.48, 0], '#6a7480'),                    // the winding house on top
+      box([1.0, 0.36, 0.8], [0, 3.7, 0], '#8a929c'),
+      box([1.02, 0.08, 0.82], [0, 3.86, 0], WIN, GLOW),
+      torus([0.75, 0.16, 0.75], [0, 3.72, 0], HAZARD, { rot: [HALF_PI, 0, 0] }),
+      dome([0.2, 0.16, 0.2], [0.6, 3.7, 0.6], BEACON, GLOW),
+    );
+    return parts;
+  },
+  // 2×2 on the upper deck: a timber terrace with a planted bed of round trees, a pond, flowers and a
+  // small glass greenhouse dome, lamps lit for the night side.
+  skygarden: () => [
+    box([1.96, 0.08, 1.96], [0, 0, 0], '#9a8460'),
+    box([1.84, 0.14, 0.74], [0, 0.08, -0.56], '#5a4a3a'),
+    box([1.8, 0.04, 0.7], [0, 0.22, -0.56], '#5fae4a'),
+    ...tree(-0.62, -0.58, 1.35, true), ...tree(-0.05, -0.62, 1.1, true), ...tree(0.58, -0.52, 1.5, true),
+    ...[-0.8, -0.4, 0.2, 0.75].map((x, k) => box([0.12, 0.05, 0.08], [x, 0.26, -0.22], k % 2 ? '#ff8fd8' : '#ffd23a')),
+    cyl([0.82, 0.05, 0.82], [-0.48, 0.08, 0.46], '#3a7ab8'),
+    torus([0.88, 0.05, 0.88], [-0.48, 0.08, 0.46], '#bfb3a0'),
+    cyl([0.64, 0.06, 0.64], [0.5, 0.08, 0.48], '#dfe6ee'),
+    dome([0.6, 0.5, 0.6], [0.5, 0.14, 0.48], '#bfe8ff'),
+    cone([0.22, 0.34, 0.22], [0.5, 0.14, 0.48], '#3f8a3a'),
+    ...[[-0.9, 0.0], [0.05, 0.88]].flatMap(([x, z]) => [cyl([0.03, 0.42, 0.03], [x, 0.08, z], DARK), dome([0.1, 0.08, 0.1], [x, 0.5, z], '#fff2b0', GLOW)]),
+  ],
+  // 2×2 on the upper deck: a marble hall with a colonnade and a barrel roof of sky glass, lit art
+  // panels between the columns and a gilded statue on the plaza.
+  gallery: () => [
+    box([1.96, 0.08, 1.96], [0, 0, 0], '#c9c2b4'),
+    box([1.72, 0.55, 1.12], [0, 0.08, -0.3], '#ece6da', { slot: 'mat/hab-facade' }),
+    cyl([0.62, 1.74, 1.14], [0, -0.24, -0.3], '#9fd6f0', { rot: [0, 0, HALF_PI] }),
+    box([1.76, 0.07, 0.22], [0, 0.63, 0.34], '#f4f0e8'),
+    ...[-0.78, -0.46, -0.15, 0.15, 0.46, 0.78].map((x) => cyl([0.08, 0.55, 0.08], [x, 0.08, 0.36], '#f4f0e8')),
+    ...[[-0.6, '#ff6a8a'], [0, '#ffd23a'], [0.6, '#6ad0ff']].map(([x, c]) => box([0.22, 0.26, 0.03], [x, 0.2, 0.27], c, GLOW)),
+    box([0.24, 0.16, 0.24], [-0.62, 0.08, 0.72], '#dcd4c4'),
+    cyl([0.1, 0.22, 0.1], [-0.62, 0.24, 0.72], '#d9b23a'),
+    dome([0.12, 0.1, 0.12], [-0.62, 0.46, 0.72], '#d9b23a'),
+    box([0.7, 0.02, 0.5], [0.4, 0.08, 0.72], '#b03a3a'),
+  ],
+  // 2×2 on the lower deck: a big round water tank with steel hoops, a glowing level band, a domed
+  // lid with a hatch, and its pipe run to a pump block.
+  cistern: () => [
+    box([1.96, 0.08, 1.96], [0, 0, 0], '#4a5058'),
+    cyl([1.62, 1.0, 1.62], [0, 0.08, 0], '#5a7a9a', { slot: 'mat/tank' }),
+    torus([1.7, 0.07, 1.7], [0, 0.3, 0], STEEL), torus([1.7, 0.07, 1.7], [0, 0.82, 0], STEEL),
+    cyl([1.64, 0.07, 1.64], [0, 0.56, 0], '#4ac0ff', GLOW),
+    dome([1.62, 0.36, 1.62], [0, 1.08, 0], '#6a8aa8'),
+    cyl([0.32, 0.1, 0.32], [0, 1.4, 0], STEEL),
+    box([0.06, 1.2, 0.08], [0.82, 0.08, 0.1], HAZARD),
+    cyl([0.14, 0.7, 0.14], [0.62, 0.2, -0.62], '#8a929c', { rot: [0, 0, HALF_PI] }),
+    box([0.4, 0.36, 0.4], [-0.72, 0.08, 0.72], DARK),
+    box([0.42, 0.06, 0.42], [-0.72, 0.3, 0.72], '#4aa8e8', GLOW),
+  ],
+  // 2×2 on the lower deck: a derrick over a bore glowing from the old core, two copper heat
+  // exchangers with lit vents and a hazard-striped wellhead.
+  geotap: () => {
+    const parts = [
+      box([1.96, 0.1, 1.96], [0, 0, 0], '#3a3430'),
+      torus([1.1, 0.14, 1.1], [0, 0.1, 0], '#6a6460'),
+      cyl([0.86, 0.06, 0.86], [0, 0.1, 0], '#ff6a1a', GLOW),
+      cyl([0.12, 2.0, 0.12], [0, 0.1, 0], STEEL),
+      box([0.34, 0.24, 0.34], [0, 2.05, 0], HAZARD),
+      torus([0.7, 0.1, 0.7], [0, 0.9, 0], '#ff9a3a', GLOW),
+      dome([0.16, 0.12, 0.16], [0, 2.29, 0], BEACON, GLOW),
+    ];
+    for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) parts.push(box([0.08, 2.1, 0.08], [x * 0.38, 0.05, z * 0.38], '#8a929c', { rot: [-z * 0.17, 0, x * 0.17] }));
+    for (const [x, z] of [[-0.68, 0.68], [0.68, 0.68]]) parts.push(
+      cyl([0.44, 0.75, 0.44], [x, 0.1, z], '#c4773a'), torus([0.5, 0.06, 0.5], [x, 0.4, z], '#7a4a2a'),
+      cyl([0.3, 0.06, 0.3], [x, 0.85, z], '#ffb46a', GLOW));
+    parts.push(box([0.5, 0.3, 0.36], [0.62, 0.1, -0.66], DARK), box([0.52, 0.06, 0.38], [0.62, 0.28, -0.66], '#ffb46a', GLOW));
+    return parts;
+  },
+  // 1×1 (main and lower deck): a squat pump house with a motor stack, a blue impeller wheel, the
+  // outflow pipe and a green running light.
+  pumpstation: () => [
+    box([0.92, 0.06, 0.92], [0, 0, 0], '#5a6068'),
+    box([0.5, 0.38, 0.46], [-0.12, 0.06, -0.1], '#5a7a8a'),
+    box([0.53, 0.05, 0.49], [-0.12, 0.44, -0.1], DARK),
+    cyl([0.18, 0.46, 0.18], [0.27, 0.06, -0.24], '#8a929c'),
+    dome([0.2, 0.1, 0.2], [0.27, 0.52, -0.24], STEEL),
+    torus([0.36, 0.08, 0.36], [0.24, 0.2, 0.22], '#4aa8e8', { rot: [0, 0, HALF_PI] }),
+    cyl([0.12, 0.4, 0.12], [-0.12, -0.02, 0.25], '#4a9ae0', { rot: [HALF_PI, 0, 0] }),
+    box([0.08, 0.06, 0.03], [-0.12, 0.3, 0.14], '#5fff8a', GLOW),
+  ],
 };
 
 // A plain block for any key without a kit (later buildings), so the view never fails on new data.
