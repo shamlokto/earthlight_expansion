@@ -126,10 +126,10 @@ function attemptDecks(rng, main, mainChambers, startId, { avoid = null, landing 
     const score = fertile(s.x, s.y) * 4 + (nearRiver(s.x, s.y, 2) ? 12 : 0) + Math.max(0, 7 - cmd) * 4 + Math.abs(cmd - 9) * 0.3 + rng() * 3;
     if (score < best) { best = score; home = s; }
   }
-  if (!home) {   // a crowded old colony: any open chamber will do
+  if (!home) {   // a crowded old colony: any open chamber will do, else any chamber at all
     const open = new Set(mainChambers.filter((c) => c.status === 'open').map((c) => c.id));
     const alt = cands.filter((s) => open.has(s.main));
-    home = alt.length ? pick(alt) : null;
+    home = alt.length ? pick(alt) : cands.length ? pick(cands) : null;
   }
   if (!home) return null;
   const want = rint(SHAFT.min, SHAFT.max), shafts = [home];

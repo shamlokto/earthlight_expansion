@@ -137,7 +137,8 @@ function preview(m, E) {
   check(median < 200, `deck generation median ${median.toFixed(0)} ms (< 200)`);
   // deterministic; different seeds differ
   check(saveState(newGame({ seed: 4 })) === saveState(newGame({ seed: 4 })), 'same seed, same decks');
-  check(newGame({ seed: 1 }).decks.upper.t.some((v, i) => v !== newGame({ seed: 2 }).decks.upper.t[i]), 'different seeds, different decks');
+  const u2 = newGame({ seed: 2 }).decks.upper.t;
+  check(newGame({ seed: 1 }).decks.upper.t.some((v, i) => v !== u2[i]), 'different seeds, different decks');
   // the stand-in map generator of tests/colony-sim.mjs gets decks too
   const { generateFakeMap } = await import('./colony-fakemap.mjs');
   const f = newGame({ seed: 3, generate: generateFakeMap });
@@ -440,6 +441,18 @@ let player = null;
   const v1 = JSON.parse(old);
   for (const k of ['research', 'production', 'commanders', 'wanderers', 'raid']) delete v1[k];
   check(loadState(JSON.stringify(v1)).decks?.upper, 'a version-1 save gets decks too');
+  // a landing chamber built full (every free tile a Storage Depot): the home shaft moves to another open chamber
+  const full = loadState(stripDecks(player.s)), land = landingOf(full);
+  delete full.decks; full.chambers = full.chambers.filter((c) => !c.deck); full.buildings = full.buildings.filter((bd) => !bd.deck && bd.key !== 'lift');
+  for (let i = 0; i < full.map.t.length; i++) if (full.map.t[i] === T.SHAFT) full.map.t[i] = T.PLAIN;
+  const occ = R.occupancy(full);
+  for (let y = land.y0; y <= land.y1; y++) for (let x = land.x0; x <= land.x1; x++) {
+    const i = y * full.map.w + x;
+    if (!occ[i] && full.map.ch[i] === land.id) full.buildings.push({ id: full.nextId++, key: 'depot', x, y, level: 1, mode: 'food', build: 0, off: false });
+  }
+  const fl = loadState(saveState(full));
+  const hs = home(fl), hc = R.chamberOf(fl, fl.map.ch[hs.y * fl.map.w + hs.x]);
+  check(fl.decks && hc.status === 'open' && hc.id !== land.id && !fl.buildings.some((bd) => [...R.tilesOf(fl, bd)].some((i) => fl.map.t[i] === T.SHAFT)), `a full landing chamber: the home shaft goes to another open chamber (${hc?.name})`);
 }
 
 console.log(failed ? `\n${failed} of ${failed + passed} checks FAILED` : `\nall ${passed} checks passed`);

@@ -130,6 +130,8 @@ export const GOALS = [
 function deckChamber(s, deck) {
   const on = s.chambers.filter((c) => c.deck === deck);
   const busy = on.find((c) => c.status !== 'sealed' && c.status !== 'open');
+  // a big chamber may need more air than the stores hold: point at an air depot first (as airFor does)
+  if (busy && busy.status === 'surveyed' && openBreaches(s, busy).length === 0 && pressuriseAir(s, busy) > (storageCaps(s).air || 0)) return { build: 'depot' };
   if (busy) return { chamber: busy.id };
   const lifts = s.buildings.filter((b) => b.key === 'lift' && b.build === 0);
   for (const l of lifts) {

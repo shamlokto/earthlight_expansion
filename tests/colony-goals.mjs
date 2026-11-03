@@ -62,7 +62,7 @@ function act(s) {
     const c = R.chamberOf(s, sh.chamber);
     if (c.status === 'sealed') R.chamberAction(s, c.id, 'survey');
     else if (c.status === 'surveyed' && R.openBreaches(s, c).length === 0) R.chamberAction(s, c.id, 'pressurise');
-    else if (c.status === 'surveyed') for (const i of R.openBreaches(s, c)) R.build(s, 'seal', i % s.map.w, (i / s.map.w) | 0);
+    else if (c.status === 'surveyed') for (const i of R.openBreaches(s, c)) R.build(s, 'seal', i % s.map.w, (i / s.map.w) | 0, c.deck || 'main');
   } else if (sh?.tile && g.id === 'seal') R.build(s, 'seal', sh.tile.x, sh.tile.y);
   else if (sh?.roads) { const c = s.chambers.find((k) => k.status === 'open' && k.kind !== 'landing'); c && roadInto(s, c); }
   else if (sh?.research) {
