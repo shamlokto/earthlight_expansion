@@ -7,11 +7,13 @@
 //   { kind: 'cost', key, mult }        a building's cost × mult
 //   { kind: 'pressurise', mult }       air to pressurise a chamber × mult
 //   { kind: 'survey', mult, days }     survey cost × mult, survey takes `days`
+//   { kind: 'machines', tier }         Earth Light machines of this tier can be built (data/machines.js)
 export const BRANCHES = [
   { key: 'life', name: 'Life Support', text: 'Water, air and health.' },
   { key: 'industry', name: 'Industry', text: 'Ore into alloy into parts; the riches of space.' },
   { key: 'society', name: 'Society', text: 'Food worth eating and a colony worth living in.' },
   { key: 'logistics', name: 'Logistics', text: 'Reach further, survey faster, seal better.' },
+  { key: 'defence', name: 'Defence', text: 'Guardians, shipyards, sensors and shields (version 3).' },
 ];
 
 export const TECHS = [
@@ -38,6 +40,18 @@ export const TECHS = [
   { key: 'drones', name: 'Survey Drones', branch: 'logistics', cost: 80, needs: [], unlocks: ['dronebay'], effects: [{ kind: 'survey', mult: 0.5, days: 1 }], text: 'Surveys cost half and take a day; a Drone Bay surveys chambers further away.' },
   { key: 'seals2', name: 'Better Seals', branch: 'logistics', cost: 90, needs: ['drones'], unlocks: [], effects: [{ kind: 'cost', key: 'seal', mult: 0.5 }, { kind: 'pressurise', mult: 0.75 }], text: 'Seals cost half; chambers need a quarter less air.' },
   { key: 'batteries2', name: 'Better Batteries', branch: 'logistics', cost: 100, needs: [], unlocks: [], effects: [{ kind: 'storage', key: 'battery', mult: 2 }], text: 'Battery Banks hold twice as much.' },
+  // ---- version 3 (docs/COLONY-V3.md)
+  { key: 'fungi', name: 'Mushroom Walls', branch: 'life', cost: 90, needs: ['hydro2'], unlocks: ['mushroom'], text: 'Grow food on the colony\'s waste, with no water at all.' },
+  { key: 'fusion', name: 'Fusion Power', branch: 'industry', cost: 200, needs: ['plasma'], unlocks: ['fusion'], text: 'A reactor that burns helium-3: power for a city.' },
+  { key: 'terraces', name: 'Terrace Homes', branch: 'society', cost: 110, needs: ['orchards'], unlocks: ['terrace'], text: 'Roomy homes on the hills: fewer neighbours, happier families.' },
+  { key: 'leadership', name: 'Leadership', branch: 'society', cost: 120, needs: ['safety'], unlocks: ['lodge', 'quarters'], text: 'Wanderers come to Eden; invite the best as commanders.' },
+  { key: 'sensors', name: 'Long-range Sensors', branch: 'defence', cost: 60, needs: [], unlocks: ['sensormast'], text: 'Sensor Masts see raiders coming days earlier.' },
+  { key: 'machineworks', name: 'Machine Works', branch: 'defence', cost: 100, needs: [], unlocks: [], effects: [{ kind: 'machines', tier: 2 }], text: 'The Arsenal can build stronger machines: Talos-class HU, bombers and gunboats.' },
+  { key: 'shields', name: 'Shield Pylons', branch: 'defence', cost: 120, needs: ['sensors'], unlocks: ['shieldpylon'], text: 'Shields keep raiders\' fire off the buildings in range.' },
+  { key: 'jamming', name: 'Jamming', branch: 'defence', cost: 120, needs: ['sensors'], unlocks: ['jammer'], text: 'Jammer Arrays hide Eden: less heat, fewer raids.' },
+  { key: 'shipyard', name: 'Shipyard', branch: 'defence', cost: 150, needs: ['machineworks'], unlocks: ['shipyard'], text: 'A Shipyard on the hull builds capital ships: carriers, cruisers, battleships.' },
+  { key: 'heavyworks', name: 'Heavy Works', branch: 'defence', cost: 180, needs: ['machineworks'], unlocks: [], effects: [{ kind: 'machines', tier: 3 }], text: 'The heaviest machines of the war: Athena, Medusa-class and the great ships.' },
+  { key: 'kai', name: 'Kai Refits', branch: 'defence', cost: 300, needs: ['heavyworks', 'shipyard'], unlocks: [], effects: [{ kind: 'machines', tier: 4 }], text: 'Ruess\'s refits of the expansion war: the Kai series, up to the Azoras Kai.' },
 ];
 export const TECH = Object.fromEntries(TECHS.map((t) => [t.key, t]));
 // Which tech unlocks a building (version 2 buildings carry `tech` too; this is the reverse index).
