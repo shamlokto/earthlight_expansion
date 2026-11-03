@@ -1,5 +1,6 @@
 // Movers: the colony's traffic for the 3D view (docs/COLONY-V1.md "view3d/view.js"). Barges on the
-// river, ore haulers and service drones in space, the transport that brings colonists, people and
+// river, haulers (ore, helium-3 from Plasma Skimmers, ice from Ice Harvesters; to the nearest dock or
+// Tether Mast) and service drones in space, the transport that brings colonists, people and
 // rovers on the roads. Movement is VISUAL: it is derived from the simulation's numbers (pop,
 // happiness, finished buildings, state.flags.arrival) and never writes anything back; nothing in
 // sim.js or rules.js knows movers exist (SimCity 2013's agent simulation is the cautionary tale).
@@ -35,6 +36,9 @@ const SHIRTS = ['#e8524a', '#3a7ae8', '#f2c14a', '#5ac87a', '#f4f4f4', '#9a6ae8'
 const CARGO = ['#f08a2a', '#7cc04a', '#4a9ae0', '#e8eef4', '#e05a4a', '#f2c14a'].map(lin);
 const BARGE_CARGO = ['#f08a2a', '#f0a030', '#e8702a'].map(lin);
 const HAULER_POD = ['#f08a2a', '#f2c14a', '#e8eef4'].map(lin);
+// Cargo pods by source (version 2): helium-3 glows magenta, comet ice is pale blue.
+const POD_OF = { plasmaskimmer: ['#ff6ae8', '#e85ad0'].map(lin), iceharvester: ['#bfe8ff', '#e8f6ff'].map(lin) };
+const HAUL_FROM = ['oremine', 'plasmaskimmer', 'iceharvester'];   // haulers fly from these to a dock or tether mast
 const NEWCOMER = lin('#eef4ff');
 
 // ---- models: low-poly parts merged into one geometry, with per-vertex colour, tint and glow ----
@@ -668,31 +672,37 @@ export function createMovers(parent) {
     bargeMesh.instanceColor.needsUpdate = true;
   }
 
-  // ---- space: ore haulers between mines and the nearest dock, drones around collectors ----------
+  // ---- space: haulers between mines (ore, helium-3, ice) and the nearest dock or tether mast,
+  //      drones around collectors and over survey drone bays -----------------------------------
 
   let haulers = [], drones = [];
   const ground = (x, y, n) => { let g = -1; for (let j = y; j < y + n; j++) for (let i = x; i < x + n; i++) if (i >= 0 && j >= 0 && i < W && j < H) g = Math.max(g, terrTop[j * W + i]); return Math.max(0, g); };
   const finishedOf = (key) => st.buildings.filter((b) => b.key === key && !(b.build > 0));
   function dockPad(d, slot) {
     const off = [[0, 0], [-0.45, 0.45], [0.55, 0.5], [-0.4, -0.3], [0.5, -0.25], [0.05, 0.6]][slot % 6];
+    if (d.key === 'tether') {   // a mast: hover beside it, around its middle
+      const a = slot * 2.4;
+      return [d.x + 0.5 + Math.cos(a) * 0.75, ground(d.x, d.y, 1) + 1.6 + 0.35 * (slot % 3), d.y + 0.5 + Math.sin(a) * 0.75];
+    }
     return [d.x + 1.1 + off[0], ground(d.x, d.y, 2) + 0.45, d.y + 1.15 + off[1]];
   }
-  const nearestDock = (docks, cx, cz) => { let best = null, bd = Infinity; for (const d of docks) { const dd = Math.hypot(d.x + 1 - cx, d.y + 1 - cz); if (dd < bd) { bd = dd; best = d; } } return best; };
+  const nearestDock = (docks, cx, cz) => { let best = null, bd = Infinity; for (const d of docks) { const h = (BUILDING[d.key]?.size || 2) / 2, dd = Math.hypot(d.x + h - cx, d.y + h - cz); if (dd < bd) { bd = dd; best = d; } } return best; };
   function syncSpace() {
-    const docks = finishedOf('dock'), old = new Map(haulers.map((h) => [h.key, h])), next = [];
+    const docks = finishedOf('dock'), ports = docks.concat(finishedOf('tether')), old = new Map(haulers.map((h) => [h.key, h])), next = [];
     let slot = 0;
-    for (const m of finishedOf('oremine')) {
-      const d = nearestDock(docks, m.x + 1, m.y + 1);
+    for (const m of HAUL_FROM.flatMap(finishedOf)) {
+      const d = nearestDock(ports, m.x + 1, m.y + 1);
       if (!d) continue;
       let seam = false;
-      for (let y = m.y; y < m.y + 2; y++) for (let x = m.x; x < m.x + 2; x++) if (st.map.r[y * W + x] === R.ORE_SEAM) seam = true;
+      if (m.key === 'oremine') for (let y = m.y; y < m.y + 2; y++) for (let x = m.x; x < m.x + 2; x++) if (st.map.r[y * W + x] === R.ORE_SEAM) seam = true;
       for (let k = 0; k < (seam ? 2 : 1) && next.length < CAP.haulers; k++) {
-        const key = `${m.id}:${k}:${d.id}`, a = [m.x + 1.45, ground(m.x, m.y, 2) + 1.2, m.y + 1.5], b = dockPad(d, slot++);
+        const key = `${m.id}:${k}:${d.id}`, a = [m.x + 1.45, ground(m.x, m.y, 2) + (m.key === 'oremine' ? 1.2 : 1.6), m.y + 1.5], b = dockPad(d, slot++);
         const h = old.get(key) || { key, ph: k ? 2 : 0, u: k ? 0 : Math.random(), t: Math.random() * 2, hx: 1, hz: 0 };
         const dist = Math.hypot(b[0] - a[0], b[2] - a[2]);
         Object.assign(h, { a, b, dur: Math.max(4, dist / SPEED.hauler + 2.4), cruise: Math.max(a[1], b[1]) + 2.6 + 0.4 * k, dx: (b[0] - a[0]) / (dist || 1), dz: (b[2] - a[2]) / (dist || 1) });
         if (old.has(key) === false) { h.hx = h.dx; h.hz = h.dz; }
-        haulerMesh.instanceColor.array.set(HAULER_POD[next.length % HAULER_POD.length], next.length * 3);
+        const pods = POD_OF[m.key] || HAULER_POD;
+        haulerMesh.instanceColor.array.set(pods[next.length % pods.length], next.length * 3);
         next.push(h);
       }
     }
@@ -704,6 +714,12 @@ export function createMovers(parent) {
       const d = nearestDock(docks, c.x + 1, c.y + 1), key = `${c.id}:${d ? d.id : 0}`;
       const dr = oldD.get(key) || { key, ph: 0, t: 6 + Math.random() * 10, ang: Math.random() * 6.3, u: 0, f: [0, 0, 0], hx: 1, hz: 0 };
       Object.assign(dr, { c: [c.x + 1, ground(c.x, c.y, 2) + 2.15, c.y + 1], r: 1.35, dock: d ? dockPad(d, slot++) : null });
+      nextD.push(dr);
+    }
+    for (const bay of finishedOf('dronebay')) {   // survey drones circle their bay (no dock run)
+      if (nextD.length >= CAP.drones) break;
+      const key = `bay:${bay.id}`, dr = oldD.get(key) || { key, ph: 0, t: 10, ang: Math.random() * 6.3, u: 0, f: [0, 0, 0], hx: 1, hz: 0 };
+      Object.assign(dr, { c: [bay.x + 0.5, ground(bay.x, bay.y, 1) + 1.15, bay.y + 0.5], r: 0.75, dock: null });
       nextD.push(dr);
     }
     drones = nextD;
