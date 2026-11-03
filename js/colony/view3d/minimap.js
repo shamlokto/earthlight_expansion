@@ -199,10 +199,10 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
   function drawMarks(sx, sz, cw, chh) {
     ctx.save();
     if (marks.edge) {
-      const k = 0.55 + 0.35 * Math.sin(performance.now() / 260), d = Math.max(6, Math.min(cw, chh) * 0.09);
+      const k = 0.65 + 0.35 * Math.sin(performance.now() / 260), d = Math.max(8, Math.min(cw, chh) * 0.12);
       const [x0, y0, x1, y1] = marks.edge === 'north' ? [0, 0, 0, d] : marks.edge === 'east' ? [cw, 0, cw - d, 0] : marks.edge === 'west' ? [0, 0, d, 0] : [0, chh, 0, chh - d];
       const g = ctx.createLinearGradient(x0, y0, x1, y1);
-      g.addColorStop(0, `rgba(255, 40, 30, ${0.85 * k})`); g.addColorStop(1, 'rgba(255, 40, 30, 0)');
+      g.addColorStop(0, `rgba(255, 40, 30, ${0.95 * k})`); g.addColorStop(0.35, `rgba(255, 40, 30, ${0.45 * k})`); g.addColorStop(1, 'rgba(255, 40, 30, 0)');
       ctx.fillStyle = g;
       if (marks.edge === 'north') ctx.fillRect(0, 0, cw, d); else if (marks.edge === 'east') ctx.fillRect(cw - d, 0, d, chh);
       else if (marks.edge === 'west') ctx.fillRect(0, 0, d, chh); else ctx.fillRect(0, chh - d, cw, d);
@@ -216,7 +216,7 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
       }
     };
     dot(marks.guardians || [], Math.max(1.4, sx * 1.3), '#7fc8ff', 'rgba(10, 30, 80, 0.85)');
-    dot(marks.raiders || [], Math.max(2, sx * 1.9), '#ff3a2a', 'rgba(60, 0, 0, 0.9)');
+    dot(marks.raiders || [], Math.max(2.6, sx * 2.5), '#ff3a2a', 'rgba(255, 235, 220, 0.9)');
     ctx.restore();
   }
 

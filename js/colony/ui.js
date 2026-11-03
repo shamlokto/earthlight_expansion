@@ -964,19 +964,24 @@ export function createUI(root, api) {
   // A machine's numbers: data/machines.js, else the expansion's units.json (beta guardians of other types).
   function mInfo(type) {
     const m = MACHINE[type]; if (m) return m;
+    const r = rule('machineOf', S(), type); if (r?.name) return r;
     const t = api.types?.[type], pr = S().imported?.prices?.[type];
     if (t) return { type, name: t.name, code: String(t.code || '').trim(), cls: CAT_CLASS[t.category] || 'support', hp: t.hp, move: t.move, attack: t.attack ?? 0, defence: t.defence ?? 0, price: pr ?? Math.max(1, t.value) * t.hp, tier: 1 };
     return { type, name: `Machine ${type}`, code: '', cls: 'support', hp: 8, move: 0, attack: 0, defence: 0, price: pr ?? 24, tier: 1 };
   }
   const mainMode = (type) => { const w = (api.types?.[type]?.weapons || []).filter((x) => x && x.power).sort((a, b) => b.power - a.power)[0]; return w ? WEAPON_MODE[w.mode] || null : null; };
-  const maxHp = (g) => mInfo(g.type).hp || g.hp || 1;
+  const maxHp = (g) => { const r = rule('maxHp', S(), g); return Number.isFinite(r) && r > 0 ? r : mInfo(g.type).hp || g.hp || 1; };
   const hpOf = (g) => Math.max(0, g.hp ?? maxHp(g));
   const crewCap = (s) => { const r = rule('crewCap', s); return Number.isFinite(r) ? r : 4 + 6 * finishedOf(s, 'barracks').length; };
   const cmdCap = (s) => { const r = rule('commanderCap', s); return Number.isFinite(r) ? r : BASE_COMMANDERS + PER_QUARTERS * finishedOf(s, 'quarters').length; };
   const commanders = (s) => Array.isArray(s.commanders) ? s.commanders : [{ key: 'general', loyalty: 100, injured: 0, dept: null }, { key: 'sato', loyalty: 80, injured: 0, dept: null }];
-  // crewed: the rules' own flag when they keep one, else the first crewCap guardians in the list
-  const isCrewed = (s, g, i) => g.crewed != null ? !!g.crewed : i < crewCap(s);
+  // crewed: the rules' choice (rules.crewed: commanders' machines first, then the strongest), else the first crewCap
+  let crewMemo = null;
+  const crewSet = (s) => { if (crewMemo?.s === s && crewMemo.day === s.day && crewMemo.n === (s.guardians || []).length && crewMemo.sig === (s.guardians || []).map((g) => `${g.commander}${g.hp}`).join()) return crewMemo.set;
+    const r = rule('crewed', s); const set = r instanceof Set ? r : null; crewMemo = { s, day: s.day, n: (s.guardians || []).length, sig: (s.guardians || []).map((g) => `${g.commander}${g.hp}`).join(), set }; return set; };
+  const isCrewed = (s, g, i) => { const set = crewSet(s); return set ? set.has(g.id) : g.crewed != null ? !!g.crewed : i < crewCap(s); };
   function upkeepOf(g) {
+    const r = rule('guardianUpkeep', S(), g); if (Number.isFinite(r)) return r;
     if ((g.free || 0) > 0) return 0;
     const base = Math.ceil((mInfo(g.type).price || 0) / 8);
     return COMMANDER[g.commander]?.perk === 'quartermaster' ? base / 2 : base;
@@ -993,11 +998,12 @@ export function createUI(root, api) {
   }
   const batteries = (s) => finishedOf(s, 'emplacement').filter((b) => !(b.damaged > 0));
   function defenceTotal(s) {
+    const r = rule('defenceOf', s, s.raid?.coming || undefined); if (Number.isFinite(r?.total)) return r.total;
     let d = 0;
     (s.guardians || []).forEach((g, i) => { if (isCrewed(s, g, i) && hpOf(g) > 0) d += gPower(s, g); });
     return d + 40 * batteries(s).length;
   }
-  function raidsPossible(s) { const r = s.raid; return !!r && (s.pop >= 80 || !!s.flags?.unlock80 || r.count > 0 || !!r.coming || !!r.warned); }
+  function raidsPossible(s) { const r = s.raid, f = R.raidsPossible; if (r && typeof f === 'function') { try { return !!f(s) || r.count > 0 || !!r.coming; } catch { } } return !!r && (s.pop >= 80 || !!s.flags?.unlock80 || r.count > 0 || !!r.coming || !!r.warned); }
   function raidEta(s) {
     const r = s.raid; if (!r) return null;
     if (r.coming?.day != null) return Math.max(0, r.coming.day - s.day);
@@ -1005,21 +1011,25 @@ export function createUI(root, api) {
     return null;
   }
   const raidStartDay = (s) => ((api.diff?.(s)?.key ?? s.difficulty) === 'easy' ? 60 : 35);
-  const factionName = (f) => FACTION_NAME[String(f || '').toLowerCase()] || (f ? String(f).charAt(0).toUpperCase() + String(f).slice(1) : 'Unknown raiders');
-  const fromText = (f) => FROM_TEXT[f] || (f ? `the ${f}` : 'somewhere out in the dark');
+  const cap1 = (t) => String(t).charAt(0).toUpperCase() + String(t).slice(1);
+  const factionName = (f) => { const n = R.FACTIONS?.[f]?.name || FACTION_NAME[String(f || '').toLowerCase()]; return n ? cap1(n) : f ? cap1(f) : 'Unknown raiders'; };
+  const factionText = (f) => R.FACTIONS?.[f]?.text || '';
+  const fromText = (f) => R.FROM?.[f] || FROM_TEXT[f] || (f ? `the ${f}` : 'somewhere out in the dark');
+  const tierName = (t) => R.RAID_TIER?.[t]?.name || RAID_TIER[t] || (typeof t === 'string' ? t : '');
   const unitList = (units) => { const n = {}; for (const u of units || []) { const nm = mInfo(u?.type ?? u).name; n[nm] = (n[nm] || 0) + 1; } return Object.entries(n).map(([k, v]) => v > 1 ? `${k} ×${v}` : k).join(', '); };
-  const sensorDays = (s) => 3 + 3 * Math.min(3, finishedOf(s, 'sensormast').length);
+  const sensorDays = (s) => { const r = rule('warnLead', s); return Number.isFinite(r) ? r : 3 + 3 * Math.min(3, finishedOf(s, 'sensormast').length); };
   const plural = (n, w) => `${num(n)} ${w}${n === 1 ? '' : 's'}`;
 
   // What makes heat (docs/COLONY-V3.md "Heat"), worked out from the state: the sim owns the number.
   function heatParts(s) {
-    if (Array.isArray(s.raid?.heatParts)) return s.raid.heatParts.map((p) => [p.label ?? p[0], +(p.value ?? p[1]) || 0]);
+    const ht = rule('heatTarget', s);
+    if (Array.isArray(ht?.parts)) return ht.parts.map((p) => [p.label, +p.value || 0]);
     const parts = [['Colonists', s.pop / 20]];
     let v = s.stock.credits || 0;
     for (const g of SELLABLE) { try { v += (s.stock[g] || 0) * R.price(s, g); } catch { } }
     parts.push(['Riches in store', v / 2000]);
     parts.push(['Open chambers', 2 * s.chambers.filter((c) => c.status === 'open').length]);
-    const sales = s.raid?.sales ?? s.raid?.sold;
+    const sales = Array.isArray(s.raid?.sales) ? s.raid.sales.reduce((t, v) => t + (v || 0), 0) : s.raid?.sales;
     if (Number.isFinite(sales)) parts.push(['Sales, last 30 days', sales / 1000]);
     const jam = finishedOf(s, 'jammer').length;
     if (jam) parts.push(['Jammer Arrays', -Math.min(30, 10 * jam)]);
@@ -1145,6 +1155,8 @@ export function createUI(root, api) {
   }
   // What a guardian sells for: the rules' sellGuardian tried on a light copy (it only touches these fields).
   function salePrice(s, g) {
+    const v = rule('saleValue', s, g);
+    if (Number.isFinite(v?.credits)) { const dock = s.buildings.some((b) => b.key === 'dock' && b.build === 0); return { ok: dock, msg: dock ? '' : 'Machines are sold at a finished dock.', credits: v.credits, parts: v.parts }; }
     const c = { ...s, guardians: (s.guardians || []).map((x) => ({ ...x })), stock: { ...s.stock }, log: [], flags: { ...s.flags }, commanders: s.commanders?.map((x) => ({ ...x })), raid: s.raid && { ...s.raid } };
     const cr = c.stock.credits || 0, pa = c.stock.parts || 0, r = rule('sellGuardian', c, g.id);
     if (r && r.ok !== false) return { ok: true, credits: (c.stock.credits || 0) - cr, parts: (c.stock.parts || 0) - pa };
@@ -1171,7 +1183,7 @@ export function createUI(root, api) {
       return { ...m, cost, ok: !why, why };
     });
   }
-  const buildDays = (m) => Math.max(2, Math.ceil((m.price || 0) / 4));
+  const buildDays = (m) => m.days ?? Math.max(2, Math.ceil((m.price || 0) / 4));
   // A lock reason that points somewhere: a tech (Research) or a building to put up.
   function lockLink(s, m) {
     const why = m.why || '', tier = machineTier(s);
@@ -1224,9 +1236,9 @@ export function createUI(root, api) {
       return `<details class="cl-mclass" data-mfold="${c}" ${defPrefs.fold[c] ? '' : 'open'} style="--mc:${CLASS_COLOR[c]}"><summary>${esc(CLASS_NAME[c])} <small>${l.length} · ${ready} ready</small></summary><div class="cl-mgrid">${l.map(card).join('')}</div></details>`;
     }).join('');
     return `<section class="cl-dsec"><h4>Queue <small>one machine at a time per yard; Cancel refunds in full</small></h4>${queue}</section>
-      <section class="cl-dsec"><h4>Machines <small>tier ${tier} of 4 · credits = price × 10, parts = price</small>
+      <section class="cl-dsec"><h4>Machines <small>tier ${tier} of 4 · price × 10 credits and price in parts${(() => { const d = api.diff?.(s); return d && d.cost !== 1 ? `, × ${d.cost} on ${esc(d.name)}` : ''; })()}</small>
         <select class="cl-msort" data-msort title="Sort">${[['price', 'price'], ['tier', 'tier'], ['attack', 'attack'], ['name', 'name']].map(([k, n]) => `<option value="${k}" ${defPrefs.sort === k ? 'selected' : ''}>Sort: ${n}</option>`).join('')}</select></h4>
-        <p class="cl-dim">Each machine comes with a crew at level 0. Credits ${L(num(s.stock.credits))} · parts ${L(num(s.stock.parts))}.</p>${groups}</section>`;
+        <p class="cl-dim">New machines start at level 0 and need a crew (Command Centre 4, Barracks 6 each) to fight. Credits ${L(num(s.stock.credits))} · parts ${L(num(s.stock.parts))}.</p>${groups}</section>`;
   }
 
   // -- Commanders
@@ -1321,13 +1333,13 @@ export function createUI(root, api) {
     else if (r.coming) {
       const c = r.coming, pv = rule('raidPreview', s);
       next = `<div class="cl-raidnow"><b class="bad">Raiders ${eta ? `arrive in ${L(plural(eta, 'day'))}` : 'are here'}</b>
-        <p>${esc(factionName(c.faction))}${RAID_TIER[c.tier] ? ` (${RAID_TIER[c.tier]})` : ''} from ${esc(fromText(c.from))}: ${plural(c.units?.length || 0, 'machine')}${c.units?.length ? ` · ${esc(unitList(c.units))}` : ''}.</p>
+        <p>${esc(factionName(c.faction))}${tierName(c.tier) ? ` (${esc(tierName(c.tier))})` : ''} from ${esc(fromText(c.from))}: ${plural(c.units?.length || 0, 'machine')}${c.units?.length ? ` · ${esc(unitList(c.units))}` : ''}.</p>
         ${pv ? winBar(pv, L, W) : ''}</div>`;
     } else if (r.warned && eta != null) next = `<p><b class="warn">Sato's sensors: raiders in ${L(plural(eta, 'day'))}.</b>${r.from ? ` From ${esc(fromText(r.from))}.` : ''} Get the guardians crewed and repaired.</p>`;
     else next = `<p>No contact. Sato warns you <b>${sensorDays(s)} days</b> before a raid${n('sensormast') < 3 ? '; each Sensor Mast adds 3 (up to 9)' : ''}.</p>`;
     return `<div class="cl-raidcols">
       <section class="cl-dsec"><h4>Heat <small>how tempting Eden looks</small></h4>
-        <div class="cl-heat"><span class="cl-heatbar"><span ${W(heat)}></span></span><b>${L(heat)}</b></div>
+        <div class="cl-heat" title="0: nobody looks twice · 100: every crew in the belt knows Eden's name"><span class="cl-heatbar"><span ${W(100 - heat)}></span></span><b>${L(heat)}</b></div>
         <p class="cl-dim">The hotter Eden is, the sooner the next raid comes. Heat moves a tenth of the way each day toward:</p>
         <table class="cl-table"><tbody>${parts.map(([l, v]) => `<tr><td>${esc(l)}</td><td class="n ${v > 0 ? 'bad' : v < 0 ? 'good' : ''}">${L(`${v >= 0 ? '+' : '−'}${num(Math.abs(v))}`)}</td></tr>`).join('')}</tbody>
           <tfoot><tr><td>Target <small>(0–100)</small></td><td class="n">${L(num(Math.max(0, Math.min(100, parts.reduce((t, [, v]) => t + v, 0)))))}</td></tr></tfoot></table>
@@ -1347,12 +1359,13 @@ export function createUI(root, api) {
     const raw = +pv.winChance, pct = Number.isFinite(raw) ? Math.round(raw <= 1 ? raw * 100 : raw) : null;
     const lost = pv.expectedLost || [];
     const dmg = pv.expectedDamage;
-    const trib = pv.tribute ? [pv.tribute.credits ? `${num(pv.tribute.credits)} credits` : '', pv.tribute.food ? `${num(pv.tribute.food)} food` : ''].filter(Boolean).join(' + ') : '';
+    const trib = pv.tribute ? [pv.tribute.credits ? `${num(pv.tribute.credits)} credits` : '', pv.tribute.food ? `${num(pv.tribute.food)} food` : ''].filter(Boolean).join(' + ') : '';   // either one is accepted
     return `<div class="cl-win-chance${pct == null ? '' : pct >= 65 ? ' good' : pct >= 40 ? ' even' : ' bad'}"><i>Win chance</i><span class="cl-wbar"><span ${W(pct ?? 0)}></span></span><b>${L(pct == null ? '?' : `${pct}%`)}</b></div>
       <div class="cl-kv"><span>Defence vs attack</span><b>${L(`${num(pv.defence ?? 0)} vs ${num(pv.attack ?? 0)}`)}</b></div>
       <div class="cl-kv"><span>Likely losses</span><b class="${lost.length ? 'bad' : 'good'}">${L(lost.length ? unitList(lost.map((t) => ({ type: t?.type ?? t }))) : 'none expected')}</b></div>
-      ${dmg != null && dmg !== 0 ? `<div class="cl-kv"><span>If we lose</span><b class="bad">${L(typeof dmg === 'number' ? `${plural(Math.round(dmg), 'building')} damaged, stores raided` : String(dmg))}</b></div>` : ''}
-      ${trib ? `<div class="cl-kv"><span>Tribute to make them leave</span><b>${L(trib)}</b></div>` : ''}`;
+      <div class="cl-kv"><span>If we lose</span><b class="bad">${L(pv.atRisk != null ? `stores raided; ${pv.atRisk ? `${plural(pv.atRisk, 'building')} in their path${pv.shielded ? ` (${pv.shielded} more shielded)` : ''}` : `no buildings in their path${pv.shielded ? ` (${pv.shielded} shielded)` : ''}`}` : typeof dmg === 'number' ? `stores raided, about ${num(dmg)} buildings knocked out` : dmg ? String(dmg) : 'stores raided, buildings damaged')}</b></div>
+      ${typeof dmg === 'number' && dmg > 0 ? `<div class="cl-kv"><span>Buildings likely knocked out</span><b>${L(`≈ ${num(dmg)}`)}</b></div>` : ''}
+      ${trib ? `<div class="cl-kv"><span>Tribute to make them leave</span><b class="${pv.canPay === false ? 'bad' : ''}">${L(pv.canPay === false ? `${trib}: we cannot pay` : trib.replace(' + ', ' or '))}</b></div>` : ''}`;
   }
 
   // ---- panel events
@@ -1511,11 +1524,11 @@ export function createUI(root, api) {
     return all.find((c) => `${p.title} ${p.text}`.includes(c.name))?.key || null;
   }
   function raidBody(s, p) {
-    const c = s.raid?.coming || p.raid || {}, pv = rule('raidPreview', s);
+    const c = s.raid?.coming || p.raid || {}, pv = rule('raidPreview', s) || p.preview || null;
     const n = c.units?.length ?? 0;
     return `<div class="cl-raidfacts">
         <div class="cl-kv"><span>From</span><b>${esc(fromText(c.from))}</b></div>
-        <div class="cl-kv"><span>Who</span><b>${esc(factionName(c.faction))}${RAID_TIER[c.tier] ? ` <small>(${RAID_TIER[c.tier]})</small>` : ''}</b></div>
+        <div class="cl-kv"><span>Who</span><b title="${esc(factionText(c.faction))}">${esc(factionName(c.faction))}${tierName(c.tier) ? ` <small>(${esc(tierName(c.tier))})</small>` : ''}</b></div>
         <div class="cl-kv"><span>Raiders</span><b>${n ? `${plural(n, 'machine')}` : '?'}</b></div>
         ${n ? `<p class="cl-raidunits">${esc(unitList(c.units))}</p>` : ''}
       </div>
@@ -1535,11 +1548,16 @@ export function createUI(root, api) {
     return `<div class="cl-evwand"><span class="cl-face">${face(key, 'ev')}</span><div>${statBars(C)}${gradesHtml(C)}${traits(C)}${C.flaw ? `<p class="cl-cflaw">⚠ ${esc(C.flaw)}</p>` : ''}
       <p class="cl-dim">Wage ${C.wage} credits a day · invite chance about ${Math.round(inviteChance(s, { key, loyalty: (s.wanderers || []).find((w) => w.key === key)?.loyalty }) * 100)}%.</p></div></div>`;
   }
+  // The raid's one-line summary for the modal (the full numbers are laid out below it).
+  function raidLine(s, p) {
+    const c = s.raid?.coming || p.raid || {};
+    return `Sato: "${factionName(c.faction)}${factionText(c.faction) ? `, ${factionText(c.faction)},` : ''} at ${fromText(c.from)}. The guard is standing to. Fight them, or pay them to go, Governor?"`;
+  }
   function choiceLabel(s, p, c) {
     if (p.kind !== 'raid') return esc(c.label);
-    const pv = rule('raidPreview', s);
+    const pv = rule('raidPreview', s) || p.preview;
     if (c.key === 'fight') { const w = +pv?.winChance; return `${esc(c.label || 'Fight')}${Number.isFinite(w) ? ` <small>${Math.round(w <= 1 ? w * 100 : w)}% to win</small>` : ''}`; }
-    if (c.key === 'tribute') { const t = pv?.tribute; const txt = t ? [t.credits ? `${num(t.credits)} cr` : '', t.food ? `${num(t.food)} food` : ''].filter(Boolean).join(' + ') : ''; return `${esc(c.label || 'Pay tribute')}${txt ? ` <small>${txt}</small>` : ''}`; }
+    if (c.key === 'tribute') { if (/\d/.test(c.label || '')) return esc(c.label); const t = pv?.tribute; const txt = t ? [t.credits ? `${num(t.credits)} cr` : '', t.food ? `${num(t.food)} food` : ''].filter(Boolean).join(' + ') : ''; return `${esc(c.label || 'Pay tribute')}${txt ? ` <small>${txt}</small>` : ''}`; }
     return esc(c.label);
   }
   function renderEvent() {
@@ -1561,9 +1579,10 @@ export function createUI(root, api) {
     const tab = warn ? 'raids' : wkey ? 'commanders' : null;
     evBox.innerHTML = `<div class="cl-evkind">${esc(KIND_LABEL[p.kind] || p.kind || 'Event')} · Day ${s.day}${s.pending.length > 1 ? ` · ${s.pending.length - 1} more waiting` : ''}</div>
       <div class="cl-evbody">${pic}
-      <div><h2 id="evTitle">${esc(p.title)}</h2><p>${esc(p.text)}</p></div></div>
+      <div><h2 id="evTitle">${esc(p.title)}</h2>${raid && (rule('raidPreview', s) || p.preview) ? `<p>${esc(raidLine(s, p))}</p>` : `<p>${esc(p.text)}</p>`}</div></div>
       ${raid ? raidBody(s, p) : warn ? warnBody(s) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
-      <div class="cl-evchoices">${choices.map((c, i) => `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}">${choiceLabel(s, p, c)}</button>`).join('')}
+      <div class="cl-evchoices">${choices.map((c, i) => { const cant = raid && c.key === 'tribute' && (rule('raidPreview', s) || p.preview)?.canPay === false;
+        return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>`; }).join('')}
         ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : 'Meet them'}</button>` : ''}</div>
       ${api.settings.pauseOnEvents || raid ? '<p class="cl-dim cl-evpause">❚❚ The clock waits for your answer.</p>' : ''}`;
     modal.hidden = false;
@@ -1572,8 +1591,8 @@ export function createUI(root, api) {
   function showReport(s, rs) {
     evId = 'report:' + rs;
     modal.classList.remove('soft');
-    const won = !!s.raid.last.won;
-    evBox.className = 'cl-win cl-event ' + (won ? 'cl-evwon' : 'cl-evraid');
+    const won = !!s.raid.last.won, paid = !won && !!s.raid.last.tribute;
+    evBox.className = 'cl-win cl-event ' + (won ? 'cl-evwon' : paid ? 'cl-evwarn' : 'cl-evraid');
     evBox.innerHTML = `<div class="cl-evkind">${KIND_LABEL.report} · Day ${s.raid.last.day}</div>
       <div class="cl-evbody">${eventFace('sato')}<div><h2 id="evTitle">${won ? 'Eden holds' : s.raid.last.tribute && !won ? 'They took the tribute' : 'The raiders got through'}</h2>
       <p>${esc(won ? 'The raiders broke off. The salvage crews are already out.' : s.raid.last.tribute ? 'They took what we paid and left. Word will get around that Eden pays.' : 'We could not stop them. Repair crews are on the damage.')}</p></div></div>

@@ -471,8 +471,9 @@ function showcaseV3(state) {
   const hullOk = (i) => t[i] === T.HULL;
   for (const [key, extra, dx] of [['emplacement', { mode: 'dragon' }, -5], ['emplacement', { mode: 'hydra' }, -7], ['emplacement', { mode: 'dragon' }, 6], ['emplacement', { mode: 'hydra' }, 8], ['sensormast', {}, -10], ['shieldpylon', {}, 11]])
     near(key, dock.x + dx, dock.y + 1, hullOk, extra);
-  // the shipyard straddles the 2-tile hull and the space below it (3×3 cannot fit on the hull alone)
-  for (let dx = 14; dx < 60; dx++) { const x = dock.x + dx; if (free(x, dock.y, 3, (i) => t[i] === T.HULL || TERRAIN[t[i]].zone === 'space')) { place('shipyard', x, dock.y); break; } }
+  // the shipyard on the 2-tile hull (right of the dock; it straddles into space if a size 3 comes back)
+  const sy = BUILDING.shipyard.size;
+  for (let dx = 14; dx < 60; dx++) { const x = dock.x + dx; if (free(x, dock.y, sy, (i) => t[i] === T.HULL || (sy > 2 && TERRAIN[t[i]].zone === 'space'))) { place('shipyard', x, dock.y); break; } }
   near('jammer', dock.x - 3, dock.y + 6, (i) => TERRAIN[t[i]].zone === 'space');
   near('jammer', dock.x + 2, dock.y + 7, (i) => TERRAIN[t[i]].zone === 'space');
   near('scrapyard', dock.x - 8, dock.y + 6, (i) => TERRAIN[t[i]].zone === 'space');

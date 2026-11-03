@@ -490,26 +490,27 @@ export const KITS = {
     dome([0.14, 0.12, 0.14], [1.1, 1.85, -1.1], BEACON, GLOW),
     box([0.36, 0.06, 1.6], [0, 1.47, -0.4], '#5f8fd8'),                       // the blue roof stripe
   ],
-  // 3×3 on the hull: a sunken slipway with a half-built hull on its cradle under two gantry cranes,
-  // a glowing launch rail down the slip and lights along its rim.
+  // 2×2 on the hull: a sunken slipway with a half-built hull on its cradle under two gantry cranes,
+  // a glowing launch rail down the slip, lights along its rim and a control cabin in the corner.
   shipyard: () => {
     const parts = [
-      box([2.94, 0.12, 2.94], [0, 0, 0], '#454c55', { slot: 'mat/hull-plate' }),
-      box([2.9, 0.04, 1.2], [0, 0.12, 0], '#1e2329'),                         // the slip
-      box([2.9, 0.025, 0.08], [0, 0.16, 0], '#6fd3ff', GLOW),                  // launch rail
-      box([1.9, 0.38, 0.62], [-0.1, 0.2, 0], '#dfe4ea'),                        // the hull on its cradle
-      cone([0.31, 0.6, 0.38], [1.15, 0.09, 0], '#dfe4ea', { rot: [0, 0, -HALF_PI] }),
-      box([1.92, 0.08, 0.64], [-0.1, 0.42, 0], '#3a6ad8'),
-      box([0.5, 0.3, 0.4], [-0.6, 0.58, 0], '#c9ced6'),
-      ...[-0.85, -0.35, 0.15, 0.65].map((x) => box([0.06, 0.08, 0.9], [x, 0.12, 0], '#d08a1a')),   // cradle ribs
+      box([1.96, 0.12, 1.96], [0, 0, 0], '#454c55', { slot: 'mat/hull-plate' }),
+      box([1.94, 0.04, 0.86], [0, 0.12, 0.12], '#1e2329'),                      // the slip
+      box([1.94, 0.025, 0.06], [0, 0.16, 0.12], '#6fd3ff', GLOW),               // launch rail
+      box([1.3, 0.3, 0.46], [-0.12, 0.2, 0.12], '#dfe4ea'),                      // the hull on its cradle
+      cone([0.23, 0.42, 0.28], [0.74, 0.14, 0.12], '#dfe4ea', { rot: [0, 0, -HALF_PI] }),
+      box([1.32, 0.07, 0.48], [-0.12, 0.38, 0.12], '#3a6ad8'),
+      box([0.36, 0.22, 0.3], [-0.45, 0.5, 0.12], '#c9ced6'),
+      ...[-0.6, -0.25, 0.1, 0.45].map((x) => box([0.05, 0.08, 0.7], [x, 0.12, 0.12], '#d08a1a')),   // cradle ribs
     ];
-    for (const x of [-0.75, 0.55]) {                                            // two gantries over the slip
-      parts.push(box([0.12, 1.6, 0.12], [x, 0.12, -0.85], HAZARD), box([0.12, 1.6, 0.12], [x, 0.12, 0.85], HAZARD),
-        box([0.16, 0.14, 1.86], [x, 1.72, 0], HAZARD), box([0.24, 0.16, 0.24], [x, 1.58, 0.2], DARK),
-        cyl([0.025, 0.7, 0.025], [x, 0.88, 0.2], STEEL));
+    for (const x of [-0.55, 0.38]) {                                            // two gantries over the slip
+      parts.push(box([0.1, 1.25, 0.1], [x, 0.12, -0.45], HAZARD), box([0.1, 1.25, 0.1], [x, 0.12, 0.8], HAZARD),
+        box([0.13, 0.12, 1.4], [x, 1.37, 0.17], HAZARD), box([0.2, 0.13, 0.2], [x, 1.25, 0.3], DARK),
+        cyl([0.02, 0.5, 0.02], [x, 0.75, 0.3], STEEL));
     }
-    for (let k = 0; k < 6; k++) parts.push(box([0.08, 0.05, 0.08], [-1.25 + k * 0.5, 0.12, 0.66], k % 2 ? '#ffd23a' : '#7fe0ff', GLOW), box([0.08, 0.05, 0.08], [-1.25 + k * 0.5, 0.12, -0.66], k % 2 ? '#ffd23a' : '#7fe0ff', GLOW));
-    parts.push(box([0.6, 0.5, 0.5], [1.05, 0.12, -1.1], '#8a929c'), box([0.62, 0.08, 0.52], [1.05, 0.48, -1.1], WIN, GLOW), dome([0.12, 0.1, 0.12], [1.2, 0.62, -1.15], BEACON, GLOW));
+    for (let k = 0; k < 5; k++) parts.push(box([0.07, 0.05, 0.07], [-0.84 + k * 0.42, 0.12, 0.62], k % 2 ? '#ffd23a' : '#7fe0ff', GLOW), box([0.07, 0.05, 0.07], [-0.84 + k * 0.42, 0.12, -0.36], k % 2 ? '#ffd23a' : '#7fe0ff', GLOW));
+    parts.push(box([0.5, 0.36, 0.34], [0.66, 0.12, -0.72], '#8a929c'), box([0.52, 0.07, 0.36], [0.66, 0.4, -0.72], WIN, GLOW), dome([0.1, 0.08, 0.1], [0.8, 0.48, -0.78], BEACON, GLOW),
+      box([0.9, 0.05, 0.3], [-0.4, 0.12, -0.72], '#3a4048'), ...[-0.7, -0.4, -0.1].map((x) => box([0.18, 0.14, 0.2], [x, 0.17, -0.72], '#e08a3a')));
     return parts;
   },
   // 2×2: two long olive-grey barrack blocks with lit window bands, a drill yard, a flag mast
@@ -553,7 +554,8 @@ export const KITS = {
     if (mode === 'hydra') {
       parts.push(box([0.5, 0.34, 0.5], [0, 0.44, 0.02], '#6a7480', { rot: [-0.35, 0, 0] }),
         box([0.52, 0.06, 0.52], [0, 0.6, 0.02], '#c9302a', { rot: [-0.35, 0, 0] }));
-      for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) parts.push(cyl([0.1, 0.05, 0.1], [-0.15 + i * 0.15, 0.55 + j * 0.13, 0.22 - j * 0.05], '#ff9a52', { rot: [HALF_PI - 0.35, 0, 0], ...GLOW }));
+      // tube mouths on the rack's tilted front face
+      for (let i = 0; i < 3; i++) for (const j of [-0.075, 0.075]) parts.push(cyl([0.1, 0.05, 0.1], [-0.15 + i * 0.15, 0.703 + 0.94 * j - 0.025, 0.274 - 0.343 * j], '#ff9a52', { rot: [HALF_PI - 0.35, 0, 0], ...GLOW }));
     } else {
       parts.push(box([0.34, 0.24, 0.42], [0, 0.44, -0.08], '#6a7480'),
         box([0.36, 0.06, 0.44], [0, 0.58, -0.08], '#3a6ad8'),
@@ -581,7 +583,6 @@ export const KITS = {
     ...[0.35, 0.65, 0.95].map((y, k) => torus([0.46 - k * 0.1, 0.07, 0.46 - k * 0.1], [0, y, 0], '#5fc8ff', GLOW)),
     P('dome', [0.28, 0.32, 0.28], [0, 1.45, 0], '#bff0ff', GLOW),
     dome([2.8, 1.5, 2.8], [0, 0.1, 0], '#0f3158', { shimmer: true }),
-    torus([2.8, 0.03, 2.8], [0, 0.1, 0], '#1d5690', { shimmer: true }),
   ],
   // 1×1 in space: an array of thin antennae with violet tips and crossbars on a dark pad.
   jammer: () => [
