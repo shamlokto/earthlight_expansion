@@ -10,7 +10,7 @@
 export const DIFFICULTY = {
   easy: { key: 'easy', name: 'Easy', text: 'Recommended for a first colony: cheaper buildings, gentler needs, ships every 7 days, bigger grants.',
     cost: 0.6, upkeep: 0.5, need: 0.8, transportEvery: 7, transportHappy: 45, grant: { credits: 400, parts: 40 },
-    relief: { credits: 500, food: 150, every: 30 } },
+    relief: { credits: 500, food: 150, water: 150, air: 150, every: 30 } },
   normal: { key: 'normal', name: 'Normal', text: 'The colony as designed: full prices and needs, ships every 10 days at happiness 55.',
     cost: 1, upkeep: 1, need: 1, transportEvery: 10, transportHappy: 55, grant: { credits: 200, parts: 20 } },
 };

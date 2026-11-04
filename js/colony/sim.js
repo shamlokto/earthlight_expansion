@@ -24,6 +24,9 @@ import { dangerWork, secretsDay, floodedHere, SECRET } from './secrets.js';
 export { habitatNeeds, stateRng };
 
 // Rules numbers the table has no column for.
+// Buildings on the priority power circuit (see the power step).
+const LIFE_SUPPORT = new Set(['riverpump', 'airplant', 'reclaimer', 'hydro', 'habitat', 'terrace', 'clinic', 'iceharvester', 'gasscoop', 'pumpstation', 'mushroom', 'cistern']);
+
 export const SIM = {
   river: 1.25,            // farm beside the river
   seam: 2,                // ore mine on an ore seam
@@ -187,6 +190,13 @@ export function dayTick(state, rng) {
   const cap = storageCaps(state);
   const { supply, demand } = powerOf(state, staffing, moneyF);
   const pf = demand > 0 ? Math.min(1, (supply + state.battery) / demand) : 1;
+  // Life support is on the priority circuit: when power is short, homes, water, air and food plants
+  // get theirs first and industry slows down instead (a shortfall shouldn't suffocate the colony).
+  let lifeDemand = state.pop * NEEDS.power;
+  for (const b of state.buildings) { const sp = spec(b); if (active(b) && sp.power < 0 && LIFE_SUPPORT.has(b.key)) lifeDemand -= sp.power; }
+  const avail = supply + state.battery;
+  const pfLife = lifeDemand > 0 ? Math.min(1, avail / lifeDemand) : 1;
+  const pfOther = demand - lifeDemand > 1e-9 ? Math.max(0, Math.min(1, (avail - lifeDemand) / (demand - lifeDemand))) : 1;
   state.battery = Math.min(cap.power, Math.max(0, state.battery + supply - demand));
 
   // 5 production. Makers without inputs first (so today's water is there), then the users of
@@ -194,7 +204,7 @@ export function dayTick(state, rng) {
   const produced = {}, consumed = {}, st = state.stock;
   const make = (g, n) => { if (n > 0) { st[g] += n; produced[g] = (produced[g] || 0) + n; } };
   const use = (g, n) => { if (n > 0) { n = Math.min(n, st[g]); st[g] -= n; consumed[g] = (consumed[g] || 0) + n; } };
-  const rate = (s) => (s.jobs ? staffing : 1) * (s.power < 0 ? pf : 1) * moneyF;
+  const rate = (s, key) => (s.jobs ? staffing : 1) * (s.power < 0 ? (LIFE_SUPPORT.has(key) ? pfLife : pfOther) : 1) * moneyF;
   const usesOf = (b, s) => (b.key === 'farm' && b.mode === 'fallow' ? null : s.uses);
   const outMult = {}, om = (key) => (outMult[key] ??= techEffect(state, 'output', key) * (DEPT_OF[key] ? deptMult(state, DEPT_OF[key]) : 1));
   const rates = new Map();   // each building's working rate today (services scale with it)
@@ -239,8 +249,8 @@ export function dayTick(state, rng) {
       }
       continue;
     }
-    if (usesOf(b, s)) users.push([b, s, rate(s)]);
-    else run(b, s, rate(s));
+    if (usesOf(b, s)) users.push([b, s, rate(s, b.key)]);
+    else run(b, s, rate(s, b.key));
   }
   // users by stage (a Fabricator uses the alloy today's Smelters made); a short input is shared in
   // proportion and scales the output of everyone who uses it
@@ -430,10 +440,12 @@ export function dayTick(state, rng) {
   // Easy: Council relief when the colony is broke or hungry (difficulty.js relief), so a beginner's
   // colony cannot spiral into starvation for want of money to build farms.
   const relief = diffOf(state).relief;
-  if (relief && (st.credits < 50 || f.short.food > 0) && state.day - (f.relief ?? -1e9) >= relief.every) {
+  if (relief && (st.credits < 50 || f.short.food > 0 || f.short.air > 0 || f.short.water > 0) && state.day - (f.relief ?? -1e9) >= relief.every) {
     f.relief = state.day;
     st.credits += relief.credits; st.food = Math.min(st.food + relief.food, Math.max(cap.food || 0, relief.food));
-    ask('relief', 'Council relief', `The Council sends ${relief.credits} credits and ${relief.food} food to tide Eden over. `
+    if (relief.air) st.air = Math.min(st.air + relief.air, Math.max(cap.air || 0, relief.air));
+    if (relief.water) st.water = Math.min(st.water + relief.water, Math.max(cap.water || 0, relief.water));
+    ask('relief', 'Council relief', `The Council sends ${relief.credits} credits, ${relief.food} food${relief.water ? `, ${relief.water} water` : ''}${relief.air ? ` and ${relief.air} air` : ''} to tide Eden over. `
       + 'To earn your own: sell ore or spare food at the Market (the dock), switch farms to cash crops, or raise the tax a little. '
       + 'Switch off buildings you don\'t need to save upkeep. The Council helps at most once a month.');
   }

@@ -23,7 +23,7 @@ import { COMMANDER } from './data/commanders.js';
 import { LOGS, VAULTS, SURVIVORS, DANGERS, FINAL_CODE_PARTS } from './data/secrets.js';
 import { hashSeed, mulberry32 } from './mapgen.js';
 import {
-  log, addPending, deckOf, mapOf, chamberOf, chamberLinks, occupancy, costOf, storageCaps, powerOf, addGuardian, machineOf,
+  log, addPending, housingOf, deckOf, mapOf, chamberOf, chamberLinks, occupancy, costOf, storageCaps, powerOf, addGuardian, machineOf,
   shaftsOf, active, finished, stateRng, fightDrones, dronesPreview, droneAttack,
 } from './rules.js';
 
@@ -339,8 +339,14 @@ export function secretsDay(state, { rng, say, ask }) {
       p.speaker = 'sato'; p.chamber = c.id;
     }
   }
-  // survivors join when their chamber is open (and what they wait for is done)
-  for (const s of sec.sites) if (s.kind === 'survivors' && s.found && !s.done && chamberOf(state, s.chamber)?.status === 'open' && groupReady(state, GROUP[s.ref])) join(state, s, ask);
+  // survivors join when their chamber is open (and what they wait for is done) and there are free
+  // homes for them, like a transport's passengers; until then they wait where they are (one notice)
+  for (const s of sec.sites) {
+    if (s.kind !== 'survivors' || !s.found || s.done || chamberOf(state, s.chamber)?.status !== 'open' || !groupReady(state, GROUP[s.ref])) continue;
+    const free = housingOf(state) - state.pop, g = GROUP[s.ref];
+    if (free >= g.pop) { join(state, s, ask); continue; }
+    if (!s.waiting) { s.waiting = true; log(state, `${g.name} will join Eden once there are ${g.pop} free homes (now ${Math.max(0, free)}). Build Habitats.`); }
+  }
 }
 
 function discovery(state, found, ask) {
@@ -406,9 +412,13 @@ function join(state, s, ask) {
   state.pop += g.pop;
   journal(state, 'joined', s.ref);
   let extra = '';
+  // They come with what they kept alive: a few weeks of food, water and air each (always), so a group of
+  // thirty doesn't starve the colony overnight (owner asked for an easier game).
+  state.stock.food += g.pop * 12; state.stock.air += g.pop * 10; state.stock.water += g.pop * 12;
+  extra += ` They bring ${g.pop * 12} food, ${g.pop * 12} water and ${g.pop * 10} air from their stores.`;
   if (g.commander && COMMANDER[g.commander] && !state.commanders.some((c) => c.key === g.commander)) {
     state.commanders.push({ key: g.commander, loyalty: COMMANDER[g.commander].loyalty ?? 60, injured: 0, dept: null });
-    extra = ` ${COMMANDER[g.commander].name} joins Eden's commanders (${COMMANDER[g.commander].title}).`;
+    extra += ` ${COMMANDER[g.commander].name} joins Eden's commanders (${COMMANDER[g.commander].title}).`;
   }
   const c = chamberOf(state, s.chamber);
   const text = `${g.name} came out of hiding in ${c.name}: ${plural(g.pop, 'person', 'people')} join the colony. ${g.text}${extra}`;

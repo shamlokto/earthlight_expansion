@@ -679,6 +679,33 @@ export function sell(state, good, qty) {
   return ok(`Sold ${qty} ${good} for ${gain} credits.`, { credits: gain });
 }
 
+// Imports (owner: the colony was too hard; with credits but no parts a colony was stuck): parts and
+// life's essentials can be bought at the dock for twice the sale price; each lot bought pushes that
+// price up, and it recovers over days like a sale's.
+export const IMPORTS = ['parts', 'food', 'water', 'air'], IMPORT_MARKUP = 2;
+export function buyPrice(state, good) { return BASE_PRICE[good] * (state.market?.[good] ?? 1) * IMPORT_MARKUP; }
+export function buy(state, good, qty) {
+  if (!IMPORTS.includes(good)) return no('Traders don\'t sell that.');
+  qty = Math.floor(qty);
+  if (!(qty > 0)) return no('Choose how much to buy.');
+  if (!hasDock(state)) return no('Traders call only at a finished dock.');
+  const room = Math.floor((storageCaps(state)[good] ?? Infinity) - (state.stock[good] || 0));
+  if (room <= 0) return no(`The ${good} stores are full.`);
+  qty = Math.min(qty, room);
+  const step = Math.pow(1 + PRICE.drop, 1 / PRICE.lot);
+  let f = state.market[good] ?? 1, cost = 0, n = 0;
+  for (; n < qty; n++) {
+    const unit = BASE_PRICE[good] * f * IMPORT_MARKUP;
+    if (cost + unit > state.stock.credits) break;
+    cost += unit; f *= step;
+  }
+  if (!n) return no(`Needs ${Math.ceil(buyPrice(state, good))} credits for one ${good}.`);
+  cost = Math.ceil(cost / deptMult(state, 'trade'));
+  state.stock.credits -= cost; state.stock[good] += n; state.market[good] = f;
+  log(state, `Bought ${n} ${good} for ${cost} credits.`);
+  return ok(`Bought ${n} ${good} for ${cost} credits${n < qty ? ' (all the credits would buy)' : ''}.`, { credits: cost, qty: n });
+}
+
 // A guardian's sale: the expansion's price × 10 credits and price parts for the original army; a
 // machine built in the colony fetches 80% of what it cost; a finished Scrapyard adds a fifth.
 export function saleValue(state, g) {

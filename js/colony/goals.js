@@ -130,7 +130,7 @@ export const GOALS = [
     done: (s) => (s.secrets?.read?.length || 0) >= 5, progress: (s) => `${s.secrets?.read?.length || 0} / 5 logs read`, show: () => ({ journal: 'logs' }) },
   { id: 'danger', speaker: 'sato', title: 'Clear the way',
     text: 'Some chambers are guarded: sentry drones still on patrol, toxic air, radiation near the old core. Deal with one: send the guardians against the drones, or have Ruess\'s crews decontaminate.',
-    done: (s) => (s.secrets?.dangers || []).some((d) => d.done), show: () => ({ journal: 'dangers' }) },
+    done: (s) => (s.secrets?.dangers || []).some((d) => d.done && !d.failed), show: () => ({ journal: 'dangers' }) },
   { id: 'vault', speaker: 'ruess', title: 'Open a vault',
     text: 'The Directorate left more than logs: sealed stores, a fuel cache, hangars with machines nobody has seen. Each vault has its own way in; the journal lists what each one needs.',
     done: (s) => (s.secrets?.sites || []).some((x) => x.kind === 'vault' && x.done), show: () => ({ journal: 'vaults' }) },
@@ -213,7 +213,10 @@ export function advise(state) {
     const worst = [...(state.happyParts || [])].sort((a, b) => a.value - b.value)[0];
     out.push({ level: 'warn', text: `Happiness ${Math.round(state.happy)} is below ${dv.transportHappy}: ships won't dock.${worst && worst.value < 0 ? ` Worst: ${worst.label} (${Math.round(worst.value)}).` : ''} Parks help; so does a lower tax.`, show: { build: 'park' } });
   }
-  if (state.stock.parts < 20 && s.stock.parts.delta <= 2) out.push({ level: 'tip', text: 'Parts are scarce. The Command Centre makes a few a day; a Salvage Yard (at 80 colonists) turns rubble into many; finished goals bring Council grants.', show: null });
+  const waiting = (state.secrets?.sites || []).filter((x) => x.kind === 'survivors' && x.waiting && !x.done);
+  if (waiting.length) out.push({ level: 'warn', text: `Survivors are waiting to join Eden: build Habitats so they have homes (${waiting.length} group${waiting.length > 1 ? 's' : ''}).`, show: { build: 'habitat' } });
+  if (state.stock.parts < 20 && state.stock.credits > 500) out.push({ level: 'warn', text: 'Parts are nearly gone: buy parts at the Market (the dock) with credits, or build the Salvage Yard and the ore → alloy → parts chain.', show: { market: true } });
+  else if (state.stock.parts < 20 && s.stock.parts.delta <= 2) out.push({ level: 'tip', text: 'Parts are scarce. The Command Centre makes a few a day; a Salvage Yard (at 80 colonists) turns rubble into many; finished goals bring Council grants.', show: null });
   const order = { bad: 0, warn: 1, tip: 2 };
   return out.sort((a, b) => order[a.level] - order[b.level]).slice(0, 5);
 }

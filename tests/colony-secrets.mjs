@@ -327,6 +327,11 @@ function readOne(s, rng, id) { const c = chamberOfSite(s, id); if (!site(s, id).
   reveal(s, rng, cc);
   check(!s.commanders.some((c) => c.key === 'marrow') && s.pop === pop0, 'survivors found wait for their chamber to open');
   cc.status = 'open'; s.pending.length = 0;
+  // survivors join only when there are free homes for them (like a transport): first none, then some
+  const free = R.housingOf(s) - s.pop;
+  if (free < 31) { tick(s, rng); check(!site(s, 's_crypt').done && site(s, 's_crypt').waiting, 'survivors without free homes wait'); }
+  for (let k = 0; k < 6; k++) { const p = R.findSpot(s, 'habitat', { box: { x0: 0, y0: 0, x1: s.map.w - 1, y1: s.map.h - 1 } }); if (p) { R.build(s, 'habitat', p.x, p.y); s.buildings[s.buildings.length - 1].build = 0; s.buildings[s.buildings.length - 1].level = 3; } }
+  s.pending.length = 0;
   tick(s, rng);
   const mp = s.pending.find((p) => p.kind === 'survivors');
   check(site(s, 's_crypt').done && s.commanders.some((c) => c.key === 'marrow') && mp?.commander === 'marrow', `the catacomb survivors join with Warden Marrow (${mp?.text.slice(0, 100)})`);
