@@ -20,6 +20,7 @@ import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { diffOf } from './difficulty.js';
 import { updateGoals } from './goals.js';
 import { dangerWork, secretsDay, floodedHere, SECRET } from './secrets.js';
+import { expeditionsDay } from './expeditions.js';
 
 export { habitatNeeds, stateRng };
 
@@ -171,6 +172,8 @@ export function dayTick(state, rng) {
   }
   // version 4 stage 2: what the surveys found, flooding drained, the reactor's clock, survivors joining
   secretsDay(state, { rng, say, ask });
+  // version 4 stage 3: squadrons arriving at their sectors, and coming home with their reports
+  expeditionsDay(state, { rng, say, ask });
 
   // 3 labour (Lanternfall): one staffing fraction for every building with jobs.
   const jobs = jobsOf(state), staffing = jobs ? Math.min(1, state.pop / jobs) : 1;
@@ -507,6 +510,7 @@ function guardTick(state, { staffing, pf, moneyF, rng, say, ask }) {
   // (half for a Mechanic's machine)
   const yards = state.buildings.filter((b) => b.key === 'scrapyard' && active(b)).length;
   if (yards) for (const g of state.guardians) {
+    if (g.away) continue;   // out on an expedition
     const max = maxHp(state, g);
     if (g.hp >= max) continue;
     const perHp = V3.repairPart * (COMMANDER[fitCommander(state, g.commander)?.key]?.perk === 'mechanic' ? 0.5 : 1);
@@ -568,7 +572,7 @@ function guardTick(state, { staffing, pf, moneyF, rng, say, ask }) {
     if (state.day < RAID.start[dk] || state.day < rd.next - warnLead(state)) return;
     const raid = rd.coming = makeRaid(state, rng, Math.max(rd.next, state.day + 1));
     rd.warned = true;
-    const days = raid.day - state.day, defended = state.guardians.length || state.buildings.some((b) => b.key === 'emplacement' && b.build === 0);
+    const days = raid.day - state.day, defended = state.guardians.some((g) => !g.away) || state.buildings.some((b) => b.key === 'emplacement' && b.build === 0);
     const text = `Governor, long-range contact: ${FACTIONS[raid.faction].name}, ${raid.units.length} machine${raid.units.length > 1 ? 's' : ''} (${FACTIONS[raid.faction].text}), `
       + `coming from ${FROM[raid.from]}. They will be here in ${days} day${days > 1 ? 's' : ''}. `
       + (defended ? 'The guard is standing to: machines with crews and the hull batteries will meet them.' : 'We have nothing to meet them with.')

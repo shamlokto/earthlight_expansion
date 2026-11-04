@@ -18,6 +18,12 @@ export {
   placeSecrets, ensureSecrets, readLog, clearDanger, dangerPreview, openVault, vaultNeeds, secretStatus, dangerIn, sitesIn,
   dangerBlocks, floodedHere, marshLeft, secretsOf, SECRET, KEY_LOGS,
 } from './secrets.js';
+// version 4, stage 3: fleet expeditions on the sector map (js/colony/expeditions.js), re-exported likewise
+import { ensureExpeditions, densCleared, EXP } from './expeditions.js';
+export {
+  ensureExpeditions, launchExpedition, expeditionPreview, recallExpedition, expeditionStatus, makeSectors, sectorOf, densCleared,
+  lootPlan, lootText, siteName, travelDays, strengthOf, isAway, SITES, HAZARD, EXP,
+} from './expeditions.js';
 // The survivors' two commanders (Warden Marrow, Tobias Venn) are commanders like any other once they join.
 for (const c of SURVIVOR_COMMANDERS) COMMANDER[c.key] ??= { portrait: `portrait/${c.key}`, ...c, survivor: true };
 
@@ -82,6 +88,7 @@ export function upgradeState(state) {
   // saved without them; the deck buildings (no tech, no milestone) are on the menu from the start
   ensureDecks(state);
   ensureSecrets(state);   // stage 2: the secrets, placed from the seed once the decks exist
+  ensureExpeditions(state);   // stage 3: the sector map, from the seed
   if (state.unlocked) for (const d of BUILDINGS) if (d.decks && !d.tech && !d.unlock && !d.fixed && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
   return state;
 }
@@ -719,6 +726,7 @@ export function sellGuardian(state, id) {
   const i = state.guardians.findIndex((g) => g.id === id);
   if (i < 0) return no('That machine is not in the guard.');
   if (!hasDock(state)) return no('Machines are sold at a finished dock.');
+  if (state.guardians[i].away) return no('That machine is away on an expedition.');
   const g = state.guardians[i], v = saleValue(state, g);
   state.guardians.splice(i, 1);
   state.stock.credits += v.credits; state.stock.parts += v.parts;
@@ -1038,11 +1046,18 @@ export function addGuardian(state, type, extra = {}) {
 // ---------------------------------------------------------------- crews, upkeep, power
 
 export const crewCap = (state) => V3.crewsCommand + state.buildings.reduce((t, b) => t + (b.key === 'barracks' && active(b) ? spec(b).crews || 0 : 0), 0);
-// The guardians that have a crew: those a commander leads first, then the strongest.
+// The guardians that have a crew: those away on an expedition (their crews went with them), then
+// those a commander leads, then the strongest.
 export function crewed(state) {
   const cap = crewCap(state), pw = new Map(state.guardians.map((g) => [g, guardianPower(state, g)]));
-  const order = state.guardians.filter((g) => g.hp > 0).sort((a, b) => (!!fitCommander(state, b.commander) - !!fitCommander(state, a.commander)) || pw.get(b) - pw.get(a) || a.id - b.id);
+  const order = state.guardians.filter((g) => g.hp > 0).sort((a, b) => (!!b.away - !!a.away) || (!!fitCommander(state, b.commander) - !!fitCommander(state, a.commander)) || pw.get(b) - pw.get(a) || a.id - b.id);
   return new Set(order.slice(0, cap).map((g) => g.id));
+}
+// The crewed guardians at home: the ones that meet raiders and sentries (stage 3: not those away).
+export function homeCrew(state) {
+  const c = crewed(state);
+  for (const g of state.guardians) if (g.away) c.delete(g.id);
+  return c;
 }
 const serving = (state, key) => (key ? state.commanders.find((c) => c.key === key) || null : null);
 // A serving, uninjured commander (only they lead, head a department or use a perk).
@@ -1104,6 +1119,7 @@ export function assignCommander(state, key, guardianId) {
   const c = serving(state, key);
   if (!c) return no('That commander is not serving in Eden.');
   const was = state.guardians.find((g) => g.commander === key);
+  if (was?.away) return no(`${nameOf(key)} is away with a squadron.`);
   if (guardianId === null || guardianId === undefined) {
     if (!was) return ok(`${nameOf(key)} leads no machine.`);
     was.commander = null;
@@ -1111,6 +1127,7 @@ export function assignCommander(state, key, guardianId) {
   }
   const g = state.guardians.find((x) => x.id === guardianId);
   if (!g) return no('That machine is not in the guard.');
+  if (g.away) return no('That machine is away on an expedition.');
   if (c.injured > 0) return no(`${nameOf(key)} is recovering for ${c.injured} more days.`);
   if (g.commander === key) return ok(`${nameOf(key)} already leads it.`);
   const before = g.commander;
@@ -1195,6 +1212,8 @@ export function heatTarget(state) {
   ];
   if (jammers) parts.push({ label: 'Jammers', value: -Math.min(H.jammerMax, jammers * H.jammer) });
   if (serving(state, 'w_rook')) parts.push({ label: 'Cass Rook', value: H.rook });
+  const dens = densCleared(state);   // stage 3: pirate dens cleared by expeditions
+  if (dens) parts.push({ label: 'Pirate dens cleared', value: -EXP.denHeat * dens });
   return { target: Math.max(0, Math.min(100, parts.reduce((t, p) => t + p.value, 0))), parts };
 }
 export const warnLead = (state) => Math.min(RAID.warnMax, RAID.warn + RAID.warnPerMast * state.buildings.filter((b) => b.key === 'sensormast' && active(b)).length);
@@ -1202,7 +1221,7 @@ export const warnLead = (state) => Math.min(RAID.warnMax, RAID.warn + RAID.warnP
 export const raidsPossible = (state) => !!state.flags?.unlock80;
 export function raidInterval(state, rng) {
   const base = between(rng, RAID.interval[dkey(state)]);
-  return Math.max(RAID.minGap, Math.round(base * (1.4 - (state.raid?.heat || 0) / 100)));
+  return Math.max(RAID.minGap, Math.round(base * (1.4 - (state.raid?.heat || 0) / 100) * (1 + EXP.raidSlow * densCleared(state))));
 }
 export const raiderPower = (u) => { const m = MACHINE[u.type]; return m ? (m.attack + m.defence) * (1 + V3.levelPower * (u.level || 0)) : 0; };
 const POOL = MACHINES.filter((m) => m.attack > 0 && !m.unique && m.type !== 79);
@@ -1232,12 +1251,13 @@ const shipShare = (raid) => {
 // The colony's defence against a raid: crewed guardians + Battery Emplacements, × the Security head.
 export function defenceOf(state, raid = state.raid?.coming) {
   upgradeState(state);
-  const crew = crewed(state), share = raid ? shipShare(raid) : 0.5;
+  const crew = homeCrew(state), share = raid ? shipShare(raid) : 0.5;
   let guardians = 0, emplacements = 0, batteries = 0;
   for (const g of state.guardians) if (crew.has(g.id)) guardians += guardianPower(state, g);
   for (const b of state.buildings) if (b.key === 'emplacement' && active(b)) { batteries++; emplacements += RAID.emplacement * (1 + RAID.modeBonus * (b.mode === 'hydra' ? 1 - share : share)); }
   const security = deptMult(state, 'security');
-  return { total: (guardians + emplacements) * security, guardians, emplacements, security, crewed: crew.size, idle: state.guardians.length - crew.size, batteries };
+  const away = state.guardians.filter((g) => g.away).length;
+  return { total: (guardians + emplacements) * security, guardians, emplacements, security, crewed: crew.size, idle: state.guardians.length - crew.size - away, away, batteries };
 }
 export const winChance = (d, a) => (a <= 0 ? 1 : (d * d) / (d * d + a * a));
 export function tributeOf(state, raid = state.raid?.coming) {
@@ -1270,7 +1290,7 @@ export function raidPreview(state) {
   upgradeState(state);
   const raid = state.raid.coming;
   if (!raid) return null;
-  const d = defenceOf(state, raid), a = raid.strength, p = winChance(d.total, a), crew = crewed(state);
+  const d = defenceOf(state, raid), a = raid.strength, p = winChance(d.total, a), crew = homeCrew(state);
   const hurt = (RAID.hurt * a) / (a + d.total || 1) * (p + (1 - p) * RAID.hurtLost);
   const expectedLost = state.guardians.filter((g) => crew.has(g.id) && hurt * bulwarkOf(state, g) >= g.hp / maxHp(state, g)).map((g) => g.type);
   const t = raidTargets(state, raid.from), tribute = tributeOf(state, raid);
@@ -1289,7 +1309,7 @@ export const raidName = (raid) => `${RAID_TIER[raid.tier]?.name || 'Raiders'} ($
 
 function fight(state, raid, rng) {
   const d = defenceOf(state, raid), a = raid.strength, p = winChance(d.total, a), won = rng() < p;
-  const crew = crewed(state), share = a / (a + d.total || 1);
+  const crew = homeCrew(state), share = a / (a + d.total || 1);
   const lostGuardians = [], hurtGuardians = [];
   for (const g of state.guardians.filter((x) => crew.has(x.id))) {
     const max = maxHp(state, g), led = fitCommander(state, g.commander);
@@ -1378,7 +1398,7 @@ export function answerRaid(state, choice, rng = stateRng(state)) {
 export const DRONES = { wear: 0.5, salvage: { credits: 0.5, parts: 0.1 } };
 export const droneAttack = (state, d) => Math.round((d.strength || 0) * RAID.strength[dkey(state)]);
 function droneDefence(state) {
-  const crew = crewed(state);
+  const crew = homeCrew(state);
   let g = 0;
   for (const x of state.guardians) if (crew.has(x.id)) g += guardianPower(state, x);
   return { total: g * deptMult(state, 'security'), crew };

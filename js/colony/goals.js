@@ -2,11 +2,12 @@
 // instructions on how to play become important"; "even on beta testing it becomes too hard").
 // Pure: no DOM. The sim calls updateGoals() each day; the interface shows goalStatus() and advise().
 //   goal: { id, title, text, speaker, done(state), progress(state)?, show(state)?, only(state)? }
-//   show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true } | { research: true | techKey } | { defence: tab } | { journal: tab } | null
+//   show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true } | { research: true | techKey } | { defence: tab } | { journal: tab } | { chart: sectorId | true } | null
 import { BUILDING } from './data/buildings.js';
 import { summary, chamberLinks, openBreaches, chamberOf, addPending, log, centre, pressuriseAir, storageCaps } from './rules.js';
 import { diffOf } from './difficulty.js';
 import { TECH } from './data/tech.js';
+import { sectorOf } from './expeditions.js';
 
 const finished = (s, key) => s.buildings.filter((b) => b.key === key && b.build === 0).length;
 const opened = (s) => s.chambers.filter((c) => c.status === 'open').length;
@@ -21,6 +22,11 @@ function nextChamber(s) {
     if (n && n.status === 'sealed') return n;
   }
   return null;
+}
+// The closest charted, uncleared sector that matches (for the Star chart's "Show me").
+function nearSector(s, fit) {
+  const c = (s.expeditions?.sectors || []).filter((x) => x.known && !x.cleared && fit(x)).sort((a, b) => a.ring - b.ring)[0];
+  return c ? c.id : null;
 }
 const dock = (s) => s.buildings.find((b) => b.key === 'dock');
 // The next chamber, unless the air stores are too small to pressurise it: then an air depot.
@@ -134,6 +140,15 @@ export const GOALS = [
   { id: 'vault', speaker: 'ruess', title: 'Open a vault',
     text: 'The Directorate left more than logs: sealed stores, a fuel cache, hangars with machines nobody has seen. Each vault has its own way in; the journal lists what each one needs.',
     done: (s) => (s.secrets?.sites || []).some((x) => x.kind === 'vault' && x.done), show: () => ({ journal: 'vaults' }) },
+  // version 4, stage 3: the expeditions
+  { id: 'scout', speaker: 'sato', title: 'Send out a squadron',
+    text: 'Our guardians can do more than wait for raiders. Open the Star chart (X), pick a sector close to Eden and send a few crewed machines to see what is out there: ore, wrecks, people. They come home with what they find.',
+    done: (s) => (s.expeditions?.sectors || []).some((x) => x.visited), show: (s) => ({ chart: nearSector(s, () => true) || true }) },
+  { id: 'den', speaker: 'sato', title: 'Clear a pirate den',
+    text: 'The raiders come from dens out in the dark. Send a strong squadron to one and burn it out: every den cleared means fewer and weaker raids. Bring a commander if the den is far.',
+    done: (s) => (s.expeditions?.sectors || []).some((x) => x.site === 'den' && x.cleared),
+    progress: (s) => { const d = nearSector(s, (x) => x.site === 'den'); return d ? `nearest known den: ring ${sectorOf(s, d)?.ring}` : 'no den charted yet: scout further out'; },
+    show: (s) => ({ chart: nearSector(s, (x) => x.site === 'den') || true }) },
   { id: 'finalvault', speaker: 'sato', title: 'The Ninefold vault',
     text: 'Five of the logs hold a part of a code each. With all five, and the way to the vault cleared, we can open the last door under the core, and find out what really happened to Eden.',
     done: (s) => !!s.secrets?.finalOpened, progress: (s) => `${(s.secrets?.read || []).filter((id) => /^l(03|07|10|13|18)$/.test(id)).length} / 5 code parts`, show: () => ({ journal: 'vaults' }) },
