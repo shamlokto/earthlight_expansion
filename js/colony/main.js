@@ -224,6 +224,7 @@ const api = {
   show: (sh) => doShow(sh),
   help: () => openHelp(),
   answered: (p) => {
+    if (p?.kind === 'victory') save(true);   // the win is kept in the save (D25); the colony carries on
     if (p?.kind === 'welcome' && fresh) {
       fresh = false;
       let seen = false; try { seen = !!localStorage.getItem(HELP_SEEN); } catch { }

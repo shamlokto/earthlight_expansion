@@ -21,6 +21,7 @@ import { diffOf } from './difficulty.js';
 import { updateGoals } from './goals.js';
 import { dangerWork, secretsDay, floodedHere, SECRET } from './secrets.js';
 import { expeditionsDay } from './expeditions.js';
+import { victoryDay } from './victory.js';
 
 export { habitatNeeds, stateRng };
 
@@ -417,7 +418,9 @@ export function dayTick(state, rng) {
     else {
       // 8–20 arrive; the happier the colony, the larger the transport it attracts.
       const top = SIM.transportMin + Math.round((SIM.transportMax - SIM.transportMin) * Math.min(1, (state.happy - dv.transportHappy) / SIM.transportFull));
-      const n = Math.min(free, SIM.transportMin + Math.floor(rng() * (top - SIM.transportMin + 1)));
+      // version 4, stage 4: a big colony draws bigger ships, +1 colonist per 100 already living here
+      // (so the win's population target is a matter of months, not years)
+      const n = Math.min(free, SIM.transportMin + Math.floor(rng() * (top - SIM.transportMin + 1)) + Math.floor(state.pop / 100));
       state.pop += n;
       state.flags.arrival = { day: state.day, n };   // the view flies the transport in (view3d/movers.js)
       ask('transport', 'Transport', `A transport docks with ${n} colonists.`);
@@ -480,6 +483,8 @@ export function dayTick(state, rng) {
   // 13 guided goals: a finished goal pays the Council grant and names the next (js/colony/goals.js)
   const goal = updateGoals(state);
   if (goal) events.push({ kind: 'goal', text: state.log[state.log.length - 1].text, pause: true });
+  // 14 version 4, stage 4: the win, Eden Restored, once (js/colony/victory.js); the colony carries on after it
+  if (victoryDay(state)) events.push({ kind: 'victory', text: state.log[state.log.length - 1].text, pause: true });
   return { events };
 }
 

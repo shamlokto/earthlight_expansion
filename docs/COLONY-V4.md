@@ -276,3 +276,25 @@ One agent, game side and interface; unit tests plus one browser check (owner: be
 - The Star chart opens from the top-bar button or with X.
 - New goals come after the first vault: "Send out a squadron" and "Clear a pirate den". Their "Show me" opens the chart at the nearest fitting sector (`show: { chart }`).
 - Tests: tests/colony-expeditions.mjs (227 checks).
+
+### Stage 4 as built: Eden Restored
+- `js/colony/victory.js` is pure and re-exported by rules.js.
+- **Relief convoys** leave from the dock, one a day, to an Earth relief station a squadron has reached.
+  - A convoy is 100 food, water or air, or 20 helium-3.
+  - Launching costs 120 credits and 15 parts, scaled by difficulty.
+  - Earth pays 60% of the base price.
+  - The Market panel has a "Relief convoys to Earth" section with the progress toward the win.
+- **The win**:
+  - Every chamber on every deck open (about 62).
+  - 1,500 colonists on Easy, 2,000 on Normal.
+  - 12 convoys on Easy, 20 on Normal.
+- When the win comes, `state.victory` records the day and the colony's statistics. A `victory` event shows the ending screen:
+  - Ruess, Sato and the General each speak.
+  - The statistics are shown.
+  - An epilogue appears if the Ninefold vault was opened.
+  - The picture is the art slot `video/ending`, then `scene/ending`, then the title art.
+- "Keep building Eden" saves and the colony carries on (D25). The ending plays only once.
+- **Goals** come after the den: "Reach an Earth relief station", "Send a relief convoy", "Eden Restored" (with progress), and then the Ninefold vault.
+- **Growth**: transports bring +1 colonist per 100 already living in Eden, so the population target is reachable.
+- **Tests**: tests/colony-victory.mjs (28 checks).
+- The xAI ending video (D26) is not made yet: the owner is asked first.

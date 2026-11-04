@@ -71,7 +71,7 @@ const STATUS = {
   open: ['Open', 'Pressurised: build inside.'],
 };
 const OVERLAYS = [[null, 'None'], ['reach', 'Reach'], ['park', 'Parks'], ['power', 'Power']];
-const KIND_LABEL = { goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost', tech: 'Research complete',
+const KIND_LABEL = { victory: 'Eden Restored', goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost', tech: 'Research complete',
   raid: 'Raid', raidwarn: 'Raid warning', wanderer: 'Wanderer', raidreport: 'After the raid', report: 'After the raid', commander: 'Commanders', machine: 'Arsenal',
   // version 4, stage 2: the secrets
   discovery: 'Discovery', finalvault: 'The Ninefold vault', drones: 'Sentries', dronefight: 'Sentries', reactor: 'The old core', reactorwarn: 'The old core', reactorfail: 'The old core',
@@ -313,6 +313,14 @@ export function helpHtml(art, diff) {
       <li><b>Away is away</b>: machines on an expedition do not defend Eden from raids or sentries. A squadron can be recalled before it arrives.</li>
       <li><b>Sites</b>: asteroid belts and comets (ore, water), derelicts (salvage, maybe a machine), Galt bunkers (survivors, blueprints), outposts (trade, wanderers), <b>pirate dens</b> (clear them: heat falls and raids come less often), the Directorate listening post, Earth relief stations, and the wreck of the Babylon.</li>
       <li><b>Hazards</b> in the outer rings (debris, radiation) cost hull unless a commander with good wits leads the squadron. The report comes home with them.</li>
+    </ul>`)}
+  ${sec('victory', 'Winning: Eden Restored', `<figure class="cl-hfig cl-hbook"><span style="font-size:42px;color:#ffd98a">✺</span><figcaption>Eden Restored</figcaption></figure>`, `
+    <p>The Council declares Eden restored when three things are true at once. The goals walk you there, and the Market shows how far along you are.</p>
+    <ul class="cl-hsteps">
+      <li><b>Every chamber open</b>, on all three decks: survey, seal, clear dangers and pressurise them all.</li>
+      <li><b>Enough colonists</b>: 1,500 on Easy, 2,000 on Normal.</li>
+      <li><b>Relief for Earth</b>: send relief convoys (12 on Easy, 20 on Normal) from the <b>Market</b>. A convoy is 100 food, water or air, or 20 helium-3, and costs a few credits and parts to launch; one leaves a day. First, a squadron must reach an <b>Earth relief station</b> on the Star chart.</li>
+      <li><b>After the ending</b> the colony carries on: the victory is kept in your save, and Eden is yours to keep growing.</li>
     </ul>`)}
   ${sec('commanders', 'Commanders', `<figure class="cl-hfig portrait">${pic('portrait/sato', 'Capt. Mira Sato')}<figcaption>Capt. Sato</figcaption></figure>`, `
     <p>A commander in a machine makes it fight better. You start with two: <b>the General</b> (three times the power in any machine) and <b>Capt. Sato</b>, best in ships. See them in <b>Defence › Commanders</b>.</p>
@@ -1138,9 +1146,11 @@ export function createUI(root, api) {
 
   pops.market.addEventListener('click', (e) => {
     if (e.target.closest('[data-mdef]')) { openDefence(e.target.closest('[data-mdef]').dataset.mdef); return; }
-    const b = e.target.closest('[data-sell],[data-guard],[data-buy]'); if (!b || b.disabled) return;
+    if (e.target.closest('[data-mchart]')) { pops.market.hidden = true; openChart(); return; }
+    const b = e.target.closest('[data-sell],[data-guard],[data-buy],[data-convoy]'); if (!b || b.disabled) return;
     const s = S();
-    if (b.dataset.buy) result(R.buy(s, b.dataset.buy, +b.dataset.q));
+    if (b.dataset.convoy) result(R.sendConvoy(s, b.dataset.convoy));
+    else if (b.dataset.buy) result(R.buy(s, b.dataset.buy, +b.dataset.q));
     else if (b.dataset.sell) {
       const g = b.dataset.sell, have = Math.floor(s.stock[g] || 0), q = b.dataset.q === 'all' ? have : Math.min(have, +b.dataset.q);
       if (q <= 0) { toast(`No ${GOOD_NAME[g].toLowerCase()} to sell.`, 'bad'); return; }
@@ -1156,7 +1166,8 @@ export function createUI(root, api) {
     const prices = goods.map((g) => { try { return R.price(s, g); } catch { return null; } });
     const yard = finishedOf(s, 'scrapyard').length > 0;
     const imports = R.IMPORTS || [], buyP = imports.map((g) => { try { return R.buyPrice(s, g); } catch { return null; } });
-    const sig = JSON.stringify([goods, prices, buyP, Math.floor(s.stock.credits), goods.map((g) => Math.floor(s.stock[g] || 0)), (s.guardians || []).map((g) => [g.id, g.level, g.hp]), yard]);
+    const cv = R.convoyStatus ? R.convoyStatus(s) : null, vs = R.victoryStatus ? R.victoryStatus(s) : null;
+    const sig = JSON.stringify([cv, vs && R.victoryText(vs), goods, prices, buyP, Math.floor(s.stock.credits), goods.map((g) => Math.floor(s.stock[g] || 0)), (s.guardians || []).map((g) => [g.id, g.level, g.hp]), yard]);
     if (sig === marketSig) return;
     marketSig = sig;
     const hasDock = s.buildings.some((b) => b.key === 'dock' && !b.build);
@@ -1173,11 +1184,24 @@ export function createUI(root, api) {
       <table class="cl-table cl-mkt"><tbody>${imports.map((g, i) => `<tr><td>${GOOD_NAME[g]}</td><td class="n">${buyP[i] == null ? '–' : (+buyP[i]).toFixed(2)} <small>cr</small></td>
         <td class="cl-sellbtns">${[10, 100].map((q) => `<button type="button" class="cl-btn xs" data-buy="${g}" data-q="${q}" ${hasDock && buyP[i] != null && s.stock.credits >= buyP[i] ? '' : 'disabled'} title="≈ ${buyP[i] != null ? num(Math.ceil(buyP[i] * q)) : '?'} cr">+${q}</button>`).join('')}</td></tr>`).join('')}</tbody></table>
       <p class="cl-dim">Every 10 units bought raises that price 2%; it settles back over a few days.</p>` : ''}
+      ${cv ? convoyHtml(s, cv, vs) : ''}
       ${guards.length ? `<h4>Guardians <small>${guards.length} machine${guards.length === 1 ? '' : 's'}${yard ? ' · Scrapyard: +20%' : ''}</small></h4>
       ${yard ? '' : '<p class="cl-dim">A Scrapyard sells machines for a fifth more.</p>'}
       <div class="cl-guards">${guards.map((g) => { const sp = salePrice(s, g), base = yard ? Math.round(sp.credits / 1.2) : null; return `<div class="cl-guard"><b>${esc(mInfo(g.type).name)}</b><small>L${g.level ?? 0}${g.hp != null && g.hp < maxHp(g) ? ` · ${num(g.hp)}/${num(maxHp(g))} HP` : ''}</small>
         <span>${num(sp.credits)} cr · ${num(sp.parts)} parts${yard ? ` <em class="cl-bonus" title="Scrapyard bonus: ${num(base)} cr without it">+20% Scrapyard</em>` : ''}</span><button type="button" class="cl-btn xs" data-guard="${g.id}" ${sp.ok || !R.sellGuardian ? '' : 'disabled'} title="${esc(sp.ok ? '' : sp.msg)}">Sell</button></div>`; }).join('')}</div>
       <p class="cl-dim"><button type="button" class="cl-linkbtn" data-mdef="guardians">Defence panel ›</button> repairs, crews and commanders.</p>` : ''}`;
+  }
+
+  // Version 4, stage 4: relief convoys to Earth (one a day, to a relief station an expedition reached),
+  // with the three parts of the win, Eden Restored, beside them.
+  function convoyHtml(s, cv, vs) {
+    const part = (label, x) => `<li class="${x.met ? 'met' : ''}"><b>${x.met ? '✓' : '○'}</b> ${label} <small>${num(x.have)} / ${num(x.need)}</small></li>`;
+    return `<h4>Relief convoys to Earth <small>${cv.sent} / ${cv.quota} sent · each costs ${num(cv.cost.credits)} cr and ${num(cv.cost.parts)} parts</small></h4>
+      ${cv.station ? `<p class="cl-dim">Convoys go to <b>${esc(cv.station)}</b>. One leaves a day; Earth pays for each.</p>`
+        : '<p class="cl-why">No Earth relief station reached yet. <button type="button" class="cl-linkbtn" data-mchart>Star chart ›</button> send a squadron to one on the Earth side.</p>'}
+      <table class="cl-table cl-mkt"><tbody>${cv.goods.map((g) => `<tr><td>${GOOD_NAME[g.good] || g.good}</td><td class="n">${num(g.have)} <small>/ ${g.load}</small></td><td class="n">+${num(g.pay)} <small>cr</small></td>
+        <td class="cl-sellbtns"><button type="button" class="cl-btn xs" data-convoy="${g.good}" ${g.why ? `disabled title="${esc(g.why)}"` : `title="Send ${g.load} ${g.good} to Earth"`}>Send ${g.load}</button></td></tr>`).join('')}</tbody></table>
+      ${vs ? `<div class="cl-restore${s.victory ? ' won' : ''}"><b>${s.victory ? `Eden Restored on day ${s.victory.day}` : 'Eden Restored needs'}</b><ul>${part('every chamber open', vs.chambers)}${part('colonists', vs.pop)}${part('relief convoys', vs.convoys)}</ul></div>` : ''}`;
   }
 
   function renderSettings() {
@@ -2333,6 +2357,32 @@ export function createUI(root, api) {
       <path d="M0 470 Q200 440 400 470 V500 H0z" fill="#020308"/>
     </svg>`;
   }
+  // Version 4, stage 4: the ending, Eden Restored (shown once; the colony carries on after it, D25).
+  // A video for it (art slot video/ending) plays if there is one, else its still, else the title art.
+  function victoryPicture() {
+    const vid = api.art?.('video/ending'), still = api.art?.('scene/ending') || api.art?.('title/rebuild');
+    if (vid) return `<video class="cl-fvmedia" src="${esc(vid)}"${still ? ` poster="${esc(still)}"` : ''} autoplay muted playsinline></video>`;
+    return still ? `<img class="cl-fvmedia" src="${esc(still)}" alt="Eden, restored, above the Earth">` : '';
+  }
+  function renderVictory(s, p) {
+    evId = p.id;
+    modal.classList.remove('soft'); modal.classList.add('final');
+    evBox.className = 'cl-win cl-event cl-evfinal cl-evvictory';
+    const v = s.victory || {}, choice = p.choices?.[0] || { key: 'keep', label: 'Keep building Eden' };
+    const stats = [['Day', v.day], ['Colonists', v.pop], ['Chambers open', v.chambers], ['Relief convoys', v.convoys], ['Buildings', v.buildings], ['Raids beaten', v.raids], ['Pirate dens cleared', v.dens], ['Logs read', v.logs]];
+    evBox.innerHTML = `<div class="cl-fvpic">${victoryPicture()}</div>
+      <div class="cl-fvmain">
+        <div class="cl-evkind">${esc(KIND_LABEL.victory)} · Day ${s.day}</div>
+        <div class="cl-fvpage"><h2 id="evTitle">${esc(p.title || 'Eden Restored')}</h2><p class="cl-vlead">${esc(p.text)}</p>
+          <dl class="cl-vstats">${stats.filter(([, n]) => n != null).map(([k, n]) => `<div><dt>${k}</dt><dd>${num(n)}</dd></div>`).join('')}</dl>
+          <div class="cl-fvclose">${(R.ENDING || []).map(([k, who, line], i) => `<figure style="--i:${i}">${eventFace(k) || `<span class="cl-portrait cl-fvinit">${esc(who.split(' ').pop()[0])}</span>`}<blockquote><p>“${esc(line)}”</p><figcaption>${esc(who)}</figcaption></blockquote></figure>`).join('')}</div>
+          ${v.finalVault && R.EPILOGUE ? `<p class="cl-fvreward"><i>Epilogue</i> ${esc(R.EPILOGUE)}</p>` : ''}
+          <p class="cl-dim">Your colony is saved, victory and all. Keep building: Eden is yours.</p></div>
+        <div class="cl-evchoices"><button type="button" class="cl-btn primary" data-choice="${esc(choice.key)}">${esc(choice.label)}</button></div>
+      </div>`;
+    modal.hidden = false;
+    evBox.querySelector('[data-choice]')?.focus({ preventScroll: true });
+  }
   function renderFinal(s, p, stage) {
     if (!fv || fv.id !== p.id) fv = { id: p.id, stage: 0, raf: 0 };
     if (stage != null) fv.stage = stage;
@@ -2524,6 +2574,7 @@ export function createUI(root, api) {
     }
     if (evId === p.id && !modal.hidden) return;
     if (p.kind === 'finalvault') { renderFinal(s, p); return; }
+    if (p.kind === 'victory') { renderVictory(s, p); return; }
     modal.classList.remove('final');
     evId = p.id;
     if (/report|result/.test(p.kind || '')) repSeen = reportSig(s);   // the sim's own report: no second one
@@ -2600,7 +2651,7 @@ export function createUI(root, api) {
     const p = S().pending?.[0]; if (!p) return;
     const key = b.dataset.choice ?? (p.choices?.[0]?.key || 'ok');
     evId = null; modal.hidden = true;
-    if (p.kind === 'finalvault') { if (fv) cancelAnimationFrame(fv.raf); fv = null; modal.classList.remove('final'); }
+    if (p.kind === 'finalvault' || p.kind === 'victory') { if (fv) cancelAnimationFrame(fv.raf); fv = null; modal.classList.remove('final'); }
     let r = R.answer(S(), p.id, key);
     // a raid the generic answer() did not resolve: the rules' own raid answer
     if (p.kind === 'raid' && r?.ok === false && typeof R.answerRaid === 'function' && S().pending?.some((x) => x.id === p.id)) { const r2 = rule('answerRaid', S(), key); if (r2) r = r2; }

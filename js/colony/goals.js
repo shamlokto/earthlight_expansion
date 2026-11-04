@@ -8,6 +8,7 @@ import { summary, chamberLinks, openBreaches, chamberOf, addPending, log, centre
 import { diffOf } from './difficulty.js';
 import { TECH } from './data/tech.js';
 import { sectorOf } from './expeditions.js';
+import { reliefStation, victoryStatus, victoryText } from './victory.js';
 
 const finished = (s, key) => s.buildings.filter((b) => b.key === key && b.build === 0).length;
 const opened = (s) => s.chambers.filter((c) => c.status === 'open').length;
@@ -149,6 +150,17 @@ export const GOALS = [
     done: (s) => (s.expeditions?.sectors || []).some((x) => x.site === 'den' && x.cleared),
     progress: (s) => { const d = nearSector(s, (x) => x.site === 'den'); return d ? `nearest known den: ring ${sectorOf(s, d)?.ring}` : 'no den charted yet: scout further out'; },
     show: (s) => ({ chart: nearSector(s, (x) => x.site === 'den') || true }) },
+  // version 4, stage 4: the win
+  { id: 'station', speaker: 'sato', title: 'Reach an Earth relief station',
+    text: 'Earth is still starving after the war, and the Council wants Eden to help. Relief convoys dock at stations on the Earth side of the Star chart. Send a squadron to one so the convoys know the way.',
+    done: (s) => !!reliefStation(s), show: (s) => ({ chart: nearSector(s, (x) => x.site === 'relief') || true }) },
+  { id: 'convoy', speaker: 'ruess', title: 'Send a relief convoy',
+    text: 'A convoy is a full load of food, water, air or helium-3, launched from the dock for a few credits and parts. Open the Market and send one. Earth pays a little, and every convoy counts toward restoring Eden.',
+    done: (s) => (s.relief?.sent || 0) >= 1, show: () => ({ market: true }) },
+  { id: 'restored', speaker: 'ruess', title: 'Eden Restored',
+    text: 'The Council will declare Eden restored when every chamber on every deck breathes, the colony is home to enough people, and the relief quota has reached Earth. Then the colony is yours to keep growing.',
+    done: (s) => !!s.victory, progress: (s) => victoryText(victoryStatus(s)),
+    show: (s) => { const v = victoryStatus(s); if (!v.chambers.met) { const c = nextChamber(s); return c ? { chamber: c.id } : (deckChamber(s, 'upper') || deckChamber(s, 'lower')); } return v.pop.met ? { market: true } : { build: 'habitat' }; } },
   { id: 'finalvault', speaker: 'sato', title: 'The Ninefold vault',
     text: 'Five of the logs hold a part of a code each. With all five, and the way to the vault cleared, we can open the last door under the core, and find out what really happened to Eden.',
     done: (s) => !!s.secrets?.finalOpened, progress: (s) => `${(s.secrets?.read || []).filter((id) => /^l(03|07|10|13|18)$/.test(id)).length} / 5 code parts`, show: () => ({ journal: 'vaults' }) },
