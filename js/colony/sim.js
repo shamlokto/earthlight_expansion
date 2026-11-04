@@ -3,7 +3,8 @@
 // parts chain, services, clinics and Apartments, tailings, sweeper strikes, seed vaults; and version 3
 // in docs/COLONY-V3.md: machine production, repairs, upkeep, commanders, wanderers, heat and raids,
 // fusion, mushroom walls and terrace homes; and version 4 in docs/COLONY-V4.md: buildings on the
-// upper and lower decks work like any other, coverage stays on its deck, Pump Stations drain).
+// upper and lower decks work like any other, coverage stays on its deck, Pump Stations drain; stage 2:
+// the secrets' day in js/colony/secrets.js: discoveries, crews on dangers, the reactor, survivors).
 // Pure apart from rng(), a seeded generator the caller passes in.
 import { T, R, TERRAIN } from './data/terrain.js';
 import { BUILDING, NEEDS, CHAMBER_AIR_PER_100 } from './data/buildings.js';
@@ -18,6 +19,7 @@ import {
 import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { diffOf } from './difficulty.js';
 import { updateGoals } from './goals.js';
+import { dangerWork, secretsDay, floodedHere, SECRET } from './secrets.js';
 
 export { habitatNeeds, stateRng };
 
@@ -108,6 +110,15 @@ function nearestPoor(state, b, ter = T.POOR, ok = () => true) {
   return best;
 }
 
+// A Pump Station in a flooded chamber (stage 2): SECRET.pumpOut of its chamber's flooded tiles a day.
+function pumpOut(state, b, c, m) {
+  const w = state.map.w, wet = [];
+  for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) { const i = y * w + x; if (m.ch[i] === c.id && m.t[i] === T.MARSH) wet.push(i); }
+  const d = (i) => Math.max(Math.abs((i % w) - b.x), Math.abs(((i / w) | 0) - b.y));
+  wet.sort((a, z) => d(a) - d(z) || a - z);
+  for (const i of wet.slice(0, SECRET.pumpOut)) m.t[i] = deckOf(b) === 'main' ? T.PLAIN : T.DECK;
+}
+
 export function dayTick(state, rng) {
   const events = [];
   const say = (kind, text, pause = false) => { events.push({ kind, text, pause }); log(state, text); };
@@ -126,6 +137,8 @@ export function dayTick(state, rng) {
   // 1 construction: each crew works on one building, oldest order first. A Safety Post's crews
   // put up Bulkhead Seals in its range twice as fast.
   let crews = crewsOf(state);
+  // version 4 stage 2: decontamination and the reactor's stabilisation take the first crews
+  crews = dangerWork(state, crews, say, ask);
   // raid damage (version 3) is repaired first, a crew a building, a day of damage a day
   for (const b of state.buildings) {
     if (!(b.damaged > 0) || crews <= 0) continue;
@@ -153,6 +166,8 @@ export function dayTick(state, rng) {
     if (c.status === 'surveying') { c.status = 'surveyed'; say('surveyed', `${c.name} surveyed: ${c.breaches.length} breach${c.breaches.length === 1 ? '' : 'es'} to seal, ${c.tiles} tiles of floor.`); }
     else if (c.status === 'pressurising') { c.status = 'open'; ask('chamber', 'Chamber open', `${c.name} holds air again: ${c.tiles} tiles to build on.`); }
   }
+  // version 4 stage 2: what the surveys found, flooding drained, the reactor's clock, survivors joining
+  secretsDay(state, { rng, say, ask });
 
   // 3 labour (Lanternfall): one staffing fraction for every building with jobs.
   const jobs = jobsOf(state), staffing = jobs ? Math.min(1, state.pop / jobs) : 1;
@@ -254,11 +269,14 @@ export function dayTick(state, rng) {
     if (i >= 0) { mapOf(state, deckOf(b)).t[i] = T.PLAIN; say('mend', 'A Seed Vault mended a tile of poor soil: it is plain again.'); }
   }
   // Pump Stations (version 4) drain the nearest flooded tile of an open chamber in range every 5
-  // days: deck plating on the lower deck, plain soil on the main deck.
+  // days: deck plating on the lower deck, plain soil on the main deck. Stage 2: one standing in a
+  // flooded chamber that is not open yet pumps it out, 4 tiles a day (the nearest first, anywhere in it).
   for (const b of state.buildings) {
-    if (b.key !== 'pumpstation' || !active(b) || (b.drain = (b.drain || 0) + 1) < SIM.drainEvery) continue;
+    if (b.key !== 'pumpstation' || !active(b)) continue;
+    const m = mapOf(state, deckOf(b)), home = chamberOf(state, m.ch[idx(state, b.x, b.y)]);
+    if (home && home.status !== 'open' && floodedHere(state, home)) { pumpOut(state, b, home, m); continue; }
+    if ((b.drain = (b.drain || 0) + 1) < SIM.drainEvery) continue;
     b.drain = 0;
-    const m = mapOf(state, deckOf(b));
     const i = nearestPoor(state, b, T.MARSH, (j) => chamberOf(state, m.ch[j])?.status === 'open');
     if (i >= 0) { m.t[i] = deckOf(b) === 'main' ? T.PLAIN : T.DECK; say('drain', `A Pump Station drained a tile of flooded ground on the ${deckOf(b)} deck.`); }
   }

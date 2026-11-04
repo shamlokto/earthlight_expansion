@@ -23,12 +23,18 @@
 //        show(show) performs a goal's or the advisor's "Show me", help() opens How to play,
 //        answered(pending, choiceKey) after an event is answered, openResearch(techKey),
 //        version 4: deck() the deck on show, decks() the decks this colony has, setDeck(deck),
-//        stepDeck('up' | 'down'), mapOf(deck), decksFor(key), goDeck(deck, x, y) }
+//        stepDeck('up' | 'down'), mapOf(deck), decksFor(key), goDeck(deck, x, y),
+//        version 4 stage 2: secrets (js/colony/secrets.js or null: clearDanger, dangerPreview, openVault,
+//        secretStatus, readLog when rules.js does not re-export them) }
+//   ui.openJournal(tab, ref)  the Discoveries journal (version 4, stage 2): 'logs' | 'vaults' | 'survivors' | 'dangers',
+//                             ref a log id, a vault or survivors site / ref, or a danger's chamber id
+//   ui.toggleJournal()        key J
 import { CATEGORIES, BUILDINGS, BUILDING, NEEDS, CHAMBER_AIR_PER_100 } from './data/buildings.js';
 import { TERRAIN, ARTIFACT, T } from './data/terrain.js';
 import { BRANCHES, TECHS, TECH } from './data/tech.js';
 import { MACHINES, MACHINE, MACHINE_COST } from './data/machines.js';
 import { CLASSES, CLASS_NAME, STYLES, PERKS, DEPARTMENTS, COMMANDER, GENERAL, BASE_COMMANDERS, PER_QUARTERS } from './data/commanders.js';
+import { LOGS, VAULTS, SURVIVORS, SURVIVOR_COMMANDERS, DANGERS, FINAL_CODE_PARTS } from './data/secrets.js';
 
 // The expansion's SVG busts (story characters) for commanders without a painted portrait; loaded
 // lazily so the colony still runs if the expansion's files are missing.
@@ -64,8 +70,11 @@ const STATUS = {
 };
 const OVERLAYS = [[null, 'None'], ['reach', 'Reach'], ['park', 'Parks'], ['power', 'Power']];
 const KIND_LABEL = { goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost', tech: 'Research complete',
-  raid: 'Raid', raidwarn: 'Raid warning', wanderer: 'Wanderer', raidreport: 'After the raid', report: 'After the raid', commander: 'Commanders', machine: 'Arsenal' };
-const SPEAKER = { ruess: 'Prof. Ruess', sato: 'Capt. Sato' };
+  raid: 'Raid', raidwarn: 'Raid warning', wanderer: 'Wanderer', raidreport: 'After the raid', report: 'After the raid', commander: 'Commanders', machine: 'Arsenal',
+  // version 4, stage 2: the secrets
+  discovery: 'Discovery', finalvault: 'The Ninefold vault', drones: 'Sentries', dronefight: 'Sentries', reactor: 'The old core', reactorwarn: 'The old core', reactorfail: 'The old core',
+  vault: 'Vault opened', survivors: 'Survivors', danger: 'Danger' };
+const SPEAKER = { ruess: 'Prof. Ruess', sato: 'Capt. Sato', marrow: 'Warden Marrow', venn: 'Tobias Venn' };
 // Version 4 (docs/COLONY-V4.md): the three decks, top to bottom.
 const DECKS = ['upper', 'main', 'lower'];
 const DECK_NAME = { upper: 'Upper', main: 'Main', lower: 'Lower' };
@@ -77,6 +86,84 @@ const decksText = (list) => list.length === 1 ? `${DECK_NAME[list[0]]} deck only
 const UI_KEY = 'el-colony-ui';   // per-viewer panel state (collapsed or not)
 const loadUI = () => { try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}') || {}; } catch { return {}; } };
 const storeUI = (o) => { try { localStorage.setItem(UI_KEY, JSON.stringify(o)); } catch { } };
+
+// ---------------------------------------------------------------- version 4, stage 2: the secrets (docs/COLONY-V4.md §2)
+// The survivors' two commanders (data/secrets.js) join the roster's names and faces.
+const CMDR = { ...COMMANDER, ...Object.fromEntries(SURVIVOR_COMMANDERS.map((c) => [c.key, { portrait: `portrait/${c.key}`, ...c }])) };
+const J_TABS = [['logs', 'Logs'], ['vaults', 'Vaults'], ['survivors', 'Survivors'], ['dangers', 'Dangers']];
+const LOG_ORDER = [...LOGS].sort((a, b) => a.order - b.order);
+const LOG = Object.fromEntries(LOGS.map((l) => [l.id, l]));
+const VAULT = Object.fromEntries(VAULTS.map((v) => [v.id, v]));
+const SURV = Object.fromEntries(SURVIVORS.map((v) => [v.id, v]));
+const KEY_LOGS = LOGS.filter((l) => l.key).sort((a, b) => a.key - b.key);
+// The five fragments' clues, as the logs give them (the code itself stays with the player).
+const KEY_CLUE = { 1: 'The founding year', 2: 'The back of a badge', 3: 'The ring that failed', 4: 'The first night', 5: 'The warden\'s word' };
+// How a log is set on the page: a child's diary, a log in ink, an engineer's notebook, a terminal print-out, words on a wall.
+function logKind(l) {
+  const a = `${l.author} ${l.title}`;
+  if (/\bPim\b/.test(a)) return 'diary';
+  if (/wall|graffiti/i.test(a)) return 'wall';
+  if (/Venn/.test(a)) return 'notebook';
+  if (/Directorate|bulletin|broadcast|manifest|officer|Hesk/i.test(a)) return 'terminal';
+  return 'letter';
+}
+const LOG_KIND = { diary: 'Diary page', wall: 'Words on a wall', notebook: 'Engineer\'s notebook', terminal: 'Terminal print-out', letter: 'Handwritten log' };
+// A fragment's cipher group on the slot (three characters, fixed per log): decoration, not the code.
+const cipher = (id) => { let h = 2166136261; for (const c of String(id)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } h >>>= 0; const A = 'ACEFHKLMNPRTVWXY3479'; return [0, 7, 14].map((k) => A[(h >>> k) % A.length]).join(''); };
+const SITE_NAME = { log: 'Log', vault: 'Vault', survivors: 'Survivors' };
+// Small line icons (currentColor): the journal's book, the three kinds of site and the five dangers.
+const SICON = {
+  book: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 5.2C5.6 3.7 8.8 3.8 12 6c3.2-2.2 6.4-2.3 9.5-.8v13.6c-3.1-1.4-6.3-1.3-9.5.9-3.2-2.2-6.4-2.3-9.5-.9z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 6v13.6" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.6c1.6-.5 3.2-.4 4.6.3M5 11.6c1.6-.5 3.2-.4 4.6.3M14.4 8.9c1.4-.7 3-.8 4.6-.3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" opacity=".7"/></svg>',
+  log: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8h9M7.5 11.5h9M7.5 15h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  vault: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="3" width="19" height="18" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="5.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 6.8v10.4M6.8 12h10.4M8.3 8.3l7.4 7.4M15.7 8.3l-7.4 7.4" stroke="currentColor" stroke-width="1" opacity=".75"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>',
+  survivors: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3.5h6M12 3.5v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8 7h8l1 3v8l-1 2.5H8L7 18v-8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 10.5c1.5 1.6 1.7 3.2 0 5-1.7-1.8-1.5-3.4 0-5z" fill="currentColor"/></svg>',
+  drones: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11c0-3.9 3.6-7 8-7s8 3.1 8 7v2H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" fill="currentColor"/><path d="M6 13l-2 6M18 13l2 6M10 13l-1 5M14 13l1 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  toxic: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15.5c-1.8 0-3-1.3-3-3 0-1.6 1.3-3 3-3 .4-2.6 2.7-4.5 5.4-4.5 2.4 0 4.5 1.5 5.2 3.7 2.6-.2 4.9 1.7 4.9 4.1 0 1.6-1.3 2.7-3 2.7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 19h2M11 20.5h2M15 19h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  radiation: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1.8" fill="currentColor"/><path d="M12 10.2V3.5a8.5 8.5 0 0 0-7.4 4.3l5.8 3.3zM13.6 11.1l5.8-3.3A8.5 8.5 0 0 0 12 3.5M10.4 12.9l-5.8 3.3a8.5 8.5 0 0 0 14.8 0l-5.8-3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  flooded: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0M2 14c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0M2 19c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  reactor: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2.6" fill="currentColor"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8" fill="none" stroke="currentColor" stroke-width="1.4"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8" fill="none" stroke="currentColor" stroke-width="1.4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8" fill="none" stroke="currentColor" stroke-width="1.4" transform="rotate(-60 12 12)"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
+};
+const ico = (k, cls = '') => `<span class="cl-sico ${cls}" aria-hidden="true">${SICON[k] || SICON.log}</span>`;
+
+// The Ninefold vault's revelation (the 'finalvault' event): the truth, Eden's registry read aloud,
+// then Ruess and Sato. Original writing, from the logs in data/secrets.js.
+const FINAL_TRUTH = [
+  'There was no Galt raid. There never was.',
+  'In the last year of the war Marshal Kessrin\'s Directorate took Eden\'s lower decks under cover of a quarantine and called them Site Ninefold. Galt prisoners dug a cavity under the old core, and a Quantum Decimator rig was built inside it. The families above were told to keep away from the lifts.',
+  'On day 211 the rig ran at full yield. Ring three slipped out of phase; the cavity folded in on itself, gutted the lower decks and tore the hull open to space. Before the dust settled Major Hesk invoked Protocol Ash: blame the Galt, empty the colony, leave no one behind who knew.',
+  'Eleven thousand four hundred and two people were put on ships and told they had been attacked. Three days later the Marshal promised them vengeance. Sixty-three stayed. Warden Ilse Marrow kept sixty-one of them alive in the catacombs, and Tobias Venn, who built the rig, sealed it and set the proof beside it: the test logs, Hesk\'s orders, the authorisation under the Marshal\'s own seal.',
+  'And the registry. Every soul who ever lived on Eden.',
+];
+const FINAL_CLOSE = [
+  ['ruess', 'Prof. Ruess', 'Every page will be on the Council\'s desk by morning, and a copy on every ship that docks here. Whatever the Union decides to do with the truth, Eden is not going to be a lie any more.'],
+  ['sato', 'Capt. Sato', 'I flew under that seal for six years. The Marshal said every one of them would be avenged. Let\'s settle for remembered, Governor. Loudly.'],
+];
+// Eden's registry: invented names, the same for every colony (Marrow reads them out).
+const REG_FIRST = ['Ada', 'Aron', 'Bea', 'Bram', 'Cass', 'Cyril', 'Dana', 'Dov', 'Edda', 'Emil', 'Fen', 'Freya', 'Gil', 'Greta', 'Hal', 'Hedda', 'Ines', 'Isak', 'Jana', 'Jory',
+  'Kesia', 'Lars', 'Lena', 'Mara', 'Matti', 'Nadia', 'Nils', 'Noor', 'Olek', 'Orla', 'Pavel', 'Pia', 'Quin', 'Rafe', 'Rhea', 'Rosa', 'Saul', 'Selma', 'Tam', 'Tess',
+  'Ulla', 'Uri', 'Vera', 'Wren', 'Yara', 'Yusuf', 'Zofia', 'Anouk', 'Benno', 'Chiara', 'Dmitri', 'Elif', 'Farid', 'Hanne', 'Jun', 'Kalinda', 'Levi', 'Mei', 'Oskar', 'Priya',
+  'Ruth', 'Sami', 'Tomas', 'Ama', 'Bo', 'Corin', 'Dalia', 'Ezra', 'Ilka', 'Mateo', 'Nell', 'Odile', 'Petra', 'Ravi', 'Sunniva', 'Teo', 'Vesna', 'Wim', 'Ysolde', 'Zeno'];
+const REG_LAST = ['Abara', 'Aldane', 'Asante', 'Bertil', 'Brightwater', 'Castell', 'Corvo', 'Dahl', 'Delacroix', 'Eske', 'Faro', 'Fenwick', 'Gale', 'Halloran', 'Hesse', 'Ibarra',
+  'Jansen', 'Kaur', 'Kowal', 'Lindqvist', 'Lomax', 'Marchetti', 'Mbeki', 'Novak', 'Nakamura', 'Okoro', 'Orsini', 'Pell', 'Quaresma', 'Rasku', 'Reyes', 'Sandoval', 'Sorensen',
+  'Tamm', 'Tobin', 'Ueda', 'Varga', 'Vinter', 'Wakefield', 'Weir', 'Yilmaz', 'Zeller', 'Achterberg', 'Bannerjee', 'Cole', 'Drummond', 'Esposito', 'Frost', 'Greaves', 'Haddad',
+  'Iversen', 'Juhl', 'Kettering', 'Lowe', 'Mirza', 'Nyberg', 'Oduro', 'Pajari', 'Rowan', 'Szabo', 'Thorsen', 'Underhill', 'Voss', 'Whitlock', 'Yoon'];
+const REG_HOME = ['Lantern Ring', 'Skyward Gallery', 'Orchard Ring', 'River Ward', 'Weir Row', 'Fieldside', 'Market Arcade', 'Dock Ward', 'Old Cistern', 'Pump Hall', 'Glasshouse Row', 'Mill Lane'];
+const REGISTRY = (() => {
+  let a = 0x5eed1e; const rnd = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const pick = (L) => L[Math.floor(rnd() * L.length)], seen = new Set(), out = [];
+  while (out.length < 168) {
+    const f = pick(REG_FIRST), l = pick(REG_LAST), k = `${l}, ${f}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push({ name: k, age: 2 + Math.floor(rnd() * 84), home: pick(REG_HOME) });
+  }
+  // the names the logs gave us, where they belong in the book
+  out.splice(23, 0, { name: 'Asante, Pim', age: 9, home: 'Lantern Ring' });
+  out.splice(97, 0, { name: 'Marrow, Ilse', age: 58, home: 'Warden\'s House', mark: 'stayed' });
+  out.splice(141, 0, { name: 'Venn, Tobias', age: 41, home: 'Site Ninefold', mark: 'stayed' });
+  return out;
+})();
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const num = (n) => {
@@ -113,7 +200,7 @@ function cardIcon(b) {
 // The help dialog's sections (colony.html #dHelp). Short sentences, pictures from the card art.
 // diff: the difficulty row (js/colony/difficulty.js) the numbers are quoted for, or null.
 export const HELP_SECTIONS = [['goal', 'The goal'], ['time', 'Time'], ['build', 'Building'], ['res', 'Resources'], ['chambers', 'Chambers'],
-  ['homes', 'Homes & happiness'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
+  ['homes', 'Homes & happiness'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
 export function helpHtml(art, diff) {
   const pic = (slot, alt = '') => { const u = art?.(slot); return u ? `<img src="${esc(u)}" alt="${esc(alt)}" loading="lazy">` : ''; };
   const card = (key) => { const u = art?.(`card/${key}`); return `<figure class="cl-hfig">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : cardIcon(BUILDING[key])}<figcaption>${esc(BUILDING[key]?.name || key)}</figcaption></figure>`; };
@@ -203,6 +290,17 @@ export function helpHtml(art, diff) {
     </ul>
     <p><b>Lift shafts</b> (gold-rimmed pits) run through all three decks at the same spot. One is in your landing chamber. Build a <b>Lift</b> on it (Command menu): once it works, the chambers it passes through on the other decks can be <b>surveyed through the lift</b>. Click the Lift to see which decks it links and go there.</p>
     <p>A chamber on another deck opens as usual: survey, seal its breaches, pressurise. Each open chamber needs air. Parks and services only reach their own deck; lifts carry roads, colonists and rovers between decks. A greyed card says where it stands (<b>Upper deck only</b>): click it to go there.</p>`)}
+  ${sec('secrets', 'Secrets of Eden', `<figure class="cl-hfig cl-hbook">${SICON.book}<figcaption>Discoveries</figcaption></figure>`, `
+    <p>Eden was not emptied by an ordinary war, and not everything down there is dead. When a survey finishes, Ruess's team reports what the chamber holds, and the <b>Discoveries</b> journal (top bar, or key <b>J</b>) keeps it all.</p>
+    <ul class="cl-hsteps">
+      <li><b>Logs.</b> Terminals, recorders, diaries and words on walls, in the order the story runs. Each one found can be read at once; a new one is marked <b>New</b>. Most lie on the <b>lower deck</b>.</li>
+      <li><b>The code.</b> Five logs each hold a <b>fragment</b> of a code. The row of five slots fills as you read them.</li>
+      <li><b>Vaults.</b> Sealed rooms, each with its own way in: its chamber open, and perhaps a log read, the floor drained, the guard cleared or spare power. The journal lists what is still missing, with <b>Show me</b>. Inside: stores, research, and machines nobody has seen.</li>
+      <li><b>Survivors.</b> People still hide in Eden. Open the chamber they hide in and they join the colony; a few of them can lead.</li>
+      <li><b>Dangers</b> keep a chamber from taking air until they are dealt with. <b>Sentry drones</b>: send the crewed guardians (the journal shows the win chance; machines can be lost). <b>Toxic air</b> and <b>radiation</b>: crews decontaminate for credits, parts and days. <b>Flooding</b>: Pump Stations drain it.</li>
+      <li><b>Something stirs</b> deep under Eden. If a survey wakes it, a countdown appears in the top bar: deal with it before it runs out.</li>
+    </ul>
+    <p>The inspector shows what a chamber holds: click a surveyed chamber to read, open or clear right there.</p>`)}
   ${sec('commanders', 'Commanders', `<figure class="cl-hfig portrait">${pic('portrait/sato', 'Capt. Mira Sato')}<figcaption>Capt. Sato</figcaption></figure>`, `
     <p>A commander in a machine makes it fight better. You start with two: <b>the General</b> (three times the power in any machine) and <b>Capt. Sato</b>, best in ships. See them in <b>Defence › Commanders</b>.</p>
     <ul class="cl-hsteps">
@@ -232,7 +330,7 @@ export function helpHtml(art, diff) {
       <li>Short of credits? Sell some food at the Market, or set a farm to cash crops.</li>
     </ol>
     ${diff?.relief ? `<p>On <b>${esc(name)}</b>, if the treasury runs dry or colonists go hungry, the Council sends <b>${num(diff.relief.credits)} credits</b> and <b>${num(diff.relief.food)} food</b> (at most once every ${diff.relief.every} days).</p>` : ''}
-    <p class="cl-dim">Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · PgUp / PgDn deck · Esc cancel · F1 or ? this guide.</p>`)}
+    <p class="cl-dim">Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · J discoveries · PgUp / PgDn deck · Esc cancel · F1 or ? this guide.</p>`)}
   </div>`;
 }
 
@@ -255,12 +353,14 @@ export function createUI(root, api) {
       <div class="cl-stat" data-g="pop" title="Colonists / housing; next transport"><i>Colonists</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
       <button type="button" class="cl-stat cl-happybtn" data-g="happy" title="Happiness: click for the breakdown"><i>Happiness</i><b><span data-v></span></b><em data-d></em></button>
       <button type="button" class="cl-stat cl-heatstat" data-g="heat" hidden title="Heat: how tempting Eden looks to raiders"><i>Heat</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
+      <button type="button" class="cl-stat cl-corestat" data-g="core" hidden title="The old core: days left to stabilise it"><i>Old core</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
       <div class="cl-stat cl-tax" title="Tax rate: 0% +8 happiness, 10% 0, 20% −14, 30% −32. Shift-click steps 5%."><i>Tax</i>
         <b class="cl-taxctl"><button type="button" data-taxstep="-1" aria-label="Lower the tax">−</button><span data-tax></span><button type="button" data-taxstep="1" aria-label="Raise the tax">+</button></b><em data-taxfx></em></div>
     </div>
     <div class="cl-tools">
       <button type="button" class="cl-btn sm cl-resbtn" data-tool="research" title="Research: the tech tree (T)"><span class="cl-ico">⚗</span><span class="cl-lbl">Research</span></button>
       <button type="button" class="cl-btn sm cl-defbtn" data-tool="defence" title="Defence: guardians, production, commanders and raids (G)"><span class="cl-ico">⛨</span><span class="cl-lbl">Defence</span></button>
+      <button type="button" class="cl-btn sm cl-jbtn" data-tool="journal" hidden title="Discoveries: logs, vaults, survivors and dangers (J)"><span class="cl-ico cl-bookico">${SICON.book}</span><span class="cl-lbl">Discoveries</span><span class="cl-jnew" data-jnew hidden></span></button>
       <button type="button" class="cl-btn sm" data-tool="market" title="Sell goods and guardians"><span class="cl-ico">⚖</span><span class="cl-lbl">Market</span></button>
       <button type="button" class="cl-btn sm" data-tool="save" title="Save the colony in this browser"><span class="cl-ico">⤓</span><span class="cl-lbl">Save</span></button>
       <button type="button" class="cl-btn sm icon cl-helpbtn" data-tool="help" title="How to play (F1 or ?)" aria-label="How to play">?</button>
@@ -326,6 +426,16 @@ export function createUI(root, api) {
     </header>
     <div class="cl-dtabs" role="tablist">${DEF_TABS.map(([k, n]) => `<button type="button" role="tab" data-dtab="${k}" aria-selected="false">${n}<span data-dtabn="${k}"></span></button>`).join('')}</div>
     <div class="cl-dbody" data-dbody></div>
+  </section>
+  <section class="cl-journal cl-win" hidden role="dialog" aria-label="Discoveries">
+    <header class="cl-rhead cl-jhead">
+      <div class="cl-rtitle"><h3>Discoveries</h3><small>the secrets of Eden · J</small></div>
+      <div class="cl-rstats" data-jstats></div>
+      <button type="button" class="cl-x" data-close="journal" title="Close (Esc or J)" aria-label="Close">×</button>
+    </header>
+    <div class="cl-jkeys" data-jkeys></div>
+    <div class="cl-dtabs cl-jtabs" role="tablist">${J_TABS.map(([k, n]) => `<button type="button" role="tab" data-jtab="${k}" aria-selected="false">${n}<span data-jtabn="${k}"></span></button>`).join('')}</div>
+    <div class="cl-jbody" data-jbody></div>
   </section>
   <div class="cl-decks" role="group" aria-label="Deck" title="Decks: open / all chambers on each. PageUp / PageDown move between them."><i>Deck</i>${DECKS.map((d) => `<button type="button" data-deck="${d}" aria-pressed="${d === 'main'}"><b>${DECK_NAME[d]}</b><small data-deckn="${d}"></small></button>`).join('')}</div>
   <div class="cl-ovl" role="group" aria-label="Overlay"><i>Overlay</i>${OVERLAYS.map(([k, n]) => `<button type="button" data-ovl="${k ?? ''}" aria-pressed="${k === null}">${n}</button>`).join('')}</div>
@@ -406,6 +516,7 @@ export function createUI(root, api) {
     const t = e.target.closest('[data-tool]')?.dataset.tool;
     if (t === 'research') toggleResearch();
     else if (t === 'defence') toggleDefence();
+    else if (t === 'journal') toggleJournal();
     else if (t === 'market') togglePop('market');
     else if (t === 'save') api.save();
     else if (t === 'settings') togglePop('settings');
@@ -543,6 +654,7 @@ export function createUI(root, api) {
     if (taxEl.textContent !== t + '%') taxEl.textContent = t + '%';
     const fx = `${th > 0 ? '+' : th < 0 ? '−' : '±'}${Math.abs(th)} happy`;
     if (taxFx.textContent !== fx) { taxFx.textContent = fx; taxFx.className = th > 0 ? 'good' : th < 0 ? 'bad' : ''; }
+    hudSecrets(s);
     setSpeed(s.speed);
   }
 
@@ -625,6 +737,9 @@ export function createUI(root, api) {
       case 'defence': openDefence(a.dataset.v || null); break;
       case 'focus': api.focus(+a.dataset.x, +a.dataset.y); break;
       case 'deck': api.goDeck?.(a.dataset.v, +a.dataset.x, +a.dataset.y); return;
+      case 'journal': { const [tab, ...ref] = (v || '').split(':'); openJournal(tab, ref.length ? ref.join(':') : null); return; }
+      case 'vopen': openVault(v); break;
+      case 'clear': clearDanger(id); break;
     }
     inspSig = ''; refreshInspector();
   });
@@ -741,6 +856,7 @@ export function createUI(root, api) {
         </div>${!surveyR.ok && ch.status === 'sealed' ? `<p class="cl-why">${esc(surveyR.msg)}</p>` : ''}${!pressR.ok && ch.status === 'surveyed' ? `<p class="cl-why">${esc(pressR.msg)}</p>` : ''}` : ''}
       </section>`);
     }
+    if (ch) parts.push(secretsHtml(s, ch, x, y));
     if (b) parts.push(buildingHtml(s, b));
     if (b?.key === 'lift' || (!b && ter?.id === T.SHAFT)) parts.push(shaftHtml(s, x, y, b?.key === 'lift' ? b : null));
     return parts.join('');
@@ -846,7 +962,7 @@ export function createUI(root, api) {
     const i = inspAt.y * s.map.w + inspAt.x;
     const b = buildingAt(s, inspAt.x, inspAt.y, null), ch = chamberOf(s, inspAt.x, inspAt.y, null);
     const lifts = s.buildings.filter((k) => k.key === 'lift').map((k) => [k.id, k.build, k.off, deckOf(k)]);
-    const sig = JSON.stringify([inspAt.deck, mapOf(s).t[i], lifts, b?.key === 'lift' || mapOf(s).t[i] === T.SHAFT ? s.chambers.filter((c) => c.deck).map((c) => c.status) : 0, b, ch && [ch.status, ch.work, sealedCount(s, ch)], Math.floor(s.stock.credits / 50), Math.floor(s.stock.parts / 5), Math.floor(s.stock.air / 10), summary?.jobs, summary?.workers, s.day % 5 === 0 ? s.day : 0, BUILDING[b?.key]?.cat === 'defence' || b?.key === 'lodge' || b?.key === 'quarters' ? [s.production, (s.guardians || []).length, (s.wanderers || []).length, s.commanders?.length] : 0, b?.key === 'lab' ? [s.research?.focus, Math.floor(s.research?.progress?.[s.research?.focus] || 0), s.stats?.last?.research] : 0]);
+    const sig = JSON.stringify([inspAt.deck, mapOf(s).t[i], lifts, b?.key === 'lift' || mapOf(s).t[i] === T.SHAFT ? s.chambers.filter((c) => c.deck).map((c) => c.status) : 0, b, ch && [ch.status, ch.work, sealedCount(s, ch)], Math.floor(s.stock.credits / 50), Math.floor(s.stock.parts / 5), Math.floor(s.stock.air / 10), summary?.jobs, summary?.workers, s.day % 5 === 0 ? s.day : 0, BUILDING[b?.key]?.cat === 'defence' || b?.key === 'lodge' || b?.key === 'quarters' ? [s.production, (s.guardians || []).length, (s.wanderers || []).length, s.commanders?.length] : 0, b?.key === 'lab' ? [s.research?.focus, Math.floor(s.research?.progress?.[s.research?.focus] || 0), s.stats?.last?.research] : 0, ch && secOf(s) ? [JSON.stringify(dangerAt(s, ch.id)), sitesOf(s).filter((k) => k.chamber === ch.id).map((k) => `${k.found ? 1 : 0}${k.done ? 1 : 0}`).join(''), (s.secrets.read || []).length, (s.guardians || []).length, spareMW()] : 0]);
     if (sig === inspSig) return;
     inspSig = sig;
     inspBody.innerHTML = inspectorHtml(s, inspAt.x, inspAt.y);
@@ -862,13 +978,13 @@ export function createUI(root, api) {
   // ---------------------------------------------------------------- pop-up panels
   function openPop(name) {
     for (const [k, p] of Object.entries(pops)) p.hidden = k !== name;
-    closeResearch(); closeDefence();
+    closeResearch(); closeDefence(); closeJournal();
     if (name === 'happy') { happySig = ''; renderHappy(); }
     if (name === 'market') { marketSig = ''; renderMarket(); }
     if (name === 'settings') renderSettings();
   }
   function togglePop(name) { if (pops[name].hidden) openPop(name); else pops[name].hidden = true; }
-  function closePops() { let any = closeResearch(); any = closeDefence() || any; for (const p of Object.values(pops)) { any ||= !p.hidden; p.hidden = true; } return any; }
+  function closePops() { let any = closeResearch(); any = closeDefence() || any; any = closeJournal() || any; for (const p of Object.values(pops)) { any ||= !p.hidden; p.hidden = true; } return any; }
   for (const p of Object.values(pops)) p.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) p.hidden = true; });
 
   function renderHappy() {
@@ -1047,7 +1163,7 @@ export function createUI(root, api) {
   }
   function openResearch(key) {
     for (const p of Object.values(pops)) p.hidden = true;
-    closeDefence();
+    closeDefence(); closeJournal();
     resFlash = key || null;
     resEl.hidden = false;
     $('.cl-build')?.classList.remove('open');
@@ -1091,7 +1207,7 @@ export function createUI(root, api) {
     const r = rule('guardianUpkeep', S(), g); if (Number.isFinite(r)) return r;
     if ((g.free || 0) > 0) return 0;
     const base = Math.ceil((mInfo(g.type).price || 0) / 8);
-    return COMMANDER[g.commander]?.perk === 'quartermaster' ? base / 2 : base;
+    return CMDR[g.commander]?.perk === 'quartermaster' ? base / 2 : base;
   }
   function upkeepTotal(s) {
     const r = rule('machineUpkeep', s);
@@ -1153,7 +1269,7 @@ export function createUI(root, api) {
 
   // ---- pictures: commanders' portraits (painted art, the expansion's SVG bust, or a drawn initial) and machine glyphs
   function face(key, ctx = '') {
-    const c = COMMANDER[key] || { key, name: key };
+    const c = CMDR[key] || { key, name: key };
     const url = c.portrait && api.art?.(c.portrait);
     if (url) return `<img src="${esc(url)}" alt="${esc(c.name)}" loading="lazy">`;
     const svg = c.svg && svgPortrait?.(c.svg);
@@ -1237,7 +1353,7 @@ export function createUI(root, api) {
       ${s.unlocked?.includes?.('arsenal') ? showBtn1('arsenal') : ''}<button type="button" class="cl-btn sm" data-dgo="production">Production</button>`);
     const cap = crewCap(s), cm = commanders(s), yard = finishedOf(s, 'scrapyard').length > 0;
     const uncrewed = gs.filter((g, i) => !isCrewed(s, g, i)).length;
-    const opts = (g) => `<option value="">No commander</option>${cm.map((c) => { const C = COMMANDER[c.key] || {}, other = (s.guardians || []).find((x) => x.commander === c.key && x.id !== g.id);
+    const opts = (g) => `<option value="">No commander</option>${cm.map((c) => { const C = CMDR[c.key] || {}, other = (s.guardians || []).find((x) => x.commander === c.key && x.id !== g.id);
       return `<option value="${esc(c.key)}" ${g.commander === c.key ? 'selected' : ''} ${c.injured > 0 ? 'disabled' : ''}>${esc(C.name || c.key)}${c.injured > 0 ? ' (injured)' : other ? ` (in ${esc(mInfo(other.type).name)})` : ''}</option>`; }).join('')}`;
     const rows = gs.map((g, i) => {
       const m = mInfo(g.type), mh = maxHp(g), hp = hpOf(g), crew = isCrewed(s, g, i), up = upkeepOf(g), sale = salePrice(s, g);
@@ -1351,7 +1467,7 @@ export function createUI(root, api) {
   // -- Commanders
   function inviteChance(s, w) {
     const r = rule('inviteChance', s, w.key); if (Number.isFinite(r)) return r;
-    const loyalty = w.loyalty ?? COMMANDER[w.key]?.loyalty ?? 50;
+    const loyalty = w.loyalty ?? CMDR[w.key]?.loyalty ?? 50;
     return Math.max(0.05, Math.min(0.95, 0.3 + GENERAL.charm / 220 - 0.03 * (commanders(s).length - 2) + (100 - loyalty) / 400));
   }
   function commandersHtml(s, L, W) {
@@ -1359,7 +1475,7 @@ export function createUI(root, api) {
     for (const c of cm) if (c.dept) heads[c.dept] = c.key;
     const ready = Array.isArray(s.commanders);
     const card = (c) => {
-      const C = COMMANDER[c.key] || { name: c.key, grades: {} }, g = gs.find((x) => x.commander === c.key), loy = Math.round(c.loyalty ?? C.loyalty ?? 50);
+      const C = CMDR[c.key] || { name: c.key, grades: {} }, g = gs.find((x) => x.commander === c.key), loy = Math.round(c.loyalty ?? C.loyalty ?? 50);
       return `<article class="cl-cmd${c.injured > 0 ? ' injured' : ''}${C.general ? ' gen' : ''}">
         <span class="cl-face">${face(c.key, 'c')}</span>
         <div class="cl-cbody">
@@ -1373,9 +1489,9 @@ export function createUI(root, api) {
           </div>
           ${C.text ? `<p class="cl-ctext">${esc(C.text)}</p>` : ''}
           <div class="cl-cacts">
-            <label><i>Pilots</i><select data-cassign="${esc(c.key)}" ${ready && !(c.injured > 0) ? '' : 'disabled'}><option value="">No machine</option>${gs.map((x) => { const o = x.commander && x.commander !== c.key ? COMMANDER[x.commander]?.name : '';
+            <label><i>Pilots</i><select data-cassign="${esc(c.key)}" ${ready && !(c.injured > 0) ? '' : 'disabled'}><option value="">No machine</option>${gs.map((x) => { const o = x.commander && x.commander !== c.key ? CMDR[x.commander]?.name : '';
               return `<option value="${x.id}" ${x.commander === c.key ? 'selected' : ''}>${esc(mInfo(x.type).name)} L${x.level || 0}${o ? ` (${esc(o)})` : ''}</option>`; }).join('')}</select></label>
-            <label><i>Heads</i><select data-cdept="${esc(c.key)}" ${ready ? '' : 'disabled'}><option value="">No department</option>${Object.entries(DEPARTMENTS).map(([k, d]) => `<option value="${k}" ${c.dept === k ? 'selected' : ''}>${esc(d.name)} (+${Math.round((C[d.stat] || 0) / 10)}%)${heads[k] && heads[k] !== c.key ? ` · ${esc(COMMANDER[heads[k]]?.name || heads[k])}` : ''}</option>`).join('')}</select></label>
+            <label><i>Heads</i><select data-cdept="${esc(c.key)}" ${ready ? '' : 'disabled'}><option value="">No department</option>${Object.entries(DEPARTMENTS).map(([k, d]) => `<option value="${k}" ${c.dept === k ? 'selected' : ''}>${esc(d.name)} (+${Math.round((C[d.stat] || 0) / 10)}%)${heads[k] && heads[k] !== c.key ? ` · ${esc(CMDR[heads[k]]?.name || heads[k])}` : ''}</option>`).join('')}</select></label>
             ${C.general || c.key === 'sato' ? '' : `<button type="button" class="cl-btn xs warn" data-cdismiss="${esc(c.key)}" title="They leave, and may come back to the Lodge later">Dismiss</button>`}
           </div>
         </div></article>`;
@@ -1383,7 +1499,7 @@ export function createUI(root, api) {
     const lodge = s.buildings.filter((b) => b.key === 'lodge' && b.build === 0);
     const ws = s.wanderers || [];
     const wcard = (w) => {
-      const C = COMMANDER[w.key] || { name: w.key, grades: {} }, ch = inviteChance(s, w), left = w.until != null ? Math.max(0, w.until - s.day) : null;
+      const C = CMDR[w.key] || { name: w.key, grades: {} }, ch = inviteChance(s, w), left = w.until != null ? Math.max(0, w.until - s.day) : null;
       const full = cm.length >= cap, poor = (s.stock.credits || 0) < 100;
       const why = full ? `No room: ${cm.length} / ${cap} commanders. Officers' Quarters make room for two more.` : poor ? 'The gift is 100 credits.' : '';
       return `<article class="cl-cmd wand">
@@ -1401,12 +1517,12 @@ export function createUI(root, api) {
     const lodgeNote = !lodge.length ? note(`<b>Wanderers</b> stop at a <b>Wanderers' Lodge</b>: pilots, captains and engineers adrift since the war. ${techDone(s, 'leadership') ? 'Build one (Services menu).' + showBtn1('lodge') : 'Research <b>Leadership</b> (Society) to build one.<button type="button" class="cl-btn sm" data-mtech="leadership">Research: Leadership</button>'}`)
       : !ws.length ? `<p class="cl-dim">Nobody at the Lodge right now. A wanderer stops by every ${{ 1: 15, 2: 10, 3: 7 }[Math.max(...lodge.map((b) => b.level || 1))] || 15} days and stays 20.</p>` : '';
     return `${ready ? '' : note('Commanders are not ready in this build yet: these are the two you will start with.', 'warn')}
-      <section class="cl-dsec"><h4>Commanders <small>${cm.length} / ${cap} · wages ${num(cm.reduce((t, c) => t + (COMMANDER[c.key]?.wage || 0), 0))} cr a day</small></h4>
+      <section class="cl-dsec"><h4>Commanders <small>${cm.length} / ${cap} · wages ${num(cm.reduce((t, c) => t + (CMDR[c.key]?.wage || 0), 0))} cr a day</small></h4>
         <div class="cl-cgrid">${cm.map(card).join('')}</div>
         ${cm.length >= cap && techDone(s, 'leadership') ? `<p class="cl-dim">Room for no more: each <b>Officers' Quarters</b> houses two more commanders.</p>` : ''}</section>
       <section class="cl-dsec"><h4>Wanderers at the Lodge <small>${ws.length ? `${ws.length} here` : ''}</small></h4>${lodgeNote}<div class="cl-cgrid">${ws.map(wcard).join('')}</div></section>
       <section class="cl-dsec"><h4>Departments <small>one head each: + stat ÷ 10 %</small></h4><div class="cl-depts">${Object.entries(DEPARTMENTS).map(([k, d]) => {
-        const h = heads[k], C = COMMANDER[h];
+        const h = heads[k], C = CMDR[h];
         return `<div class="cl-dept${h ? ' on' : ''}"><span class="cl-mface">${h ? face(h, 'd' + k) : ''}</span><div><b>${esc(d.name)}</b><small>${esc(d.text)} · ${esc(d.stat)}</small><em>${C ? `${esc(C.name)} · +${Math.round((C[d.stat] || 0) / 10)}%` : 'no head'}</em></div></div>`;
       }).join('')}</div></section>`;
   }
@@ -1458,7 +1574,7 @@ export function createUI(root, api) {
         <div class="cl-kv"><span>Shield Pylons</span><b>${n('shieldpylon') || '<span class="cl-dim">none</span>'}</b></div>
         <div class="cl-kv"><span>Sensor Masts</span><b>${n('sensormast') ? `${n('sensormast')} · warning ${sensorDays(s)} d` : '<span class="cl-dim">none</span>'}</b></div>
         <div class="cl-kv"><span>Jammer Arrays</span><b>${n('jammer') || '<span class="cl-dim">none</span>'}</b></div>
-        ${(() => { const h = commanders(s).find((c) => c.dept === 'security'); return h ? `<div class="cl-kv"><span>Security head</span><b>${esc(COMMANDER[h.key]?.name || h.key)} +${Math.round((COMMANDER[h.key]?.might || 0) / 10)}%</b></div>` : ''; })()}
+        ${(() => { const h = commanders(s).find((c) => c.dept === 'security'); return h ? `<div class="cl-kv"><span>Security head</span><b>${esc(CMDR[h.key]?.name || h.key)} +${Math.round((CMDR[h.key]?.might || 0) / 10)}%</b></div>` : ''; })()}
         <div class="cl-acts"><button type="button" class="cl-btn sm" data-dgo="guardians">Guardians</button><button type="button" class="cl-btn sm" data-dgo="production">Production</button></div></section>
       <section class="cl-dsec"><h4>Last raid <small>${r.count ? `${r.count} so far · ${r.won || 0} won · ${r.lost || 0} lost` : ''}</small></h4>${reportHtml(s, r.last)}</section></div>`;
   }
@@ -1499,7 +1615,7 @@ export function createUI(root, api) {
       const r = rule('inviteWanderer', s, b.dataset.winvite) ?? notReady('Invitations');
       result(r);
     } else if (b.dataset.cdismiss) {
-      const C = COMMANDER[b.dataset.cdismiss];
+      const C = CMDR[b.dataset.cdismiss];
       if (!confirm(`Dismiss ${C?.name || 'this commander'}? They may come back to the Lodge later.`)) return;
       result(rule('dismissCommander', s, b.dataset.cdismiss) ?? notReady('Dismissing commanders'));
     } else return;
@@ -1528,7 +1644,7 @@ export function createUI(root, api) {
   function openDefence(tab) {
     if (tab && DEF_TABS.some(([k]) => k === tab)) { defTab = tab; defPrefs.tab = tab; storeDef(); }
     for (const p of Object.values(pops)) p.hidden = true;
-    closeResearch();
+    closeResearch(); closeJournal();
     $('.cl-build')?.classList.remove('open');
     const was = defEl.hidden;
     defEl.hidden = false;
@@ -1538,6 +1654,578 @@ export function createUI(root, api) {
   function closeDefence() { if (defEl.hidden) return false; defEl.hidden = true; return true; }
   function toggleDefence(tab) { if (defEl.hidden || tab) openDefence(tab); else closeDefence(); }
   statEls.heat?.el.addEventListener('click', () => openDefence('raids'));
+
+  // ---------------------------------------------------------------- version 4, stage 2: the Discoveries journal
+  // Logs in story order (a reader that sets each one by its kind), the five fragments of the vault's
+  // code, the vaults with what each still needs, the survivors, and the dangers with their Clear
+  // buttons. Orders go through rules.js, or js/colony/secrets.js when the rules do not re-export them
+  // (clearDanger, dangerPreview, openVault, secretStatus, readLog); each call is guarded.
+  const srule = (name, s, ...a) => {
+    const f = typeof R[name] === 'function' ? R[name] : api.secrets?.[name];
+    if (typeof f !== 'function') return undefined;
+    try { return f(s, ...a); } catch (e) { console.warn(`${name} failed`, e); return undefined; }
+  };
+  const secOf = (s) => s?.secrets || null;
+  const sitesOf = (s) => secOf(s)?.sites || [];
+  const dangersOf = (s) => secOf(s)?.dangers || [];
+  const readOf = (s) => new Set(secOf(s)?.read || []);
+  const chamberById = (s, id) => s.chambers.find((c) => c.id === id) || null;
+  const chName = (s, id) => { const c = chamberById(s, id); return c ? c.name || `Chamber ${c.id}` : 'an unknown chamber'; };
+  const siteFor = (s, kind, ref) => sitesOf(s).find((x) => x.kind === kind && x.ref === ref) || null;
+  const SURVEYED = new Set(['surveyed', 'pressurising', 'open']);
+  // a danger is known once its chamber has been surveyed (or the rules say so)
+  const dangerFound = (s, d) => !!(d.found ?? (d.done || d.deadline != null || SURVEYED.has(chamberById(s, d.chamber)?.status)));
+  const dangerAt = (s, cid) => dangersOf(s).find((d) => d.chamber === cid) || null;
+  const reactorOf = (s) => dangersOf(s).find((d) => d.kind === 'reactor' && !d.done && d.deadline != null) || null;
+  // days of crew work left on a danger being cleared, or null when nobody is at work on it
+  const dangerWork = (d) => (!d || d.done ? null : d.work > 0 ? d.work : null);
+  const logFound = (s, id) => !!siteFor(s, 'log', id)?.found;
+  const unreadLogs = (s) => { const r = readOf(s); return LOG_ORDER.filter((l) => logFound(s, l.id) && !r.has(l.id)); };
+  const keysRead = (s) => { const r = readOf(s); return KEY_LOGS.filter((l) => r.has(l.id)).length; };
+  const deckWord = (o) => `${(DECK_NAME[deckOf(o)] || 'Main').toLowerCase()} deck`;
+  const showAttr = (o) => esc(JSON.stringify(o));
+  const sameRef = (a, b) => a != null && b != null && String(a) === String(b);
+  // flooded tiles left in a chamber (vaults that need it drained; the flooding danger)
+  const marshLeft = (s, c) => {
+    if (!c) return 0;
+    const m = mapOf(s, deckOf(c)); let n = 0;
+    for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) { const i = y * m.w + x; if (m.ch[i] === c.id && m.t[i] === T.MARSH) n++; }
+    return n;
+  };
+  const spareMW = () => Math.floor((summary?.power?.supply ?? 0) - (summary?.power?.demand ?? 0));
+  // rules.secretStatus when it exists, else the same counts from state.secrets
+  function secStatus(s) {
+    const sites = sitesOf(s), r = readOf(s), k = (kind) => sites.filter((x) => x.kind === kind);
+    const fb = {
+      logs: { read: LOGS.filter((l) => r.has(l.id)).length, found: k('log').filter((x) => x.found).length, total: LOGS.length },
+      vaults: { opened: k('vault').filter((x) => x.done).length, found: k('vault').filter((x) => x.found).length, total: VAULTS.length },
+      survivors: { joined: k('survivors').filter((x) => x.done).length, found: k('survivors').filter((x) => x.found).length, total: SURVIVORS.length },
+      keys: keysRead(s), finalOpened: !!secOf(s)?.finalOpened,
+    };
+    const st = srule('secretStatus', s);
+    if (!st || typeof st !== 'object') return fb;
+    return { ...fb, ...st, logs: { ...fb.logs, ...st.logs }, vaults: { ...fb.vaults, ...st.vaults }, survivors: { ...fb.survivors, ...st.survivors }, keys: st.keys ?? fb.keys };
+  }
+  const goodsText = (o) => Object.entries(o || {}).filter(([, v]) => v > 0).map(([k, v]) => `${num(v)} ${(GOOD_NAME[k] || k).toLowerCase()}`).join(', ');
+  function rewardText(rw) {
+    if (!rw) return '';
+    return [rw.final ? 'the truth about Eden' : '', goodsText(rw.goods), rw.research ? `${num(rw.research)} research` : '', rw.tech ? `the ${TECH[rw.tech]?.name || rw.tech} tech` : '',
+      rw.machine != null ? `a prototype: the ${mInfo(rw.machine).name}` : '', rw.soil ? `${num(rw.soil)} tiles of soil made fertile` : ''].filter(Boolean).join(' · ');
+  }
+  // What a vault still needs, as a checklist: { ok, label, now?, hint?, show? }. rules.vaultNeeds gives
+  // the list ({ need, label, met }); the interface adds where to go about each one.
+  function vaultNeeds(s, site) {
+    const v = VAULT[site.ref] || {}, q = v.requires || {}, r = readOf(s), c = chamberById(s, site.chamber), dk = deckOf(c || site);
+    const ruled = srule('vaultNeeds', s, site);
+    if (Array.isArray(ruled) && ruled.length) {
+      const k = keysRead(s), keyFound = q.key && logFound(s, q.key), d = dangerAt(s, site.chamber), sp = spareMW();
+      const SHOW = {
+        open: { chamber: site.chamber }, key: keyFound ? { journal: 'logs', ref: q.key } : null,
+        drained: { build: 'pumpstation', deck: dk === 'upper' ? 'main' : dk }, cleared: d && !d.done ? { journal: 'dangers', ref: site.chamber } : { chamber: site.chamber },
+        power: { build: dk === 'lower' ? 'geotap' : 'solar' }, code: k < FINAL_CODE_PARTS ? { journal: 'logs' } : null,
+      };
+      const HINT = { key: q.key && !keyFound ? `not found yet: somewhere on the ${LOG[q.key]?.deck || 'lower'} deck` : '', power: q.power ? `${sp} MW spare now` : '' };
+      return ruled.map((n) => ({ ok: !!(n.met ?? n.ok), label: n.need === 'key' && !keyFound ? 'Read a log not found yet' : n.label, hint: HINT[n.need] && n.need !== 'power' ? HINT[n.need] : '', now: '', show: SHOW[n.need] ?? null }));
+    }
+    const out = [];
+    out.push({ ok: c?.status === 'open', label: `${chName(s, site.chamber)} open`, now: c ? (STATUS[c.status]?.[0] || c.status).toLowerCase() : '', show: { chamber: site.chamber } });
+    if (q.key) {
+      const l = LOG[q.key], found = logFound(s, q.key);
+      out.push({ ok: r.has(q.key), label: found ? `Read “${l?.title || q.key}”` : 'Read a log not found yet', hint: found ? '' : `somewhere on the ${(l?.deck || 'lower')} deck`, show: found ? { journal: 'logs', ref: q.key } : null });
+    }
+    if (q.drained) { const n = marshLeft(s, c); out.push({ ok: n === 0, label: 'No flooded ground in the chamber', now: n ? `${n} tile${n === 1 ? '' : 's'} flooded` : '', show: n ? { build: 'pumpstation', deck: dk === 'upper' ? 'main' : dk } : null }); }
+    if (q.cleared) { const d = dangerAt(s, site.chamber); out.push({ ok: !d || !!d.done, label: d ? `${DANGERS[d.kind]?.name || d.kind}: dealt with` : 'The way cleared', show: d && !d.done ? { journal: 'dangers', ref: site.chamber } : null }); }
+    if (q.power) { const sp = spareMW(); out.push({ ok: sp >= q.power, label: `${q.power} MW of spare power`, now: `${sp} MW spare now`, show: sp < q.power ? { build: dk === 'lower' ? 'geotap' : 'solar' } : null }); }
+    if (q.code) { const k = keysRead(s); out.push({ ok: k >= FINAL_CODE_PARTS, label: `All ${FINAL_CODE_PARTS} fragments of the code`, now: `${k} of ${FINAL_CODE_PARTS} read`, show: k < FINAL_CODE_PARTS ? { journal: 'logs' } : null }); }
+    return out;
+  }
+
+  // ---- the panel
+  const jEl = $('.cl-journal'), jBody = $('[data-jbody]'), jStats = $('[data-jstats]'), jKeys = $('[data-jkeys]');
+  const jBtn = $('[data-tool=journal]'), jNew = $('[data-jnew]');
+  const J_KEY = 'el-colony-journal';
+  const jPrefs = (() => { try { return JSON.parse(localStorage.getItem(J_KEY) || '{}') || {}; } catch { return {}; } })();
+  const storeJ = () => { try { localStorage.setItem(J_KEY, JSON.stringify(jPrefs)); } catch { } };
+  let jTab = J_TABS.some(([k]) => k === jPrefs.tab) ? jPrefs.tab : 'logs', jLog = null, jFocus = null, jSig = '';
+
+  function renderJournal(force) {
+    if (jEl.hidden) return;
+    const s = S();
+    const sig = JSON.stringify([jTab, jLog, jFocus, s.day, secOf(s), Math.floor((s.stock?.credits || 0) / 25), Math.floor((s.stock?.parts || 0) / 5),
+      (s.guardians || []).map((g) => `${g.id}:${g.hp}:${g.commander || ''}`).join(), spareMW(), s.chambers.map((c) => (c.status || '?')[0]).join(''), phone()]);
+    if (!force && sig === jSig) return;
+    jSig = sig;
+    if (force) { liveSigs.delete(jBody); liveSigs.delete(jStats); liveSigs.delete(jKeys); }
+    for (const t of jEl.querySelectorAll('[data-jtab]')) { const on = t.dataset.jtab === jTab; if (t.getAttribute('aria-selected') !== String(on)) t.setAttribute('aria-selected', String(on)); }
+    const nNew = unreadLogs(s).length, act = dangersOf(s).filter((d) => dangerFound(s, d) && !d.done).length;
+    const vReady = sitesOf(s).filter((x) => x.kind === 'vault' && x.found && !x.done && vaultNeeds(s, x).every((n) => n.ok)).length;
+    const counts = { logs: nNew ? `${nNew} new` : '', vaults: vReady ? `${vReady} ready` : '', survivors: '', dangers: act || '' };
+    for (const n of jEl.querySelectorAll('[data-jtabn]')) { const v = String(counts[n.dataset.jtabn] ?? ''); if (n.textContent !== v) n.textContent = v; }
+    liveRender(jStats, (L) => jStatsHtml(s, L));
+    liveRender(jKeys, () => keysHtml(s));
+    if (!secOf(s)) { liveRender(jBody, () => note('Nothing has turned up yet. Survey chambers on the upper and lower decks: Eden keeps its secrets below.')); return; }
+    const fn = { logs: logsHtml, vaults: vaultsHtml, survivors: survivorsHtml, dangers: dangersHtml }[jTab];
+    liveRender(jBody, (L, W) => `<div class="cl-jtab-${jTab}">${fn(s, L, W)}</div>`);
+  }
+  function jStatsHtml(s, L) {
+    const st = secStatus(s), nNew = unreadLogs(s).length, act = dangersOf(s).filter((d) => dangerFound(s, d) && !d.done).length, rc = reactorOf(s);
+    return `<span class="cl-rst" title="Logs read, of all twenty"><i>Logs</i><b>${L(st.logs.read)}<small>${L(`/${st.logs.total}`)}</small></b><em>${L(nNew ? `${nNew} new` : `${st.logs.found} found`)}</em></span>
+      <span class="cl-rst" title="Fragments of the Ninefold vault's code: five logs each hold one"><i>Code</i><b>${L(st.keys)}<small>/${FINAL_CODE_PARTS}</small></b><em>${L(st.finalOpened ? 'vault opened' : st.keys >= FINAL_CODE_PARTS ? 'complete' : 'fragments')}</em></span>
+      <span class="cl-rst" title="Vaults opened / all"><i>Vaults</i><b>${L(st.vaults.opened)}<small>${L(`/${st.vaults.total}`)}</small></b><em>${L(`${st.vaults.found} found`)}</em></span>
+      <span class="cl-rst" title="Groups of survivors who have joined / all"><i>Survivors</i><b>${L(st.survivors.joined)}<small>${L(`/${st.survivors.total}`)}</small></b><em>${L(`${st.survivors.found} found`)}</em></span>
+      <span class="cl-rst${act ? ' cl-rsbad' : ''}" title="Dangers known and not yet dealt with"><i>Dangers</i><b>${L(act)}</b><em>${L(rc ? `core: ${Math.max(0, rc.deadline - s.day)} d left` : act ? 'in the way' : 'none known')}</em></span>`;
+  }
+  // the five fragments as a row of slots that fill as their logs are read
+  function keysHtml(s) {
+    const r = readOf(s), n = keysRead(s), opened = !!secOf(s)?.finalOpened;
+    return `<div class="cl-jkeyrow${n >= FINAL_CODE_PARTS ? ' complete' : ''}${opened ? ' opened' : ''}">
+      <i class="cl-jkeylbl" title="Five logs each hold a part of the code to the Ninefold vault">Ninefold code</i>
+      <div class="cl-jslots">${KEY_LOGS.map((l) => {
+        const got = r.has(l.id), found = logFound(s, l.id);
+        if (got) return `<button type="button" class="cl-jslot on" data-jlog="${l.id}" title="Fragment ${l.key}, from “${esc(l.title)}”"><b>${cipher(l.id)}</b><small>${l.key} · ${esc(KEY_CLUE[l.key])}</small></button>`;
+        if (found) return `<button type="button" class="cl-jslot found" data-jlog="${l.id}" title="Found, not read: read “${esc(l.title)}” to learn it"><b>? ? ?</b><small>${l.key} · unread</small></button>`;
+        return `<span class="cl-jslot" title="Not found yet"><b>· · ·</b><small>${l.key} · missing</small></span>`;
+      }).join('')}</div>
+      <em class="cl-jkeynote">${opened ? 'The vault is open.' : n >= FINAL_CODE_PARTS ? 'Complete: the Ninefold vault will open to it.' : `${n} of ${FINAL_CODE_PARTS} fragments`}</em></div>`;
+  }
+
+  // -- Logs
+  function logsHtml(s) {
+    const r = readOf(s), sel = jLog && logFound(s, jLog) ? LOG[jLog] : null;
+    const list = LOG_ORDER.map((l) => {
+      const site = siteFor(s, 'log', l.id), no = String(l.order).padStart(2, '0');
+      if (!site?.found) return `<li><div class="cl-jli locked" title="Not found yet"><span class="cl-jno">${no}</span>${ico('lock')}<span class="cl-jlt"><b>Not found yet</b><small>${site ? `somewhere on the ${deckWord(site)}` : '&nbsp;'}</small></span></div></li>`;
+      const isNew = !r.has(l.id), on = sel?.id === l.id;
+      return `<li><button type="button" class="cl-jli k-${logKind(l)}${on ? ' sel' : ''}${isNew ? ' new' : ''}" data-jlog="${l.id}" aria-current="${on}"><span class="cl-jno">${no}</span>${ico('log')}<span class="cl-jlt"><b>${esc(l.title)}</b><small>${esc(l.author)}</small></span>${l.key ? `<span class="cl-jkeytag" title="Holds fragment ${l.key} of the code">◆${l.key}</span>` : ''}${isNew ? '<em class="cl-jnewtag">New</em>' : ''}</button></li>`;
+    }).join('');
+    return `<div class="cl-jlogs${sel ? ' reading' : ''}"><ol class="cl-jlist" aria-label="Logs in story order">${list}</ol><div class="cl-jreader">${sel ? docHtml(s, sel) : readerEmpty(s)}</div></div>`;
+  }
+  function readerEmpty(s) {
+    const un = unreadLogs(s), found = LOGS.filter((l) => logFound(s, l.id)).length;
+    if (!found) return `<div class="cl-jempty">${SICON.book}<p><b>No logs found yet.</b></p><p class="cl-dim">Terminals, recorders and words scratched on walls turn up as Ruess's teams survey Eden's chambers, most of them on the lower deck. Each one tells a little of what happened here.</p></div>`;
+    return `<div class="cl-jempty">${SICON.book}<p><b>${un.length ? `${un.length} new log${un.length === 1 ? '' : 's'}` : `${found} log${found === 1 ? '' : 's'} found`}</b></p>
+      <p class="cl-dim">${un.length ? 'Pick one from the list to read it. Five of them hold a part of a code.' : 'Pick one from the list to read it again.'}</p>
+      ${un.length ? `<button type="button" class="cl-btn sm primary" data-jlog="${un[0].id}">Read “${esc(un[0].title)}”</button>` : ''}</div>`;
+  }
+  // A log set as what it is: a diary page, a log in ink, an engineer's notebook, a print-out, a wall.
+  function docHtml(s, l) {
+    const kind = logKind(l), site = siteFor(s, 'log', l.id);
+    const when = (secOf(s)?.journal || []).find((j) => j.ref === l.id && j.kind === 'log')?.day;
+    const found = LOG_ORDER.filter((x) => logFound(s, x.id)), i = found.findIndex((x) => x.id === l.id), prev = found[i - 1], next = found[i + 1];
+    const text = String(l.text).split(/\n+/).map((p) => `<p>${esc(p)}</p>`).join('');
+    const head = kind === 'terminal' ? `<div class="cl-dochead"><span>EDEN&nbsp;//&nbsp;${esc(l.author.toUpperCase())}</span><span>REC&nbsp;${String(l.order).padStart(3, '0')}</span></div>`
+      : kind === 'notebook' ? `<div class="cl-dochead"><span>T. VENN · NOTES</span><span>p. ${l.order}</span></div>`
+      : kind === 'letter' ? `<div class="cl-dochead"><span>${esc(l.author)}</span></div>` : '';
+    return `<button type="button" class="cl-jback" data-jback>‹ All logs</button>
+      <article class="cl-doc k-${kind}" aria-label="${esc(l.title)}">
+        ${head}
+        <h3>${esc(l.title)}</h3>
+        <div class="cl-doctext">${text}</div>
+        ${kind === 'wall' || kind === 'letter' && /log/i.test(l.title) ? '' : `<footer class="cl-docsign">— ${esc(l.author)}</footer>`}
+        ${l.key ? `<div class="cl-dockey" title="Five logs each hold a part of the Ninefold vault's code">◆ Fragment ${l.key} of ${FINAL_CODE_PARTS} · ${esc(KEY_CLUE[l.key])} <b>${cipher(l.id)}</b></div>` : ''}
+      </article>
+      <div class="cl-docfoot">
+        <span class="cl-docwhere">${esc(LOG_KIND[kind])}${site ? ` · found in <b>${esc(chName(s, site.chamber))}</b>, ${deckWord(site)}` : ''}${when != null ? ` · day ${when}` : ''}</span>
+        ${site?.x != null ? `<button type="button" class="cl-btn xs" data-jshow="${showAttr({ tile: { x: site.x, y: site.y, deck: deckOf(site) } })}">Show me</button>` : ''}
+        <span class="cl-docnav">${prev ? `<button type="button" class="cl-btn xs" data-jlog="${prev.id}" title="${esc(prev.title)}">‹ Previous</button>` : ''}${next ? `<button type="button" class="cl-btn xs" data-jlog="${next.id}" title="${esc(next.title)}">Next ›</button>` : ''}</span>
+      </div>`;
+  }
+  // Opening a log in the reader marks it read (rules.readLog; state.secrets.read as a fallback).
+  function readLog(id) {
+    const s = S(); jLog = id;
+    if (!secOf(s) || !logFound(s, id) || readOf(s).has(id)) { renderJournal(true); return; }
+    let r = srule('readLog', s, id);
+    if (r === undefined) { s.secrets.read ??= []; if (!s.secrets.read.includes(id)) s.secrets.read.push(id); r = { ok: true }; }
+    const l = LOG[id];
+    // (the rules' msg is the log's own text: the reader shows it, no toast)
+    if (r?.ok !== false) r = l?.key ? { ok: true, msg: keysRead(S()) >= FINAL_CODE_PARTS ? 'The last fragment: the Ninefold code is complete.' : `Fragment ${l.key} of the Ninefold code.` } : { ok: true };
+    result(r && typeof r === 'object' ? r : { ok: true });
+    renderJournal(true);
+  }
+
+  // -- Vaults
+  function vaultsHtml(s) {
+    const found = sitesOf(s).filter((x) => x.kind === 'vault' && x.found);
+    const rank = (x) => (VAULT[x.ref]?.reward?.final ? 50 : 0) + (x.done ? 100 : 0) + VAULTS.findIndex((v) => v.id === x.ref);
+    const missing = VAULTS.length - found.length;
+    return `${note(`Sealed rooms the Directorate and Eden's people left behind. Each one opens its own way: <b>its chamber open</b>, and what the list says. The last, under the old core, needs <b>all five fragments</b> of the code.`)}
+      <div class="cl-jcards">${found.sort((a, b) => rank(a) - rank(b)).map((x) => vaultCard(s, x)).join('')}
+      ${missing > 0 ? `<div class="cl-jcard locked">${ico('lock')}<div><b>${missing} vault${missing === 1 ? '' : 's'} not found yet</b><p class="cl-dim">Survey more chambers, above and below.</p></div></div>` : ''}</div>`;
+  }
+  function vaultCard(s, x) {
+    const v = VAULT[x.ref] || { name: x.ref, text: '' }, needs = vaultNeeds(s, x), ok = needs.every((n) => n.ok), final = !!v.reward?.final;
+    const r = !x.done && ok && typeof (R.openVault ?? api.secrets?.openVault) !== 'function' ? notReady('Opening vaults') : null;
+    const can = !x.done && ok && !r;
+    const why = x.done ? 'Opened' : !ok ? `Still needed: ${needs.filter((n) => !n.ok).map((n) => n.label).join('; ')}` : r?.msg && r.ok === false ? r.msg : final ? 'Enter the five fragments and open it' : 'Open it';
+    return `<article class="cl-jcard cl-vault${x.done ? ' done' : can ? ' ready' : ''}${final ? ' final' : ''}${sameRef(jFocus, x.id) || sameRef(jFocus, x.ref) ? ' flash' : ''}" data-jsite="${esc(x.id)}">
+      <header>${ico('vault')}<div class="cl-jct"><b>${esc(v.name)}</b><small>${esc(chName(s, x.chamber))} · ${deckWord(x)}</small></div><span class="cl-badge ${x.done ? 'st-open' : can ? 'st-surveying' : 'st-sealed'}">${x.done ? 'Opened' : can ? 'Ready' : 'Sealed'}</span></header>
+      <p class="cl-jctext">${esc(v.text)}</p>
+      ${x.done ? `<p class="cl-vgot"><i>Recovered</i> ${esc(rewardText(v.reward))}</p>` : `<ul class="cl-req">${needs.map((n) => `<li class="${n.ok ? 'ok' : 'no'}"><span class="cl-reqmark">${n.ok ? '✓' : '✗'}</span><span class="cl-reqtext">${esc(n.label)}${!n.ok && (n.now || n.hint) ? ` <small>${esc(n.now || n.hint)}</small>` : ''}</span>${!n.ok && n.show ? `<button type="button" class="cl-btn xs" data-jshow="${showAttr(n.show)}">Show me</button>` : ''}</li>`).join('')}</ul>`}
+      <div class="cl-acts">${x.done ? '' : `<button type="button" class="cl-btn sm${can ? ' primary' : ''}" data-jvopen="${esc(x.id)}" ${can ? '' : 'disabled'} title="${esc(why)}">${final ? 'Enter the code' : 'Open'}</button>`}<button type="button" class="cl-btn sm" data-jshow="${showAttr({ chamber: x.chamber })}">Show me</button></div>
+      ${!x.done && ok && !can && r?.msg ? `<p class="cl-why">${esc(r.msg)}</p>` : ''}
+    </article>`;
+  }
+  function openVault(id) {
+    const s = S(), x = sitesOf(s).find((k) => sameRef(k.id, id)); if (!x) return;
+    const r = srule('openVault', s, x.id) ?? notReady('Opening vaults');
+    const v = VAULT[x.ref];
+    if (r && r.ok !== false && v?.reward?.final) { closeJournal(); result({ ok: true }); return; }   // the revelation's window comes up
+    const inside = /Inside: (.*)\.$/.exec(r?.msg || '')?.[1];
+    result(r && r.ok !== false ? { ok: true, msg: `${v?.name || 'The vault'} is open. ${inside ? `Inside: ${inside}.` : rewardText(v?.reward)}` } : r);
+    jFocus = x.id; renderJournal(true);
+  }
+
+  // -- Survivors
+  function survivorsHtml(s) {
+    const found = sitesOf(s).filter((x) => x.kind === 'survivors' && x.found).sort((a, b) => (a.done - b.done) || SURVIVORS.findIndex((g) => g.id === a.ref) - SURVIVORS.findIndex((g) => g.id === b.ref));
+    const missing = SURVIVORS.length - found.length, r = readOf(s);
+    const cards = found.map((x) => {
+      const g = SURV[x.ref] || { name: x.ref, pop: 0, text: '' }, c = chamberById(s, x.chamber), C = g.commander ? CMDR[g.commander] : null;
+      const needKey = g.requires?.key && !r.has(g.requires.key) ? LOG[g.requires.key] : null;
+      const status = x.done ? 'Joined' : needKey ? 'Hiding' : 'Waiting';
+      const line = x.done ? `${g.pop === 1 ? 'Now one of Eden\'s colonists' : `${num(g.pop)} colonists joined Eden`}${C ? `, and ${esc(C.name)} joined the commanders` : ''}.`
+        : `${needKey ? `They will not come out until you have read “${esc(logFound(s, needKey.id) ? needKey.title : 'a log not found yet')}”. ` : ''}They join when <b>${esc(chName(s, x.chamber))}</b> is open${c ? ` (now ${esc((STATUS[c.status]?.[0] || c.status).toLowerCase())})` : ''}.`;
+      return `<article class="cl-jcard cl-surv${x.done ? ' done' : ''}${sameRef(jFocus, x.id) || sameRef(jFocus, x.ref) ? ' flash' : ''}" data-jsite="${esc(x.id)}">
+        <header>${C ? `<span class="cl-face cl-jface">${face(g.commander, 'j')}</span>` : ico('survivors')}<div class="cl-jct"><b>${esc(g.name)}</b><small>${g.pop === 1 ? 'one person' : `${num(g.pop)} people`} · ${esc(chName(s, x.chamber))} · ${deckWord(x)}</small></div><span class="cl-badge ${x.done ? 'st-open' : 'st-surveying'}">${status}</span></header>
+        <p class="cl-jctext">${esc(g.text)}</p>
+        ${C ? `<p class="cl-jcmd"><i>Commander</i> <b>${esc(C.name)}</b> <small>${esc(C.title || '')}</small></p>` : ''}
+        <p class="cl-dim">${line}</p>
+        <div class="cl-acts">${!x.done && needKey && logFound(s, needKey.id) ? `<button type="button" class="cl-btn sm" data-jlog="${needKey.id}">Read the log</button>` : ''}${C && x.done ? '<button type="button" class="cl-btn sm" data-jdef="commanders">Commanders</button>' : ''}<button type="button" class="cl-btn sm${!x.done && !needKey ? ' primary' : ''}" data-jshow="${showAttr({ chamber: x.chamber })}">Show me</button></div>
+      </article>`;
+    }).join('');
+    return `${note('People still hide in Eden: families in the gardens, crews in the pump halls, the warden\'s people in the catacombs. Open the chamber they hide in and they join the colony.')}
+      <div class="cl-jcards">${cards}${missing > 0 ? `<div class="cl-jcard locked">${ico('lock')}<div><b>${missing} group${missing === 1 ? '' : 's'} not found yet</b><p class="cl-dim">Someone is still out there.</p></div></div>` : ''}</div>`;
+  }
+
+  // -- Dangers
+  const winPct = (pv) => { const raw = +(pv?.winChance ?? pv?.chance ?? pv?.win); return Number.isFinite(raw) ? Math.round(raw <= 1 ? raw * 100 : raw) : null; };
+  function droneBar(pv, L, W) {
+    const pct = winPct(pv), lost = pv.expectedLost || pv.losses || [];
+    return `<div class="cl-win-chance${pct == null ? '' : pct >= 65 ? ' good' : pct >= 40 ? ' even' : ' bad'}"><i>Win chance</i><span class="cl-wbar"><span ${W(pct ?? 0)}></span></span><b>${L(pct == null ? '?' : `${pct}%`)}</b></div>
+      ${pv.defence != null || pv.attack != null ? `<div class="cl-kv"><span>Guardians vs sentries</span><b>${L(`${num(pv.defence ?? pv.power ?? 0)} vs ${num(pv.attack ?? pv.strength ?? 0)}`)}</b></div>` : ''}
+      <div class="cl-kv"><span>Likely losses</span><b class="${lost.length ? 'bad' : 'good'}">${L(lost.length ? unitList(lost.map((t) => ({ type: t?.type ?? t }))) : 'none expected')}</b></div>`;
+  }
+  const dangerCost = (s, d, pv) => { const c = pv?.cost || DANGERS[d.kind]?.cost; if (!c) return null; try { return pv?.cost ? c : R.costOf?.(s, c) || c; } catch { return c; } };
+  const dangerDays = (s, d, pv) => pv?.days ?? DANGERS[d.kind]?.days ?? null;
+  function dangerCard(s, d, L, W) {
+    const info = DANGERS[d.kind] || { name: d.kind, text: '' }, c = chamberById(s, d.chamber), pv = d.done ? null : srule('dangerPreview', s, d.chamber) || null;
+    const left = d.deadline != null ? d.deadline - s.day : null, wl = dangerWork(d), cost = dangerCost(s, d, pv), days = dangerDays(s, d, pv);
+    // the preview's `why` says what stands in the way; without a preview, a dry run of clearDanger
+    const r = d.done || wl != null || d.kind === 'flooded' ? null : pv && 'why' in pv ? (pv.why ? { ok: false, msg: pv.why } : { ok: true })
+      : dry(s, (q) => srule('clearDanger', q, d.chamber) ?? notReady('Clearing dangers'));
+    const can = !!r && r.ok !== false;
+    const status = d.done ? 'Cleared' : wl != null ? `Crews · ${wl} d` : d.kind === 'reactor' && left != null ? `${Math.max(0, left)} d left` : 'Active';
+    let body = '';
+    if (!d.done) {
+      if (d.kind === 'drones') body = pv ? `<div class="cl-preview">${droneBar(pv, L, W)}</div>` : `<div class="cl-kv"><span>Sentry strength</span><b>${L(num(d.strength ?? 0))}</b></div>`;
+      else if (d.kind === 'flooded') { const n = pv?.marsh ?? marshLeft(s, c); body = `<div class="cl-kv"><span>Flooded tiles left</span><b class="${n ? 'bad' : 'good'}">${L(n)}</b></div>${pv?.pumps != null ? `<div class="cl-kv"><span>Pump Stations in it</span><b class="${pv.pumps ? 'good' : 'bad'}">${L(pv.pumps || 'none')}</b></div>` : ''}`; }
+      else {
+        if (d.kind === 'reactor' && left != null) {
+          const total = DANGERS.reactor.deadline || 60, pct = Math.max(0, Math.min(100, (left / total) * 100));
+          body += `<div class="cl-corebar${left <= 10 ? ' crit' : ''}"><i>Until it tears loose</i><span class="cl-wbar"><span ${W(pct)}></span></span><b>${L(`${Math.max(0, left)} d`)}</b></div>`;
+        }
+        body += `<div class="cl-kv"><span>${d.kind === 'reactor' ? 'Stabilising' : 'Decontamination'}</span><b>${L(`${cost ? costText(cost) : '?'}${days != null ? ` · ${plural(days, 'day')}` : ''}`)}</b></div>`;
+        if (wl != null) body += `<div class="cl-kv"><span>Crews at work</span><b class="good">${L(`${plural(wl, 'day')} to go`)}</b></div>`;
+      }
+    }
+    const label = d.kind === 'drones' ? 'Send the guardians' : d.kind === 'reactor' ? 'Stabilise' : 'Decontaminate';
+    const btn = d.done || d.kind === 'flooded' || wl != null ? '' : `<button type="button" class="cl-btn sm${can ? ' primary' : ''}${d.kind === 'drones' ? ' fight' : ''}" data-jclear="${d.chamber}" ${can ? '' : 'disabled'} title="${esc(can ? label : r?.msg || 'Not possible now')}">${label}${d.kind !== 'drones' && cost ? ` <small>${esc(costText(cost))}</small>` : d.kind === 'drones' && winPct(pv) != null ? ` <small>${winPct(pv)}%</small>` : ''}</button>`;
+    const pump = d.kind === 'flooded' && !d.done ? `<button type="button" class="cl-btn sm primary" data-jshow="${showAttr({ build: 'pumpstation', deck: deckOf(c) === 'upper' ? 'main' : deckOf(c) })}">Show me: Pump Station</button>` : '';
+    return `<article class="cl-jcard cl-danger k-${esc(d.kind)}${d.done ? ' done' : ''}${sameRef(jFocus, d.chamber) ? ' flash' : ''}" data-jdanger="${d.chamber}">
+      <header>${ico(d.kind in SICON ? d.kind : 'toxic')}<div class="cl-jct"><b>${esc(info.name)}</b><small>${esc(chName(s, d.chamber))} · ${deckWord(c)}</small></div><span class="cl-badge ${d.done ? 'st-open' : wl != null ? 'st-surveying' : 'st-sealed'}">${esc(status)}</span></header>
+      <p class="cl-jctext">${esc(d.done ? (d.kind === 'drones' ? 'The sentries are scrap. The way is clear.' : d.kind === 'reactor' ? 'The core is clamped and cold.' : 'Dealt with: the chamber can take air.') : info.text)}</p>
+      ${body}
+      <div class="cl-acts">${btn}${pump}<button type="button" class="cl-btn sm" data-jshow="${showAttr({ chamber: d.chamber })}">Show me</button></div>
+      ${!d.done && r && !can && r.msg ? `<p class="cl-why">${esc(r.msg)}</p>` : !d.done && d.kind === 'flooded' && pv?.why ? `<p class="cl-dim">${esc(pv.why)}</p>` : ''}
+    </article>`;
+  }
+  function dangersHtml(s, L, W) {
+    const ds = dangersOf(s).filter((d) => dangerFound(s, d));
+    const rank = (d) => (d.done ? 100 : 0) + (d.kind === 'reactor' ? 0 : d.kind === 'drones' ? 1 : 2);
+    return `${note('A danger keeps its chamber from taking air until it is dealt with (the old core only threatens). <b>Sentries</b>: send the crewed guardians, as against raiders. <b>Toxic air</b> and <b>radiation</b>: crews decontaminate for parts and days. <b>Flooding</b>: Pump Stations drain it.')}
+      <div class="cl-jcards">${ds.sort((a, b) => rank(a) - rank(b)).map((d) => dangerCard(s, d, L, W)).join('') || '<div class="cl-jcard locked"><div><b>No dangers known yet.</b><p class="cl-dim">Surveys reveal them, as they reveal everything else.</p></div></div>'}</div>`;
+  }
+  function clearDanger(cid) {
+    const s = S(), d = dangerAt(s, cid); if (!d) return;
+    if (d.kind === 'drones') {
+      const w = winPct(srule('dangerPreview', s, cid));
+      if (w != null && w < 40 && !confirm(`The guardians have about ${w}% to win against the sentries. Send them anyway?`)) return;
+    }
+    const before = (S().guardians || []).map((g) => g.type), pend = (S().pending || []).length;
+    const r = srule('clearDanger', S(), cid) ?? notReady('Clearing dangers');
+    const fought = d.kind === 'drones' && r && (r.won != null || r.win != null || r.report || r.ok !== false);
+    if (fought) {
+      closeJournal();   // the fight's report window comes up (the rules' 'dronefight' event)
+      result({ ok: true });
+      if (!(S().pending || []).slice(pend).some((p) => /drone|sentr/.test(p.kind || ''))) droneReport(S(), cid, r.report || r, before);
+      return;
+    }
+    else result(r && r.ok !== false && !r.msg ? { ok: true, msg: `${DANGERS[d.kind]?.name || 'The danger'}: crews at work.` } : r);
+    jFocus = cid; renderJournal(true);
+  }
+
+  function openJournal(tab, ref) {
+    if (tab && J_TABS.some(([k]) => k === tab)) { jTab = tab; jPrefs.tab = tab; storeJ(); }
+    if (ref != null) {
+      if (jTab === 'logs' && LOG[ref]) { jLog = ref; jFocus = null; }
+      else jFocus = ref;
+    } else jFocus = null;
+    for (const p of Object.values(pops)) p.hidden = true;
+    closeResearch(); closeDefence();
+    $('.cl-build')?.classList.remove('open');
+    const was = jEl.hidden;
+    jEl.hidden = false;
+    renderJournal(true);
+    if (jTab === 'logs' && ref && LOG[ref] && logFound(S(), ref) && !readOf(S()).has(ref)) readLog(ref);
+    if (was || tab) jBody.scrollTop = 0;
+    requestAnimationFrame(() => {
+      const el = ref == null ? null : jTab === 'logs' ? jBody.querySelector(`[data-jlog="${CSS.escape(String(ref))}"]`) : jBody.querySelector(`.flash`);
+      el?.scrollIntoView({ block: 'nearest' });
+    });
+  }
+  function closeJournal() { if (jEl.hidden) return false; jEl.hidden = true; jFocus = null; return true; }
+  function toggleJournal(tab) { if (jEl.hidden || tab) openJournal(tab); else closeJournal(); }
+
+  jEl.addEventListener('click', (e) => {
+    const t = e.target;
+    if (t.closest('[data-close=journal]')) { closeJournal(); return; }
+    const tab = t.closest('[data-jtab]');
+    if (tab) { openJournal(tab.dataset.jtab); return; }
+    const lg = t.closest('[data-jlog]');
+    if (lg) { if (jTab !== 'logs') { jTab = 'logs'; jPrefs.tab = 'logs'; storeJ(); } readLog(lg.dataset.jlog); jBody.querySelector('.cl-jreader')?.scrollTo?.(0, 0); if (phone()) jBody.scrollTop = 0; return; }
+    if (t.closest('[data-jback]')) { jLog = null; renderJournal(true); return; }
+    const sh = t.closest('[data-jshow]');
+    if (sh) {
+      let show = null; try { show = JSON.parse(sh.dataset.jshow); } catch { }
+      if (!show) return;
+      if (show.journal) { openJournal(show.journal, show.ref ?? null); return; }
+      closeJournal(); api.show?.(show); return;
+    }
+    const df = t.closest('[data-jdef]');
+    if (df) { openDefence(df.dataset.jdef); return; }
+    const b = t.closest('button'); if (!b || b.disabled) return;
+    if (b.dataset.jvopen != null) openVault(b.dataset.jvopen);
+    else if (b.dataset.jclear != null) clearDanger(+b.dataset.jclear);
+  });
+
+  // The top bar: the journal button (with the number of new logs) once Eden has secrets, and the
+  // old core's countdown while it is stirring.
+  function hudSecrets(s) {
+    const sec = secOf(s);
+    if (jBtn.hidden === !!sec) jBtn.hidden = !sec;
+    const any = !!sec && (sitesOf(s).some((x) => x.found) || (sec.read || []).length > 0);
+    if (root.classList.contains('cl-v4s') !== any) root.classList.toggle('cl-v4s', any);
+    const n = sec ? unreadLogs(s).length : 0;
+    if (jNew.hidden === !!n) jNew.hidden = !n;
+    if (jNew.textContent !== String(n)) jNew.textContent = String(n);
+    const t = n ? `Discoveries: ${n} new log${n === 1 ? '' : 's'} to read (J)` : 'Discoveries: logs, vaults, survivors and dangers (J)';
+    if (jBtn.title !== t) jBtn.title = t;
+    const rc = reactorOf(s);
+    show('core', !!rc);
+    if (rc) {
+      const left = Math.max(0, rc.deadline - s.day), wl = dangerWork(rc);
+      stat('core', String(left), ' d', wl != null ? `crews ${wl} d` : 'stabilise!', `alert${left <= 10 && wl == null ? ' crit' : ''}${wl != null ? ' working' : ''}`);
+      setTitle('core', `The old core under ${chName(s, rc.chamber)} (${deckWord(chamberById(s, rc.chamber))}) is stirring.\n${left} day${left === 1 ? '' : 's'} until it tears loose: it would damage buildings on its deck and reseal chambers there.\n${wl != null ? `Crews are stabilising it: ${wl} day${wl === 1 ? '' : 's'} to go.` : 'Stabilise it from the Discoveries journal (Dangers).'}\nClick to open it.`);
+    }
+  }
+  statEls.core?.el.addEventListener('click', () => openJournal('dangers', reactorOf(S())?.chamber ?? null));
+
+  // ---- the inspector: what a chamber holds (its found sites and its danger), with the actions
+  function secretsHtml(s, ch, x, y) {
+    if (!secOf(s) || !ch) return '';
+    const sites = sitesOf(s).filter((k) => k.chamber === ch.id && k.found), d = dangerAt(s, ch.id), dOn = d && dangerFound(s, d);
+    if (!sites.length && !dOn) return '';
+    const r = readOf(s);
+    const rows = sites.map((k) => {
+      const here = k.x === x && k.y === y;
+      if (k.kind === 'log') { const l = LOG[k.ref] || { title: k.ref }; return `<li class="${here ? 'here' : ''}">${ico('log')}<span class="cl-isl"><b>${esc(l.title)}</b><small>${r.has(k.ref) ? 'read' : '<em class="cl-jnewtag">New</em>'}${l.key ? ` · ◆ fragment ${l.key}` : ''}</small></span><button type="button" class="cl-btn xs" data-a="journal" data-v="logs:${esc(k.ref)}">Read</button></li>`; }
+      if (k.kind === 'vault') {
+        const v = VAULT[k.ref] || { name: k.ref }, ok = !k.done && vaultNeeds(s, k).every((n) => n.ok);
+        return `<li class="${here ? 'here' : ''}">${ico('vault')}<span class="cl-isl"><b>${esc(v.name)}</b><small>${k.done ? 'opened' : ok ? 'ready to open' : 'sealed'}</small></span>${k.done ? '' : ok ? `<button type="button" class="cl-btn xs primary" data-a="vopen" data-v="${esc(k.id)}">Open</button>` : `<button type="button" class="cl-btn xs" data-a="journal" data-v="vaults:${esc(k.id)}">Needs</button>`}</li>`;
+      }
+      const g = SURV[k.ref] || { name: k.ref };
+      return `<li class="${here ? 'here' : ''}">${ico('survivors')}<span class="cl-isl"><b>${esc(g.name)}</b><small>${k.done ? 'joined the colony' : `${num(g.pop || 0)} waiting: open the chamber`}</small></span><button type="button" class="cl-btn xs" data-a="journal" data-v="survivors:${esc(k.id)}">More</button></li>`;
+    }).join('');
+    let danger = '';
+    if (dOn) {
+      const info = DANGERS[d.kind] || { name: d.kind }, wl = dangerWork(d), left = d.deadline != null ? Math.max(0, d.deadline - s.day) : null;
+      const pv = !d.done && d.kind === 'drones' ? srule('dangerPreview', s, ch.id) : null, w = winPct(pv);
+      const what = d.done ? 'dealt with' : wl != null ? `crews at work · ${plural(wl, 'day')}` : d.kind === 'reactor' && left != null ? `${plural(left, 'day')} until it tears loose` : d.kind === 'drones' ? (w != null ? `${w}% to win` : 'guarding the chamber') : d.kind === 'flooded' ? `${marshLeft(s, ch)} tiles flooded` : 'blocks pressurising';
+      const act = d.done || wl != null ? '' : d.kind === 'flooded' ? `<button type="button" class="cl-btn xs" data-a="journal" data-v="dangers:${ch.id}">Drain</button>` : `<button type="button" class="cl-btn xs primary" data-a="clear" data-id="${ch.id}">${d.kind === 'drones' ? 'Fight' : d.kind === 'reactor' ? 'Stabilise' : 'Clear'}</button>`;
+      danger = `<div class="cl-idanger k-${esc(d.kind)}${d.done ? ' done' : ''}">${ico(d.kind in SICON ? d.kind : 'toxic')}<span class="cl-isl"><b>${esc(info.name)}</b><small>${esc(what)}</small></span>${act}<button type="button" class="cl-btn xs" data-a="journal" data-v="dangers:${ch.id}" title="The Dangers page">›</button></div>`;
+    }
+    return `<section class="cl-isec cl-isecret"><h4>Discoveries</h4>${danger}${rows ? `<ul class="cl-isites">${rows}</ul>` : ''}</section>`;
+  }
+
+  // ---- event windows: what a survey found, the sentries' fight, the old core
+  // The 'discovery' event's finds: p.found / p.items / p.sites (site objects, ids or refs), else what
+  // is known in its chamber, else today's journal entries.
+  function discoveryItems(s, p) {
+    const raw = p.found ?? p.items ?? p.sites ?? p.finds ?? null;
+    const norm = (x) => {
+      if (x == null) return null;
+      if (typeof x !== 'object') { const k = sitesOf(s).find((q) => sameRef(q.id, x) || q.ref === x); return k || (DANGERS[x] ? { kind: 'danger', danger: x, chamber: p.chamber } : null); }
+      if (x.kind === 'danger' || DANGERS[x.kind]) return { kind: 'danger', danger: x.danger || (DANGERS[x.kind] ? x.kind : x.ref), chamber: x.chamber ?? p.chamber };
+      if (x.site != null) return sitesOf(s).find((q) => sameRef(q.id, x.site)) || null;
+      return x;
+    };
+    let list = Array.isArray(raw) ? raw.map(norm).filter(Boolean) : [];
+    const cid = p.chamber ?? p.chamberId;
+    if (!list.length && cid != null) {
+      list = sitesOf(s).filter((k) => k.chamber === cid && k.found);
+      const d = dangerAt(s, cid); if (d) list.push({ kind: 'danger', danger: d.kind, chamber: cid });
+    }
+    if (!list.length) list = (secOf(s)?.journal || []).filter((j) => j.day === s.day).map((j) => norm(j.ref) || (DANGERS[j.kind] ? { kind: 'danger', danger: j.kind, chamber: j.chamber } : null)).filter(Boolean);
+    return list;
+  }
+  function discoveryBody(s, p) {
+    const items = discoveryItems(s, p);
+    if (!items.length) return '';
+    const r = readOf(s);
+    const li = items.map((k) => {
+      if (k.kind === 'log') { const l = LOG[k.ref] || { title: k.ref, author: '' }; return `<li>${ico('log')}<span><i>Log</i><b>${esc(l.title)}</b><small>${esc(l.author)}${l.key ? ' · ◆ a fragment of a code' : ''}</small></span><button type="button" class="cl-btn xs${r.has(k.ref) ? '' : ' primary'}" data-evj="logs:${esc(k.ref)}">Read</button></li>`; }
+      if (k.kind === 'vault') { const v = VAULT[k.ref] || { name: k.ref }; return `<li>${ico('vault')}<span><i>Vault</i><b>${esc(v.name)}</b><small>sealed</small></span><button type="button" class="cl-btn xs" data-evj="vaults:${esc(k.id ?? k.ref)}">What it needs</button></li>`; }
+      if (k.kind === 'survivors') { const g = SURV[k.ref] || { name: k.ref }; return `<li>${ico('survivors')}<span><i>Survivors</i><b>${esc(g.name)}</b><small>${g.pop === 1 ? 'one person' : `${num(g.pop || 0)} people`}, hiding</small></span><button type="button" class="cl-btn xs" data-evj="survivors:${esc(k.id ?? k.ref)}">See</button></li>`; }
+      const info = DANGERS[k.danger] || { name: k.danger };
+      return `<li class="bad">${ico(k.danger in SICON ? k.danger : 'toxic')}<span><i>Danger</i><b>${esc(info.name)}</b><small>${esc(k.danger === 'reactor' ? `${DANGERS.reactor.deadline} days to stabilise it` : 'blocks pressurising')}</small></span><button type="button" class="cl-btn xs" data-evj="dangers:${esc(k.chamber ?? '')}">Deal with it</button></li>`;
+    }).join('');
+    return `<ul class="cl-evfound">${li}</ul>`;
+  }
+  function reactorBody(s, p) {
+    const d = reactorOf(s) || dangersOf(s).find((x) => x.kind === 'reactor') || null;
+    if (!d) return '';
+    const left = d.deadline != null ? Math.max(0, d.deadline - s.day) : null, pv = srule('dangerPreview', s, d.chamber), cost = dangerCost(s, d, pv), days = dangerDays(s, d, pv);
+    if (d.done && !d.failed) return `<div class="cl-raidfacts"><div class="cl-kv"><span>The old core</span><b class="good">clamped and cold</b></div><div class="cl-kv"><span>The ${esc(deckWord(d))}</span><b class="good">safe</b></div></div>`;
+    if (d.failed) {
+      const hit = (p.damaged || []).map((id) => BUILDING[s.buildings.find((b) => b.id === id)?.key]?.name).filter(Boolean), shut = (p.resealed || []).map((id) => chName(s, id));
+      return `<div class="cl-report lost"><header><b>The core tore loose</b><small>${esc(chName(s, d.chamber))} · ${deckWord(d)}</small></header>
+        <div class="cl-kv"><span>Buildings knocked out</span><b class="${hit.length ? 'bad' : 'good'}">${hit.length ? esc(hit.join(', ')) : 'none'}</b></div>
+        <div class="cl-kv"><span>Chambers sealed again</span><b class="${shut.length ? 'bad' : 'good'}">${shut.length ? esc(shut.join(', ')) : 'none'}</b></div>
+        <div class="cl-kv"><span>The core</span><b>burned out: it will not stir again</b></div></div>`;
+    }
+    return `<div class="cl-raidfacts">
+      <div class="cl-kv"><span>Where</span><b>${esc(chName(s, d.chamber))} · ${deckWord(chamberById(s, d.chamber))}</b></div>
+      ${left != null && !d.done ? `<div class="cl-corebar${left <= 10 ? ' crit' : ''}"><i>Until it tears loose</i><span class="cl-wbar"><span ${plainW((left / (DANGERS.reactor.deadline || 60)) * 100)}></span></span><b>${left} d</b></div>` : ''}
+      ${!d.done ? `<div class="cl-kv"><span>Stabilising</span><b>${cost ? esc(costText(cost)) : '?'}${days != null ? ` · ${plural(days, 'day')} of crew work` : ''}</b></div>` : ''}
+      ${dangerWork(d) != null ? `<div class="cl-kv"><span>Crews at work</span><b class="good">${plural(dangerWork(d), 'day')} to go</b></div>` : ''}</div>`;
+  }
+  // The rules' 'dronefight' event: p.report { won, attack, defence, winChance, lostGuardians, salvage }.
+  function droneEvBody(s, p) {
+    const rep = p.report; if (!rep) return '';
+    const kv = (k, v, cls = '') => `<div class="cl-kv"><span>${k}</span><b class="${cls}">${v}</b></div>`, lost = rep.lostGuardians || [], pct = winPct(rep);
+    return `<div class="cl-report ${rep.won ? 'won' : 'lost'}"><header><b>${rep.won ? 'Sentries cleared' : 'Driven back'}</b><small>${esc(chName(s, p.chamber))} · ${deckWord(chamberById(s, p.chamber))}</small></header>
+      ${kv('Guardians vs sentries', `${num(rep.defence ?? 0)} vs ${num(rep.attack ?? 0)}${pct != null ? ` · ${pct}% to win` : ''}`)}
+      ${kv('Machines lost', lost.length ? esc(unitList(lost.map((t) => ({ type: t?.type ?? t })))) : 'none', lost.length ? 'bad' : 'good')}
+      ${rep.hurt?.length ? kv('Machines damaged', `${rep.hurt.length} (a Scrapyard mends them)`, 'warn') : ''}
+      ${goodsText(rep.salvage) ? kv('Salvage', '+' + esc(goodsText(rep.salvage)), 'good') : ''}
+      ${kv('The chamber', rep.won ? 'can be pressurised now' : 'still guarded: it cannot take air', rep.won ? 'good' : 'bad')}</div>`;
+  }
+  // Survivors coming out of hiding: their commander, if they bring one.
+  function survivorsEvBody(s, p) {
+    const key = p.commander, C = key && CMDR[key];
+    if (!C) return '';
+    return `<div class="cl-evwand"><span class="cl-face">${face(key, 'sv')}</span><div><p class="cl-jcmd"><b>${esc(C.name)}</b> <small>${esc(C.title || '')}</small></p>${statBars(C)}${gradesHtml(C)}${traits(C)}
+      <p class="cl-dim">Joins Eden's commanders: assign them in Defence › Commanders.</p></div></div>`;
+  }
+  // The sentries' fight, shown after clearDanger when the rules raised no event of their own.
+  let localEv = null;   // { id, cls, html } a window the interface opens itself (no pending event)
+  function droneReport(s, cid, r, before) {
+    const d = dangerAt(s, cid), won = !!(r.won ?? r.win ?? d?.done);
+    const lost = r.lost ?? r.lostGuardians ?? (() => { const now = (s.guardians || []).map((g) => g.type), out = [...before]; for (const t of now) { const i = out.indexOf(t); if (i >= 0) out.splice(i, 1); } return out; })();
+    const salvage = r.salvage || r.reward || null;
+    const kv = (k, v, cls = '') => `<div class="cl-kv"><span>${k}</span><b class="${cls}">${v}</b></div>`;
+    localEv = { id: `drones:${cid}:${s.day}:${Math.random()}`, cls: won ? 'cl-evwon' : 'cl-evraid', html: `<div class="cl-evkind">Sentries · Day ${s.day}</div>
+      <div class="cl-evbody">${eventFace('sato')}<div><h2 id="evTitle">${won ? 'The sentries are down' : 'The sentries held'}</h2>
+      <p>${esc(r.msg || (won ? `Sato: "${chName(s, cid)} is clear. Forty years on patrol and not one of them thought to retreat. The salvage crews are going in."` : `Sato: "They are better than they look, Governor. We pulled back from ${chName(s, cid)}. We'll need more machines, or better pilots."`))}</p></div></div>
+      <div class="cl-report ${won ? 'won' : 'lost'}"><header><b>${won ? 'Sentries cleared' : 'Repulsed'}</b><small>${esc(chName(s, cid))} · ${deckWord(chamberById(s, cid))}</small></header>
+        ${kv('Machines lost', Array.isArray(lost) && lost.length ? esc(unitList(lost.map((t) => ({ type: t?.type ?? t })))) : 'none', Array.isArray(lost) && lost.length ? 'bad' : 'good')}
+        ${salvage && goodsText(salvage) ? kv('Salvage', '+' + esc(goodsText(salvage)), 'good') : ''}
+        ${!won ? kv('The chamber', 'still guarded: it cannot take air', 'bad') : kv('The chamber', 'can be pressurised now', 'good')}</div>
+      <div class="cl-evchoices"><button type="button" class="cl-btn primary" data-localok>Understood</button><button type="button" class="cl-btn" data-localok="dangers:${cid}">Dangers</button></div>` };
+    evId = null; renderEvent();
+  }
+  function showLocal() {
+    evId = localEv.id;
+    modal.classList.remove('soft', 'final');
+    evBox.className = 'cl-win cl-event ' + (localEv.cls || '');
+    evBox.innerHTML = localEv.html;
+    modal.hidden = false;
+    evBox.querySelector('[data-localok]')?.focus({ preventScroll: true });
+  }
+
+  // ---- the Ninefold vault: the revelation (a dark, quiet window in three pages)
+  let fv = null;   // { id, stage, raf }
+  const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function finalPicture() {
+    const vid = api.art?.('video/finalvault'), still = api.art?.('scene/finalvault');
+    if (vid) return `<video class="cl-fvmedia" src="${esc(vid)}"${still ? ` poster="${esc(still)}"` : ''} autoplay muted playsinline></video>`;
+    if (still) return `<img class="cl-fvmedia" src="${esc(still)}" alt="The Ninefold vault, open">`;
+    const rings = Array.from({ length: 9 }, (_, i) => `<circle cx="200" cy="250" r="${158 + i * 7}" fill="none" stroke="#9fd0e8" stroke-opacity="${(0.2 - i * 0.018).toFixed(3)}" stroke-dasharray="${2 + i} ${6 + i * 2}"/>`).join('');
+    const shelves = [170, 215, 260, 305].map((y) => `<path d="M95 ${y}h210" stroke="#e8b866" stroke-opacity=".28"/>${Array.from({ length: 14 }, (_, i) => `<rect x="${102 + i * 14 + ((y * 7 + i * 13) % 5)}" y="${y - 26 + ((i * 11 + y) % 9)}" width="${6 + ((i + y) % 5)}" height="${26 - ((i * 11 + y) % 9)}" fill="#c9954a" fill-opacity="${(0.12 + ((i * 7 + y) % 10) / 60).toFixed(2)}"/>`).join('')}`).join('');
+    const motes = Array.from({ length: 26 }, (_, i) => `<circle cx="${110 + ((i * 73) % 190)}" cy="${120 + ((i * 131) % 270)}" r="${(0.6 + (i % 3) * 0.5).toFixed(1)}" fill="#ffe7b0" fill-opacity="${(0.15 + (i % 5) * 0.08).toFixed(2)}"><animate attributeName="cy" values="${120 + ((i * 131) % 270)};${110 + ((i * 131) % 270)};${120 + ((i * 131) % 270)}" dur="${9 + (i % 7)}s" repeatCount="indefinite"/></circle>`).join('');
+    return `<svg class="cl-fvmedia" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" role="img" aria-label="The Ninefold vault door, standing open on the registry">
+      <defs><radialGradient id="fvglow" cx="50%" cy="56%" r="52%"><stop offset="0" stop-color="#ffd98a" stop-opacity=".5"/><stop offset=".4" stop-color="#b8692a" stop-opacity=".16"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+      <linearGradient id="fvwall" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#04050b"/><stop offset="1" stop-color="#0b0c16"/></linearGradient>
+      <linearGradient id="fvdoor" x1="0" x2="1"><stop offset="0" stop-color="#1b1e2b"/><stop offset="1" stop-color="#0c0e16"/></linearGradient>
+      <clipPath id="fvhole"><circle cx="200" cy="250" r="150"/></clipPath></defs>
+      <rect width="400" height="500" fill="url(#fvwall)"/>
+      <circle cx="200" cy="250" r="150" fill="#0a0705"/>
+      <g clip-path="url(#fvhole)">${shelves}<rect x="176" y="336" width="48" height="6" fill="#e8b866" fill-opacity=".5"/><path d="M180 336l20-14 20 14z" fill="#f3d39a" fill-opacity=".55"/><circle cx="200" cy="250" r="150" fill="url(#fvglow)"/>${motes}</g>
+      ${rings}
+      <circle cx="200" cy="250" r="152" fill="none" stroke="#3a3f55" stroke-width="5"/>
+      <g transform="translate(64 250)"><ellipse rx="40" ry="152" fill="url(#fvdoor)" stroke="#4a5068" stroke-width="2"/><ellipse rx="26" ry="100" fill="none" stroke="#4a5068" stroke-opacity=".7"/><ellipse rx="12" ry="46" fill="none" stroke="#6fd3ff" stroke-opacity=".25"/>${[-110, -60, 0, 60, 110].map((y) => `<rect x="30" y="${y - 5}" width="22" height="10" fill="#2a2e40" stroke="#4a5068"/>`).join('')}</g>
+      <path d="M0 470 Q200 440 400 470 V500 H0z" fill="#020308"/>
+    </svg>`;
+  }
+  function renderFinal(s, p, stage) {
+    if (!fv || fv.id !== p.id) fv = { id: p.id, stage: 0, raf: 0 };
+    if (stage != null) fv.stage = stage;
+    cancelAnimationFrame(fv.raf);
+    evId = p.id;
+    modal.classList.remove('soft'); modal.classList.add('final');
+    evBox.className = 'cl-win cl-event cl-evfinal';
+    const marrow = p.marrow ?? ((s.commanders || []).some((c) => c.key === 'marrow') || !!siteFor(s, 'survivors', 's_crypt')?.done);
+    const inside = /Inside: ([^]*?)\.(?: The test logs|$)/.exec(p.text || '')?.[1];
+    const choice = p.choices?.[0] || { key: 'ok', label: 'Close the vault' };
+    const pages = [
+      `<h2 id="evTitle">${esc(p.title && !/^the ninefold vault$/i.test(p.title) ? p.title : 'What happened to Eden')}</h2>
+       <div class="cl-fvtext">${FINAL_TRUTH.map((t, i) => `<p style="--i:${i}">${esc(t)}</p>`).join('')}</div>`,
+      `<h2 id="evTitle">The registry of Eden</h2>
+       <div class="cl-fvspeak">${eventFace(marrow ? 'marrow' : 'ruess') || `<span class="cl-portrait cl-fvinit">${marrow ? 'IM' : 'HR'}</span>`}<p>${marrow ? '<b>Warden Marrow</b> takes the book down as if she had shelved it yesterday. “I said they would be read out. All of them.”' : 'The registry is in <b>Warden Marrow\'s</b> hand. <b>Ruess</b> reads it aloud, as her last log asked.'}</p></div>
+       <div class="cl-reg" data-reg tabindex="0" aria-label="The registry of Eden"><ol>${REGISTRY.map((n) => `<li${n.mark ? ' class="stayed"' : ''}><b>${esc(n.name)}</b><small>${n.age} · ${esc(n.home)}${n.mark ? ' · stayed' : ''}</small></li>`).join('')}</ol>
+       <p class="cl-regmore">… and eleven thousand more. ${marrow ? 'She reads until the lamps dim, and nobody asks her to stop.' : 'He reads until the lamps dim, and nobody asks him to stop.'}</p></div>`,
+      `<h2 id="evTitle">After the names</h2>
+       <div class="cl-fvclose">${FINAL_CLOSE.map(([k, who, line], i) => `<figure style="--i:${i}">${eventFace(k)}<blockquote><p>“${esc(line)}”</p><figcaption>${esc(who)}</figcaption></blockquote></figure>`).join('')}</div>
+       ${inside ? `<p class="cl-fvreward"><i>Also in the vault</i> ${esc(inside)}.</p>` : ''}`,
+    ];
+    const st = Math.max(0, Math.min(2, fv.stage));
+    evBox.innerHTML = `<div class="cl-fvpic">${finalPicture()}</div>
+      <div class="cl-fvmain">
+        <div class="cl-evkind">${esc(KIND_LABEL.finalvault)} · Day ${s.day}<span class="cl-fvdots">${[0, 1, 2].map((i) => `<i class="${i === st ? 'on' : i < st ? 'past' : ''}"></i>`).join('')}</span></div>
+        <div class="cl-fvpage" data-stage="${st}">${pages[st]}</div>
+        <div class="cl-evchoices">${st < 2 ? `<button type="button" class="cl-btn primary" data-fvnext>${st === 0 ? 'Open the registry ›' : 'Continue ›'}</button><button type="button" class="cl-btn ghost" data-fvskip>Skip to the end</button>`
+          : `<button type="button" class="cl-btn primary" data-choice="${esc(choice.key)}">${esc(choice.label && choice.label !== 'Continue' ? choice.label : 'Close the vault')}</button>`}</div>
+      </div>`;
+    modal.hidden = false;
+    evBox.querySelector('[data-fvnext],[data-choice]')?.focus({ preventScroll: true });
+    if (st === 1) crawl();
+  }
+  // Marrow reads: the registry scrolls by itself, slowly; a hand on it (pointer, wheel, keys) stops it.
+  function crawl() {
+    const el = evBox.querySelector('[data-reg]'); if (!el || reduceMotion()) return;
+    let held = false, last = 0, acc = 0;
+    const hold = () => { held = true; };
+    for (const ev of ['wheel', 'touchstart', 'pointerdown', 'keydown']) el.addEventListener(ev, hold, { passive: true });
+    el.addEventListener('pointerenter', () => { held = true; });
+    el.addEventListener('pointerleave', () => { held = false; last = 0; });
+    const step = (t) => {
+      if (!fv || !el.isConnected) return;
+      if (!held && last) { acc += (t - last) * 0.022; const n = Math.floor(acc); if (n) { el.scrollTop += n; acc -= n; } }
+      last = t;
+      if (el.scrollTop + el.clientHeight < el.scrollHeight - 1) fv.raf = requestAnimationFrame(step);
+    };
+    fv.raf = requestAnimationFrame((t) => { last = t; fv.raf = requestAnimationFrame(step); });
+  }
 
   // ---------------------------------------------------------------- the map's free area
   // The view draws its minimap (bottom right) and navigation buttons (top right) inside the area
@@ -1626,7 +2314,7 @@ export function createUI(root, api) {
   const plainL = (t) => esc(t), plainW = (p) => `style="width:${Math.max(0, Math.min(100, Math.round(+p || 0)))}%"`;
   function wandererOf(p) {
     const k = p.key ?? p.wanderer ?? p.who ?? p.data?.key;
-    if (k && COMMANDER[k]) return k;
+    if (k && CMDR[k]) return k;
     const all = Object.values(COMMANDER).filter((c) => c.key?.startsWith('w_'));
     return all.find((c) => `${p.title} ${p.text}`.includes(c.name))?.key || null;
   }
@@ -1651,7 +2339,7 @@ export function createUI(root, api) {
       <p class="cl-dim">Arsenal machines, Guardian Barracks crews and Battery Emplacements defend Eden. Shield Pylons keep raiders' fire off buildings.</p></div>`;
   }
   function wandererBody(s, key) {
-    const C = COMMANDER[key]; if (!C) return '';
+    const C = CMDR[key]; if (!C) return '';
     return `<div class="cl-evwand"><span class="cl-face">${face(key, 'ev')}</span><div>${statBars(C)}${gradesHtml(C)}${traits(C)}${C.flaw ? `<p class="cl-cflaw">⚠ ${esc(C.flaw)}</p>` : ''}
       <p class="cl-dim">Wage ${C.wage} credits a day · invite chance about ${Math.round(inviteChance(s, { key, loyalty: (s.wanderers || []).find((w) => w.key === key)?.loyalty }) * 100)}%.</p></div></div>`;
   }
@@ -1670,27 +2358,36 @@ export function createUI(root, api) {
   function renderEvent() {
     const s = S(), p = s.pending?.[0];
     if (!p) {
+      if (localEv) { if (evId !== localEv.id || modal.hidden) showLocal(); return; }
       const rs = reportSig(s);
       if (rs && rs !== repSeen) { if (evId !== 'report:' + rs || modal.hidden) showReport(s, rs); return; }
-      if (!modal.hidden) { modal.hidden = true; evId = null; }
+      if (!modal.hidden) { modal.hidden = true; evId = null; modal.classList.remove('final'); }
       return;
     }
     if (evId === p.id && !modal.hidden) return;
+    if (p.kind === 'finalvault') { renderFinal(s, p); return; }
+    modal.classList.remove('final');
     evId = p.id;
     if (/report|result/.test(p.kind || '')) repSeen = reportSig(s);   // the sim's own report: no second one
     const raid = p.kind === 'raid', warn = p.kind === 'raidwarn', wkey = p.kind === 'wanderer' ? wandererOf(p) : null;
+    // version 4, stage 2: what a survey found, the old core (its warning and what it did), the sentries
+    const disc = p.kind === 'discovery', core = /reactor|core/.test(p.kind || ''), drone = /drone|sentr/.test(p.kind || '');
+    const coreBad = core && /fail|blast|tore|damage|loose/i.test(`${p.kind} ${p.title}`), coreSafe = core && !coreBad && /safe|stable|clamp/i.test(p.title || '');
+    const droneWon = drone && !!(p.report?.won ?? /clear|won/i.test(p.title || ''));
     const pic = eventFace(p.speaker);
-    modal.classList.toggle('soft', !api.settings.pauseOnEvents && !raid);
-    evBox.className = 'cl-win cl-event' + (raid ? ' cl-evraid' : warn ? ' cl-evwarn' : '');
+    modal.classList.toggle('soft', !api.settings.pauseOnEvents && !raid && !core);
+    evBox.className = 'cl-win cl-event' + (raid || coreBad ? ' cl-evraid' : coreSafe ? ' cl-evwon' : warn || core ? ' cl-evwarn' : disc || p.kind === 'survivors' ? ' cl-evdisc' : drone ? (droneWon ? ' cl-evwon' : ' cl-evraid') : '');
+    const jtab = disc ? 'logs' : (core && !coreSafe) || drone ? 'dangers' : p.kind === 'survivors' ? 'survivors' : null;
     const choices = p.choices?.length ? p.choices : [{ key: 'ok', label: 'Understood' }];
     const tab = warn ? 'raids' : wkey ? 'commanders' : null;
     evBox.innerHTML = `<div class="cl-evkind">${esc(KIND_LABEL[p.kind] || p.kind || 'Event')} · Day ${s.day}${s.pending.length > 1 ? ` · ${s.pending.length - 1} more waiting` : ''}</div>
       <div class="cl-evbody">${pic}
       <div><h2 id="evTitle">${esc(p.title)}</h2>${raid && (rule('raidPreview', s) || p.preview) ? `<p>${esc(raidLine(s, p))}</p>` : `<p>${esc(p.text)}</p>`}</div></div>
-      ${raid ? raidBody(s, p) : warn ? warnBody(s) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
+      ${raid ? raidBody(s, p) : warn ? warnBody(s) : disc ? discoveryBody(s, p) : core ? reactorBody(s, p) : drone ? droneEvBody(s, p) : p.kind === 'survivors' ? survivorsEvBody(s, p) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
       <div class="cl-evchoices">${choices.map((c, i) => { const cant = raid && c.key === 'tribute' && (rule('raidPreview', s) || p.preview)?.canPay === false;
         return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>`; }).join('')}
-        ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : 'Meet them'}</button>` : ''}</div>
+        ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : 'Meet them'}</button>` : ''}
+        ${jtab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evj="${jtab}${(core || drone) && p.chamber != null ? `:${p.chamber}` : p.kind === 'survivors' && p.group ? `:${p.group}` : ''}" title="Answer and open the Discoveries journal (J)">${disc ? 'Open the journal' : p.kind === 'survivors' ? 'Survivors' : 'Dangers'}</button>` : ''}</div>
       ${api.settings.pauseOnEvents || raid ? '<p class="cl-dim cl-evpause">❚❚ The clock waits for your answer.</p>' : ''}`;
     modal.hidden = false;
     evBox.querySelector('[data-choice]')?.focus({ preventScroll: true });
@@ -1709,12 +2406,33 @@ export function createUI(root, api) {
     evBox.querySelector('[data-repok]')?.focus({ preventScroll: true });
   }
   evBox.addEventListener('click', (e) => {
+    // version 4, stage 2: the windows the interface opens itself (the sentries' fight) and the Ninefold vault's pages
+    const lok = e.target.closest('[data-localok]');
+    if (lok) { localEv = null; evId = null; modal.hidden = true; const [tab, ref] = (lok.dataset.localok || '').split(':'); if (tab) openJournal(tab, ref || null); renderEvent(); return; }
+    if (e.target.closest('[data-fvnext],[data-fvskip]')) {
+      const p = S().pending?.[0]; if (!p || p.kind !== 'finalvault') return;
+      renderFinal(S(), p, e.target.closest('[data-fvskip]') ? 2 : (fv?.stage || 0) + 1);
+      return;
+    }
+    const ej = e.target.closest('[data-evj]');
+    if (ej) {
+      const [tab, ...ref] = ej.dataset.evj.split(':');
+      const p = S().pending?.[0];
+      if (p) {
+        evId = null; modal.hidden = true;
+        const key = p.choices?.[0]?.key || 'ok', r = result(R.answer(S(), p.id, key));
+        if (r?.ok !== false) api.answered?.(p, key);
+      }
+      openJournal(tab, ref.length && ref.join(':') !== '' ? ref.join(':') : null);
+      return;
+    }
     const ok = e.target.closest('[data-repok]');
     if (ok) { repSeen = reportSig(S()); evId = null; modal.hidden = true; if (ok.dataset.repok) openDefence(ok.dataset.repok); renderEvent(); return; }
     const b = e.target.closest('[data-choice],[data-evdef]'); if (!b) return;
     const p = S().pending?.[0]; if (!p) return;
     const key = b.dataset.choice ?? (p.choices?.[0]?.key || 'ok');
     evId = null; modal.hidden = true;
+    if (p.kind === 'finalvault') { if (fv) cancelAnimationFrame(fv.raf); fv = null; modal.classList.remove('final'); }
     let r = R.answer(S(), p.id, key);
     // a raid the generic answer() did not resolve: the rules' own raid answer
     if (p.kind === 'raid' && r?.ok === false && typeof R.answerRaid === 'function' && S().pending?.some((x) => x.id === p.id)) { const r2 = rule('answerRaid', S(), key); if (r2) r = r2; }
@@ -1753,7 +2471,7 @@ export function createUI(root, api) {
   // "1 / 2 fields" gives 0.5 for the bar; null when the text holds no fraction.
   const fraction = (t) => { const m = /(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/.exec(t || ''); return m && +m[2] > 0 ? Math.min(1, +m[1] / +m[2]) : null; };
   const grantText = (r) => r ? [r.credits ? `+${num(r.credits)} cr` : '', r.parts ? `+${num(r.parts)} parts` : ''].filter(Boolean).join(' · ') : '';
-  const showLabel = (sh) => !sh ? '' : sh.build && sh.deck && sh.deck !== D() ? `Show me: ${BUILDING[sh.build]?.name || sh.build} (${DECK_NAME[sh.deck]?.toLowerCase() || sh.deck} deck)` : sh.build ? `Show me: ${BUILDING[sh.build]?.name || sh.build}` : sh.market ? 'Show me: the Market' : sh.roads ? 'Show me: Roads' : sh.research ? `Show me: ${typeof sh.research === 'string' && TECH[sh.research] ? TECH[sh.research].name : 'Research'}` : sh.chamber != null ? 'Show me the chamber' : sh.tile ? 'Show me where' : 'Show me';
+  const showLabel = (sh) => !sh ? '' : sh.build && sh.deck && sh.deck !== D() ? `Show me: ${BUILDING[sh.build]?.name || sh.build} (${DECK_NAME[sh.deck]?.toLowerCase() || sh.deck} deck)` : sh.build ? `Show me: ${BUILDING[sh.build]?.name || sh.build}` : sh.market ? 'Show me: the Market' : sh.roads ? 'Show me: Roads' : sh.research ? `Show me: ${typeof sh.research === 'string' && TECH[sh.research] ? TECH[sh.research].name : 'Research'}` : sh.journal ? `Show me: ${J_TABS.find(([k]) => k === sh.journal)?.[1] || 'Discoveries'} (journal)` : sh.chamber != null ? 'Show me the chamber' : sh.tile ? 'Show me where' : 'Show me';
 
   function renderGoals() {
     const G = api.goals;
@@ -1839,7 +2557,7 @@ export function createUI(root, api) {
   function update(force) {
     const s = S();
     try { summary = R.summary(s); } catch (e) { summary = null; console.warn('summary failed', e); }
-    if (force) { deckSig = ''; cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; resSig = ''; liveSigs.delete(defBody); liveSigs.delete(defStats); }
+    if (force) { deckSig = ''; cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; resSig = ''; jSig = ''; liveSigs.delete(defBody); liveSigs.delete(defStats); liveSigs.delete(jBody); }
     hud();
     renderDecks();
     renderGoals();
@@ -1851,6 +2569,7 @@ export function createUI(root, api) {
     renderMarket();
     renderResearch();
     renderDefence();
+    renderJournal();
     renderLog();
     renderEvent();
   }
@@ -1858,6 +2577,8 @@ export function createUI(root, api) {
   return {
     update, inspect, closeInspector, toast, tip, setPlacing, setSpeed, closePops, openBuild, welcomeDone, openResearch, toggleResearch,
     openDefence, toggleDefence, closeDefence,
+    openJournal, toggleJournal, closeJournal,
+    journalOpen: () => !jEl.hidden,
     researchOpen: () => !resEl.hidden,
     defenceOpen: () => !defEl.hidden,
     firstAvailableTech: () => techList(S()).find((t) => t.available && !t.done && !t.focus)?.key || null,
