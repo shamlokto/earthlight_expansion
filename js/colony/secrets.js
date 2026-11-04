@@ -492,10 +492,11 @@ function addGoods(state, goods) {
     if (g === 'credits') { state.stock.credits += n; out.push(`${n} credits`); continue; }
     const room = Math.max(0, Math.floor((cap[g] || 0) - (state.stock[g] || 0))), put = Math.min(n, room);
     state.stock[g] = (state.stock[g] || 0) + put;
-    sold += (n - put) * (BASE_PRICE[g] || 1);
-    out.push(`${n} ${g}${put < n ? ` (${n - put} more than the stores hold, sold)` : ''}`);
+    const over = n - put, gain = Math.floor(over * (BASE_PRICE[g] || 1));
+    sold += gain;
+    out.push(over ? `${n} ${g}: ${put} into the stores, the other ${over} traded for ${gain} credits (no room)` : `${n} ${g}`);
   }
-  if (sold) { state.stock.credits += Math.floor(sold); out.push(`${Math.floor(sold)} credits for what would not fit`); }
+  state.stock.credits += Math.floor(sold);
   return out;
 }
 function finishTech(state, key) {

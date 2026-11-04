@@ -1005,9 +1005,10 @@ export function createUI(root, api) {
 
   pops.market.addEventListener('click', (e) => {
     if (e.target.closest('[data-mdef]')) { openDefence(e.target.closest('[data-mdef]').dataset.mdef); return; }
-    const b = e.target.closest('[data-sell],[data-guard]'); if (!b || b.disabled) return;
+    const b = e.target.closest('[data-sell],[data-guard],[data-buy]'); if (!b || b.disabled) return;
     const s = S();
-    if (b.dataset.sell) {
+    if (b.dataset.buy) result(R.buy(s, b.dataset.buy, +b.dataset.q));
+    else if (b.dataset.sell) {
       const g = b.dataset.sell, have = Math.floor(s.stock[g] || 0), q = b.dataset.q === 'all' ? have : Math.min(have, +b.dataset.q);
       if (q <= 0) { toast(`No ${GOOD_NAME[g].toLowerCase()} to sell.`, 'bad'); return; }
       result(R.sell(s, g, q));
@@ -1021,7 +1022,8 @@ export function createUI(root, api) {
     const goods = SELLABLE.filter((g) => !LATE[g] || lateShown(s, g));
     const prices = goods.map((g) => { try { return R.price(s, g); } catch { return null; } });
     const yard = finishedOf(s, 'scrapyard').length > 0;
-    const sig = JSON.stringify([goods, prices, goods.map((g) => Math.floor(s.stock[g] || 0)), (s.guardians || []).map((g) => [g.id, g.level, g.hp]), yard]);
+    const imports = R.IMPORTS || [], buyP = imports.map((g) => { try { return R.buyPrice(s, g); } catch { return null; } });
+    const sig = JSON.stringify([goods, prices, buyP, Math.floor(s.stock.credits), goods.map((g) => Math.floor(s.stock[g] || 0)), (s.guardians || []).map((g) => [g.id, g.level, g.hp]), yard]);
     if (sig === marketSig) return;
     marketSig = sig;
     const hasDock = s.buildings.some((b) => b.key === 'dock' && !b.build);
@@ -1034,6 +1036,10 @@ export function createUI(root, api) {
         <td class="cl-sellbtns">${[10, 100].map((q) => `<button type="button" class="cl-btn xs" data-sell="${g}" data-q="${q}" ${have < 1 ? 'disabled' : ''}>${q}</button>`).join('')}<button type="button" class="cl-btn xs" data-sell="${g}" data-q="all" ${have < 1 ? 'disabled' : ''} title="${p != null ? `≈ ${num(have * p)} cr` : ''}">All</button></td></tr>`; }).join('')}
       </tbody></table>
       <p class="cl-dim">Every 10 units sold lowers that price 2%; prices recover a little each day.</p>
+      ${imports.length ? `<h4>Buy <small>imports at twice the price · ${num(Math.floor(s.stock.credits))} cr</small></h4>
+      <table class="cl-table cl-mkt"><tbody>${imports.map((g, i) => `<tr><td>${GOOD_NAME[g]}</td><td class="n">${buyP[i] == null ? '–' : (+buyP[i]).toFixed(2)} <small>cr</small></td>
+        <td class="cl-sellbtns">${[10, 100].map((q) => `<button type="button" class="cl-btn xs" data-buy="${g}" data-q="${q}" ${hasDock && buyP[i] != null && s.stock.credits >= buyP[i] ? '' : 'disabled'} title="≈ ${buyP[i] != null ? num(Math.ceil(buyP[i] * q)) : '?'} cr">+${q}</button>`).join('')}</td></tr>`).join('')}</tbody></table>
+      <p class="cl-dim">Every 10 units bought raises that price 2%; it settles back over a few days.</p>` : ''}
       ${guards.length ? `<h4>Guardians <small>${guards.length} machine${guards.length === 1 ? '' : 's'}${yard ? ' · Scrapyard: +20%' : ''}</small></h4>
       ${yard ? '' : '<p class="cl-dim">A Scrapyard sells machines for a fifth more.</p>'}
       <div class="cl-guards">${guards.map((g) => { const sp = salePrice(s, g), base = yard ? Math.round(sp.credits / 1.2) : null; return `<div class="cl-guard"><b>${esc(mInfo(g.type).name)}</b><small>L${g.level ?? 0}${g.hp != null && g.hp < maxHp(g) ? ` · ${num(g.hp)}/${num(maxHp(g))} HP` : ''}</small>
