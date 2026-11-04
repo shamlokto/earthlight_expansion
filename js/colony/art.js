@@ -5,16 +5,18 @@
 // and the caller draws its procedural fallback. Plain ES module, no DOM.
 //
 //   MANIFEST[slot] = { kind, size: [w, h], seamless, prompt, refs, file }
-//     kind      'card' | 'terrain' | 'portrait' | 'sky' | 'title'
+//     kind      'card' | 'terrain' | 'portrait' | 'sky' | 'title' | 'scene' (a big moment's still; its
+//               clip, if any, is in VIDEOS below)
 //     size      output size in pixels
 //     seamless  the picture tiles (terrain textures)
 //     prompt    prompt file (the style bible and tools/art/colony/prompts/_<kind>.txt go first)
 //     refs      reference pictures for the edits endpoint, so a set keeps one style
 //     file      'art/colony/<kind>/<name>.webp', or null while the slot has no picture
 
-const SIZE = { card: [256, 256], terrain: [256, 256], portrait: [256, 320], sky: [1024, 512], title: [1280, 720] };
+const SIZE = { card: [256, 256], terrain: [256, 256], portrait: [256, 320], sky: [1024, 512], title: [1280, 720], scene: [1280, 720] };
 const CARD_REF = 'tools/art/colony/ref/card.png';
-const PORTRAIT_REF = 'art/colony/portrait/sato.webp';   // the later portraits (wanderers, survivors) follow Sato's style
+const PORTRAIT_REF = 'art/colony/portrait/sato.webp';
+const TITLE_REF = 'art/colony/title/rebuild.webp';         // the scenes follow the title picture   // the later portraits (wanderers, survivors) follow Sato's style
 
 // Slots of version 1, then version 2 (docs/COLONY-V2.md "Art"), then version 3 (docs/COLONY-V3.md "Art"), then version 4
 // (docs/COLONY-V4.md stage 1: the deck buildings). Add a slot here and a prompt file,
@@ -40,7 +42,11 @@ const SLOTS = {
     'w_kestrel', 'w_brann', 'w_ilves', 'w_oduya', 'w_vashti', 'w_corran', 'w_maris', 'w_thorne', 'w_seln', 'w_okafor',
     'w_rook', 'w_hale',
     // the survivors of Eden (data/secrets.js SURVIVOR_COMMANDERS)
-    'marrow', 'venn'],
+    'marrow', 'venn',
+    // version 4, stage 4: the player, at last (the ending)
+    'general'],
+  // version 4, stage 4: the big moments (D26); each still is the first frame of its clip
+  scene: ['ending'],
 };
 
 // Pictures that exist. Kept up to date by `node tools/art/colony-xai.mjs --index`.
@@ -136,6 +142,8 @@ const FILES = {
   'portrait/w_hale': 'art/colony/portrait/w_hale.webp',
   'portrait/marrow': 'art/colony/portrait/marrow.webp',
   'portrait/venn': 'art/colony/portrait/venn.webp',
+  'portrait/general': 'art/colony/portrait/general.webp',
+  'scene/ending': 'art/colony/scene/ending.webp',
 };
 // @files-end
 
@@ -148,11 +156,15 @@ for (const [kind, names] of Object.entries(SLOTS)) {
       size: SIZE[kind],
       seamless: kind === 'terrain',
       prompt: `tools/art/colony/prompts/${kind}-${name}.txt`,
-      refs: kind === 'card' && name !== 'command' ? [CARD_REF] : kind === 'portrait' && name !== 'ruess' && name !== 'sato' ? [PORTRAIT_REF] : [],
+      refs: kind === 'card' && name !== 'command' ? [CARD_REF] : kind === 'portrait' && name !== 'ruess' && name !== 'sato' ? [PORTRAIT_REF] : kind === 'scene' ? [TITLE_REF] : [],
       file: FILES[slot] || null,
     };
   }
 }
 
-export const hasArt = (slot) => !!MANIFEST[slot]?.file;
-export const art = (slot) => MANIFEST[slot]?.file || null;
+// Short xAI clips (image-to-video from a scene's still: tools/art/colony-video.py), silent, played muted
+// over their still; skippable, and the still stands in where video cannot play.
+const VIDEOS = { 'video/ending': 'art/colony/video/ending.mp4' };
+
+export const hasArt = (slot) => !!(MANIFEST[slot]?.file || VIDEOS[slot]);
+export const art = (slot) => MANIFEST[slot]?.file || VIDEOS[slot] || null;

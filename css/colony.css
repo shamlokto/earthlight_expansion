@@ -1266,3 +1266,9 @@ button.cl-jslot:hover { border-color: var(--gold); }
 .cl-vstats dt { font: 600 9px var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: #9a8a66; }
 .cl-vstats dd { margin: 2px 0 0; font: 600 17px var(--f-data); color: #ffe7b0; }
 @media (max-width: 640px) { .cl-vstats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cl-event.cl-evvictory.cine { display: block; position: relative; width: min(1180px, 100%); height: auto; aspect-ratio: 16 / 9; max-height: calc(100dvh - 32px); overflow: hidden; background: #000; }
+.cl-vcine { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.cl-vcap { position: absolute; left: 0; right: 0; top: 0; padding: 26px 32px 60px; background: linear-gradient(180deg, rgba(0, 0, 0, .65), transparent); opacity: 0; animation: fvline 2s var(--ease) 2.5s forwards; pointer-events: none; }
+.cl-vcap h2 { margin: 8px 0 0; font: 600 34px var(--f-display); letter-spacing: .16em; text-transform: uppercase; color: #f3e2bd; text-shadow: 0 0 30px rgba(255, 217, 138, .45), 0 2px 8px rgba(0, 0, 0, .8); }
+.cl-vnav { position: absolute; right: 22px; bottom: 18px; margin: 0; }
+@media (max-width: 640px) { .cl-vcap { padding: 14px 16px 40px; } .cl-vcap h2 { font-size: 22px; } .cl-vnav { right: 12px; bottom: 10px; } }

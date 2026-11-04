@@ -2358,15 +2358,32 @@ export function createUI(root, api) {
     </svg>`;
   }
   // Version 4, stage 4: the ending, Eden Restored (shown once; the colony carries on after it, D25).
-  // A video for it (art slot video/ending) plays if there is one, else its still, else the title art.
+  // The clip (art slot video/ending) opens it; the page beside the words shows its still (scene/ending), else the title art.
   function victoryPicture() {
-    const vid = api.art?.('video/ending'), still = api.art?.('scene/ending') || api.art?.('title/rebuild');
-    if (vid) return `<video class="cl-fvmedia" src="${esc(vid)}"${still ? ` poster="${esc(still)}"` : ''} autoplay muted playsinline></video>`;
+    const still = api.art?.('scene/ending') || api.art?.('title/rebuild');
     return still ? `<img class="cl-fvmedia" src="${esc(still)}" alt="Eden, restored, above the Earth">` : '';
   }
-  function renderVictory(s, p) {
+  // Stage 0, when there is a clip: the cinematic, full width (the clip plays, the title fades in;
+  // Continue or Skip, and it moves on by itself when the clip ends). Stage 1: the words and the numbers.
+  let vStage = { id: null, stage: 0 };
+  function renderVictory(s, p, stage) {
+    if (vStage.id !== p.id) vStage = { id: p.id, stage: api.art?.('video/ending') && !reduceMotion() ? 0 : 1 };
+    if (stage != null) vStage.stage = stage;
     evId = p.id;
     modal.classList.remove('soft'); modal.classList.add('final');
+    if (vStage.stage === 0) {
+      const vid = api.art('video/ending'), still = api.art?.('scene/ending');
+      evBox.className = 'cl-win cl-event cl-evfinal cl-evvictory cine';
+      evBox.innerHTML = `<video class="cl-vcine" src="${esc(vid)}"${still ? ` poster="${esc(still)}"` : ''} autoplay muted playsinline></video>
+        <div class="cl-vcap"><div class="cl-evkind">${esc(KIND_LABEL.victory)} · Day ${s.day}</div><h2 id="evTitle">${esc(p.title || 'Eden Restored')}</h2></div>
+        <div class="cl-evchoices cl-vnav"><button type="button" class="cl-btn primary" data-vnext>Continue ›</button></div>`;
+      modal.hidden = false;
+      const v = evBox.querySelector('video');
+      v?.addEventListener('ended', () => { if (vStage.id === p.id && vStage.stage === 0 && S().pending?.[0]?.id === p.id) renderVictory(S(), p, 1); });
+      v?.addEventListener('error', () => { if (vStage.id === p.id && vStage.stage === 0) renderVictory(S(), p, 1); });
+      evBox.querySelector('[data-vnext]')?.focus({ preventScroll: true });
+      return;
+    }
     evBox.className = 'cl-win cl-event cl-evfinal cl-evvictory';
     const v = s.victory || {}, choice = p.choices?.[0] || { key: 'keep', label: 'Keep building Eden' };
     const stats = [['Day', v.day], ['Colonists', v.pop], ['Chambers open', v.chambers], ['Relief convoys', v.convoys], ['Buildings', v.buildings], ['Raids beaten', v.raids], ['Pirate dens cleared', v.dens], ['Logs read', v.logs]];
@@ -2621,6 +2638,7 @@ export function createUI(root, api) {
     // version 4, stage 2: the windows the interface opens itself (the sentries' fight) and the Ninefold vault's pages
     const lok = e.target.closest('[data-localok]');
     if (lok) { localEv = null; evId = null; modal.hidden = true; const [tab, ref] = (lok.dataset.localok || '').split(':'); if (tab) openJournal(tab, ref || null); renderEvent(); return; }
+    if (e.target.closest('[data-vnext]')) { const p = S().pending?.[0]; if (p?.kind === 'victory') renderVictory(S(), p, 1); return; }
     if (e.target.closest('[data-fvnext],[data-fvskip]')) {
       const p = S().pending?.[0]; if (!p || p.kind !== 'finalvault') return;
       renderFinal(S(), p, e.target.closest('[data-fvskip]') ? 2 : (fv?.stage || 0) + 1);
