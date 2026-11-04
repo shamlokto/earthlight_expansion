@@ -357,6 +357,11 @@ function doShow(sh) {
     ui.openJournal?.(typeof sh.journal === 'string' ? sh.journal : null, sh.ref ?? sh.log ?? null);
     return;
   }
+  if (sh.chart) {
+    setPlacing(null);
+    ui.openChart?.(typeof sh.chart === 'string' ? sh.chart : null);
+    return;
+  }
   if (sh.market) { setPlacing(null); setDeck('main', { quiet: true }); ui.openMarket(); const d = state.buildings.find((b) => b.key === 'dock'); if (d) view?.focus?.(d.x + 1, d.y + 1); return; }
   if (sh.roads) {
     if (sh.deck) setDeck(sh.deck, { quiet: true });
@@ -601,6 +606,7 @@ function onKey(e) {
     case 't': case 'T': if (!e.ctrlKey && !e.metaKey && !e.altKey) ui.toggleResearch(); break;
     case 'g': case 'G': if (!e.ctrlKey && !e.metaKey && !e.altKey) ui.toggleDefence?.(); break;
     case 'j': case 'J': if (!e.ctrlKey && !e.metaKey && !e.altKey) ui.toggleJournal?.(); break;
+    case 'x': case 'X': if (!e.ctrlKey && !e.metaKey && !e.altKey) ui.toggleChart?.(); break;
     case 'Escape':
       if (placing?.roadStart) { placing.roadStart = null; applyOverlay(); if (hover) ghostAt(hover.x, hover.y); }
       else if (placing) setPlacing(null);

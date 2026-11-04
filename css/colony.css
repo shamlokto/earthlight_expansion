@@ -1207,3 +1207,45 @@ button.cl-jslot:hover { border-color: var(--gold); }
 @media (prefers-reduced-motion: reduce) {
   .cl-titlebox, .cl-event, .cl-event::after, .cl-toast, .cl-pop, .cl-showme, .cl-goal { animation: none !important; }
 }
+
+/* version 4, stage 3: the Star chart (expeditions) */
+.cl-xbtn { border-color: rgba(122, 255, 216, .45); }
+.cl-xbtn .cl-ico { color: #7affd8; }
+.cl-chart { --br: #7affd8; --glass: rgba(5, 9, 28, .96); grid-row: 2; grid-column: 1 / -1; justify-self: center; align-self: start; width: min(1180px, 100%); max-height: 100%; min-height: 0;
+  display: flex; flex-direction: column; position: relative; z-index: 6; border-color: rgba(122, 255, 216, .4); animation: toast-in .2s var(--ease); }
+.cl-xhead .cl-rst:first-child b { color: #7affd8; }
+.cl-xbody { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; min-height: 0; overflow: hidden; padding: 8px 14px 14px; }
+.cl-xmap { min-height: 0; display: flex; align-items: center; justify-content: center; }
+.cl-xsvg { width: 100%; max-height: calc(100vh - 190px); }
+.cl-xside { overflow-y: auto; min-height: 0; scrollbar-width: thin; }
+.cl-xring { fill: none; stroke: rgba(111, 211, 255, .18); stroke-width: .6; stroke-dasharray: 2 2; }
+.cl-xlink { stroke: rgba(122, 255, 216, .22); stroke-width: .5; }
+.cl-xeden { fill: #f5c542; stroke: #fff6c8; stroke-width: .8; }
+.cl-xearth { fill: #1d5fae; stroke: #8fd0ff; stroke-width: .8; opacity: .85; }
+.cl-xlbl { fill: var(--dim); font: 600 5px var(--f-display); letter-spacing: .2em; text-anchor: middle; }
+.cl-xsec { cursor: pointer; }
+.cl-xsec circle { fill: rgba(8, 14, 46, .92); stroke: var(--sc); stroke-width: .9; }
+.cl-xsec text { fill: var(--sc); font-size: 7px; text-anchor: middle; pointer-events: none; }
+.cl-xsec.unknown circle { stroke-dasharray: 1.5 1.2; }
+.cl-xsec.cleared circle { opacity: .6; }
+.cl-xsec .cl-xok { fill: var(--good); font-size: 5px; }
+.cl-xsec:hover circle, .cl-xsec.sel circle { stroke-width: 1.8; fill: rgba(20, 40, 80, .95); }
+.cl-xship path { fill: #fff; stroke: #7affd8; stroke-width: .5; }
+.cl-xship text { fill: #7affd8; font: 600 4.5px var(--f-data); text-anchor: middle; }
+.cl-xname { display: flex; gap: 8px; align-items: center; margin: 8px 0 2px; font: 700 18px var(--f-display); color: var(--sc); }
+.cl-xglist { display: grid; gap: 3px; max-height: 260px; overflow-y: auto; }
+.cl-xg { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; font-size: 12.5px; padding: 3px 6px; border: 1px solid var(--edge); border-radius: 2px; cursor: pointer; }
+.cl-xg.off { opacity: .5; cursor: default; }
+.cl-xg small, .cl-xg em { color: var(--dim); font-style: normal; font-size: 11px; }
+.cl-xg span { font: 600 12px var(--f-data); color: var(--gold); }
+.cl-xcmd { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 12.5px; }
+.cl-xaway { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; padding: 4px 0; border-bottom: 1px dashed rgba(111, 211, 255, .1); }
+.cl-xaway small { color: var(--dim); flex: 1 1 60%; }
+.cl-xrep { font-size: 12.5px; margin: 4px 0; }
+.cl-ui:has(.cl-chart:not([hidden])) .cl-decks, .cl-ui:has(.cl-chart:not([hidden])) .cl-ovl { visibility: hidden; }
+@media (max-width: 760px) {
+  .cl-chart { position: fixed; inset: 0; width: 100%; max-height: none; z-index: 8; border-radius: 0; align-self: stretch; justify-self: stretch; }
+  .cl-xbody { grid-template-columns: 1fr; overflow-y: auto; }
+  .cl-xsvg { max-height: 50vh; }
+}
+.cl-xearthl { fill: #d8ecff; }

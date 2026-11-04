@@ -29,6 +29,8 @@
 //   ui.openJournal(tab, ref)  the Discoveries journal (version 4, stage 2): 'logs' | 'vaults' | 'survivors' | 'dangers',
 //                             ref a log id, a vault or survivors site / ref, or a danger's chamber id
 //   ui.toggleJournal()        key J
+//   ui.openChart(sectorId)    the Star chart (version 4, stage 3): the sectors, a squadron picker, squadrons in flight
+//   ui.toggleChart()          key X
 import { CATEGORIES, BUILDINGS, BUILDING, NEEDS, CHAMBER_AIR_PER_100 } from './data/buildings.js';
 import { TERRAIN, ARTIFACT, T } from './data/terrain.js';
 import { BRANCHES, TECHS, TECH } from './data/tech.js';
@@ -73,7 +75,10 @@ const KIND_LABEL = { goal: 'Goal complete', welcome: 'Landfall', transport: 'Tra
   raid: 'Raid', raidwarn: 'Raid warning', wanderer: 'Wanderer', raidreport: 'After the raid', report: 'After the raid', commander: 'Commanders', machine: 'Arsenal',
   // version 4, stage 2: the secrets
   discovery: 'Discovery', finalvault: 'The Ninefold vault', drones: 'Sentries', dronefight: 'Sentries', reactor: 'The old core', reactorwarn: 'The old core', reactorfail: 'The old core',
-  vault: 'Vault opened', survivors: 'Survivors', danger: 'Danger' };
+  vault: 'Vault opened', survivors: 'Survivors', danger: 'Danger', expedition: 'Expedition' };
+// Version 4, stage 3: the Star chart's site glyphs and colours.
+const SITE_GLYPH = { belt: '⁂', comet: '☄', derelict: '⚓', babylon: '✠', bunker: '▣', den: '☠', outpost: '⌂', listening: '◉', relief: '✚' };
+const SITE_COLOR = { belt: '#c9b38a', comet: '#8fd8ff', derelict: '#ffb070', babylon: '#ffd36a', bunker: '#b0e07a', den: '#ff6a5a', outpost: '#c3a6ff', listening: '#7affd8', relief: '#6fb8ff' };
 const SPEAKER = { ruess: 'Prof. Ruess', sato: 'Capt. Sato', marrow: 'Warden Marrow', venn: 'Tobias Venn' };
 // Version 4 (docs/COLONY-V4.md): the three decks, top to bottom.
 const DECKS = ['upper', 'main', 'lower'];
@@ -301,6 +306,14 @@ export function helpHtml(art, diff) {
       <li><b>Something stirs</b> deep under Eden. If a survey wakes it, a countdown appears in the top bar: deal with it before it runs out.</li>
     </ul>
     <p>The inspector shows what a chamber holds: click a surveyed chamber to read, open or clear right there.</p>`)}
+  ${sec('expeditions', 'Expeditions', `<figure class="cl-hfig cl-hbook"><span style="font-size:42px;color:#7affd8">✦</span><figcaption>Star chart</figcaption></figure>`, `
+    <p>Eden's guardians can fly beyond the hull. The <b>Star chart</b> (top bar, or key <b>X</b>) shows the sectors in three rings around Eden, Earth below. The inner ring is charted at the start; visiting a sector charts the ones beyond it.</p>
+    <ul class="cl-hsteps">
+      <li><b>A squadron</b>: up to six crewed, undamaged guardians, perhaps with a commander. Pick a sector, tick the machines, check the win chance and <b>Launch</b>. The trip takes 4 days per ring each way.</li>
+      <li><b>Away is away</b>: machines on an expedition do not defend Eden from raids or sentries. A squadron can be recalled before it arrives.</li>
+      <li><b>Sites</b>: asteroid belts and comets (ore, water), derelicts (salvage, maybe a machine), Galt bunkers (survivors, blueprints), outposts (trade, wanderers), <b>pirate dens</b> (clear them: heat falls and raids come less often), the Directorate listening post, Earth relief stations, and the wreck of the Babylon.</li>
+      <li><b>Hazards</b> in the outer rings (debris, radiation) cost hull unless a commander with good wits leads the squadron. The report comes home with them.</li>
+    </ul>`)}
   ${sec('commanders', 'Commanders', `<figure class="cl-hfig portrait">${pic('portrait/sato', 'Capt. Mira Sato')}<figcaption>Capt. Sato</figcaption></figure>`, `
     <p>A commander in a machine makes it fight better. You start with two: <b>the General</b> (three times the power in any machine) and <b>Capt. Sato</b>, best in ships. See them in <b>Defence › Commanders</b>.</p>
     <ul class="cl-hsteps">
@@ -360,6 +373,7 @@ export function createUI(root, api) {
     <div class="cl-tools">
       <button type="button" class="cl-btn sm cl-resbtn" data-tool="research" title="Research: the tech tree (T)"><span class="cl-ico">⚗</span><span class="cl-lbl">Research</span></button>
       <button type="button" class="cl-btn sm cl-defbtn" data-tool="defence" title="Defence: guardians, production, commanders and raids (G)"><span class="cl-ico">⛨</span><span class="cl-lbl">Defence</span></button>
+      <button type="button" class="cl-btn sm cl-xbtn" data-tool="chart" title="Star chart: expeditions to the sectors around Eden (X)"><span class="cl-ico">✦</span><span class="cl-lbl">Star chart</span></button>
       <button type="button" class="cl-btn sm cl-jbtn" data-tool="journal" hidden title="Discoveries: logs, vaults, survivors and dangers (J)"><span class="cl-ico cl-bookico">${SICON.book}</span><span class="cl-lbl">Discoveries</span><span class="cl-jnew" data-jnew hidden></span></button>
       <button type="button" class="cl-btn sm" data-tool="market" title="Sell goods and guardians"><span class="cl-ico">⚖</span><span class="cl-lbl">Market</span></button>
       <button type="button" class="cl-btn sm" data-tool="save" title="Save the colony in this browser"><span class="cl-ico">⤓</span><span class="cl-lbl">Save</span></button>
@@ -437,6 +451,14 @@ export function createUI(root, api) {
     <div class="cl-dtabs cl-jtabs" role="tablist">${J_TABS.map(([k, n]) => `<button type="button" role="tab" data-jtab="${k}" aria-selected="false">${n}<span data-jtabn="${k}"></span></button>`).join('')}</div>
     <div class="cl-jbody" data-jbody></div>
   </section>
+  <section class="cl-chart cl-win" hidden role="dialog" aria-label="Star chart">
+    <header class="cl-rhead cl-xhead">
+      <div class="cl-rtitle"><h3>Star chart</h3><small>expeditions · X</small></div>
+      <div class="cl-rstats" data-xstats></div>
+      <button type="button" class="cl-x" data-close="chart" title="Close (Esc or X)" aria-label="Close">×</button>
+    </header>
+    <div class="cl-xbody"><div class="cl-xmap" data-xmap></div><div class="cl-xside" data-xside></div></div>
+  </section>
   <div class="cl-decks" role="group" aria-label="Deck" title="Decks: open / all chambers on each. PageUp / PageDown move between them."><i>Deck</i>${DECKS.map((d) => `<button type="button" data-deck="${d}" aria-pressed="${d === 'main'}"><b>${DECK_NAME[d]}</b><small data-deckn="${d}"></small></button>`).join('')}</div>
   <div class="cl-ovl" role="group" aria-label="Overlay"><i>Overlay</i>${OVERLAYS.map(([k, n]) => `<button type="button" data-ovl="${k ?? ''}" aria-pressed="${k === null}">${n}</button>`).join('')}</div>
   <div class="cl-placing" hidden><span data-placing></span> <button type="button" class="cl-btn sm" data-cancel>Cancel</button></div>
@@ -502,6 +524,116 @@ export function createUI(root, api) {
   const lateShown = (s, g) => (s.stock?.[g] || 0) > 0 || techDone(s, LATE[g]) || s.buildings.some((b) => BUILDING[b.key]?.makes?.[g]);
 
   // ---------------------------------------------------------------- top bar
+  // ---------------------------------------------------------------- version 4, stage 3: the Star chart
+  // The rings around Eden (Earth below) with the sectors by site type, squadrons in flight; a sector's
+  // card with a squadron picker, a commander and the preview; Launch. Orders go through rules.js.
+  const xEl = $('.cl-chart'), xMap = $('[data-xmap]'), xSide = $('[data-xside]'), xStats = $('[data-xstats]');
+  const RING_R = [0, 34, 62, 90];
+  let xSel = null, xPick = new Set(), xCmd = '', xSig = '';
+  const xy = (r, a) => [+(Math.cos(a) * r).toFixed(1), +(Math.sin(a) * r).toFixed(1)];
+  const xReady = (s, g) => { const crew = crewSet(s); return !g.away && hpOf(g) >= maxHp(g) && (!crew || crew.has(g.id)); };
+  function xDefaultPick(s) {
+    xPick = new Set((s.guardians || []).filter((g) => xReady(s, g)).sort((a, b) => gPower(s, b) - gPower(s, a)).slice(0, 4).map((g) => g.id));
+  }
+  function renderChart(force) {
+    if (xEl.hidden) return;
+    const s = S(), st = rule('expeditionStatus', s);
+    if (!st) { xSide.innerHTML = note('Expeditions are not ready in this build yet.'); return; }
+    const sig = JSON.stringify([s.day, xSel, [...xPick], xCmd, st.away.map((e) => [e.id, e.left, e.report ? 1 : 0]), st.sectors.map((x) => `${+x.known}${+x.visited}${+x.cleared}`).join(''),
+      (s.guardians || []).map((g) => `${g.id}:${g.hp}:${g.away || ''}:${g.commander || ''}`).join(), (s.commanders || []).map((c) => `${c.key}${c.injured > 0 ? 'i' : ''}`).join()]);
+    if (!force && sig === xSig) return;
+    xSig = sig;
+    const known = st.sectors.filter((x) => x.known).length;
+    xStats.innerHTML = `<span class="cl-rst" title="Sectors charted / all"><i>Charted</i><b>${known}<small>/${st.sectors.length}</small></b><em>${st.sectors.filter((x) => x.visited).length} visited</em></span>
+      <span class="cl-rst" title="Squadrons away from Eden: their machines do not defend it"><i>Away</i><b>${st.away.length}</b><em>${(s.guardians || []).filter((g) => g.away).length} machines</em></span>
+      <span class="cl-rst" title="Pirate dens cleared: heat lower, raids rarer"><i>Dens</i><b>${st.dens}</b><em>cleared</em></span>`;
+    xMap.innerHTML = chartSvg(s, st);
+    xSide.innerHTML = xSel ? sectorCard(s, st.sectors.find((x) => x.id === xSel)) : chartHome(s, st);
+  }
+  function chartSvg(s, st) {
+    const byId = Object.fromEntries(st.sectors.map((x) => [x.id, x]));
+    const links = st.sectors.filter((x) => x.parent && x.known).map((x) => { const p = byId[x.parent], [a, b] = xy(RING_R[p.ring], p.angle), [c, d] = xy(RING_R[x.ring], x.angle); return `<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" class="cl-xlink"/>`; }).join('');
+    const secs = st.sectors.map((x) => {
+      const [cx, cy] = xy(RING_R[x.ring], x.angle), col = x.known ? SITE_COLOR[x.site] : '#55607a';
+      return `<g class="cl-xsec${x.id === xSel ? ' sel' : ''}${x.known ? '' : ' unknown'}${x.cleared ? ' cleared' : ''}" data-xsec="${x.id}" transform="translate(${cx} ${cy})" style="--sc:${col}">
+        <title>${esc(x.known ? `${x.name}: ${x.siteName}` : 'Uncharted sector')}</title><circle r="7.5"/><text dy="3.2">${x.known ? SITE_GLYPH[x.site] : '?'}</text>${x.cleared ? '<text class="cl-xok" dx="6.5" dy="-4.5">✓</text>' : ''}</g>`;
+    }).join('');
+    const ships = st.away.map((e) => {
+      const r = RING_R[e.ring] * e.pos, [cx, cy] = xy(r, e.angle), deg = (e.angle * 180 / Math.PI + (e.outbound ? 90 : 270)).toFixed(0);
+      return `<g class="cl-xship" transform="translate(${cx} ${cy})"><path d="M0 -4.5 L3.2 3.5 L0 2 L-3.2 3.5 Z" transform="rotate(${deg})"/><text dy="-6">${e.left}d</text></g>`;
+    }).join('');
+    return `<svg viewBox="-104 -104 208 232" class="cl-xsvg" role="img" aria-label="The sectors around Eden">
+      <circle class="cl-xearth" cx="0" cy="118" r="20"/><text class="cl-xlbl cl-xearthl" x="0" y="113">EARTH</text>
+      ${RING_R.slice(1).map((r) => `<circle class="cl-xring" r="${r}"/>`).join('')}${links}
+      <circle class="cl-xeden" r="6"/><text class="cl-xlbl" y="13">EDEN</text>${secs}${ships}</svg>`;
+  }
+  function awayList(s, st) {
+    if (!st.away.length) return '';
+    return `<div class="cl-dsec"><h4>Squadrons away</h4>${st.away.map((e) => `<div class="cl-xaway"><b>${esc(e.name)}</b><small>${plural(e.guardians.length, 'machine')}${e.commander ? ` · ${esc(CMDR[e.commander]?.name || e.commander)}` : ''} · ${e.outbound ? `arrives in ${e.arrive - s.day} d` : 'on the way home'}, back in ${e.left} d</small>
+      ${e.outbound ? `<button type="button" class="cl-btn xs" data-xrecall="${e.id}">Recall</button>` : ''}</div>`).join('')}</div>`;
+  }
+  function chartHome(s, st) {
+    const last = st.log.slice(-4).reverse();
+    return `${note('Click a sector to see what is known of it and send a squadron. The inner ring is charted; a visit charts the sectors beyond it. Machines away do not defend Eden.')}
+      ${awayList(s, st)}
+      ${last.length ? `<div class="cl-dsec"><h4>Reports</h4>${last.map((r) => `<p class="cl-xrep"><b>${esc(r.name)}</b> <small class="cl-dim">day ${r.back ?? r.day}</small><br>${r.recalled ? 'Recalled before it arrived.' : `${r.won ? 'Success' : 'Beaten off'}${r.lost?.length ? `, lost ${r.lost.length}` : ''}${r.got?.length ? `: ${esc(r.got.join('; '))}` : '.'}`}</p>`).join('')}</div>` : ''}`;
+  }
+  function sectorCard(s, x) {
+    if (!x) return chartHome(s, rule('expeditionStatus', s));
+    const head = `<button type="button" class="cl-jback" data-xback>‹ The chart</button>
+      <h3 class="cl-xname" style="--sc:${x.known ? SITE_COLOR[x.site] : '#8890a8'}"><span>${x.known ? SITE_GLYPH[x.site] : '?'}</span>${esc(x.known ? x.name : 'Uncharted sector')}</h3>
+      <p class="cl-dim">Ring ${x.ring} · ${x.days} days each way${x.known ? ` · ${esc(x.siteName)}${x.cleared ? ' · cleared' : x.visited ? ' · visited' : ''}` : ''}</p>`;
+    if (!x.known) return `${head}${note('Nobody has been out this far yet. Visit the sector next to it, nearer Eden, to chart it.')}`;
+    const site = R.SITES?.[x.site] || {}, gs = s.guardians || [], crew = crewSet(s);
+    const ids = [...xPick].filter((id) => gs.some((g) => g.id === id));
+    const pv = rule('expeditionPreview', s, x.id, ids, xCmd || null) || {};
+    const pct = pv.winChance != null ? Math.round(pv.winChance * 100) : null;
+    const rows = gs.length ? gs.map((g) => {
+      const m = mInfo(g.type), why = g.away ? 'away' : hpOf(g) < maxHp(g) ? 'damaged' : crew && !crew.has(g.id) ? 'no crew' : '';
+      return `<label class="cl-xg${why ? ' off' : ''}"><input type="checkbox" data-xg="${g.id}" ${xPick.has(g.id) ? 'checked' : ''} ${why ? 'disabled' : ''}><b>${esc(m.name)}</b><small>${why || `L${g.level || 0}${g.commander ? ` · ${esc(CMDR[g.commander]?.name || '')}` : ''}`}</small><span>${num(gPower(s, g))}</span><em>${num(hpOf(g))}/${num(maxHp(g))} HP</em></label>`;
+    }).join('') : note('No guardians yet: build an Arsenal and order machines (Defence, G).');
+    const cms = commanders(s).filter((c) => !(c.injured > 0) && !gs.some((g) => g.commander === c.key && g.away));
+    const hz = pv.hazard;
+    return `${head}<p>${esc(site.text || '')}</p>
+      ${pv.strength ? `<div class="cl-kv"><span>Opposition</span><b>${num(pv.strength)}</b></div>` : ''}
+      ${hz ? `<div class="cl-kv"><span>Hazard: ${esc(hz.name)}</span><b class="${hz.avoided ? 'good' : 'warn'}">${hz.avoided ? `${esc(CMDR[hz.by]?.name || 'The commander')} steers clear` : `−${Math.round(hz.hurt * 100)}% hull (wits over ${hz.need} avoids it)`}</b></div>` : ''}
+      <div class="cl-kv"><span>Expected</span><b>${esc((pv.lootText || []).join(', ') || 'nothing left to find')}</b></div>
+      <div class="cl-dsec"><h4>Squadron <small class="cl-dim">${ids.length}/6 · power ${num(pv.power || 0)}</small></h4><div class="cl-xglist">${rows}</div>
+      <label class="cl-xcmd">Commander <select data-xcmd><option value="">None${pv.leader && !xCmd ? ` (${esc(CMDR[pv.leader]?.name || '')} aboard)` : ''}</option>${cms.map((c) => `<option value="${esc(c.key)}" ${xCmd === c.key ? 'selected' : ''}>${esc(CMDR[c.key]?.name || c.key)} (wits ${CMDR[c.key]?.wits ?? '?'})</option>`).join('')}</select></label></div>
+      ${pv.strength ? `<div class="cl-win-chance${pct >= 65 ? ' good' : pct >= 40 ? ' even' : ' bad'}"><i>Win chance</i><span class="cl-wbar"><span style="width:${pct}%"></span></span><b>${pct}%</b></div>` : ''}
+      <div class="cl-row"><button type="button" class="cl-btn primary" data-xlaunch ${pv.ok ? '' : `disabled title="${esc(pv.why || '')}"`}>Launch <small>${x.days * 2} days</small></button>${pv.ok ? '' : `<small class="cl-dim">${esc(pv.why || '')}</small>`}</div>
+      ${awayList(s, rule('expeditionStatus', s))}`;
+  }
+  xEl.addEventListener('click', (e) => {
+    const t = e.target, s = S();
+    if (t.closest('[data-close=chart]')) { closeChart(); return; }
+    const sec = t.closest('[data-xsec]');
+    if (sec) { xSel = sec.dataset.xsec; xCmd = ''; xDefaultPick(s); renderChart(true); return; }
+    if (t.closest('[data-xback]')) { xSel = null; renderChart(true); return; }
+    const b = t.closest('button'); if (!b || b.disabled) return;
+    if (b.dataset.xlaunch != null) { const r = result(rule('launchExpedition', s, xSel, [...xPick], xCmd || null) ?? notReady('Expeditions')); if (r?.ok !== false) { xSel = null; xPick.clear(); } }
+    else if (b.dataset.xrecall) result(rule('recallExpedition', s, +b.dataset.xrecall) ?? notReady('Recalling'));
+    else return;
+    renderChart(true);
+  });
+  xEl.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.matches('[data-xg]')) { const id = +t.dataset.xg; if (t.checked) xPick.add(id); else xPick.delete(id); }
+    else if (t.matches('[data-xcmd]')) xCmd = t.value;
+    else return;
+    renderChart(true);
+  });
+  function openChart(sectorId) {
+    for (const p of Object.values(pops)) p.hidden = true;
+    closeResearch(); closeDefence(); closeJournal();
+    $('.cl-build')?.classList.remove('open');
+    if (sectorId) { xSel = sectorId; xDefaultPick(S()); }
+    xEl.hidden = false;
+    renderChart(true);
+  }
+  function closeChart() { if (!xEl || xEl.hidden) return false; xEl.hidden = true; return true; }
+  function toggleChart(id) { if (xEl.hidden || id) openChart(id); else closeChart(); }
+
   $('.cl-speeds').addEventListener('click', (e) => { const b = e.target.closest('[data-speed]'); if (b) api.setSpeed(+b.dataset.speed); });
   $('.cl-taxctl').addEventListener('click', (e) => {
     const b = e.target.closest('[data-taxstep]'); if (!b) return;
@@ -517,6 +649,7 @@ export function createUI(root, api) {
     if (t === 'research') toggleResearch();
     else if (t === 'defence') toggleDefence();
     else if (t === 'journal') toggleJournal();
+    else if (t === 'chart') toggleChart();
     else if (t === 'market') togglePop('market');
     else if (t === 'save') api.save();
     else if (t === 'settings') togglePop('settings');
@@ -979,13 +1112,13 @@ export function createUI(root, api) {
   // ---------------------------------------------------------------- pop-up panels
   function openPop(name) {
     for (const [k, p] of Object.entries(pops)) p.hidden = k !== name;
-    closeResearch(); closeDefence(); closeJournal();
+    closeResearch(); closeDefence(); closeJournal(); closeChart();
     if (name === 'happy') { happySig = ''; renderHappy(); }
     if (name === 'market') { marketSig = ''; renderMarket(); }
     if (name === 'settings') renderSettings();
   }
   function togglePop(name) { if (pops[name].hidden) openPop(name); else pops[name].hidden = true; }
-  function closePops() { let any = closeResearch(); any = closeDefence() || any; any = closeJournal() || any; for (const p of Object.values(pops)) { any ||= !p.hidden; p.hidden = true; } return any; }
+  function closePops() { let any = closeResearch(); any = closeDefence() || any; any = closeJournal() || any; any = closeChart() || any; for (const p of Object.values(pops)) { any ||= !p.hidden; p.hidden = true; } return any; }
   for (const p of Object.values(pops)) p.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) p.hidden = true; });
 
   function renderHappy() {
@@ -1170,7 +1303,7 @@ export function createUI(root, api) {
   }
   function openResearch(key) {
     for (const p of Object.values(pops)) p.hidden = true;
-    closeDefence(); closeJournal();
+    closeDefence(); closeJournal(); closeChart();
     resFlash = key || null;
     resEl.hidden = false;
     $('.cl-build')?.classList.remove('open');
@@ -1364,7 +1497,7 @@ export function createUI(root, api) {
       return `<option value="${esc(c.key)}" ${g.commander === c.key ? 'selected' : ''} ${c.injured > 0 ? 'disabled' : ''}>${esc(C.name || c.key)}${c.injured > 0 ? ' (injured)' : other ? ` (in ${esc(mInfo(other.type).name)})` : ''}</option>`; }).join('')}`;
     const rows = gs.map((g, i) => {
       const m = mInfo(g.type), mh = maxHp(g), hp = hpOf(g), crew = isCrewed(s, g, i), up = upkeepOf(g), sale = salePrice(s, g);
-      const status = hp <= 0 ? '<b class="bad">Wrecked</b>' : !crew ? '<b class="bad">No crew</b>' : hp < mh ? (yard ? '<b class="warn">Repairing</b>' : '<b class="warn">Damaged</b>') : '<b class="good">Ready</b>';
+      const status = g.away ? '<b class="warn" title="On an expedition (Star chart, X)">Away</b>' : hp <= 0 ? '<b class="bad">Wrecked</b>' : !crew ? '<b class="bad">No crew</b>' : hp < mh ? (yard ? '<b class="warn">Repairing</b>' : '<b class="warn">Damaged</b>') : '<b class="good">Ready</b>';
       const lv = Math.max(0, Math.min(9, g.level || 0));
       return `<article class="cl-grow${crew ? '' : ' nocrew'}${hp < mh ? ' hurt' : ''}" style="--mc:${CLASS_COLOR[m.cls] || '#9aa'}">
         <span class="cl-gicon">${machineIcon(m.cls)}</span>
@@ -1651,7 +1784,7 @@ export function createUI(root, api) {
   function openDefence(tab) {
     if (tab && DEF_TABS.some(([k]) => k === tab)) { defTab = tab; defPrefs.tab = tab; storeDef(); }
     for (const p of Object.values(pops)) p.hidden = true;
-    closeResearch(); closeJournal();
+    closeResearch(); closeJournal(); closeChart();
     $('.cl-build')?.classList.remove('open');
     const was = defEl.hidden;
     defEl.hidden = false;
@@ -1805,7 +1938,9 @@ export function createUI(root, api) {
       const isNew = !r.has(l.id), on = sel?.id === l.id;
       return `<li><button type="button" class="cl-jli k-${logKind(l)}${on ? ' sel' : ''}${isNew ? ' new' : ''}" data-jlog="${l.id}" aria-current="${on}"><span class="cl-jno">${no}</span>${ico('log')}<span class="cl-jlt"><b>${esc(l.title)}</b><small>${esc(l.author)}</small></span>${l.key ? `<span class="cl-jkeytag" title="Holds fragment ${l.key} of the code">◆${l.key}</span>` : ''}${isNew ? '<em class="cl-jnewtag">New</em>' : ''}</button></li>`;
     }).join('');
-    return `<div class="cl-jlogs${sel ? ' reading' : ''}"><ol class="cl-jlist" aria-label="Logs in story order">${list}</ol><div class="cl-jreader">${sel ? docHtml(s, sel) : readerEmpty(s)}</div></div>`;
+    const exp = (secOf(s)?.journal || []).filter((j) => j.kind === 'expedition' && j.text);
+    return `<div class="cl-jlogs${sel ? ' reading' : ''}"><ol class="cl-jlist" aria-label="Logs in story order">${list}</ol><div class="cl-jreader">${sel ? docHtml(s, sel) : readerEmpty(s)}</div></div>
+      ${exp.length ? `<div class="cl-dsec cl-jexp"><h4>From the expeditions</h4>${exp.map((j) => `<p><b>${esc(j.title || j.ref)}</b> <small class="cl-dim">day ${num(j.day)}</small><br>${esc(j.text)}</p>`).join('')}</div>` : ''}`;
   }
   function readerEmpty(s) {
     const un = unreadLogs(s), found = LOGS.filter((l) => logFound(s, l.id)).length;
@@ -1984,7 +2119,7 @@ export function createUI(root, api) {
       else jFocus = ref;
     } else jFocus = null;
     for (const p of Object.values(pops)) p.hidden = true;
-    closeResearch(); closeDefence();
+    closeResearch(); closeDefence(); closeChart();
     $('.cl-build')?.classList.remove('open');
     const was = jEl.hidden;
     jEl.hidden = false;
@@ -2399,7 +2534,8 @@ export function createUI(root, api) {
     const droneWon = drone && !!(p.report?.won ?? /clear|won/i.test(p.title || ''));
     const pic = eventFace(p.speaker);
     modal.classList.toggle('soft', !api.settings.pauseOnEvents && !raid && !core);
-    evBox.className = 'cl-win cl-event' + (raid || coreBad ? ' cl-evraid' : coreSafe ? ' cl-evwon' : warn || core ? ' cl-evwarn' : disc || p.kind === 'survivors' ? ' cl-evdisc' : drone ? (droneWon ? ' cl-evwon' : ' cl-evraid') : '');
+    const expd = p.kind === 'expedition' && p.report;
+    evBox.className = 'cl-win cl-event' + (expd ? (p.report.recalled ? ' cl-evwarn' : p.report.won ? ' cl-evwon' : ' cl-evraid') : raid || coreBad ? ' cl-evraid' : coreSafe ? ' cl-evwon' : warn || core ? ' cl-evwarn' : disc || p.kind === 'survivors' ? ' cl-evdisc' : drone ? (droneWon ? ' cl-evwon' : ' cl-evraid') : '');
     const jtab = disc ? 'logs' : (core && !coreSafe) || drone ? 'dangers' : p.kind === 'survivors' ? 'survivors' : null;
     const choices = p.choices?.length ? p.choices : [{ key: 'ok', label: 'Understood' }];
     const tab = warn ? 'raids' : wkey ? 'commanders' : null;
@@ -2589,7 +2725,7 @@ export function createUI(root, api) {
   function update(force) {
     const s = S();
     try { summary = R.summary(s); } catch (e) { summary = null; console.warn('summary failed', e); }
-    if (force) { deckSig = ''; cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; resSig = ''; jSig = ''; liveSigs.delete(defBody); liveSigs.delete(defStats); liveSigs.delete(jBody); }
+    if (force) { deckSig = ''; cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; resSig = ''; jSig = ''; xSig = ''; liveSigs.delete(defBody); liveSigs.delete(defStats); liveSigs.delete(jBody); }
     hud();
     renderDecks();
     renderGoals();
@@ -2602,6 +2738,7 @@ export function createUI(root, api) {
     renderResearch();
     renderDefence();
     renderJournal();
+    renderChart();
     renderLog();
     renderEvent();
   }
@@ -2610,6 +2747,7 @@ export function createUI(root, api) {
     update, inspect, closeInspector, toast, tip, setPlacing, setSpeed, closePops, openBuild, welcomeDone, openResearch, toggleResearch,
     openDefence, toggleDefence, closeDefence,
     openJournal, toggleJournal, closeJournal,
+    openChart, toggleChart, closeChart, chartOpen: () => !xEl.hidden,
     journalOpen: () => !jEl.hidden,
     researchOpen: () => !resEl.hidden,
     defenceOpen: () => !defEl.hidden,

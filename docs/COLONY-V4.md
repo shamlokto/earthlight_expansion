@@ -265,3 +265,14 @@ One agent, game side and interface; unit tests plus one browser check (owner: be
   card (what's known, distance, preview) and a squadron picker (guardians with power and HP, a
   commander), Launch; squadrons in flight drawn on the chart with days left; reports as event windows.
   How to play: an "Expeditions" section. Goals (the lead): scout a sector; clear a pirate den.
+
+### Stage 3 as built
+- `js/colony/expeditions.js` (pure, re-exported by rules.js). Twenty sectors sit in three rings. Each sector you visit charts the ring beyond it, and the listening post charts every sector.
+- Squadrons hold up to 6 crewed machines at full HP, with an optional commander. A commander's wits get the squadron past debris fields and radiation.
+- Travel is 4 days per ring each way. Fights use the raid formula. Loot arrives when the squadron gets home.
+- Every pirate den you clear cuts heat by 20 at once, lowers the heat target by 5 for good, and makes raids 15% rarer.
+- Machines away are left out of raids, drone fights, repairs and sales.
+- The Babylon wreck's story goes into the Discoveries journal ("From the expeditions").
+- The Star chart opens from the top-bar button or with X.
+- New goals come after the first vault: "Send out a squadron" and "Clear a pirate den". Their "Show me" opens the chart at the nearest fitting sector (`show: { chart }`).
+- Tests: tests/colony-expeditions.mjs (227 checks).
