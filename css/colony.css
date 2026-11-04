@@ -949,9 +949,10 @@ button.cl-jslot:hover { border-color: var(--gold); }
 .cl-idanger .cl-btn:only-of-type { grid-column: 3 / 5; }
 
 /* event windows: what a survey found */
+.cl-event:not(.cl-evfinal) { max-height: calc(100dvh - 32px); overflow-y: auto; scrollbar-width: thin; }
 .cl-event.cl-evdisc { --br: var(--disc); border-color: rgba(143, 230, 207, .45); }
 .cl-event.cl-evdisc .cl-evkind { color: var(--disc); }
-.cl-evfound { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 4px; }
+.cl-evfound { list-style: none; margin: 14px 0 0; padding: 0 4px 0 0; display: grid; gap: 4px; max-height: min(46vh, 420px); overflow-y: auto; scrollbar-width: thin; }
 .cl-evfound li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid rgba(143, 230, 207, .2); border-left: 3px solid var(--disc); background: rgba(8, 14, 46, .55); }
 .cl-evfound li.bad { border-left-color: var(--bad); }
 .cl-evfound li.bad .cl-sico { color: #ff9a8a; }
@@ -1008,6 +1009,7 @@ button.cl-jslot:hover { border-color: var(--gold); }
 .cl-fvclose blockquote p { margin: 0; font: italic 17px/1.65 "Spectral", Georgia, serif; color: #e8e1cf; }
 .cl-fvclose figcaption { margin-top: 6px; font: 600 10.5px var(--f-display); letter-spacing: .2em; text-transform: uppercase; color: #c9a66a; }
 .cl-fvreward { margin: 18px 0 0; padding-top: 10px; border-top: 1px solid rgba(255, 217, 138, .12); font-size: 12.5px; color: #9a927e; white-space: pre-wrap; }
+.cl-fvreward i { font: 600 9.5px var(--f-display); font-style: normal; letter-spacing: .18em; text-transform: uppercase; color: #7d7563; margin-right: 6px; }
 .cl-evfinal .cl-evchoices { margin-top: 14px; }
 .cl-evfinal .cl-btn.primary { color: #1a1206; border-color: #e8c98a; background: linear-gradient(180deg, #f6e6c2, #e0bd78 50%, #b98c3e); box-shadow: 0 0 22px rgba(232, 201, 138, .2); }
 .cl-evfinal .cl-btn.ghost { border-color: transparent; }
@@ -1025,15 +1027,18 @@ button.cl-jslot:hover { border-color: var(--gold); }
 @media (max-width: 760px) {
   .cl-ui:not(.cl-v4s) .cl-jbtn { display: none; }
   .cl-tools .cl-jbtn { position: relative; }
-  .cl-tools .cl-jbtn .cl-jnew { position: absolute; top: -6px; right: -6px; min-width: 15px; height: 15px; font-size: 9.5px; }
+  .cl-tools .cl-jbtn .cl-jnew { position: absolute; top: 1px; right: 1px; min-width: 14px; height: 14px; padding: 0 3px; font-size: 9px; }
   .cl-journal { position: fixed; inset: 0; width: 100%; max-height: none; z-index: 8; border-radius: 0; padding-top: env(safe-area-inset-top, 0px); align-self: stretch; justify-self: stretch; }
-  .cl-jhead .cl-rst { flex: 1 1 30%; }
+  .cl-jhead .cl-rst { flex: 1 1 18%; padding: 2px 5px; }
+  .cl-jhead .cl-rst i { letter-spacing: .06em; font-size: 9px; }
+  .cl-jhead .cl-rst em { display: none; }
+  .cl-jhead .cl-rtitle small { display: none; }
   .cl-jkeys { padding: 6px 10px; }
   .cl-jkeylbl, .cl-jkeynote { display: none; }
   .cl-jslots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; width: 100%; }
   .cl-jslot { min-width: 0; padding: 3px 2px; }
   .cl-jslot b { font-size: 12px; letter-spacing: .12em; }
-  .cl-jslot small { font-size: 8.5px; letter-spacing: .04em; white-space: normal; text-align: center; line-height: 1.15; }
+  .cl-jslot small { font-size: 8.5px; letter-spacing: .04em; white-space: normal; text-align: center; line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .cl-jbody { padding: 2px 10px 28px; }
   .cl-jlogs { grid-template-columns: minmax(0, 1fr); }
   .cl-jlogs.reading .cl-jlist { display: none; }
@@ -1047,7 +1052,7 @@ button.cl-jslot:hover { border-color: var(--gold); }
   .cl-doc.k-terminal::before { left: 10px; } .cl-doc.k-terminal::after { right: 8px; }
   .cl-doc.k-letter { font-size: 16px; }
   .cl-doc.k-wall { font-size: 17px; }
-  .cl-docnav { margin-left: 0; width: 100%; justify-content: space-between; }
+  .cl-docnav { margin-left: 0; width: 100%; justify-content: flex-end; }
   .cl-jcards { grid-template-columns: minmax(0, 1fr); }
   .cl-event.cl-evfinal { grid-template-columns: minmax(0, 1fr); grid-template-rows: 150px minmax(0, 1fr); height: calc(100dvh - 16px); max-height: none; overflow: hidden; padding: 0; }
   .cl-modal.final { padding: 8px; }

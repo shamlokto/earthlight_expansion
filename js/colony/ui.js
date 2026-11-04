@@ -353,7 +353,7 @@ export function createUI(root, api) {
       <div class="cl-stat" data-g="pop" title="Colonists / housing; next transport"><i>Colonists</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
       <button type="button" class="cl-stat cl-happybtn" data-g="happy" title="Happiness: click for the breakdown"><i>Happiness</i><b><span data-v></span></b><em data-d></em></button>
       <button type="button" class="cl-stat cl-heatstat" data-g="heat" hidden title="Heat: how tempting Eden looks to raiders"><i>Heat</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
-      <button type="button" class="cl-stat cl-corestat" data-g="core" hidden title="The old core: days left to stabilise it"><i>Old core</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
+      <button type="button" class="cl-stat cl-corestat" data-g="core" hidden title="The old core: days left to stabilise it"><i>Core</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
       <div class="cl-stat cl-tax" title="Tax rate: 0% +8 happiness, 10% 0, 20% −14, 30% −32. Shift-click steps 5%."><i>Tax</i>
         <b class="cl-taxctl"><button type="button" data-taxstep="-1" aria-label="Lower the tax">−</button><span data-tax></span><button type="button" data-taxstep="1" aria-label="Raise the tax">+</button></b><em data-taxfx></em></div>
     </div>
@@ -838,6 +838,8 @@ export function createUI(root, api) {
     parts.push(`<header class="cl-ihead"><small>Tile ${x}, ${y} · <span class="cl-ideck" data-deck="${d}">${DECK_NAME[d]} deck</span>${info?.reach ? ' · in reach' : ''}</small>
       <h3>${esc(ter?.name || 'Unknown')}</h3><p>${esc(ter?.text || '')}</p>
       ${art && !hidden ? `<p class="cl-art">◆ <b>${esc(art.name)}</b> ${esc(art.text || '')}</p>` : ''}</header>`);
+    // version 4, stage 2: what the chamber holds (its sites and its danger), first: it is what a click here is about
+    if (ch) parts.push(secretsHtml(s, ch, x, y));
     if (ch) {
       const st = STATUS[ch.status] || [ch.status, ''];
       const total = (ch.breaches || []).length, sealed = sealedCount(s, ch);
@@ -856,7 +858,6 @@ export function createUI(root, api) {
         </div>${!surveyR.ok && ch.status === 'sealed' ? `<p class="cl-why">${esc(surveyR.msg)}</p>` : ''}${!pressR.ok && ch.status === 'surveyed' ? `<p class="cl-why">${esc(pressR.msg)}</p>` : ''}` : ''}
       </section>`);
     }
-    if (ch) parts.push(secretsHtml(s, ch, x, y));
     if (b) parts.push(buildingHtml(s, b));
     if (b?.key === 'lift' || (!b && ter?.id === T.SHAFT)) parts.push(shaftHtml(s, x, y, b?.key === 'lift' ? b : null));
     return parts.join('');
@@ -1846,7 +1847,8 @@ export function createUI(root, api) {
   // -- Vaults
   function vaultsHtml(s) {
     const found = sitesOf(s).filter((x) => x.kind === 'vault' && x.found);
-    const rank = (x) => (VAULT[x.ref]?.reward?.final ? 50 : 0) + (x.done ? 100 : 0) + VAULTS.findIndex((v) => v.id === x.ref);
+    const ready = (x) => !x.done && vaultNeeds(s, x).every((n) => n.ok);
+    const rank = (x) => (ready(x) ? -100 : 0) + (VAULT[x.ref]?.reward?.final ? 50 : 0) + (x.done ? 100 : 0) + VAULTS.findIndex((v) => v.id === x.ref);
     const missing = VAULTS.length - found.length;
     return `${note(`Sealed rooms the Directorate and Eden's people left behind. Each one opens its own way: <b>its chamber open</b>, and what the list says. The last, under the old core, needs <b>all five fragments</b> of the code.`)}
       <div class="cl-jcards">${found.sort((a, b) => rank(a) - rank(b)).map((x) => vaultCard(s, x)).join('')}
@@ -1905,6 +1907,11 @@ export function createUI(root, api) {
       ${pv.defence != null || pv.attack != null ? `<div class="cl-kv"><span>Guardians vs sentries</span><b>${L(`${num(pv.defence ?? pv.power ?? 0)} vs ${num(pv.attack ?? pv.strength ?? 0)}`)}</b></div>` : ''}
       <div class="cl-kv"><span>Likely losses</span><b class="${lost.length ? 'bad' : 'good'}">${L(lost.length ? unitList(lost.map((t) => ({ type: t?.type ?? t }))) : 'none expected')}</b></div>`;
   }
+  // the old core's whole countdown (from the day it was found; 60 days, × 1.5 on Easy), for its bar
+  const coreTotal = (s, d) => {
+    const f = (secOf(s)?.journal || []).find((j) => j.kind === 'danger' && j.ref === d.chamber);
+    return f && d.deadline != null && d.deadline > f.day ? d.deadline - f.day : Math.round((DANGERS.reactor.deadline || 60) * ((api.diff?.(s)?.key ?? s.difficulty) === 'easy' ? 1.5 : 1));
+  };
   const dangerCost = (s, d, pv) => { const c = pv?.cost || DANGERS[d.kind]?.cost; if (!c) return null; try { return pv?.cost ? c : R.costOf?.(s, c) || c; } catch { return c; } };
   const dangerDays = (s, d, pv) => pv?.days ?? DANGERS[d.kind]?.days ?? null;
   function dangerCard(s, d, L, W) {
@@ -1921,7 +1928,7 @@ export function createUI(root, api) {
       else if (d.kind === 'flooded') { const n = pv?.marsh ?? marshLeft(s, c); body = `<div class="cl-kv"><span>Flooded tiles left</span><b class="${n ? 'bad' : 'good'}">${L(n)}</b></div>${pv?.pumps != null ? `<div class="cl-kv"><span>Pump Stations in it</span><b class="${pv.pumps ? 'good' : 'bad'}">${L(pv.pumps || 'none')}</b></div>` : ''}`; }
       else {
         if (d.kind === 'reactor' && left != null) {
-          const total = DANGERS.reactor.deadline || 60, pct = Math.max(0, Math.min(100, (left / total) * 100));
+          const total = coreTotal(s, d), pct = Math.max(0, Math.min(100, (left / total) * 100));
           body += `<div class="cl-corebar${left <= 10 ? ' crit' : ''}"><i>Until it tears loose</i><span class="cl-wbar"><span ${W(pct)}></span></span><b>${L(`${Math.max(0, left)} d`)}</b></div>`;
         }
         body += `<div class="cl-kv"><span>${d.kind === 'reactor' ? 'Stabilising' : 'Decontamination'}</span><b>${L(`${cost ? costText(cost) : '?'}${days != null ? ` · ${plural(days, 'day')}` : ''}`)}</b></div>`;
@@ -2024,7 +2031,7 @@ export function createUI(root, api) {
     show('core', !!rc);
     if (rc) {
       const left = Math.max(0, rc.deadline - s.day), wl = dangerWork(rc);
-      stat('core', String(left), ' d', wl != null ? `crews ${wl} d` : 'stabilise!', `alert${left <= 10 && wl == null ? ' crit' : ''}${wl != null ? ' working' : ''}`);
+      stat('core', String(left), 'd', wl != null ? `crew ${wl}d` : left <= 10 ? 'critical' : 'stirring', `alert${left <= 10 && wl == null ? ' crit' : ''}${wl != null ? ' working' : ''}`);
       setTitle('core', `The old core under ${chName(s, rc.chamber)} (${deckWord(chamberById(s, rc.chamber))}) is stirring.\n${left} day${left === 1 ? '' : 's'} until it tears loose: it would damage buildings on its deck and reseal chambers there.\n${wl != null ? `Crews are stabilising it: ${wl} day${wl === 1 ? '' : 's'} to go.` : 'Stabilise it from the Discoveries journal (Dangers).'}\nClick to open it.`);
     }
   }
@@ -2078,16 +2085,24 @@ export function createUI(root, api) {
     if (!list.length) list = (secOf(s)?.journal || []).filter((j) => j.day === s.day).map((j) => norm(j.ref) || (DANGERS[j.kind] ? { kind: 'danger', danger: j.kind, chamber: j.chamber } : null)).filter(Boolean);
     return list;
   }
+  // the discovery window's line above its list: the speaker's opening, and where
+  function discoveryLead(s, p) {
+    const items = discoveryItems(s, p), chs = [...new Set(items.map((k) => k.chamber).filter((c) => c != null))];
+    const first = /^[^.]*\./.exec(p.text || '')?.[0] || 'Governor, the surveyors found something.';
+    return `${first} ${chs.length === 1 ? `In ${chName(s, chs[0])} (${deckWord(chamberById(s, chs[0]))}):` : `${items.length} finds in ${chs.length} chambers:`}`;
+  }
   function discoveryBody(s, p) {
-    const items = discoveryItems(s, p);
+    const ORDER = { danger: 0, log: 1, vault: 2, survivors: 3 };
+    const items = discoveryItems(s, p).sort((a, b) => (ORDER[a.kind] ?? 4) - (ORDER[b.kind] ?? 4));
     if (!items.length) return '';
-    const r = readOf(s);
+    const r = readOf(s), many = new Set(items.map((k) => k.chamber)).size > 1;
+    const at = (k) => (many && k.chamber != null ? `${esc(chName(s, k.chamber))} · ` : '');
     const li = items.map((k) => {
-      if (k.kind === 'log') { const l = LOG[k.ref] || { title: k.ref, author: '' }; return `<li>${ico('log')}<span><i>Log</i><b>${esc(l.title)}</b><small>${esc(l.author)}${l.key ? ' · ◆ a fragment of a code' : ''}</small></span><button type="button" class="cl-btn xs${r.has(k.ref) ? '' : ' primary'}" data-evj="logs:${esc(k.ref)}">Read</button></li>`; }
-      if (k.kind === 'vault') { const v = VAULT[k.ref] || { name: k.ref }; return `<li>${ico('vault')}<span><i>Vault</i><b>${esc(v.name)}</b><small>sealed</small></span><button type="button" class="cl-btn xs" data-evj="vaults:${esc(k.id ?? k.ref)}">What it needs</button></li>`; }
-      if (k.kind === 'survivors') { const g = SURV[k.ref] || { name: k.ref }; return `<li>${ico('survivors')}<span><i>Survivors</i><b>${esc(g.name)}</b><small>${g.pop === 1 ? 'one person' : `${num(g.pop || 0)} people`}, hiding</small></span><button type="button" class="cl-btn xs" data-evj="survivors:${esc(k.id ?? k.ref)}">See</button></li>`; }
-      const info = DANGERS[k.danger] || { name: k.danger };
-      return `<li class="bad">${ico(k.danger in SICON ? k.danger : 'toxic')}<span><i>Danger</i><b>${esc(info.name)}</b><small>${esc(k.danger === 'reactor' ? `${DANGERS.reactor.deadline} days to stabilise it` : 'blocks pressurising')}</small></span><button type="button" class="cl-btn xs" data-evj="dangers:${esc(k.chamber ?? '')}">Deal with it</button></li>`;
+      if (k.kind === 'log') { const l = LOG[k.ref] || { title: k.ref, author: '' }; return `<li>${ico('log')}<span><i>Log</i><b>${esc(l.title)}</b><small>${at(k)}${esc(l.author)}${l.key ? ' · ◆ a fragment of a code' : ''}</small></span><button type="button" class="cl-btn xs${r.has(k.ref) ? '' : ' primary'}" data-evj="logs:${esc(k.ref)}">Read</button></li>`; }
+      if (k.kind === 'vault') { const v = VAULT[k.ref] || { name: k.ref }; return `<li>${ico('vault')}<span><i>Vault</i><b>${esc(v.name)}</b><small>${at(k)}sealed</small></span><button type="button" class="cl-btn xs" data-evj="vaults:${esc(k.id ?? k.ref)}">What it needs</button></li>`; }
+      if (k.kind === 'survivors') { const g = SURV[k.ref] || { name: k.ref }; return `<li>${ico('survivors')}<span><i>Survivors</i><b>${esc(g.name)}</b><small>${at(k)}${g.pop === 1 ? 'one person' : `${num(g.pop || 0)} people`}, hiding</small></span><button type="button" class="cl-btn xs" data-evj="survivors:${esc(k.id ?? k.ref)}">See</button></li>`; }
+      const info = DANGERS[k.danger] || { name: k.danger }, d = dangerAt(s, k.chamber), left = d?.deadline != null ? Math.max(0, d.deadline - s.day) : DANGERS.reactor.deadline;
+      return `<li class="bad">${ico(k.danger in SICON ? k.danger : 'toxic')}<span><i>Danger</i><b>${esc(info.name)}</b><small>${at(k)}${esc(k.danger === 'reactor' ? `${left} days to stabilise it` : k.danger === 'drones' ? 'guarding it: blocks pressurising' : 'blocks pressurising')}</small></span><button type="button" class="cl-btn xs" data-evj="dangers:${esc(k.chamber ?? '')}">Deal with it</button></li>`;
     }).join('');
     return `<ul class="cl-evfound">${li}</ul>`;
   }
@@ -2105,7 +2120,7 @@ export function createUI(root, api) {
     }
     return `<div class="cl-raidfacts">
       <div class="cl-kv"><span>Where</span><b>${esc(chName(s, d.chamber))} · ${deckWord(chamberById(s, d.chamber))}</b></div>
-      ${left != null && !d.done ? `<div class="cl-corebar${left <= 10 ? ' crit' : ''}"><i>Until it tears loose</i><span class="cl-wbar"><span ${plainW((left / (DANGERS.reactor.deadline || 60)) * 100)}></span></span><b>${left} d</b></div>` : ''}
+      ${left != null && !d.done ? `<div class="cl-corebar${left <= 10 ? ' crit' : ''}"><i>Until it tears loose</i><span class="cl-wbar"><span ${plainW((left / coreTotal(s, d)) * 100)}></span></span><b>${left} d</b></div>` : ''}
       ${!d.done ? `<div class="cl-kv"><span>Stabilising</span><b>${cost ? esc(costText(cost)) : '?'}${days != null ? ` · ${plural(days, 'day')} of crew work` : ''}</b></div>` : ''}
       ${dangerWork(d) != null ? `<div class="cl-kv"><span>Crews at work</span><b class="good">${plural(dangerWork(d), 'day')} to go</b></div>` : ''}</div>`;
   }
@@ -2213,14 +2228,16 @@ export function createUI(root, api) {
   // Marrow reads: the registry scrolls by itself, slowly; a hand on it (pointer, wheel, keys) stops it.
   function crawl() {
     const el = evBox.querySelector('[data-reg]'); if (!el || reduceMotion()) return;
-    let held = false, last = 0, acc = 0;
-    const hold = () => { held = true; };
+    let held = false, last = 0, pos = el.scrollTop, until = 0;
+    const hold = () => { held = true; until = performance.now() + 4000; };
     for (const ev of ['wheel', 'touchstart', 'pointerdown', 'keydown']) el.addEventListener(ev, hold, { passive: true });
-    el.addEventListener('pointerenter', () => { held = true; });
-    el.addEventListener('pointerleave', () => { held = false; last = 0; });
+    el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') held = true; });
+    el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') { held = false; until = 0; } });
     const step = (t) => {
       if (!fv || !el.isConnected) return;
-      if (!held && last) { acc += (t - last) * 0.022; const n = Math.floor(acc); if (n) { el.scrollTop += n; acc -= n; } }
+      if (held && until && t > until) { held = false; until = 0; }
+      if (held) pos = el.scrollTop;
+      else if (last) { pos += (t - last) * 0.022; el.scrollTop = pos; }
       last = t;
       if (el.scrollTop + el.clientHeight < el.scrollHeight - 1) fv.raf = requestAnimationFrame(step);
     };
@@ -2382,11 +2399,13 @@ export function createUI(root, api) {
     const tab = warn ? 'raids' : wkey ? 'commanders' : null;
     evBox.innerHTML = `<div class="cl-evkind">${esc(KIND_LABEL[p.kind] || p.kind || 'Event')} · Day ${s.day}${s.pending.length > 1 ? ` · ${s.pending.length - 1} more waiting` : ''}</div>
       <div class="cl-evbody">${pic}
-      <div><h2 id="evTitle">${esc(p.title)}</h2>${raid && (rule('raidPreview', s) || p.preview) ? `<p>${esc(raidLine(s, p))}</p>` : `<p>${esc(p.text)}</p>`}</div></div>
+      <div><h2 id="evTitle">${esc(p.title)}</h2>${raid && (rule('raidPreview', s) || p.preview) ? `<p>${esc(raidLine(s, p))}</p>` : `<p>${esc(disc && discoveryItems(s, p).length ? discoveryLead(s, p) : p.text)}</p>`}</div></div>
       ${raid ? raidBody(s, p) : warn ? warnBody(s) : disc ? discoveryBody(s, p) : core ? reactorBody(s, p) : drone ? droneEvBody(s, p) : p.kind === 'survivors' ? survivorsEvBody(s, p) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
       <div class="cl-evchoices">${choices.map((c, i) => { const cant = raid && c.key === 'tribute' && (rule('raidPreview', s) || p.preview)?.canPay === false;
         return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>`; }).join('')}
         ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : 'Meet them'}</button>` : ''}
+        ${(() => { const d = core && !coreBad && !coreSafe ? reactorOf(s) : null, pv = d && dangerWork(d) == null ? srule('dangerPreview', s, d.chamber) : null;
+          return pv ? `<button type="button" class="cl-btn" data-evclear="${d.chamber}" ${pv.why ? `disabled title="${esc(pv.why)}"` : 'title="Answer, and set the crews to work on it now"'}>Stabilise now${pv.cost ? ` <small>${esc(costText(pv.cost))}</small>` : ''}</button>` : ''; })()}
         ${jtab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evj="${jtab}${(core || drone) && p.chamber != null ? `:${p.chamber}` : p.kind === 'survivors' && p.group ? `:${p.group}` : ''}" title="Answer and open the Discoveries journal (J)">${disc ? 'Open the journal' : p.kind === 'survivors' ? 'Survivors' : 'Dangers'}</button>` : ''}</div>
       ${api.settings.pauseOnEvents || raid ? '<p class="cl-dim cl-evpause">❚❚ The clock waits for your answer.</p>' : ''}`;
     modal.hidden = false;
@@ -2412,6 +2431,13 @@ export function createUI(root, api) {
     if (e.target.closest('[data-fvnext],[data-fvskip]')) {
       const p = S().pending?.[0]; if (!p || p.kind !== 'finalvault') return;
       renderFinal(S(), p, e.target.closest('[data-fvskip]') ? 2 : (fv?.stage || 0) + 1);
+      return;
+    }
+    const ec = e.target.closest('[data-evclear]');
+    if (ec && !ec.disabled) {
+      const p = S().pending?.[0];
+      if (p) { evId = null; modal.hidden = true; const key = p.choices?.[0]?.key || 'ok', r = result(R.answer(S(), p.id, key)); if (r?.ok !== false) api.answered?.(p, key); }
+      clearDanger(+ec.dataset.evclear);
       return;
     }
     const ej = e.target.closest('[data-evj]');
