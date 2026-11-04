@@ -592,6 +592,7 @@ export function createUI(root, api) {
       <h3 class="cl-xname" style="--sc:${x.known ? SITE_COLOR[x.site] : '#8890a8'}"><span>${x.known ? SITE_GLYPH[x.site] : '?'}</span>${esc(x.known ? x.name : 'Uncharted sector')}</h3>
       <p class="cl-dim">Ring ${x.ring} · ${x.days} days each way${x.known ? ` · ${esc(x.siteName)}${x.cleared ? ' · cleared' : x.visited ? ' · visited' : ''}` : ''}</p>`;
     if (!x.known) return `${head}${note('Nobody has been out this far yet. Visit the sector next to it, nearer Eden, to chart it.')}`;
+    const pic = banner(`site/${x.site}`, x.siteName || x.name);
     const site = R.SITES?.[x.site] || {}, gs = s.guardians || [], crew = crewSet(s);
     const ids = [...xPick].filter((id) => gs.some((g) => g.id === id));
     const pv = rule('expeditionPreview', s, x.id, ids, xCmd || null) || {};
@@ -602,7 +603,7 @@ export function createUI(root, api) {
     }).join('') : note('No guardians yet: build an Arsenal and order machines (Defence, G).');
     const cms = commanders(s).filter((c) => !(c.injured > 0) && !gs.some((g) => g.commander === c.key && g.away));
     const hz = pv.hazard;
-    return `${head}<p>${esc(site.text || '')}</p>
+    return `${head}${pic}<p>${esc(site.text || '')}</p>
       ${pv.strength ? `<div class="cl-kv"><span>Opposition</span><b>${num(pv.strength)}</b></div>` : ''}
       ${hz ? `<div class="cl-kv"><span>Hazard: ${esc(hz.name)}</span><b class="${hz.avoided ? 'good' : 'warn'}">${hz.avoided ? `${esc(CMDR[hz.by]?.name || 'The commander')} steers clear` : `−${Math.round(hz.hurt * 100)}% hull (wits over ${hz.need} avoids it)`}</b></div>` : ''}
       <div class="cl-kv"><span>Expected</span><b>${esc((pv.lootText || []).join(', ') || 'nothing left to find')}</b></div>
@@ -2019,13 +2020,19 @@ export function createUI(root, api) {
       <div class="cl-jcards">${found.sort((a, b) => rank(a) - rank(b)).map((x) => vaultCard(s, x)).join('')}
       ${missing > 0 ? `<div class="cl-jcard locked">${ico('lock')}<div><b>${missing} vault${missing === 1 ? '' : 's'} not found yet</b><p class="cl-dim">Survey more chambers, above and below.</p></div></div>` : ''}</div>`;
   }
+  // A picture across the top of a card (art slots site/, vault/, danger/: the owner's reserve of xAI
+  // images, 2026-11-04); nothing when the slot has no picture.
+  function banner(slot, alt) {
+    const u = api.art?.(slot);
+    return u ? `<img class="cl-banner" src="${esc(u)}" alt="${esc(alt || '')}" loading="lazy" decoding="async">` : '';
+  }
   function vaultCard(s, x) {
     const v = VAULT[x.ref] || { name: x.ref, text: '' }, needs = vaultNeeds(s, x), ok = needs.every((n) => n.ok), final = !!v.reward?.final;
     const r = !x.done && ok && typeof (R.openVault ?? api.secrets?.openVault) !== 'function' ? notReady('Opening vaults') : null;
     const can = !x.done && ok && !r;
     const why = x.done ? 'Opened' : !ok ? `Still needed: ${needs.filter((n) => !n.ok).map((n) => n.label).join('; ')}` : r?.msg && r.ok === false ? r.msg : final ? 'Enter the five fragments and open it' : 'Open it';
     return `<article class="cl-jcard cl-vault${x.done ? ' done' : can ? ' ready' : ''}${final ? ' final' : ''}${sameRef(jFocus, x.id) || sameRef(jFocus, x.ref) ? ' flash' : ''}" data-jsite="${esc(x.id)}">
-      <header>${ico('vault')}<div class="cl-jct"><b>${esc(v.name)}</b><small>${esc(chName(s, x.chamber))} · ${deckWord(x)}</small></div><span class="cl-badge ${x.done ? 'st-open' : can ? 'st-surveying' : 'st-sealed'}">${x.done ? 'Opened' : can ? 'Ready' : 'Sealed'}</span></header>
+      <header>${ico('vault')}<div class="cl-jct"><b>${esc(v.name)}</b><small>${esc(chName(s, x.chamber))} · ${deckWord(x)}</small></div><span class="cl-badge ${x.done ? 'st-open' : can ? 'st-surveying' : 'st-sealed'}">${x.done ? 'Opened' : can ? 'Ready' : 'Sealed'}</span></header>${banner(final ? 'scene/finalvault' : `vault/${x.ref}`, v.name)}
       <p class="cl-jctext">${esc(v.text)}</p>
       ${x.done ? `<p class="cl-vgot"><i>Recovered</i> ${esc(rewardText(v.reward))}</p>` : `<ul class="cl-req">${needs.map((n) => `<li class="${n.ok ? 'ok' : 'no'}"><span class="cl-reqmark">${n.ok ? '✓' : '✗'}</span><span class="cl-reqtext">${esc(n.label)}${!n.ok && (n.now || n.hint) ? ` <small>${esc(n.now || n.hint)}</small>` : ''}</span>${!n.ok && n.show ? `<button type="button" class="cl-btn xs" data-jshow="${showAttr(n.show)}">Show me</button>` : ''}</li>`).join('')}</ul>`}
       <div class="cl-acts">${x.done ? '' : `<button type="button" class="cl-btn sm${can ? ' primary' : ''}" data-jvopen="${esc(x.id)}" ${can ? '' : 'disabled'} title="${esc(why)}">${final ? 'Enter the code' : 'Open'}</button>`}<button type="button" class="cl-btn sm" data-jshow="${showAttr({ chamber: x.chamber })}">Show me</button></div>
@@ -2104,7 +2111,7 @@ export function createUI(root, api) {
     const btn = d.done || d.kind === 'flooded' || wl != null ? '' : `<button type="button" class="cl-btn sm${can ? ' primary' : ''}${d.kind === 'drones' ? ' fight' : ''}" data-jclear="${d.chamber}" ${can ? '' : 'disabled'} title="${esc(can ? label : r?.msg || 'Not possible now')}">${label}${d.kind !== 'drones' && cost ? ` <small>${esc(costText(cost))}</small>` : d.kind === 'drones' && winPct(pv) != null ? ` <small>${winPct(pv)}%</small>` : ''}</button>`;
     const pump = d.kind === 'flooded' && !d.done ? `<button type="button" class="cl-btn sm primary" data-jshow="${showAttr({ build: 'pumpstation', deck: deckOf(c) === 'upper' ? 'main' : deckOf(c) })}">Show me: Pump Station</button>` : '';
     return `<article class="cl-jcard cl-danger k-${esc(d.kind)}${d.done ? ' done' : ''}${sameRef(jFocus, d.chamber) ? ' flash' : ''}" data-jdanger="${d.chamber}">
-      <header>${ico(d.kind in SICON ? d.kind : 'toxic')}<div class="cl-jct"><b>${esc(info.name)}</b><small>${esc(chName(s, d.chamber))} · ${deckWord(c)}</small></div><span class="cl-badge ${d.done ? 'st-open' : wl != null ? 'st-surveying' : 'st-sealed'}">${esc(status)}</span></header>
+      <header>${ico(d.kind in SICON ? d.kind : 'toxic')}<div class="cl-jct"><b>${esc(info.name)}</b><small>${esc(chName(s, d.chamber))} · ${deckWord(c)}</small></div><span class="cl-badge ${d.done ? 'st-open' : wl != null ? 'st-surveying' : 'st-sealed'}">${esc(status)}</span></header>${d.done ? '' : banner(`danger/${d.kind}`, info.name)}
       <p class="cl-jctext">${esc(d.done ? (d.kind === 'drones' ? 'The sentries are scrap. The way is clear.' : d.kind === 'reactor' ? 'The core is clamped and cold.' : 'Dealt with: the chamber can take air.') : info.text)}</p>
       ${body}
       <div class="cl-acts">${btn}${pump}<button type="button" class="cl-btn sm" data-jshow="${showAttr({ chamber: d.chamber })}">Show me</button></div>

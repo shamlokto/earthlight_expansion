@@ -5,7 +5,7 @@
 // and the caller draws its procedural fallback. Plain ES module, no DOM.
 //
 //   MANIFEST[slot] = { kind, size: [w, h], seamless, prompt, refs, file }
-//     kind      'card' | 'terrain' | 'portrait' | 'sky' | 'title' | 'scene' (a big moment's still; its
+//     kind      'card' | 'terrain' | 'portrait' | 'sky' | 'title' | 'scene' | 'site' | 'vault' | 'danger' (a big moment's still; its
 //               clip, if any, is in VIDEOS below)
 //     size      output size in pixels
 //     seamless  the picture tiles (terrain textures)
@@ -13,7 +13,8 @@
 //     refs      reference pictures for the edits endpoint, so a set keeps one style
 //     file      'art/colony/<kind>/<name>.webp', or null while the slot has no picture
 
-const SIZE = { card: [256, 256], terrain: [256, 256], portrait: [256, 320], sky: [1024, 512], title: [1280, 720], scene: [1280, 720] };
+const SIZE = { card: [256, 256], terrain: [256, 256], portrait: [256, 320], sky: [1024, 512], title: [1280, 720], scene: [1280, 720],
+  site: [480, 270], vault: [480, 270], danger: [480, 270] };
 const CARD_REF = 'tools/art/colony/ref/card.png';
 const PORTRAIT_REF = 'art/colony/portrait/sato.webp';
 const TITLE_REF = 'art/colony/title/rebuild.webp';         // the scenes follow the title picture   // the later portraits (wanderers, survivors) follow Sato's style
@@ -36,7 +37,9 @@ const SLOTS = {
   sky: ['earth-below'],
   terrain: ['void', 'asteroid', 'magnetic', 'atmosphere', 'hull', 'deck', 'plain', 'fertile', 'river', 'rubble', 'breach',
     // version 2
-    'forest', 'hills', 'rock', 'meteoroid', 'comet', 'plasma', 'gravity'],
+    'forest', 'hills', 'rock', 'meteoroid', 'comet', 'plasma', 'gravity',
+    // owner's reserve of 50 (2026-11-04): the terrains still drawn by hand, mostly the decks'
+    'poor', 'lake', 'marsh', 'bulkhead', 'gate', 'glass', 'conduit', 'catacomb'],
   portrait: ['ruess', 'sato',
     // version 3: the wanderers (data/commanders.js WANDERERS)
     'w_kestrel', 'w_brann', 'w_ilves', 'w_oduya', 'w_vashti', 'w_corran', 'w_maris', 'w_thorne', 'w_seln', 'w_okafor',
@@ -46,7 +49,11 @@ const SLOTS = {
     // version 4, stage 4: the player, at last (the ending)
     'general'],
   // version 4, stage 4: the big moments (D26); each still is the first frame of its clip
-  scene: ['ending'],
+  scene: ['ending', 'finalvault'],
+  // the Star chart's sites (js/colony/expeditions.js SITES), the journal's vaults and dangers (data/secrets.js)
+  site: ['belt', 'comet', 'derelict', 'babylon', 'bunker', 'den', 'outpost', 'listening', 'relief'],
+  vault: ['v_stores', 'v_helium', 'v_msnp', 'v_msfb', 'v_seeds', 'v_blue'],
+  danger: ['drones', 'toxic', 'radiation', 'flooded', 'reactor'],
 };
 
 // Pictures that exist. Kept up to date by `node tools/art/colony-xai.mjs --index`.
@@ -126,6 +133,14 @@ const FILES = {
   'terrain/comet': 'art/colony/terrain/comet.webp',
   'terrain/plasma': 'art/colony/terrain/plasma.webp',
   'terrain/gravity': 'art/colony/terrain/gravity.webp',
+  'terrain/poor': 'art/colony/terrain/poor.webp',
+  'terrain/lake': 'art/colony/terrain/lake.webp',
+  'terrain/marsh': 'art/colony/terrain/marsh.webp',
+  'terrain/bulkhead': 'art/colony/terrain/bulkhead.webp',
+  'terrain/gate': 'art/colony/terrain/gate.webp',
+  'terrain/glass': 'art/colony/terrain/glass.webp',
+  'terrain/conduit': 'art/colony/terrain/conduit.webp',
+  'terrain/catacomb': 'art/colony/terrain/catacomb.webp',
   'portrait/ruess': 'art/colony/portrait/ruess.webp',
   'portrait/sato': 'art/colony/portrait/sato.webp',
   'portrait/w_kestrel': 'art/colony/portrait/w_kestrel.webp',
@@ -144,6 +159,27 @@ const FILES = {
   'portrait/venn': 'art/colony/portrait/venn.webp',
   'portrait/general': 'art/colony/portrait/general.webp',
   'scene/ending': 'art/colony/scene/ending.webp',
+  'scene/finalvault': 'art/colony/scene/finalvault.webp',
+  'site/belt': 'art/colony/site/belt.webp',
+  'site/comet': 'art/colony/site/comet.webp',
+  'site/derelict': 'art/colony/site/derelict.webp',
+  'site/babylon': 'art/colony/site/babylon.webp',
+  'site/bunker': 'art/colony/site/bunker.webp',
+  'site/den': 'art/colony/site/den.webp',
+  'site/outpost': 'art/colony/site/outpost.webp',
+  'site/listening': 'art/colony/site/listening.webp',
+  'site/relief': 'art/colony/site/relief.webp',
+  'vault/v_stores': 'art/colony/vault/v_stores.webp',
+  'vault/v_helium': 'art/colony/vault/v_helium.webp',
+  'vault/v_msnp': 'art/colony/vault/v_msnp.webp',
+  'vault/v_msfb': 'art/colony/vault/v_msfb.webp',
+  'vault/v_seeds': 'art/colony/vault/v_seeds.webp',
+  'vault/v_blue': 'art/colony/vault/v_blue.webp',
+  'danger/drones': 'art/colony/danger/drones.webp',
+  'danger/toxic': 'art/colony/danger/toxic.webp',
+  'danger/radiation': 'art/colony/danger/radiation.webp',
+  'danger/flooded': 'art/colony/danger/flooded.webp',
+  'danger/reactor': 'art/colony/danger/reactor.webp',
 };
 // @files-end
 
@@ -156,7 +192,7 @@ for (const [kind, names] of Object.entries(SLOTS)) {
       size: SIZE[kind],
       seamless: kind === 'terrain',
       prompt: `tools/art/colony/prompts/${kind}-${name}.txt`,
-      refs: kind === 'card' && name !== 'command' ? [CARD_REF] : kind === 'portrait' && name !== 'ruess' && name !== 'sato' ? [PORTRAIT_REF] : kind === 'scene' ? [TITLE_REF] : [],
+      refs: kind === 'card' && name !== 'command' ? [CARD_REF] : kind === 'portrait' && name !== 'ruess' && name !== 'sato' ? [PORTRAIT_REF] : slot === 'scene/ending' ? [TITLE_REF] : [],
       file: FILES[slot] || null,
     };
   }
