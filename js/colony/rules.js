@@ -10,7 +10,16 @@ import {
   COMMANDER, GENERAL, STARTERS, WANDERERS, GRADE, GENERAL_POWER, GENERAL_EVASION, DEPARTMENTS, BASE_COMMANDERS, PER_QUARTERS,
 } from './data/commanders.js';
 import { generateDecks, DECKS, DECK_NAME } from './decks.js';
+import { SURVIVOR_COMMANDERS } from './data/secrets.js';
+import { ensureSecrets, dangerBlocks, floodedHere } from './secrets.js';
 export { DECKS, DECK_NAME };
+// version 4, stage 2: the secrets (js/colony/secrets.js), re-exported so the interface needs only rules.js
+export {
+  placeSecrets, ensureSecrets, readLog, clearDanger, dangerPreview, openVault, vaultNeeds, secretStatus, dangerIn, sitesIn,
+  dangerBlocks, floodedHere, marshLeft, secretsOf, SECRET, KEY_LOGS,
+} from './secrets.js';
+// The survivors' two commanders (Warden Marrow, Tobias Venn) are commanders like any other once they join.
+for (const c of SURVIVOR_COMMANDERS) COMMANDER[c.key] ??= { portrait: `portrait/${c.key}`, ...c, survivor: true };
 
 // alloy and helium(-3) arrived with version 2 (docs/COLONY-V2.md "New goods").
 export const STORED = ['food', 'water', 'air', 'parts', 'ore', 'alloy', 'helium'];
@@ -72,6 +81,7 @@ export function upgradeState(state) {
   // version 4 (docs/COLONY-V4.md): the upper and lower decks, generated from the seed for a colony
   // saved without them; the deck buildings (no tech, no milestone) are on the menu from the start
   ensureDecks(state);
+  ensureSecrets(state);   // stage 2: the secrets, placed from the seed once the decks exist
   if (state.unlocked) for (const d of BUILDINGS) if (d.decks && !d.tech && !d.unlock && !d.fixed && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
   return state;
 }
@@ -88,7 +98,8 @@ export function mapOf(state, deck = 'main') {
 // The decks a building may stand on (absent = the main deck only), and why not elsewhere. Roads and
 // Bulkhead Seals belong to every deck: chambers up and down are sealed and joined like the main
 // deck's (the contract's flow), though the table gives them no `decks`.
-const EVERY_DECK = new Set(['road', 'seal']);
+// The Shield Pylon stands on any deck since stage 2 (one on a deck halves its radiation work).
+const EVERY_DECK = new Set(['road', 'seal', 'shieldpylon']);
 export const decksOf = (d) => d?.decks || (EVERY_DECK.has(d?.key) ? DECKS : ['main']);
 const deckList = (ds) => ds.join(', ').replace(/, ([^,]+)$/, ' and $1');
 export const deckWhy = (d) => { const l = deckList(decksOf(d)); return `${l[0].toUpperCase()}${l.slice(1)} deck${decksOf(d).length > 1 ? 's' : ''} only.`; };
@@ -376,7 +387,9 @@ export function placeCheck(state, key, x, y, opts = {}) {
     if (!on.has(ti)) return `A ${d.name} stands only on ${names(d.on)}, not on ${TERRAIN[ti].name.toLowerCase()}.`;
     const c = chamberOf(state, ch[i]);
     const interior = !!c && c.status === OPEN, space = spaceLike(ti), near = space && reach(x + dx, y + dy);
-    if (d.zone === 'interior' && !interior) return c ? `${c.name} is not pressurised yet: survey, seal and pressurise it first.` : `A ${d.name} must stand inside an open chamber.`;
+    // stage 2: a Pump Station may stand in a flooded chamber that is surveyed but not open (crews in suits)
+    const pumping = key === 'pumpstation' && !!c && c.status === 'surveyed' && floodedHere(state, c);
+    if (d.zone === 'interior' && !interior && !pumping) return c ? `${c.name} is not pressurised yet: survey, seal and pressurise it first.` : `A ${d.name} must stand inside an open chamber.`;
     if (d.zone === 'space' && !near) return space ? `That is beyond reach (${DOCK_REACH} tiles of a dock, 16 of a Tether Mast): build closer.` : `A ${d.name} must stand in space near a dock.`;
     if (d.zone === 'hull' && ti !== T.HULL) return `A ${d.name} must stand on the hull.`;
     if (key === 'obsdeck' && !bottomHull(state, x + dx, y + dy)) return `An ${d.name} must stand on the bottom hull wall, facing Earth.`;
@@ -618,6 +631,8 @@ export function chamberAction(state, chamberId, action) {
     if (c.status !== 'surveyed') return no(`Survey ${c.name} first.`);
     const left = openBreaches(state, c).length;
     if (left) return no(`${left} breach${left > 1 ? 'es' : ''} still open: build a Bulkhead Seal on each.`);
+    const danger = dangerBlocks(state, c);   // stage 2: drones, toxic air, radiation, flooding
+    if (danger) return no(danger);
     const air = pressuriseAir(state, c), cap = storageCaps(state).air || 0;
     if (air > cap) return no(`Pressurising ${c.name} takes ${air} air, more than your stores hold (${Math.floor(cap)}): build a Storage Depot and set it to Air.`);
     if (state.stock.air < air) return no(`Pressurising ${c.name} takes ${air} air; there is ${Math.floor(state.stock.air)}. Air Plants fill the stores.`);
@@ -662,6 +677,33 @@ export function sell(state, good, qty) {
   state.stock[good] -= qty; state.stock.credits += gain; state.market[good] = f;
   state.flags.sold = (state.flags.sold || 0) + gain;
   return ok(`Sold ${qty} ${good} for ${gain} credits.`, { credits: gain });
+}
+
+// Imports (owner: the colony was too hard; with credits but no parts a colony was stuck): parts and
+// life's essentials can be bought at the dock for twice the sale price; each lot bought pushes that
+// price up, and it recovers over days like a sale's.
+export const IMPORTS = ['parts', 'food', 'water', 'air'], IMPORT_MARKUP = 2;
+export function buyPrice(state, good) { return BASE_PRICE[good] * (state.market?.[good] ?? 1) * IMPORT_MARKUP; }
+export function buy(state, good, qty) {
+  if (!IMPORTS.includes(good)) return no('Traders don\'t sell that.');
+  qty = Math.floor(qty);
+  if (!(qty > 0)) return no('Choose how much to buy.');
+  if (!hasDock(state)) return no('Traders call only at a finished dock.');
+  const room = Math.floor((storageCaps(state)[good] ?? Infinity) - (state.stock[good] || 0));
+  if (room <= 0) return no(`The ${good} stores are full.`);
+  qty = Math.min(qty, room);
+  const step = Math.pow(1 + PRICE.drop, 1 / PRICE.lot);
+  let f = state.market[good] ?? 1, cost = 0, n = 0;
+  for (; n < qty; n++) {
+    const unit = BASE_PRICE[good] * f * IMPORT_MARKUP;
+    if (cost + unit > state.stock.credits) break;
+    cost += unit; f *= step;
+  }
+  if (!n) return no(`Needs ${Math.ceil(buyPrice(state, good))} credits for one ${good}.`);
+  cost = Math.ceil(cost / deptMult(state, 'trade'));
+  state.stock.credits -= cost; state.stock[good] += n; state.market[good] = f;
+  log(state, `Bought ${n} ${good} for ${cost} credits.`);
+  return ok(`Bought ${n} ${good} for ${cost} credits${n < qty ? ' (all the credits would buy)' : ''}.`, { credits: cost, qty: n });
 }
 
 // A guardian's sale: the expansion's price × 10 credits and price parts for the original army; a
@@ -893,6 +935,9 @@ const OTHER = {
   52: ['Pergamon', 'support', 8, 15, 20], 53: ['Solomon', 'support', 12, 20, 35], 54: ['Carthago', 'support', 20, 30, 20], 55: ['Goliath', 'support', 12, 65, 65],
   56: ['Cortex', 'support', 8, 0, 45], 57: ['Adzam', 'support', 8, 0, 35], 59: ['Leviathan', 'ships', 60, 199, 50], 60: ['Directorate Talos', 'hu', 8, 109, 65],
   77: ['Nineveh', 'ships', 90, 199, 60], 80: ['Directorate Medusa', 'hu', 8, 80, 50],
+  // the Directorate prototypes in the hangars (stage 2): units.json's armed forms 45 / 47, one each
+  46: ['MSNP-II', 'ships', 8, 180, 45, { code: 'MSNP-II', evasion: 58, move: 5, price: 40, unique: true, proto: true }],
+  48: ['MSFB-5', 'ships', 8, 156, 60, { code: 'MSFB-5', evasion: 77, move: 5, price: 40, unique: true, proto: true }],
 };
 const others = new Map();
 // The machine (data/machines.js) a guardian or raider of this expansion type is.
@@ -902,7 +947,7 @@ export function machineOf(state, type) {
   let x = others.get(type);
   if (!x) {
     const o = OTHER[type] || [`Machine ${type}`, 'support', 8, 60, 40];
-    x = { type, name: o[0], code: '', cls: o[1], category: 0, hp: o[2], move: 0, evasion: 0, attack: o[3], defence: o[4], price: 24, at: 'arsenal', tier: 1, series: 'original', unique: false, other: true };
+    x = { type, name: o[0], code: '', cls: o[1], category: 0, hp: o[2], move: 0, evasion: 0, attack: o[3], defence: o[4], price: 24, at: 'arsenal', tier: 1, series: 'original', unique: false, other: true, ...(o[5] || {}) };
     others.set(type, x);
   }
   return x;
@@ -913,6 +958,7 @@ const MAIN = {
   21: [1, 3], 22: [1, 3], 23: [0, 7], 24: [2, 6], 25: [0, 5], 28: [1, 1], 30: [0, 5], 31: [1, 4], 32: [2, 4], 33: [0, 4], 34: [0, 1], 35: [2, 3],
   36: [1, 1], 38: [1, 1], 39: [0, 3], 40: [0, 1], 41: [2, 4], 42: [1, 1], 43: [2, 4], 49: [1, 1], 50: [2, 2], 51: [1, 1], 58: [0, 2], 61: [0, 4],
   62: [2, 2], 66: [0, 2], 67: [2, 2], 68: [1, 4], 69: [1, 1], 70: [2, 6], 71: [1, 1], 72: [1, 4], 73: [2, 2], 78: [0, 5],
+  45: [2, 4], 46: [2, 4], 47: [2, 4], 48: [2, 4],
 };
 const MODE_STYLE = ['beam', 'railgun', 'missile'];
 // Does a commander's style match the machine's main weapon? Melee: range 1; Gunner: range 2+; or the mode.
@@ -1034,7 +1080,9 @@ export function guardianList(state) {
 
 // ---------------------------------------------------------------- commanders
 
-export const commanderCap = (state) => BASE_COMMANDERS + PER_QUARTERS * state.buildings.filter((b) => b.key === 'quarters' && finished(b)).length;
+// The survivors' commanders (stage 2) bring their own room: one more place each while they serve.
+export const commanderCap = (state) => BASE_COMMANDERS + PER_QUARTERS * state.buildings.filter((b) => b.key === 'quarters' && finished(b)).length
+  + (state.commanders || []).filter((c) => COMMANDER[c.key]?.survivor).length;
 // The serving commanders with their data: [{ ...data, loyalty, injured, dept, guardian }].
 export function commanderList(state) {
   upgradeState(state);
@@ -1321,6 +1369,56 @@ export function answerRaid(state, choice, rng = stateRng(state)) {
   state.pending = state.pending.filter((p) => p.kind !== 'raid');
   log(state, text);
   return ok(text, { report });
+}
+
+// ---------------------------------------------------------------- stage 2: Directorate sentries
+
+// Sentry drones guarding a lower chamber (js/colony/secrets.js): the crewed guardians at home fight them,
+// auto-resolved like a raid (no batteries: the hull guns cannot reach inside). Easy's drones are × 0.6.
+export const DRONES = { wear: 0.5, salvage: { credits: 0.5, parts: 0.1 } };
+export const droneAttack = (state, d) => Math.round((d.strength || 0) * RAID.strength[dkey(state)]);
+function droneDefence(state) {
+  const crew = crewed(state);
+  let g = 0;
+  for (const x of state.guardians) if (crew.has(x.id)) g += guardianPower(state, x);
+  return { total: g * deptMult(state, 'security'), crew };
+}
+const hunterMult = (state) => (state.commanders.some((c) => !(c.injured > 0) && COMMANDER[c.key]?.perk === 'hunter') ? RAID.hunter : 1);
+const droneSalvage = (state, d) => ({ credits: Math.round(d.strength * DRONES.salvage.credits * hunterMult(state)), parts: Math.round(d.strength * DRONES.salvage.parts * hunterMult(state)) });
+// { attack, defence, winChance, crewed, expectedLost: [types], salvage } for a danger of kind 'drones'.
+export function dronesPreview(state, d) {
+  const a = droneAttack(state, d), def = droneDefence(state), p = winChance(def.total, a);
+  const hurt = (RAID.hurt * a) / (a + def.total || 1) * (p + (1 - p) * RAID.hurtLost);
+  const expectedLost = state.guardians.filter((g) => def.crew.has(g.id) && hurt * bulwarkOf(state, g) >= g.hp / maxHp(state, g)).map((g) => g.type);
+  return { attack: a, defence: def.total, winChance: p, crewed: def.crew.size, expectedLost, salvage: droneSalvage(state, d) };
+}
+// The fight: guardians are hurt as in a raid (lost when their HP runs out); a win clears the chamber and
+// pays salvage, a loss wears the sentries down (strength × (1 − 0.5 × our share)).
+export function fightDrones(state, d, rng) {
+  const def = droneDefence(state), a = droneAttack(state, d), p = winChance(def.total, a), won = rng() < p;
+  const share = a / (a + def.total || 1), lostGuardians = [], hurtGuardians = [];
+  for (const g of state.guardians.filter((x) => def.crew.has(x.id))) {
+    const max = maxHp(state, g), led = fitCommander(state, g.commander);
+    g.hp = round1(g.hp - max * RAID.hurt * share * (won ? 1 : RAID.hurtLost) * (0.5 + rng()) * bulwarkOf(state, g));
+    if (g.hp <= 0.05) {
+      lostGuardians.push(g.type);
+      if (g.commander) {
+        const c = serving(state, g.commander);
+        if (c) c.injured = between(rng, V3.injury);
+        log(state, `${nameOf(g.commander)} was pulled from the wreck of the ${machineOf(state, g.type).name}: injured for ${c?.injured} days.`);
+      }
+      state.guardians.splice(state.guardians.indexOf(g), 1);
+    } else {
+      if (g.hp < max) hurtGuardians.push(g.id);
+      g.level = Math.min(V3.maxLevel, (g.level || 0) + (led ? 2 : 1));
+    }
+  }
+  const report = { day: state.day, won, attack: a, defence: Math.round(def.total), winChance: p, lostGuardians, hurt: hurtGuardians, salvage: { credits: 0, parts: 0 } };
+  if (won) {
+    report.salvage = droneSalvage(state, d);
+    state.stock.credits += report.salvage.credits; state.stock.parts += report.salvage.parts;
+  } else d.strength = Math.max(1, Math.round(d.strength * (1 - DRONES.wear * (1 - share))));
+  return report;
 }
 
 // What the Raids tab shows: { possible, heat, target, warned, coming, eta, last, count, won, lost, paid }.

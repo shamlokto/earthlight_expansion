@@ -19,6 +19,10 @@
 //     ground beneath (extra.below), and every 2×2 lift shaft gets a gold square: an outline while
 //     the shaft is unrepaired, filled with a white core when a working Lift stands on it on any
 //     deck (extra.lifts), a cyan core while one is being built
+//   * secrets (version 4 stage 2, from secrets.js through the marks): small dots on the deck on
+//     show for found sites, cyan logs (dim once read), gold vaults (a gold ring once open), white
+//     survivors' camps, and red dots for dangers (the reactor larger, blue once stabilised, dark
+//     once burned out)
 import { TERRAIN, T } from '../data/terrain.js';
 import { BUILDING, DOCK_REACH } from '../data/buildings.js';
 
@@ -184,7 +188,7 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
     if (!visible || !st || !W) return;
     if (baseDirty) compose();
     const q = (a) => { let s = ''; for (let k = 0; k < a.length; k++) s += ((a[k] * 2) | 0) + ','; return s; };
-    const msig = marks ? `${marks.edge || ''}|${q(marks.raiders || [])}|${q(marks.guardians || [])}|${marks.edge ? Math.floor(performance.now() / 120) : ''}` : '';
+    const msig = marks ? `${marks.edge || ''}|${q(marks.raiders || [])}|${q(marks.guardians || [])}|${marks.edge ? Math.floor(performance.now() / 120) : ''}|${marks.ssig || ''}` : '';
     const sig = (poly ? poly.map((v) => v.toFixed(1)).join(',') : '') + msig;
     if (sig === drawSig) return;
     drawSig = sig;
@@ -259,9 +263,33 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
         ctx.fillStyle = fill; ctx.fill();
       }
     };
+    drawSecrets(sx, sz);
     dot(marks.guardians || [], Math.max(1.4, sx * 1.3), '#7fc8ff', 'rgba(10, 30, 80, 0.85)');
     dot(marks.raiders || [], Math.max(2.6, sx * 2.5), '#ff3a2a', 'rgba(255, 235, 220, 0.9)');
     ctx.restore();
+  }
+
+  // Secrets: [x, z, code, ...] in tiles. Sites: 0 log, 1 log read, 2 vault, 3 vault open, 4 survivors.
+  // Dangers: 0 a danger, 1 the reactor, 2 the reactor stabilised, 3 the reactor burned out.
+  const SITE_STYLE = [['#5ff0ff', 1], ['#2a7f8a', 0.8], ['#f5c542', 1.1], [null, 1.1], ['#ffffff', 1]];
+  function drawSecrets(sx, sz) {
+    const S = marks.sites || [], D = marks.dangers || [], r0 = Math.max(1.5, sx * 1.4);
+    const disc = (x, y, r, fill) => {
+      ctx.beginPath(); ctx.arc(x, y, r + Math.max(0.8, sx * 0.6), 0, Math.PI * 2); ctx.fillStyle = 'rgba(0, 0, 0, 0.75)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill();
+    };
+    for (let k = 0; k + 2 < D.length; k += 3) {
+      const code = D[k + 2], r = r0 * (code ? 1.5 : 1.1);
+      disc(D[k] * sx, D[k + 1] * sz, r, code === 2 ? '#4a9aff' : code === 3 ? '#6a2a20' : '#ff3a2a');
+      if (code === 1) { ctx.beginPath(); ctx.arc(D[k] * sx, D[k + 1] * sz, r * 0.45, 0, Math.PI * 2); ctx.fillStyle = '#ffd0b0'; ctx.fill(); }
+    }
+    for (let k = 0; k + 2 < S.length; k += 3) {
+      const [fill, f] = SITE_STYLE[S[k + 2]] || SITE_STYLE[0], x = S[k] * sx, y = S[k + 1] * sz, r = r0 * f;
+      if (fill) { disc(x, y, r, fill); continue; }
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);   // an open vault: a gold ring
+      ctx.lineWidth = Math.max(1.6, sx * 1.4); ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)'; ctx.stroke();
+      ctx.lineWidth = Math.max(0.9, sx * 0.8); ctx.strokeStyle = '#f5c542'; ctx.stroke();
+    }
   }
 
   // ---- input ------------------------------------------------------------------------------------
@@ -303,7 +331,8 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
     // Chambers or buildings changed: recompose on the next draw (only if shown).
     refresh(state, more) { st = state; if (more) extra = more; baseDirty = true; },
     // The camera's ground footprint [x0, z0, x1, z1, ...] and target [x, z], in tiles, and the
-    // defence marks ({ raiders: [x, z, ...], guardians: [x, z, ...], edge }); drawn only when changed.
+    // defence marks ({ raiders: [x, z, ...], guardians: [x, z, ...], edge }) with the secrets' marks
+    // (version 4: { sites: [x, z, code, ...], dangers: [x, z, code, ...], ssig }); drawn only when changed.
     frame(footprint, at, m = null) { poly = footprint; target = at; marks = m; draw(); },
     setVisible(on) { visible = !!on; el.hidden = !visible; drawSig = ''; },
     get visible() { return visible; },

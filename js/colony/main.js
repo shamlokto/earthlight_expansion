@@ -35,13 +35,15 @@ function storeSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringi
 
 // ---------------------------------------------------------------- modules
 async function loadModules() {
-  const [stateMod, rules, sim, viewMod, artMod, goals, difficulty] = await Promise.all([
+  const [stateMod, rules, sim, viewMod, artMod, goals, difficulty, secrets] = await Promise.all([
     import('./state.js'), import('./rules.js'), import('./sim.js'), import('./view3d/view.js'),
     import('./art.js').catch(() => null),
     import('./goals.js').catch((e) => { console.warn('goals.js not loaded', e); return null; }),
     import('./difficulty.js').catch(() => null),
+    // version 4, stage 2: the secrets' rules, for any the rules module does not re-export
+    import('./secrets.js').catch((e) => { console.warn('secrets.js not loaded', e); return null; }),
   ]);
-  return { state: stateMod, rules, sim, view: viewMod, art: artMod, goals, difficulty };
+  return { state: stateMod, rules, sim, view: viewMod, art: artMod, goals, difficulty, secrets };
 }
 const art = (slot) => { try { return M?.art?.art?.(slot) || null; } catch { return null; } };
 const DIFF = () => M?.difficulty?.DIFFICULTY || DIFF_FALLBACK;
@@ -235,6 +237,7 @@ const api = {
   },
   openResearch: (key) => ui?.openResearch(key),
   openDefence: (tab) => ui?.openDefence?.(tab),
+  get secrets() { return M?.secrets || null; },
   audio,
   // version 4: the decks
   deck: () => deck,
@@ -334,6 +337,8 @@ function save(announce) {
 // show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true }
 //       | { research: true | techKey } (the Research panel, at that tech or the first one to study)
 //       | { defence: 'guardians' | 'production' | 'commanders' | 'raids' | true } (the Defence panel on that tab)
+//       | { journal: 'logs' | 'vaults' | 'survivors' | 'dangers' | true, ref? } (the Discoveries journal there;
+//         ref: a log id, a site, or a danger's chamber)   | { tile: { x, y, deck? } } on that deck
 function doShow(sh) {
   if (!sh || !state) return;
   ui.closePops();
@@ -345,6 +350,11 @@ function doShow(sh) {
   if (sh.defence) {
     setPlacing(null);
     ui.openDefence?.(typeof sh.defence === 'string' ? sh.defence : null);
+    return;
+  }
+  if (sh.journal) {
+    setPlacing(null);
+    ui.openJournal?.(typeof sh.journal === 'string' ? sh.journal : null, sh.ref ?? sh.log ?? null);
     return;
   }
   if (sh.market) { setPlacing(null); setDeck('main', { quiet: true }); ui.openMarket(); const d = state.buildings.find((b) => b.key === 'dock'); if (d) view?.focus?.(d.x + 1, d.y + 1); return; }
@@ -590,6 +600,7 @@ function onKey(e) {
     case 'r': case 'R': if (!e.ctrlKey && !e.metaKey && lastKey) api.pick(lastKey); break;
     case 't': case 'T': if (!e.ctrlKey && !e.metaKey && !e.altKey) ui.toggleResearch(); break;
     case 'g': case 'G': if (!e.ctrlKey && !e.metaKey && !e.altKey) ui.toggleDefence?.(); break;
+    case 'j': case 'J': if (!e.ctrlKey && !e.metaKey && !e.altKey) ui.toggleJournal?.(); break;
     case 'Escape':
       if (placing?.roadStart) { placing.roadStart = null; applyOverlay(); if (hover) ghostAt(hover.x, hover.y); }
       else if (placing) setPlacing(null);

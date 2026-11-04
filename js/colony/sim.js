@@ -3,7 +3,8 @@
 // parts chain, services, clinics and Apartments, tailings, sweeper strikes, seed vaults; and version 3
 // in docs/COLONY-V3.md: machine production, repairs, upkeep, commanders, wanderers, heat and raids,
 // fusion, mushroom walls and terrace homes; and version 4 in docs/COLONY-V4.md: buildings on the
-// upper and lower decks work like any other, coverage stays on its deck, Pump Stations drain).
+// upper and lower decks work like any other, coverage stays on its deck, Pump Stations drain; stage 2:
+// the secrets' day in js/colony/secrets.js: discoveries, crews on dangers, the reactor, survivors).
 // Pure apart from rng(), a seeded generator the caller passes in.
 import { T, R, TERRAIN } from './data/terrain.js';
 import { BUILDING, NEEDS, CHAMBER_AIR_PER_100 } from './data/buildings.js';
@@ -18,10 +19,14 @@ import {
 import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { diffOf } from './difficulty.js';
 import { updateGoals } from './goals.js';
+import { dangerWork, secretsDay, floodedHere, SECRET } from './secrets.js';
 
 export { habitatNeeds, stateRng };
 
 // Rules numbers the table has no column for.
+// Buildings on the priority power circuit (see the power step).
+const LIFE_SUPPORT = new Set(['riverpump', 'airplant', 'reclaimer', 'hydro', 'habitat', 'terrace', 'clinic', 'iceharvester', 'gasscoop', 'pumpstation', 'mushroom', 'cistern']);
+
 export const SIM = {
   river: 1.25,            // farm beside the river
   seam: 2,                // ore mine on an ore seam
@@ -108,6 +113,15 @@ function nearestPoor(state, b, ter = T.POOR, ok = () => true) {
   return best;
 }
 
+// A Pump Station in a flooded chamber (stage 2): SECRET.pumpOut of its chamber's flooded tiles a day.
+function pumpOut(state, b, c, m) {
+  const w = state.map.w, wet = [];
+  for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) { const i = y * w + x; if (m.ch[i] === c.id && m.t[i] === T.MARSH) wet.push(i); }
+  const d = (i) => Math.max(Math.abs((i % w) - b.x), Math.abs(((i / w) | 0) - b.y));
+  wet.sort((a, z) => d(a) - d(z) || a - z);
+  for (const i of wet.slice(0, SECRET.pumpOut)) m.t[i] = deckOf(b) === 'main' ? T.PLAIN : T.DECK;
+}
+
 export function dayTick(state, rng) {
   const events = [];
   const say = (kind, text, pause = false) => { events.push({ kind, text, pause }); log(state, text); };
@@ -126,6 +140,8 @@ export function dayTick(state, rng) {
   // 1 construction: each crew works on one building, oldest order first. A Safety Post's crews
   // put up Bulkhead Seals in its range twice as fast.
   let crews = crewsOf(state);
+  // version 4 stage 2: decontamination and the reactor's stabilisation take the first crews
+  crews = dangerWork(state, crews, say, ask);
   // raid damage (version 3) is repaired first, a crew a building, a day of damage a day
   for (const b of state.buildings) {
     if (!(b.damaged > 0) || crews <= 0) continue;
@@ -153,6 +169,8 @@ export function dayTick(state, rng) {
     if (c.status === 'surveying') { c.status = 'surveyed'; say('surveyed', `${c.name} surveyed: ${c.breaches.length} breach${c.breaches.length === 1 ? '' : 'es'} to seal, ${c.tiles} tiles of floor.`); }
     else if (c.status === 'pressurising') { c.status = 'open'; ask('chamber', 'Chamber open', `${c.name} holds air again: ${c.tiles} tiles to build on.`); }
   }
+  // version 4 stage 2: what the surveys found, flooding drained, the reactor's clock, survivors joining
+  secretsDay(state, { rng, say, ask });
 
   // 3 labour (Lanternfall): one staffing fraction for every building with jobs.
   const jobs = jobsOf(state), staffing = jobs ? Math.min(1, state.pop / jobs) : 1;
@@ -172,6 +190,13 @@ export function dayTick(state, rng) {
   const cap = storageCaps(state);
   const { supply, demand } = powerOf(state, staffing, moneyF);
   const pf = demand > 0 ? Math.min(1, (supply + state.battery) / demand) : 1;
+  // Life support is on the priority circuit: when power is short, homes, water, air and food plants
+  // get theirs first and industry slows down instead (a shortfall shouldn't suffocate the colony).
+  let lifeDemand = state.pop * NEEDS.power;
+  for (const b of state.buildings) { const sp = spec(b); if (active(b) && sp.power < 0 && LIFE_SUPPORT.has(b.key)) lifeDemand -= sp.power; }
+  const avail = supply + state.battery;
+  const pfLife = lifeDemand > 0 ? Math.min(1, avail / lifeDemand) : 1;
+  const pfOther = demand - lifeDemand > 1e-9 ? Math.max(0, Math.min(1, (avail - lifeDemand) / (demand - lifeDemand))) : 1;
   state.battery = Math.min(cap.power, Math.max(0, state.battery + supply - demand));
 
   // 5 production. Makers without inputs first (so today's water is there), then the users of
@@ -179,7 +204,7 @@ export function dayTick(state, rng) {
   const produced = {}, consumed = {}, st = state.stock;
   const make = (g, n) => { if (n > 0) { st[g] += n; produced[g] = (produced[g] || 0) + n; } };
   const use = (g, n) => { if (n > 0) { n = Math.min(n, st[g]); st[g] -= n; consumed[g] = (consumed[g] || 0) + n; } };
-  const rate = (s) => (s.jobs ? staffing : 1) * (s.power < 0 ? pf : 1) * moneyF;
+  const rate = (s, key) => (s.jobs ? staffing : 1) * (s.power < 0 ? (LIFE_SUPPORT.has(key) ? pfLife : pfOther) : 1) * moneyF;
   const usesOf = (b, s) => (b.key === 'farm' && b.mode === 'fallow' ? null : s.uses);
   const outMult = {}, om = (key) => (outMult[key] ??= techEffect(state, 'output', key) * (DEPT_OF[key] ? deptMult(state, DEPT_OF[key]) : 1));
   const rates = new Map();   // each building's working rate today (services scale with it)
@@ -224,8 +249,8 @@ export function dayTick(state, rng) {
       }
       continue;
     }
-    if (usesOf(b, s)) users.push([b, s, rate(s)]);
-    else run(b, s, rate(s));
+    if (usesOf(b, s)) users.push([b, s, rate(s, b.key)]);
+    else run(b, s, rate(s, b.key));
   }
   // users by stage (a Fabricator uses the alloy today's Smelters made); a short input is shared in
   // proportion and scales the output of everyone who uses it
@@ -254,11 +279,14 @@ export function dayTick(state, rng) {
     if (i >= 0) { mapOf(state, deckOf(b)).t[i] = T.PLAIN; say('mend', 'A Seed Vault mended a tile of poor soil: it is plain again.'); }
   }
   // Pump Stations (version 4) drain the nearest flooded tile of an open chamber in range every 5
-  // days: deck plating on the lower deck, plain soil on the main deck.
+  // days: deck plating on the lower deck, plain soil on the main deck. Stage 2: one standing in a
+  // flooded chamber that is not open yet pumps it out, 4 tiles a day (the nearest first, anywhere in it).
   for (const b of state.buildings) {
-    if (b.key !== 'pumpstation' || !active(b) || (b.drain = (b.drain || 0) + 1) < SIM.drainEvery) continue;
+    if (b.key !== 'pumpstation' || !active(b)) continue;
+    const m = mapOf(state, deckOf(b)), home = chamberOf(state, m.ch[idx(state, b.x, b.y)]);
+    if (home && home.status !== 'open' && floodedHere(state, home)) { pumpOut(state, b, home, m); continue; }
+    if ((b.drain = (b.drain || 0) + 1) < SIM.drainEvery) continue;
     b.drain = 0;
-    const m = mapOf(state, deckOf(b));
     const i = nearestPoor(state, b, T.MARSH, (j) => chamberOf(state, m.ch[j])?.status === 'open');
     if (i >= 0) { m.t[i] = deckOf(b) === 'main' ? T.PLAIN : T.DECK; say('drain', `A Pump Station drained a tile of flooded ground on the ${deckOf(b)} deck.`); }
   }
@@ -412,10 +440,12 @@ export function dayTick(state, rng) {
   // Easy: Council relief when the colony is broke or hungry (difficulty.js relief), so a beginner's
   // colony cannot spiral into starvation for want of money to build farms.
   const relief = diffOf(state).relief;
-  if (relief && (st.credits < 50 || f.short.food > 0) && state.day - (f.relief ?? -1e9) >= relief.every) {
+  if (relief && (st.credits < 50 || f.short.food > 0 || f.short.air > 0 || f.short.water > 0) && state.day - (f.relief ?? -1e9) >= relief.every) {
     f.relief = state.day;
     st.credits += relief.credits; st.food = Math.min(st.food + relief.food, Math.max(cap.food || 0, relief.food));
-    ask('relief', 'Council relief', `The Council sends ${relief.credits} credits and ${relief.food} food to tide Eden over. `
+    if (relief.air) st.air = Math.min(st.air + relief.air, Math.max(cap.air || 0, relief.air));
+    if (relief.water) st.water = Math.min(st.water + relief.water, Math.max(cap.water || 0, relief.water));
+    ask('relief', 'Council relief', `The Council sends ${relief.credits} credits, ${relief.food} food${relief.water ? `, ${relief.water} water` : ''}${relief.air ? ` and ${relief.air} air` : ''} to tide Eden over. `
       + 'To earn your own: sell ore or spare food at the Market (the dock), switch farms to cash crops, or raise the tax a little. '
       + 'Switch off buildings you don\'t need to save upkeep. The Council helps at most once a month.');
   }

@@ -14,7 +14,7 @@
 
 const SIZE = { card: [256, 256], terrain: [256, 256], portrait: [256, 320], sky: [1024, 512], title: [1280, 720] };
 const CARD_REF = 'tools/art/colony/ref/card.png';
-const PORTRAIT_REF = 'art/colony/portrait/sato.webp';   // the wanderers' portraits follow Sato's style
+const PORTRAIT_REF = 'art/colony/portrait/sato.webp';   // the later portraits (wanderers, survivors) follow Sato's style
 
 // Slots of version 1, then version 2 (docs/COLONY-V2.md "Art"), then version 3 (docs/COLONY-V3.md "Art"), then version 4
 // (docs/COLONY-V4.md stage 1: the deck buildings). Add a slot here and a prompt file,
@@ -38,7 +38,9 @@ const SLOTS = {
   portrait: ['ruess', 'sato',
     // version 3: the wanderers (data/commanders.js WANDERERS)
     'w_kestrel', 'w_brann', 'w_ilves', 'w_oduya', 'w_vashti', 'w_corran', 'w_maris', 'w_thorne', 'w_seln', 'w_okafor',
-    'w_rook', 'w_hale'],
+    'w_rook', 'w_hale',
+    // the survivors of Eden (data/secrets.js SURVIVOR_COMMANDERS)
+    'marrow', 'venn'],
 };
 
 // Pictures that exist. Kept up to date by `node tools/art/colony-xai.mjs --index`.
@@ -132,6 +134,8 @@ const FILES = {
   'portrait/w_okafor': 'art/colony/portrait/w_okafor.webp',
   'portrait/w_rook': 'art/colony/portrait/w_rook.webp',
   'portrait/w_hale': 'art/colony/portrait/w_hale.webp',
+  'portrait/marrow': 'art/colony/portrait/marrow.webp',
+  'portrait/venn': 'art/colony/portrait/venn.webp',
 };
 // @files-end
 
@@ -144,7 +148,7 @@ for (const [kind, names] of Object.entries(SLOTS)) {
       size: SIZE[kind],
       seamless: kind === 'terrain',
       prompt: `tools/art/colony/prompts/${kind}-${name}.txt`,
-      refs: kind === 'card' && name !== 'command' ? [CARD_REF] : kind === 'portrait' && name.startsWith('w_') ? [PORTRAIT_REF] : [],
+      refs: kind === 'card' && name !== 'command' ? [CARD_REF] : kind === 'portrait' && name !== 'ruess' && name !== 'sato' ? [PORTRAIT_REF] : [],
       file: FILES[slot] || null,
     };
   }

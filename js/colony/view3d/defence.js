@@ -18,6 +18,9 @@
 //   * effects: additive sparks (fireballs, trails, muzzle flashes), smoke puffs, beams (stretched
 //     additive boxes) and red building flashes, each one InstancedMesh with a fixed capacity
 //   * time: update(dt) is scaled by the movers' speed (view.setSpeed); 0 freezes everything
+// Version 4 (secrets.js) reuses the craft models, class colours and the Particles effects for the
+// drone skirmishes: hence the exports below (MODELS, SCALE, CLS_RGB, BEAM_RGB, FIRE, SMOKE, clsOf,
+// FLIERS, Particles).
 import * as THREE from 'three';
 import { BUILDING } from '../data/buildings.js';
 import { MACHINE } from '../data/machines.js';
@@ -35,12 +38,12 @@ const ALT = { battle: 5.2, standoff: 6.5, entry: 14 };
 const CLS = ['hu', 'planes', 'armour', 'ships', 'support'];
 // Class colours (the tinted parts): HU blue, fighters cyan, armour green, ships gold, support orange.
 const CLS_COLOR = { hu: '#5a8cff', planes: '#40e0ff', armour: '#9ad04a', ships: '#f2c14a', support: '#ff9a3a' };
-const FLIERS = new Set(['hu', 'planes', 'ships']);             // these lift off; armour and support fire from the apron
+export const FLIERS = new Set(['hu', 'planes', 'ships']);             // these lift off; armour and support fire from the apron
 const lin = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
-const CLS_RGB = Object.fromEntries(CLS.map((k) => [k, lin(CLS_COLOR[k])]));
-const BEAM_RGB = { hu: lin('#7fe8ff'), planes: lin('#9ff0ff'), armour: lin('#ffe07a'), ships: lin('#d8f0ff'), support: lin('#ffd08a'), raider: lin('#ff3a2a'), dragon: lin('#e8fbff') };
-const FIRE = [lin('#fff6d8'), lin('#ffd27a'), lin('#ff8a2a'), lin('#ff4a1a')];
-const SMOKE = [lin('#2a2a2e'), lin('#3a3836'), lin('#4a4644')];
+export const CLS_RGB = Object.fromEntries(CLS.map((k) => [k, lin(CLS_COLOR[k])]));
+export const BEAM_RGB = { hu: lin('#7fe8ff'), planes: lin('#9ff0ff'), armour: lin('#ffe07a'), ships: lin('#d8f0ff'), support: lin('#ffd08a'), raider: lin('#ff3a2a'), dragon: lin('#e8fbff') };
+export const FIRE = [lin('#fff6d8'), lin('#ffd27a'), lin('#ff8a2a'), lin('#ff4a1a')];
+export const SMOKE = [lin('#2a2a2e'), lin('#3a3836'), lin('#4a4644')];
 const HALF = Math.PI / 2;
 
 // ---- models (face +x; `tint` parts take the class colour) ------------------------------------
@@ -141,13 +144,13 @@ const RAIDER_SHIP = () => model([
   ...[0.15, -0.15].map((z) => ({ s: 'cyl', r: 0.13, h: 0.05, seg: 8, rot: [0, 0, HALF], pos: [-1.02, 0, z], c: RAID_GLOW, glow: 1 })),
   ...[-0.6, 0, 0.6].map((x) => ({ s: 'box', size: [0.06, 0.04, 0.06], pos: [x, 0.2, 0.36], c: RAID_GLOW, glow: 1 })),
 ]);
-const MODELS = { hu: MECHA, planes: FIGHTER, armour: TANK, ships: SHIP, support: SUPPORT, raider: RAIDER, raidship: RAIDER_SHIP };
-const SCALE = { hu: 1, planes: 1, armour: 1, ships: 1, support: 1, raider: 1.35, raidship: 1.25 };
+export const MODELS = { hu: MECHA, planes: FIGHTER, armour: TANK, ships: SHIP, support: SUPPORT, raider: RAIDER, raidship: RAIDER_SHIP };
+export const SCALE = { hu: 1, planes: 1, armour: 1, ships: 1, support: 1, raider: 1.35, raidship: 1.25 };
 
 // ---- small helpers -----------------------------------------------------------------------------
 
 const smooth01 = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
-const clsOf = (g) => { const c = MACHINE[g?.type]?.cls; return CLS.includes(c) ? c : 'hu'; };
+export const clsOf = (g) => { const c = MACHINE[g?.type]?.cls; return CLS.includes(c) ? c : 'hu'; };
 // a deterministic 0..1 from two integers, so placement and jitter do not jump between refreshes
 const hash = (a, b) => { let h = Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 const rnd = Math.random;
@@ -155,7 +158,7 @@ const SIDES = ['north', 'east', 'west', 'earth'];
 const sideOf = (from) => (SIDES.includes(from) ? from : 'earth');
 
 // Additive sparks or smoke puffs: structure of arrays, swap-remove, one InstancedMesh.
-class Particles {
+export class Particles {
   constructor(parent, geo, mat, cap, smoke) {
     this.cap = cap; this.n = 0; this.smoke = smoke;
     for (const k of ['x', 'y', 'z', 'vx', 'vy', 'vz', 'life', 'max', 's0', 's1', 'r', 'g', 'b', 'drag']) this[k] = new Float32Array(cap);
