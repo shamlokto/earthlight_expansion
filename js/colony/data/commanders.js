@@ -36,7 +36,7 @@ export const DEPARTMENTS = {
 
 // The General and Capt. Sato are commanders from the start.
 export const GENERAL = { key: 'general', name: 'The General', title: 'Governor of Eden', might: 100, wits: 90, charm: 80, general: true,
-  grades: { hu: 'S', planes: 'S', armour: 'S', ships: 'S', support: 'S' }, style: null, perk: 'steady', wage: 0, portrait: null, svg: null,
+  grades: { hu: 'S', planes: 'S', armour: 'S', ships: 'S', support: 'S' }, style: null, perk: 'steady', wage: 0, portrait: 'portrait/general', svg: null,
   text: 'Won the war and sold the fleet to rebuild Eden. Still the best pilot alive.' };
 export const STARTERS = [
   { key: 'sato', name: 'Capt. Mira Sato', title: 'Commander of the Guardians', might: 74, wits: 78, charm: 66,

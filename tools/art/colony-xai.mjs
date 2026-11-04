@@ -28,8 +28,8 @@ const COL = join(ROOT, 'tools/art/colony');
 const RAW = process.env.COLONY_RAW || join(tmpdir(), 'earthlight-colony-raw');
 const env = { ...process.env, XMODEL: process.env.XMODEL || 'grok-imagine-image-2.0', XAI_QUOTA: process.env.XAI_QUOTA || join(COL, 'quota.txt') };
 
-const ASPECT = { card: '1:1', terrain: '1:1', portrait: '3:4', sky: '2:1', title: '16:9' };
-const MAX_KB = { card: 40, terrain: 50, portrait: 50, sky: 60, title: 100 };
+const ASPECT = { card: '1:1', terrain: '1:1', portrait: '3:4', sky: '2:1', title: '16:9', scene: '16:9' };
+const MAX_KB = { card: 40, terrain: 50, portrait: 50, sky: 60, title: 100, scene: 120 };
 const FOCUS = { portrait: 0 };                        // 3:4 → 4:5 crop: keep the top (the head)
 const TILE = {};                                 // per-slot tiling override ('blend' | 'mirror'); default 'auto'
 // approved pictures that become the reference of a set: ref file ← slot whose raw it is made from

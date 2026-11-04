@@ -297,4 +297,8 @@ One agent, game side and interface; unit tests plus one browser check (owner: be
 - **Goals** come after the den: "Reach an Earth relief station", "Send a relief convoy", "Eden Restored" (with progress), and then the Ninefold vault.
 - **Growth**: transports bring +1 colonist per 100 already living in Eden, so the population target is reachable.
 - **Tests**: tests/colony-victory.mjs (28 checks).
-- The xAI ending video (D26) is not made yet: the owner is asked first.
+- **Art (owner, 2026-11-04: "Draw general with xAI and make ending vid")**:
+  - The General's portrait (`portrait/general`, the last of the 100 images) appears in the Defence panel and the ending.
+  - The ending still (`scene/ending`, made from the title picture as reference).
+  - An 8-second ending clip (`video/ending`, art/colony/video/ending.mp4, 1.9 MB, silent). xAI `grok-imagine-video-1.5` made it image-to-video from the still with tools/art/colony-video.py, and tools/art/colony/videos.txt counts the clips made.
+- **The ending opens on a full-width cinematic**: the clip plays and the title fades in. It moves on to the words and the statistics when the clip ends, or on Continue. Reduced motion skips straight to the words.
