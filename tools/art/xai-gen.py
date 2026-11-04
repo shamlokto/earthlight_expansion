@@ -2,12 +2,13 @@
 # own art (tools/art/kai-refits.mjs). With reference pictures it uses the edits endpoint, so the
 # results follow the style of the expansion's existing pictures.
 #   python3 tools/art/xai-gen.py OUTPREFIX N PROMPTFILE [REF.png ...]
-# Every image counts against a budget of 100 kept in $XAI_QUOTA (a small counter file), if set.
+# Every image counts against a budget ($XAI_LIMIT, default 100) kept in $XAI_QUOTA (a small counter file), if set.
 import sys, json, base64, subprocess, os
 out, n, pf, refs = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4:]
 cnt = os.environ.get('XAI_QUOTA')
 used = int(open(cnt).read()) if cnt and os.path.exists(cnt) else 0
-if used + n > 100: sys.exit(f'quota: {used} used, {n} more would exceed 100')
+limit = int(os.environ.get('XAI_LIMIT', '100'))   # the owner's budget: 100, then a reserve of 50 (2026-11-04)
+if used + n > limit: sys.exit(f'quota: {used} used, {n} more would exceed {limit}')
 prompt = open(pf).read().strip()
 # Note (HANDOFF.md): grok-imagine-image-quality is retired on 2026-11-02 and then served by
 # grok-imagine-image-2.0 at quality: low; test that on our prompts, or set XMODEL to it directly.
