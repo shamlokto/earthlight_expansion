@@ -234,3 +234,34 @@ dangers with Clear buttons and previews; the inspector shows a chamber's sites a
 for `discovery`, `finalvault` (a large, special window: the revelation text and Marrow reading the
 registry), drone fights and the reactor's deadline; the top bar shows a reactor countdown while one is
 pending. How to play: "Secrets of Eden".
+
+---
+
+## Stage 3 build contract: expeditions (lean)
+
+One agent, game side and interface; unit tests plus one browser check (owner: be efficient).
+
+* **Sectors** (`js/colony/expeditions.js`, pure, deterministic from the seed): about 20 sectors in three
+  rings around Eden (distance 1–3), each `{ id, name, ring, angle, site, known, visited, cleared }`.
+  Sites: `belt` (ore, ice), `derelict` (salvage: parts, credits, sometimes a machine), `babylon` (the
+  Babylon wreck: deep salvage and a story log), `bunker` (a Galt bunker: survivors and a Galt blueprint,
+  i.e. research points or a tech), `den` (a pirate den: a fight; cleared → heat −20 and fewer raids),
+  `outpost` (Union or Galt traders: a wanderer joins the Lodge's list, trade goods), `listening`
+  (the Directorate listening post: story and a large research reward), `comet` (water and ice),
+  `relief` (an Earth relief station: needed for stage 4's relief convoys). Ring 1 known at the start.
+* **An expedition**: `launchExpedition(state, sectorId, guardianIds, commanderKey?)` — up to 6 crewed,
+  undamaged guardians at home (they don't defend Eden while away; the raid code must skip them),
+  optionally led by a commander. Travel days = 4 × ring each way. On arrival one event per site,
+  auto-resolved: fights use guardian power (the version 3 formula) against the site's strength (dens,
+  derelict drones, the listening post's guard); hazards (debris, radiation) cost HP unless the
+  commander's wits beat a threshold. Results come home with the squadron: goods, parts, credits,
+  research, machines (one each from a derelict, the Babylon wreck), survivors (as pop), a wanderer,
+  new sectors made known (the next ring's neighbours), a log (`babylon` adds a short story entry to the
+  journal as kind `expedition`). `expeditionPreview(state, sectorId, guardianIds)` gives the win chance,
+  days and expected loot. `recallExpedition(state, id)` turns it around.
+* **State**: `state.expeditions = { sectors: [...], away: [{ id, sector, guardians, commander, leave, arrive, back, report }], log: [] }`; old saves get it on load.
+* **Interface**: a **Star chart** panel (top-bar button, key X): a 2-D drawing of the rings around Eden
+  with the sectors as icons by site type (unknown ones as "?"), Earth below; click a sector for its
+  card (what's known, distance, preview) and a squadron picker (guardians with power and HP, a
+  commander), Launch; squadrons in flight drawn on the chart with days left; reports as event windows.
+  How to play: an "Expeditions" section. Goals (the lead): scout a sector; clear a pirate den.
