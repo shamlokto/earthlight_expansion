@@ -89,7 +89,7 @@ export const BUILDINGS = [
 
   { key: 'oremine', name: 'Ore Mine', cat: 'industry', size: 2, zone: 'space', on: ['asteroid'], cost: { credits: 350, parts: 20 }, days: 5, jobs: 4, upkeep: 6, power: -8, makes: { ore: 15 }, unlock: { pop: 80 },
     text: 'Mines an asteroid. Double on an ore seam. Sell the ore at the dock.' },
-  { key: 'salvage', name: 'Salvage Yard', cat: 'industry', size: 2, zone: 'any', on: ['deck', 'plain', 'fertile', 'poor', 'void'], cost: { credits: 250, parts: 10 }, days: 4, jobs: 4, upkeep: 2, power: -4, radius: 6, makes: { parts: 10 }, unlock: { pop: 80 },
+  { key: 'salvage', name: 'Salvage Yard', cat: 'industry', size: 2, zone: 'any', on: ['deck', 'plain', 'fertile', 'poor', 'void', 'rock', 'conduit'], decks: ['main', 'lower'], cost: { credits: 250, parts: 10 }, days: 4, jobs: 4, upkeep: 2, power: -4, radius: 6, makes: { parts: 10 }, unlock: { pop: 80 },
     modes: [{ key: 'fast', name: 'Fast', text: 'Strip it quickly: full rate.' },
             { key: 'careful', name: 'Careful', text: 'Half the rate, double the parts from each tile.' }],
     text: 'Turns rubble and wrecks in range into parts, clearing the ground as it goes.' },

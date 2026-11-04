@@ -95,7 +95,8 @@ function strip(state, b, amount) {
       if (ch[i] !== 255 && chamberOf(state, ch[i])?.status !== 'open') continue;
       const take = Math.min(sv[i], amount - got);
       sv[i] -= take; got += take;
-      if (!sv[i]) { if (t[i] === T.RUBBLE) t[i] = T.PLAIN; if (r[i] === R.WRECK) r[i] = R.NONE; }
+      // cleared rubble: soil on the main deck, bare deck plating below (the lower deck has no soil)
+      if (!sv[i]) { if (t[i] === T.RUBBLE) t[i] = deckOf(b) === 'main' ? T.PLAIN : T.DECK; if (r[i] === R.WRECK) r[i] = R.NONE; }
     }
   }
   return got;

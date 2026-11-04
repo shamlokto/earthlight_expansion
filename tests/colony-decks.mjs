@@ -455,5 +455,26 @@ let player = null;
   check(fl.decks && hc.status === 'open' && hc.id !== land.id && !fl.buildings.some((bd) => [...R.tilesOf(fl, bd)].some((i) => fl.map.t[i] === T.SHAFT)), `a full landing chamber: the home shaft goes to another open chamber (${hc?.name})`);
 }
 
+// Owner, 2026-11-04: "The salvage yard is disabled on the lower deck, so I cannot clear rubble."
+// A Salvage Yard goes on the lower deck too, strips the rubble there and leaves deck plating.
+{
+  const s = newGame({ seed: 1 }); s.stock.credits = 9e4; s.stock.parts = 9e3; s.pending.length = 0;
+  if (!s.unlocked.includes('salvage')) s.unlocked.push('salvage');
+  const L = s.decks.lower, W = L.w;
+  for (const c of s.chambers) if (c.deck === 'lower') c.status = 'open';
+  const rubble = () => [...L.t].filter((v) => v === T.RUBBLE).length, before = rubble();
+  let spot = null;
+  for (let i = 0; i < L.t.length && !spot; i++) if (L.t[i] === T.RUBBLE) {
+    for (let dy = -5; dy <= 5 && !spot; dy++) for (let dx = -5; dx <= 5 && !spot; dx++) if (!R.placeCheck(s, 'salvage', (i % W) + dx, ((i / W) | 0) + dy, { deck: 'lower' })) spot = [(i % W) + dx, ((i / W) | 0) + dy];
+  }
+  check(before > 0 && !!spot, `a Salvage Yard can go beside the lower deck's rubble (${before} tiles)`);
+  if (spot) {
+    check(R.build(s, 'salvage', spot[0], spot[1], 'lower').ok, 'and is built there');
+    s.buildings.find((b) => b.key === 'salvage').build = 0;
+    const rng = stateRng(s); for (let k = 0; k < 30; k++) dayTick(s, rng);
+    check(rubble() < before && [...L.t].every((v) => v !== T.PLAIN), `it clears lower-deck rubble to deck plating (${before} → ${rubble()})`);
+  }
+}
+
 console.log(failed ? `\n${failed} of ${failed + passed} checks FAILED` : `\nall ${passed} checks passed`);
 process.exit(failed ? 1 : 0);
