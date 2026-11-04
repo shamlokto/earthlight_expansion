@@ -19,7 +19,15 @@
      them, else from js/colony/decks.js generateDecks when present, else from fakeDecks() below (the
      main map's hull box with plausible terrain, 7 lift shafts stamped through all three decks, a
      few open chambers around the landing chamber's shaft with the deck kits, roads and lifts).
-     ?deck=upper|lower starts there; the Decks row switches (window.setDeck). -->
+     ?deck=upper|lower starts there; the Decks row switches (window.setDeck).
+     Version 4 stage 2 (the secrets): state.secrets from state.js when it makes them, else from
+     js/colony/secrets.js placeSecrets when present, else from fakeSecrets() below (logs, vaults
+     and survivors in chambers near the landing shaft on all three decks; the reactor, radiation,
+     drones and toxic air in closed lower chambers, toxic air upstairs too), all unfound. The
+     Secrets row (or ?secrets) reveals them all (sites found, their chambers and the dangers'
+     surveyed) and plays the game's moves on them: read a log, open a vault, survivors join, clear
+     or repel drones (a skirmish plays on the deck on show), clear the haze, bring the reactor's
+     deadline nearer, stabilise it or let it burn out (window.secretsDo(name), window.secretSpots(deck)). -->
 <script type="importmap">{"imports":{"three":"./js/vendor/three/three.module.min.js"}}</script>
 <style>
   html, body { margin: 0; height: 100%; background: #010205; color: #cfd6e4; font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
@@ -30,6 +38,7 @@
   #info, #movers { color: #9fb0d0; white-space: pre; }
   #movers { color: #8fd0b0; font-size: 12px; }
   #def { color: #ff9a8a; font-size: 12px; white-space: pre; }
+  #sec { color: #c8a8ff; font-size: 12px; white-space: pre; }
 </style>
 </head>
 <body>
@@ -61,6 +70,11 @@
   <div class="row">Decks <button data-deck="upper">Upper</button><button data-deck="main">Main</button><button data-deck="lower">Lower</button>
     <button id="lift">Lift kits</button> <span id="decksrc"></span>
   </div>
+  <div class="row">Secrets <button id="sreveal">Reveal</button><button data-sec="read">Read log</button><button data-sec="vault">Open vault</button><button data-sec="join">Join</button>
+    <button data-sec="clear">Clear drones</button><button data-sec="repel">Repel</button><button data-sec="haze">Clear haze</button><button data-sec="work">Crew work</button>
+    <button data-sec="soon">Reactor −20 d</button><button data-sec="calm">Stabilise</button><button data-sec="burn">Burn out</button> <span id="secsrc"></span>
+  </div>
+  <div id="sec"></div>
   <div class="row">Pop <input id="pop" type="number" min="0" max="5000" step="20" style="width:60px">
     <label><input type="checkbox" id="glum"> glum (happy 30)</label> <button id="stress">Stress</button>
   </div>
@@ -678,6 +692,74 @@ async function ensureDecks(state) {
   }
 }
 
+// ---- version 4 stage 2: the secrets (until js/colony/secrets.js places them) ---------------------
+
+const SITE_FLOOR = new Set([T.DECK, T.CONDUIT, T.ROCK, T.PLAIN, T.FERTILE, T.POOR]);
+function fakeSecrets(state, centre) {
+  const [cx, cy] = centre || [W / 2, H / 2];
+  const mapOf = (deck) => (deck === 'main' ? state.map : state.decks[deck]);
+  const occOf = (deck) => {
+    const o = new Uint8Array(W * H);
+    for (const b of state.buildings) if ((b.deck || 'main') === deck) { const n = BUILDING[b.key]?.size || 1; for (let j = b.y; j < b.y + n; j++) for (let i = b.x; i < b.x + n; i++) o[j * W + i] = 1; }
+    return o;
+  };
+  const dist = (c) => Math.hypot((c.x0 + c.x1) / 2 - cx, (c.y0 + c.y1) / 2 - cy);
+  const ofDeck = (deck, closed) => state.chambers.filter((c) => (c.deck || 'main') === deck && c.kind !== 'landing' && (closed ? c.status !== 'open' : c.status === 'open')).sort((a, b) => dist(a) - dist(b));
+  const used = new Set();
+  // a free floor tile of the chamber near a point (fx, fy in 0..1 across its box), off the walls
+  const tileIn = (c, deck, fx = 0.5, fy = 0.5) => {
+    const m = mapOf(deck), o = occOf(deck), tx = c.x0 + (c.x1 - c.x0) * fx, ty = c.y0 + (c.y1 - c.y0) * fy;
+    let best = null, bd = Infinity;
+    for (let y = c.y0 + 1; y < c.y1; y++) for (let x = c.x0 + 1; x < c.x1; x++) {
+      const i = y * W + x;
+      if (m.ch[i] !== c.id || !SITE_FLOOR.has(m.t[i]) || o[i] || used.has(deck + i) || o[i + W] || m.ch[i + W] !== c.id) continue;
+      const d = Math.hypot(x - tx, y - ty);
+      if (d < bd) { bd = d; best = [x, y]; }
+    }
+    if (best) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) used.add(deck + ((best[1] + dy) * W + best[0] + dx));
+    return best;
+  };
+  const sites = [];
+  const site = (kind, ref, c, deck, fx, fy) => { if (!c) return; const p = tileIn(c, deck, fx, fy); if (p) sites.push({ id: 'site_' + ref, kind, ref, chamber: c.id, x: p[0], y: p[1], deck, found: false, done: false }); };
+  const low = ofDeck('lower', true), lowOpen = ofDeck('lower', false), up = ofDeck('upper', true), upOpen = ofDeck('upper', false), mainClosed = ofDeck('main', true), mainOpen = ofDeck('main', false);
+  const core = low.find((c) => c.kind === 'core') || low[2];
+  const rest = low.filter((c) => c !== core);
+  const dangers = [
+    { chamber: core?.id, kind: 'reactor', work: 0, deadline: null, done: false },
+    { chamber: rest[0]?.id, kind: 'radiation', work: 0, done: false },
+    { chamber: rest[1]?.id, kind: 'drones', strength: 450, work: 0, done: false },
+    { chamber: rest[2]?.id, kind: 'drones', strength: 820, work: 0, done: false },
+    { chamber: rest[3]?.id, kind: 'toxic', work: 0, done: false },
+    { chamber: up[1]?.id, kind: 'toxic', work: 0, done: false },
+  ].filter((d) => d.chamber != null);
+  site('log', 'l07', lowOpen[0], 'lower', 0.3, 0.35); site('vault', 'v_stores', lowOpen[0], 'lower', 0.7, 0.4);
+  site('log', 'l03', lowOpen[1], 'lower', 0.5, 0.4);
+  site('vault', 'v_msnp', rest[1], 'lower', 0.4, 0.4); site('log', 'l16', rest[1], 'lower', 0.75, 0.7);
+  site('vault', 'v_final', rest[2], 'lower', 0.5, 0.35);
+  site('vault', 'v_helium', rest[3], 'lower', 0.5, 0.5);
+  site('log', 'l10', rest[0], 'lower', 0.3, 0.6);
+  site('survivors', 's_crypt', rest[4] || lowOpen[2], 'lower', 0.5, 0.5); site('log', 'l13', rest[4] || lowOpen[2], 'lower', 0.25, 0.3);
+  site('survivors', 's_pumps', lowOpen[2] || rest[5], 'lower', 0.6, 0.5);
+  site('log', 'l02', upOpen[0], 'upper', 0.35, 0.4); site('vault', 'v_seeds', up[0], 'upper', 0.5, 0.4); site('survivors', 's_garden', up[0], 'upper', 0.3, 0.7);
+  site('log', 'l06', up[1], 'upper', 0.6, 0.6);
+  site('log', 'l01', mainOpen[0], 'main', 0.5, 0.5); site('survivors', 's_market', mainClosed[0], 'main', 0.5, 0.5); site('vault', 'v_blue', mainClosed[1], 'main', 0.5, 0.5);
+  state.secrets = { sites, dangers, read: [], journal: [], finalOpened: false };
+}
+// state.js's secrets, else js/colony/secrets.js placeSecrets, else the fake ones above
+async function ensureSecrets(state, centre) {
+  if (state.secrets) return 'state.js secrets';
+  try {
+    const X = await import('./js/colony/secrets.js');
+    const r = X.placeSecrets(state);
+    if (!state.secrets && r?.sites) state.secrets = r;
+    if (state.secrets) return 'secrets.js placeSecrets';
+  } catch (e) {
+    if (!/Failed to fetch|Importing a module|404|Cannot find/i.test(String(e))) console.warn('secrets.js failed, using fake secrets:', e);
+  }
+  fakeSecrets(state, centre);
+  return 'fake secrets';
+}
+
 let gen = null, src, state;
 const showcase = qs.has('showcase') || qs.has('fake');
 if (showcase) {
@@ -698,6 +780,8 @@ const decksGot = await ensureDecks(state);
 const deckCentre = decksGot.shafts.length ? deckDemo(state, decksGot.shafts) : null;
 document.getElementById('src').textContent = '· ' + src;
 document.getElementById('decksrc').textContent = decksGot.src + ` · ${decksGot.shafts.length} shafts`;
+const secretsGot = await ensureSecrets(state, deckCentre);
+document.getElementById('secsrc').textContent = secretsGot;
 
 const info = document.getElementById('info');
 const view = createView(document.getElementById('view'), {
@@ -718,6 +802,7 @@ window.tick = () => {
   state.day++;
   for (const b of state.buildings) { if (b.build > 0) b.build--; if (b.damaged > 0) b.damaged--; }
   for (const c of state.chambers) if (c.work > 0 && --c.work === 0) c.status = c.status === 'surveying' ? 'surveyed' : 'open';
+  for (const d of state.secrets?.dangers || []) if (d.work > 0 && --d.work === 0) d.done = true;   // crews at work on a danger
   view.refresh(state);
 };
 let ghostKey = '';
@@ -769,7 +854,52 @@ setInterval(() => { document.getElementById('wk').textContent = `last: ${view.de
 for (const el of document.querySelectorAll('[data-deck]')) el.onclick = () => view.setDeck(el.dataset.deck);
 document.getElementById('lift').onclick = () => { if (deckCentre) view.focus(deckCentre[0], deckCentre[1]); };
 if (qs.get('deck')) { view.setDeck(qs.get('deck'), { animate: false }); if (deckCentre) view.focus(deckCentre[0], deckCentre[1]); }
-Object.assign(window, { view, state, gen, landing: lm, demo: { demoRoads, stress, realState, fakeDecks, deckDemo }, showcaseV2, showcaseV3, deckCentre, decksGot, setDeck: (d, o) => view.setDeck(d, o) });
+// The secrets: reveal them all, then the game's moves on them (the first one that applies, on the
+// deck on show when it has one). Returns what it touched.
+const S = () => state.secrets;
+const chamberOfId = (id) => state.chambers.find((c) => c.id === id);
+const deckOfDanger = (d) => chamberOfId(d.chamber)?.deck || 'main';
+const firstDanger = (ok) => S().dangers.filter((d) => chamberOfId(d.chamber)?.status !== 'sealed' && ok(d)).sort((a, b) => (deckOfDanger(b) === view.deck) - (deckOfDanger(a) === view.deck))[0];
+const firstSite = (ok) => S().sites.filter((s) => s.found && ok(s)).sort((a, b) => ((b.deck || 'main') === view.deck) - ((a.deck || 'main') === view.deck))[0];
+window.revealSecrets = () => {
+  for (const s of S().sites) { s.found = true; const c = chamberOfId(s.chamber); if (c?.status === 'sealed') c.status = 'surveyed'; }
+  for (const d of S().dangers) { const c = chamberOfId(d.chamber); if (c?.status === 'sealed') c.status = 'surveyed'; if (d.kind === 'reactor' && d.deadline == null) d.deadline = state.day + 60; }
+  view.refresh(state);
+  return S().sites.length;
+};
+window.secretsDo = (name) => {
+  let hit = null;
+  const DAYS = { toxic: 6, radiation: 10, reactor: 12 };
+  if (name === 'read') { hit = firstSite((s) => s.kind === 'log' && !S().read.includes(s.ref)); if (hit) S().read.push(hit.ref); }
+  else if (name === 'vault') { hit = firstSite((s) => s.kind === 'vault' && !s.done); if (hit) hit.done = true; }
+  else if (name === 'join') { hit = firstSite((s) => s.kind === 'survivors' && !s.done); if (hit) hit.done = true; }
+  else if (name === 'clear') { hit = firstDanger((d) => d.kind === 'drones' && !d.done); if (hit) hit.done = true; }
+  else if (name === 'repel') { hit = firstDanger((d) => d.kind === 'drones' && !d.done); if (hit) hit.strength = Math.max(150, (hit.strength || 600) - 300); }
+  else if (name === 'haze') { hit = firstDanger((d) => (d.kind === 'toxic' || d.kind === 'radiation') && !d.done); if (hit) hit.done = true; }
+  else if (name === 'work') { hit = firstDanger((d) => (d.kind === 'toxic' || d.kind === 'radiation' || d.kind === 'reactor') && !d.done && !(d.work > 0)); if (hit) hit.work = Math.ceil(DAYS[hit.kind] / 2); }
+  else if (name === 'soon') { hit = firstDanger((d) => d.kind === 'reactor' && !d.done); if (hit) hit.deadline = Math.max(state.day + 1, (hit.deadline ?? state.day + 60) - 20); }
+  else if (name === 'calm') { hit = firstDanger((d) => d.kind === 'reactor' && !d.done); if (hit) { hit.done = true; hit.work = 0; } }
+  else if (name === 'burn') { hit = firstDanger((d) => d.kind === 'reactor' && !d.done); if (hit) { hit.done = true; hit.failed = true; hit.work = 0; } }
+  view.refresh(state);
+  return hit ? { ...hit } : null;
+};
+// Where the secrets are on a deck (tile centres), for the camera: { log: [[x, y, ref]], vault, survivors, drones, toxic, radiation, reactor }
+window.secretSpots = (deck = view.deck) => {
+  const out = {};
+  const add = (k, v) => (out[k] ||= []).push(v);
+  for (const s of S().sites) if ((s.deck || chamberOfId(s.chamber)?.deck || 'main') === deck) add(s.kind, [s.x + 0.5, s.y + 0.5, s.ref]);
+  for (const d of S().dangers) { const c = chamberOfId(d.chamber); if (c && (c.deck || 'main') === deck) add(d.kind, [(c.x0 + c.x1 + 1) / 2, (c.y0 + c.y1 + 1) / 2, c.id]); }
+  return out;
+};
+document.getElementById('sreveal').onclick = () => window.revealSecrets();
+for (const el of document.querySelectorAll('[data-sec]')) el.onclick = () => window.secretsDo(el.dataset.sec);
+if (qs.has('secrets')) window.revealSecrets();
+setInterval(() => {
+  const s = view.debug.secrets.stats();
+  document.getElementById('sec').textContent = `logs ${s.logs} (read ${s.logsRead}) · vaults ${s.vaults} (open ${s.vaultsOpen}) · camps ${s.camps} (${s.people} people)\ndrones ${s.patrols.map((p) => p.drones).join('+') || 0} · haze ${s.toxicLayers}/${s.radiationLayers} · lamps ${s.lamps} · reactor ${s.reactors.map((r) => (r.done ? 'calm' : r.freq + ' Hz')).join(',') || '-'}${s.fights.length ? ' · fight ' + s.fights.map((f) => `${f.outcome} ${f.t}s ${f.drones}d/${f.guards}g`).join(',') : ''}`;
+}, 400);
+
+Object.assign(window, { view, state, gen, landing: lm, demo: { demoRoads, stress, realState, fakeDecks, deckDemo }, showcaseV2, showcaseV3, deckCentre, decksGot, secretsGot, setDeck: (d, o) => view.setDeck(d, o) });
 window.__cam = (tx, tz, d, polar, theta) => view.debug.placeCamera(tx, tz, d, polar, theta);
 </script>
 </body>

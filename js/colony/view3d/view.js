@@ -30,6 +30,11 @@
 //     Lift's plate; guardians and raids (defence.js) and space traffic exist on the main deck only.
 //     A deck change rebuilds the terrain (a few tens of ms) while the world slides through a short
 //     rise or sink under a dark veil, and the deck's name shows for a moment
+//   * secrets (secrets.js, version 4 stage 2): on the deck on show, the found sites of
+//     state.secrets (log terminals, vault doors, survivors' camps) and the dangers of surveyed
+//     chambers (sentry drones, toxic haze, radiation shimmer and flickering lamps, the
+//     reactor's pulsing core), a drone skirmish when guardians clear a chamber, and their minimap
+//     marks; visual only, rebuilt when the secrets change, frozen by setSpeed(0)
 // Art slots (js/colony/art.js, docs/COLONY.md §7): terrain/<key> textures the tile tops (every
 // terrain, version 2's forest, hills, rock, meteoroid, comet, plasma and gravity included) and
 // sky/earth-below the Earth when present; otherwise everything is procedural.
@@ -54,6 +59,7 @@ import { BUILDING } from '../data/buildings.js';
 import { kitParts, kitHeight, ROAD } from './kits.js';
 import { createMovers } from './movers.js';
 import { createDefence } from './defence.js';
+import { createSecrets } from './secrets.js';
 import { createMinimap, reachMask } from './minimap.js';
 import { createNavPad } from './navpad.js';
 
@@ -334,6 +340,11 @@ export function createView(container, opts = {}) {
   const movers = createMovers(world);
   let buildVersion = 0;   // bumps when buildings change: the guardians' aprons follow
   const defence = createDefence(world, {
+    topAt: (x, y) => Math.max(0, tops[y * W + x]),
+    freeAt: (i) => !occ[i],
+    occSig: () => buildVersion,
+  });
+  const secrets = createSecrets(world, {
     topAt: (x, y) => Math.max(0, tops[y * W + x]),
     freeAt: (i) => !occ[i],
     occSig: () => buildVersion,
@@ -886,6 +897,7 @@ export function createView(container, opts = {}) {
       syncBuildings();
       movers.refresh(st, { terrTop, buildingsChanged: true });
       if (deck === 'main') defence.refresh(st, { terrTop, terrainChanged: true });
+      secrets.refresh(st, { terrTop });
     }
   }
 
@@ -1228,8 +1240,10 @@ export function createView(container, opts = {}) {
     if (trans && !trans.hold) stepTransition(now);
     if (breachMat) breachMat.color.setScalar(0.75 + 0.25 * Math.sin(now / 260));   // breaches throb
     if (plasmaMat) plasmaMat.color.setScalar(0.9 + 0.1 * Math.sin(now / 900));
-    if (st) movers.update(dt, camera.position.distanceTo(controls.target));
+    const camDist = camera.position.distanceTo(controls.target);
+    if (st) movers.update(dt, camDist);
     if (st && deck === 'main') defence.update(dt, movers.getSpeed());
+    if (st) secrets.update(dt, movers.getSpeed(), camDist);
     if (shimmerMat) shimmerMat.opacity = 0.26 + 0.12 * Math.sin(now / 480) + 0.05 * Math.sin(now / 137);
     if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], deckMarks());
     for (const p of pools.values()) p.flush();
@@ -1256,7 +1270,14 @@ export function createView(container, opts = {}) {
     liftSig = liftSigOf(lifts);
     return { lifts, below: deck === 'upper' ? full.map.t : null };
   }
-  const deckMarks = () => (deck === 'main' ? defence.marks() : null);
+  // the minimap's marks: guardians and raiders (main deck), and the secrets' sites and dangers
+  const deckMarks = () => {
+    const s = secrets.marks();
+    if (deck !== 'main') return s.ssig ? s : null;
+    const m = defence.marks();
+    m.sites = s.sites; m.dangers = s.dangers; m.ssig = s.ssig;
+    return m;
+  };
   function setLights() {
     const [h, s2, e] = DECK_LIGHT[deck] || DECK_LIGHT.main;
     hemi.intensity = h; sun.intensity = s2; earthlight.intensity = e;
@@ -1289,6 +1310,7 @@ export function createView(container, opts = {}) {
     defence.group.visible = deck === 'main';
     if (deck === 'main') defence.refresh(st, fresh ? { terrTop, reset: true } : { terrTop, terrainChanged: true });
     lap('defence');
+    secrets.refresh(st, { terrTop, reset: fresh, deckChanged: true }); lap('secrets');
     minimap.setState(st, minimapExtra()); lap('minimap');
     setLights();
     updateDeckPad();
@@ -1329,6 +1351,7 @@ export function createView(container, opts = {}) {
       showOverlay();
       movers.refresh(st, { terrTop, buildingsChanged: true, chambersChanged: true });
       if (deck === 'main') defence.refresh(st, { terrTop, terrainChanged: true });
+      secrets.refresh(st, { terrTop });
       minimap.setState(st, minimapExtra());
       return;
     }
@@ -1338,6 +1361,7 @@ export function createView(container, opts = {}) {
     if (overlayName && !overlayValues && bc) showOverlay();
     movers.refresh(st, { terrTop, buildingsChanged: bc, chambersChanged: cc });
     if (deck === 'main') defence.refresh(st, { terrTop });
+    secrets.refresh(st, { terrTop });
     const lifts = full.buildings?.some((b) => b.key === 'lift') || liftSig ? liftList() : [];
     const ls = liftSigOf(lifts);
     if (cc || bc || ls !== liftSig) { liftSig = ls; minimap.refresh(st, { lifts, below: deck === 'upper' ? full.map.t : null }); }
@@ -1449,7 +1473,7 @@ export function createView(container, opts = {}) {
 
   function destroy() {
     cancelAnimationFrame(raf); ac.abort(); ro.disconnect(); controls.dispose();
-    movers.dispose(); defence.dispose(); minimap.destroy(); navPad.destroy();
+    movers.dispose(); defence.dispose(); secrets.dispose(); minimap.destroy(); navPad.destroy();
     dropTerrain();
     for (const g of [terrainGroup, buildGroup, fxGroup, roadGroup, ghost.group]) clearGroup(g);
     scene.traverse((o) => { o.geometry?.dispose(); if (o.material) [].concat(o.material).forEach((m) => { m.map?.dispose(); m.dispose(); }); });
@@ -1483,12 +1507,14 @@ export function createView(container, opts = {}) {
       // the deck change held at progress k (0..1) for a screenshot mid-move (k = 1 finishes it);
       // false if no change runs
       deckAt(k) { if (!trans) return false; const now = performance.now(); trans.hold = k < 1; trans.t0 = now - k * trans.dur; stepTransition(now); return true; },
-      deckState: () => st, world, rebuildMs, scene, camera, controls, renderer, placeCamera, pick, movers, defence, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse'),
+      deckState: () => st, world, rebuildMs, scene, camera, controls, renderer, placeCamera, pick, movers, defence, secrets, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse'),
       // n camera steps of 1/60 s now, without rendering (tests on slow software GL)
       setRender(on) { dbg.noRender = !on; },
       tick(n = 1) { for (let k = 0; k < n && st; k++) stepCamera(1 / 60, performance.now()); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], deckMarks()); },
       // n seconds of guardian / raid time now, ignoring the speed (tests on slow software GL)
       advanceDefence(sec) { defence.advance(sec); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], deckMarks()); },
+      // n seconds of the secrets' time now (drone patrols, skirmishes, pulses), ignoring the speed
+      advanceSecrets(sec) { secrets.advance(sec); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], deckMarks()); },
       // draw one frame now (with setRender(false), for a screenshot)
       render() { for (const p of pools.values()) p.flush(); renderer.render(scene, camera); } } };
 }
