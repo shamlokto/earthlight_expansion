@@ -24,6 +24,11 @@ export {
   ensureExpeditions, launchExpedition, expeditionPreview, recallExpedition, expeditionStatus, makeSectors, sectorOf, densCleared,
   lootPlan, lootText, siteName, travelDays, strengthOf, isAway, SITES, HAZARD, EXP,
 } from './expeditions.js';
+// version 4, stage 4: relief convoys to Earth and the win, Eden Restored (js/colony/victory.js), re-exported likewise
+export {
+  RELIEF, POP_TARGET, CONVOY_GOODS, sendConvoy, convoyWhy, convoyStatus, convoyCost, convoyPay, reliefStation,
+  victoryStatus, victoryText, quotaOf, popTargetOf, ensureRelief, ENDING, EPILOGUE,
+} from './victory.js';
 // The survivors' two commanders (Warden Marrow, Tobias Venn) are commanders like any other once they join.
 for (const c of SURVIVOR_COMMANDERS) COMMANDER[c.key] ??= { portrait: `portrait/${c.key}`, ...c, survivor: true };
 
