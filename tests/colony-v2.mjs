@@ -73,8 +73,8 @@ function walk(v, path, out) {
   check(s.stock.alloy === 0 && s.stock.helium === 0 && s.market.alloy === 1 && s.market.helium === 1, 'new game: alloy and helium in stock and market');
   check(R.STORED.includes('alloy') && R.STORED.includes('helium') && R.GOODS.includes('alloy'), 'alloy and helium are stored goods');
   const v2keys = BUILDINGS.filter((d) => d.tech).map((d) => d.key);
-  // (17 version 2 buildings carry a tech; version 3 adds 9 more, version 6 10 more, also locked)
-  check(v2keys.length === 17 + 9 + 10 && v2keys.every((k) => !s.unlocked.includes(k)) && !s.unlocked.includes('lab'), 'nothing of version 2 is available at the start');
+  // (17 version 2 buildings carry a tech; version 3 adds 9 more, version 6 9 more (the Granary is open from the start), also locked)
+  check(v2keys.length === 17 + 9 + 9 && v2keys.every((k) => !s.unlocked.includes(k)) && !s.unlocked.includes('lab'), 'nothing of version 2 is available at the start');
   const bl = R.buildable(s);
   check(bl.find((b) => b.key === 'clinic').why === 'Research Medicine.' && bl.find((b) => b.key === 'lab').why === 'Unlocks at 80 colonists.', 'buildable(): tech-locked reason');
   check(R.canBuild(s, 'smelter', 0, 0) === 'Research Smelting.', 'canBuild(): tech-locked reason');

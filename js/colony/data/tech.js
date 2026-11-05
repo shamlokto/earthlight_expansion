@@ -54,7 +54,7 @@ export const TECHS = [
   { key: 'kai', name: 'Kai Refits', branch: 'defence', cost: 300, needs: ['heavyworks', 'shipyard'], unlocks: [], effects: [{ kind: 'machines', tier: 4 }], text: 'Ruess\'s refits of the expansion war: the Kai series, up to the Azoras Kai.' },
   // ---- version 6 (docs/COLONY-V6.md): the big city. 'reserve' multiplies Emergency Stores' reserve; Food
   // Security also turns on automatic rationing (sim.js needs) when the food would last under three days.
-  { key: 'foodsec', name: 'Food Security', ver: 6, branch: 'society', cost: 90, needs: ['canteens'], unlocks: ['granary'], effects: [{ kind: 'reserve', mult: 2 }], text: 'Granaries, Emergency Stores that hold twice as much, and automatic rationing whenever the food would last less than three days.' },
+  { key: 'foodsec', name: 'Food Security', ver: 6, branch: 'society', cost: 90, needs: ['canteens'], unlocks: [], effects: [{ kind: 'reserve', mult: 2 }], text: 'Emergency Stores that hold twice as much, and automatic rationing whenever the food would last less than three days.' },
   { key: 'waterworks', name: 'Water Works', ver: 6, branch: 'life', cost: 200, needs: ['reclaim'], unlocks: ['waterworks'], text: 'A whole water plant in one building: water for a city.' },
   { key: 'atmoproc', name: 'Atmosphere Processors', ver: 6, branch: 'life', cost: 240, needs: ['waterworks'], unlocks: ['atmoproc'], text: 'Air for a city and all its chambers from one great plant.' },
   { key: 'vertfarm', name: 'Vertical Farms', ver: 6, branch: 'life', cost: 240, needs: ['fungi'], unlocks: ['vertfarm'], text: 'Farms forty storeys tall: 800 food a day on any floor.' },

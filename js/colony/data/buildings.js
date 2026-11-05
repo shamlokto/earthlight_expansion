@@ -58,6 +58,14 @@ export const BUILDINGS = [
   { key: 'depot', name: 'Storage Depot', cat: 'core', size: 1, zone: 'any', on: ['deck', 'plain', 'fertile', 'poor', 'void', 'asteroid', 'hull', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 80, parts: 5 }, days: 2, jobs: 0, upkeep: 1,
     storage: { food: 300 }, modes: [{ key: 'food', name: 'Food' }, { key: 'water', name: 'Water' }, { key: 'air', name: 'Air' }, { key: 'parts', name: 'Parts' }, { key: 'ore', name: 'Ore' }, { key: 'alloy', name: 'Alloy' }, { key: 'helium', name: 'Helium-3' }],
     text: 'Stores 300 of one good. Switch what it holds any time.' },
+  // owner, 2026-11-05: "a big warehouse to store everything in general"
+  { key: 'warehouse', name: 'Warehouse', cat: 'core', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 400, parts: 30 }, days: 4, jobs: 2, upkeep: 3, power: -2,
+    storage: { food: 1000, water: 1000, air: 800, parts: 800, ore: 800, alloy: 400, helium: 200 },
+    text: 'A big general store: room for 1,000 food and water, 800 air, parts and ore, 400 alloy and 200 helium-3, all at once.' },
+  { key: 'reserve', name: 'Emergency Stores', cat: 'core', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 150, parts: 10 }, days: 2, jobs: 0, upkeep: 1, reserve: 200,
+    text: 'Sealed rations, water tanks and air candles: 200 of each held back for a crisis. When a store runs dry the colony lives on these instead of going without, and they refill by themselves from spare stock.' },
+  { key: 'granary', name: 'Granary', cat: 'core', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 300, parts: 20 }, days: 4, jobs: 1, upkeep: 2, storage: { food: 2500 },
+    text: 'A great silo: stores 2,500 food, so a bad month is not a hungry one (and heavy relief convoys have something to carry).' },
 
   { key: 'road', name: 'Road', cat: 'core', size: 1, zone: 'road', on: ['deck', 'plain', 'fertile', 'poor', 'gate', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 5, parts: 1 }, days: 0, jobs: 0, upkeep: 0,
     text: 'Colonists walk and rovers drive only where there are roads. Click the start, then the end. Roads pass through gates between open chambers.' },
@@ -191,10 +199,6 @@ export const BUILDINGS = [
     text: 'Raises happiness in range, up to its rating. Costs water, not power.' },
   // ---------------------------------------------------------------- version 6 (docs/COLONY-V6.md): the big city
   // `reserve`: emergency food, water and air held back (each), drawn only when the stores run dry (sim.js needs).
-  { key: 'reserve', name: 'Emergency Stores', cat: 'food', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 150, parts: 10 }, days: 2, jobs: 0, upkeep: 1, reserve: 200,
-    text: 'Sealed rations, water tanks and air candles: 200 of each held back for a crisis. When a store runs dry the colony lives on these instead of going without, and they refill by themselves from spare stock.' },
-  { key: 'granary', name: 'Granary', cat: 'food', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 300, parts: 20 }, days: 4, jobs: 1, upkeep: 2, storage: { food: 2500 }, tech: 'foodsec',
-    text: 'A great silo: stores 2,500 food, so a bad month is not a hungry one (and heavy relief convoys have something to carry).' },
   { key: 'vertfarm', name: 'Vertical Farm', cat: 'food', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 2400, parts: 160 }, days: 10, jobs: 30, upkeep: 14, power: -40, uses: { water: 120 }, makes: { food: 800 }, tech: 'vertfarm',
     text: 'Forty storeys of lit trays: 800 food a day on any floor, for power and water. Feeds a city.' },
   { key: 'waterworks', name: 'Water Works', cat: 'life', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 2000, parts: 140 }, days: 10, jobs: 16, upkeep: 12, power: -45, makes: { water: 1800 }, tech: 'waterworks',

@@ -34,7 +34,7 @@ const SLOTS = {
     // version 4: the deck buildings
     'lift', 'skygarden', 'gallery', 'cistern', 'geotap', 'pumpstation',
     // version 6 (docs/COLONY-V6.md): the big city (prompts written; pictures not made yet)
-    'reserve', 'granary', 'vertfarm', 'waterworks', 'atmoproc', 'sunmirror', 'towerblock', 'arcology', 'arrivals', 'plaza', 'massdriver'],
+    'reserve', 'granary', 'warehouse', 'vertfarm', 'waterworks', 'atmoproc', 'sunmirror', 'towerblock', 'arcology', 'arrivals', 'plaza', 'massdriver'],
   title: ['rebuild'],
   sky: ['earth-below'],
   terrain: ['void', 'asteroid', 'magnetic', 'atmosphere', 'hull', 'deck', 'plain', 'fertile', 'river', 'rubble', 'breach',
@@ -117,6 +117,7 @@ const FILES = {
   'card/pumpstation': 'art/colony/card/pumpstation.webp',
   'card/reserve': 'art/colony/card/reserve.webp',
   'card/granary': 'art/colony/card/granary.webp',
+  'card/warehouse': 'art/colony/card/warehouse.webp',
   'card/vertfarm': 'art/colony/card/vertfarm.webp',
   'card/waterworks': 'art/colony/card/waterworks.webp',
   'card/atmoproc': 'art/colony/card/atmoproc.webp',
