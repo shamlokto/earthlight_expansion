@@ -28,6 +28,7 @@ export {
 export {
   RELIEF, POP_TARGET, CONVOY_GOODS, sendConvoy, convoyWhy, convoyStatus, convoyCost, convoyPay, reliefStation,
   victoryStatus, victoryText, quotaOf, popTargetOf, ensureRelief, ENDING, EPILOGUE,
+  HAPPY_TARGET, massDrivers, convoyLoad, autoConvoyGood,   // version 6 (docs/COLONY-V6.md)
 } from './victory.js';
 // The survivors' two commanders (Warden Marrow, Tobias Venn) are commanders like any other once they join.
 for (const c of SURVIVOR_COMMANDERS) COMMANDER[c.key] ??= { portrait: `portrait/${c.key}`, ...c, survivor: true };
@@ -793,9 +794,15 @@ export function habitatNeeds(state, b, field) {
 // Services (version 2): a service building covers a home when the home's centre lies within its
 // radius (Chebyshev, from the service's centre). serviceAt: the best `service` value of that
 // building kind covering the home (Clinic triage halves it; a Canteen on rationing gives none).
-export const SERVICE_KINDS = [{ key: 'clinic', label: 'Clinic' }, { key: 'canteen', label: 'Canteen' }, { key: 'safetypost', label: 'Safety' }, { key: 'terrace', label: 'Terraces' }];
-// Homes for service averages (version 3: Terrace Homes count beside Habitats).
-export const HOME_KEYS = new Set(['habitat', 'terrace']);
+export const SERVICE_KINDS = [{ key: 'clinic', label: 'Clinic' }, { key: 'canteen', label: 'Canteen' }, { key: 'safetypost', label: 'Safety' }, { key: 'terrace', label: 'Terraces' },
+  { key: 'gallery', label: 'Gallery' }, { key: 'plaza', label: 'Civic Plaza' }];   // version 6: the Gallery counts at last; Civic Plazas
+// Homes for service averages (version 3: Terrace Homes count beside Habitats; version 6: Tower Blocks and Arcologies).
+export const HOME_KEYS = new Set(['habitat', 'terrace', 'towerblock', 'arcology']);
+// Homes that grow a level by themselves when their needs are met (version 6: Tower Blocks grow like Habitats).
+export const GROW_KEYS = new Set(['habitat', 'towerblock']);
+// Version 6: Emergency Stores hold back `reserve` of each of food, water and air (Food Security doubles it).
+export const RESERVE_GOODS = ['food', 'water', 'air'];
+export const reserveCap = (state) => state.buildings.reduce((t, b) => t + (finished(b) && BUILDING[b.key]?.reserve ? BUILDING[b.key].reserve : 0), 0) * techEffect(state, 'reserve');
 export function serviceValue(b) {
   const s = spec(b);
   if (!s.service || !active(b)) return 0;
@@ -835,7 +842,7 @@ export function summary(state) {
     stock, power: { supply: p.supply, demand: p.demand, battery: state.battery, cap: cap.power },
     pop: state.pop, housing: housingOf(state), jobs, workers: Math.min(state.pop, jobs),
     happy: state.happy, happyParts: state.happyParts, nextArrival: diffOf(state).transportEvery - (state.day % diffOf(state).transportEvery),
-    decks: deckSummary(state),
+    decks: deckSummary(state), reserve: { ...(state.reserve || { food: 0, water: 0, air: 0 }), cap: reserveCap(state) },
     research: { perDay: last.research || 0, focus: state.research?.focus ?? null, banked: state.research?.points || 0 },
   };
 }

@@ -15,7 +15,7 @@ import {
   HOME_KEYS, stateRng, V3, RAID, machineOf, maxHp, addGuardian, rehomeOrders, machineUpkeep, fitCommander, deptMult, deptHead,
   heatTarget, warnLead, raidsPossible, raidInterval, makeRaid, raidPreview, answerRaid, raidName, FACTIONS, FROM,
   basesDay, readyBase, raidsOn, baseName, BASE, BASE_RAIDS, releaseCommander, inviteChance,
-  mapOf, deckOf,
+  mapOf, deckOf, GROW_KEYS, reserveCap, RESERVE_GOODS,
 } from './rules.js';
 import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { diffOf } from './difficulty.js';
@@ -28,7 +28,8 @@ export { habitatNeeds, stateRng };
 
 // Rules numbers the table has no column for.
 // Buildings on the priority power circuit (see the power step).
-const LIFE_SUPPORT = new Set(['riverpump', 'airplant', 'reclaimer', 'hydro', 'habitat', 'terrace', 'clinic', 'iceharvester', 'gasscoop', 'pumpstation', 'mushroom', 'cistern']);
+const LIFE_SUPPORT = new Set(['riverpump', 'airplant', 'reclaimer', 'hydro', 'habitat', 'terrace', 'clinic', 'iceharvester', 'gasscoop', 'pumpstation', 'mushroom', 'cistern',
+  'vertfarm', 'waterworks', 'atmoproc', 'towerblock', 'arcology']);   // version 6
 
 export const SIM = {
   river: 1.25,            // farm beside the river
@@ -54,10 +55,14 @@ export const SIM = {
   fusionHelium: 2, overdriveHelium: 4, overdriveTrip: 0.01, overdriveDays: 5,
   // version 4
   drainEvery: 5,                     // Pump Station: one flooded tile in range drained every 5 days
+  // version 6 (docs/COLONY-V6.md)
+  hallBonus: 0.5, hallMax: 3,        // Arrivals Halls: each makes a transport half as big again, up to three
+  autoRation: 0.85, autoRationHappy: -3, autoRationDays: 3,   // Food Security: automatic rationing when food lasts < 3 days
+  reserveFill: 0.1, reserveKeep: 2,  // Emergency Stores refill 10% of their reserve a day from stock above 2 days of need
 };
 // Department heads (version 3): which buildings each one's bonus multiplies.
 const DEPT_OF = {
-  farm: 'agriculture', orchard: 'agriculture', fishery: 'agriculture', mushroom: 'agriculture',
+  farm: 'agriculture', orchard: 'agriculture', fishery: 'agriculture', mushroom: 'agriculture', vertfarm: 'agriculture',
   oremine: 'industry', smelter: 'industry', fabricator: 'industry', plasmaskimmer: 'industry', sweeper: 'industry',
   lab: 'research',
 };
@@ -324,9 +329,31 @@ export function dayTick(state, rng) {
   for (const c of state.chambers) if (c.status === 'open') chamberAir += (c.tiles / 100) * CHAMBER_AIR_PER_100;
   const nm = diffOf(state).need;
   const ration = state.buildings.some((b) => b.key === 'canteen' && b.mode === 'ration' && active(b));
-  const need = { food: pop * NEEDS.food * nm * (ration ? SIM.ration : 1), water: pop * NEEDS.water * nm, air: (pop * NEEDS.air + chamberAir) * nm };
-  const got = {};
-  for (const g in need) { const before = st[g]; use(g, need[g]); got[g] = need[g] > 0 ? (before - st[g]) / need[g] : 1; }
+  // version 6: Food Security rations by itself while the food in store (and the Emergency Stores) would last
+  // under three days and today's harvest falls short; a Canteen on rationing takes precedence
+  const rv = state.reserve ??= { food: 0, water: 0, air: 0 }, rcap = reserveCap(state);
+  const foodNeed = pop * NEEDS.food * nm;
+  const autoRation = !ration && state.research.done.includes('foodsec') && foodNeed > 0
+    && st.food + (rv.food || 0) < foodNeed * SIM.autoRationDays && (produced.food || 0) < foodNeed;
+  if (autoRation && !f.autoRation) say('ration', 'Food is running low: the colony rations itself (a sixth less food) until the stores recover.');
+  f.autoRation = autoRation;
+  const need = { food: foodNeed * (ration ? SIM.ration : autoRation ? SIM.autoRation : 1), water: pop * NEEDS.water * nm, air: (pop * NEEDS.air + chamberAir) * nm };
+  const got = {}, drawn = [];
+  for (const g in need) {
+    const before = st[g]; use(g, need[g]);
+    let gave = before - st[g];
+    // version 6: Emergency Stores cover what the stores could not
+    if (gave < need[g] - 1e-9 && rv[g] > 0) { const d = Math.min(rv[g], need[g] - gave); rv[g] -= d; gave += d; consumed[g] = (consumed[g] || 0) + d; drawn.push(g); }
+    got[g] = need[g] > 0 ? gave / need[g] : 1;
+  }
+  if (drawn.length && !f.reserveDrawn) say('reserve', `The colony is living on its Emergency Stores (${drawn.join(', ')}): ${drawn.map((g) => `${Math.floor(rv[g])} ${g}`).join(', ')} left. Make more before they run out.`, true);
+  f.reserveDrawn = drawn.length > 0;
+  // they refill from stock above two days of need, a tenth of the reserve a day
+  for (const g of RESERVE_GOODS) {
+    rv[g] = Math.min(rv[g] || 0, rcap);
+    const put = Math.min(rcap - rv[g], Math.max(5, rcap * SIM.reserveFill), st[g] - need[g] * SIM.reserveKeep);
+    if (put > 0 && !drawn.includes(g)) { st[g] -= put; rv[g] += put; }
+  }
   const housing = state.buildings.reduce((t, b) => t + (active(b) ? spec(b).housing || 0 : 0), 0);
   const met = { food: got.food > 0.999, water: got.water > 0.999, air: got.air > 0.999, power: pf > 0.999, housing: pop <= housing };
   for (const g of ['food', 'water', 'air', 'power']) f.short[g] = met[g] ? 0 : f.short[g] + 1;
@@ -348,7 +375,7 @@ export function dayTick(state, rng) {
   parts.push({ label: `Tax ${Math.round(state.tax * 100)}%`, value: Math.round(tx) });
   // park coverage stays on its deck (version 4): each home reads its own deck's field
   const fields = {}, fieldOf = (b) => (fields[deckOf(b)] ??= parkField(state, deckOf(b)));
-  const homes = state.buildings.filter((b) => b.key === 'habitat' && active(b));
+  const homes = state.buildings.filter((b) => GROW_KEYS.has(b.key) && active(b));   // version 6: Tower Blocks grow too
   const dwellings = state.buildings.filter((b) => HOME_KEYS.has(b.key) && active(b));   // habitats and terrace homes
   const parkAvg = dwellings.length ? dwellings.reduce((t, b) => t + parkAt(state, b, fieldOf(b)), 0) / dwellings.length : 0;
   parts.push({ label: 'Parks near homes', value: Math.round(parkAvg) });
@@ -362,6 +389,7 @@ export function dayTick(state, rng) {
   }
   if (state.buildings.some((b) => b.key === 'obsdeck' && active(b))) parts.push({ label: 'Observation Deck', value: SIM.obsHappy });
   if (ration) parts.push({ label: 'Rationing', value: SIM.rationHappy });
+  else if (autoRation) parts.push({ label: 'Rationing (automatic)', value: SIM.autoRationHappy });
   // version 3: a Welfare head (+ charm / 20), raid fear and tribute shame fading over 15 days,
   // a hot-headed commander going unpaid
   const welfare = deptHead(state, 'welfare');
@@ -382,14 +410,14 @@ export function dayTick(state, rng) {
   // their own level's needs fail for a while.
   state.stats.last = { ...(state.stats.last || {}), met };
   for (const b of homes) {
-    const field = fieldOf(b), d = BUILDING.habitat, nextOk = habitatNeeds(state, b, field);
+    const field = fieldOf(b), d = BUILDING[b.key], nextOk = habitatNeeds(state, b, field);
     const canGrow = nextOk.length > 0 && nextOk.every((n) => n.met);
     const holds = b.level === 1 || habitatNeeds(state, { ...b, level: b.level - 1 }, field).every((n) => n.met);
     if (canGrow) b.grow = Math.max(0, b.grow || 0) + 1;
     else if (!holds) b.grow = Math.min(0, b.grow || 0) - 1;
     else b.grow = 0;
-    if (b.grow >= SIM.growDays) { b.level++; b.grow = 0; say('grew', `A Habitat grew into ${d.levels[b.level - 1].name}: room for ${d.levels[b.level - 1].housing}.`); }
-    else if (b.grow <= -SIM.shrinkDays) { b.level--; b.grow = 0; say('shrank', `A Habitat fell back to ${d.levels[b.level - 1].name}: its needs went unmet.`); }
+    if (b.grow >= SIM.growDays) { b.level++; b.grow = 0; say('grew', `A ${d.name} grew into ${d.levels[b.level - 1].name}: room for ${d.levels[b.level - 1].housing}.`); }
+    else if (b.grow <= -SIM.shrinkDays) { b.level--; b.grow = 0; say('shrank', `A ${d.name} fell back to ${d.levels[b.level - 1].name}: its needs went unmet.`); }
   }
 
   // 9 population: deaths after days without food, water or air; emigration when unhappy;
@@ -423,7 +451,9 @@ export function dayTick(state, rng) {
       const top = SIM.transportMin + Math.round((SIM.transportMax - SIM.transportMin) * Math.min(1, (state.happy - dv.transportHappy) / SIM.transportFull));
       // version 4, stage 4: a big colony draws bigger ships, +1 colonist per 100 already living here
       // (so the win's population target is a matter of months, not years)
-      const n = Math.min(free, SIM.transportMin + Math.floor(rng() * (top - SIM.transportMin + 1)) + Math.floor(state.pop / 100));
+      // version 6: each working Arrivals Hall makes the transport half as big again (up to three halls)
+      const halls = Math.min(SIM.hallMax, state.buildings.filter((b) => b.key === 'arrivals' && active(b)).length);
+      const n = Math.min(free, Math.round((SIM.transportMin + Math.floor(rng() * (top - SIM.transportMin + 1)) + Math.floor(state.pop / 100)) * (1 + SIM.hallBonus * halls)));
       state.pop += n;
       state.flags.arrival = { day: state.day, n };   // the view flies the transport in (view3d/movers.js)
       ask('transport', 'Transport', `A transport docks with ${n} colonists.`);

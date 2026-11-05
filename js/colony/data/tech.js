@@ -52,6 +52,18 @@ export const TECHS = [
   { key: 'shipyard', name: 'Shipyard', branch: 'defence', cost: 150, needs: ['machineworks'], unlocks: ['shipyard'], text: 'A Shipyard on the hull builds capital ships: carriers, cruisers, battleships.' },
   { key: 'heavyworks', name: 'Heavy Works', branch: 'defence', cost: 180, needs: ['machineworks'], unlocks: [], effects: [{ kind: 'machines', tier: 3 }], text: 'The heaviest machines of the war: Athena, Medusa-class and the great ships.' },
   { key: 'kai', name: 'Kai Refits', branch: 'defence', cost: 300, needs: ['heavyworks', 'shipyard'], unlocks: [], effects: [{ kind: 'machines', tier: 4 }], text: 'Ruess\'s refits of the expansion war: the Kai series, up to the Azoras Kai.' },
+  // ---- version 6 (docs/COLONY-V6.md): the big city. 'reserve' multiplies Emergency Stores' reserve; Food
+  // Security also turns on automatic rationing (sim.js needs) when the food would last under three days.
+  { key: 'foodsec', name: 'Food Security', ver: 6, branch: 'society', cost: 90, needs: ['canteens'], unlocks: ['granary'], effects: [{ kind: 'reserve', mult: 2 }], text: 'Granaries, Emergency Stores that hold twice as much, and automatic rationing whenever the food would last less than three days.' },
+  { key: 'waterworks', name: 'Water Works', ver: 6, branch: 'life', cost: 200, needs: ['reclaim'], unlocks: ['waterworks'], text: 'A whole water plant in one building: water for a city.' },
+  { key: 'atmoproc', name: 'Atmosphere Processors', ver: 6, branch: 'life', cost: 240, needs: ['waterworks'], unlocks: ['atmoproc'], text: 'Air for a city and all its chambers from one great plant.' },
+  { key: 'vertfarm', name: 'Vertical Farms', ver: 6, branch: 'life', cost: 240, needs: ['fungi'], unlocks: ['vertfarm'], text: 'Farms forty storeys tall: 800 food a day on any floor.' },
+  { key: 'mirrors', name: 'Sun Mirrors', ver: 6, branch: 'industry', cost: 220, needs: ['fabrication', 'tethers'], unlocks: ['sunmirror'], text: 'Great mirrors in space that focus sunlight into power, with no fuel at all.' },
+  { key: 'highrise', name: 'High-rise Homes', ver: 6, branch: 'society', cost: 160, needs: ['terraces'], unlocks: ['towerblock'], text: 'Tower Blocks for 150 that grow into Spires for 450.' },
+  { key: 'civics', name: 'Civic Planning', ver: 6, branch: 'society', cost: 220, needs: ['highrise'], unlocks: ['plaza'], text: 'Civic Plazas: town hall, school and market, happiness over a whole district.' },
+  { key: 'immigration', name: 'Immigration', ver: 6, branch: 'logistics', cost: 200, needs: ['highrise'], unlocks: ['arrivals'], text: 'Arrivals Halls by the dock: every transport brings more colonists.' },
+  { key: 'arcology', name: 'Arcologies', ver: 6, branch: 'society', cost: 450, needs: ['highrise', 'vertfarm'], unlocks: ['arcology'], text: 'A city in one building: homes for 1,500 with jobs and gardens inside.' },
+  { key: 'massdriver', name: 'Mass Driver', ver: 6, branch: 'logistics', cost: 320, needs: ['tethers', 'fabrication'], unlocks: ['massdriver'], text: 'A rail on the hull that throws heavy relief convoys to Earth, three loads at a time, even by itself.' },
 ];
 export const TECH = Object.fromEntries(TECHS.map((t) => [t.key, t]));
 // Which tech unlocks a building (version 2 buildings carry `tech` too; this is the reverse index).

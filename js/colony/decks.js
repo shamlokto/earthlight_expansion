@@ -38,10 +38,11 @@ const NAMES = {
 const KINDS = { upper: ['garden', 'dome', 'ring', 'gallery'], lower: ['machinery', 'cistern', 'flooded', 'catacomb', 'core'] };
 
 // Floors a building can use, per deck (for the guarantees); the main deck's floors a shaft may replace.
-export const DECK_FLOOR = { upper: new Set([T.DECK, T.PLAIN, T.FERTILE, T.POOR]), lower: new Set([T.DECK, T.CONDUIT, T.ROCK]) };
+export const DECK_FLOOR = { upper: new Set([T.DECK, T.PLAIN, T.FERTILE, T.POOR, T.HILLS]), lower: new Set([T.DECK, T.CONDUIT, T.ROCK]) };
 const MAIN_OK = new Set([T.DECK, T.PLAIN, T.FERTILE, T.POOR, T.ROCK, T.RUBBLE, T.HILLS, T.FOREST]);
 const FIELDISH = new Set([T.PLAIN, T.FERTILE, T.POOR, T.RIVER, T.LAKE, T.FOREST, T.HILLS]);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const rint2 = (rng, a, b) => a + Math.floor(rng() * (b - a + 1));
 
 // Eden's outer box (the hull ring, inclusive) on the main map.
 export function hullBox(main) {
@@ -207,6 +208,45 @@ function attemptDecks(rng, main, mainChambers, startId, { avoid = null, landing 
           const row = (y - c.y0) % period, col = (x - c.x0 + ox) % gap;
           if ((row === 2 || row === 3) && col !== 0 && (c.kind === 'dome' || FIELDISH.has(main.t[i]))) { t[i] = T.GLASS; glassAt[i] = 1; }
         }
+      }
+    }
+  }
+  // version 6 (docs/COLONY-V6.md; owner, 2026-11-05: "too few hills … no rivers to pump from"): hills in the
+  // gardens and habitat rings, and irrigation canals (RIVER, so River Pumps, Fisheries and farms beside them
+  // work) winding across most gardens and the chamber the home shaft opens first. A generator of its own,
+  // so everything else about the layout comes out as before for the same seed.
+  {
+    const rng2 = mulberry32(salt ^ 0x5bd1e995), { t } = D.upper;
+    const nearShaft = (x, y) => shafts.some((k) => x >= k.x - 2 && x <= k.x + SHAFT.size + 1 && y >= k.y - 2 && y <= k.y + SHAFT.size + 1);
+    const soft = new Set([T.DECK, T.PLAIN, T.FERTILE, T.POOR]);
+    const inner = (c, x, y, m) => x - c.x0 >= m && c.x1 - x >= m && y - c.y0 >= m && c.y1 - y >= m;
+    for (const c of D.upper.chambers) {
+      const homeUp = c.id === home.upper;
+      if (c.kind !== 'garden' && c.kind !== 'ring' && !homeUp) continue;
+      const tiles = rectTiles(c), n3 = tiles.map((i) => noise(i % W, (i / W) | 0, 0.11, 21));
+      const q = quantile(n3, c.kind === 'garden' ? 0.8 : 0.86);
+      tiles.forEach((i, k) => { const x = i % W, y = (i / W) | 0; if (n3[k] > q && !glassAt[i] && soft.has(t[i]) && inner(c, x, y, 2) && !nearShaft(x, y)) t[i] = T.HILLS; });
+      if (!(homeUp || rng2() < (c.kind === 'garden' ? 0.8 : 0.35)) || (c.x1 - c.x0 + 1) * (c.y1 - c.y0 + 1) < 220) continue;
+      // a canal two tiles wide along the chamber's long axis, a tile in from the walls, clear of the shafts
+      const horiz = c.x1 - c.x0 >= c.y1 - c.y0;
+      for (let tries = 0; tries < 8; tries++) {
+        const path = new Set();
+        let a = horiz ? rint2(rng2, c.y0 + 3, c.y1 - 4) : rint2(rng2, c.x0 + 3, c.x1 - 4), drift = 0, clear = true;
+        for (let s = (horiz ? c.x0 : c.y0) + 1; s <= (horiz ? c.x1 : c.y1) - 1 && clear; s++) {
+          drift = clamp(drift + (rng2() - 0.5) * 0.6, -0.7, 0.7);
+          a = clamp(a + drift, (horiz ? c.y0 : c.x0) + 2, (horiz ? c.y1 : c.x1) - 3);
+          for (const d of [0, 1]) {
+            const x = horiz ? s : Math.round(a) + d, y = horiz ? Math.round(a) + d : s;
+            if (nearShaft(x, y)) { clear = false; break; }
+            path.add(y * W + x);
+          }
+        }
+        if (!clear) continue;
+        let left = 0;
+        for (const i of tiles) if (!path.has(i) && DECK_FLOOR.upper.has(t[i])) left++;
+        if (left < 60) break;
+        for (const i of path) { t[i] = T.RIVER; glassAt[i] = 0; }
+        break;
       }
     }
   }

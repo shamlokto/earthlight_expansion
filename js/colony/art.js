@@ -32,7 +32,9 @@ const SLOTS = {
     'arsenal', 'shipyard', 'barracks', 'scrapyard', 'emplacement', 'sensormast', 'shieldpylon', 'jammer', 'fusion',
     'mushroom', 'terrace', 'lodge', 'quarters',
     // version 4: the deck buildings
-    'lift', 'skygarden', 'gallery', 'cistern', 'geotap', 'pumpstation'],
+    'lift', 'skygarden', 'gallery', 'cistern', 'geotap', 'pumpstation',
+    // version 6 (docs/COLONY-V6.md): the big city (prompts written; pictures not made yet)
+    'reserve', 'granary', 'vertfarm', 'waterworks', 'atmoproc', 'sunmirror', 'towerblock', 'arcology', 'arrivals', 'plaza', 'massdriver'],
   title: ['rebuild'],
   sky: ['earth-below'],
   terrain: ['void', 'asteroid', 'magnetic', 'atmosphere', 'hull', 'deck', 'plain', 'fertile', 'river', 'rubble', 'breach',

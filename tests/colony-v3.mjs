@@ -75,7 +75,7 @@ function raidNow(s, units, { from = 'earth', faction = 'scavengers', tier = 'sca
 {
   const s = newGame({ seed: 1 });
   check(BUILDINGS.filter((d) => d.cat === 'defence').length === 8 && ['fusion', 'mushroom', 'terrace', 'lodge', 'quarters'].every((k) => BUILDING[k]), 'data: version 3 buildings');
-  check(TECHS.length === 30 && R.techStatus(s).length === 30, 'data: 30 techs');
+  check(TECHS.filter((t) => !t.ver).length === 30 && R.techStatus(s).length === TECHS.length, 'data: 30 techs before version 6');
   check(JSON.stringify(s.commanders.map((c) => c.key)) === '["general","sato"]' && s.commanders.every((c) => c.injured === 0 && c.dept === null), 'new game: the General and Sato serve');
   check(Array.isArray(s.production) && !s.production.length && Array.isArray(s.wanderers) && s.raid.heat === 0 && s.raid.next === null && s.raid.coming === null && s.raid.count === 0, 'new game: production, wanderers, raid clock');
   check(R.techEffect(s, 'machines') === 1, 'techEffect machines: tier 1 with no tech');
@@ -897,13 +897,13 @@ function playNormal(seed, { days = 250, defence = null } = {}) {
   const base = play(2, { days: 120, defence: false }).s;
   const v2save = JSON.parse(saveState(base));
   for (const k of ['production', 'commanders', 'wanderers', 'raid']) delete v2save[k];
-  const v2techs = TECHS.filter((t) => t.branch !== 'defence' && !['fungi', 'fusion', 'terraces', 'leadership'].includes(t.key)).map((t) => t.key);
+  const v2techs = TECHS.filter((t) => !t.ver && t.branch !== 'defence' && !['fungi', 'fusion', 'terraces', 'leadership'].includes(t.key)).map((t) => t.key);
   v2save.research = { points: 3, focus: null, progress: Object.fromEntries(v2techs.map((k) => [k, TECH[k].cost])), done: v2techs };
   v2save.unlocked = [...new Set([...v2save.unlocked, ...v2techs.flatMap((k) => TECH[k].unlocks)])].filter((k) => !['arsenal', 'barracks', 'scrapyard', 'emplacement'].includes(k));
   v2save.pending = [];
   const s = loadState(JSON.stringify(v2save));
   check(v2techs.length === 19 && s.research.done.length === 19, 'old save: all 19 version-2 techs done');
-  const avail = R.techStatus(s).filter((t) => t.available).map((t) => t.key).sort().join();
+  const avail = R.techStatus(s).filter((t) => t.available && !TECH[t.key].ver).map((t) => t.key).sort().join();
   check(avail === 'fungi,fusion,leadership,machineworks,sensors,terraces', `old save: the new techs are offered (${avail})`);
   check(['arsenal', 'barracks', 'scrapyard', 'emplacement'].every((k) => s.unlocked.includes(k)) && s.commanders.length === 2 && s.raid.count === 0, 'old save: defence buildings unlocked (past 80), commanders and the raid clock');
   const rng = stateRng(s);

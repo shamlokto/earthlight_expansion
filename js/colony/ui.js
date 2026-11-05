@@ -319,11 +319,12 @@ export function helpHtml(art, diff) {
       <li><b>Hazards</b> in the outer rings (debris, radiation) cost hull unless a commander with good wits leads the squadron. The report comes home with them.</li>
     </ul>`)}
   ${sec('victory', 'Winning: Eden Restored', `<figure class="cl-hfig cl-hbook"><span style="font-size:42px;color:#ffd98a">✺</span><figcaption>Eden Restored</figcaption></figure>`, `
-    <p>The Council declares Eden restored when three things are true at once. The goals walk you there, and the Market shows how far along you are.</p>
+    <p>The Council declares Eden restored when four things are true at once. It is a long road: the goals walk you there, and the Market shows how far along you are.</p>
     <ul class="cl-hsteps">
       <li><b>Every chamber open</b>, on all three decks: survey, seal, clear dangers and pressurise them all.</li>
-      <li><b>Enough colonists</b>: 1,500 on Easy, 2,000 on Normal.</li>
-      <li><b>Relief for Earth</b>: send relief convoys (12 on Easy, 20 on Normal) from the <b>Market</b>. A convoy is 100 food, water or air, or 20 helium-3, and costs a few credits and parts to launch; one leaves a day. First, a squadron must reach an <b>Earth relief station</b> on the Star chart.</li>
+      <li><b>A city of 25,000 colonists.</b> Late research builds it: <b>Tower Blocks</b> (150, growing to 450), <b>Arcologies</b> (1,500 each), <b>Arrivals Halls</b> (bigger transports), and <b>Vertical Farms</b>, <b>Water Works</b>, <b>Atmosphere Processors</b> and <b>Sun Mirrors</b> to keep it fed, watered, breathing and lit. Clinics bring children.</li>
+      <li><b>A happy city</b>: happiness above 85, held for 30 days (a day at or below 85 costs three days of progress). Cover the homes with parks, Clinics, Canteens, Safety Posts, Galleries and <b>Civic Plazas</b>.</li>
+      <li><b>Relief for Earth</b>: ship the relief quota (60 loads on Easy, 90 on Normal) from the <b>Market</b>. A load is 500 food, water or air, or 100 helium-3. One convoy leaves a day: from the dock it carries one load; a <b>Mass Driver</b> on the hull launches three at once, and on <b>Automatic</b> it launches by itself, always keeping ten days of needs at home. First, a squadron must reach an <b>Earth relief station</b> on the Star chart.</li>
       <li><b>After the ending</b> the colony carries on: the victory is kept in your save, and Eden is yours to keep growing.</li>
     </ul>`)}
   ${sec('commanders', 'Commanders', `<figure class="cl-hfig portrait">${pic('portrait/sato', 'Capt. Mira Sato')}<figcaption>Capt. Sato</figcaption></figure>`, `
@@ -1084,9 +1085,13 @@ export function createUI(root, api) {
       return `<button type="button" data-a="mode" data-id="${b.id}" data-v="${esc(mo.key)}" aria-pressed="${on}" title="${esc(mo.text || mo.name)}">${esc(mo.name)}</button>`;
     }).join('')}</div>${d.modes.find((mo) => mo.key === (b.mode ?? d.modes[0].key))?.text ? `<p class="cl-dim">${esc(d.modes.find((mo) => mo.key === (b.mode ?? d.modes[0].key)).text)}</p>` : ''}` : '';
     let needs = '';
-    if (b.key === 'habitat' && next && R.habitatLevelReachable && !R.habitatLevelReachable(next)) {
+    const grows = b.key === 'habitat' || b.key === 'towerblock';   // version 6: Tower Blocks grow like Habitats
+    if (b.key === 'reserve' && R.reserveCap) { const rv = s.reserve || {}, cap = R.reserveCap(s); rows.push(kv('Held back', ['food', 'water', 'air'].map((g) => `${num(Math.floor(rv[g] || 0))} ${g}`).join(' · ') + ` <small>of ${num(cap)} each</small>`)); }
+    if (grows && b.key !== 'habitat' && next && R.habitatLevelReachable && !R.habitatLevelReachable(next)) {
+      needs = '';
+    } else if (b.key === 'habitat' && next && R.habitatLevelReachable && !R.habitatLevelReachable(next)) {
       needs = `<div class="cl-needs"><h5>${esc(d.levels?.[b.level - 1]?.name || 'This')} is the largest home for now</h5></div>`;
-    } else if (b.key === 'habitat') {
+    } else if (grows) {
       const list = habitatNeeds(s, b);
       if (list && list.length) needs = `<div class="cl-needs"><h5>${next ? `Next level: ${esc(next.name || 'level ' + (b.level + 1))}` : 'Top level'}</h5><ul>${list.map((n) => `<li class="${n.ok ? 'ok' : 'no'}">${n.ok ? '✓' : '✗'} ${esc(n.label)}</li>`).join('')}</ul></div>`;
       else if (next?.needs) needs = `<div class="cl-needs"><h5>Next level: ${esc(next.name || '')}</h5><ul>${next.needs.map((n) => `<li class="no">• ${esc({ allNeeds: 'Food, water, air and power for everyone', park: 'A park in range', clinic: 'A clinic in range (later)' }[n] || n)}</li>`).join('')}</ul></div>`;
@@ -1109,12 +1114,12 @@ export function createUI(root, api) {
       if (b.key !== 'seal') acts.push(`<button type="button" class="cl-btn sm" data-a="toggle" data-id="${b.id}">${b.off ? 'Switch on' : 'Switch off'}</button>`);
       acts.push(`<button type="button" class="cl-btn sm warn" data-a="demolish" data-id="${b.id}" title="Refunds half its cost">Demolish</button>`);
     }
-    if (b.key === 'dock') acts.unshift(`<button type="button" class="cl-btn sm primary" data-a="market">Market</button>`);
+    if (b.key === 'dock' || b.key === 'massdriver') acts.unshift(`<button type="button" class="cl-btn sm primary" data-a="market">Market</button>`);
     return `<section class="cl-isec"><h4>Building ${status}</h4>
       <div class="cl-ibuild"><span class="cl-ipic">${api.art?.(`card/${b.key}`) ? `<img src="${esc(api.art(`card/${b.key}`))}" alt="">` : cardIcon(d)}</span>
       <div><div class="cl-iname">${esc(d.name)}</div><p class="cl-dim">${esc(d.text || '')}</p></div></div>
       ${rows.join('')}${extra}${modes}${needs}
-      ${!next && d.levels && b.key !== 'habitat' ? '<p class="cl-dim">Fully upgraded.</p>' : ''}
+      ${!next && d.levels && !grows ? '<p class="cl-dim">Fully upgraded.</p>' : ''}
       <div class="cl-acts">${acts.join('')}</div></section>`;
   }
 
@@ -1175,7 +1180,7 @@ export function createUI(root, api) {
     if (e.target.closest('[data-mchart]')) { pops.market.hidden = true; openChart(); return; }
     const b = e.target.closest('[data-sell],[data-guard],[data-buy],[data-convoy]'); if (!b || b.disabled) return;
     const s = S();
-    if (b.dataset.convoy) result(R.sendConvoy(s, b.dataset.convoy));
+    if (b.dataset.convoy) result(R.sendConvoy(s, b.dataset.convoy, !!b.dataset.heavy));
     else if (b.dataset.buy) result(R.buy(s, b.dataset.buy, +b.dataset.q));
     else if (b.dataset.sell) {
       const g = b.dataset.sell, have = Math.floor(s.stock[g] || 0), q = b.dataset.q === 'all' ? have : Math.min(have, +b.dataset.q);
@@ -1222,12 +1227,13 @@ export function createUI(root, api) {
   // with the three parts of the win, Eden Restored, beside them.
   function convoyHtml(s, cv, vs) {
     const part = (label, x) => `<li class="${x.met ? 'met' : ''}"><b>${x.met ? '✓' : '○'}</b> ${label} <small>${num(x.have)} / ${num(x.need)}</small></li>`;
-    return `<h4>Relief convoys to Earth <small>${cv.sent} / ${cv.quota} sent · each costs ${num(cv.cost.credits)} cr and ${num(cv.cost.parts)} parts</small></h4>
-      ${cv.station ? `<p class="cl-dim">Convoys go to <b>${esc(cv.station)}</b>. One leaves a day; Earth pays for each.</p>`
+    const loads = cv.loads ?? cv.sent, heavy = cv.driver && cv.heavyCost;
+    return `<h4>Relief convoys to Earth <small>${num(loads)} / ${num(cv.quota)} loads · a convoy costs ${num(cv.cost.credits)} cr and ${num(cv.cost.parts)} parts${heavy ? `, a heavy launch ${num(cv.heavyCost.credits)} cr and ${num(cv.heavyCost.parts)} parts` : ''}</small></h4>
+      ${cv.station ? `<p class="cl-dim">Convoys go to <b>${esc(cv.station)}</b>. One leaves a day; Earth pays for each.${cv.driver ? ` The Mass Driver launches three loads at once${cv.auto ? ' and is on <b>Automatic</b>: it launches by itself' : ' (set it to Automatic in its panel to launch by itself)'}.` : ' A Mass Driver (research) launches three loads at once.'}</p>`
         : '<p class="cl-why">No Earth relief station reached yet. <button type="button" class="cl-linkbtn" data-mchart>Star chart ›</button> send a squadron to one on the Earth side.</p>'}
       <table class="cl-table cl-mkt"><tbody>${cv.goods.map((g) => `<tr><td>${GOOD_NAME[g.good] || g.good}</td><td class="n">${num(g.have)} <small>/ ${g.load}</small></td><td class="n">+${num(g.pay)} <small>cr</small></td>
-        <td class="cl-sellbtns"><button type="button" class="cl-btn xs" data-convoy="${g.good}" ${g.why ? `disabled title="${esc(g.why)}"` : `title="Send ${g.load} ${g.good} to Earth"`}>Send ${g.load}</button></td></tr>`).join('')}</tbody></table>
-      ${vs ? `<div class="cl-restore${s.victory ? ' won' : ''}"><b>${s.victory ? `Eden Restored on day ${s.victory.day}` : 'Eden Restored needs'}</b><ul>${part('every chamber open', vs.chambers)}${part('colonists', vs.pop)}${part('relief convoys', vs.convoys)}</ul></div>` : ''}`;
+        <td class="cl-sellbtns"><button type="button" class="cl-btn xs" data-convoy="${g.good}" ${g.why ? `disabled title="${esc(g.why)}"` : `title="Send ${g.load} ${g.good} to Earth"`}>Send ${num(g.load)}</button>${heavy ? ` <button type="button" class="cl-btn xs" data-convoy="${g.good}" data-heavy="1" ${g.whyHeavy ? `disabled title="${esc(g.whyHeavy)}"` : `title="Launch ${g.heavyLoad} ${g.good} from the Mass Driver"`}>Launch ${num(g.heavyLoad)}</button>` : ''}</td></tr>`).join('')}</tbody></table>
+      ${vs ? `<div class="cl-restore${s.victory ? ' won' : ''}"><b>${s.victory ? `Eden Restored on day ${s.victory.day}` : 'Eden Restored needs'}</b><ul>${part('every chamber open', vs.chambers)}${part('colonists', vs.pop)}${vs.happy ? part(`happiness above ${vs.happy.above} (now ${vs.happy.now}), days held`, vs.happy) : ''}${part('relief convoy loads', vs.convoys)}</ul></div>` : ''}`;
   }
 
   function renderSettings() {
@@ -2439,7 +2445,7 @@ export function createUI(root, api) {
     }
     evBox.className = 'cl-win cl-event cl-evfinal cl-evvictory';
     const v = s.victory || {}, choice = p.choices?.[0] || { key: 'keep', label: 'Keep building Eden' };
-    const stats = [['Day', v.day], ['Colonists', v.pop], ['Chambers open', v.chambers], ['Relief convoys', v.convoys], ['Buildings', v.buildings], ['Raids beaten', v.raids], ['Pirate dens cleared', v.dens], ['Logs read', v.logs]];
+    const stats = [['Day', v.day], ['Colonists', v.pop], ['Chambers open', v.chambers], ...(v.happy != null ? [['Happiness', v.happy]] : []), ['Relief loads', v.convoys], ['Buildings', v.buildings], ['Raids beaten', v.raids], ['Pirate dens cleared', v.dens], ['Logs read', v.logs]];
     evBox.innerHTML = `<div class="cl-fvpic">${victoryPicture()}</div>
       <div class="cl-fvmain">
         <div class="cl-evkind">${esc(KIND_LABEL.victory)} · Day ${s.day}</div>

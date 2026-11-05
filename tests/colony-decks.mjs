@@ -38,7 +38,7 @@ function walk(v, path, out) {
 
 // ---------------------------------------------------------------- generation, seeds 1–20
 
-const UPPER_T = new Set([T.OUTSIDE, T.HULL, T.BULKHEAD, T.GATE, T.BREACH, T.DECK, T.PLAIN, T.FERTILE, T.POOR, T.GLASS, T.SHAFT]);
+const UPPER_T = new Set([T.OUTSIDE, T.HULL, T.BULKHEAD, T.GATE, T.BREACH, T.DECK, T.PLAIN, T.FERTILE, T.POOR, T.GLASS, T.SHAFT, T.HILLS, T.RIVER]);   // version 6: hills and canals
 const LOWER_T = new Set([T.OUTSIDE, T.HULL, T.BULKHEAD, T.GATE, T.BREACH, T.DECK, T.CONDUIT, T.ROCK, T.RUBBLE, T.MARSH, T.CATACOMB, T.SHAFT]);
 function verify(seed, s) {
   const { w, h } = s.map, E = hullBox(s.map), IN = { x0: E.x0 + 2, y0: E.y0 + 2, x1: E.x1 - 2, y1: E.y1 - 2 };
@@ -72,7 +72,7 @@ function verify(seed, s) {
     }
     check(t.every((v, i) => sv[i] === (v === T.RUBBLE ? 40 : 0)), `seed ${seed}: ${deck} salvage only on rubble`);
     const have = (ter) => t.some((v) => v === ter);
-    if (deck === 'upper') check(have(T.GLASS) && have(T.FERTILE) && have(T.DECK), `seed ${seed}: upper has sky panels, garden soil, deck`);
+    if (deck === 'upper') check(have(T.GLASS) && have(T.FERTILE) && have(T.DECK) && have(T.HILLS) && have(T.RIVER), `seed ${seed}: upper has sky panels, garden soil, deck, hills and canals`);
     else check(have(T.CONDUIT) && have(T.MARSH) && have(T.CATACOMB) && have(T.ROCK), `seed ${seed}: lower has conduit halls, flooded tunnels, catacombs, rock`);
     const listed = new Set();
     for (const c of cs) {
@@ -161,13 +161,16 @@ function preview(m, E) {
   const s = rich(2), land = landingOf(s), hs = home(s);
   const up = chAt(s, 'upper', hs.x, hs.y), lo = chAt(s, 'lower', hs.x, hs.y);
   check(up && lo && up.deck === 'upper' && lo.deck === 'lower', 'the landing shaft passes through an upper and a lower chamber');
-  // a farm on the upper deck is refused (even with its chamber open), a sky garden on the main deck too
+  // version 6: a farm on the upper deck's soil is allowed (it was refused before); a sky garden on the main deck is not
   up.status = 'open';
   const farmUp = R.findSpot(s, 'farm', { deck: 'upper', box: up, free: true });
   let fx = -1, fy = -1;
   for (let y = up.y0; y < up.y1 && fx < 0; y++) for (let x = up.x0; x < up.x1; x++) { const t = s.decks.upper.t; const i = y * s.map.w + x; if ([i, i + 1, i + s.map.w, i + s.map.w + 1].every((j) => t[j] === T.PLAIN || t[j] === T.FERTILE)) { fx = x; fy = y; break; } }
   const why = R.canBuild(s, 'farm', fx, fy, 'upper');
-  check(fx >= 0 && !farmUp && /only on the main deck/.test(why || ''), `a farm on the upper deck is refused (${why})`);
+  check(fx >= 0 && farmUp && why === null, `a farm on the upper deck's soil is allowed (${why})`);
+  check(/only on the lower deck/.test(R.canBuild(s, 'cistern', fx, fy, 'upper') || ''), 'a cistern is refused on the upper deck');
+  // the home shaft's upper chamber has a canal: a River Pump stands beside it, and the farm beside a canal gets +25%
+  check(R.findSpot(s, 'riverpump', { deck: 'upper', box: up, free: true }) !== null, 'a River Pump fits beside an upper-deck canal');
   check(/only on the upper deck/.test(R.canBuild(s, 'skygarden', cmdOf(s).x + 4, cmdOf(s).y, 'main') || ''), 'a sky garden on the main deck is refused');
   check(R.findSpot(s, 'skygarden', { deck: 'main', free: true }) === null, 'no spot for a sky garden anywhere on the main deck');
   check(R.findSpot(s, 'skygarden', { deck: 'upper', box: up, free: true }) !== null, 'a sky garden fits in an open upper chamber');
@@ -185,7 +188,7 @@ function preview(m, E) {
   check(/not pressurised/.test(R.canBuild(s, 'lift', other.x, other.y) || ''), 'a lift in a sealed main chamber is refused');
   // the build menu per deck
   const menu = R.buildable(s, 'upper');
-  check(menu.find((b) => b.key === 'farm').why === 'Main deck only.' && menu.find((b) => b.key === 'skygarden').onDeck && menu.find((b) => b.key === 'pumpstation').why === 'Main and lower decks only.', 'the build menu says which deck');
+  check(menu.find((b) => b.key === 'geotap').why === 'Lower deck only.' && menu.find((b) => b.key === 'farm').onDeck && menu.find((b) => b.key === 'skygarden').onDeck && menu.find((b) => b.key === 'pumpstation').why === 'Main and lower decks only.', 'the build menu says which deck');
   check(menu.find((b) => b.key === 'lift').onDeck && R.buildable(s).find((b) => b.key === 'skygarden').why === null, 'no deck given: the menu is as before');
   check(['lift', 'skygarden', 'gallery', 'cistern', 'geotap', 'pumpstation'].every((k) => s.unlocked.includes(k)), 'deck buildings are unlocked from the start');
 }
