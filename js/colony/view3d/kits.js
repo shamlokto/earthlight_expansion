@@ -800,6 +800,16 @@ export const KITS = {
     ...[-0.36, -0.22].map((x) => cyl([0.08, 0.3, 0.08], [x, 0.05, 0.32], '#e8eef4')),
     dome([0.08, 0.06, 0.08], [-0.08, 0.66, -0.1], '#5fff8a', GLOW),
   ],
+  // 2×2: a long ribbed shed with a curved roof, loading bays and crates stacked outside.
+  warehouse: () => [
+    box([1.96, 0.06, 1.96], [0, 0, 0], '#5a5e64'),
+    box([1.7, 0.7, 1.3], [0, 0.06, -0.2], '#8a929c'),
+    dome([1.7, 0.36, 1.3], [0, 0.76, -0.2], '#a8b0b8'),
+    ...[-0.5, 0, 0.5].map((x) => box([0.34, 0.42, 0.04], [x, 0.06, 0.46], '#3c4048')),
+    ...[[-0.6, 0.75], [-0.25, 0.8], [0.55, 0.78]].map(([x, z]) => box([0.26, 0.22, 0.26], [x, 0.06, z], '#c9954a')),
+    box([0.26, 0.22, 0.26], [-0.42, 0.28, 0.77], '#5f9fd0'),
+    box([1.72, 0.04, 0.04], [0, 0.78, 0.46], '#f5c542', GLOW),
+  ],
   // 2×2: two cream silos with green domed tops, a conveyor bridge and a loading house.
   granary: () => [
     box([1.96, 0.06, 1.96], [0, 0, 0], '#7a7466'),
