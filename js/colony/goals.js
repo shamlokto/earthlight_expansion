@@ -4,7 +4,7 @@
 //   goal: { id, title, text, speaker, done(state), progress(state)?, show(state)?, only(state)? }
 //   show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true } | { research: true | techKey } | { defence: tab } | { journal: tab } | { chart: sectorId | true } | null
 import { BUILDING } from './data/buildings.js';
-import { summary, chamberLinks, openBreaches, chamberOf, addPending, log, centre, pressuriseAir, storageCaps } from './rules.js';
+import { homeCrew, summary, chamberLinks, openBreaches, chamberOf, addPending, log, centre, pressuriseAir, storageCaps } from './rules.js';
 import { diffOf } from './difficulty.js';
 import { TECH } from './data/tech.js';
 import { sectorOf } from './expeditions.js';
@@ -29,6 +29,7 @@ function nearSector(s, fit) {
   const c = (s.expeditions?.sectors || []).filter((x) => x.known && !x.cleared && fit(x)).sort((a, b) => a.ring - b.ring)[0];
   return c ? c.id : null;
 }
+const guardHome = (s) => { try { return homeCrew(s).size; } catch { return 0; } };
 const dock = (s) => s.buildings.find((b) => b.key === 'dock');
 // The next chamber, unless the air stores are too small to pressurise it: then an air depot.
 function airFor(s) {
@@ -118,9 +119,11 @@ export const GOALS = [
   { id: 'barracks', speaker: 'sato', title: 'Crews for the machines',
     text: 'A machine needs a crew to fly it. The Command Centre crews four; a Guardian Barracks crews six more. Put Battery Emplacements on the hull too: they fire on raiders that come close.',
     done: (s) => finished(s, 'barracks') >= 1, show: () => ({ build: 'barracks' }) },
-  { id: 'raid', speaker: 'sato', title: 'Weather the first raid',
-    text: 'Sooner or later the sensors will pick up a contact. When the raiders come, fight with the guardians or pay them to leave: either way, Eden goes on. The Defence panel shows how heated things are.',
-    done: (s) => (s.raid?.count || 0) >= 1, progress: (s) => (s.raid?.coming ? `raiders on the way` : `heat ${Math.round(s.raid?.heat || 0)}`), show: () => ({ defence: 'raids' }) },
+  // version 5 (owner, 2026-11-05): nobody raids Eden below 500 colonists, so the goal is a guard, not a raid
+  { id: 'raid', speaker: 'sato', title: 'A guard for Eden',
+    text: 'While Eden is small, nobody out there cares: the raider bands notice a colony once it has about 500 people, or when our squadrons come knocking at their bases. Get two crewed machines standing guard before then. When raiders come, fight them (or command the battle yourself) or pay them to leave. Every den we burn out means fewer raids.',
+    done: (s) => (s.raid?.count || 0) >= 1 || guardHome(s) >= 2 || s.options?.raids === false,
+    progress: (s) => `${guardHome(s)} / 2 crewed machines at home`, show: (s) => (finished(s, 'barracks') ? { defence: 'production' } : { build: 'barracks' }) },
   // ---- version 4: the decks (docs/COLONY-V4.md)
   { id: 'lift', speaker: 'ruess', title: 'Repair a lift',
     text: 'Eden is three decks deep: the habitat rings above us and the machinery and catacombs below. The gold-rimmed pits are lift shafts. Repair a Lift on the one in our own chamber, and the decks above and below open to survey.',

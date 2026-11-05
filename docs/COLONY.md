@@ -109,7 +109,7 @@ and trade costs more.
 
 ## 4. Time (D1)
 
-A tick is **one day**. Days run live at ×1 (one per second), ×2, ×4 or paused. The simulation is
+A tick is **one day**. Days run live at ×1 (one every 2.5 seconds since 2026-11-05; it was one a second), ×2, ×4 or paused. The simulation is
 integer-stepped, so the headless test runs 500 days in milliseconds.
 
 **Decisions pause the clock** until answered: a raid at the gates (auto-resolve / command /

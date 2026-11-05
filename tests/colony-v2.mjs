@@ -558,6 +558,7 @@ function v2(s) {
 }
 function playV2(seed, days = 250) {
   const s = newGame({ seed }), rng = stateRng(s), when = {}, t0 = performance.now();
+  s.options.raids = false;   // a version-2 player builds no defences: raiders (version 3, 5) are tested in colony-v3
   let deaths = 0;
   for (let d = 0; d < days; d++) {
     followGoal(s); upkeep(s); v2(s);

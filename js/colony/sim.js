@@ -13,7 +13,8 @@ import {
   STORED, spec, active, finished, tilesOf, centre, log, addPending, chamberOf, idx, storageCaps, jobsOf, crewsOf,
   powerOf, parkField, parkAt, openBreaches, habitatNeeds, PRICE, upgradeState, techEffect, SERVICE_KINDS, covers, serviceValue,
   HOME_KEYS, stateRng, V3, RAID, machineOf, maxHp, addGuardian, rehomeOrders, machineUpkeep, fitCommander, deptMult, deptHead,
-  heatTarget, warnLead, raidsPossible, raidInterval, makeRaid, raidPreview, answerRaid, raidName, FACTIONS, FROM, releaseCommander, inviteChance,
+  heatTarget, warnLead, raidsPossible, raidInterval, makeRaid, raidPreview, answerRaid, raidName, FACTIONS, FROM,
+  basesDay, readyBase, raidsOn, baseName, BASE, BASE_RAIDS, releaseCommander, inviteChance,
   mapOf, deckOf,
 } from './rules.js';
 import { COMMANDER, WANDERERS } from './data/commanders.js';
@@ -133,7 +134,8 @@ export function dayTick(state, rng) {
   f.short ||= { food: 0, water: 0, air: 0, power: 0 };
   upgradeState(state);
   // a raid left unanswered when the clock moves on is fought (raiders don't wait)
-  if (state.raid.coming && state.day >= state.raid.coming.day && state.raid.coming.arrived) {
+  // (version 5: not one being fought on the battle map: that one waits for the battle's result)
+  if (state.raid.coming && state.day >= state.raid.coming.day && state.raid.coming.arrived && !state.raid.coming.battle) {
     state.pending = state.pending.filter((p) => p.kind !== 'raid');
     const r = answerRaid(state, 'fight', rng);
     if (r.ok) events.push({ kind: 'raidresult', text: r.msg, pause: false });
@@ -492,6 +494,7 @@ export function dayTick(state, rng) {
 // ---------------------------------------------------------------- version 3: the guard's day
 
 const r2 = (v) => Math.round(v * 100) / 100;
+const RAID_PEACE = BASE_RAIDS.peace;
 const cname = (key) => COMMANDER[key]?.name || key;
 function guardTick(state, { staffing, pf, moneyF, rng, say, ask }) {
   const f = state.flags, rd = state.raid, st = state.stock;
@@ -570,13 +573,22 @@ function guardTick(state, { staffing, pf, moneyF, rng, say, ask }) {
   rd.sales[state.day % 30] = Math.round(sold - (f.soldSeen ?? sold));
   f.soldSeen = sold;
   rd.heat = r2(rd.heat + (heatTarget(state).target - rd.heat) * RAID.heat.ease);
-  // the raid clock: running from 80 colonists; a warning `warnLead` days ahead, then the raid
-  if (f.lost || !raidsPossible(state)) return;
-  const dk = state.difficulty === 'easy' ? 'easy' : 'normal';
+  // version 5 (docs/COLONY-V5.md): the raiders' bases regrow their fleets and notice Eden as it grows
+  for (const b of basesDay(state, rng)) if (raidsOn(state)) {
+    const B = BASE[b.id], who = FACTIONS[b.faction]?.name || b.faction;
+    say('notice', state.pop >= RAID_PEACE
+      ? `Sato: chatter on the raider bands. ${who} at ${baseName(b)} have heard of Eden and its ${state.pop} colonists. Expect them within a month or so.`
+      : `Sato: ${who} at ${baseName(b)} know of Eden now. While we are small (under ${RAID_PEACE} colonists) we are not worth their fuel.`, B.notice <= state.pop);
+  }
+  // the raid clock: raiders on, 500 colonists, a base that knows Eden; a warning `warnLead` days ahead, then the raid
+  if (rd.coming && rd.coming.battle) return;   // fought on the battle map: main.js brings the result
+  if (f.lost || (!rd.coming && !raidsPossible(state))) return;
   if (!rd.coming) {
-    if (rd.next === null) rd.next = Math.max(RAID.start[dk] + RAID.firstGap, state.day + raidInterval(state, rng));
-    if (state.day < RAID.start[dk] || state.day < rd.next - warnLead(state)) return;
-    const raid = rd.coming = makeRaid(state, rng, Math.max(rd.next, state.day + 1));
+    const base = readyBase(state);
+    if (!base) return;
+    const target = Math.max(rd.next ?? 0, base.since ?? 0);
+    if (state.day < target - warnLead(state)) return;
+    const raid = rd.coming = makeRaid(state, rng, Math.max(target, state.day + 1), base);
     rd.warned = true;
     const days = raid.day - state.day, defended = state.guardians.some((g) => !g.away) || state.buildings.some((b) => b.key === 'emplacement' && b.build === 0);
     const text = `Governor, long-range contact: ${FACTIONS[raid.faction].name}, ${raid.units.length} machine${raid.units.length > 1 ? 's' : ''} (${FACTIONS[raid.faction].text}), `

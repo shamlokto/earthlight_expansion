@@ -42,6 +42,10 @@ import { LOGS, VAULTS, SURVIVORS, SURVIVOR_COMMANDERS, DANGERS, FINAL_CODE_PARTS
 // lazily so the colony still runs if the expansion's files are missing.
 let svgPortrait = null;
 import('../expansion/portraits.js').then((m) => { svgPortrait = m.portrait; }).catch(() => { });
+// Command the battle (docs/COLONY-V5.md §2): the raid fought on the expansion's hex map; needs the
+// Earth Light pack (packReady: null while checking).
+let battleMod = null, packReady = null;
+import('./battle.js').then((m) => { battleMod = m; }).catch((e) => console.warn('battle.js not loaded', e));
 
 const GOODS = ['food', 'water', 'air', 'parts', 'ore', 'alloy', 'helium', 'credits'];
 const GOOD_NAME = { food: 'Food', water: 'Water', air: 'Air', parts: 'Parts', ore: 'Ore', alloy: 'Alloy', helium: 'Helium-3', credits: 'Credits', power: 'Power', research: 'Research' };
@@ -219,7 +223,7 @@ export function helpHtml(art, diff) {
     <p>The <b>goal panel</b> (under the top bar) always says what to do next. Press <b>Show me</b> and it takes you there. Each goal done pays a <b>Council grant</b> of credits and parts.</p>
     <p>The <b>advisor</b> warns you when something is going wrong. Press <b>Fix</b> to jump to the answer.</p>`)}
   ${sec('time', 'Time', '', `
-    <p>One <b>day</b> passes every second. The buttons at the top are <b>pause</b>, <b>×1</b>, <b>×2</b> and <b>×4</b>. Keys: space, 1, 2, 3.</p>
+    <p>One <b>day</b> passes every two and a half seconds at ×1. The buttons at the top are <b>pause</b>, <b>×1</b>, <b>×2</b> and <b>×4</b>. Keys: space, 1, 2, 3.</p>
     <p>When something needs your answer (a ship, a finished goal, a new chamber), <b>the clock stops</b> until you answer.</p>
     <p>Pause any time to plan. Nothing is lost while paused.</p>`)}
   ${sec('build', 'Building', card('farm') + card('repairyard'), `
@@ -355,6 +359,10 @@ export function helpHtml(art, diff) {
   </div>`;
 }
 
+// One stock readout in the top bar (owner, 2026-11-05: "the top status bar becomes crowded": the bar keeps
+// colonists, happiness, credits, parts, power and life support; the rest is under More).
+const goodStat = (g) => `<div class="cl-stat" data-g="${g}"${LATE[g] ? ' hidden' : ''} title="${GOOD_NAME[g]}: stock / capacity, change per day"><i>${g === 'helium' ? 'Helium' : GOOD_NAME[g]}</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>`;
+
 export function createUI(root, api) {
   const R = api.rules;
   const S = () => api.state();
@@ -368,15 +376,22 @@ export function createUI(root, api) {
       <button type="button" data-speed="4" title="×4 (3)">×4</button>
     </div>
     <div class="cl-stats">
-      ${GOODS.map((g) => `<div class="cl-stat" data-g="${g}"${LATE[g] ? ' hidden' : ''} title="${GOOD_NAME[g]}: stock / capacity, change per day"><i>${g === 'helium' ? 'Helium' : GOOD_NAME[g]}</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>`).join('')}
-      <button type="button" class="cl-stat cl-resstat" data-g="research" hidden title="Research a day from the labs"><i>Research</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
-      <div class="cl-stat" data-g="power" title="Power: supply / demand (MW), battery"><i>Power</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
       <div class="cl-stat" data-g="pop" title="Colonists / housing; next transport"><i>Colonists</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
       <button type="button" class="cl-stat cl-happybtn" data-g="happy" title="Happiness: click for the breakdown"><i>Happiness</i><b><span data-v></span></b><em data-d></em></button>
-      <button type="button" class="cl-stat cl-heatstat" data-g="heat" hidden title="Heat: how tempting Eden looks to raiders"><i>Heat</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
+      ${goodStat('credits')}${goodStat('parts')}
+      <div class="cl-stat" data-g="power" title="Power: supply / demand (MW), battery"><i>Power</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
+      <div class="cl-life" role="group" aria-label="Life support: food, water and air">${goodStat('food')}${goodStat('water')}${goodStat('air')}</div>
       <button type="button" class="cl-stat cl-corestat" data-g="core" hidden title="The old core: days left to stabilise it"><i>Core</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
-      <div class="cl-stat cl-tax" title="Tax rate: 0% +8 happiness, 10% 0, 20% −14, 30% −32. Shift-click steps 5%."><i>Tax</i>
-        <b class="cl-taxctl"><button type="button" data-taxstep="-1" aria-label="Lower the tax">−</button><span data-tax></span><button type="button" data-taxstep="1" aria-label="Raise the tax">+</button></b><em data-taxfx></em></div>
+      <div class="cl-morewrap">
+        <button type="button" class="cl-morebtn" data-more aria-expanded="false" aria-haspopup="true" title="More: ore, alloy, helium-3, research, heat and the tax"><span>More</span><b>▾</b><i class="cl-moredot" data-moredot hidden></i></button>
+        <div class="cl-more" data-morepop hidden>
+          ${goodStat('ore')}${goodStat('alloy')}${goodStat('helium')}
+          <button type="button" class="cl-stat cl-resstat" data-g="research" hidden title="Research a day from the labs"><i>Research</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
+          <button type="button" class="cl-stat cl-heatstat" data-g="heat" hidden title="Heat: how tempting Eden looks to raiders"><i>Heat</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
+          <div class="cl-stat cl-tax" title="Tax rate: 0% +8 happiness, 10% 0, 20% −14, 30% −32. Shift-click steps 5%."><i>Tax</i>
+            <b class="cl-taxctl"><button type="button" data-taxstep="-1" aria-label="Lower the tax">−</button><span data-tax></span><button type="button" data-taxstep="1" aria-label="Raise the tax">+</button></b><em data-taxfx></em></div>
+        </div>
+      </div>
     </div>
     <div class="cl-tools">
       <button type="button" class="cl-btn sm cl-resbtn" data-tool="research" title="Research: the tech tree (T)"><span class="cl-ico">⚗</span><span class="cl-lbl">Research</span></button>
@@ -479,6 +494,16 @@ export function createUI(root, api) {
   const $$ = (s) => [...root.querySelectorAll(s)];
   const statEls = {};
   for (const el of $$('.cl-stat[data-g]')) statEls[el.dataset.g] = { el, base: el.className, v: el.querySelector('[data-v]'), c: el.querySelector('[data-c]'), d: el.querySelector('[data-d]') };
+  // the More pop-out (top bar): opens on click, closes on a click elsewhere or Esc; a dot when something in it needs a look
+  const moreBtn = $('[data-more]'), morePop = $('[data-morepop]'), moreDot = $('[data-moredot]');
+  const moreOpen = (on) => { morePop.hidden = !on; moreBtn.setAttribute('aria-expanded', String(on)); };
+  moreBtn.addEventListener('click', (e) => { e.stopPropagation(); moreOpen(morePop.hidden); });
+  document.addEventListener('pointerdown', (e) => { if (!morePop.hidden && !e.target.closest('.cl-morewrap')) moreOpen(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !morePop.hidden) moreOpen(false); });
+  function moreFlag() {
+    const bad = !!morePop.querySelector('.cl-stat:not([hidden]).down, .cl-resstat.idle:not([hidden])');
+    if (moreDot.hidden === bad) moreDot.hidden = !bad;
+  }
   const dayEl = $('[data-h=day]'), taxEl = $('[data-tax]'), taxFx = $('[data-taxfx]');
   const cardsEl = $('[data-cards]'), insp = $('.cl-insp'), inspBody = $('[data-insp]'), tipEl = $('.cl-tip'), toasts = $('.cl-toasts');
   const logEl = $('[data-log]'), modal = $('.cl-modal'), evBox = $('.cl-event'), placingEl = $('.cl-placing');
@@ -1216,21 +1241,33 @@ export function createUI(root, api) {
       <label class="cl-field"><em>Scrolling<small>Two-finger scroll on a trackpad, or a mouse wheel. Pinch (or Ctrl + scroll) always zooms.</small></em>
         <select data-setsel="wheel">${[['auto', 'Auto: pan on a trackpad, zoom with a mouse wheel'], ['pan', 'Pan the map (trackpad)'], ['zoom', 'Zoom (mouse wheel)']].map(([v, l]) => `<option value="${v}" ${(st.wheel || 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       ${musicHtml()}
+      ${raidToggleHtml(S())}
       <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · M music · WASD / arrows pan · Q / E rotate · PgUp / PgDn deck · Esc cancel · F1 or ? how to play.</p>`;
     for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => { api.setSetting(c.dataset.set, c.checked); helpersShown(); };
     for (const c of pops.settings.querySelectorAll('[data-setsel]')) c.onchange = () => api.setSetting(c.dataset.setsel, c.value);
     const mus = pops.settings.querySelector('[data-music]'), setup = pops.settings.querySelector('[data-musicsetup]');
     if (mus) mus.onchange = () => api.audio.setMuted(!mus.checked);
+    for (const b of pops.settings.querySelectorAll('[data-musicsrc]')) b.onclick = () => { api.audio.setSource(b.dataset.musicsrc); renderSettings(); };
+    const rd = pops.settings.querySelector('[data-raids]');
+    if (rd) rd.onchange = () => { result(R.setRaids(S(), rd.checked)); renderSettings(); };
     if (setup) setup.onclick = () => { setup.disabled = true; api.audio.setUp().then(() => { renderSettings(); toast('Earth Light music is ready.', 'good'); }).catch((e) => { setup.disabled = false; toast(e.message || 'No ROM chosen.', 'bad'); }); };
   }
-  // Earth Light's own music, from the expansion's sound pack (js/colony/audio.js).
+  // Music (js/colony/audio.js): Lanternfall's soundtrack (default, no setup) or Earth Light's own
+  // songs (from the ROM's sound pack, set up once); and raiders on or off (owner, 2026-11-05).
   function musicHtml() {
     const a = api.audio;
     if (!a) return '';
-    return a.available
-      ? `<label class="cl-check"><input type="checkbox" data-music ${a.muted ? '' : 'checked'}><span></span><em>Music<small>Earth Light's own songs, from your ROM's sound pack.</small></em></label>`
+    const src = `<div class="cl-field"><em>Soundtrack<small>${a.source === 'earthlight' ? 'Earth Light\'s own songs, from your ROM\'s sound pack.' : 'Lanternfall\'s orchestra, played live.'}</small></em>
+      <span class="cl-seg"><button type="button" class="cl-btn xs${a.source === 'lanternfall' ? ' on' : ''}" data-musicsrc="lanternfall">Lanternfall</button><button type="button" class="cl-btn xs${a.source === 'earthlight' ? ' on' : ''}" data-musicsrc="earthlight">Earth Light</button></span></div>`;
+    return src + (a.available
+      ? `<label class="cl-check"><input type="checkbox" data-music ${a.muted ? '' : 'checked'}><span></span><em>Music<small>On or off (M).</small></em></label>`
       : `<div class="cl-field"><em>Music<small>${esc(a.why || 'Earth Light music needs your ROM once.')}</small></em>
-         <button type="button" class="cl-btn sm" data-musicsetup>Set up Earth Light music</button></div>`;
+         <button type="button" class="cl-btn sm" data-musicsetup>Set up Earth Light music</button></div>`);
+  }
+  function raidToggleHtml(s) {
+    if (!s || typeof R.setRaids !== 'function') return '';
+    const on = s.options?.raids !== false;
+    return `<label class="cl-check"><input type="checkbox" data-raids ${on ? 'checked' : ''}><span></span><em>Raiders<small>${on ? 'Raiders come once Eden has 500 colonists and a base has noticed it.' : 'Off: no raids. Turn them on again whenever you like.'}</small></em></label>`;
   }
 
   // ---------------------------------------------------------------- research panel (version 2)
@@ -1717,7 +1754,12 @@ export function createUI(root, api) {
     const dragons = emp.filter((b) => (b.mode ?? 'dragon') === 'dragon').length;
     const parts = heatParts(s);
     let next;
-    if (!on) next = `<p>No raids yet. Raiders take notice once Eden has <b>80 colonists</b> (you have ${num(s.pop)}), and not before <b>day ${raidStartDay(s)}</b>.</p>`;
+    const bases = R.basesStatus ? R.basesStatus(s) : [], peace = R.BASE_RAIDS?.peace ?? 500;
+    if (s.options?.raids === false && !r.coming) next = `<p>Raiders are <b>off</b> (Settings). Turn them on whenever you like.</p>`;
+    else if (!on && !r.coming) next = s.pop < peace
+      ? `<p>No raids while Eden is small: nobody out there cares about a colony under <b>${num(peace)} colonists</b> (you have ${num(s.pop)}). Rebuild in peace.</p>`
+      : bases.length && bases.every((b) => b.destroyed) ? '<p>Every raider base is destroyed. <b>No more raids.</b></p>'
+      : '<p>No raider base has noticed Eden yet.</p>';
     else if (r.coming) {
       const c = r.coming, pv = rule('raidPreview', s);
       next = `<div class="cl-raidnow"><b class="bad">Raiders ${eta ? `arrive in ${L(plural(eta, 'day'))}` : 'are here'}</b>
@@ -1733,6 +1775,10 @@ export function createUI(root, api) {
           <tfoot><tr><td>Target <small>(0–100)</small></td><td class="n">${L(num(Math.max(0, Math.min(100, parts.reduce((t, [, v]) => t + v, 0)))))}</td></tr></tfoot></table>
         <p class="cl-dim">Paying tribute adds 10. Jammer Arrays take 10 off each (up to 30).</p></section>
       <section class="cl-dsec"><h4>Next raid</h4>${next}</section>
+      ${bases.length ? `<section class="cl-dsec"><h4>Raider bases <small>destroy them on the Star chart (X)</small></h4>
+        ${bases.map((b) => `<div class="cl-kv cl-base${b.destroyed ? ' gone' : ''}"><span>${esc(b.name[0].toUpperCase() + b.name.slice(1))} <small>${esc(b.faction)}${b.sectorName ? ` · ${esc(b.sectorName)}` : ''}</small></span>
+          <b class="${b.destroyed ? 'good' : b.aware ? 'bad' : ''}">${b.destroyed ? 'destroyed' : b.aware ? `${b.eta ? `first raid in ~${L(b.eta)} d · ` : ''}fleet ${L(b.fleet)}/${b.max}` : `notices Eden at ${num(b.notice)} colonists`}</b></div>`).join('')}
+        <p class="cl-dim">A base raids when most of its fleet is home; raiders you destroy are gone for good, so a beaten base takes longer to come back. A squadron at a base's door gets Eden noticed.</p></section>` : ''}
       <section class="cl-dsec"><h4>Defences <small>total ${L(num(defenceTotal(s)))}</small></h4>
         <div class="cl-kv"><span>Crewed guardians</span><b class="${crewedN ? '' : 'bad'}">${L(`${crewedN} of ${gs.length} · crews ${cap}`)}</b></div>
         <div class="cl-kv"><span>Battery Emplacements</span><b>${emp.length ? `${emp.length} (${dragons} Dragon, ${emp.length - dragons} Hydra)` : '<span class="cl-dim">none</span>'}</b></div>
@@ -2619,7 +2665,7 @@ export function createUI(root, api) {
       <div><h2 id="evTitle">${esc(p.title)}</h2>${raid && (rule('raidPreview', s) || p.preview) ? `<p>${esc(raidLine(s, p))}</p>` : `<p>${esc(disc && discoveryItems(s, p).length ? discoveryLead(s, p) : p.text)}</p>`}</div></div>
       ${raid ? raidBody(s, p) : warn ? warnBody(s) : disc ? discoveryBody(s, p) : core ? reactorBody(s, p) : drone ? droneEvBody(s, p) : p.kind === 'survivors' ? survivorsEvBody(s, p) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
       <div class="cl-evchoices">${choices.map((c, i) => { const cant = raid && c.key === 'tribute' && (rule('raidPreview', s) || p.preview)?.canPay === false;
-        return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>`; }).join('')}
+        return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>${raid && c.key === 'fight' ? commandButton() : ''}`; }).join('')}
         ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : 'Meet them'}</button>` : ''}
         ${(() => { const d = core && !coreBad && !coreSafe ? reactorOf(s) : null, pv = d && dangerWork(d) == null ? srule('dangerPreview', s, d.chamber) : null;
           return pv ? `<button type="button" class="cl-btn" data-evclear="${d.chamber}" ${pv.why ? `disabled title="${esc(pv.why)}"` : 'title="Answer, and set the crews to work on it now"'}>Stabilise now${pv.cost ? ` <small>${esc(costText(pv.cost))}</small>` : ''}</button>` : ''; })()}
@@ -2627,6 +2673,20 @@ export function createUI(root, api) {
       ${api.settings.pauseOnEvents || raid ? '<p class="cl-dim cl-evpause">❚❚ The clock waits for your answer.</p>' : ''}`;
     modal.hidden = false;
     evBox.querySelector('[data-choice]')?.focus({ preventScroll: true });
+    if (raid) checkCommand();
+  }
+  // "Command the battle": between Fight and Pay tribute; disabled (with why) without the pack.
+  const COMMAND_WHY = { null: 'Checking for the Earth Light pack…', false: 'Needs the Earth Light pack: set up Earth Light music in Settings once (from your own ROM).' };
+  function commandButton() {
+    return `<button type="button" class="cl-btn" data-command ${packReady ? 'title="Fight them yourself, turn by turn, on the Earth Light hex map"' : `disabled title="${esc(COMMAND_WHY[packReady])}"`}>Command the battle</button>`;
+  }
+  function checkCommand() {
+    const ask = battleMod?.canCommand ? battleMod.canCommand() : import('./battle.js').then((m) => { battleMod = m; return m.canCommand(); });
+    ask.catch(() => false).then((ok) => {
+      packReady = !!ok;
+      const b = evBox.querySelector('[data-command]');
+      if (b) { b.disabled = !ok; b.title = ok ? 'Fight them yourself, turn by turn, on the Earth Light hex map' : COMMAND_WHY.false; }
+    });
   }
   function showReport(s, rs) {
     evId = 'report:' + rs;
@@ -2672,6 +2732,13 @@ export function createUI(root, api) {
     }
     const ok = e.target.closest('[data-repok]');
     if (ok) { repSeen = reportSig(S()); evId = null; modal.hidden = true; if (ok.dataset.repok) openDefence(ok.dataset.repok); renderEvent(); return; }
+    const cmd = e.target.closest('[data-command]');
+    if (cmd) {   // Command the battle: off to game.html?colony=1 (js/colony/battle.js); the raid stays pending until its result comes back
+      if (cmd.disabled || !battleMod) return;
+      const r = battleMod.commandBattle(S(), () => api.save());
+      if (r?.ok === false) toast(r.msg, 'bad');
+      return;
+    }
     const b = e.target.closest('[data-choice],[data-evdef]'); if (!b) return;
     const p = S().pending?.[0]; if (!p) return;
     const key = b.dataset.choice ?? (p.choices?.[0]?.key || 'ok');
@@ -2802,7 +2869,7 @@ export function createUI(root, api) {
     const s = S();
     try { summary = R.summary(s); } catch (e) { summary = null; console.warn('summary failed', e); }
     if (force) { deckSig = ''; cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; resSig = ''; jSig = ''; xSig = ''; liveSigs.delete(defBody); liveSigs.delete(defStats); liveSigs.delete(jBody); }
-    hud();
+    hud(); moreFlag();
     renderDecks();
     renderGoals();
     renderAdvice(force || dirty);

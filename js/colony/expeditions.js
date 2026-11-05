@@ -19,6 +19,7 @@ import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { hashSeed, mulberry32 } from './mapgen.js';
 import {
   log, addPending, stateRng, crewed, guardianPower, maxHp, machineOf, addGuardian, fitCommander, winChance, storageCaps, RAID, V3,
+  baseForSector, noticeEden, baseName, BASE_RAIDS,
 } from './rules.js';
 
 export const EXP = {
@@ -99,7 +100,12 @@ export const densCleared = (state) => (state.expeditions?.sectors || []).filter(
 export const isAway = (g) => !!g?.away;
 export const siteName = (s) => (s.site === 'outpost' ? `${s.faction === 'galt' ? 'Galt' : 'Union'} outpost` : SITES[s.site]?.name || s.site);
 export const travelDays = (s) => EXP.travel * s.ring;
-export const strengthOf = (state, s) => (s.cleared && !SITES[s.site].repeat ? 0 : Math.round((SITES[s.site].fight[s.ring - 1] || 0) * (state.difficulty === 'easy' ? EXP.easy : 1)));
+// A raider base fights with what is home: × (0.4 + 0.6 × fleet / max) (version 5).
+export const strengthOf = (state, s) => {
+  if (s.cleared && !SITES[s.site].repeat) return 0;
+  const b = baseForSector(state, s.id), f = b && !b.destroyed ? BASE_RAIDS.fleetFight + (1 - BASE_RAIDS.fleetFight) * b.fleet / b.max : 1;
+  return Math.round((SITES[s.site].fight[s.ring - 1] || 0) * (state.difficulty === 'easy' ? EXP.easy : 1) * f);
+};
 
 // What a visit would bring home (before the dice): { goods, research, pop, machine (a chance), blueprint, wanderer, story, reveal }.
 export function lootPlan(state, s) {
@@ -295,6 +301,10 @@ function comeHome(state, e, ask) {
   }
   const L = r.loot, got = [];
   s.visited = true;
+  // version 5: a squadron at a raider base's door gets Eden noticed (if the base still stands)
+  const base = baseForSector(state, s.id);
+  if (base && !r.won) noticeEden(state, base, stateRng(state), `: our squadron came calling at ${s.name}`);
+  if (base && r.won) { base.destroyed = true; base.fleet = 0; got.push(`${baseName(base)} is destroyed: no more raids from there`); }
   if (r.won) {
     if (!SITES[s.site].repeat) s.cleared = true;
     addGoods(state, L.goods);
