@@ -262,7 +262,7 @@ for (const [name, gen] of gens) {
     const bl = rules.buildable(s);
     // version 2 (docs/COLONY-V2.md): 17 version 1 buildings + 18 new ones, locked behind research;
     // version 3 (docs/COLONY-V3.md): + 13 more; version 4 (docs/COLONY-V4.md): + 6 deck buildings
-    check(bl.length === 54 && bl.find((b) => b.key === 'road') && bl.find((b) => b.key === 'oremine').why.includes('80') && bl.find((b) => b.key === 'smelter').why === 'Research Smelting.', 'buildable list');
+    check(bl.length === 65 && bl.find((b) => b.key === 'road') && bl.find((b) => b.key === 'oremine').why.includes('80') && bl.find((b) => b.key === 'smelter').why === 'Research Smelting.', 'buildable list');
     const ti = rules.tileInfo(s, cmd.x, cmd.y);
     check(ti.building?.key === 'command' && ti.chamber?.status === 'open', 'tileInfo');
     for (const k of ['park', 'reach', 'power', 'happiness']) check(rules.coverage(s, k).length === w * s.map.h, `coverage ${k}`);

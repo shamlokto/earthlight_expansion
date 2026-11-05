@@ -4,7 +4,7 @@
 //   goal: { id, title, text, speaker, done(state), progress(state)?, show(state)?, only(state)? }
 //   show: { build: key } | { chamber: id } | { tile: { x, y } } | { market: true } | { roads: true } | { research: true | techKey } | { defence: tab } | { journal: tab } | { chart: sectorId | true } | null
 import { BUILDING } from './data/buildings.js';
-import { summary, chamberLinks, openBreaches, chamberOf, addPending, log, centre, pressuriseAir, storageCaps } from './rules.js';
+import { homeCrew, summary, chamberLinks, openBreaches, chamberOf, addPending, log, centre, pressuriseAir, storageCaps } from './rules.js';
 import { diffOf } from './difficulty.js';
 import { TECH } from './data/tech.js';
 import { sectorOf } from './expeditions.js';
@@ -29,6 +29,7 @@ function nearSector(s, fit) {
   const c = (s.expeditions?.sectors || []).filter((x) => x.known && !x.cleared && fit(x)).sort((a, b) => a.ring - b.ring)[0];
   return c ? c.id : null;
 }
+const guardHome = (s) => { try { return homeCrew(s).size; } catch { return 0; } };
 const dock = (s) => s.buildings.find((b) => b.key === 'dock');
 // The next chamber, unless the air stores are too small to pressurise it: then an air depot.
 function airFor(s) {
@@ -118,9 +119,11 @@ export const GOALS = [
   { id: 'barracks', speaker: 'sato', title: 'Crews for the machines',
     text: 'A machine needs a crew to fly it. The Command Centre crews four; a Guardian Barracks crews six more. Put Battery Emplacements on the hull too: they fire on raiders that come close.',
     done: (s) => finished(s, 'barracks') >= 1, show: () => ({ build: 'barracks' }) },
-  { id: 'raid', speaker: 'sato', title: 'Weather the first raid',
-    text: 'Sooner or later the sensors will pick up a contact. When the raiders come, fight with the guardians or pay them to leave: either way, Eden goes on. The Defence panel shows how heated things are.',
-    done: (s) => (s.raid?.count || 0) >= 1, progress: (s) => (s.raid?.coming ? `raiders on the way` : `heat ${Math.round(s.raid?.heat || 0)}`), show: () => ({ defence: 'raids' }) },
+  // version 5 (owner, 2026-11-05): nobody raids Eden below 500 colonists, so the goal is a guard, not a raid
+  { id: 'raid', speaker: 'sato', title: 'A guard for Eden',
+    text: 'While Eden is small, nobody out there cares: the raider bands notice a colony once it has about 500 people, or when our squadrons come knocking at their bases. Get two crewed machines standing guard before then. When raiders come, fight them (or command the battle yourself) or pay them to leave. Every den we burn out means fewer raids.',
+    done: (s) => (s.raid?.count || 0) >= 1 || guardHome(s) >= 2 || s.options?.raids === false,
+    progress: (s) => `${guardHome(s)} / 2 crewed machines at home`, show: (s) => (finished(s, 'barracks') ? { defence: 'production' } : { build: 'barracks' }) },
   // ---- version 4: the decks (docs/COLONY-V4.md)
   { id: 'lift', speaker: 'ruess', title: 'Repair a lift',
     text: 'Eden is three decks deep: the habitat rings above us and the machinery and catacombs below. The gold-rimmed pits are lift shafts. Repair a Lift on the one in our own chamber, and the decks above and below open to survey.',
@@ -155,12 +158,12 @@ export const GOALS = [
     text: 'Earth is still starving after the war, and the Council wants Eden to help. Relief convoys dock at stations on the Earth side of the Star chart. Send a squadron to one so the convoys know the way.',
     done: (s) => !!reliefStation(s), show: (s) => ({ chart: nearSector(s, (x) => x.site === 'relief') || true }) },
   { id: 'convoy', speaker: 'ruess', title: 'Send a relief convoy',
-    text: 'A convoy is a full load of food, water, air or helium-3, launched from the dock for a few credits and parts. Open the Market and send one. Earth pays a little, and every convoy counts toward restoring Eden.',
+    text: 'A convoy is a load of 500 food, water or air, or 100 helium-3, launched from the dock for credits and parts. Open the Market and send one. Earth pays a little, and every load counts toward restoring Eden. Later a Mass Driver throws three loads at a time, even by itself.',
     done: (s) => (s.relief?.sent || 0) >= 1, show: () => ({ market: true }) },
   { id: 'restored', speaker: 'ruess', title: 'Eden Restored',
-    text: 'The Council will declare Eden restored when every chamber on every deck breathes, the colony is home to enough people, and the relief quota has reached Earth. Then the colony is yours to keep growing.',
+    text: 'The Council will declare Eden restored when every chamber on every deck breathes, twenty-five thousand people live here, happily (above 85 for a month), and the relief quota has reached Earth. Tower Blocks, Arcologies and Arrivals Halls build the city; Vertical Farms, Water Works and Atmosphere Processors feed it. Then the colony is yours to keep growing.',
     done: (s) => !!s.victory, progress: (s) => victoryText(victoryStatus(s)),
-    show: (s) => { const v = victoryStatus(s); if (!v.chambers.met) { const c = nextChamber(s); return c ? { chamber: c.id } : (deckChamber(s, 'upper') || deckChamber(s, 'lower')); } return v.pop.met ? { market: true } : { build: 'habitat' }; } },
+    show: (s) => { const v = victoryStatus(s); if (!v.chambers.met) { const c = nextChamber(s); return c ? { chamber: c.id } : (deckChamber(s, 'upper') || deckChamber(s, 'lower')); } if (!v.pop.met) return { build: ['arcology', 'towerblock'].find((k) => s.unlocked.includes(k)) || 'habitat' }; if (!v.happy.met && s.unlocked.includes('plaza')) return { build: 'plaza' }; return { market: true }; } },
   { id: 'finalvault', speaker: 'sato', title: 'The Ninefold vault',
     text: 'Five of the logs hold a part of a code each. With all five, and the way to the vault cleared, we can open the last door under the core, and find out what really happened to Eden.',
     done: (s) => !!s.secrets?.finalOpened, progress: (s) => `${(s.secrets?.read || []).filter((id) => /^l(03|07|10|13|18)$/.test(id)).length} / 5 code parts`, show: () => ({ journal: 'vaults' }) },

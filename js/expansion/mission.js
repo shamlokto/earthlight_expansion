@@ -7,7 +7,8 @@
 //   screensW, screensH    size in 15x10 screens (1-4)
 //   pairs                 [[graphic, terrainId], ...] up to 80; a cell value indexes this list
 //   grid                  rows 0..rows+1 of values for columns 0..cols+1 (the cells around the playfield included)
-//   units                 [{ type, army, x, y, neutral?, cargo?: [type, ...] }] (cargo = inside a dock/carrier)
+//   units                 [{ type, army, x, y, neutral?, cargo?: [type, ...], hp? }] (cargo = inside a dock/carrier;
+//                         hp: starting HP below the type's full HP, the colony's damaged guardians)
 //   arrivals              [{ turn, army, units: [{ type, x, y, cargo?: [...] }] }]
 //   objective             { kind, ... } (see campaign rules), bonus, turnLimit, cap, briefing
 import { MAP_COUNT, mapInfo } from '../maps.js';
@@ -74,7 +75,7 @@ export function romView(rom, mission) {
 export function deployList(mission) {
   const out = [];
   for (const u of mission.units) {
-    const host = { type: u.type, army: u.army, x: u.x, y: u.y, flag40: !!u.neutral, level: u.level, rosterId: u.rosterId, hold: u.hold, wakes: !!u.wakes };
+    const host = { type: u.type, army: u.army, x: u.x, y: u.y, flag40: !!u.neutral, level: u.level, rosterId: u.rosterId, hold: u.hold, wakes: !!u.wakes, hp: u.hp };
     out.push(host);
     // cargo: unit types, or campaign machines { type, level, rosterId } (campaign.applyRoster)
     for (const c of u.cargo || []) out.push(typeof c === 'number' ? { type: c, army: u.army, x: u.x, y: u.y, carrier: host }

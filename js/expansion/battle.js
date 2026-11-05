@@ -50,7 +50,10 @@ export class ExpansionBattle extends Battle {
     this.mission = mission;
     // campaign machines bring their pilot's level and their roster id (Battle spawns in list order)
     list.forEach((d, i) => { if (d.level !== undefined) this.units[i].level = d.level; if (d.rosterId !== undefined) this.units[i].rosterId = d.rosterId; if (d.hold) this.units[i].hold = d.hold; if (d.wakes) this.units[i].wakes = true; });
+    // a damaged machine starts with what HP it has left (the colony's guardians: mission unit `hp`)
+    list.forEach((d, i) => { if (d.hp !== undefined) this.units[i].hp = Math.max(1, Math.min(this.units[i].hp, d.hp)); });
     this.escaped = [];
+    this.fled = null;   // the colony's raiders who broke off and ran (mission.flee)
     const g = mission.general && this.units.find((u) => u.army === 0 && u.x === mission.general.x && u.y === mission.general.y && !u.carrier);
     this.general = g || null;
     if (g) { g.general = true; g.pilotLevel = g.level; g.level = 9; }   // level 9 only while the general is aboard
@@ -105,11 +108,37 @@ export class ExpansionBattle extends Battle {
     }
   }
 
+  // The colony's flee rule (mission.flee): checked after every destruction and at every phase change.
+  attack(att, def, w, rnd) {
+    const e = super.attack(att, def, w, rnd);
+    if (this.mission.flee && (!e.after[0] || !e.after[1])) this.checkFlee();
+    return e;
+  }
+  endTurn() {
+    const arrived = super.endTurn();
+    if (this.mission.flee) this.checkFlee();
+    return arrived;
+  }
+  // Raiders outnumbered two to one by the player's living units break off: they leave the map
+  // (riding off in the FLED placeholder, cargo with its host) and the battle is won.
+  checkFlee() {
+    if (this.fled || this.winner() !== null) return false;
+    // not before the raiders have had one full turn: a band that came in outnumbered still tries its luck once
+    if ((this.turn || 1) < 2) return false;
+    if (!raidersFlee(this.forces(0).length, this.forces(1).length)) return false;
+    this.fled = this.forces(1);
+    for (const u of this.fled) { u.fled = true; if (!u.carrier) { u.carrier = FLED; u.x = -1; u.y = -1; } }
+    this.log.push({ kind: 'flee', units: this.fled });
+    this.result = { winner: 0, reason: 'fled' };
+    return true;
+  }
+
   winner() {
     if (!this.result) this.result = this.expansionOutcome();
     return super.winner();
   }
   expansionOutcome() {
+    if (this.fled) return { winner: 0, reason: 'fled' };
     if (this.general && this.general.hp <= 0) return { winner: 1, reason: 'general' };
     const o = this.mission.objective || {};
     if (o.kind === 'escape') {
@@ -133,12 +162,34 @@ export class ExpansionBattle extends Battle {
     this.general = this.units.find((u) => u.general) || null;
     this.escaped = this.units.filter((u) => u.escaped);
     for (const u of this.escaped) if (!u.carrier) u.carrier = EXIT;   // left the map themselves (saved as id -1)
+    const fled = this.units.filter((u) => u.fled);
+    if (fled.length) { this.fled = fled; for (const u of fled) if (!u.carrier) u.carrier = FLED; }
     return this;
   }
 }
 
 // Escaped units ride in this placeholder host: off the map, never drawn, never targeted.
 const EXIT = { id: -1, type: 0, army: 0, x: -1, y: -1, hp: 1, carrier: null, exit: true };
+const FLED = { id: -1, type: 0, army: 1, x: -1, y: -1, hp: 1, carrier: null, exit: true };
+
+// The colony's flee rule (js/colony/battle.js has the same): the player's living units at least
+// twice the raiders' living units.
+export const raidersFlee = (mine, theirs) => theirs > 0 && mine >= 2 * theirs;
+
+// The colony battle's result for colony.html (localStorage COLONY_RESULT, docs/COLONY-V5.md §2):
+// { day, won, fled, turns, killed: [raid.units indices destroyed], guardians: [{ id, hp: 0..1, lost }] }.
+// A retreat is a loss (the caller passes won = false).
+export function colonyResult(b, won = b.winner() === 0) {
+  const c = b.mission.colony || {};
+  const raiders = b.units.filter((u) => u.army === 1 && u.rosterId !== undefined);
+  return {
+    day: c.day ?? null, won: !!won, fled: !!(won && b.fled), turns: b.turn,
+    killed: raiders.filter((u) => u.hp <= 0).map((u) => u.rosterId).sort((x, y) => x - y),
+    guardians: b.units.filter((u) => u.army === 0 && u.rosterId !== undefined).map((u) => ({
+      id: u.rosterId, hp: u.hp > 0 ? Math.round((u.hp / b.types[u.type].hp) * 1000) / 1000 : 0, lost: u.hp <= 0,
+    })),
+  };
+}
 
 // HUD and briefing helpers for gameapp.js's expansion branch.
 export const ARMY_NAMES = ['Galt remnant', 'Union'];
@@ -165,12 +216,21 @@ export function standChecker(rom, mission, types, tables) {
   return (type, x, y) => tables.moveCost(types[type].category, tables.terrain(header[80 + grid[y * 62 + x]]).cls) !== 0;
 }
 
-// ?mission=missions/asimov.json on game.html plays that mission.
+// The colony's raid battle (game.html?colony=1): the mission js/colony/battle.js stored, its
+// mid-battle save slot and its result's key.
+export const COLONY_MISSION = 'el-colony-raid', COLONY_RESULT = 'el-colony-raid-result', COLONY_BATTLE = 'el-colony-battle';
+export function colonyMission() {
+  try { const v = localStorage.getItem(COLONY_MISSION); return v ? JSON.parse(v) : null; } catch { return null; }
+}
+
+// ?mission=missions/asimov.json on game.html plays that mission (?colony=1: the colony's raid).
 // Units, rule tables and text come from the expansion's own data (data.js), not the ROM.
 export async function expansionFromUrl(rom) {
-  const q = new URLSearchParams(location.search), url = q.get('mission');
+  const q = new URLSearchParams(location.search), colony = q.has('colony');
+  const url = colony ? 'colony' : q.get('mission');
   if (!url) return null;
   const data = await loadExpansionData(), { types, tables } = data;
+  if (colony) return colonyBattle(rom, data);
   let mission = await (await fetch(url, { cache: 'no-cache' })).json(), state = null;
   const missionNo = +(q.get('no') || 0);
   // &c=remnant|classic: which campaign's save the battle reads and writes (campaign.js CAMPAIGNS)
@@ -205,5 +265,25 @@ export async function expansionFromUrl(rom) {
     newBattle: (opts) => new ExpansionBattle(rom, mission, types, { ...opts, tables }),
     briefing: () => briefingPages(mission, scriptOf(mission).goal),
     hud: expansionHud,
+  };
+}
+
+// The colony's raid (expansionFromUrl with ?colony=1): no campaign, the colony's own names, its
+// own save slot; the end writes COLONY_RESULT for colony.html (gameapp.js colonyEnd).
+function colonyBattle(rom, data) {
+  const mission = colonyMission();
+  if (!mission) throw new Error('No raid battle is waiting.');
+  const { types, tables } = data, c = mission.colony || {};
+  const { rom: view, info } = romView(rom, mission);
+  return {
+    url: `colony:${c.day}:${c.from}`, mission, rom: view, info, musicMap: mission.music ?? 0, names: ['Eden', 'Raiders'],
+    campaign: false, colony: true, battleKey: COLONY_BATTLE, campaignId: null, total: null, choice: undefined, ending: null,
+    types, tables, text: data.text, terrain: data.terrain, finish: () => 0, secret: null,
+    newBattle: (opts) => new ExpansionBattle(rom, mission, types, { ...opts, tables }),
+    briefing: () => briefingPages(mission, scriptOf(mission).goal),
+    hud: expansionHud,
+    // the result for colony.html; retreat = a loss
+    result: (b, won) => colonyResult(b, won),
+    store: (result) => { try { localStorage.setItem(COLONY_RESULT, JSON.stringify(result)); localStorage.removeItem(COLONY_MISSION); return true; } catch { return false; } },
   };
 }

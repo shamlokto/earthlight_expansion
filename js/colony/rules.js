@@ -28,6 +28,7 @@ export {
 export {
   RELIEF, POP_TARGET, CONVOY_GOODS, sendConvoy, convoyWhy, convoyStatus, convoyCost, convoyPay, reliefStation,
   victoryStatus, victoryText, quotaOf, popTargetOf, ensureRelief, ENDING, EPILOGUE,
+  HAPPY_TARGET, massDrivers, convoyLoad, autoConvoyGood,   // version 6 (docs/COLONY-V6.md)
 } from './victory.js';
 // The survivors' two commanders (Warden Marrow, Tobias Venn) are commanders like any other once they join.
 for (const c of SURVIVOR_COMMANDERS) COMMANDER[c.key] ??= { portrait: `portrait/${c.key}`, ...c, survivor: true };
@@ -94,6 +95,8 @@ export function upgradeState(state) {
   ensureDecks(state);
   ensureSecrets(state);   // stage 2: the secrets, placed from the seed once the decks exist
   ensureExpeditions(state);   // stage 3: the sector map, from the seed
+  ensureBases(state);   // version 5: the raiders' bases on the sector map
+  state.options ??= {};
   if (state.unlocked) for (const d of BUILDINGS) if (d.decks && !d.tech && !d.unlock && !d.fixed && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
   return state;
 }
@@ -791,9 +794,15 @@ export function habitatNeeds(state, b, field) {
 // Services (version 2): a service building covers a home when the home's centre lies within its
 // radius (Chebyshev, from the service's centre). serviceAt: the best `service` value of that
 // building kind covering the home (Clinic triage halves it; a Canteen on rationing gives none).
-export const SERVICE_KINDS = [{ key: 'clinic', label: 'Clinic' }, { key: 'canteen', label: 'Canteen' }, { key: 'safetypost', label: 'Safety' }, { key: 'terrace', label: 'Terraces' }];
-// Homes for service averages (version 3: Terrace Homes count beside Habitats).
-export const HOME_KEYS = new Set(['habitat', 'terrace']);
+export const SERVICE_KINDS = [{ key: 'clinic', label: 'Clinic' }, { key: 'canteen', label: 'Canteen' }, { key: 'safetypost', label: 'Safety' }, { key: 'terrace', label: 'Terraces' },
+  { key: 'gallery', label: 'Gallery' }, { key: 'plaza', label: 'Civic Plaza' }];   // version 6: the Gallery counts at last; Civic Plazas
+// Homes for service averages (version 3: Terrace Homes count beside Habitats; version 6: Tower Blocks and Arcologies).
+export const HOME_KEYS = new Set(['habitat', 'terrace', 'towerblock', 'arcology']);
+// Homes that grow a level by themselves when their needs are met (version 6: Tower Blocks grow like Habitats).
+export const GROW_KEYS = new Set(['habitat', 'towerblock']);
+// Version 6: Emergency Stores hold back `reserve` of each of food, water and air (Food Security doubles it).
+export const RESERVE_GOODS = ['food', 'water', 'air'];
+export const reserveCap = (state) => state.buildings.reduce((t, b) => t + (finished(b) && BUILDING[b.key]?.reserve ? BUILDING[b.key].reserve : 0), 0) * techEffect(state, 'reserve');
 export function serviceValue(b) {
   const s = spec(b);
   if (!s.service || !active(b)) return 0;
@@ -833,7 +842,7 @@ export function summary(state) {
     stock, power: { supply: p.supply, demand: p.demand, battery: state.battery, cap: cap.power },
     pop: state.pop, housing: housingOf(state), jobs, workers: Math.min(state.pop, jobs),
     happy: state.happy, happyParts: state.happyParts, nextArrival: diffOf(state).transportEvery - (state.day % diffOf(state).transportEvery),
-    decks: deckSummary(state),
+    decks: deckSummary(state), reserve: { ...(state.reserve || { food: 0, water: 0, air: 0 }), cap: reserveCap(state) },
     research: { perDay: last.research || 0, focus: state.research?.focus ?? null, banked: state.research?.points || 0 },
   };
 }
@@ -905,6 +914,25 @@ export const RAID = {
   salvage: { credits: 5, parts: 0.5 }, hunter: 1.2,
   heat: { pop: 20, value: 2000, chamber: 2, sales: 1000, jammer: 10, jammerMax: 30, rook: 5, ease: 0.1 },
 };
+// Version 5 (docs/COLONY-V5.md; owner, 2026-11-05): every raid comes from a base on the sector map, with
+// a fleet that regrows slowly ("their bases are limited in resources"). Nobody raids Eden below 500
+// colonists; a base notices Eden at its population, or when a squadron visits it; a destroyed base sends
+// no more. A raid takes 50–80% of the base's fleet; the raiders killed are gone, the rest go home.
+export const BASE_RAIDS = {
+  peace: 500,               // no raids at all below this many colonists
+  ready: 0.6,               // a base raids once this share of its fleet is home
+  send: [0.5, 0.8],         // share of the fleet a raid takes
+  firstWait: [20, 30],      // days from noticing Eden to its first raid
+  kill: { won: [0.5, 0.4], lost: 0.15 },   // auto fights: killed = n × (0.5 + 0.4 × p) on a win, n × 0.15 × p on a loss
+  fleetFight: 0.4,          // an expedition against a base: its strength × (0.4 + 0.6 × fleet / max)
+};
+export const BASES = [
+  { id: 'scavengers', site: 'den', ring: 1, faction: 'scavengers', tier: 'scavengers', notice: 500, max: 5, regen: 8, name: 'the scavengers\' den' },
+  { id: 'cartel', site: 'den', ring: 2, faction: 'cartel', tier: 'pirates', notice: 800, max: 9, regen: 7, name: 'the Ashfall Cartel\'s den' },
+  { id: 'deserters', site: 'den', ring: 3, faction: null, tier: 'warbands', notice: 1200, max: 14, regen: 6, name: 'the deserters\' den' },
+  { id: 'remnant', site: 'listening', ring: 3, faction: 'remnant', tier: 'remnant', notice: 1800, max: 18, regen: 6, name: 'the Directorate remnant' },
+];
+export const BASE = Object.fromEntries(BASES.map((b) => [b.id, b]));
 // Raid tiers by menace (= day + 2 × heat, minus the difficulty's shift): who comes and how many.
 // Strength = Σ raiders' (attack + defence) × (1 + 0.08 × level), × the difficulty's factor, × (1 + heat / 100).
 export const RAID_TIERS = [
@@ -1222,8 +1250,73 @@ export function heatTarget(state) {
   return { target: Math.max(0, Math.min(100, parts.reduce((t, p) => t + p.value, 0))), parts };
 }
 export const warnLead = (state) => Math.min(RAID.warnMax, RAID.warn + RAID.warnPerMast * state.buildings.filter((b) => b.key === 'sensormast' && active(b)).length);
-// The raid clock runs from the 80-colonist milestone (no raid before RAID.start's day, though).
-export const raidsPossible = (state) => !!state.flags?.unlock80;
+// Raids on at all (Settings: owner, 2026-11-05 "toggle raiders on and off").
+export const raidsOn = (state) => state.options?.raids !== false;
+// The raiders' bases (state.raid.bases), from the sector map: [{ id, sector, faction, fleet, max, regen,
+// aware, since, destroyed, grow }]. A base is destroyed when its sector is cleared.
+export function ensureBases(state) {
+  const rd = state.raid, sectors = state.expeditions?.sectors;
+  if (!rd || !sectors) return [];
+  if (!rd.bases) {
+    rd.bases = [];
+    for (const B of BASES) {
+      const sec = sectors.find((x) => x.site === B.site && x.ring === B.ring);
+      if (!sec) continue;
+      const faction = B.faction || ((hashSeed(`${state.seed}:${sec.id}`) & 1) ? 'galt' : 'union');
+      rd.bases.push({ id: B.id, sector: sec.id, faction, fleet: B.max, max: B.max, regen: B.regen, aware: false, since: null, destroyed: false, grow: 0 });
+    }
+  }
+  for (const b of rd.bases) if (!b.destroyed && sectors.find((x) => x.id === b.sector)?.cleared) b.destroyed = true;
+  return rd.bases;
+}
+export const baseOf = (state, id) => (state.raid?.bases || []).find((b) => b.id === id) || null;
+export const baseForSector = (state, sectorId) => (state.raid?.bases || []).find((b) => b.sector === sectorId) || null;
+export const baseName = (b) => BASE[b?.id]?.name || 'a raider base';
+// A base notices Eden (its population threshold, or a squadron at its door): its first raid comes 20–30 days later.
+export function noticeEden(state, b, rng = stateRng(state), why = '') {
+  if (!b || b.aware || b.destroyed) return false;
+  b.aware = true; b.since = state.day + between(rng, BASE_RAIDS.firstWait);
+  log(state, `${baseName(b)[0].toUpperCase() + baseName(b).slice(1)} (${FACTIONS[b.faction]?.name || b.faction}) has noticed Eden${why}.`);
+  return true;
+}
+// The base whose raiders come next: aware, standing, past its first wait, with enough of its fleet home.
+export function readyBase(state) {
+  const ok = ensureBases(state).filter((b) => b.aware && !b.destroyed && state.day >= (b.since ?? 0) - warnLead(state) && b.fleet >= Math.max(1, Math.ceil(b.max * BASE_RAIDS.ready)));
+  return ok.sort((a, b) => b.fleet / b.max - a.fleet / a.max)[0] || null;
+}
+// The raid clock runs while raiders are on, Eden has 500 colonists, and some base knows of it and stands.
+export const raidsPossible = (state) => raidsOn(state) && state.pop >= BASE_RAIDS.peace
+  && ensureBases(state).some((b) => b.aware && !b.destroyed);
+// Raiders off or on (Settings).
+export function setRaids(state, on) {
+  state.options ??= {};
+  state.options.raids = !!on;
+  if (!on && state.raid?.coming && !state.raid.coming.arrived) {   // a band only sighted turns back
+    const b = baseOf(state, state.raid.coming.base);
+    if (b) b.fleet = Math.min(b.max, b.fleet + state.raid.coming.units.length);
+    state.raid.coming = null; state.raid.warned = false;
+    state.pending = state.pending.filter((p) => p.kind !== 'raidwarn');
+  }
+  return ok(on ? 'Raiders on: they come once Eden has 500 colonists and a base has noticed it.' : 'Raiders off: no raids until you turn them on again.');
+}
+// Each day: fleets regrow, bases notice Eden as it grows.
+export function basesDay(state, rng = stateRng(state)) {
+  const out = [];
+  for (const b of ensureBases(state)) {
+    if (b.destroyed) continue;
+    if (b.fleet < b.max && ++b.grow >= b.regen) { b.fleet++; b.grow = 0; }
+    if (!b.aware && state.pop >= BASE[b.id].notice && noticeEden(state, b, rng, ` (${state.pop} colonists)`)) out.push(b);
+  }
+  return out;
+}
+// What the Raids tab shows of the bases.
+export function basesStatus(state) {
+  return ensureBases(state).map((b) => {
+    const sec = state.expeditions?.sectors?.find((x) => x.id === b.sector);
+    return { id: b.id, name: baseName(b), faction: FACTIONS[b.faction]?.name || b.faction, sector: b.sector, sectorName: sec?.known ? sec.name : null,
+      fleet: b.fleet, max: b.max, aware: b.aware, destroyed: b.destroyed, notice: BASE[b.id].notice, eta: b.aware && b.since > state.day ? b.since - state.day : 0 };
+  });
+}
 export function raidInterval(state, rng) {
   const base = between(rng, RAID.interval[dkey(state)]);
   return Math.max(RAID.minGap, Math.round(base * (1.4 - (state.raid?.heat || 0) / 100) * (1 + EXP.raidSlow * densCleared(state))));
@@ -1232,22 +1325,38 @@ export const raiderPower = (u) => { const m = MACHINE[u.type]; return m ? (m.att
 const POOL = MACHINES.filter((m) => m.attack > 0 && !m.unique && m.type !== 79);
 const CAPITALS = MACHINES.filter((m) => m.cls === 'ships' && m.hp >= 18 && m.attack > 0 && !m.unique && m.tier <= 3);
 // Who comes: the tier from the menace (day and heat), a faction, the machines and their strength.
-export function makeRaid(state, rng, day = state.day) {
+// Version 5: with a base (`base`), its tier and faction, and 50–80% of its fleet (taken out of it);
+// without one (tests, old saves) the tier from the menace as before.
+export function makeRaid(state, rng, day = state.day, base = null) {
   const heat = state.raid?.heat || 0, menace = day + 2 * heat - RAID.menaceShift[dkey(state)];
-  let ti = 0;
-  RAID_TIERS.forEach((t, i) => { if (menace >= t.menace) ti = i; });
-  if (ti > 0 && rng() < 0.25) ti--;   // now and then a weaker band
-  if (ti === 0 && state.imported?.choice === 'refuse' && rng() < 0.5) ti = 1;   // the cartel remembers
-  const T = RAID_TIERS[ti];
-  const faction = T.key === 'scavengers' ? 'scavengers' : T.key === 'pirates' ? 'cartel' : T.key === 'warbands' ? (rng() < 0.5 ? 'union' : 'galt') : 'remnant';
-  const n = between(rng, T.n), units = [];
+  let ti = 0, T, faction, n;
+  if (base) {
+    T = RAID_TIER[BASE[base.id].tier]; faction = base.faction;
+    n = Math.max(1, Math.min(base.fleet, Math.round(base.fleet * (BASE_RAIDS.send[0] + rng() * (BASE_RAIDS.send[1] - BASE_RAIDS.send[0])))));
+    base.fleet -= n;
+  } else {
+    RAID_TIERS.forEach((t, i) => { if (menace >= t.menace) ti = i; });
+    if (ti > 0 && rng() < 0.25) ti--;   // now and then a weaker band
+    if (ti === 0 && state.imported?.choice === 'refuse' && rng() < 0.5) ti = 1;   // the cartel remembers
+    T = RAID_TIERS[ti];
+    faction = T.key === 'scavengers' ? 'scavengers' : T.key === 'pirates' ? 'cartel' : T.key === 'warbands' ? (rng() < 0.5 ? 'union' : 'galt') : 'remnant';
+    n = between(rng, T.n);
+  }
+  const units = [];
   const pool = POOL.filter((m) => m.tier >= T.tiers[0] && m.tier <= T.tiers[1]);
-  if (T.capital) units.push({ type: CAPITALS[Math.floor(rng() * CAPITALS.length)].type, level: between(rng, T.levels) });
+  if (T.capital && n >= 4) units.push({ type: CAPITALS[Math.floor(rng() * CAPITALS.length)].type, level: between(rng, T.levels) });
   while (units.length < n) units.push({ type: pool[Math.floor(rng() * pool.length)].type, level: between(rng, T.levels) });
   const from = ['north', 'east', 'west', 'earth'][Math.floor(rng() * 4)];
   // heat makes them bolder: strength × (1 + heat / 100)
   const strength = Math.round(units.reduce((t, u) => t + raiderPower(u), 0) * RAID.strength[dkey(state)] * (1 + heat / 100));
-  return { day, from, tier: T.key, units, faction, strength };
+  return { day, from, tier: T.key, units, faction, strength, base: base?.id || null };
+}
+// After a raid: the survivors go home to their base (the killed are gone for good).
+function raidersHome(state, raid, killed) {
+  const b = baseOf(state, raid.base);
+  if (!b) return;
+  b.fleet = Math.min(b.max, b.fleet + Math.max(0, raid.units.length - killed));
+  b.last = state.day;
 }
 const shipShare = (raid) => {
   const all = raid.units.reduce((t, u) => t + raiderPower(u), 0);
@@ -1333,11 +1442,23 @@ function fight(state, raid, rng) {
       g.level = Math.min(V3.maxLevel, (g.level || 0) + (led ? 2 : 1));
     }
   }
-  const report = { day: state.day, won, from: raid.from, faction: raid.faction, tier: raid.tier, strength: a, defence: Math.round(d.total), winChance: p,
-    lostGuardians, hurt: hurtGuardians, damaged: [], stolen: {}, salvage: { credits: 0, parts: 0 }, tribute: null };
+  // version 5: how many raiders die (the rest go home to their base)
+  const n = raid.units.length, K = BASE_RAIDS.kill;
+  const killed = Math.min(n, won ? Math.max(1, Math.round(n * (K.won[0] + K.won[1] * p))) : Math.round(n * K.lost * p));
+  return raidOutcome(state, raid, { won, winChance: p, defence: Math.round(d.total), lostGuardians, hurt: hurtGuardians, killed: raid.units.map((_, i) => i).slice(0, killed) }, rng);
+}
+// What a raid leaves behind, fought by the dice or on the battle map: salvage for the raiders killed on a
+// win; on a loss, stores stolen and buildings knocked out. The survivors go home to their base.
+function raidOutcome(state, raid, o, rng) {
+  const a = raid.strength, won = o.won, killedIdx = o.killed || [];
+  const report = { day: state.day, won, from: raid.from, faction: raid.faction, tier: raid.tier, strength: a, defence: o.defence ?? 0, winChance: o.winChance ?? null,
+    lostGuardians: o.lostGuardians || [], hurt: o.hurt || [], damaged: [], stolen: {}, salvage: { credits: 0, parts: 0 }, tribute: null,
+    killed: killedIdx.length, sent: raid.units.length, fled: !!o.fled, manual: !!o.manual, base: raid.base || null };
+  raidersHome(state, raid, killedIdx.length);
   if (won) {
     const hunter = state.commanders.some((c) => !(c.injured > 0) && COMMANDER[c.key]?.perk === 'hunter') ? RAID.hunter : 1;
-    const value = raid.units.reduce((t, u) => t + (MACHINE[u.type]?.price || 0), 0);
+    // salvage from the wrecks: the raiders killed (a fled band leaves little behind)
+    const value = killedIdx.reduce((t, i) => t + (MACHINE[raid.units[i]?.type]?.price || 0), 0);
     report.salvage = { credits: Math.round(value * RAID.salvage.credits * hunter), parts: Math.round(value * RAID.salvage.parts * hunter) };
     state.stock.credits += report.salvage.credits; state.stock.parts += report.salvage.parts;
     mood(state, 'Raid', RAID.fear.won);
@@ -1379,6 +1500,7 @@ export function answerRaid(state, choice, rng = stateRng(state)) {
     rd.heat = Math.min(100, rd.heat + RAID.tributeHeat);
     mood(state, 'Tribute paid', RAID.fear.tribute);
     rd.paid++;
+    raidersHome(state, raid, 0);
     report = { day: state.day, won: false, from: raid.from, faction: raid.faction, tier: raid.tier, strength: raid.strength, defence: 0, winChance: 0,
       lostGuardians: [], hurt: [], damaged: [], stolen: {}, salvage: { credits: 0, parts: 0 }, tribute: paid };
     text = `${who} took ${paid.credits ? `${paid.credits} credits` : `${paid.food} food`} and left. Word of an easy mark gets around: heat +${RAID.tributeHeat}.`;
@@ -1386,11 +1508,50 @@ export function answerRaid(state, choice, rng = stateRng(state)) {
     report = fight(state, raid, rng);
     const lost = report.lostGuardians.length ? ` Lost: ${report.lostGuardians.map((t) => machineOf(state, t).name).join(', ')}.` : '';
     text = report.won
-      ? `The guard beat off ${who}. Salvage: ${report.salvage.credits} credits and ${report.salvage.parts} parts.${lost}`
+      ? `The guard beat off ${who}: ${report.killed} of ${report.sent} destroyed. Salvage: ${report.salvage.credits} credits and ${report.salvage.parts} parts.${lost}`
       : `${who} broke through.${Object.keys(report.stolen).length ? ` Stolen: ${Object.entries(report.stolen).map(([g, n]) => `${n} ${g}`).join(', ')}.` : ''}${report.damaged.length ? ` ${report.damaged.length} building${report.damaged.length > 1 ? 's' : ''} knocked out until repaired.` : ''}${lost}`;
   } else return no('Fight them or pay tribute.');
   rd.count++; rd.last = report; rd.coming = null; rd.warned = false;
   rd.next = state.day + raidInterval(state, rng);
+  state.pending = state.pending.filter((p) => p.kind !== 'raid');
+  log(state, text);
+  return ok(text, { report });
+}
+
+// Version 5: the raid fought on the battle map (js/colony/battle.js, game.html?colony=1). `result`:
+// { day, won, fled, turns, killed: [indices into raid.units], guardians: [{ id, hp: 0..1, lost }] }.
+export function resolveRaidBattle(state, result) {
+  upgradeState(state);
+  const rd = state.raid, raid = rd.coming;
+  if (!raid || !raid.battle) return no('No battle is being fought.');
+  const lostGuardians = [], hurt = [];
+  for (const r of result?.guardians || []) {
+    const g = state.guardians.find((x) => x.id === r.id);
+    if (!g) continue;
+    const max = maxHp(state, g);
+    if (r.lost || !(r.hp > 0)) {
+      lostGuardians.push(g.type);
+      if (g.commander) {
+        const c = serving(state, g.commander);
+        if (c) c.injured = between(stateRng(state), V3.injury);
+        log(state, `${nameOf(g.commander)} was pulled from the wreck of the ${machineOf(state, g.type).name}: injured for ${c?.injured} days.`);
+      }
+      state.guardians.splice(state.guardians.indexOf(g), 1);
+    } else {
+      g.hp = round1(Math.min(max, Math.max(0.1, r.hp * max)));
+      if (g.hp < max) hurt.push(g.id);
+      g.level = Math.min(V3.maxLevel, (g.level || 0) + (fitCommander(state, g.commander) ? 2 : 1));
+    }
+  }
+  const killed = [...new Set((result?.killed || []).filter((i) => i >= 0 && i < raid.units.length))];
+  const won = !!result?.won;
+  const report = raidOutcome(state, raid, { won, fled: !!result?.fled, manual: true, killed, lostGuardians, hurt, defence: Math.round(defenceOf(state, raid).total), winChance: null }, stateRng(state));
+  const who = raidName(raid), lost = lostGuardians.length ? ` Lost: ${lostGuardians.map((t) => machineOf(state, t).name).join(', ')}.` : '';
+  const text = won
+    ? `${result.fled ? `${who} broke off and ran` : `The guard destroyed ${who}`}: ${killed.length} of ${raid.units.length} raiders destroyed in ${result.turns || '?'} turns. Salvage: ${report.salvage.credits} credits and ${report.salvage.parts} parts.${lost}`
+    : `${who} broke through the guard.${Object.keys(report.stolen).length ? ` Stolen: ${Object.entries(report.stolen).map(([g, n]) => `${n} ${g}`).join(', ')}.` : ''}${report.damaged.length ? ` ${report.damaged.length} building${report.damaged.length > 1 ? 's' : ''} knocked out until repaired.` : ''}${lost}`;
+  rd.count++; rd.last = report; rd.coming = null; rd.warned = false;
+  rd.next = state.day + raidInterval(state, stateRng(state));
   state.pending = state.pending.filter((p) => p.kind !== 'raid');
   log(state, text);
   return ok(text, { report });
@@ -1450,7 +1611,7 @@ export function fightDrones(state, d, rng) {
 export function raidStatus(state) {
   upgradeState(state);
   const rd = state.raid, h = heatTarget(state);
-  return { possible: raidsPossible(state), heat: rd.heat, target: h.target, heatParts: h.parts, warned: rd.warned, coming: rd.coming,
+  return { possible: raidsPossible(state), on: raidsOn(state), peace: BASE_RAIDS.peace, bases: basesStatus(state), heat: rd.heat, target: h.target, heatParts: h.parts, warned: rd.warned, coming: rd.coming,
     eta: rd.coming ? Math.max(0, rd.coming.day - state.day) : null, last: rd.last, count: rd.count, won: rd.won, lost: rd.lost, paid: rd.paid, lead: warnLead(state) };
 }
 

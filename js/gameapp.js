@@ -27,7 +27,7 @@ import { Sound, mapMusic, SONGS, briefingSong } from './audio/sound.js';
 import { drawScreen } from './screens.js';
 import { Board } from './render/board.js';
 import { loadProgress, saveProgress, saveBattle, savedBattle, clearSavedBattle, restoreBattle } from './game/savegame.js';
-import { expansionFromUrl } from './expansion/battle.js';
+import { expansionFromUrl, colonyMission } from './expansion/battle.js';
 import { briefingHtml, startBriefingFx } from './expansion/briefing.js';
 
 const $ = (id) => document.getElementById(id);
@@ -101,7 +101,10 @@ async function testFile(url, read) {
 async function boot() {
   // expansion missions run from the expansion's pack (js/expansion/pack.js): the original's
   // graphics and sound, copied once from the player's ROM, so no ROM is needed after that
-  if (new URLSearchParams(location.search).has('mission')) {
+  const q = new URLSearchParams(location.search);
+  if (q.has('mission') || q.has('colony')) {
+    // the colony's raid battle (game.html?colony=1): its mission waits in localStorage (js/colony/battle.js)
+    if (q.has('colony') && !colonyMission()) { colonyMissing(); return; }
     const { ensurePack } = await import('./expansion/pack.js');
     const p = await ensurePack({ onProgress: (t) => { $('loadMsg').textContent = t; } });
     rom = p.rom; romEn = p.textRom; en = p.text; pal = battlePalette(rom);
@@ -135,10 +138,18 @@ async function boot() {
 async function startExpansion() {
   custom = await expansionFromUrl(rom);
   types = custom.types; en = { ...(en || {}), ...custom.text };
+  if (custom.colony) { $('bRestart').hidden = true; $('bRetreat').textContent = 'Retreat'; }   // no replays of a raid
   const s = savedBattle(custom.battleKey), title = custom.mission.title || custom.mission.name;
   const brief = () => expansionBriefing();
   if (s && s.mission === custom.url) choose(title, `You have a saved battle of this mission (turn ${s.turn}).`, 'Resume', 'Start over', () => resumeExpansion(s), brief);
   else brief();
+}
+
+// game.html?colony=1 with no raid stored (already fought, or opened by hand).
+function colonyMissing() {
+  show('sLoad');
+  $('setup').hidden = true; $('loadMsg').hidden = false;
+  $('loadMsg').innerHTML = 'No raid battle is waiting. <a href="colony.html">Back to Eden</a>';
 }
 
 // Back to this campaign's intermission (expansion.html).
@@ -158,7 +169,8 @@ async function expansionBriefing() {
   const fx = startBriefingFx($('briefBody'), { terrain: terr, mission: custom.mission, types, icon: (u) => maskedIcon({ type: u.type, army: u.army === 2 ? NEUTRAL : u.army }) });
   soundHint($('briefBody').querySelector('.bHead'));
   $('bBriefGo').onclick = () => { fx.stop(); silence(); startMission(-1); };
-  $('bBriefBack').onclick = () => { fx.stop(); silence(); if (custom.campaign) location.href = interUrl(); else location.search = ''; };
+  $('bBriefBack').onclick = () => { fx.stop(); silence(); if (custom.colony) location.href = 'colony.html'; else if (custom.campaign) location.href = interUrl(); else location.search = ''; };
+  if (custom.colony) { $('bBriefBack').textContent = 'Back to Eden'; $('bBriefGo').textContent = 'Defend Eden'; }
 }
 
 // First run (and ☰ → ROM & patch): pick the ROM and, optionally, the English patch; both are
@@ -235,7 +247,12 @@ function wire() {
   };
   $('bRestart').onclick = () => { if (!busy) startMission(mission); };
   // an expansion battle leaves for its own pages, so the base title never runs with `custom` set
-  $('bRetreat').onclick = () => { if (busy) return; if (custom) location.href = custom.campaign ? interUrl() : 'game.html'; else showTitle({ menu: true }); };
+  $('bRetreat').onclick = () => {
+    if (busy) return;
+    // the colony's raid: retreating lets the raiders through (a defeat, reported to the colony)
+    if (custom?.colony) { if (battle.winner() === null && confirm('Retreat? The raiders will be through the gates.')) { battle.result = { winner: 1, reason: 'retreat' }; checkEnd(); } return; }
+    if (custom) location.href = custom.campaign ? interUrl() : 'game.html'; else showTitle({ menu: true });
+  };
   $('cv').addEventListener('click', onClick);
   $('cv').addEventListener('mousemove', aimDecimator);
   document.addEventListener('keydown', onKey);
@@ -322,7 +339,7 @@ function setupBoard(m) {
   if (!board) { board = new Board($('board'), $('cv'), { rom, icon: maskedIcon, controlsHost: $('boardCtl') }); board.active = () => !$('sBattle').hidden; board.onDeath = () => { if (sound) sound.playSfx(0x18); }; }
   board.setTerrain(terr.img, pal);   // terrain classes come with the battle (board.update)
   sel = null; reach = null; targets = []; hosts = []; launching = null; busy = false; blastCells = null; blastAim = null; threat = null; range = null; $('log').innerHTML = '';
-  show('sBattle'); $('where').textContent = custom ? `expansion · ${custom.mission.title || custom.mission.name}` : `mission ${m + 1} · ${missionTitle(m)}`;
+  show('sBattle'); $('where').textContent = custom ? `${custom.colony ? 'Eden' : 'expansion'} · ${custom.mission.title || custom.mission.name}` : `mission ${m + 1} · ${missionTitle(m)}`;
   return info;
 }
 
@@ -820,6 +837,7 @@ async function phaseEvents() {
 function checkEnd() {
   const w = battle.winner();
   if (w === null) return false;
+  if (battle.result?.reason === 'fled' && !battle.fledLogged) { battle.fledLogged = true; draw(); log('<b>The raiders break off and run.</b>'); }
   setTimeout(() => result(w), 400);
   return true;
 }
@@ -878,6 +896,7 @@ function expansionResult(w) {
   $('bResNext').textContent = 'Retry';
   $('bResNext').onclick = () => startMission(-1);
   $('bResTitle').onclick = () => { location.search = ''; };
+  if (custom.colony) { colonyEnd(w); return; }
   if (!custom.campaign) return;
   $('bResTitle').onclick = () => { location.href = interUrl(); };
   if (w === 0) {   // the campaign moves on: survivors, levels and supply are saved for the intermission
@@ -886,6 +905,28 @@ function expansionResult(w) {
     $('bResNext').textContent = 'Intermission';
     $('bResNext').onclick = () => { location.href = interUrl(); };
   }
+}
+
+// The colony's raid is over: the result goes to colony.html (js/colony/main.js hands it to the
+// rules), and the only way on is back to Eden.
+function colonyEnd(w) {
+  const r = battle.result.reason, res = custom.result(battle, w === 0), c = custom.mission.colony || {};
+  const stored = custom.store(res);
+  $('resKicker').textContent = w === 0 ? 'Eden holds' : 'Eden is raided';
+  $('resTitle').textContent = w === 0 ? (r === 'fled' ? 'The raiders break off and run' : 'The raiders are destroyed') : 'The raiders got through';
+  $('resText').textContent = (w === 0
+    ? (r === 'fled' ? `Outnumbered two to one, they turned tail on turn ${battle.turn}.` : `Cleared on turn ${battle.turn}.`)
+    : r === 'retreat' ? 'You pulled the guard back. The raiders are through the gates.'
+    : r === 'general' ? 'The General\'s machine is down. The guard falls back and the raiders are through.'
+    : r === 'timeup' ? 'The raiders held out long enough to loot the outer works.'
+    : 'The guard is gone. The raiders are through the gates.')
+    + `\n\n${res.killed.length} of ${c.count ?? res.killed.length} raider${(c.count ?? 0) === 1 ? '' : 's'} destroyed · ${res.guardians.filter((g) => g.lost).length} guardian${res.guardians.filter((g) => g.lost).length === 1 ? '' : 's'} lost.`
+    + (stored ? '' : '\n\nThe result could not be stored (browser storage unavailable).');
+  const supply = $('resStats').querySelector('[data-k=supply]');
+  if (supply) supply.closest('div').hidden = true;
+  $('bResNext').textContent = 'Back to Eden';
+  $('bResNext').onclick = () => { location.href = 'colony.html?raid=1'; };
+  $('bResTitle').hidden = true;
 }
 
 // The results screens open on the ROM's Earthrise (the opening's BG1), tinted red on a defeat.
@@ -912,7 +953,7 @@ function expansionReport(w) {
   const mvp = w === 0 ? mine.filter((u) => u.hp > 0 && score(u) > 0).sort((a, b) => score(b) - score(a))[0] : null;
   const no = +(new URLSearchParams(location.search).get('no') || 0);
   const foes = battle.units.filter((u) => u.army === 1 && u.hp <= 0).length, lost = mine.filter((u) => u.hp <= 0).length;
-  $('resStats').innerHTML = [['Turns', battle.turn], ['Map points', mapPoints(battle, no).total], ['Union destroyed', foes], ['Machines lost', lost], ['Supply', '—', 'supply']]
+  $('resStats').innerHTML = [['Turns', battle.turn], ['Map points', mapPoints(battle, no).total], [custom.colony ? 'Raiders destroyed' : 'Union destroyed', foes], ['Machines lost', lost], ['Supply', '—', 'supply']]
     .map(([k, v, key]) => `<div><span>${k}</span><b${key ? ` data-k="${key}"` : ''}>${v}</b></div>`).join('');
   $('resStats').hidden = false;
   $('resCrew').innerHTML = `<h2>${w === 0 ? 'The crews' : 'Who flew'}</h2><div class="crew">${mine.map((u, i) => {

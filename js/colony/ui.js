@@ -42,6 +42,10 @@ import { LOGS, VAULTS, SURVIVORS, SURVIVOR_COMMANDERS, DANGERS, FINAL_CODE_PARTS
 // lazily so the colony still runs if the expansion's files are missing.
 let svgPortrait = null;
 import('../expansion/portraits.js').then((m) => { svgPortrait = m.portrait; }).catch(() => { });
+// Command the battle (docs/COLONY-V5.md §2): the raid fought on the expansion's hex map; needs the
+// Earth Light pack (packReady: null while checking).
+let battleMod = null, packReady = null;
+import('./battle.js').then((m) => { battleMod = m; }).catch((e) => console.warn('battle.js not loaded', e));
 
 const GOODS = ['food', 'water', 'air', 'parts', 'ore', 'alloy', 'helium', 'credits'];
 const GOOD_NAME = { food: 'Food', water: 'Water', air: 'Air', parts: 'Parts', ore: 'Ore', alloy: 'Alloy', helium: 'Helium-3', credits: 'Credits', power: 'Power', research: 'Research' };
@@ -219,7 +223,7 @@ export function helpHtml(art, diff) {
     <p>The <b>goal panel</b> (under the top bar) always says what to do next. Press <b>Show me</b> and it takes you there. Each goal done pays a <b>Council grant</b> of credits and parts.</p>
     <p>The <b>advisor</b> warns you when something is going wrong. Press <b>Fix</b> to jump to the answer.</p>`)}
   ${sec('time', 'Time', '', `
-    <p>One <b>day</b> passes every second. The buttons at the top are <b>pause</b>, <b>×1</b>, <b>×2</b> and <b>×4</b>. Keys: space, 1, 2, 3.</p>
+    <p>One <b>day</b> passes every two and a half seconds at ×1. The buttons at the top are <b>pause</b>, <b>×1</b>, <b>×2</b> and <b>×4</b>. Keys: space, 1, 2, 3.</p>
     <p>When something needs your answer (a ship, a finished goal, a new chamber), <b>the clock stops</b> until you answer.</p>
     <p>Pause any time to plan. Nothing is lost while paused.</p>`)}
   ${sec('build', 'Building', card('farm') + card('repairyard'), `
@@ -315,11 +319,12 @@ export function helpHtml(art, diff) {
       <li><b>Hazards</b> in the outer rings (debris, radiation) cost hull unless a commander with good wits leads the squadron. The report comes home with them.</li>
     </ul>`)}
   ${sec('victory', 'Winning: Eden Restored', `<figure class="cl-hfig cl-hbook"><span style="font-size:42px;color:#ffd98a">✺</span><figcaption>Eden Restored</figcaption></figure>`, `
-    <p>The Council declares Eden restored when three things are true at once. The goals walk you there, and the Market shows how far along you are.</p>
+    <p>The Council declares Eden restored when four things are true at once. It is a long road: the goals walk you there, and the Market shows how far along you are.</p>
     <ul class="cl-hsteps">
       <li><b>Every chamber open</b>, on all three decks: survey, seal, clear dangers and pressurise them all.</li>
-      <li><b>Enough colonists</b>: 1,500 on Easy, 2,000 on Normal.</li>
-      <li><b>Relief for Earth</b>: send relief convoys (12 on Easy, 20 on Normal) from the <b>Market</b>. A convoy is 100 food, water or air, or 20 helium-3, and costs a few credits and parts to launch; one leaves a day. First, a squadron must reach an <b>Earth relief station</b> on the Star chart.</li>
+      <li><b>A city of 25,000 colonists.</b> Late research builds it: <b>Tower Blocks</b> (150, growing to 450), <b>Arcologies</b> (1,500 each), <b>Arrivals Halls</b> (bigger transports), and <b>Vertical Farms</b>, <b>Water Works</b>, <b>Atmosphere Processors</b> and <b>Sun Mirrors</b> to keep it fed, watered, breathing and lit. Clinics bring children.</li>
+      <li><b>A happy city</b>: happiness above 85, held for 30 days (a day at or below 85 costs three days of progress). Cover the homes with parks, Clinics, Canteens, Safety Posts, Galleries and <b>Civic Plazas</b>.</li>
+      <li><b>Relief for Earth</b>: ship the relief quota (60 loads on Easy, 90 on Normal) from the <b>Market</b>. A load is 500 food, water or air, or 100 helium-3. One convoy leaves a day: from the dock it carries one load; a <b>Mass Driver</b> on the hull launches three at once, and on <b>Automatic</b> it launches by itself, always keeping ten days of needs at home. First, a squadron must reach an <b>Earth relief station</b> on the Star chart.</li>
       <li><b>After the ending</b> the colony carries on: the victory is kept in your save, and Eden is yours to keep growing.</li>
     </ul>`)}
   ${sec('commanders', 'Commanders', `<figure class="cl-hfig portrait">${pic('portrait/sato', 'Capt. Mira Sato')}<figcaption>Capt. Sato</figcaption></figure>`, `
@@ -355,6 +360,10 @@ export function helpHtml(art, diff) {
   </div>`;
 }
 
+// One stock readout in the top bar (owner, 2026-11-05: "the top status bar becomes crowded": the bar keeps
+// colonists, happiness, credits, parts, power and life support; the rest is under More).
+const goodStat = (g) => `<div class="cl-stat" data-g="${g}"${LATE[g] ? ' hidden' : ''} title="${GOOD_NAME[g]}: stock / capacity, change per day"><i>${g === 'helium' ? 'Helium' : GOOD_NAME[g]}</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>`;
+
 export function createUI(root, api) {
   const R = api.rules;
   const S = () => api.state();
@@ -368,15 +377,22 @@ export function createUI(root, api) {
       <button type="button" data-speed="4" title="×4 (3)">×4</button>
     </div>
     <div class="cl-stats">
-      ${GOODS.map((g) => `<div class="cl-stat" data-g="${g}"${LATE[g] ? ' hidden' : ''} title="${GOOD_NAME[g]}: stock / capacity, change per day"><i>${g === 'helium' ? 'Helium' : GOOD_NAME[g]}</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>`).join('')}
-      <button type="button" class="cl-stat cl-resstat" data-g="research" hidden title="Research a day from the labs"><i>Research</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
-      <div class="cl-stat" data-g="power" title="Power: supply / demand (MW), battery"><i>Power</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
       <div class="cl-stat" data-g="pop" title="Colonists / housing; next transport"><i>Colonists</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
       <button type="button" class="cl-stat cl-happybtn" data-g="happy" title="Happiness: click for the breakdown"><i>Happiness</i><b><span data-v></span></b><em data-d></em></button>
-      <button type="button" class="cl-stat cl-heatstat" data-g="heat" hidden title="Heat: how tempting Eden looks to raiders"><i>Heat</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
+      ${goodStat('credits')}${goodStat('parts')}
+      <div class="cl-stat" data-g="power" title="Power: supply / demand (MW), battery"><i>Power</i><b><span data-v></span><small data-c></small></b><em data-d></em></div>
+      <div class="cl-life" role="group" aria-label="Life support: food, water and air">${goodStat('food')}${goodStat('water')}${goodStat('air')}</div>
       <button type="button" class="cl-stat cl-corestat" data-g="core" hidden title="The old core: days left to stabilise it"><i>Core</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
-      <div class="cl-stat cl-tax" title="Tax rate: 0% +8 happiness, 10% 0, 20% −14, 30% −32. Shift-click steps 5%."><i>Tax</i>
-        <b class="cl-taxctl"><button type="button" data-taxstep="-1" aria-label="Lower the tax">−</button><span data-tax></span><button type="button" data-taxstep="1" aria-label="Raise the tax">+</button></b><em data-taxfx></em></div>
+      <div class="cl-morewrap">
+        <button type="button" class="cl-morebtn" data-more aria-expanded="false" aria-haspopup="true" title="More: ore, alloy, helium-3, research, heat and the tax"><span>More</span><b>▾</b><i class="cl-moredot" data-moredot hidden></i></button>
+        <div class="cl-more" data-morepop hidden>
+          ${goodStat('ore')}${goodStat('alloy')}${goodStat('helium')}
+          <button type="button" class="cl-stat cl-resstat" data-g="research" hidden title="Research a day from the labs"><i>Research</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
+          <button type="button" class="cl-stat cl-heatstat" data-g="heat" hidden title="Heat: how tempting Eden looks to raiders"><i>Heat</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
+          <div class="cl-stat cl-tax" title="Tax rate: 0% +8 happiness, 10% 0, 20% −14, 30% −32. Shift-click steps 5%."><i>Tax</i>
+            <b class="cl-taxctl"><button type="button" data-taxstep="-1" aria-label="Lower the tax">−</button><span data-tax></span><button type="button" data-taxstep="1" aria-label="Raise the tax">+</button></b><em data-taxfx></em></div>
+        </div>
+      </div>
     </div>
     <div class="cl-tools">
       <button type="button" class="cl-btn sm cl-resbtn" data-tool="research" title="Research: the tech tree (T)"><span class="cl-ico">⚗</span><span class="cl-lbl">Research</span></button>
@@ -479,6 +495,16 @@ export function createUI(root, api) {
   const $$ = (s) => [...root.querySelectorAll(s)];
   const statEls = {};
   for (const el of $$('.cl-stat[data-g]')) statEls[el.dataset.g] = { el, base: el.className, v: el.querySelector('[data-v]'), c: el.querySelector('[data-c]'), d: el.querySelector('[data-d]') };
+  // the More pop-out (top bar): opens on click, closes on a click elsewhere or Esc; a dot when something in it needs a look
+  const moreBtn = $('[data-more]'), morePop = $('[data-morepop]'), moreDot = $('[data-moredot]');
+  const moreOpen = (on) => { morePop.hidden = !on; moreBtn.setAttribute('aria-expanded', String(on)); };
+  moreBtn.addEventListener('click', (e) => { e.stopPropagation(); moreOpen(morePop.hidden); });
+  document.addEventListener('pointerdown', (e) => { if (!morePop.hidden && !e.target.closest('.cl-morewrap')) moreOpen(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !morePop.hidden) moreOpen(false); });
+  function moreFlag() {
+    const bad = !!morePop.querySelector('.cl-stat:not([hidden]).down, .cl-resstat.idle:not([hidden])');
+    if (moreDot.hidden === bad) moreDot.hidden = !bad;
+  }
   const dayEl = $('[data-h=day]'), taxEl = $('[data-tax]'), taxFx = $('[data-taxfx]');
   const cardsEl = $('[data-cards]'), insp = $('.cl-insp'), inspBody = $('[data-insp]'), tipEl = $('.cl-tip'), toasts = $('.cl-toasts');
   const logEl = $('[data-log]'), modal = $('.cl-modal'), evBox = $('.cl-event'), placingEl = $('.cl-placing');
@@ -1059,9 +1085,13 @@ export function createUI(root, api) {
       return `<button type="button" data-a="mode" data-id="${b.id}" data-v="${esc(mo.key)}" aria-pressed="${on}" title="${esc(mo.text || mo.name)}">${esc(mo.name)}</button>`;
     }).join('')}</div>${d.modes.find((mo) => mo.key === (b.mode ?? d.modes[0].key))?.text ? `<p class="cl-dim">${esc(d.modes.find((mo) => mo.key === (b.mode ?? d.modes[0].key)).text)}</p>` : ''}` : '';
     let needs = '';
-    if (b.key === 'habitat' && next && R.habitatLevelReachable && !R.habitatLevelReachable(next)) {
+    const grows = b.key === 'habitat' || b.key === 'towerblock';   // version 6: Tower Blocks grow like Habitats
+    if (b.key === 'reserve' && R.reserveCap) { const rv = s.reserve || {}, cap = R.reserveCap(s); rows.push(kv('Held back', ['food', 'water', 'air'].map((g) => `${num(Math.floor(rv[g] || 0))} ${g}`).join(' · ') + ` <small>of ${num(cap)} each</small>`)); }
+    if (grows && b.key !== 'habitat' && next && R.habitatLevelReachable && !R.habitatLevelReachable(next)) {
+      needs = '';
+    } else if (b.key === 'habitat' && next && R.habitatLevelReachable && !R.habitatLevelReachable(next)) {
       needs = `<div class="cl-needs"><h5>${esc(d.levels?.[b.level - 1]?.name || 'This')} is the largest home for now</h5></div>`;
-    } else if (b.key === 'habitat') {
+    } else if (grows) {
       const list = habitatNeeds(s, b);
       if (list && list.length) needs = `<div class="cl-needs"><h5>${next ? `Next level: ${esc(next.name || 'level ' + (b.level + 1))}` : 'Top level'}</h5><ul>${list.map((n) => `<li class="${n.ok ? 'ok' : 'no'}">${n.ok ? '✓' : '✗'} ${esc(n.label)}</li>`).join('')}</ul></div>`;
       else if (next?.needs) needs = `<div class="cl-needs"><h5>Next level: ${esc(next.name || '')}</h5><ul>${next.needs.map((n) => `<li class="no">• ${esc({ allNeeds: 'Food, water, air and power for everyone', park: 'A park in range', clinic: 'A clinic in range (later)' }[n] || n)}</li>`).join('')}</ul></div>`;
@@ -1084,12 +1114,12 @@ export function createUI(root, api) {
       if (b.key !== 'seal') acts.push(`<button type="button" class="cl-btn sm" data-a="toggle" data-id="${b.id}">${b.off ? 'Switch on' : 'Switch off'}</button>`);
       acts.push(`<button type="button" class="cl-btn sm warn" data-a="demolish" data-id="${b.id}" title="Refunds half its cost">Demolish</button>`);
     }
-    if (b.key === 'dock') acts.unshift(`<button type="button" class="cl-btn sm primary" data-a="market">Market</button>`);
+    if (b.key === 'dock' || b.key === 'massdriver') acts.unshift(`<button type="button" class="cl-btn sm primary" data-a="market">Market</button>`);
     return `<section class="cl-isec"><h4>Building ${status}</h4>
       <div class="cl-ibuild"><span class="cl-ipic">${api.art?.(`card/${b.key}`) ? `<img src="${esc(api.art(`card/${b.key}`))}" alt="">` : cardIcon(d)}</span>
       <div><div class="cl-iname">${esc(d.name)}</div><p class="cl-dim">${esc(d.text || '')}</p></div></div>
       ${rows.join('')}${extra}${modes}${needs}
-      ${!next && d.levels && b.key !== 'habitat' ? '<p class="cl-dim">Fully upgraded.</p>' : ''}
+      ${!next && d.levels && !grows ? '<p class="cl-dim">Fully upgraded.</p>' : ''}
       <div class="cl-acts">${acts.join('')}</div></section>`;
   }
 
@@ -1150,7 +1180,7 @@ export function createUI(root, api) {
     if (e.target.closest('[data-mchart]')) { pops.market.hidden = true; openChart(); return; }
     const b = e.target.closest('[data-sell],[data-guard],[data-buy],[data-convoy]'); if (!b || b.disabled) return;
     const s = S();
-    if (b.dataset.convoy) result(R.sendConvoy(s, b.dataset.convoy));
+    if (b.dataset.convoy) result(R.sendConvoy(s, b.dataset.convoy, !!b.dataset.heavy));
     else if (b.dataset.buy) result(R.buy(s, b.dataset.buy, +b.dataset.q));
     else if (b.dataset.sell) {
       const g = b.dataset.sell, have = Math.floor(s.stock[g] || 0), q = b.dataset.q === 'all' ? have : Math.min(have, +b.dataset.q);
@@ -1197,12 +1227,13 @@ export function createUI(root, api) {
   // with the three parts of the win, Eden Restored, beside them.
   function convoyHtml(s, cv, vs) {
     const part = (label, x) => `<li class="${x.met ? 'met' : ''}"><b>${x.met ? '✓' : '○'}</b> ${label} <small>${num(x.have)} / ${num(x.need)}</small></li>`;
-    return `<h4>Relief convoys to Earth <small>${cv.sent} / ${cv.quota} sent · each costs ${num(cv.cost.credits)} cr and ${num(cv.cost.parts)} parts</small></h4>
-      ${cv.station ? `<p class="cl-dim">Convoys go to <b>${esc(cv.station)}</b>. One leaves a day; Earth pays for each.</p>`
+    const loads = cv.loads ?? cv.sent, heavy = cv.driver && cv.heavyCost;
+    return `<h4>Relief convoys to Earth <small>${num(loads)} / ${num(cv.quota)} loads · a convoy costs ${num(cv.cost.credits)} cr and ${num(cv.cost.parts)} parts${heavy ? `, a heavy launch ${num(cv.heavyCost.credits)} cr and ${num(cv.heavyCost.parts)} parts` : ''}</small></h4>
+      ${cv.station ? `<p class="cl-dim">Convoys go to <b>${esc(cv.station)}</b>. One leaves a day; Earth pays for each.${cv.driver ? ` The Mass Driver launches three loads at once${cv.auto ? ' and is on <b>Automatic</b>: it launches by itself' : ' (set it to Automatic in its panel to launch by itself)'}.` : ' A Mass Driver (research) launches three loads at once.'}</p>`
         : '<p class="cl-why">No Earth relief station reached yet. <button type="button" class="cl-linkbtn" data-mchart>Star chart ›</button> send a squadron to one on the Earth side.</p>'}
       <table class="cl-table cl-mkt"><tbody>${cv.goods.map((g) => `<tr><td>${GOOD_NAME[g.good] || g.good}</td><td class="n">${num(g.have)} <small>/ ${g.load}</small></td><td class="n">+${num(g.pay)} <small>cr</small></td>
-        <td class="cl-sellbtns"><button type="button" class="cl-btn xs" data-convoy="${g.good}" ${g.why ? `disabled title="${esc(g.why)}"` : `title="Send ${g.load} ${g.good} to Earth"`}>Send ${g.load}</button></td></tr>`).join('')}</tbody></table>
-      ${vs ? `<div class="cl-restore${s.victory ? ' won' : ''}"><b>${s.victory ? `Eden Restored on day ${s.victory.day}` : 'Eden Restored needs'}</b><ul>${part('every chamber open', vs.chambers)}${part('colonists', vs.pop)}${part('relief convoys', vs.convoys)}</ul></div>` : ''}`;
+        <td class="cl-sellbtns"><button type="button" class="cl-btn xs" data-convoy="${g.good}" ${g.why ? `disabled title="${esc(g.why)}"` : `title="Send ${g.load} ${g.good} to Earth"`}>Send ${num(g.load)}</button>${heavy ? ` <button type="button" class="cl-btn xs" data-convoy="${g.good}" data-heavy="1" ${g.whyHeavy ? `disabled title="${esc(g.whyHeavy)}"` : `title="Launch ${g.heavyLoad} ${g.good} from the Mass Driver"`}>Launch ${num(g.heavyLoad)}</button>` : ''}</td></tr>`).join('')}</tbody></table>
+      ${vs ? `<div class="cl-restore${s.victory ? ' won' : ''}"><b>${s.victory ? `Eden Restored on day ${s.victory.day}` : 'Eden Restored needs'}</b><ul>${part('every chamber open', vs.chambers)}${part('colonists', vs.pop)}${vs.happy ? part(`happiness above ${vs.happy.above} (now ${vs.happy.now}), days held`, vs.happy) : ''}${part('relief convoy loads', vs.convoys)}</ul></div>` : ''}`;
   }
 
   function renderSettings() {
@@ -1216,21 +1247,33 @@ export function createUI(root, api) {
       <label class="cl-field"><em>Scrolling<small>Two-finger scroll on a trackpad, or a mouse wheel. Pinch (or Ctrl + scroll) always zooms.</small></em>
         <select data-setsel="wheel">${[['auto', 'Auto: pan on a trackpad, zoom with a mouse wheel'], ['pan', 'Pan the map (trackpad)'], ['zoom', 'Zoom (mouse wheel)']].map(([v, l]) => `<option value="${v}" ${(st.wheel || 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       ${musicHtml()}
+      ${raidToggleHtml(S())}
       <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · M music · WASD / arrows pan · Q / E rotate · PgUp / PgDn deck · Esc cancel · F1 or ? how to play.</p>`;
     for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => { api.setSetting(c.dataset.set, c.checked); helpersShown(); };
     for (const c of pops.settings.querySelectorAll('[data-setsel]')) c.onchange = () => api.setSetting(c.dataset.setsel, c.value);
     const mus = pops.settings.querySelector('[data-music]'), setup = pops.settings.querySelector('[data-musicsetup]');
     if (mus) mus.onchange = () => api.audio.setMuted(!mus.checked);
+    for (const b of pops.settings.querySelectorAll('[data-musicsrc]')) b.onclick = () => { api.audio.setSource(b.dataset.musicsrc); renderSettings(); };
+    const rd = pops.settings.querySelector('[data-raids]');
+    if (rd) rd.onchange = () => { result(R.setRaids(S(), rd.checked)); renderSettings(); };
     if (setup) setup.onclick = () => { setup.disabled = true; api.audio.setUp().then(() => { renderSettings(); toast('Earth Light music is ready.', 'good'); }).catch((e) => { setup.disabled = false; toast(e.message || 'No ROM chosen.', 'bad'); }); };
   }
-  // Earth Light's own music, from the expansion's sound pack (js/colony/audio.js).
+  // Music (js/colony/audio.js): Lanternfall's soundtrack (default, no setup) or Earth Light's own
+  // songs (from the ROM's sound pack, set up once); and raiders on or off (owner, 2026-11-05).
   function musicHtml() {
     const a = api.audio;
     if (!a) return '';
-    return a.available
-      ? `<label class="cl-check"><input type="checkbox" data-music ${a.muted ? '' : 'checked'}><span></span><em>Music<small>Earth Light's own songs, from your ROM's sound pack.</small></em></label>`
+    const src = `<div class="cl-field"><em>Soundtrack<small>${a.source === 'earthlight' ? 'Earth Light\'s own songs, from your ROM\'s sound pack.' : 'Lanternfall\'s orchestra, played live.'}</small></em>
+      <span class="cl-seg"><button type="button" class="cl-btn xs${a.source === 'lanternfall' ? ' on' : ''}" data-musicsrc="lanternfall">Lanternfall</button><button type="button" class="cl-btn xs${a.source === 'earthlight' ? ' on' : ''}" data-musicsrc="earthlight">Earth Light</button></span></div>`;
+    return src + (a.available
+      ? `<label class="cl-check"><input type="checkbox" data-music ${a.muted ? '' : 'checked'}><span></span><em>Music<small>On or off (M).</small></em></label>`
       : `<div class="cl-field"><em>Music<small>${esc(a.why || 'Earth Light music needs your ROM once.')}</small></em>
-         <button type="button" class="cl-btn sm" data-musicsetup>Set up Earth Light music</button></div>`;
+         <button type="button" class="cl-btn sm" data-musicsetup>Set up Earth Light music</button></div>`);
+  }
+  function raidToggleHtml(s) {
+    if (!s || typeof R.setRaids !== 'function') return '';
+    const on = s.options?.raids !== false;
+    return `<label class="cl-check"><input type="checkbox" data-raids ${on ? 'checked' : ''}><span></span><em>Raiders<small>${on ? 'Raiders come once Eden has 500 colonists and a base has noticed it.' : 'Off: no raids. Turn them on again whenever you like.'}</small></em></label>`;
   }
 
   // ---------------------------------------------------------------- research panel (version 2)
@@ -1717,7 +1760,12 @@ export function createUI(root, api) {
     const dragons = emp.filter((b) => (b.mode ?? 'dragon') === 'dragon').length;
     const parts = heatParts(s);
     let next;
-    if (!on) next = `<p>No raids yet. Raiders take notice once Eden has <b>80 colonists</b> (you have ${num(s.pop)}), and not before <b>day ${raidStartDay(s)}</b>.</p>`;
+    const bases = R.basesStatus ? R.basesStatus(s) : [], peace = R.BASE_RAIDS?.peace ?? 500;
+    if (s.options?.raids === false && !r.coming) next = `<p>Raiders are <b>off</b> (Settings). Turn them on whenever you like.</p>`;
+    else if (!on && !r.coming) next = s.pop < peace
+      ? `<p>No raids while Eden is small: nobody out there cares about a colony under <b>${num(peace)} colonists</b> (you have ${num(s.pop)}). Rebuild in peace.</p>`
+      : bases.length && bases.every((b) => b.destroyed) ? '<p>Every raider base is destroyed. <b>No more raids.</b></p>'
+      : '<p>No raider base has noticed Eden yet.</p>';
     else if (r.coming) {
       const c = r.coming, pv = rule('raidPreview', s);
       next = `<div class="cl-raidnow"><b class="bad">Raiders ${eta ? `arrive in ${L(plural(eta, 'day'))}` : 'are here'}</b>
@@ -1733,6 +1781,10 @@ export function createUI(root, api) {
           <tfoot><tr><td>Target <small>(0–100)</small></td><td class="n">${L(num(Math.max(0, Math.min(100, parts.reduce((t, [, v]) => t + v, 0)))))}</td></tr></tfoot></table>
         <p class="cl-dim">Paying tribute adds 10. Jammer Arrays take 10 off each (up to 30).</p></section>
       <section class="cl-dsec"><h4>Next raid</h4>${next}</section>
+      ${bases.length ? `<section class="cl-dsec"><h4>Raider bases <small>destroy them on the Star chart (X)</small></h4>
+        ${bases.map((b) => `<div class="cl-kv cl-base${b.destroyed ? ' gone' : ''}"><span>${esc(b.name[0].toUpperCase() + b.name.slice(1))} <small>${esc(b.faction)}${b.sectorName ? ` · ${esc(b.sectorName)}` : ''}</small></span>
+          <b class="${b.destroyed ? 'good' : b.aware ? 'bad' : ''}">${b.destroyed ? 'destroyed' : b.aware ? `${b.eta ? `first raid in ~${L(b.eta)} d · ` : ''}fleet ${L(b.fleet)}/${b.max}` : `notices Eden at ${num(b.notice)} colonists`}</b></div>`).join('')}
+        <p class="cl-dim">A base raids when most of its fleet is home; raiders you destroy are gone for good, so a beaten base takes longer to come back. A squadron at a base's door gets Eden noticed.</p></section>` : ''}
       <section class="cl-dsec"><h4>Defences <small>total ${L(num(defenceTotal(s)))}</small></h4>
         <div class="cl-kv"><span>Crewed guardians</span><b class="${crewedN ? '' : 'bad'}">${L(`${crewedN} of ${gs.length} · crews ${cap}`)}</b></div>
         <div class="cl-kv"><span>Battery Emplacements</span><b>${emp.length ? `${emp.length} (${dragons} Dragon, ${emp.length - dragons} Hydra)` : '<span class="cl-dim">none</span>'}</b></div>
@@ -2393,7 +2445,7 @@ export function createUI(root, api) {
     }
     evBox.className = 'cl-win cl-event cl-evfinal cl-evvictory';
     const v = s.victory || {}, choice = p.choices?.[0] || { key: 'keep', label: 'Keep building Eden' };
-    const stats = [['Day', v.day], ['Colonists', v.pop], ['Chambers open', v.chambers], ['Relief convoys', v.convoys], ['Buildings', v.buildings], ['Raids beaten', v.raids], ['Pirate dens cleared', v.dens], ['Logs read', v.logs]];
+    const stats = [['Day', v.day], ['Colonists', v.pop], ['Chambers open', v.chambers], ...(v.happy != null ? [['Happiness', v.happy]] : []), ['Relief loads', v.convoys], ['Buildings', v.buildings], ['Raids beaten', v.raids], ['Pirate dens cleared', v.dens], ['Logs read', v.logs]];
     evBox.innerHTML = `<div class="cl-fvpic">${victoryPicture()}</div>
       <div class="cl-fvmain">
         <div class="cl-evkind">${esc(KIND_LABEL.victory)} · Day ${s.day}</div>
@@ -2619,7 +2671,7 @@ export function createUI(root, api) {
       <div><h2 id="evTitle">${esc(p.title)}</h2>${raid && (rule('raidPreview', s) || p.preview) ? `<p>${esc(raidLine(s, p))}</p>` : `<p>${esc(disc && discoveryItems(s, p).length ? discoveryLead(s, p) : p.text)}</p>`}</div></div>
       ${raid ? raidBody(s, p) : warn ? warnBody(s) : disc ? discoveryBody(s, p) : core ? reactorBody(s, p) : drone ? droneEvBody(s, p) : p.kind === 'survivors' ? survivorsEvBody(s, p) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
       <div class="cl-evchoices">${choices.map((c, i) => { const cant = raid && c.key === 'tribute' && (rule('raidPreview', s) || p.preview)?.canPay === false;
-        return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>`; }).join('')}
+        return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>${raid && c.key === 'fight' ? commandButton() : ''}`; }).join('')}
         ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : 'Meet them'}</button>` : ''}
         ${(() => { const d = core && !coreBad && !coreSafe ? reactorOf(s) : null, pv = d && dangerWork(d) == null ? srule('dangerPreview', s, d.chamber) : null;
           return pv ? `<button type="button" class="cl-btn" data-evclear="${d.chamber}" ${pv.why ? `disabled title="${esc(pv.why)}"` : 'title="Answer, and set the crews to work on it now"'}>Stabilise now${pv.cost ? ` <small>${esc(costText(pv.cost))}</small>` : ''}</button>` : ''; })()}
@@ -2627,6 +2679,20 @@ export function createUI(root, api) {
       ${api.settings.pauseOnEvents || raid ? '<p class="cl-dim cl-evpause">❚❚ The clock waits for your answer.</p>' : ''}`;
     modal.hidden = false;
     evBox.querySelector('[data-choice]')?.focus({ preventScroll: true });
+    if (raid) checkCommand();
+  }
+  // "Command the battle": between Fight and Pay tribute; disabled (with why) without the pack.
+  const COMMAND_WHY = { null: 'Checking for the Earth Light pack…', false: 'Needs the Earth Light pack: set up Earth Light music in Settings once (from your own ROM).' };
+  function commandButton() {
+    return `<button type="button" class="cl-btn" data-command ${packReady ? 'title="Fight them yourself, turn by turn, on the Earth Light hex map"' : `disabled title="${esc(COMMAND_WHY[packReady])}"`}>Command the battle</button>`;
+  }
+  function checkCommand() {
+    const ask = battleMod?.canCommand ? battleMod.canCommand() : import('./battle.js').then((m) => { battleMod = m; return m.canCommand(); });
+    ask.catch(() => false).then((ok) => {
+      packReady = !!ok;
+      const b = evBox.querySelector('[data-command]');
+      if (b) { b.disabled = !ok; b.title = ok ? 'Fight them yourself, turn by turn, on the Earth Light hex map' : COMMAND_WHY.false; }
+    });
   }
   function showReport(s, rs) {
     evId = 'report:' + rs;
@@ -2672,6 +2738,13 @@ export function createUI(root, api) {
     }
     const ok = e.target.closest('[data-repok]');
     if (ok) { repSeen = reportSig(S()); evId = null; modal.hidden = true; if (ok.dataset.repok) openDefence(ok.dataset.repok); renderEvent(); return; }
+    const cmd = e.target.closest('[data-command]');
+    if (cmd) {   // Command the battle: off to game.html?colony=1 (js/colony/battle.js); the raid stays pending until its result comes back
+      if (cmd.disabled || !battleMod) return;
+      const r = battleMod.commandBattle(S(), () => api.save());
+      if (r?.ok === false) toast(r.msg, 'bad');
+      return;
+    }
     const b = e.target.closest('[data-choice],[data-evdef]'); if (!b) return;
     const p = S().pending?.[0]; if (!p) return;
     const key = b.dataset.choice ?? (p.choices?.[0]?.key || 'ok');
@@ -2802,7 +2875,7 @@ export function createUI(root, api) {
     const s = S();
     try { summary = R.summary(s); } catch (e) { summary = null; console.warn('summary failed', e); }
     if (force) { deckSig = ''; cardSig = ''; inspSig = ''; marketSig = ''; happySig = ''; logSig = ''; goalSig = ''; resSig = ''; jSig = ''; xSig = ''; liveSigs.delete(defBody); liveSigs.delete(defStats); liveSigs.delete(jBody); }
-    hud();
+    hud(); moreFlag();
     renderDecks();
     renderGoals();
     renderAdvice(force || dirty);

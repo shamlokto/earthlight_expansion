@@ -75,7 +75,7 @@ function raidNow(s, units, { from = 'earth', faction = 'scavengers', tier = 'sca
 {
   const s = newGame({ seed: 1 });
   check(BUILDINGS.filter((d) => d.cat === 'defence').length === 8 && ['fusion', 'mushroom', 'terrace', 'lodge', 'quarters'].every((k) => BUILDING[k]), 'data: version 3 buildings');
-  check(TECHS.length === 30 && R.techStatus(s).length === 30, 'data: 30 techs');
+  check(TECHS.filter((t) => !t.ver).length === 30 && R.techStatus(s).length === TECHS.length, 'data: 30 techs before version 6');
   check(JSON.stringify(s.commanders.map((c) => c.key)) === '["general","sato"]' && s.commanders.every((c) => c.injured === 0 && c.dept === null), 'new game: the General and Sato serve');
   check(Array.isArray(s.production) && !s.production.length && Array.isArray(s.wanderers) && s.raid.heat === 0 && s.raid.next === null && s.raid.coming === null && s.raid.count === 0, 'new game: production, wanderers, raid clock');
   check(R.techEffect(s, 'machines') === 1, 'techEffect machines: tier 1 with no tech');
@@ -327,28 +327,73 @@ function raidNow(s, units, { from = 'earth', faction = 'scavengers', tier = 'sca
   check(R.warnLead(s) === 9, 'Sensor Masts: +3 each, at most 9');
   s.commanders.push({ key: 'w_rook', loyalty: 40, injured: 0, dept: null });
   check(R.heatTarget(s).parts.some((p) => p.label === 'Cass Rook' && p.value === 5), 'Cass Rook serving: heat +5');
-  // the clock: none before 80 colonists or day 60 (Easy); a warning, then the raid
-  const c = rich(10); c.stock.credits = 3000; c.stock.parts = 200;
+  // the clock (version 5, docs/COLONY-V5.md): nobody raids below 500 colonists; a base notices Eden at
+  // its population, its first raid 20–30 days later; a warning, then the raid, from that base's fleet
+  const c = rich(10); c.stock.credits = 3000; c.stock.parts = 200; c.stock.food = 5000; c.stock.water = 5000; c.stock.air = 5000;
   const rng = stateRng(c);
-  for (let d = 0; d < 30; d++) { tick(c, rng); c.pending.length = 0; }
-  check(c.raid.next === null, 'no raid clock before 80 colonists');
-  unlock80(c); tick(c, rng);
-  check(c.raid.next >= 72, `first raid not before day 72 on Easy (warning not before 60): next ${c.raid.next}`);
+  unlock80(c); c.pop = 450;
+  for (let d = 0; d < 60; d++) { tick(c, rng); c.pop = 450; c.pending.length = 0; }
+  check(!c.raid.coming && c.raid.count === 0 && c.raid.bases.every((b) => !b.aware), 'no raids and no base aware below 500 colonists');
+  check(c.raid.bases.map((b) => b.id).join() === 'scavengers,cartel,deserters,remnant' && c.raid.bases.every((b) => b.fleet === b.max), 'four raider bases, fleets full');
+  const keep = (n) => { c.pop = Math.max(c.pop, n); };
+  const scav = R.baseOf(c, 'scavengers');
+  for (let d = 0; d < 5 && !scav.aware; d++) { keep(700); tick(c, rng); c.pending.length = 0; }
+  keep(700);
+  check(scav.aware && scav.since - c.day >= 19 && scav.since - c.day <= 30 && !R.baseOf(c, 'cartel').aware, `at 500 colonists the scavengers notice Eden; their raid 20–30 days on (${scav.since - c.day})`);
   let warnDay = null, arriveDay = null, warn = null, raid = null;
-  for (let d = 0; d < 200 && !raid; d++) {
-    tick(c, rng);
+  const noticed = c.day, since = scav.since;
+  for (let d = 0; d < 60 && !raid; d++) {
+    tick(c, rng); keep(700);
     for (const p of c.pending) { if (p.kind === 'raidwarn') { warnDay = c.day; warn = p; } if (p.kind === 'raid') { arriveDay = c.day; raid = p; } }
     if (!raid) c.pending = c.pending.filter((p) => p.kind === 'raid');
   }
   check(warn && warn.speaker === 'sato' && /coming from/.test(warn.text) && /days?\./.test(warn.text) && /Barracks/.test(warn.text) && /Battery Emplacements/.test(warn.text), `the warning: from where, who, how many days, what defends (${warn?.text})`);
-  check(warnDay >= 60 && arriveDay - warnDay === 3, `warned 3 days ahead (day ${warnDay} -> ${arriveDay})`);
+  check(warnDay - noticed >= 16 && arriveDay - warnDay === 3 && arriveDay === since, `warned 3 days ahead, after the first wait (noticed ${noticed}, since ${since}, lead ${R.warnLead(c)}, day ${warnDay} -> ${arriveDay})`);
   check(raid && raid.speaker === 'sato' && raid.choices.map((x) => x.key).join() === 'fight,tribute' && /Chance to win: \d+%/.test(raid.text) && /Tribute: \d+ credits/.test(raid.text), `the raid event: choices and the preview (${raid?.text})`);
+  const sent = c.raid.coming?.units.length;
+  check(c.raid.coming?.base === 'scavengers' && c.raid.coming.faction === 'scavengers' && sent >= 2 && sent <= 4 && scav.fleet >= 5 - sent && scav.fleet <= 5 - sent + 1, `the scavengers send 50–80% of their 5 (${sent}, ${scav.fleet} home)`);
   check(c.raid.coming && c.raid.coming.arrived && R.raidPreview(c).winChance === 0 && R.raidPreview(c).tribute.credits === Math.ceil(c.raid.coming.strength * 3), 'raidPreview: no defence, no chance; tribute = strength × 3');
-  // unanswered: the sim fights it the next day
-  const count = c.raid.count;
-  tick(c, rng);
+  // unanswered: the sim fights it the next day; none die (no defence), so all go home
+  const count = c.raid.count, home0 = scav.fleet;
+  tick(c, rng); keep(700);
   check(c.raid.count === count + 1 && c.raid.last && c.raid.last.won === false && c.raid.coming === null && !c.pending.some((p) => p.kind === 'raid'), 'an unanswered raid is fought when the clock moves on');
+  check(c.raid.last.killed === 0 && scav.fleet === Math.min(5, home0 + sent), `the raiders go home (${scav.fleet})`);
   check(c.raid.next > c.day && c.raid.next - c.day >= 10, 'the next raid is scheduled');
+  // a raid fought and mostly won: the dead stay dead, so the base needs longer before it is ready again
+  {
+    const k = rich(11), kr = stateRng(k); unlock80(k); k.pop = 600; R.upgradeState(k);
+    const b = R.baseOf(k, 'scavengers'); b.aware = true; b.since = 0;
+    for (let i = 0; i < 8; i++) R.addGuardian(k, 30, { level: 5 });
+    for (let i = 0; i < 2; i++) k.buildings.push({ id: k.nextId++, key: 'barracks', x: 0, y: 0, level: 1, mode: null, build: 0, off: false });
+    k.raid.coming = R.makeRaid(k, kr, k.day, b); k.raid.coming.arrived = true;
+    const n = k.raid.coming.units.length, left = b.fleet;
+    const r = R.answerRaid(k, 'fight', kr);
+    check(r.ok && r.report.killed >= 1 && b.fleet === left + n - r.report.killed && !R.readyBase(k) === (b.fleet < 3), `kills come off the base's fleet (${r.report.won ? 'won' : 'lost'}, ${r.report.killed}/${n} killed, ${b.fleet} left)`);
+  }
+  // every base destroyed: no raids at all, whatever the population
+  {
+    const z = rich(12), zr = stateRng(z); unlock80(z); z.pop = 3000; R.upgradeState(z);
+    for (const b of z.raid.bases) { b.destroyed = true; b.fleet = 0; }
+    for (let d = 0; d < 120; d++) { tick(z, zr); z.pop = 3000; z.pending.length = 0; }
+    check(!R.raidsPossible(z) && z.raid.count === 0 && !z.raid.coming, 'every base destroyed: no raids, even at 3,000 colonists');
+  }
+  // raiders off (Settings): no raids; on again: they come
+  {
+    const o = rich(13), or = stateRng(o); unlock80(o); o.pop = 900; R.upgradeState(o);
+    check(R.setRaids(o, false).ok && o.options.raids === false, 'raiders can be switched off');
+    for (let d = 0; d < 120; d++) { tick(o, or); o.pop = 900; o.pending.length = 0; }
+    check(o.raid.count === 0 && !o.raid.coming && !R.raidsPossible(o), 'raiders off: no raids in 120 days at 900 colonists');
+    R.setRaids(o, true);
+    let seen = false;
+    for (let d = 0; d < 120 && !seen; d++) { tick(o, or); o.pop = 900; seen = o.pending.some((p) => p.kind === 'raidwarn'); o.pending.length = 0; }
+    check(seen, 'raiders on again: a warning comes');
+  }
+  // a squadron at a base's door gets Eden noticed (the raid still waits for 500 colonists)
+  {
+    const e = rich(14); R.upgradeState(e); e.pop = 200;
+    const b = R.baseOf(e, 'cartel');
+    check(R.noticeEden(e, b, stateRng(e), ': test') && b.aware && !R.raidsPossible(e), 'exploring a base: it notices Eden, but no raids below 500 colonists');
+  }
 }
 
 // ---------------------------------------------------------------- raid tiers and factions
@@ -644,8 +689,13 @@ function play(seed, { days = 250, difficulty = 'easy', defence = false, beta = n
 }
 const fmt = (r) => r.raids.map((x) => `d${x.day} ${x.faction} ${x.strength} vs ${x.defence} (${Math.round(x.win * 100)}%) ${x.result}${x.lost ? ` -${x.lost}` : ''}${x.damaged ? ` dmg${x.damaged}` : ''}`).join(' | ');
 
+// The balance runs below play 250 days, when a colony has 500 colonists only near the end; to test how
+// raids go, the raider bases notice Eden early here (a test hook: the game's thresholds are 500+).
+R.BASE_RAIDS.peace = 80;
+const NOTICE = { scavengers: 80, cartel: 150, deserters: 250, remnant: 400 };
+for (const B of R.BASES) B.notice = NOTICE[B.id];
 // Easy, defended: wins most early raids (scavengers, pirates), never loses the colony; first warning
-// not before day 60.
+// not before day 35 (80 colonists, then the first wait less the warning).
 const easyDef = [];
 for (const seed of [1, 2, 3]) {
   const r = play(seed, { defence: true });
@@ -653,7 +703,7 @@ for (const seed of [1, 2, 3]) {
   const { s } = r, early = r.raids.filter((x) => x.tier === 'scavengers' || x.tier === 'pirates');
   console.log(`easy defended seed ${seed}: day ${s.day} pop ${s.pop} guardians ${s.guardians.length} (crews ${R.crewCap(s)}) heat ${Math.round(s.raid.heat)} first warning day ${r.firstWarn} deaths ${r.deaths} (${r.ms.toFixed(0)} ms)`);
   console.log('    raids:', fmt(r));
-  check(r.firstWarn === null || r.firstWarn >= 60, `seed ${seed}: first warning not before day 60 (${r.firstWarn})`);
+  check(r.firstWarn === null || r.firstWarn >= 35, `seed ${seed}: first warning not before day 35 (${r.firstWarn})`);
   check(r.raids.length >= 3, `seed ${seed}: raids come (${r.raids.length})`);
   check(early.length && early.filter((x) => x.result === 'won').length / early.length >= 0.6, `seed ${seed}: wins most early raids (${early.filter((x) => x.result === 'won').length}/${early.length})`);
   check(s.pop >= 150 && !s.flags.lost && r.deaths === 0, `seed ${seed}: the colony stands, no deaths (pop ${s.pop}, deaths ${r.deaths})`);
@@ -847,13 +897,13 @@ function playNormal(seed, { days = 250, defence = null } = {}) {
   const base = play(2, { days: 120, defence: false }).s;
   const v2save = JSON.parse(saveState(base));
   for (const k of ['production', 'commanders', 'wanderers', 'raid']) delete v2save[k];
-  const v2techs = TECHS.filter((t) => t.branch !== 'defence' && !['fungi', 'fusion', 'terraces', 'leadership'].includes(t.key)).map((t) => t.key);
+  const v2techs = TECHS.filter((t) => !t.ver && t.branch !== 'defence' && !['fungi', 'fusion', 'terraces', 'leadership'].includes(t.key)).map((t) => t.key);
   v2save.research = { points: 3, focus: null, progress: Object.fromEntries(v2techs.map((k) => [k, TECH[k].cost])), done: v2techs };
   v2save.unlocked = [...new Set([...v2save.unlocked, ...v2techs.flatMap((k) => TECH[k].unlocks)])].filter((k) => !['arsenal', 'barracks', 'scrapyard', 'emplacement'].includes(k));
   v2save.pending = [];
   const s = loadState(JSON.stringify(v2save));
   check(v2techs.length === 19 && s.research.done.length === 19, 'old save: all 19 version-2 techs done');
-  const avail = R.techStatus(s).filter((t) => t.available).map((t) => t.key).sort().join();
+  const avail = R.techStatus(s).filter((t) => t.available && !TECH[t.key].ver).map((t) => t.key).sort().join();
   check(avail === 'fungi,fusion,leadership,machineworks,sensors,terraces', `old save: the new techs are offered (${avail})`);
   check(['arsenal', 'barracks', 'scrapyard', 'emplacement'].every((k) => s.unlocked.includes(k)) && s.commanders.length === 2 && s.raid.count === 0, 'old save: defence buildings unlocked (past 80), commanders and the raid clock');
   const rng = stateRng(s);

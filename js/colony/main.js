@@ -6,7 +6,7 @@
 import { parseSave, mountSaveButtons } from '../savefile.js';
 import { createAudio } from './audio.js';
 
-// Earth Light's own music (owner, 2026-11-03), when this browser has the expansion's sound pack.
+// Music (js/colony/audio.js): Lanternfall's soundtrack by default, or Earth Light's own songs from the pack.
 const audio = createAudio();
 for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, () => audio.unlock(), { capture: true });
 import { BUILDING } from './data/buildings.js';
@@ -186,9 +186,30 @@ function startGame(s, isNew = false) {
   try { view?.setDeck?.('main'); } catch (e) { console.warn('setDeck', e); }
   ui = createUI($('#ui'), api);
   overlay = null; placing = null; hover = null;
+  if (!isNew) applyRaidResult();   // after createUI, so the ui shows the new raid report itself
   ui.update(true);
   boot(false);
   startLoop();
+}
+
+// Command the battle (docs/COLONY-V5.md §2): the battle page (game.html?colony=1) leaves its result
+// here; the rules apply it to the raid that is waiting for it (R.resolveRaidBattle, rules.js).
+const RAID_RESULT = 'el-colony-raid-result', RAID_MISSION = 'el-colony-raid';
+function raidResultWaiting() { try { return !!localStorage.getItem(RAID_RESULT); } catch { return false; } }
+function applyRaidResult() {
+  let res = null;
+  try { res = JSON.parse(localStorage.getItem(RAID_RESULT) || 'null'); } catch { res = null; }
+  if (!res) return;
+  const drop = () => { try { localStorage.removeItem(RAID_RESULT); localStorage.removeItem(RAID_MISSION); } catch { } };
+  if (!state.raid?.coming?.battle) { drop(); return; }   // stale: that raid was answered some other way
+  if (typeof M.rules.resolveRaidBattle !== 'function') { ui.toast('This build cannot apply the battle\'s result yet. It is kept for later.', 'bad'); return; }
+  let r;
+  try { r = M.rules.resolveRaidBattle(state, res); } catch (e) { console.error(e); ui.toast('The battle\'s result could not be applied: ' + e.message, 'bad'); return; }
+  drop();
+  save(false);
+  if (r && r.ok === false) { ui.toast(r.msg || 'The battle\'s result was refused.', 'bad'); return; }
+  try { view?.setState?.(state); } catch (e) { console.warn('setState', e); }
+  ui.toast(r?.msg || (res.won ? (res.fled ? 'The raiders broke off and ran. Eden holds.' : 'The raiders are destroyed. Eden holds.') : 'The raiders got through.'), res.won ? 'good' : 'bad');
 }
 
 // The view's trackpad helpers (version 2): the minimap and the on-map buttons, as the settings say.
@@ -637,16 +658,28 @@ function tick() {
   for (const ev of res?.events || []) if (ev?.text && !ev.pause && ev.kind !== 'log') ui.toast(ev.text, ev.kind === 'bad' || ev.kind === 'death' ? 'bad' : '');
   if (state.day > 0 && state.day % 10 === 0) save(false);
   if (placing && hover) ghostAt(hover.x, hover.y);
+  // music: the defenders' theme while raiders are at the gates; fanfares for a raid beaten and the win
+  for (const ev of res?.events || []) {
+    if (ev?.kind === 'victory') audio.sting('victory');
+    else if (ev?.kind === 'raidresult') audio.sting(state.raid?.last?.won ? 'won' : 'lost');
+  }
+  musicMode();
   ui.update();
 }
+function musicMode() {
+  if (!state || $('#sGame')?.hidden) return;
+  audio.play(state.raid?.coming?.arrived || state.pending?.some((p) => p.kind === 'raid') ? 'raid' : 'colony');
+}
 
+// A day at ×1 (owner, 2026-11-05: "the day is too fast. It should be at least 2x slower"; it was 1 s).
+const DAY_MS = 2500;
 function frame(t) {
   const dt = Math.min(250, t - (last || t)); last = t;
   if (state) {
     const blocked = settings.pauseOnEvents && state.pending?.length > 0;
     if (state.speed > 0 && !blocked) {
       acc += dt;
-      const step = 1000 / state.speed;
+      const step = DAY_MS / state.speed;
       let n = 0;
       while (acc >= step && n < 4) {
         acc -= step; n++;
@@ -690,8 +723,11 @@ async function main() {
   }
   showTitle();
   audio.init().then((ok) => { if (ok && !$('#sTitle').hidden) audio.play('title'); });
-  window.__colony = { get state() { return state; }, get view() { return view; }, get ui() { return ui; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings, show: doShow,
+  window.__colony = { get audio() { return audio; }, get state() { return state; }, get view() { return view; }, get ui() { return ui; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings, show: doShow,
     get deck() { return deck; }, setDeck, stepDeck, mapOf, get placing() { return placing; } };
+  // back from a commanded raid battle: straight into the saved colony, where its result is applied
+  let saved = null; try { saved = localStorage.getItem(KEY); } catch { }
+  if (raidResultWaiting() && saved) { continueGame(); return; }
   // colony.html?from=remnant|classic: straight on from the expansion's ending, its army already found
   const from = new URLSearchParams(location.search).get('from');
   if (from && EXPANSION[from]) newDialog(from);

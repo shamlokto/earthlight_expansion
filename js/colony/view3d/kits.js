@@ -785,6 +785,153 @@ export const KITS = {
     cyl([0.12, 0.4, 0.12], [-0.12, -0.02, 0.25], '#4a9ae0', { rot: [HALF_PI, 0, 0] }),
     box([0.08, 0.06, 0.03], [-0.12, 0.3, 0.14], '#5fff8a', GLOW),
   ],
+
+  // ---- version 6 (docs/COLONY-V6.md): the big city
+  // 1×1: an armoured supply bunker with hazard trim, ration crates, a water drum and air canisters.
+  reserve: () => [
+    box([0.92, 0.05, 0.92], [0, 0, 0], '#5a6068'),
+    box([0.62, 0.42, 0.56], [-0.08, 0.05, -0.1], '#6f7a5a'),
+    cyl([0.62, 0.56, 0.3], [-0.08, 0.36, -0.1], '#7a8664', { rot: [0, 0, HALF_PI] }),
+    box([0.64, 0.05, 0.58], [-0.08, 0.05, -0.1], HAZARD),
+    box([0.22, 0.28, 0.03], [-0.08, 0.05, 0.19], '#3a3f34'),
+    box([0.08, 0.08, 0.02], [-0.08, 0.26, 0.205], '#e84a3a', GLOW),
+    box([0.2, 0.14, 0.18], [0.3, 0.05, 0.28], '#b8945a'), box([0.18, 0.12, 0.16], [0.3, 0.19, 0.28], '#c8a46a'),
+    cyl([0.16, 0.26, 0.16], [0.32, 0.05, -0.02], '#3a7ae0'),
+    ...[-0.36, -0.22].map((x) => cyl([0.08, 0.3, 0.08], [x, 0.05, 0.32], '#e8eef4')),
+    dome([0.08, 0.06, 0.08], [-0.08, 0.66, -0.1], '#5fff8a', GLOW),
+  ],
+  // 2×2: two cream silos with green domed tops, a conveyor bridge and a loading house.
+  granary: () => [
+    box([1.96, 0.06, 1.96], [0, 0, 0], '#7a7466'),
+    ...[[-0.45, -0.4], [0.45, -0.4]].flatMap(([x, z]) => [
+      cyl([0.78, 1.6, 0.78], [x, 0.06, z], '#e8dfc8', { slot: 'mat/tank' }),
+      torus([0.82, 0.05, 0.82], [x, 0.6, z], '#b8a888'), torus([0.82, 0.05, 0.82], [x, 1.2, z], '#b8a888'),
+      dome([0.78, 0.36, 0.78], [x, 1.66, z], '#5a9a7a'),
+    ]),
+    box([0.9, 0.16, 0.2], [0, 1.45, -0.4], '#9a9488'),
+    box([1.3, 0.5, 0.6], [0, 0.06, 0.55], '#c9b890'),
+    box([1.34, 0.06, 0.64], [0, 0.56, 0.55], '#8a5a3a'),
+    box([0.4, 0.32, 0.03], [0, 0.06, 0.86], '#5a4a3a'),
+    box([0.5, 0.06, 0.04], [0, 0.42, 0.87], '#ffd98a', GLOW),
+    box([0.3, 0.04, 0.2], [0.55, 0.06, 0.9], '#e8c040'),
+  ],
+  // 3×3: a glass tower of lit green floors under magenta grow light, a louvred roof and a water tank.
+  vertfarm: () => {
+    const parts = [box([2.94, 0.1, 2.94], [0, 0, 0], '#4a5058', { slot: 'mat/hull-plate' })];
+    const W = 2.1, H = 3.0, F = 6;
+    for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) parts.push(box([0.12, H, 0.12], [x * W / 2, 0.1, z * W / 2], '#e8eef4'));
+    for (let k = 0; k < F; k++) {
+      const y = 0.1 + k * (H / F);
+      parts.push(box([W, 0.06, W], [0, y, 0], '#dfe6ee'),
+        box([W - 0.2, 0.16, W - 0.2], [0, y + 0.06, 0], '#4fb84a'),
+        box([W - 0.1, 0.05, W - 0.1], [0, y + H / F - 0.08, 0], '#ff5ad8', GLOW));
+    }
+    parts.push(box([W + 0.04, 0.1, W + 0.04], [0, 0.1 + H, 0], '#c9ced6'),
+      cyl([0.5, 0.45, 0.5], [0.55, 0.2 + H, 0.55], '#8ab4d8', { slot: 'mat/tank' }),
+      ...[-0.6, -0.2, 0.2].map((x) => box([0.3, 0.04, 0.9], [x, 0.3 + H, -0.4], '#2a3a5a', { rot: [0.4, 0, 0] })),
+      box([0.8, 0.4, 0.3], [0, 0.1, 1.3], '#6a7480'), box([0.3, 0.2, 0.2], [0.7, 0.1, 1.3], '#7cc04a'));
+    return parts;
+  },
+  // 3×3: condenser towers, a sawtooth pump hall and two round settling pools of blue water.
+  waterworks: () => [
+    box([2.94, 0.08, 2.94], [0, 0, 0], '#4a5058'),
+    ...[-0.95, -0.35, 0.25].map((x) => cyl([0.5, 1.8, 0.5], [x, 0.08, -0.95], '#eef2f6', { slot: 'mat/tank' })),
+    ...[-0.95, -0.35, 0.25].map((x) => torus([0.54, 0.06, 0.54], [x, 1.2, -0.95], '#3a7ae0', GLOW)),
+    box([1.1, 0.6, 1.0], [0.85, 0.08, -0.7], '#9aa3ad'),
+    ...[0.55, 0.85, 1.15].map((x) => box([0.3, 0.06, 1.0], [x, 0.7, -0.7], '#c9ced6', { rot: [0, 0, 0.5] })),
+    ...[[-0.65, 0.65], [0.7, 0.75]].flatMap(([x, z]) => [
+      cyl([1.1, 0.2, 1.1], [x, 0.08, z], '#bfc6ce'), cyl([0.98, 0.04, 0.98], [x, 0.26, z], '#4aa8e8', GLOW),
+      box([1.0, 0.05, 0.06], [x, 0.3, z], STEEL, { rot: [0, 0.6, 0] })]),
+    cyl([0.14, 1.4, 0.14], [0, 0.4, 0.05], '#4a9ae0', { rot: [0, 0, HALF_PI] }),
+  ],
+  // 3×3: a tall stepped air plant with intake fans, glowing cyan stacks and vapour chimneys.
+  atmoproc: () => [
+    box([2.94, 0.08, 2.94], [0, 0, 0], '#4a5058', { slot: 'mat/hull-plate' }),
+    box([2.5, 1.0, 2.2], [0, 0.08, 0.1], '#d8dde3'),
+    box([1.8, 0.9, 1.6], [0, 1.08, 0.1], '#e8ecf0'),
+    box([1.0, 0.7, 1.0], [0, 1.98, 0.1], '#f2f4f7'),
+    box([2.54, 0.12, 2.24], [0, 0.6, 0.1], WIN, GLOW), box([1.84, 0.1, 1.64], [0, 1.6, 0.1], WIN, GLOW),
+    ...[-1, 1].map((sx) => cyl([0.8, 0.12, 0.8], [sx * 1.26, 0.55, 0.1], '#5a6470', { rot: [0, 0, HALF_PI] })),
+    ...[-1, 1].map((sx) => torus([0.8, 0.06, 0.8], [sx * 1.3, 0.55, 0.1], '#7fe0ff', { rot: [0, 0, HALF_PI], glow: true })),
+    ...[-0.6, 0, 0.6].map((x) => cyl([0.22, 0.9, 0.22], [x, 2.6, -0.2], '#c9ced6')),
+    ...[-0.6, 0, 0.6].map((x) => dome([0.3, 0.3, 0.3], [x, 3.5, -0.2], '#ffffff', { shimmer: true })),
+    ...[-1.2, -0.9].map((x) => cyl([0.22, 0.7, 0.22], [x, 0.08, 1.25], '#e8eef4')),
+  ],
+  // 2×2 in space: a silver faceted dish on a gold truss focusing on a boiler pod, a radiator module below.
+  sunmirror: () => [
+    box([1.9, 0.08, 1.9], [0, 0, 0], '#3a4048', { slot: 'mat/hull-plate' }),
+    box([0.7, 0.35, 0.5], [0, 0.08, 0.55], '#8a929c'),
+    ...[-0.5, -0.3, 0.3, 0.5].map((x) => box([0.12, 0.3, 0.5], [x, 0.12, 0.55], '#c9ced6')),
+    box([0.1, 1.1, 0.1], [0, 0.08, -0.1], '#d9b23a'),
+    dome([1.8, 0.45, 1.8], [0, 0.9, -0.2], '#dfe8f2', { rot: [-1.0, 0, 0] }),
+    torus([1.84, 0.05, 1.84], [0, 0.9, -0.2], '#d9b23a', { rot: [-1.0 + HALF_PI, 0, 0] }),
+    box([0.05, 0.05, 1.0], [0, 1.3, 0.3], '#d9b23a', { rot: [0.5, 0, 0] }),
+    dome([0.26, 0.26, 0.26], [0, 1.42, 0.62], '#ffd23a', GLOW),
+  ],
+  // 2×2: a slim white high-rise of lit floors and balconies; a Tower is taller, a Spire taller still with a mast.
+  towerblock: (level) => {
+    const lv = Math.max(1, Math.min(3, level || 1)), h = [1.6, 2.6, 3.6][lv - 1], w = lv === 3 ? 1.2 : 1.36;
+    const parts = [box([1.96, 0.06, 1.96], [0, 0, 0], '#6a6e74'), box([1.9, 0.03, 0.5], [0, 0.06, 0.72], '#6fbf4a'),
+      box([w, h, w], [0, 0.06, -0.1], '#ece6da', { slot: 'mat/hab-facade' })];
+    for (let y = 0.3; y < h - 0.1; y += 0.32) parts.push(box([w + 0.03, 0.08, w + 0.03], [0, 0.06 + y, -0.1], '#ffd98a', GLOW), box([w + 0.14, 0.03, 0.12], [0, 0.04 + y, -0.1 + w / 2 + 0.05], '#d8d0c0'));
+    parts.push(box([w - 0.1, 0.08, w - 0.1], [0, 0.06 + h, -0.1], '#5fae4a'), ...tree(0.3, -0.3, 0.5, true).map((p) => ({ ...p, pos: [p.pos[0], p.pos[1] + h + 0.1, p.pos[2]] })),
+      box([0.6, 0.3, 0.2], [0, 0.06, 0.6], '#bfe8ff'));
+    if (lv === 3) parts.push(cyl([0.05, 0.7, 0.05], [-0.3, 0.14 + h, -0.4], STEEL), dome([0.1, 0.08, 0.1], [-0.3, 0.84 + h, -0.4], BEACON, GLOW));
+    return parts;
+  },
+  // 3×3: a stepped white and gold pyramid-tower of garden terraces round a glowing atrium, rising to a spire.
+  arcology: () => {
+    const parts = [box([2.96, 0.08, 2.96], [0, 0, 0], '#b8b2a4')];
+    const steps = [[2.6, 0.9], [2.1, 0.9], [1.6, 0.9], [1.1, 0.8], [0.6, 0.7]];
+    let y = 0.08;
+    for (const [w, h] of steps) {
+      parts.push(box([w, h, w], [0, y, 0], '#f2ede2', { slot: 'mat/hab-facade' }),
+        box([w + 0.02, 0.07, w + 0.02], [0, y + h * 0.5, 0], '#ffd98a', GLOW),
+        box([w + 0.04, 0.06, w + 0.04], [0, y + h, 0], '#5fae4a'));
+      y += h + 0.06;
+    }
+    parts.push(cyl([0.08, 1.0, 0.08], [0, y, 0], '#d9b23a'), dome([0.14, 0.12, 0.14], [0, y + 1.0, 0], '#fff2b0', GLOW),
+      torus([2.9, 0.06, 2.9], [0, 1.6, 0], '#c9ced6'),
+      box([0.7, 1.4, 0.04], [0, 0.08, 1.31], '#ffd98a', GLOW),
+      ...[[-1.15, 1.15], [1.15, 1.15], [-1.15, -1.15], [1.15, -1.15]].flatMap(([x, z]) => tree(x * 0.85, z * 0.85, 0.5, true).map((p) => ({ ...p, pos: [p.pos[0], p.pos[1] + 0.98, p.pos[2]] }))));
+    return parts;
+  },
+  // 2×2: a terminal with a sweeping white roof, a glass front, a lit sign arch, banners and a boarding tube.
+  arrivals: () => [
+    box([1.96, 0.06, 1.96], [0, 0, 0], '#6a7078'),
+    box([1.7, 0.55, 1.0], [0, 0.06, -0.25], '#bfe8ff'),
+    cyl([1.1, 1.76, 1.2], [0, 0.35, -0.25], '#f4f6f8', { rot: [0, 0, HALF_PI] }),
+    box([1.72, 0.12, 1.02], [0, 0.3, -0.25], '#ffd98a', GLOW),
+    torus([0.7, 0.08, 0.7], [0, 0.06, 0.45], '#ffd23a', { rot: [HALF_PI, 0, 0], glow: true }),
+    ...[-0.8, -0.55, 0.55, 0.8].flatMap((x, k) => [cyl([0.03, 0.7, 0.03], [x, 0.06, 0.75], DARK), box([0.12, 0.25, 0.02], [x + 0.07, 0.45, 0.75], ['#ff6a8a', '#6ad0ff', '#ffd23a', '#7cc04a'][k])]),
+    cyl([0.3, 0.8, 0.3], [1.0, 0.4, -0.5], '#dfe3ea', { rot: [0, 0, HALF_PI] }),
+  ],
+  // 3×3: a round square with a fountain, a columned town hall with a clock tower, a schoolhouse and market stalls.
+  plaza: () => [
+    box([2.96, 0.06, 2.96], [0, 0, 0], '#d8d0c0'),
+    cyl([0.9, 0.12, 0.9], [0, 0.06, 0.2], '#bfb3a0'), cyl([0.76, 0.04, 0.76], [0, 0.17, 0.2], '#4ac0ff', GLOW),
+    cyl([0.12, 0.4, 0.12], [0, 0.17, 0.2], '#e8e0d0'), dome([0.3, 0.2, 0.3], [0, 0.55, 0.2], '#bfe8ff', { shimmer: true }),
+    box([1.4, 0.7, 0.7], [-0.3, 0.06, -1.0], '#f4f0e8', { slot: 'mat/hab-facade' }),
+    ...[-0.9, -0.6, -0.3, 0, 0.3].map((x) => cyl([0.08, 0.6, 0.08], [x, 0.06, -0.6], '#ffffff')),
+    box([1.44, 0.1, 0.74], [-0.3, 0.76, -1.0], '#c9b890'),
+    box([0.34, 1.6, 0.34], [0.75, 0.06, -1.05], '#ece6da'), cyl([0.26, 0.04, 0.26], [0.75, 1.3, -0.87], '#ffe3a0', { rot: [HALF_PI, 0, 0], glow: true }),
+    cone([0.44, 0.4, 0.44], [0.75, 1.66, -1.05], '#24346a'),
+    box([0.8, 0.5, 0.6], [-1.0, 0.06, 0.9], '#e8dcc4'), box([0.84, 0.06, 0.64], [-1.0, 0.56, 0.9], '#b03a2a', { rot: [0.3, 0, 0] }),
+    ...[0.4, 0.8, 1.2].map((x, k) => box([0.34, 0.06, 0.34], [x, 0.45, 1.0], ['#ff6a6a', '#ffd23a', '#6ad0ff'][k])),
+    ...[0.4, 0.8, 1.2].map((x) => box([0.3, 0.3, 0.3], [x, 0.06, 1.0], '#9a7450')),
+    ...tree(1.1, 0.0, 0.8, true), ...tree(-1.15, -0.05, 0.8, true),
+  ],
+  // 2×2 on the hull: a sloped rail of glowing blue rings, a cargo pod at its foot, a capacitor bank and a beacon.
+  massdriver: () => [
+    box([1.96, 0.12, 1.96], [0, 0, 0], '#4a525c', { slot: 'mat/hull-plate' }),
+    box([0.5, 0.12, 2.3], [0.2, 0.7, -0.1], '#8a929c', { rot: [0.5, 0, 0] }),
+    ...[-0.8, -0.35, 0.1, 0.55].map((z, k) => torus([0.6, 0.08, 0.6], [0.2, 0.25 + (0.55 - z) * 0.55, z], '#4ac0ff', { rot: [HALF_PI - 0.5, 0, 0], glow: true })),
+    cyl([0.32, 0.6, 0.32], [0.2, 0.25, 0.75], '#f4f6f8', { rot: [HALF_PI - 0.5, 0, 0] }),
+    box([0.34, 0.06, 0.1], [0.2, 0.42, 0.8], '#ff8a2a'),
+    box([0.6, 0.45, 0.6], [-0.6, 0.12, 0.55], '#9aa3ad'), box([0.62, 0.08, 0.62], [-0.6, 0.4, 0.55], WIN, GLOW),
+    ...[-0.8, -0.5].map((x) => cyl([0.22, 0.5, 0.22], [x, 0.12, -0.5], '#c4773a')),
+    cyl([0.04, 0.6, 0.04], [-0.6, 0.57, 0.55], STEEL), dome([0.12, 0.1, 0.12], [-0.6, 1.17, 0.55], BEACON, GLOW),
+  ],
 };
 
 // A plain block for any key without a kit (later buildings), so the view never fails on new data.

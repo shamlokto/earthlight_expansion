@@ -73,13 +73,13 @@ function walk(v, path, out) {
   check(s.stock.alloy === 0 && s.stock.helium === 0 && s.market.alloy === 1 && s.market.helium === 1, 'new game: alloy and helium in stock and market');
   check(R.STORED.includes('alloy') && R.STORED.includes('helium') && R.GOODS.includes('alloy'), 'alloy and helium are stored goods');
   const v2keys = BUILDINGS.filter((d) => d.tech).map((d) => d.key);
-  // (17 version 2 buildings carry a tech; version 3 adds 9 more, also locked)
-  check(v2keys.length === 17 + 9 && v2keys.every((k) => !s.unlocked.includes(k)) && !s.unlocked.includes('lab'), 'nothing of version 2 is available at the start');
+  // (17 version 2 buildings carry a tech; version 3 adds 9 more, version 6 10 more, also locked)
+  check(v2keys.length === 17 + 9 + 10 && v2keys.every((k) => !s.unlocked.includes(k)) && !s.unlocked.includes('lab'), 'nothing of version 2 is available at the start');
   const bl = R.buildable(s);
   check(bl.find((b) => b.key === 'clinic').why === 'Research Medicine.' && bl.find((b) => b.key === 'lab').why === 'Unlocks at 80 colonists.', 'buildable(): tech-locked reason');
   check(R.canBuild(s, 'smelter', 0, 0) === 'Research Smelting.', 'canBuild(): tech-locked reason');
   const ts = R.techStatus(s);
-  check(ts.length === 30 && ts.every((t) => !t.done && !t.focus && t.progress === 0), 'techStatus: 30 techs (19 + 11 of version 3), none done');
+  check(ts.length === 40 && ts.every((t) => !t.done && !t.focus && t.progress === 0), 'techStatus: 40 techs (19 + 11 of version 3 + 10 of version 6), none done');
   check(ts.filter((t) => t.available).map((t) => t.key).sort().join() === TECHS.filter((t) => !t.needs.length).map((t) => t.key).sort().join(), 'techStatus: the roots are available');
   const sum = R.summary(s);
   check(sum.stock.alloy.cap === 100 && sum.stock.helium.cap === 50 && sum.research.perDay === 0, 'summary: alloy / helium caps from the Command Centre, research read-out');
@@ -478,7 +478,7 @@ function walk(v, path, out) {
   let err = null;
   try { const r = stateRng(back); for (let d = 0; d < 50; d++) { dayTick(back, r); back.pending.length = 0; } } catch (e) { err = e; }
   check(!err && back.day === s.day + 50 && !walk(back, 'state', []).length, `old save runs 50 days (${err?.message || 'ok'})`);
-  check(R.techStatus(back).length === 30 && R.summary(back).stock.alloy.have === 0, 'old save: read-outs work');
+  check(R.techStatus(back).length === 40 && R.summary(back).stock.alloy.have === 0, 'old save: read-outs work');
   // a save that unlocked version 2 buildings without research is corrected
   const odd = JSON.parse(saveState(s)); odd.unlocked.push('smelter');
   check(!loadState(JSON.stringify(odd)).unlocked.includes('smelter'), 'load: tech buildings locked until their tech is done');
@@ -558,6 +558,7 @@ function v2(s) {
 }
 function playV2(seed, days = 250) {
   const s = newGame({ seed }), rng = stateRng(s), when = {}, t0 = performance.now();
+  s.options.raids = false;   // a version-2 player builds no defences: raiders (version 3, 5) are tested in colony-v3
   let deaths = 0;
   for (let d = 0; d < days; d++) {
     followGoal(s); upkeep(s); v2(s);

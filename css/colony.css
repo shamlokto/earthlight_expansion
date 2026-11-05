@@ -1275,3 +1275,32 @@ button.cl-jslot:hover { border-color: var(--gold); }
 /* card pictures (sites on the Star chart, vaults and dangers in the journal) */
 .cl-banner { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; margin: 8px 0 6px; border-radius: 2px; border: 1px solid rgba(255, 255, 255, .08); background: #05070d; }
 .cl-jcard.done .cl-banner { filter: saturate(.6) brightness(.85); }
+/* a small segmented choice (Settings: the soundtrack) */
+.cl-seg { display: inline-flex; gap: 0; margin-top: 4px; }
+.cl-seg .cl-btn { border-radius: 0; }
+.cl-seg .cl-btn.on { color: #06121e; background: var(--cyan, #6fd3ff); border-color: var(--cyan, #6fd3ff); }
+
+/* top bar, regrouped (version 5; owner: "the top status bar becomes crowded"): the essentials, life support
+   as one block, and the rest under More */
+.cl-life { display: flex; border-left: 1px solid rgba(111, 211, 255, .14); background: rgba(111, 211, 255, .04); border-radius: 2px; }
+.cl-life .cl-stat { border-left: 0; min-width: 58px; }
+.cl-life .cl-stat + .cl-stat { border-left: 1px dotted rgba(111, 211, 255, .12); }
+.cl-morewrap { position: relative; display: flex; }
+.cl-morebtn { position: relative; display: flex; align-items: center; gap: 4px; padding: 3px 10px; border: 0; border-left: 1px solid rgba(111, 211, 255, .14); background: none; color: var(--dim); font: 600 10px var(--f-display); letter-spacing: .18em; text-transform: uppercase; cursor: pointer; }
+.cl-morebtn:hover, .cl-morebtn[aria-expanded=true] { color: var(--ink); background: rgba(111, 211, 255, .1); }
+.cl-morebtn b { font-size: 11px; }
+.cl-moredot { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 6px var(--bad); }
+.cl-more { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; display: flex; flex-direction: column; gap: 2px; min-width: 170px; padding: 6px;
+  background: rgba(4, 7, 28, .97); border: 1px solid var(--edge); border-radius: 4px; box-shadow: 0 12px 30px rgba(0, 0, 0, .55); }
+.cl-more[hidden] { display: none; }
+.cl-more .cl-stat { border-left: 0; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 10px; padding: 4px 8px; }
+.cl-more .cl-stat i { min-width: 64px; }
+.cl-more .cl-stat + .cl-stat { border-top: 1px solid rgba(111, 211, 255, .08); }
+.cl-top:has(.cl-more:not([hidden])) { position: relative; z-index: 9; }
+.cl-more { min-width: 250px; }
+.cl-more .cl-stat b, .cl-more .cl-stat em { white-space: nowrap; }
+@media (max-width: 760px) {
+  .cl-stats > * { flex-shrink: 0; }
+  .cl-stat i { letter-spacing: .06em; }
+  .cl-more { position: fixed; top: 112px; left: 8px; right: 8px; min-width: 0; }
+}
