@@ -183,6 +183,8 @@ const num = (n) => {
   return a < 10 && n % 1 ? (+n).toFixed(1) : String(Math.round(n));
 };
 const signed = (n) => (n > 0 ? '+' : n < 0 ? '−' : '±') + num(Math.abs(n));
+// version 7: what a quad grows into at its top level, for its card ("lot, grows to 700 homes")
+const quadTop = (d) => { const l = d.levels[d.levels.length - 1]; return d.quad === 'R' ? `${num(l.housing)} homes` : `${num(l.jobs)} jobs`; };
 const costText = (c) => c ? [c.credits ? `${num(c.credits)} cr` : '', c.parts ? `${num(c.parts)} parts` : ''].filter(Boolean).join(' · ') || 'free' : 'free';
 const flows = (o) => Object.entries(o || {}).filter(([, v]) => v).map(([k, v]) => `${num(v)} ${GOOD_NAME[k] || k}`).join(', ');
 
@@ -209,7 +211,7 @@ function cardIcon(b) {
 // The help dialog's sections (colony.html #dHelp). Short sentences, pictures from the card art.
 // diff: the difficulty row (js/colony/difficulty.js) the numbers are quoted for, or null.
 export const HELP_SECTIONS = [['goal', 'The goal'], ['time', 'Time'], ['build', 'Building'], ['res', 'Resources'], ['chambers', 'Chambers'],
-  ['homes', 'Homes & happiness'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
+  ['homes', 'Homes & happiness'], ['zoning', 'Zoning and growth'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
 export function helpHtml(art, diff) {
   const pic = (slot, alt = '') => { const u = art?.(slot); return u ? `<img src="${esc(u)}" alt="${esc(alt)}" loading="lazy">` : ''; };
   const card = (key) => { const u = art?.(`card/${key}`); return `<figure class="cl-hfig">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : cardIcon(BUILDING[key])}<figcaption>${esc(BUILDING[key]?.name || key)}</figcaption></figure>`; };
@@ -258,6 +260,16 @@ export function helpHtml(art, diff) {
     <p><b>Happiness</b> (top bar, click it for the breakdown) starts at 50. Needs met add, shortages take a lot away. Parks add. High tax takes away.</p>
     <p>On ${esc(name)}, a <b>transport</b> calls every <b>${every} days</b>. It brings new colonists if happiness is at least <b>${happy}</b>, there are <b>free homes</b>, and food, water and air are not short.</p>
     <p><b>Tax</b> (top bar slider) pays upkeep. 10% is neutral. Lower makes people happier; higher makes them unhappy.</p>`)}
+  ${sec('zoning', 'Zoning and growth', card('livingquad') + card('marketquad') + card('workshopquad'), `
+    <p><b>Quads</b> are cheap 2×2 lots you zone in <b>Homes &amp; parks</b>. You don't build them up: they <b>grow by themselves</b>, a level every 4 days (2 near a <b>Transit Station</b>), while their conditions hold, and fall back if a condition fails for 10 days.</p>
+    <ul class="cl-hsteps">
+      <li><b>Living Quad</b> (homes): Cottages 40 → Row Houses 100 → Courtyard Flats 220 → Mid-rise 400 → Residential Tower 700.</li>
+      <li><b>Market Quad</b> (shops): Stalls → Shops → Market Hall → Arcade → Trade Tower. Jobs, credits every day, and <b>shopping</b> happiness for the homes around it. It needs homes nearby.</li>
+      <li><b>Workshop Quad</b> (work): Workshops → Machine Shops → Works → Assembly Plant → Factory. Jobs and parts, later alloy. It is <b>noisy</b>: keep Living Quads a few tiles away or they stay Cottages.</li>
+    </ul>
+    <p>Click a quad to see <b>To grow into …</b>: every condition with a ✓ or ✗, such as a park in reach, a Clinic, a School, shops, happiness 60, or a tech to research.</p>
+    <p>The <b>R C I</b> bars at the top of the build menu show <b>demand</b>. <b>R</b> rises when people are coming and homes are full. <b>C</b> rises when residents outnumber the shops. <b>I</b> rises when colonists have no work or parts run low. A quad grows only while its bar is up, and each one that grows uses some of it up.</p>
+    <p>Research <b>Schools</b>, <b>Commerce</b>, <b>Light Industry</b>, <b>Urban Planning</b>, <b>Skyscrapers</b> and <b>Automation</b> for the upper levels. Quads are a cheap way to grow a town, but slower than placing Habitats and Tower Blocks yourself.</p>`)}
   ${sec('roads', 'Roads', '', `
     <p>Colonists walk and rovers drive <b>only on roads</b>. Without roads your colony still works, but nobody moves.</p>
     <p>Choose <b>Road</b> (Command menu). <b>Click where it starts</b>, then <b>click where it ends</b>: it lays an L-shaped line. Roads pass through gates once both chambers are open.</p>`)}
@@ -431,6 +443,7 @@ export function createUI(root, api) {
   <aside class="cl-build cl-panel" aria-label="Build">
     <button type="button" class="cl-buildtoggle" data-buildtoggle>Build ▾</button>
     <div class="cl-buildbody">
+      <div class="cl-rci" data-rci hidden></div>
       <div class="cl-cats" role="tablist">${CATEGORIES.map((c, i) => `<button type="button" role="tab" data-cat="${c.key}" aria-selected="${i === 0}" style="--cc:${CAT_COLOR[c.key]}">${esc(c.name)}</button>`).join('')}</div>
       <div class="cl-cards" data-cards></div>
     </div>
@@ -506,6 +519,7 @@ export function createUI(root, api) {
     if (moreDot.hidden === bad) moreDot.hidden = !bad;
   }
   const dayEl = $('[data-h=day]'), taxEl = $('[data-tax]'), taxFx = $('[data-taxfx]');
+  const rciEl = $('[data-rci]');
   const cardsEl = $('[data-cards]'), insp = $('.cl-insp'), inspBody = $('[data-insp]'), tipEl = $('.cl-tip'), toasts = $('.cl-toasts');
   const logEl = $('[data-log]'), modal = $('.cl-modal'), evBox = $('.cl-event'), placingEl = $('.cl-placing');
   const pops = { happy: $('[data-pop=happy]'), market: $('[data-pop=market]'), settings: $('[data-pop=settings]') };
@@ -847,12 +861,35 @@ export function createUI(root, api) {
     if (matchMedia('(max-width: 760px)').matches) $('.cl-build').classList.remove('open');
   });
 
+  // Version 7 (docs/COLONY-V7.md): RCI demand, three small bars in the build menu's header (rules.demandOf).
+  // A bar rises when the colony wants more of that zone and sinks when it has too much.
+  let rciSig = '';
+  function renderRci() {
+    if (!rciEl || typeof R.demandOf !== 'function') return;
+    let dm; try { dm = R.demandOf(S()); } catch { return; }
+    const sig = ['R', 'C', 'I'].map((z) => `${dm[z].units}:${Math.round(dm[z].value * 20)}`).join('|');
+    if (sig === rciSig) return;
+    rciSig = sig;
+    const w = dm.R.why, c = dm.C.why, i = dm.I.why;
+    const tips = {
+      R: `Residential demand ${signed(dm.R.units)}: about ${num(w.arriving)} arriving on the next transport, ${num(w.freeJobs)} free jobs, ${num(w.freeHomes)} free homes. Living Quads grow while it is above zero.`,
+      C: `Commercial demand ${signed(dm.C.units)}: ${num(c.residents)} residents, shops for ${num(c.shoppers)}. Market Quads grow while it is above zero.`,
+      I: `Industrial demand ${signed(dm.I.units)}: ${num(i.jobless)} colonists without work${i.partsPull ? `, ${signed(i.partsPull)} for parts (the parts store is ${i.partsPull > 0 ? 'low' : 'well stocked'})` : ''}. Workshop Quads grow while it is above zero.`,
+    };
+    rciEl.hidden = false;
+    rciEl.innerHTML = `<span class="cl-rcilabel" title="Zoning demand: what the colony wants more of. Zone Living, Market and Workshop Quads in Homes &amp; parks.">Demand</span>${['R', 'C', 'I'].map((z) => {
+      const v = dm[z].value, h = Math.round(Math.abs(v) * 100);
+      return `<span class="cl-rcibar z${z}" data-z="${z}" title="${esc(tips[z])}"><span class="cl-rcitrack"><i class="${v >= 0 ? 'up' : 'down'}" style="height:${h / 2}%"></i></span><b>${z}</b></span>`;
+    }).join('')}`;
+  }
+
   function buildMenu() {
     const s = S();
     const dk = D();
     let list; try { list = R.buildable(s, dk); } catch { list = []; }
     const by = Object.fromEntries((list || []).map((o) => [o.key, o]));
-    const items = BUILDINGS.filter((b) => b.cat === cat && !b.fixed).map((b) => {
+    // version 7: the zoning lots lead Homes & parks, under the RCI bars
+    const items = BUILDINGS.filter((b) => b.cat === cat && !b.fixed).sort((a, b) => (b.quad ? 1 : 0) - (a.quad ? 1 : 0)).map((b) => {
       const o = by[b.key] || { key: b.key, name: b.name, cost: b.cost, unlocked: !b.unlock && !b.tech, why: b.unlock ? `At ${b.unlock.pop} colonists` : '' };
       const cost = o.cost || b.cost;
       const poor = (cost.credits || 0) > (s.stock.credits || 0) || (cost.parts || 0) > (s.stock.parts || 0);
@@ -878,7 +915,7 @@ export function createUI(root, api) {
         <span class="cl-cardpic">${url ? `<img src="${esc(url)}" alt="" loading="lazy">` : cardIcon(b)}</span>
         <span class="cl-cardname">${esc(o.name || b.name)}</span>
         <span class="cl-cardcost${poor && !locked ? ' poor' : ''}">${costText(cost)}</span>
-        <span class="cl-cardmeta">${b.size}×${b.size}${b.power ? ` · ${b.power > 0 ? '+' : ''}${b.power} MW` : ''}${b.jobs ? ` · ${b.jobs} jobs` : ''}${b.housing ? ` · ${b.housing} homes` : ''}</span>
+        <span class="cl-cardmeta">${b.size}×${b.size}${b.power ? ` · ${b.power > 0 ? '+' : ''}${b.power} MW` : ''}${b.jobs ? ` · ${b.jobs} jobs` : ''}${b.housing ? ` · ${b.housing} homes` : ''}${b.quad ? ` · lot, grows to ${quadTop(b)}` : ''}</span>
         ${locked ? `<span class="cl-cardwhy">${tech ? '⚗' : deckLock ? (decks[0] === 'upper' ? '▲' : decks[0] === 'lower' ? '▼' : '◆') : '🔒'} ${esc(why)}${tech || deckLock ? ' <i>›</i>' : ''}</span>` : `<span class="cl-cardtext">${esc(b.text)}</span>`}
       </button>`;
     }).join('') || '<p class="cl-dim">Nothing to build here yet.</p>';
@@ -1054,8 +1091,8 @@ export function createUI(root, api) {
     if (housing) rows.push(kv('Homes', housing));
     if (sp.crews) rows.push(kv('Crews', sp.crews));
     if (d.storage) rows.push(kv('Stores', b.mode && d.modes ? `${Object.values(sp.storage || d.storage)[0]} ${GOOD_NAME[b.mode] || b.mode}` : flows(sp.storage || d.storage)));
-    if (sp.radius) rows.push(kv(d.service ? 'Range' : 'Radius', `${sp.radius} tiles${sp.park ? ` · park ${sp.park}` : ''}`));
-    if (d.service) {
+    if (sp.radius) rows.push(kv(d.service || sp.service ? 'Range' : 'Radius', `${sp.radius} tiles${sp.park ? ` · park ${sp.park}` : ''}`));
+    if (d.service || sp.service) {
       const v = (sp.service || d.service) * (mode === 'triage' ? 0.5 : 1);
       rows.push(kv('Happiness', `+${num(v)} for homes in range`, 'good'));
     }
@@ -1085,7 +1122,14 @@ export function createUI(root, api) {
       return `<button type="button" data-a="mode" data-id="${b.id}" data-v="${esc(mo.key)}" aria-pressed="${on}" title="${esc(mo.text || mo.name)}">${esc(mo.name)}</button>`;
     }).join('')}</div>${d.modes.find((mo) => mo.key === (b.mode ?? d.modes[0].key))?.text ? `<p class="cl-dim">${esc(d.modes.find((mo) => mo.key === (b.mode ?? d.modes[0].key)).text)}</p>` : ''}` : '';
     let needs = '';
-    const grows = b.key === 'habitat' || b.key === 'towerblock';   // version 6: Tower Blocks grow like Habitats
+    const grows = R.GROW_KEYS ? R.GROW_KEYS.has(b.key) : b.key === 'habitat' || b.key === 'towerblock';   // version 6: Tower Blocks; version 7: the quads
+    // version 7 (docs/COLONY-V7.md): a quad's own read-outs: shoppers served, workshop noise, its zone's demand
+    if (d.quad) {
+      if (sp.shoppers) rows.push(kv('Serves', `${num(sp.shoppers)} shoppers`));
+      if (sp.nuisance) rows.push(kv('Noise', `${sp.nuisance} tiles: Living Quads that close stay Cottages`, 'bad'));
+      try { const z = R.demandOf(s)[d.quad]; rows.push(kv(`${{ R: 'Residential', C: 'Commercial', I: 'Industrial' }[d.quad]} demand`, `${z.units > 0 ? '+' : ''}${num(z.units)}`, z.units > 0 ? 'good' : 'bad')); } catch { }
+    }
+    if (grows && b.build === 0 && b.grow) rows.push(kv(b.grow > 0 ? 'Growing' : 'Declining', b.grow > 0 ? `${b.grow} day${b.grow === 1 ? '' : 's'} so far` : `${-b.grow} of 10 days: a need is failing`, b.grow > 0 ? 'good' : 'bad'));
     if (b.key === 'reserve' && R.reserveCap) { const rv = s.reserve || {}, cap = R.reserveCap(s); rows.push(kv('Held back', ['food', 'water', 'air'].map((g) => `${num(Math.floor(rv[g] || 0))} ${g}`).join(' · ') + ` <small>of ${num(cap)} each</small>`)); }
     if (grows && b.key !== 'habitat' && next && R.habitatLevelReachable && !R.habitatLevelReachable(next)) {
       needs = '';
@@ -1093,7 +1137,7 @@ export function createUI(root, api) {
       needs = `<div class="cl-needs"><h5>${esc(d.levels?.[b.level - 1]?.name || 'This')} is the largest home for now</h5></div>`;
     } else if (grows) {
       const list = habitatNeeds(s, b);
-      if (list && list.length) needs = `<div class="cl-needs"><h5>${next ? `Next level: ${esc(next.name || 'level ' + (b.level + 1))}` : 'Top level'}</h5><ul>${list.map((n) => `<li class="${n.ok ? 'ok' : 'no'}">${n.ok ? '✓' : '✗'} ${esc(n.label)}</li>`).join('')}</ul></div>`;
+      if (list && list.length) needs = `<div class="cl-needs"><h5>${next ? `${d.quad ? 'To grow into' : 'Next level:'} ${esc(next.name || 'level ' + (b.level + 1))}` : 'Top level'}</h5><ul>${list.map((n) => `<li class="${n.ok ? 'ok' : 'no'}">${n.ok ? '✓' : '✗'} ${esc(n.label)}</li>`).join('')}</ul></div>`;
       else if (next?.needs) needs = `<div class="cl-needs"><h5>Next level: ${esc(next.name || '')}</h5><ul>${next.needs.map((n) => `<li class="no">• ${esc({ allNeeds: 'Food, water, air and power for everyone', park: 'A park in range', clinic: 'A clinic in range (later)' }[n] || n)}</li>`).join('')}</ul></div>`;
     }
     const acts = [];
@@ -1119,7 +1163,7 @@ export function createUI(root, api) {
       <div class="cl-ibuild"><span class="cl-ipic">${api.art?.(`card/${b.key}`) ? `<img src="${esc(api.art(`card/${b.key}`))}" alt="">` : cardIcon(d)}</span>
       <div><div class="cl-iname">${esc(d.name)}</div><p class="cl-dim">${esc(d.text || '')}</p></div></div>
       ${rows.join('')}${extra}${modes}${needs}
-      ${!next && d.levels && !grows ? '<p class="cl-dim">Fully upgraded.</p>' : ''}
+      ${!next && d.levels && !grows ? '<p class="cl-dim">Fully upgraded.</p>' : ''}${!next && d.quad ? '<p class="cl-dim">Top level: it has grown as far as a quad can.</p>' : ''}
       <div class="cl-acts">${acts.join('')}</div></section>`;
   }
 
@@ -2881,6 +2925,7 @@ export function createUI(root, api) {
     renderAdvice(force || dirty);
     dirty = false;
     buildMenu();
+    renderRci();
     refreshInspector();
     renderHappy();
     renderMarket();

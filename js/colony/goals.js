@@ -238,7 +238,7 @@ export function advise(state) {
     if (c.delta < 0 && c.have / -c.delta < 25) out.push({ level: 'warn', text: `Credits run out in ${Math.floor(c.have / -c.delta)} days. Sell food or ore at the Market, or raise the tax a little.`, show: { market: true } });
   }
   if (s.jobs > state.pop) out.push({ level: 'warn', text: `${s.jobs} jobs but only ${state.pop} colonists: every workplace runs at ${Math.round((state.pop / s.jobs) * 100)}%. More homes bring more colonists; switch off what you don't need.`, show: { build: 'habitat' } });
-  if (s.housing <= state.pop) out.push({ level: 'warn', text: 'Every home is full: the next ship will not dock. Build Habitats.', show: { build: 'habitat' } });
+  if (s.housing <= state.pop) out.push({ level: 'warn', text: 'Every home is full: the next ship will not dock. Build Habitats, or zone Living Quads.', show: { build: 'habitat' } });
   if (state.happy < dv.transportHappy) {
     const worst = [...(state.happyParts || [])].sort((a, b) => a.value - b.value)[0];
     out.push({ level: 'warn', text: `Happiness ${Math.round(state.happy)} is below ${dv.transportHappy}: ships won't dock.${worst && worst.value < 0 ? ` Worst: ${worst.label} (${Math.round(worst.value)}).` : ''} Parks help; so does a lower tax.`, show: { build: 'park' } });

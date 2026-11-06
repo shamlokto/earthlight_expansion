@@ -64,6 +64,14 @@ export const TECHS = [
   { key: 'immigration', name: 'Immigration', ver: 6, branch: 'logistics', cost: 200, needs: ['highrise'], unlocks: ['arrivals'], text: 'Arrivals Halls by the dock: every transport brings more colonists.' },
   { key: 'arcology', name: 'Arcologies', ver: 6, branch: 'society', cost: 450, needs: ['highrise', 'vertfarm'], unlocks: ['arcology'], text: 'A city in one building: homes for 1,500 with jobs and gardens inside.' },
   { key: 'massdriver', name: 'Mass Driver', ver: 6, branch: 'logistics', cost: 320, needs: ['tethers', 'fabrication'], unlocks: ['massdriver'], text: 'A rail on the hull that throws heavy relief convoys to Earth, three loads at a time, even by itself.' },
+  // ---- version 7 (docs/COLONY-V7.md): zoning and growth. The quads themselves are on the menu from the start; these
+  // techs open their upper levels (a level need 'tech:<key>' in data/buildings.js) and the buildings that support them.
+  { key: 'schooling', name: 'Schools', ver: 7, branch: 'society', cost: 90, needs: [], unlocks: ['school'], text: 'Schools: happier homes, a little research, and Living Quads in range can grow into Mid-rises.' },
+  { key: 'commerce', name: 'Commerce', ver: 7, branch: 'society', cost: 100, needs: [], unlocks: [], effects: [{ kind: 'output', key: 'marketquad', mult: 1.2 }], text: 'Market Quads can grow into Market Halls, and every Market Quad earns a fifth more.' },
+  { key: 'lightindustry', name: 'Light Industry', ver: 7, branch: 'industry', cost: 110, needs: ['smelting'], unlocks: ['freightyard'], text: 'Workshop Quads can grow into Works that make alloy too; Freight Yards help them grow further.' },
+  { key: 'urbanplan', name: 'Urban Planning', ver: 7, branch: 'society', cost: 200, needs: ['schooling', 'commerce'], unlocks: ['transit'], text: 'Quads can reach level 4: Mid-rises, Arcades and Assembly Plants. Transit Stations make a district grow twice as fast.' },
+  { key: 'skyscrapers', name: 'Skyscrapers', ver: 7, branch: 'society', cost: 380, needs: ['urbanplan', 'highrise'], unlocks: ['monorail'], text: 'The top of the zoning ladder: Residential Towers for 700 and Trade Towers. Monorail Stops carry transit 16 tiles.' },
+  { key: 'automation', name: 'Automation', ver: 7, branch: 'industry', cost: 300, needs: ['lightindustry', 'urbanplan', 'fabrication'], unlocks: [], effects: [{ kind: 'output', key: 'fabricator', mult: 1.2 }], text: 'Workshop Quads can grow into Factories, and Fabricators make a fifth more.' },
 ];
 export const TECH = Object.fromEntries(TECHS.map((t) => [t.key, t]));
 // Which tech unlocks a building (version 2 buildings carry `tech` too; this is the reverse index).

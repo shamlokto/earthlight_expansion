@@ -773,33 +773,120 @@ export function answer(state, pendingId, choiceKey) {
 // ---------------------------------------------------------------- read-outs
 
 // A level whose needs name a building the game doesn't have (none since version 2) is not offered.
-export const habitatLevelReachable = (level) => !level?.needs?.some((n) => !['allNeeds', 'park'].includes(n) && !BUILDING[n]);
+// Version 7: the quads' need words, and 'demand:R', 'happy:60', 'residents:150', 'tech:skyscrapers' (a level
+// waiting on a tech is offered: its panel says what to research).
+const NEED_WORDS = new Set(['allNeeds', 'park', 'clinic', 'school', 'transit', 'freight', 'shops', 'quiet']);
+const NEED_PREFIX = new Set(['demand', 'happy', 'residents', 'tech']);
+export const habitatLevelReachable = (level) => !level?.needs?.some((n) => {
+  const [k, v] = String(n).split(':');
+  if (v !== undefined) return !NEED_PREFIX.has(k) || (k === 'tech' && !TECH[v]);
+  return !NEED_WORDS.has(n) && !BUILDING[n];
+});
 
-// What a habitat needs for its next level: [{ need, label, met }] (Caesar III's panel, rule 10).
-export function habitatNeeds(state, b, field) {
+// What a habitat needs for its next level: [{ need, label, met, grow? }] (Caesar III's panel, rule 10).
+// `grow`: the need only gates growing (demand, happiness, research); every other need must also hold for
+// the level the building has, or it shrinks back. ctx (optional): { demand } from demandOf, to share a day's.
+export function habitatNeeds(state, b, field, ctx = {}) {
   const d = BUILDING[b.key], next = d.levels?.[b.level];
   if (!next?.needs || !habitatLevelReachable(next)) return [];
   const met = state.stats?.last?.met || {};
   const out = [];
   for (const n of next.needs) {
+    const [k, v] = n.split(':');
     if (n === 'allNeeds') {
       for (const g of ['food', 'water', 'air', 'power']) out.push({ need: g, label: `Enough ${g} for every colonist`, met: !!met[g] });
     } else if (n === 'park') out.push({ need: 'park', label: 'A park or grove in reach', met: parkAt(state, b, field) > 0 });
     else if (n === 'clinic') out.push({ need: 'clinic', label: 'A Clinic in reach', met: serviceAt(state, b, 'clinic') > 0 });
+    // version 7 (docs/COLONY-V7.md): the quads' needs
+    else if (n === 'school') out.push({ need: n, label: 'A School in reach', met: serviceAt(state, b, 'school') > 0 });
+    else if (n === 'transit') out.push({ need: n, label: 'A Transit Station or Monorail Stop in reach', met: coveredBy(state, b, TRANSIT_KEYS) });
+    else if (n === 'freight') out.push({ need: n, label: 'A Freight Yard in reach', met: coveredBy(state, b, FREIGHT_KEYS) });
+    else if (n === 'shops') out.push({ need: n, label: 'Shops in reach (a Market Quad with stalls or more)', met: state.buildings.some((s) => s.key === 'marketquad' && s.level > 1 && active(s) && covers(s, b)) });
+    else if (n === 'quiet') {
+      const w = noiseAt(state, b);
+      out.push({ need: n, label: w ? `No workshop noise: a ${spec(w.b).levelName} is ${w.gap} tile${w.gap === 1 ? '' : 's'} away (it carries ${spec(w.b).nuisance})` : 'No workshop noise nearby', met: !w });
+    } else if (k === 'demand') {
+      const z = (ctx.demand ||= demandOf(state))[v];
+      out.push({ need: n, label: `${ZONE_NAME[v]} demand (${z.units > 0 ? '+' : ''}${z.units})`, met: z.units > 0, grow: true });
+    } else if (k === 'happy') out.push({ need: n, label: `Happiness ${v} (now ${Math.round(state.happy || 0)})`, met: (state.happy || 0) >= +v, grow: true });
+    else if (k === 'residents') { const r = residentsNear(state, b); out.push({ need: n, label: `Homes for ${num(+v)} within ${QUAD.residentsRadius} tiles (now ${num(r)})`, met: r >= +v }); }
+    else if (k === 'tech') out.push({ need: n, label: `Research ${TECH[v]?.name || v}`, met: !!state.research?.done?.includes(v), grow: true });
     else out.push({ need: n, label: n, met: false });
   }
   return out;
+}
+
+// ---------------------------------------------------------------- version 7: zoning (docs/COLONY-V7.md)
+// Quads are 2×2 lots (data/buildings.js `quad`) that grow like Habitats. RCI demand says what the colony wants:
+//   R (homes)  = the next transport's likely size + free jobs − free homes
+//   C (shops)  = residents − the shoppers Market Quads serve
+//   I (work)   = jobless colonists + a pull for parts (+20 with the parts store empty, −20 full)
+// in units of homes, shoppers and jobs. A quad that grows spends its zone's demand by what it adds (sim.js).
+export const QUAD = { residentsRadius: 12, transport: 20, hall: 0.5, hallMax: 3, partsPull: 40, scale: 0.1, scaleMin: 40 };
+export const ZONE_NAME = { R: 'Residential', C: 'Commercial', I: 'Industrial' };
+export const TRANSIT_KEYS = new Set(['transit', 'monorail']);
+const FREIGHT_KEYS = new Set(['freightyard']);
+const num = (n) => Math.round(n).toLocaleString('en-US');
+const coveredBy = (state, b, keys) => state.buildings.some((s) => keys.has(s.key) && active(s) && covers(s, b));
+// Homes (capacity) whose centres lie within QUAD.residentsRadius tiles of b's, on its deck.
+export function residentsNear(state, b) {
+  const c = centre(b);
+  let n = 0;
+  for (const h of state.buildings) {
+    if (!HOME_KEYS.has(h.key) || !active(h) || deckOf(h) !== deckOf(b)) continue;
+    const e = centre(h);
+    if (Math.max(Math.abs(e.x - c.x), Math.abs(e.y - c.y)) <= QUAD.residentsRadius) n += spec(h).housing || 0;
+  }
+  return n;
+}
+// The nearest working Workshop Quad whose noise reaches b: { b, gap } (gap = tiles between the footprints), or null.
+export function noiseAt(state, b) {
+  const c = centre(b), half = BUILDING[b.key].size / 2;
+  let best = null;
+  for (const w of state.buildings) {
+    if (w.key !== 'workshopquad' || w.id === b.id || !active(w) || deckOf(w) !== deckOf(b)) continue;
+    const r = spec(w).nuisance || 0;
+    if (!r) continue;
+    const e = centre(w), gap = Math.max(0, Math.ceil(Math.max(Math.abs(e.x - c.x), Math.abs(e.y - c.y)) - half - BUILDING.workshopquad.size / 2));
+    if (gap < r && (!best || gap < best.gap)) best = { b: w, gap };
+  }
+  return best;
+}
+// RCI demand: { R, C, I }, each { units, value (−1..1, for the bars), why }.
+export function demandOf(state) {
+  const pop = state.pop || 0, housing = housingOf(state), jobs = jobsOf(state);
+  const halls = Math.min(QUAD.hallMax, state.buildings.filter((b) => b.key === 'arrivals' && active(b)).length);
+  const arriving = Math.round((QUAD.transport + Math.floor(pop / 100)) * (1 + QUAD.hall * halls));
+  const freeJobs = Math.max(0, jobs - pop), freeHomes = housing - pop;
+  let shoppers = 0;
+  for (const b of state.buildings) if (b.key === 'marketquad' && active(b)) shoppers += spec(b).shoppers || 0;
+  const cap = storageCaps(state).parts || 0, fill = cap > 0 ? Math.min(1, (state.stock?.parts || 0) / cap) : 1;
+  const partsPull = Math.round(QUAD.partsPull * (0.5 - fill));
+  const scale = Math.max(QUAD.scaleMin, pop * QUAD.scale);
+  const z = (units, why) => ({ units: Math.round(units), value: Math.max(-1, Math.min(1, units / scale)), why });
+  return {
+    R: z(arriving + freeJobs - freeHomes, { arriving, freeJobs, freeHomes }),
+    C: z(pop - shoppers, { residents: pop, shoppers }),
+    I: z(pop - jobs + partsPull, { jobless: pop - jobs, partsPull }),
+  };
+}
+// What a quad growing from `level` adds to its zone (homes, shoppers or jobs): what it spends of the demand.
+export function quadAdds(b) {
+  const d = BUILDING[b.key], f = { R: 'housing', C: 'shoppers', I: 'jobs' }[d.quad], lv = d.levels || [];
+  return (lv[b.level]?.[f] || 0) - (lv[b.level - 1]?.[f] || 0);
 }
 
 // Services (version 2): a service building covers a home when the home's centre lies within its
 // radius (Chebyshev, from the service's centre). serviceAt: the best `service` value of that
 // building kind covering the home (Clinic triage halves it; a Canteen on rationing gives none).
 export const SERVICE_KINDS = [{ key: 'clinic', label: 'Clinic' }, { key: 'canteen', label: 'Canteen' }, { key: 'safetypost', label: 'Safety' }, { key: 'terrace', label: 'Terraces' },
-  { key: 'gallery', label: 'Gallery' }, { key: 'plaza', label: 'Civic Plaza' }];   // version 6: the Gallery counts at last; Civic Plazas
+  { key: 'gallery', label: 'Gallery' }, { key: 'plaza', label: 'Civic Plaza' },   // version 6: the Gallery counts at last; Civic Plazas
+  { key: 'marketquad', label: 'Shopping' }, { key: 'school', label: 'School' }, { key: 'transit', label: 'Transit' }, { key: 'monorail', label: 'Monorail' }];   // version 7
 // Homes for service averages (version 3: Terrace Homes count beside Habitats; version 6: Tower Blocks and Arcologies).
-export const HOME_KEYS = new Set(['habitat', 'terrace', 'towerblock', 'arcology']);
+export const HOME_KEYS = new Set(['habitat', 'terrace', 'towerblock', 'arcology', 'livingquad']);   // version 7: Living Quads
 // Homes that grow a level by themselves when their needs are met (version 6: Tower Blocks grow like Habitats).
-export const GROW_KEYS = new Set(['habitat', 'towerblock']);
+// Version 7: the three quads (data/buildings.js `quad`) grow the same way, from an empty lot.
+export const GROW_KEYS = new Set(['habitat', 'towerblock', 'livingquad', 'marketquad', 'workshopquad']);
 // Version 6: Emergency Stores hold back `reserve` of each of food, water and air (Food Security doubles it).
 export const RESERVE_GOODS = ['food', 'water', 'air'];
 export const reserveCap = (state) => state.buildings.reduce((t, b) => t + (finished(b) && BUILDING[b.key]?.reserve ? BUILDING[b.key].reserve : 0), 0) * techEffect(state, 'reserve');

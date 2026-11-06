@@ -34,7 +34,9 @@ const SLOTS = {
     // version 4: the deck buildings
     'lift', 'skygarden', 'gallery', 'cistern', 'geotap', 'pumpstation',
     // version 6 (docs/COLONY-V6.md): the big city (prompts written; pictures not made yet)
-    'reserve', 'granary', 'warehouse', 'vertfarm', 'waterworks', 'atmoproc', 'sunmirror', 'towerblock', 'arcology', 'arrivals', 'plaza', 'massdriver'],
+    'reserve', 'granary', 'warehouse', 'vertfarm', 'waterworks', 'atmoproc', 'sunmirror', 'towerblock', 'arcology', 'arrivals', 'plaza', 'massdriver',
+    // version 7 (docs/COLONY-V7.md): zoning and growth (prompts written; pictures not made yet)
+    'livingquad', 'marketquad', 'workshopquad', 'school', 'transit', 'monorail', 'freightyard'],
   title: ['rebuild'],
   sky: ['earth-below'],
   terrain: ['void', 'asteroid', 'magnetic', 'atmosphere', 'hull', 'deck', 'plain', 'fertile', 'river', 'rubble', 'breach',
@@ -127,6 +129,13 @@ const FILES = {
   'card/arrivals': 'art/colony/card/arrivals.webp',
   'card/plaza': 'art/colony/card/plaza.webp',
   'card/massdriver': 'art/colony/card/massdriver.webp',
+  'card/livingquad': 'art/colony/card/livingquad.webp',
+  'card/marketquad': 'art/colony/card/marketquad.webp',
+  'card/workshopquad': 'art/colony/card/workshopquad.webp',
+  'card/school': 'art/colony/card/school.webp',
+  'card/transit': 'art/colony/card/transit.webp',
+  'card/monorail': 'art/colony/card/monorail.webp',
+  'card/freightyard': 'art/colony/card/freightyard.webp',
   'title/rebuild': 'art/colony/title/rebuild.webp',
   'sky/earth-below': 'art/colony/sky/earth-below.webp',
   'terrain/void': 'art/colony/terrain/void.webp',
