@@ -7,7 +7,7 @@
 //     type, cargo included; optionally lost if one of them reaches an edge)
 //   * a turn limit from the mission
 // The player is army 0 (pink, on the left in fights), the Union army 1, as in the original.
-import { Battle } from '../game/rules.js';
+import { Battle, neighbours } from '../game/rules.js';
 import { romView, deployList, arrivalList } from './mission.js';
 import { mapPoints } from '../game/points.js';
 import { loadExpansionData } from './data.js';
@@ -53,7 +53,9 @@ export class ExpansionBattle extends Battle {
     // a damaged machine starts with what HP it has left (the colony's guardians: mission unit `hp`)
     list.forEach((d, i) => { if (d.hp !== undefined) this.units[i].hp = Math.max(1, Math.min(this.units[i].hp, d.hp)); });
     this.escaped = [];
-    this.fled = null;   // the colony's raiders who broke off and ran (mission.flee)
+    // the colony's raid (mission.flee): raiders who broke off and got off the map; whether they
+    // are running for the edge (fleeing) and whether Eden is pulling back (retreating)
+    this.fled = []; this.fleeing = false; this.retreating = false;
     const g = mission.general && this.units.find((u) => u.army === 0 && u.x === mission.general.x && u.y === mission.general.y && !u.carrier);
     this.general = g || null;
     if (g) { g.general = true; g.pilotLevel = g.level; g.level = 9; }   // level 9 only while the general is aboard
@@ -98,6 +100,7 @@ export class ExpansionBattle extends Battle {
   }
   move(u, x, y) {
     super.move(u, x, y);
+    if (this.mission.flee) { if (this.running(u.army) && this.edgeHex(x, y)) this.leave(u); return; }
     const exit = this.exitCells();
     if (exit && u.army === 0 && exit(x, y)) {
       // whatever rides inside leaves with it (the general may be aboard a carrier)
@@ -108,6 +111,58 @@ export class ExpansionBattle extends Battle {
     }
   }
 
+  // ------------------------------------------------------------ the colony's raid (mission.flee)
+  // Nobody leaves a raid by a button: a side that breaks off (the raiders under the flee rule, Eden
+  // after Retreat) has to get each machine onto an edge hex, the map's border or the hexes beside
+  // Earth's gravity field on the Earth side. A machine of a running side that ends its move on an
+  // edge hex leaves the map with whatever rides inside it (leave(); one already standing on an edge
+  // hex may leave instead of moving). Escaped machines keep their HP; the other side shoots at
+  // whoever is still on the map.
+  running(army) { return !!this.mission.flee && (army === 1 ? this.fleeing : army === 0 && this.retreating); }
+  edgeHex(x, y) {
+    if (!this.inBounds(x, y)) return false;
+    if (x === 1 || y === 1 || x === this.info.cols - 1 || y === this.info.rows) return true;
+    return neighbours(x, y).some(([a, b]) => this.inBounds(a, b) && this.cls(a, b) === EARTH_CLS);
+  }
+  // Still in the battle: alive and not off the map (cargo included).
+  onMap(army) { return this.forces(army).filter((u) => !u.escaped && !u.fled); }
+  // May u leave from where it stands? (its side running, on an edge hex, its move not spent)
+  canLeave(u) { return this.running(u.army) && u.hp > 0 && !u.carrier && !u.moved && !u.acted && this.edgeHex(u.x, u.y); }
+  leave(u) {
+    const going = [u, ...this.cargo(u)];
+    u.carrier = u.army === 1 ? FLED : EXIT; u.x = -1; u.y = -1;
+    for (const v of going) {
+      if (v.army === 1) { v.fled = true; v.fleeing = false; this.fled.push(v); } else { v.escaped = true; this.escaped.push(v); }
+    }
+    this.log.push({ kind: 'leave', u, units: going });
+    return going;
+  }
+  // A machine that can't reach any edge hex over the terrain (the rail guns on Eden's railway):
+  // it stays at the dock when Eden retreats, and the retreat ends without it.
+  stranded(u) {
+    if (u.carrier) return u.carrier.x > 0 && this.stranded(u.carrier);
+    const t = this.type(u), cat = t.moveCat ?? t.category;
+    if (!t.move) return true;
+    const seen = new Set([`${u.x},${u.y}`]), q = [[u.x, u.y]];
+    for (let i = 0; i < q.length; i++) {
+      const [x, y] = q[i];
+      if (this.edgeHex(x, y)) return false;
+      for (const [a, b] of neighbours(x, y)) {
+        if (!this.inBounds(a, b) || seen.has(`${a},${b}`) || this.tables.moveCost(cat, this.cls(a, b)) === 0) continue;
+        seen.add(`${a},${b}`); q.push([a, b]);
+      }
+    }
+    return true;
+  }
+  // Eden's Retreat (gameapp.js, after a confirmation): cannot be undone. Not while the raiders run.
+  retreat() {
+    if (!this.mission.flee || this.retreating || this.fleeing || this.winner() !== null) return false;
+    this.retreating = true;
+    for (const u of this.onMap(0)) u.retreating = true;
+    this.log.push({ kind: 'retreat' });
+    return true;
+  }
+
   // The colony's flee rule (mission.flee): checked after every destruction and at every phase change.
   attack(att, def, w, rnd) {
     const e = super.attack(att, def, w, rnd);
@@ -116,21 +171,38 @@ export class ExpansionBattle extends Battle {
   }
   endTurn() {
     const arrived = super.endTurn();
-    if (this.mission.flee) this.checkFlee();
+    if (this.mission.flee) {
+      // the turn limit while the raiders run: the ones still on the map get away
+      if (this.fleeing && this.result?.reason === 'timeup') {
+        for (const u of this.alive(1)) this.leave(u);
+        this.result = { winner: 0, reason: 'fled' };
+      }
+      this.checkFlee();
+    }
     return arrived;
   }
-  // Raiders outnumbered two to one by the player's living units break off: they leave the map
-  // (riding off in the FLED placeholder, cargo with its host) and the battle is won.
+  // Raiders outnumbered two to one by Eden's machines still on the map break off: from then on they
+  // run for the edge (ai.js flee) and leave the map one by one; the battle goes on until none is
+  // left on it. Not while Eden retreats; once they run they don't turn back.
   checkFlee() {
-    if (this.fled || this.winner() !== null) return false;
+    if (this.fleeing || this.retreating || this.winner() !== null) return false;
     // not before the raiders have had one full turn: a band that came in outnumbered still tries its luck once
     if ((this.turn || 1) < 2) return false;
-    if (!raidersFlee(this.forces(0).length, this.forces(1).length)) return false;
-    this.fled = this.forces(1);
-    for (const u of this.fled) { u.fled = true; if (!u.carrier) { u.carrier = FLED; u.x = -1; u.y = -1; } }
-    this.log.push({ kind: 'flee', units: this.fled });
-    this.result = { winner: 0, reason: 'fled' };
+    const theirs = this.onMap(1);
+    if (!raidersFlee(this.onMap(0).length, theirs.length)) return false;
+    this.fleeing = true;
+    for (const u of theirs) u.fleeing = true;
+    this.log.push({ kind: 'flee', units: theirs });
     return true;
+  }
+  // How a colony raid ends besides annihilation (scripts.js outcome): the General's machine lost;
+  // Eden retreating with nothing left on the map that could still get away (escaped, destroyed or
+  // stranded at the dock); the raiders all gone from the map with some of them escaped.
+  colonyOutcome() {
+    if (this.general && this.general.hp <= 0) return { winner: 1, reason: 'general' };
+    if (this.retreating && !this.onMap(0).some((u) => !this.stranded(u))) return { winner: 1, reason: 'retreat' };
+    if (!this.onMap(1).length && this.fled.length) return { winner: 0, reason: 'fled' };
+    return null;
   }
 
   winner() {
@@ -138,7 +210,7 @@ export class ExpansionBattle extends Battle {
     return super.winner();
   }
   expansionOutcome() {
-    if (this.fled) return { winner: 0, reason: 'fled' };
+    if (this.mission.flee) return this.colonyOutcome();
     if (this.general && this.general.hp <= 0) return { winner: 1, reason: 'general' };
     const o = this.mission.objective || {};
     if (o.kind === 'escape') {
@@ -162,8 +234,10 @@ export class ExpansionBattle extends Battle {
     this.general = this.units.find((u) => u.general) || null;
     this.escaped = this.units.filter((u) => u.escaped);
     for (const u of this.escaped) if (!u.carrier) u.carrier = EXIT;   // left the map themselves (saved as id -1)
-    const fled = this.units.filter((u) => u.fled);
-    if (fled.length) { this.fled = fled; for (const u of fled) if (!u.carrier) u.carrier = FLED; }
+    this.fled = this.units.filter((u) => u.fled);
+    for (const u of this.fled) if (!u.carrier) u.carrier = FLED;
+    this.fleeing = this.units.some((u) => u.fleeing || u.fled) && !!this.mission.flee;
+    this.retreating = this.units.some((u) => u.retreating) && !!this.mission.flee;
     return this;
   }
 }
@@ -171,6 +245,7 @@ export class ExpansionBattle extends Battle {
 // Escaped units ride in this placeholder host: off the map, never drawn, never targeted.
 const EXIT = { id: -1, type: 0, army: 0, x: -1, y: -1, hp: 1, carrier: null, exit: true };
 const FLED = { id: -1, type: 0, army: 1, x: -1, y: -1, hp: 1, carrier: null, exit: true };
+const EARTH_CLS = 12;   // Earth's gravity field (and comet bodies): the colony's Earth-side edge band
 
 // The colony's flee rule (js/colony/battle.js has the same): the player's living units at least
 // twice the raiders' living units.
@@ -178,12 +253,13 @@ export const raidersFlee = (mine, theirs) => theirs > 0 && mine >= 2 * theirs;
 
 // The colony battle's result for colony.html (localStorage COLONY_RESULT, docs/COLONY-V5.md §2):
 // { day, won, fled, turns, killed: [raid.units indices destroyed], guardians: [{ id, hp: 0..1, lost }] }.
-// A retreat is a loss (the caller passes won = false).
+// fled: some raiders got off the map; they are not in killed. Guardians who got off the map in a
+// retreat keep their HP. A retreat is a loss.
 export function colonyResult(b, won = b.winner() === 0) {
   const c = b.mission.colony || {};
   const raiders = b.units.filter((u) => u.army === 1 && u.rosterId !== undefined);
   return {
-    day: c.day ?? null, won: !!won, fled: !!(won && b.fled), turns: b.turn,
+    day: c.day ?? null, won: !!won, fled: !!(won && raiders.some((u) => u.fled && u.hp > 0)), turns: b.turn,
     killed: raiders.filter((u) => u.hp <= 0).map((u) => u.rosterId).sort((x, y) => x - y),
     guardians: b.units.filter((u) => u.army === 0 && u.rosterId !== undefined).map((u) => ({
       id: u.rosterId, hp: u.hp > 0 ? Math.round((u.hp / b.types[u.type].hp) * 1000) / 1000 : 0, lost: u.hp <= 0,
@@ -196,6 +272,11 @@ export const ARMY_NAMES = ['Galt remnant', 'Union'];
 
 export function expansionHud(b) {
   const o = b.mission.objective || {}, parts = [];
+  if (b.mission.flee && b.fleeing) parts.push(`<b>The raiders are running for the edge</b>: ${b.onMap(1).length} still on the map, ${b.fled.length} got away. Chase them down.`);
+  if (b.mission.flee && b.retreating) {
+    const left = b.onMap(0).filter((u) => !b.stranded(u)).length;
+    parts.push(`<b>Retreat</b>: ${b.escaped.length} off the map, ${left} still to go. Move each machine onto an edge hex (the map's border${b.mission.colony?.from === 'earth' ? ', or beside the atmosphere' : ''}) to leave.`);
+  }
   if (b.general) parts.push(`General aboard: ${b.general.hp > 0 ? (b.general.escaped ? 'escaped' : 'on the map') : 'lost'}`);
   if (o.kind === 'escape') {
     const need = (o.count ?? 3) + (b.general ? 1 : 0), names = b.escaped.map((u) => (u.general ? `${b.types[u.type].code.trim()} ★` : b.types[u.type].code.trim()));

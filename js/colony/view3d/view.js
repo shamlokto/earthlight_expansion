@@ -162,6 +162,28 @@ const TERRAIN_RGB = TERRAIN.map((d) => lin(TOP_COLOR[d.key] || d.color));
 const TERRAIN_LIN = TERRAIN.map((d) => lin(d.color));   // terrain.js colours (water, rocks)
 const RAMP = [[58, 111, 240], [63, 224, 160], [255, 240, 122]];   // overlay sRGB: low, mid, high
 
+// Version 8 (docs/COLONY-V8.md): day and night. One cycle every DN.days game days, smooth in real time: the
+// clock runs at the game's speed (DN.daySec seconds a day at ×1) and stands still when paused. Night keeps
+// over half the day's light, bluer; lamps on the roads and the buildings' glow parts brighten; the sky turns
+// deep blue; the sun warms the atmosphere band at dawn and dusk; Earth turns below. Off = the constant light.
+const DN = { days: 8, daySec: 2.5, earthDays: 160 };
+const DN_C = {
+  hemiDay: new THREE.Color('#d8e0f4'), hemiNight: new THREE.Color('#8197d0'),
+  sunDay: new THREE.Color('#fff1dc'), sunDawn: new THREE.Color('#ff9a5c'),
+  bgDay: new THREE.Color('#010205'), bgNight: new THREE.Color('#030c2c'),
+  white: new THREE.Color('#ffffff'), atmoNight: new THREE.Color('#5a6cae'), atmoDawn: new THREE.Color('#ff8a5a'),
+  hazeDay: new THREE.Color('#6fb4ff'), haloDay: new THREE.Color('#4f9fff'), hazeDawn: new THREE.Color('#ff7a3a'),
+  lamp: new THREE.Color('#ffd27f'),
+};
+// A soft round pool of light on the ground under a street lamp (additive: black by day).
+function lampGlowTexture() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const g = cv.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,.45)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(cv);
+}
+
 // Unit shapes, each spanning [-0.5, 0.5]³, so a part's size is its scale.
 function unitGeometries() {
   const dome = new THREE.SphereGeometry(0.5, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 2, 1).translate(0, -0.5, 0);
@@ -329,6 +351,11 @@ export function createView(container, opts = {}) {
   scene.add(hemi);
   const sun = new THREE.DirectionalLight('#fff1dc', 2.6), earthlight = new THREE.DirectionalLight('#5f9fff', 0.9);
   scene.add(sun, sun.target, earthlight, earthlight.target);
+  // version 8: day and night (DN above); hold: a fixed time of day (0 noon, 0.5 midnight) for screenshots
+  const dn = { on: opts.dayNight !== false, clock: -1, hold: null, night: 0, sun0: new THREE.Vector3() };
+  const lampMat = new THREE.MeshBasicMaterial({ color: '#b9a77f' });
+  const lampGlowMat = new THREE.MeshBasicMaterial({ map: lampGlowTexture(), color: 0x000000, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+  let hazeMat = null, haloMat = null;
 
   // everything of the deck on show lives in `world`, which slides up or down when the deck changes
   // (Earth, the stars and the lights stay in the scene)
@@ -756,7 +783,7 @@ export function createView(container, opts = {}) {
   // dashes run from the centre towards each road neighbour (junctions of 3 or 4 get a lighter slab
   // and no dashes). Two InstancedMeshes for every road on the map, rebuilt when one changes.
 
-  let roadsDirty = false, roadSlab = null, roadLane = null;
+  let roadsDirty = false, roadSlab = null, roadLane = null, roadLamp = null, roadPool = null;   // version 8: street lamps and their pools of light
   const roadTopAt = (i) => (st.map.t[i] === T.GATE ? ROAD.gateTop : ROAD.top);
   function addRoad(b) {
     const i = b.y * W + b.x;
@@ -768,7 +795,8 @@ export function createView(container, opts = {}) {
     if (!roadsDirty) return;
     roadsDirty = false;
     for (const m of [roadSlab, roadLane]) if (m) { roadGroup.remove(m); m.dispose(); m.material.dispose(); }
-    roadSlab = roadLane = null;
+    for (const m of [roadLamp, roadPool]) if (m) { roadGroup.remove(m); m.dispose(); }   // their materials are shared
+    roadSlab = roadLane = roadLamp = roadPool = null;
     const list = [];
     for (const rec of built.values()) if (rec.road && rec.x >= 0 && rec.y >= 0 && rec.x < W && rec.y < H) list.push(rec.y * W + rec.x);
     if (!list.length) return;
@@ -777,7 +805,10 @@ export function createView(container, opts = {}) {
     const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
     const conn = (i, k) => { const x = (i % W) + DIRS[k][0], y = ((i / W) | 0) + DIRS[k][1]; return x >= 0 && y >= 0 && x < W && y < H && is[y * W + x] === 1; };
     let nSlab = 0, nLane = 0;
-    for (const i of list) { let c = 0; for (let k = 0; k < 4; k++) c += conn(i, k) ? 1 : 0; nSlab += 1 + (4 - c); if (c <= 2) nLane += c; }
+    // a street lamp on every fourth tile of a plain stretch (not a junction), at the kerb
+    const lampAt = (i, c) => c <= 2 && ((i % W) + 3 * ((i / W) | 0)) % 4 === 0;
+    let nLamp = 0;
+    for (const i of list) { let c = 0; for (let k = 0; k < 4; k++) c += conn(i, k) ? 1 : 0; nSlab += 1 + (4 - c); if (c <= 2) nLane += c; if (lampAt(i, c)) { nLamp++; nSlab++; } }
     const mk = (count, mat) => {
       const m = new THREE.InstancedMesh(UNIT.box, mat, Math.max(1, count));
       m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, count) * 3), 3);
@@ -786,6 +817,10 @@ export function createView(container, opts = {}) {
     };
     roadSlab = mk(nSlab, new THREE.MeshLambertMaterial()); roadLane = mk(nLane, new THREE.MeshBasicMaterial());
     roadSlab.name = 'roads'; roadLane.name = 'road-lanes';
+    if (nLamp) {
+      roadLamp = mk(nLamp, lampMat); roadLamp.name = 'road-lamps';
+      roadPool = new THREE.InstancedMesh(PLANE, lampGlowMat, nLamp); roadPool.frustumCulled = false; roadPool.count = 0; roadPool.renderOrder = 3; roadPool.name = 'lamp-light'; roadGroup.add(roadPool);
+    }
     const rgb = (hex) => { c4.set(hex); return [c4.r, c4.g, c4.b]; };
     const ASPHALT = rgb(ROAD.asphalt), JUNCTION = rgb(ROAD.junction), KERB = rgb(ROAD.kerb), DASH = rgb(ROAD.dash);
     const put = (m, cx, cy, cz, sx, sy, sz, col) => {
@@ -799,6 +834,13 @@ export function createView(container, opts = {}) {
       let c = 0;
       for (let k = 0; k < 4; k++) c += conn(i, k) ? 1 : 0;
       put(roadSlab, cx, (top + lo) / 2, cz, 1, top - lo, 1, c >= 3 ? JUNCTION : ASPHALT);
+      if (roadLamp && lampAt(i, c)) {   // the post beside the road, the lamp on it, its light on the road
+        const ew = conn(i, 1) || conn(i, 3), lx = ew ? cx : cx - 0.42, lz = ew ? cz - 0.42 : cz;
+        put(roadSlab, lx, top + 0.26, lz, 0.05, 0.52, 0.05, KERB);
+        put(roadLamp, lx, top + 0.54, lz, 0.13, 0.07, 0.13, [1, 1, 1]);
+        const k = roadPool.count++, a = roadPool.instanceMatrix.array, o = k * 16;
+        a.fill(0, o, o + 16); a[o] = 1.7; a[o + 5] = 1; a[o + 10] = 1.7; a[o + 12] = lx * 0.6 + cx * 0.4; a[o + 13] = top + 0.015; a[o + 14] = lz * 0.6 + cz * 0.4; a[o + 15] = 1;
+      }
       for (let k = 0; k < 4; k++) {
         const [dx, dz] = DIRS[k], along = dx !== 0;
         if (!conn(i, k)) {
@@ -812,6 +854,7 @@ export function createView(container, opts = {}) {
     }
     roadSlab.instanceMatrix.needsUpdate = roadLane.instanceMatrix.needsUpdate = true;
     roadSlab.instanceColor.needsUpdate = roadLane.instanceColor.needsUpdate = true;
+    if (roadLamp) roadLamp.instanceMatrix.needsUpdate = roadLamp.instanceColor.needsUpdate = roadPool.instanceMatrix.needsUpdate = true;
   }
 
   // ---- overlays ------------------------------------------------------------------------------
@@ -856,8 +899,8 @@ export function createView(container, opts = {}) {
     for (let k = 0; k < P.count; k++) U.setXY(k, P.getX(k) / (2 * ER) + 0.5, P.getZ(k) / (2 * ER) * -1 + 0.5);
     earthMat = new THREE.MeshLambertMaterial({ map: earthTexture(), emissive: '#06142a' });
     const earth = new THREE.Mesh(geo, earthMat);
-    const haze = new THREE.Mesh(geo, glowMaterial('#6fb4ff', false, 2.5, 0.9));
-    const halo = new THREE.Mesh(geo, glowMaterial('#4f9fff', true, 1.6, 0.85));
+    const haze = new THREE.Mesh(geo, hazeMat = glowMaterial('#6fb4ff', false, 2.5, 0.9));
+    const halo = new THREE.Mesh(geo, haloMat = glowMaterial('#4f9fff', true, 1.6, 0.85));
     haze.scale.setScalar(1.004); halo.scale.setScalar(1.06);
     planet.add(earth, haze, halo);
     planet.scale.set(1, flat, 1);
@@ -865,6 +908,7 @@ export function createView(container, opts = {}) {
     earthGroup.add(planet, starfield(W / 2, H / 2));
     scene.add(earthGroup);
     sun.position.set(W / 2 - 120, 220, H / 2 - 140); sun.target.position.set(W / 2, 0, H / 2);
+    dn.sun0.copy(sun.position);
     earthlight.position.set(W / 2, -40, H + 200); earthlight.target.position.set(W / 2, 0, H / 2);
   }
 
@@ -1244,6 +1288,7 @@ export function createView(container, opts = {}) {
     if (st) movers.update(dt, camDist);
     if (st && deck === 'main') defence.update(dt, movers.getSpeed());
     if (st) secrets.update(dt, movers.getSpeed(), camDist);
+    stepDayNight(dt);
     if (shimmerMat) shimmerMat.opacity = 0.26 + 0.12 * Math.sin(now / 480) + 0.05 * Math.sin(now / 137);
     if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], deckMarks());
     for (const p of pools.values()) p.flush();
@@ -1252,6 +1297,39 @@ export function createView(container, opts = {}) {
     if (!dbg.noRender) renderer.render(scene, camera);
   }
   raf = requestAnimationFrame(frame);
+
+  // Version 8: the light of the time of day (DN above). No allocation: colours are copied and mixed in place.
+  function stepDayNight(dt) {
+    const day = full?.day ?? 0;
+    if (dn.clock < 0 || Math.abs(dn.clock - day) > 2) dn.clock = day;
+    dn.clock = Math.min(day + 1, dn.clock + (dt * movers.getSpeed()) / DN.daySec);
+    const on = dn.on && !!st, p = dn.hold ?? (((dn.clock / DN.days) % 1) + 1) % 1, c = Math.cos(p * Math.PI * 2);
+    const night = on ? 1 - Math.min(1, Math.max(0, (c + 0.3) / 0.6)) ** 2 * (3 - 2 * Math.min(1, Math.max(0, (c + 0.3) / 0.6))) : 0;
+    const dawn = on ? Math.max(0, 1 - Math.abs(c) / 0.45) ** 1.5 : 0;   // sunrise and sunset, either side of the turn
+    dn.night = night;
+    hemi.intensity = 2.2 - 0.7 * night; hemi.color.copy(DN_C.hemiDay).lerp(DN_C.hemiNight, night);
+    sun.intensity = 2.6 - 2.15 * night; sun.color.copy(DN_C.sunDay).lerp(DN_C.sunDawn, dawn * 0.8);
+    earthlight.intensity = 0.9 + 0.7 * night;   // earthshine from below lights the night
+    if (on) { const a = p * Math.PI * 2; sun.position.set(dn.sun0.x + 220 * Math.sin(a), Math.max(40, dn.sun0.y * (0.35 + 0.65 * Math.max(0, c))), dn.sun0.z); }
+    else sun.position.copy(dn.sun0);
+    scene.background.copy(DN_C.bgDay).lerp(DN_C.bgNight, night);
+    KIND_MAT.glow.color.setScalar(on ? 0.82 + 0.4 * night : 1);
+    lampMat.color.copy(DN_C.lamp).multiplyScalar(on ? 0.55 + 0.6 * night : 0.7);
+    lampGlowMat.color.copy(DN_C.lamp).multiplyScalar(on ? 0.6 * night : 0);
+    const atmo = meshes[T.ATMOSPHERE]?.material;
+    if (atmo?.color) atmo.color.copy(DN_C.white).lerp(DN_C.atmoNight, night * 0.6).lerp(DN_C.atmoDawn, dawn * 0.75);
+    if (hazeMat) hazeMat.uniforms.color.value.copy(DN_C.hazeDay).lerp(DN_C.hazeDawn, dawn);
+    if (haloMat) haloMat.uniforms.color.value.copy(DN_C.haloDay).lerp(DN_C.hazeDawn, dawn * 0.8);
+    if (earthMat) {
+      earthMat.color.setScalar(1 - 0.3 * night);
+      const map = earthMat.map;   // Earth turns: its texture slides along the rim (mirrored, so no seam)
+      if (map) {
+        if (map.wrapS !== THREE.MirroredRepeatWrapping) { map.wrapS = THREE.MirroredRepeatWrapping; map.needsUpdate = true; }
+        map.offset.x = on ? (dn.clock / DN.earthDays) % 2 : 0;
+      }
+    }
+  }
+  const setDayNight = (on) => { dn.on = !!on; };
 
   // ---- API -----------------------------------------------------------------------------------
 
@@ -1501,12 +1579,15 @@ export function createView(container, opts = {}) {
   // `debug` is for dev pages and tests only (colony-view-test.html), not part of the contract.
   // Version 4: setDeck(deck, { animate }) and the current deck (view.deck); DECKS / DECK_INFO are
   // exported for the interface's names.
-  return { setState, refresh, setOverlay, setGhost, focus, setSnap, setSpeed, destroy, setMinimap, setNavButtons, setWheelMode, nav, home, setDeck,
+  return { setState, refresh, setOverlay, setGhost, focus, setSnap, setSpeed, destroy, setMinimap, setNavButtons, setWheelMode, nav, home, setDeck, setDayNight,
     get deck() { return deck; },
     debug: {
       // the deck change held at progress k (0..1) for a screenshot mid-move (k = 1 finishes it);
       // false if no change runs
       deckAt(k) { if (!trans) return false; const now = performance.now(); trans.hold = k < 1; trans.t0 = now - k * trans.dur; stepTransition(now); return true; },
+      // version 8: hold the time of day (0 noon, 0.25 dusk, 0.5 midnight; null lets it run); dayNight() reads it
+      setDayTime(p) { dn.hold = p == null ? null : ((+p % 1) + 1) % 1; },
+      dayNight: () => ({ on: dn.on, clock: dn.clock, night: dn.night, hold: dn.hold }),
       deckState: () => st, world, rebuildMs, scene, camera, controls, renderer, placeCamera, pick, movers, defence, secrets, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse'),
       // n camera steps of 1/60 s now, without rendering (tests on slow software GL)
       setRender(on) { dbg.noRender = !on; },

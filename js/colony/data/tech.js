@@ -72,6 +72,8 @@ export const TECHS = [
   { key: 'urbanplan', name: 'Urban Planning', ver: 7, branch: 'society', cost: 200, needs: ['schooling', 'commerce'], unlocks: ['transit'], text: 'Quads can reach level 4: Mid-rises, Arcades and Assembly Plants. Transit Stations make a district grow twice as fast.' },
   { key: 'skyscrapers', name: 'Skyscrapers', ver: 7, branch: 'society', cost: 380, needs: ['urbanplan', 'highrise'], unlocks: ['monorail'], text: 'The top of the zoning ladder: Residential Towers for 700 and Trade Towers. Monorail Stops carry transit 16 tiles.' },
   { key: 'automation', name: 'Automation', ver: 7, branch: 'industry', cost: 300, needs: ['lightindustry', 'urbanplan', 'fabrication'], unlocks: [], effects: [{ kind: 'output', key: 'fabricator', mult: 1.2 }], text: 'Workshop Quads can grow into Factories, and Fabricators make a fifth more.' },
+  // ---- version 8 (docs/COLONY-V8.md): incidents you can prepare for (js/colony/incidents.js reads 'forecasting' too)
+  { key: 'forecasting', name: 'Hazard Forecasting', ver: 8, branch: 'logistics', cost: 80, needs: [], unlocks: ['flareshelter'], text: 'Incidents are seen 2 days earlier, and Flare Shelters keep the power on through a solar flare.' },
 ];
 export const TECH = Object.fromEntries(TECHS.map((t) => [t.key, t]));
 // Which tech unlocks a building (version 2 buildings carry `tech` too; this is the reverse index).

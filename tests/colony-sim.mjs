@@ -261,8 +261,9 @@ for (const [name, gen] of gens) {
     check(!act(rules.sell(s, 'ore', 10)).ok && !act(rules.sell(s, 'gold', 1)).ok && !act(rules.sellGuardian(s, 99)).ok, 'market refusals');
     const bl = rules.buildable(s);
     // version 2 (docs/COLONY-V2.md): 17 version 1 buildings + 18 new ones, locked behind research;
-    // version 3 (docs/COLONY-V3.md): + 13 more; version 4 (docs/COLONY-V4.md): + 6 deck buildings; version 7 (`ver: 7`): + 7
-    check(bl.length === 66 + BUILDING_LIST.filter((d) => d.ver === 7).length && bl.length === 73 && bl.find((b) => b.key === 'road') && bl.find((b) => b.key === 'oremine').why.includes('80') && bl.find((b) => b.key === 'smelter').why === 'Research Smelting.', 'buildable list');
+    // version 3 (docs/COLONY-V3.md): + 13 more; version 4 (docs/COLONY-V4.md): + 6 deck buildings; version 7 (`ver: 7`): + 7;
+    // version 8 (`ver: 8`, docs/COLONY-V8.md): + 6 landmarks and the Flare Shelter
+    check(bl.length === 66 + BUILDING_LIST.filter((d) => d.ver === 7 || d.ver === 8).length && bl.length === 80 && bl.find((b) => b.key === 'road') && bl.find((b) => b.key === 'oremine').why.includes('80') && bl.find((b) => b.key === 'smelter').why === 'Research Smelting.', 'buildable list');
     const ti = rules.tileInfo(s, cmd.x, cmd.y);
     check(ti.building?.key === 'command' && ti.chamber?.status === 'open', 'tileInfo');
     for (const k of ['park', 'reach', 'power', 'happiness']) check(rules.coverage(s, k).length === w * s.map.h, `coverage ${k}`);

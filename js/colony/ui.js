@@ -52,7 +52,7 @@ const GOOD_NAME = { food: 'Food', water: 'Water', air: 'Air', parts: 'Parts', or
 // Version 2 goods: in the top bar and the market only once the colony has any, or the tech that makes them is done.
 const LATE = { alloy: 'smelting', helium: 'plasma' };
 const SELLABLE = ['ore', 'food', 'parts', 'alloy', 'helium'];
-const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8', services: '#c3a6ff', defence: '#ff6a5a' };
+const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8', services: '#c3a6ff', defence: '#ff6a5a', landmarks: '#ffd98a' };
 const BRANCH_COLOR = { life: '#5aa8ff', industry: '#ff9a52', society: '#ff8fd8', logistics: '#f5c542', defence: '#ff6a5a' };
 // Version 3 (docs/COLONY-V3.md): machine classes, the Defence panel's tabs, raid words.
 const CLASS_COLOR = { hu: '#6fd3ff', planes: '#c3a6ff', armour: '#ff9a52', ships: '#f5c542', support: '#8fe38a' };
@@ -74,16 +74,18 @@ const STATUS = {
   pressurising: ['Pressurising', 'Filling it with air.'],
   open: ['Open', 'Pressurised: build inside.'],
 };
-const OVERLAYS = [[null, 'None'], ['reach', 'Reach'], ['park', 'Parks'], ['power', 'Power']];
+const OVERLAYS = [[null, 'None'], ['reach', 'Reach'], ['park', 'Parks'], ['power', 'Power'], ['value', 'Value']];   // version 8: land value
 const KIND_LABEL = { victory: 'Eden Restored', goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost', tech: 'Research complete',
   raid: 'Raid', raidwarn: 'Raid warning', wanderer: 'Wanderer', raidreport: 'After the raid', report: 'After the raid', commander: 'Commanders', machine: 'Arsenal',
   // version 4, stage 2: the secrets
   discovery: 'Discovery', finalvault: 'The Ninefold vault', drones: 'Sentries', dronefight: 'Sentries', reactor: 'The old core', reactorwarn: 'The old core', reactorfail: 'The old core',
-  vault: 'Vault opened', survivors: 'Survivors', danger: 'Danger', expedition: 'Expedition' };
+  vault: 'Vault opened', survivors: 'Survivors', danger: 'Danger', expedition: 'Expedition',
+  // version 8 (docs/COLONY-V8.md): landmarks and incidents
+  landmark: 'Landmark', incidentwarn: 'Incident ahead', incident: 'Incident' };
 // Version 4, stage 3: the Star chart's site glyphs and colours.
 const SITE_GLYPH = { belt: '⁂', comet: '☄', derelict: '⚓', babylon: '✠', bunker: '▣', den: '☠', outpost: '⌂', listening: '◉', relief: '✚' };
 const SITE_COLOR = { belt: '#c9b38a', comet: '#8fd8ff', derelict: '#ffb070', babylon: '#ffd36a', bunker: '#b0e07a', den: '#ff6a5a', outpost: '#c3a6ff', listening: '#7affd8', relief: '#6fb8ff' };
-const SPEAKER = { ruess: 'Prof. Ruess', sato: 'Capt. Sato', marrow: 'Warden Marrow', venn: 'Tobias Venn' };
+const SPEAKER = { ruess: 'Prof. Ruess', sato: 'Capt. Sato', marrow: 'Warden Marrow', venn: 'Tobias Venn', general: 'The General' };
 // Version 4 (docs/COLONY-V4.md): the three decks, top to bottom.
 const DECKS = ['upper', 'main', 'lower'];
 const DECK_NAME = { upper: 'Upper', main: 'Main', lower: 'Lower' };
@@ -211,7 +213,7 @@ function cardIcon(b) {
 // The help dialog's sections (colony.html #dHelp). Short sentences, pictures from the card art.
 // diff: the difficulty row (js/colony/difficulty.js) the numbers are quoted for, or null.
 export const HELP_SECTIONS = [['goal', 'The goal'], ['time', 'Time'], ['build', 'Building'], ['res', 'Resources'], ['chambers', 'Chambers'],
-  ['homes', 'Homes & happiness'], ['zoning', 'Zoning and growth'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
+  ['homes', 'Homes & happiness'], ['zoning', 'Zoning and growth'], ['landvalue', 'Land value'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['landmarks', 'Landmarks'], ['incidents', 'Incidents'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
 export function helpHtml(art, diff) {
   const pic = (slot, alt = '') => { const u = art?.(slot); return u ? `<img src="${esc(u)}" alt="${esc(alt)}" loading="lazy">` : ''; };
   const card = (key) => { const u = art?.(`card/${key}`); return `<figure class="cl-hfig">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : cardIcon(BUILDING[key])}<figcaption>${esc(BUILDING[key]?.name || key)}</figcaption></figure>`; };
@@ -227,7 +229,8 @@ export function helpHtml(art, diff) {
   ${sec('time', 'Time', '', `
     <p>One <b>day</b> passes every two and a half seconds at ×1. The buttons at the top are <b>pause</b>, <b>×1</b>, <b>×2</b> and <b>×4</b>. Keys: space, 1, 2, 3.</p>
     <p>When something needs your answer (a ship, a finished goal, a new chamber), <b>the clock stops</b> until you answer.</p>
-    <p>Pause any time to plan. Nothing is lost while paused.</p>`)}
+    <p>Pause any time to plan. Nothing is lost while paused.</p>
+    <p><b>Day and night</b> turn slowly over Eden, once every 8 days: lamps and windows glow at night and Earth turns below. Switch it off in Settings (⚙) for the same light all day.</p>`)}
   ${sec('build', 'Building', card('farm') + card('repairyard'), `
     <p>Pick a card in the <b>build menu</b> (left). Move over the map: a <b class="cl-good">green</b> ghost means you can build there. A <b class="cl-bad">red</b> ghost means you can't: <b>read the reason</b> next to the pointer.</p>
     <p>Click to order it. Right-click or Esc cancels. Hold Shift to place several. R builds the same again.</p>
@@ -270,6 +273,13 @@ export function helpHtml(art, diff) {
     <p>Click a quad to see <b>To grow into …</b>: every condition with a ✓ or ✗, such as a park in reach, a Clinic, a School, shops, happiness 60, or a tech to research.</p>
     <p>The <b>R C I</b> bars at the top of the build menu show <b>demand</b>. <b>R</b> rises when people are coming and homes are full. <b>C</b> rises when residents outnumber the shops. <b>I</b> rises when colonists have no work or parts run low. A quad grows only while its bar is up, and each one that grows uses some of it up.</p>
     <p>Research <b>Schools</b>, <b>Commerce</b>, <b>Light Industry</b>, <b>Urban Planning</b>, <b>Skyscrapers</b> and <b>Automation</b> for the upper levels. Quads are a cheap way to grow a town, but slower than placing Habitats and Tower Blocks yourself.</p>`)}
+  ${sec('landvalue', 'Land value', '', `
+    <p><b>Land value</b> says how much people want to live and shop on a tile, from 0 to 100. Press <b>Value</b> in the overlay bar to see it as a heat map: <b>blue</b> is low, <b>green</b> middling, <b>yellow</b> high. Click any tile and the inspector shows its value and the main reasons.</p>
+    <ul class="cl-hsteps">
+      <li><b>Raise it</b> with parks, services in reach (Clinic, Canteen, School, shops...), a Transit Station, a view of the river or a lake, and a happy colony.</li>
+      <li><b>It falls</b> beside Workshop Quads (their noise) and other industry, next to the outer hull where raiders and meteoroids come, and in a chamber with an unsealed breach. Sealed chambers have none.</li>
+    </ul>
+    <p>Living and Market Quads need land value <b>45</b> to grow into a Mid-rise or an Arcade, and <b>55</b> for their towers. Put homes and shops where it is high, and industry where it is low.</p>`)}
   ${sec('roads', 'Roads', '', `
     <p>Colonists walk and rovers drive <b>only on roads</b>. Without roads your colony still works, but nobody moves.</p>
     <p>Choose <b>Road</b> (Command menu). <b>Click where it starts</b>, then <b>click where it ends</b>: it lays an L-shaped line. Roads pass through gates once both chambers are open.</p>`)}
@@ -311,6 +321,26 @@ export function helpHtml(art, diff) {
     </ul>
     <p><b>Lift shafts</b> (gold-rimmed pits) run through all three decks at the same spot. One is in your landing chamber. Build a <b>Lift</b> on it (Command menu): once it works, the chambers it passes through on the other decks can be <b>surveyed through the lift</b>. Click the Lift to see which decks it links and go there.</p>
     <p>A chamber on another deck opens as usual: survey, seal its breaches, pressurise. Each open chamber needs air. Parks and services only reach their own deck; lifts carry roads, colonists and rovers between decks. A greyed card says where it stands (<b>Upper deck only</b>): click it to go there.</p>`)}
+  ${sec('landmarks', 'Landmarks', card('lantern') + card('govgarden'), `
+    <p><b>Landmarks</b> are Eden's great works, in their own <b>Landmarks</b> tab of the build menu. Each is <b>one of a kind</b>, costs a lot and takes two or three weeks to build, and gives a <b>lasting bonus</b> while it works. A locked card says what it waits for; once a requirement is met it stays met.</p>
+    <ul class="cl-hsteps">
+      <li><b>Ruess's Workshop</b> (10 chambers open, Fabrication): two more construction crews, and every building costs a tenth less.</li>
+      <li><b>Governor's Garden</b> (500 colonists, happiness 70 for 30 days): +5 happiness everywhere and the finest park in Eden nearby.</li>
+      <li><b>Sato's Watch</b> (300 colonists, Long-range Sensors, Observation Decks): incidents and raids seen 3 days earlier, 4 research a day.</li>
+      <li><b>The Lantern</b> (every main-deck chamber open): transports bring a quarter more colonists, relief convoys pay half as much again, +3 happiness.</li>
+      <li><b>Hall of Names</b> (1,000 colonists, Civic Planning): +4 happiness, grief and fear fade twice as fast; once the Ninefold vault is open it holds the registry, and +3 more.</li>
+      <li><b>Orbital Elevator</b> (3,000 colonists, Mass Driver; on the hull): relief convoys cost half, and Earth goods at the Market a quarter less.</li>
+    </ul>`)}
+  ${sec('incidents', 'Incidents', card('shieldpylon') + card('flareshelter'), `
+    <p>Now and then something happens to Eden, but <b>never without warning</b>. None come in the first 60 days (75 on Easy), then one every two or three months (less often on Easy). Each is announced <b>5 days ahead</b> with exactly what helps, and the advisor repeats it with a <b>Fix</b> button. Hazard Forecasting and Sato's Watch see them sooner.</p>
+    <ul class="cl-hsteps">
+      <li><b>Meteor shower</b>: a few unshielded buildings on the hull or in space are knocked out for a few days. <b>Shield Pylons</b> protect everything within 8 tiles.</li>
+      <li><b>Solar flare</b>: Solar Arrays and Sun Mirrors make half their power for 2–3 days. Charged <b>Battery Banks</b> carry it; a <b>Flare Shelter</b> (Hazard Forecasting) keeps three quarters and everyone calm.</li>
+      <li><b>Burst main</b>: a water plant is down for some days. A <b>Safety Post</b> nearby clamps it in a day; water in store tides you over.</li>
+      <li><b>Fever</b>: if <b>Clinics</b> cover 80% of homes it is contained; otherwise some colonists are off work for a few days and spirits dip. Nobody dies of it.</li>
+      <li>And good news: a <b>trade caravan</b> (sell spare goods at half as much again) and a <b>comet pass</b> (free water, as much as your stores can hold).</li>
+    </ul>
+    <p>Too much? <b>Settings › Incidents</b> turns them off.</p>`)}
   ${sec('secrets', 'Secrets of Eden', `<figure class="cl-hfig cl-hbook">${SICON.book}<figcaption>Discoveries</figcaption></figure>`, `
     <p>Eden was not emptied by an ordinary war, and not everything down there is dead. When a survey finishes, Ruess's team reports what the chamber holds, and the <b>Discoveries</b> journal (top bar, or key <b>J</b>) keeps it all.</p>
     <ul class="cl-hsteps">
@@ -497,7 +527,7 @@ export function createUI(root, api) {
     <div class="cl-xbody"><div class="cl-xmap" data-xmap></div><div class="cl-xside" data-xside></div></div>
   </section>
   <div class="cl-decks" role="group" aria-label="Deck" title="Decks: open / all chambers on each. PageUp / PageDown move between them."><i>Deck</i>${DECKS.map((d) => `<button type="button" data-deck="${d}" aria-pressed="${d === 'main'}"><b>${DECK_NAME[d]}</b><small data-deckn="${d}"></small></button>`).join('')}</div>
-  <div class="cl-ovl" role="group" aria-label="Overlay"><i>Overlay</i>${OVERLAYS.map(([k, n]) => `<button type="button" data-ovl="${k ?? ''}" aria-pressed="${k === null}">${n}</button>`).join('')}</div>
+  <div class="cl-ovl" role="group" aria-label="Overlay"><i>Overlay</i>${OVERLAYS.map(([k, n]) => `<button type="button" data-ovl="${k ?? ''}" aria-pressed="${k === null}"${k === 'value' ? ' title="Land value: where homes and shops want to grow"' : ''}>${n}</button>`).join('')}<span class="cl-ovl-key" data-ovlkey hidden title="Land value: low (blue) to high (yellow)">Low<b></b>High</span></div>
   <div class="cl-placing" hidden><span data-placing></span> <button type="button" class="cl-btn sm" data-cancel>Cancel</button></div>
   <div class="cl-log" data-log title="Colony log (click to expand)"></div>
   <div class="cl-tip" hidden></div>
@@ -1063,9 +1093,20 @@ export function createUI(root, api) {
         </div>${!surveyR.ok && ch.status === 'sealed' ? `<p class="cl-why">${esc(surveyR.msg)}</p>` : ''}${!pressR.ok && ch.status === 'surveyed' ? `<p class="cl-why">${esc(pressR.msg)}</p>` : ''}` : ''}
       </section>`);
     }
+    if (ch?.status === 'open') parts.push(landValueHtml(s, x, y, d));   // version 8
     if (b) parts.push(buildingHtml(s, b));
     if (b?.key === 'lift' || (!b && ter?.id === T.SHAFT)) parts.push(shaftHtml(s, x, y, b?.key === 'lift' ? b : null));
     return parts.join('');
+  }
+
+  // Version 8 (docs/COLONY-V8.md): a tile's land value and its main reasons (rules.landValueParts).
+  function landValueHtml(s, x, y, d) {
+    let lv = null; try { lv = R.landValueParts?.(s, d, x, y); } catch { }
+    if (!lv?.open) return '';
+    const v = Math.round(lv.value), word = v >= 65 ? 'High' : v >= 45 ? 'Good' : v >= 25 ? 'Modest' : 'Low';
+    const sgn = (n) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(Math.round(n))}`;
+    const rows = lv.parts.filter((p) => Math.round(p.value)).slice(0, 4).map((p) => `<div class="cl-kv"><span>${esc(p.label)}</span><b class="${p.value > 0 ? 'good' : 'bad'}">${sgn(p.value)}</b></div>`).join('');
+    return `<section class="cl-isec cl-lv"><h4>Land value <span class="cl-badge ${v >= 45 ? 'st-open' : v >= 25 ? 'st-surveying' : 'st-sealed'}">${word} · ${v}</span></h4>${rows || '<p class="cl-dim">Nothing nearby raises or lowers it.</p>'}</section>`;
   }
 
   function buildingHtml(s, b) {
@@ -1190,6 +1231,7 @@ export function createUI(root, api) {
     const b = e.target.closest('[data-ovl]'); if (!b) return;
     for (const o of $$('[data-ovl]')) o.setAttribute('aria-pressed', String(o === b));
     api.setOverlay(b.dataset.ovl || null);
+    const key = $('[data-ovlkey]'); if (key) key.hidden = b.dataset.ovl !== 'value';   // version 8: the land value legend
   });
 
   // ---------------------------------------------------------------- pop-up panels
@@ -1288,10 +1330,12 @@ export function createUI(root, api) {
       <label class="cl-check"><input type="checkbox" data-set="snap" ${st.snap ? 'checked' : ''}><span></span><em>Snap rotation to 90°<small>Quarter turns instead of a free orbit.</small></em></label>
       <label class="cl-check"><input type="checkbox" data-set="minimap" ${st.minimap !== false ? 'checked' : ''}><span></span><em>Minimap<small>All of Eden in the corner: click or drag on it to jump there.</small></em></label>
       <label class="cl-check"><input type="checkbox" data-set="navButtons" ${st.navButtons !== false ? 'checked' : ''}><span></span><em>Navigation buttons<small>Zoom, rotate, tilt and home buttons over the map, for trackpads.</small></em></label>
+      <label class="cl-check"><input type="checkbox" data-set="dayNight" ${st.dayNight !== false ? 'checked' : ''}><span></span><em>Day and night<small>A slow light cycle: lamps and windows glow at night, Earth turns below. Off: the same light all day.</small></em></label>
       <label class="cl-field"><em>Scrolling<small>Two-finger scroll on a trackpad, or a mouse wheel. Pinch (or Ctrl + scroll) always zooms.</small></em>
         <select data-setsel="wheel">${[['auto', 'Auto: pan on a trackpad, zoom with a mouse wheel'], ['pan', 'Pan the map (trackpad)'], ['zoom', 'Zoom (mouse wheel)']].map(([v, l]) => `<option value="${v}" ${(st.wheel || 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       ${musicHtml()}
       ${raidToggleHtml(S())}
+      ${incidentToggleHtml(S())}
       <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · M music · WASD / arrows pan · Q / E rotate · PgUp / PgDn deck · Esc cancel · F1 or ? how to play.</p>`;
     for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => { api.setSetting(c.dataset.set, c.checked); helpersShown(); };
     for (const c of pops.settings.querySelectorAll('[data-setsel]')) c.onchange = () => api.setSetting(c.dataset.setsel, c.value);
@@ -1300,6 +1344,8 @@ export function createUI(root, api) {
     for (const b of pops.settings.querySelectorAll('[data-musicsrc]')) b.onclick = () => { api.audio.setSource(b.dataset.musicsrc); renderSettings(); };
     const rd = pops.settings.querySelector('[data-raids]');
     if (rd) rd.onchange = () => { result(R.setRaids(S(), rd.checked)); renderSettings(); };
+    const inc = pops.settings.querySelector('[data-incidents]');
+    if (inc) inc.onchange = () => { result(R.setIncidents(S(), inc.checked)); renderSettings(); };
     if (setup) setup.onclick = () => { setup.disabled = true; api.audio.setUp().then(() => { renderSettings(); toast('Earth Light music is ready.', 'good'); }).catch((e) => { setup.disabled = false; toast(e.message || 'No ROM chosen.', 'bad'); }); };
   }
   // Music (js/colony/audio.js): Lanternfall's soundtrack (default, no setup) or Earth Light's own
@@ -1313,6 +1359,12 @@ export function createUI(root, api) {
       ? `<label class="cl-check"><input type="checkbox" data-music ${a.muted ? '' : 'checked'}><span></span><em>Music<small>On or off (M).</small></em></label>`
       : `<div class="cl-field"><em>Music<small>${esc(a.why || 'Earth Light music needs your ROM once.')}</small></em>
          <button type="button" class="cl-btn sm" data-musicsetup>Set up Earth Light music</button></div>`);
+  }
+  // version 8: incidents on or off (docs/COLONY-V8.md)
+  function incidentToggleHtml(s) {
+    if (!s || typeof R.setIncidents !== 'function') return '';
+    const on = s.options?.incidents !== false;
+    return `<label class="cl-check"><input type="checkbox" data-incidents ${on ? 'checked' : ''}><span></span><em>Incidents<small>${on ? 'Meteor showers, solar flares, burst mains and fevers, each announced days ahead with what helps (and the odd caravan or comet).' : 'Off: no incidents. Turn them on again whenever you like.'}</small></em></label>`;
   }
   function raidToggleHtml(s) {
     if (!s || typeof R.setRaids !== 'function') return '';
@@ -2706,16 +2758,19 @@ export function createUI(root, api) {
     const pic = eventFace(p.speaker);
     modal.classList.toggle('soft', !api.settings.pauseOnEvents && !raid && !core);
     const expd = p.kind === 'expedition' && p.report;
-    evBox.className = 'cl-win cl-event' + (expd ? (p.report.recalled ? ' cl-evwarn' : p.report.won ? ' cl-evwon' : ' cl-evraid') : raid || coreBad ? ' cl-evraid' : coreSafe ? ' cl-evwon' : warn || core ? ' cl-evwarn' : disc || p.kind === 'survivors' ? ' cl-evdisc' : drone ? (droneWon ? ' cl-evwon' : ' cl-evraid') : '');
+    const tone = p.tone ? (p.tone === 'good' ? ' cl-evwon' : p.tone === 'bad' ? ' cl-evraid' : ' cl-evwarn') : p.kind === 'landmark' ? ' cl-evwon' : '';   // version 8
+    evBox.className = 'cl-win cl-event' + (tone ? tone : expd ? (p.report.recalled ? ' cl-evwarn' : p.report.won ? ' cl-evwon' : ' cl-evraid') : raid || coreBad ? ' cl-evraid' : coreSafe ? ' cl-evwon' : warn || core ? ' cl-evwarn' : disc || p.kind === 'survivors' ? ' cl-evdisc' : drone ? (droneWon ? ' cl-evwon' : ' cl-evraid') : '');
     const jtab = disc ? 'logs' : (core && !coreSafe) || drone ? 'dangers' : p.kind === 'survivors' ? 'survivors' : null;
     const choices = p.choices?.length ? p.choices : [{ key: 'ok', label: 'Understood' }];
     const tab = warn ? 'raids' : wkey ? 'commanders' : null;
     evBox.innerHTML = `<div class="cl-evkind">${esc(KIND_LABEL[p.kind] || p.kind || 'Event')} · Day ${s.day}${s.pending.length > 1 ? ` · ${s.pending.length - 1} more waiting` : ''}</div>
       <div class="cl-evbody">${pic}
       <div><h2 id="evTitle">${esc(p.title)}</h2>${raid && (rule('raidPreview', s) || p.preview) ? `<p>${esc(raidLine(s, p))}</p>` : `<p>${esc(disc && discoveryItems(s, p).length ? discoveryLead(s, p) : p.text)}</p>`}</div></div>
+      ${p.kind === 'landmark' ? landmarkBody(s, p) : ''}
       ${raid ? raidBody(s, p) : warn ? warnBody(s) : disc ? discoveryBody(s, p) : core ? reactorBody(s, p) : drone ? droneEvBody(s, p) : p.kind === 'survivors' ? survivorsEvBody(s, p) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
       <div class="cl-evchoices">${choices.map((c, i) => { const cant = raid && c.key === 'tribute' && (rule('raidPreview', s) || p.preview)?.canPay === false;
         return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>${raid && c.key === 'fight' ? commandButton() : ''}`; }).join('')}
+        ${p.show && choices.length === 1 ? `<button type="button" class="cl-btn" data-evshow title="Answer and show me">${p.kind === 'landmark' ? 'Show me' : 'Show me what helps'}</button>` : ''}
         ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : 'Meet them'}</button>` : ''}
         ${(() => { const d = core && !coreBad && !coreSafe ? reactorOf(s) : null, pv = d && dangerWork(d) == null ? srule('dangerPreview', s, d.chamber) : null;
           return pv ? `<button type="button" class="cl-btn" data-evclear="${d.chamber}" ${pv.why ? `disabled title="${esc(pv.why)}"` : 'title="Answer, and set the crews to work on it now"'}>Stabilise now${pv.cost ? ` <small>${esc(costText(pv.cost))}</small>` : ''}</button>` : ''; })()}
@@ -2724,6 +2779,13 @@ export function createUI(root, api) {
     modal.hidden = false;
     evBox.querySelector('[data-choice]')?.focus({ preventScroll: true });
     if (raid) checkCommand();
+  }
+  // version 8: a landmark's moment: the speaker's line, and the Hall of Names' registry once the Ninefold vault is open
+  function landmarkBody(s, p) {
+    const who = SPEAKER[p.speaker] || '';
+    const quote = p.quote ? `<blockquote class="cl-lmquote" style="margin:10px 0 4px;padding:8px 14px;border-left:3px solid #ffd98a;background:rgba(255,217,138,.06)"><p style="margin:0">“${esc(p.quote)}”</p>${who ? `<small class="cl-dim">${esc(who)}</small>` : ''}</blockquote>` : '';
+    const reg = p.registry ? `<div class="cl-reg" tabindex="0" aria-label="The registry of Eden" style="max-height:220px;padding:10px 0"><ol>${REGISTRY.map((n) => `<li${n.mark ? ' class="stayed"' : ''}><b>${esc(n.name)}</b><small>${n.age} · ${esc(n.home)}${n.mark ? ' · stayed' : ''}</small></li>`).join('')}</ol></div>` : '';
+    return quote + reg;
   }
   // "Command the battle": between Fight and Pay tribute; disabled (with why) without the pack.
   const COMMAND_WHY = { null: 'Checking for the Earth Light pack…', false: 'Needs the Earth Light pack: set up Earth Light music in Settings once (from your own ROM).' };
@@ -2766,6 +2828,12 @@ export function createUI(root, api) {
       const p = S().pending?.[0];
       if (p) { evId = null; modal.hidden = true; const key = p.choices?.[0]?.key || 'ok', r = result(R.answer(S(), p.id, key)); if (r?.ok !== false) api.answered?.(p, key); }
       clearDanger(+ec.dataset.evclear);
+      return;
+    }
+    if (e.target.closest('[data-evshow]')) {   // version 8: a landmark or an incident's Show me
+      const p = S().pending?.[0];
+      if (p) { evId = null; modal.hidden = true; const key = p.choices?.[0]?.key || 'ok', r = result(R.answer(S(), p.id, key)); if (r?.ok !== false) api.answered?.(p, key); if (p.show) api.show?.(p.show); }
+      renderEvent();
       return;
     }
     const ej = e.target.closest('[data-evj]');

@@ -36,7 +36,9 @@ const SLOTS = {
     // version 6 (docs/COLONY-V6.md): the big city (prompts written; pictures not made yet)
     'reserve', 'granary', 'warehouse', 'vertfarm', 'waterworks', 'atmoproc', 'sunmirror', 'towerblock', 'arcology', 'arrivals', 'plaza', 'massdriver',
     // version 7 (docs/COLONY-V7.md): zoning and growth (prompts written; pictures not made yet)
-    'livingquad', 'marketquad', 'workshopquad', 'school', 'transit', 'monorail', 'freightyard'],
+    'livingquad', 'marketquad', 'workshopquad', 'school', 'transit', 'monorail', 'freightyard',
+    // version 8 (docs/COLONY-V8.md): the landmarks and the Flare Shelter (prompts written; pictures not made yet)
+    'workshop', 'govgarden', 'observatory', 'lantern', 'hallofnames', 'elevator', 'flareshelter'],
   title: ['rebuild'],
   sky: ['earth-below'],
   terrain: ['void', 'asteroid', 'magnetic', 'atmosphere', 'hull', 'deck', 'plain', 'fertile', 'river', 'rubble', 'breach',

@@ -74,13 +74,14 @@ function walk(v, path, out) {
   check(R.STORED.includes('alloy') && R.STORED.includes('helium') && R.GOODS.includes('alloy'), 'alloy and helium are stored goods');
   const v2keys = BUILDINGS.filter((d) => d.tech).map((d) => d.key);
   // (17 version 2 buildings carry a tech; version 3 adds 9 more, version 6 9 more (the Granary is open from the start), also locked;
-  // version 7 4 more: School, Transit Station, Monorail Stop, Freight Yard (the quads are open from the start))
-  check(v2keys.length === 17 + 9 + 9 + 4 && v2keys.every((k) => !s.unlocked.includes(k)) && !s.unlocked.includes('lab'), 'nothing of version 2 is available at the start');
+  // version 7 4 more: School, Transit Station, Monorail Stop, Freight Yard (the quads are open from the start);
+  // version 8 1 more: the Flare Shelter (the landmarks wait on their own requirements, not a `tech`))
+  check(v2keys.length === 17 + 9 + 9 + 4 + 1 && v2keys.every((k) => !s.unlocked.includes(k)) && !s.unlocked.includes('lab'), 'nothing of version 2 is available at the start');
   const bl = R.buildable(s);
   check(bl.find((b) => b.key === 'clinic').why === 'Research Medicine.' && bl.find((b) => b.key === 'lab').why === 'Unlocks at 80 colonists.', 'buildable(): tech-locked reason');
   check(R.canBuild(s, 'smelter', 0, 0) === 'Research Smelting.', 'canBuild(): tech-locked reason');
   const ts = R.techStatus(s);
-  check(ts.length === 46 && ts.length === 40 + TECHS.filter((t) => t.ver === 7).length && ts.every((t) => !t.done && !t.focus && t.progress === 0), 'techStatus: 46 techs (19 + 11 of version 3 + 10 of version 6 + 6 of version 7), none done');
+  check(ts.length === 47 && ts.length === 40 + TECHS.filter((t) => t.ver === 7 || t.ver === 8).length && ts.every((t) => !t.done && !t.focus && t.progress === 0), 'techStatus: 47 techs (19 + 11 of version 3 + 10 of version 6 + 6 of version 7 + 1 of version 8), none done');
   check(ts.filter((t) => t.available).map((t) => t.key).sort().join() === TECHS.filter((t) => !t.needs.length).map((t) => t.key).sort().join(), 'techStatus: the roots are available');
   const sum = R.summary(s);
   check(sum.stock.alloy.cap === 100 && sum.stock.helium.cap === 50 && sum.research.perDay === 0, 'summary: alloy / helium caps from the Command Centre, research read-out');

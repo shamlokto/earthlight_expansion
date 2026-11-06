@@ -428,6 +428,8 @@ class Brain {
     this.setupScripts();
     this.priorities();
     const end = () => b.winner() !== null;
+    // the colony's raid (js/expansion/battle.js running): a side that has broken off runs for the edge
+    if (b.running && b.running(this.army)) { yield* this.flee(); return; }
 
     yield* this.scripts();
     if (end()) return;
@@ -546,6 +548,74 @@ class Brain {
     }
   }
 }
+
+// ---------------------------------------------------------------- the colony's raid: running away
+// Only for a side the battle says is running (js/expansion/battle.js running(): the colony's raiders
+// under the flee rule, or Eden after Retreat; never in the base game or the expansion campaign).
+// Each machine heads for the nearest edge hex by its own movement costs; one already on an edge hex
+// leaves the map; one that ends its move on an edge hex leaves with it (battle.js move). It doesn't
+// attack while it can still get nearer an edge; cornered (no hex this turn brings it nearer, or no
+// way out at all), it fires from where it stands at the target it hurts most for the least counter
+// fire, even when the trade is a bad one.
+Brain.prototype.flee = function* flee() {
+  const b = this.b, costs = new Map();
+  const own = b.units.filter((u) => this.mine(u) && this.free(u));
+  // nearest the edge first, so the ones behind don't find the way out blocked by their own
+  const dist = (u) => {
+    const t = b.type(u), cat = t.moveCat ?? t.category;
+    if (!costs.has(cat)) costs.set(cat, this.edgeCost(cat, t.move || 1));
+    return costs.get(cat);
+  };
+  own.sort((p, q) => dist(p)(p.x, p.y) - dist(q)(q.x, q.y));
+  for (const u of own) {
+    if (b.winner() !== null) return;
+    if (!this.mine(u) || !this.free(u)) continue;
+    this.done.add(u);
+    if (b.canLeave(u)) { b.leave(u); this.changed(); yield { kind: 'leave', u }; continue; }
+    const d = dist(u), foes = b.hostiles(u);
+    const away = (x, y) => (foes.length ? Math.min(...foes.map((e) => distance({ x, y }, e))) : 0);
+    let goal = null, best = d(u.x, u.y), far = -1;
+    if (b.movePoints(u)) for (const k of this.reachable(u).keys()) {
+      const [x, y] = k.split(',').map(Number);
+      if ((x === u.x && y === u.y) || this.blocked(x, y)) continue;
+      const v = d(x, y);
+      if (v > best || (v === best && !goal) || (v === best && away(x, y) <= far)) continue;
+      best = v; goal = [x, y]; far = away(x, y);
+    }
+    if (goal) { b.move(u, ...goal); this.changed(); yield { kind: 'move', u }; continue; }
+    // cornered: it sells itself dear, firing from where it stands at what it hurts most (even at a loss)
+    let shot = null;
+    for (const e of b.targets(u)) for (const w of b.weaponsAgainst(u, e)) {
+      const cw = b.counterWeapon(u, e, w), score = b.damage(u, e, w) - (cw ? b.damage(e, u, cw, true) : 0);
+      if (!shot || score > shot.score) shot = { e, w, score };
+    }
+    if (shot) { yield { kind: 'attack', ...b.attack(u, shot.e, shot.w) }; this.changed(); }
+    if (b.winner() !== null) return;
+  }
+};
+
+// Movement cost from each hex to the nearest edge hex (battle.js edgeHex) for movement category
+// `cat` (a 'stop' hex costs a full move), as a function (x, y) -> cost (Infinity: no way out).
+Brain.prototype.edgeCost = function edgeCost(cat, move) {
+  const b = this.b, d = new Map(), open = [];
+  const enter = (x, y) => { const c = b.tables.moveCost(cat, b.cls(x, y)); return c === 0 ? 0 : c === 'stop' ? move : c; };
+  for (let y = 1; y <= b.info.rows; y++) for (let x = 1; x < b.info.cols; x++) {
+    if (b.edgeHex(x, y) && enter(x, y)) { d.set(K(x, y), 0); open.push([0, x, y]); }
+  }
+  while (open.length) {
+    let i = 0;
+    for (let j = 1; j < open.length; j++) if (open[j][0] < open[i][0]) i = j;
+    const [c, x, y] = open[i]; open[i] = open[open.length - 1]; open.pop();
+    if (c > d.get(K(x, y))) continue;
+    const step = enter(x, y);   // moving from a neighbour into (x, y)
+    for (const [a, e] of neighbours(x, y)) {
+      if (!b.inBounds(a, e) || !enter(a, e)) continue;
+      const n = c + step;
+      if (n < (d.get(K(a, e)) ?? Infinity)) { d.set(K(a, e), n); open.push([n, a, e]); }
+    }
+  }
+  return (x, y) => d.get(K(x, y)) ?? Infinity;
+};
 
 export function* aiTurn(b) {
   yield* new Brain(b).turn();

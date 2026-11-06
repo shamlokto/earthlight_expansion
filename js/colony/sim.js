@@ -24,6 +24,8 @@ import { updateGoals } from './goals.js';
 import { dangerWork, secretsDay, floodedHere, SECRET } from './secrets.js';
 import { expeditionsDay } from './expeditions.js';
 import { victoryDay } from './victory.js';
+import { incidentsDay, sickShare, incidentHappy } from './incidents.js';   // version 8 (docs/COLONY-V8.md)
+import { landmarksDay, landmarkHappy, landmarkTransport, landmarkFade } from './landmarks.js';
 
 export { habitatNeeds, stateRng };
 
@@ -189,9 +191,12 @@ export function dayTick(state, rng) {
   secretsDay(state, { rng, say, ask });
   // version 4 stage 3: squadrons arriving at their sectors, and coming home with their reports
   expeditionsDay(state, { rng, say, ask });
+  // version 8: incidents you can prepare for (their own dice: js/colony/incidents.js)
+  incidentsDay(state, { say, ask });
 
   // 3 labour (Lanternfall): one staffing fraction for every building with jobs.
-  const jobs = jobsOf(state), staffing = jobs ? Math.min(1, state.pop / jobs) : 1;
+  // (version 8: colonists off sick with a fever do not work)
+  const jobs = jobsOf(state), staffing = jobs ? Math.min(1, (state.pop * (1 - sickShare(state))) / jobs) : 1;
   const moneyF = f.unpaid ? SIM.unpaid : 1;
 
   // 4 power: supply plus battery against demand; a shortfall throttles every consumer alike.
@@ -395,6 +400,7 @@ export function dayTick(state, rng) {
     parts.push({ label: k.label, value: Math.round(dwellings.length ? dwellings.reduce((t, h) => t + best(h), 0) / dwellings.length : 0) });
   }
   if (state.buildings.some((b) => b.key === 'obsdeck' && active(b))) parts.push({ label: 'Observation Deck', value: SIM.obsHappy });
+  parts.push(...landmarkHappy(state), ...incidentHappy(state));   // version 8: landmarks, a solar flare
   if (ration) parts.push({ label: 'Rationing', value: SIM.rationHappy });
   else if (autoRation) parts.push({ label: 'Rationing (automatic)', value: SIM.autoRationHappy });
   // version 3: a Welfare head (+ charm / 20), raid fear and tribute shame fading over 15 days,
@@ -403,9 +409,11 @@ export function dayTick(state, rng) {
   if (welfare) parts.push({ label: 'Welfare', value: Math.round((COMMANDER[welfare.key].charm || 0) / 20) });
   const rd = state.raid;
   // (full on the day after, gone `days` days later)
-  rd.moods = rd.moods.filter((m) => state.day - m.day <= m.days);
+  // (version 8: the Hall of Names makes grief and fear fade twice as fast)
+  const fade = landmarkFade(state);
+  rd.moods = rd.moods.filter((m) => state.day - m.day <= m.days / fade);
   const moods = {};
-  for (const m of rd.moods) moods[m.label] = (moods[m.label] || 0) + m.value * (1 - (state.day - m.day - 1) / m.days);
+  for (const m of rd.moods) moods[m.label] = (moods[m.label] || 0) + m.value * Math.max(0, 1 - (fade * (state.day - m.day - 1)) / m.days);
   for (const [label, v] of Object.entries(moods)) if (Math.round(v)) parts.push({ label, value: Math.round(v) });
   if (f.wagesUnpaid && state.commanders.some((c) => c.key === 'w_brann')) parts.push({ label: 'Brann unpaid', value: -2 });
   if (pop > housing) parts.push({ label: 'Crowding', value: -Math.min(30, Math.floor((housing ? (pop - housing) / housing : 1) * 50)) });
@@ -480,7 +488,8 @@ export function dayTick(state, rng) {
       // (so the win's population target is a matter of months, not years)
       // version 6: each working Arrivals Hall makes the transport half as big again (up to three halls)
       const halls = Math.min(SIM.hallMax, state.buildings.filter((b) => b.key === 'arrivals' && active(b)).length);
-      const n = Math.min(free, Math.round((SIM.transportMin + Math.floor(rng() * (top - SIM.transportMin + 1)) + Math.floor(state.pop / 100)) * (1 + SIM.hallBonus * halls)));
+      // version 8: The Lantern draws a quarter more
+      const n = Math.min(free, Math.round((SIM.transportMin + Math.floor(rng() * (top - SIM.transportMin + 1)) + Math.floor(state.pop / 100)) * (1 + SIM.hallBonus * halls) * landmarkTransport(state)));
       state.pop += n;
       state.flags.arrival = { day: state.day, n };   // the view flies the transport in (view3d/movers.js)
       ask('transport', 'Transport', `A transport docks with ${n} colonists.`);
@@ -543,6 +552,8 @@ export function dayTick(state, rng) {
   // 13 guided goals: a finished goal pays the Council grant and names the next (js/colony/goals.js)
   const goal = updateGoals(state);
   if (goal) events.push({ kind: 'goal', text: state.log[state.log.length - 1].text, pause: true });
+  // 13b version 8: landmarks: requirements earned, the moment one is finished (js/colony/landmarks.js)
+  landmarksDay(state, { say, ask });
   // 14 version 4, stage 4: the win, Eden Restored, once (js/colony/victory.js); the colony carries on after it
   if (victoryDay(state)) events.push({ kind: 'victory', text: state.log[state.log.length - 1].text, pause: true });
   return { events };

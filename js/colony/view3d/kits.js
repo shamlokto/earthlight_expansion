@@ -1000,6 +1000,103 @@ export const KITS = {
       dome([0.08, 0.06, 0.08], [0.95, 1.38, 0.05], BEACON, GLOW));
     return parts;
   },
+
+  // ---------------------------------------------------------------- version 8 (docs/COLONY-V8.md): landmarks
+  // One of a kind each, so each is a skyline of its own: taller and busier than anything around it, with a gold
+  // trim band (the landmarks' colour in the build menu) somewhere on every one.
+  // 3×3: a long hall under a sawtooth glass roof, a yellow gantry over a yard with a half-built machine, a drafting
+  // tower with a round clock, and a chimney.
+  workshop: () => [
+    box([2.96, 0.08, 2.96], [0, 0, 0], '#5a6068', { slot: 'mat/hull-plate' }),
+    box([2.7, 0.95, 1.2], [-0.05, 0.08, -0.75], '#9a5a44'), box([2.72, 0.1, 1.22], [-0.05, 0.5, -0.75], '#ffd98a', GLOW),
+    ...[-1.0, -0.33, 0.34, 1.01].map((x) => box([0.62, 0.36, 0.06], [x - 0.05, 1.08, -0.75], '#bfe8ff', { rot: [0, 0, 0], glow: false })),
+    ...[-1.0, -0.33, 0.34, 1.01].map((x) => box([0.66, 0.08, 1.26], [x - 0.05, 1.03, -0.75], '#c9ced6', { rot: [0, 0, 0.5] })),
+    box([0.7, 2.3, 0.7], [1.05, 0.08, 0.95], '#e8e0d0', { slot: 'mat/hab-facade' }), box([0.72, 0.08, 0.72], [1.05, 1.5, 0.95], '#ffd98a', GLOW),
+    cyl([0.4, 0.04, 0.4], [1.05, 1.85, 1.31], '#fff2c0', { rot: [HALF_PI, 0, 0], glow: true }), cone([0.8, 0.45, 0.8], [1.05, 2.38, 0.95], '#24346a'),
+    ...[-1.3, 0.5].flatMap((x) => [box([0.1, 1.9, 0.1], [x, 0.08, 0.1], HAZARD), box([0.1, 1.9, 0.1], [x, 0.08, 1.3], HAZARD)]),
+    box([1.95, 0.14, 0.14], [-0.4, 1.98, 0.1], HAZARD), box([1.95, 0.14, 0.14], [-0.4, 1.98, 1.3], HAZARD),
+    box([0.3, 0.24, 1.3], [-0.5, 1.8, 0.7], '#d9a02a'), cyl([0.02, 0.8, 0.02], [-0.5, 1.0, 0.7], DARK),
+    cyl([0.36, 0.5, 0.36], [-0.5, 0.25, 0.7], '#7a8a9a'), box([0.7, 0.25, 0.4], [-0.5, 0.08, 0.7], '#4a525c'), box([0.12, 0.6, 0.12], [-0.2, 0.33, 0.7], '#ff8a2a'),
+    cyl([0.22, 2.2, 0.22], [-1.25, 0.08, -1.25], '#7a5a4a'), torus([0.26, 0.05, 0.26], [-1.25, 2.1, -1.25], BEACON, GLOW),
+    dome([0.12, 0.1, 0.12], [1.05, 2.83, 0.95], BEACON, GLOW),
+  ],
+  // 3×3: terraced lawns rising to a domed white pavilion with columns, a round lake with a fountain, a curved
+  // glasshouse, gravel paths and flowering trees.
+  govgarden: () => [
+    box([2.96, 0.06, 2.96], [0, 0, 0], '#4f9a3a'),
+    box([2.4, 0.22, 1.5], [0, 0.06, -0.6], '#5fae4a'), box([1.7, 0.22, 1.0], [0, 0.28, -0.8], '#6abf52'), box([2.42, 0.05, 1.52], [0, 0.26, -0.6], '#ffd98a'),
+    ...[-0.6, -0.3, 0, 0.3, 0.6].map((a) => cyl([0.07, 0.8, 0.07], [Math.sin(a * 2.6) * 0.5, 0.5, -0.8 + Math.cos(a * 2.6) * 0.32], '#f4f0e8')),
+    cyl([1.15, 0.1, 0.8], [0, 1.3, -0.8], '#f4f0e8'), dome([1.0, 0.75, 0.7], [0, 1.4, -0.8], '#f8f6f0', { slot: 'mat/hab-facade' }),
+    cyl([0.06, 0.4, 0.06], [0, 2.1, -0.8], '#d9b23a'), dome([0.12, 0.1, 0.12], [0, 2.5, -0.8], '#fff2b0', GLOW),
+    cyl([1.2, 0.05, 1.0], [-0.55, 0.06, 0.85], '#3a8ae0', GLOW), cyl([0.1, 0.35, 0.1], [-0.55, 0.06, 0.85], '#e8e0d0'), dome([0.24, 0.2, 0.24], [-0.55, 0.4, 0.85], '#bfe8ff', { shimmer: true }),
+    box([0.5, 0.06, 0.16], [-0.55, 0.12, 1.38], '#c9b890'),
+    cyl([0.7, 1.0, 0.7], [0.95, 0.06, 0.85], '#cfefff', { rot: [HALF_PI, 0, 0] }), box([0.72, 0.08, 1.02], [0.95, 0.06, 0.85], '#e8eef4'),
+    box([0.16, 0.02, 1.4], [0, 0.07, 0.8], '#d8ccb0'),
+    ...[[-1.25, -1.25], [1.25, -1.25], [-1.25, 0.1], [1.25, 0.1], [0.3, 1.25], [-1.25, 1.3]].flatMap(([x, z], k) => tree(x, z, 0.9, k % 2 === 0)),
+    ...[[-0.3, 0.3], [0.35, 0.3]].map(([x, z]) => dome([0.22, 0.24, 0.22], [x, 0.06, z], '#ff9ad0')),
+  ],
+  // 3×3: a great white dome split open with a long telescope, Sato's watch tower with a lit band and a radar dish,
+  // a smaller antenna dome and a beacon.
+  observatory: () => [
+    box([2.96, 0.08, 2.96], [0, 0, 0], '#59616b', { slot: 'mat/hull-plate' }),
+    ...[-1.4, 1.4].map((x) => box([0.04, 0.02, 2.8], [x, 0.08, 0], '#4ac0ff', GLOW)),
+    cyl([2.0, 0.7, 2.0], [-0.35, 0.08, -0.3], '#dfe3ea'), dome([2.0, 1.4, 2.0], [-0.35, 0.78, -0.3], '#f4f6f8'),
+    box([0.34, 1.0, 1.5], [-0.35, 1.2, -0.3], '#2a3038', { rot: [0.5, 0, 0] }),
+    cyl([0.24, 1.9, 0.24], [-0.35, 1.5, -0.1], '#c9ced6', { rot: [-0.7, 0, 0] }), cyl([0.26, 0.06, 0.26], [-0.35, 2.25, -0.8], '#7fe0ff', { rot: [-0.7, 0, 0], glow: true }),
+    box([0.7, 3.0, 0.7], [1.0, 0.08, 1.0], '#e8eef4'), box([0.72, 0.16, 0.72], [1.0, 2.5, 1.0], WIN, GLOW), box([0.72, 0.08, 0.72], [1.0, 1.4, 1.0], '#ffd98a', GLOW),
+    box([0.9, 0.1, 0.9], [1.0, 3.08, 1.0], DARK), cyl([0.04, 0.5, 0.04], [1.0, 3.18, 1.0], STEEL),
+    cyl([0.6, 0.06, 0.6], [1.0, 3.6, 1.0], '#c9ced6', { rot: [0.7, 0, 0] }), dome([0.12, 0.1, 0.12], [1.0, 3.68, 1.0], BEACON, GLOW),
+    cyl([0.8, 0.3, 0.8], [-0.9, 0.08, 1.0], '#c9ced6'), dome([0.8, 0.5, 0.8], [-0.9, 0.38, 1.0], '#f4f6f8'),
+    ...[-0.15, 0.15].map((dx) => cyl([0.02, 0.8, 0.02], [-0.9 + dx, 0.8, 1.0], STEEL)),
+  ],
+  // 3×3: a stepped white plinth with a gold band, a tall tapering tower with lit bands, a faceted glass lantern
+  // blazing gold at the top, a beam of light up into the dark (see-through), and four lamp posts.
+  lantern: () => [
+    box([2.96, 0.12, 2.96], [0, 0, 0], '#d8d0c0'), box([2.3, 0.3, 2.3], [0, 0.12, 0], '#efe8da'), box([2.32, 0.06, 2.32], [0, 0.36, 0], '#ffd98a', GLOW),
+    box([1.5, 0.4, 1.5], [0, 0.42, 0], '#f4f0e8'),
+    cyl([0.95, 1.6, 0.95], [0, 0.82, 0], '#f8f6f0', { slot: 'mat/hab-facade' }), cyl([0.97, 0.08, 0.97], [0, 1.5, 0], '#ffd98a', GLOW),
+    cyl([0.75, 1.6, 0.75], [0, 2.42, 0], '#f8f6f0'), cyl([0.77, 0.08, 0.77], [0, 3.2, 0], '#ffd98a', GLOW),
+    cyl([1.0, 0.12, 1.0], [0, 4.02, 0], '#d9b23a'),
+    cyl([0.8, 0.9, 0.8], [0, 4.14, 0], '#ffe9a0', GLOW), cone([0.95, 0.6, 0.95], [0, 5.04, 0], '#d9b23a'),
+    dome([0.18, 0.16, 0.18], [0, 5.64, 0], '#fff6c2', GLOW),
+    cyl([0.5, 7.0, 0.5], [0, 5.6, 0], '#fff2b0', { shimmer: true }),
+    ...[[-1.25, -1.25], [1.25, -1.25], [-1.25, 1.25], [1.25, 1.25]].flatMap(([x, z]) => [cyl([0.05, 0.8, 0.05], [x, 0.12, z], DARK), dome([0.14, 0.12, 0.14], [x, 0.92, z], '#ffe3a0', GLOW)]),
+  ],
+  // 3×3: a long low hall of pale stone behind a colonnade, amber windows, a reflecting pool with floating candles,
+  // a tall obelisk of names and two dark cypresses.
+  hallofnames: () => [
+    box([2.96, 0.06, 2.96], [0, 0, 0], '#cfc8b8'),
+    box([2.5, 0.9, 1.1], [0, 0.06, -0.8], '#e8e2d4', { slot: 'mat/hab-facade' }), box([2.6, 0.12, 1.3], [0, 0.96, -0.75], '#bfb3a0'),
+    box([2.0, 0.2, 0.9], [0, 1.08, -0.8], '#d8d0c0'), box([2.52, 0.05, 1.12], [0, 0.6, -0.8], '#ffd98a', GLOW),
+    ...[-1.0, -0.6, -0.2, 0.2, 0.6, 1.0].flatMap((x) => [cyl([0.09, 0.9, 0.09], [x, 0.06, -0.15], '#f4f0e8'), box([0.14, 0.5, 0.02], [x + 0.2, 0.2, -0.24], '#ffb75a', GLOW)]),
+    box([1.8, 0.04, 0.9], [-0.2, 0.06, 0.75], '#2a4a6a'), box([1.84, 0.02, 0.94], [-0.2, 0.05, 0.75], '#bfb3a0'),
+    ...[[-0.8, 0.6], [-0.4, 0.9], [0, 0.55], [0.3, 0.95], [-0.6, 1.05]].map(([x, z]) => cyl([0.04, 0.05, 0.04], [x, 0.1, z], '#ffd98a', GLOW)),
+    box([0.4, 0.3, 0.4], [1.15, 0.06, 0.8], '#bfb3a0'), box([0.26, 2.6, 0.26], [1.15, 0.36, 0.8], '#ece6da'), cone([0.3, 0.35, 0.3], [1.15, 2.96, 0.8], '#ffd98a', GLOW),
+    ...[[-1.3, 1.25], [1.3, -0.1]].flatMap(([x, z]) => [cyl([0.05, 0.2, 0.05], [x, 0.06, z], '#4a3a2a'), cone([0.3, 1.5, 0.3], [x, 0.2, z], '#1f4a2f')]),
+  ],
+  // 2×2 on the hull: a round anchor station with glowing blue rings, four stay struts, and the cable rising far up
+  // out of sight with a lit climber on it.
+  elevator: () => [
+    box([1.96, 0.12, 1.96], [0, 0, 0], '#4a525c', { slot: 'mat/hull-plate' }),
+    cyl([1.6, 0.6, 1.6], [0, 0.12, 0], '#dfe3ea'), torus([1.62, 0.1, 1.62], [0, 0.5, 0], '#4ac0ff', GLOW),
+    cyl([1.0, 0.7, 1.0], [0, 0.72, 0], '#f4f6f8'), torus([1.02, 0.08, 1.02], [0, 1.3, 0], '#4ac0ff', GLOW), box([1.1, 0.06, 1.1], [0, 1.0, 0], '#ffd98a', GLOW),
+    ...[[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]].flatMap(([x, z]) => [box([0.12, 1.6, 0.12], [x * 0.55, 0.3, z * 0.55], HAZARD, { rot: [z * 0.25, 0, -x * 0.25] }), dome([0.1, 0.08, 0.1], [x, 0.12, z], BEACON, GLOW)]),
+    cyl([0.1, 9.0, 0.1], [0, 1.42, 0], '#c9ced6'),
+    ...[3.0, 5.5, 8.0].map((y) => torus([0.3, 0.04, 0.3], [0, y, 0], '#4ac0ff', GLOW)),
+    box([0.36, 0.5, 0.36], [0, 4.0, 0], '#f4f6f8'), box([0.38, 0.08, 0.38], [0, 4.25, 0], WIN, GLOW),
+  ],
+  // 2×2: a squat half-buried bunker of dark shielding, a round striped blast door, an orange warning light and a
+  // shielded switchyard of transformers.
+  flareshelter: () => [
+    box([1.96, 0.06, 1.96], [0, 0, 0], '#5a5e64'),
+    box([1.5, 0.45, 1.1], [-0.15, 0.06, -0.35], '#3d444d'), box([1.2, 0.2, 0.8], [-0.15, 0.51, -0.35], '#4a525c'),
+    box([1.6, 0.06, 0.4], [-0.15, 0.06, 0.28], '#3d444d', { rot: [-0.6, 0, 0] }),
+    cyl([0.4, 0.05, 0.4], [-0.15, 0.3, 0.22], HAZARD, { rot: [HALF_PI, 0, 0] }), cyl([0.3, 0.06, 0.3], [-0.15, 0.3, 0.24], DARK, { rot: [HALF_PI, 0, 0] }),
+    dome([0.1, 0.08, 0.1], [-0.15, 0.71, -0.35], '#ff8a2a', GLOW),
+    ...[0.65, 0.65].map((x, k) => box([0.3, 0.35, 0.3], [x, 0.06, 0.15 + k * 0.5], '#7a8a9a')),
+    ...[0.55, 0.75].map((x) => cyl([0.04, 0.3, 0.04], [x, 0.41, 0.4], '#c4773a')),
+    box([0.08, 0.06, 1.2], [0.4, 0.06, 0.1], '#2a2e34'),
+  ],
 };
 
 // A quad at its level (version 7): 1 the empty lot, 2..6 ever bigger and taller. zone: 'R' | 'C' | 'I'.

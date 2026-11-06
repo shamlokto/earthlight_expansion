@@ -249,8 +249,21 @@ function wire() {
   // an expansion battle leaves for its own pages, so the base title never runs with `custom` set
   $('bRetreat').onclick = () => {
     if (busy) return;
-    // the colony's raid: retreating lets the raiders through (a defeat, reported to the colony)
-    if (custom?.colony) { if (battle.winner() === null && confirm('Retreat? The raiders will be through the gates.')) { battle.result = { winner: 1, reason: 'retreat' }; checkEnd(); } return; }
+    // the colony's raid: Retreat puts Eden's side in retreat (js/expansion/battle.js retreat): each
+    // machine has to reach an edge hex to leave the map, under fire; once none is left on the map
+    // it is a defeat, reported to the colony. It cannot be undone.
+    if (custom?.colony) {
+      if (battle.winner() !== null || battle.army !== 0) return;
+      if (battle.retreating) { log('<b>The guard is already pulling back: move each machine onto an edge hex.</b>'); return; }
+      if (battle.fleeing) { log('<b>The raiders are the ones running: no need to retreat.</b>'); return; }
+      if (!confirm('Retreat? Your machines must fly off an edge of the map to get away; the raiders keep firing at whoever is still on it. Once none is left, the raiders are through the gates. This cannot be undone.')) return;
+      battle.retreat(); clearSel();
+      log('<b>Eden\'s guard pulls back! Move each machine onto an edge hex to leave the map.</b>');
+      $('bRetreat').textContent = 'Retreating…';
+      draw(); hud('<span class="dim">Retreat: move each machine onto an edge hex (the map\'s border). A machine already on one can leave at once.</span>');
+      checkEnd();
+      return;
+    }
     if (custom) location.href = custom.campaign ? interUrl() : 'game.html'; else showTitle({ menu: true });
   };
   $('cv').addEventListener('click', onClick);
@@ -505,7 +518,8 @@ function unitCard(u, extra = '') {
   const evade = Math.round((battle.type(u).evasion * 100) / 128);
   const tags = [u.general ? '<span class="tag gen">★ General aboard</span>' : '', u.guard ? '<span class="tag">Guard</span>' : '',
     u.burner ? '<span class="tag burn">Afterburner · move 10</span>' : '', t.moveOrFire ? '<span class="tag">Long guns: move or fire</span>' : '',
-    u.army === NEUTRAL ? '<span class="tag">Neutral dock</span>' : ''].join('');
+    u.army === NEUTRAL ? '<span class="tag">Neutral dock</span>' : '', u.fleeing ? '<span class="tag burn">Running for the edge</span>' : '',
+    u.retreating && u.army === 0 && !u.escaped ? '<span class="tag">Retreating</span>' : ''].join('');
   const weapons = t.weapons.filter(Boolean).map((w) => `<tr><td class="slot">W${w.slot + 1}</td><td><span class="mode m${w.mode}">${MODE_NAMES[w.mode]}</span></td>
     <td class="num">${w.min === w.max ? w.min : `${w.min}–${w.max}`}</td><td class="pow"><b>${w.power}</b><span class="pbar"><span style="width:${Math.round((w.power / 255) * 100)}%"></span></span></td></tr>`).join('');
   // the info strings: [mount labels, role + armament, flavour]
@@ -550,7 +564,8 @@ function select(u) {
   if (dec.length) targets = targets.filter((e) => battle.weaponsAgainst(u, e).some((w) => w.slot !== 3));
   const tf = battle.canTransform(u) ? `<button class="btn" id="bTransform">Transform → ${types[TRANSFORM[u.type]].code}</button>` : '';
   const again = u.acted && u.reMove ? '<p>Move again (optional), or click elsewhere to finish.</p>' : '';
-  const det = (u.burner && u.army === 0 ? '<button class="btn" id="bDetach">Detach burner</button>' : '')
+  const leave = custom?.colony && u.army === 0 && battle.army === 0 && battle.canLeave(u);   // the colony's retreat: already on an edge hex
+  const det = (leave ? '<button class="btn" id="bLeave">Leave the map</button>' : '') + (u.burner && u.army === 0 ? '<button class="btn" id="bDetach">Detach burner</button>' : '')
     + (dec.length ? '<button class="btn" id="bDecimator">Quantum Decimator</button>' : '');
   const legend = `<p class="dim">Blue: move${hosts.length ? ' · yellow: board (full repair, re-arm)' : ''} · faint red: fire range · red: attack.</p>`;
   draw(); hud(unitCard(u, cargoPanel(u) + again + legend + (tf || det ? `<div class="row">${tf}${det}</div>` : '')));
@@ -558,6 +573,7 @@ function select(u) {
     reach = null; range = null; targets = []; hosts = []; blastCells = dec; blastAim = null;
     draw(); hud(unitCard(u, decimatorHelp()));
   };
+  if (leave) $('bLeave').onclick = () => { battle.leave(u); log(`<span class="armyA">${nameOf(u)}</span> leaves the map`); clearSel(); hud(); if (!checkEnd()) hud(''); };
   if (u.burner && u.army === 0) $('bDetach').onclick = async () => { detachBurner(battle, u); log(`<span class="armyA">${nameOf(u)}</span> detached its afterburner`); await alerts([EV.burner]); select(u); };
   for (const b of $('info').querySelectorAll('[data-launch]')) b.onclick = () => startLaunch(battle.units[+b.dataset.launch]);
   if (tf) $('bTransform').onclick = () => {
@@ -649,6 +665,7 @@ function act(cx, cy) {
   if (sel && reach && reach.has(key) && !u) {
     const again = sel.acted;
     battle.move(sel, cx, cy);
+    if (custom?.colony && sel.escaped) { log(`<span class="armyA">${nameOf(sel)}</span> leaves the map`); clearSel(); if (!checkEnd()) hud('<span class="dim">Off the map and safe.</span>'); return; }   // the colony's retreat: off an edge hex
     if (checkEnd()) { clearSel(); return; }   // expansion: a unit leaving by the exit edge can win the map
     if (again) { const s = sel; clearSel(); hud(unitCard(s)); return; }
     reach = null; range = null; targets = battle.targets(sel); hosts = [];
@@ -795,6 +812,7 @@ async function enemyTurn() {
   for (const step of aiTurn(battle)) {
     if (step.kind === 'blast') board.holdBlast(step);   // its victims stay drawn until the fireball
     draw(); hud();
+    if ((step.kind === 'leave' || step.kind === 'move') && step.u.fled && !step.u.leftLogged) { step.u.leftLogged = true; log(`<span class="armyB">${nameOf(step.u)}</span> got away off the edge`); }   // the colony's raid
     if (step.kind === 'attack') { logAttack(step); await runFight(step); draw(); }
     else if (step.kind === 'blast') {   // the Union's Abaddon fired the Quantum Decimator
       log(`<span class="armyB">${nameOf(step.att)}</span> fired the Quantum Decimator${step.hit.length ? ': ' + step.hit.map((u) => `<span class="${side(u.army)}">${nameOf(u)}</span>`).join(', ') + ' destroyed' : ''}`);
@@ -837,7 +855,7 @@ async function phaseEvents() {
 function checkEnd() {
   const w = battle.winner();
   if (w === null) return false;
-  if (battle.result?.reason === 'fled' && !battle.fledLogged) { battle.fledLogged = true; draw(); log('<b>The raiders break off and run.</b>'); }
+  if (battle.fleeing && !battle.fledLogged) { battle.fledLogged = true; draw(); hud(); log('<b>The raiders break off and run for the edge!</b>'); }   // the colony's raid (battle.js checkFlee)
   setTimeout(() => result(w), 400);
   return true;
 }
@@ -915,8 +933,8 @@ function colonyEnd(w) {
   $('resKicker').textContent = w === 0 ? 'Eden holds' : 'Eden is raided';
   $('resTitle').textContent = w === 0 ? (r === 'fled' ? 'The raiders break off and run' : 'The raiders are destroyed') : 'The raiders got through';
   $('resText').textContent = (w === 0
-    ? (r === 'fled' ? `Outnumbered two to one, they turned tail on turn ${battle.turn}.` : `Cleared on turn ${battle.turn}.`)
-    : r === 'retreat' ? 'You pulled the guard back. The raiders are through the gates.'
+    ? (r === 'fled' ? `Outnumbered two to one, they ran for the edge; the last of them got away on turn ${battle.turn}.` : `Cleared on turn ${battle.turn}.`)
+    : r === 'retreat' ? `You pulled the guard back: ${res.guardians.filter((g) => !g.lost).length} machine${res.guardians.filter((g) => !g.lost).length === 1 ? '' : 's'} got away. The raiders are through the gates.`
     : r === 'general' ? 'The General\'s machine is down. The guard falls back and the raiders are through.'
     : r === 'timeup' ? 'The raiders held out long enough to loot the outer works.'
     : 'The guard is gone. The raiders are through the gates.')

@@ -78,6 +78,7 @@ Power at levels 2–6 is −3, −6, −12, −22 and −40. Upkeep is 1, 2, 4, 
 The old words are unchanged: `allNeeds`, `park` and `clinic`. Version 7 adds:
 - `school`, `transit` (a Transit Station or Monorail Stop), `freight` (a Freight Yard), `shops` (a Market Quad at Stalls or above) and `quiet`;
 - `demand:R|C|I`, `happy:N`, `residents:N` (homes within 12 tiles) and `tech:<key>`.
+- Version 8 adds `value:N`: the quad's land value (the mean over its footprint, `js/colony/landvalue.js`) is at least N. It only gates growth. `rules.QUAD_VALUE` adds it to Living and Market Quads' levels 5 and 6 (45 and 55) without touching the data table. See docs/COLONY-V8.md.
 
 `habitatLevelReachable` accepts all of these. A level waiting on a tech is offered, and its panel says "Research Skyscrapers".
 
