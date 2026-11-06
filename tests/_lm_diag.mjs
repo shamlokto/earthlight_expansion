@@ -1,0 +1,196 @@
+// Guided goals and the advisor (js/colony/goals.js): a bot that does only what each goal's
+// "Show me" points at must finish every goal on Easy, without deaths. Also checks the advisor
+// warns in a crisis, and the beta guardian goal. Run: node tests/colony-goals.mjs
+import { newGame } from '../js/colony/state.js';
+import * as R from '../js/colony/rules.js';
+import { dayTick, stateRng } from '../js/colony/sim.js';
+import { goalStatus, advise, GOALS } from '../js/colony/goals.js';
+
+let failed = 0, passed = 0;
+const check = (ok, what) => { if (ok) passed++; else { failed++; console.log('FAIL', what); } };
+
+// Build `key` as close to the Command Centre as it fits (space buildings: near the dock).
+function placeAny(s, key) {
+  const cc = s.buildings.find((b) => b.key === 'command'), dock = s.buildings.find((b) => b.key === 'dock');
+  const zone = { space: dock, any: cc }[R.spec({ key }).zone] || cc, near = zone || cc;
+  const box = R.spec({ key }).zone === 'space' ? { x0: near.x - 26, y0: near.y - 26, x1: near.x + 26, y1: near.y + 26 } : { x0: 0, y0: 0, x1: s.map.w - 1, y1: s.map.h - 1 };
+  const p = R.findSpot(s, key, { box, score: (x, y) => Math.abs(x - near.x) + Math.abs(y - near.y) });
+  return p ? R.build(s, key, p.x, p.y) : { ok: false };
+}
+// Roads from the existing network into chamber `c` (BFS over buildable tiles and existing roads).
+function roadInto(s, c, fromAnywhere = false) {
+  const { w, h, ch } = s.map, road = new Set(s.buildings.filter((b) => b.key === 'road').map((b) => b.y * w + b.x));
+  // (the bot builds tightly round the Command Centre and can box its own roads in; then it starts
+  // the new road from any free tile of an open chamber)
+  const seeds = fromAnywhere ? [...Array(w * h).keys()].filter((i) => ch[i] !== 255 && ch[i] !== c.id && R.chamberOf(s, ch[i])?.status === 'open' && R.canBuild(s, 'road', i % w, (i / w) | 0) === null) : [...road];
+  const prev = new Int32Array(w * h).fill(-2), q = seeds;
+  for (const i of q) prev[i] = -1;
+  for (let k = 0; k < q.length; k++) {
+    const i = q[k];
+    if (ch[i] === c.id && !road.has(i)) { for (let j = i; j >= 0 && !road.has(j); j = prev[j]) R.build(s, 'road', j % w, (j / w) | 0); return true; }
+    if (fromAnywhere && prev[i] === -2) prev[i] = -1;
+    for (const j of [i - 1, i + 1, i - w, i + w]) if (prev[j] === -2 && R.canBuild(s, 'road', j % w, (j / w) | 0) === null) { prev[j] = i; q.push(j); }
+  }
+  return fromAnywhere ? false : roadInto(s, c, true);
+}
+// Keep the colony fed, breathing and housed while waiting on a goal (a sensible player does).
+// A sensible player doesn't order a second one while the first is still going up.
+const finished = (s, key) => s.buildings.filter((b) => b.key === key && b.build === 0).length;
+const queued = (s, key) => s.buildings.some((b) => b.key === key && b.build > 0);
+function upkeep(s) {
+  const m = R.summary(s), place = (s, key) => (queued(s, key) ? null : placeAny(s, key));
+  if (s.stock.credits < 150 && s.stock.food > 150) R.sell(s, 'food', Math.floor(s.stock.food - 120));
+  if (m.stock.food.delta < 0) place(s, 'farm');
+  if (m.stock.air.delta < 5) place(s, 'airplant');
+  // parts run out in a big colony: a sensible player buys some at the market (the advisor says so), and builds
+  // the salvage yard and the ore -> alloy -> parts chain
+  if (s.stock.parts < 40 && s.stock.credits > 1500) R.buy(s, 'parts', 60);
+  if (s.stock.parts < 60) {
+    if (s.unlocked.includes('salvage') && !s.buildings.some((b) => b.key === 'salvage')) place(s, 'salvage');
+    else if (s.unlocked.includes('smelter') && !s.buildings.some((b) => b.key === 'smelter')) place(s, 'smelter');
+    else if (s.unlocked.includes('fabricator') && s.buildings.filter((b) => b.key === 'fabricator').length < 2) place(s, 'fabricator');
+  }
+  if (m.stock.water.delta < 0) place(s, 'riverpump');
+  if (m.power.demand > m.power.supply) place(s, 'solar');
+  if (m.housing - s.pop < 10) place(s, 'habitat');
+  if (s.happy < 60 && R.summary(s).stock.credits.have > 400) place(s, 'park');
+  if (s.stock.ore > 50 && !finished(s, 'smelter')) R.sell(s, 'ore', s.stock.ore);
+  if ((s.stock.alloy || 0) > 40 && !finished(s, 'fabricator')) R.sell(s, 'alloy', Math.floor(s.stock.alloy - 20));
+  if (s.research && finished(s, 'lab') && !R.techStatus(s).find((t) => t.key === s.research.focus && !t.done)) {
+    const next = ['smelting', 'medicine', 'fabrication', 'reclaim'].find((k) => R.techStatus(s).find((t) => t.key === k && t.available && !t.done));
+    if (next) R.research(s, next);
+  }
+}
+function act(s) {
+  const g = goalStatus(s).current;
+  if (!g) return;
+  const sh = g.show;
+  if (sh?.build) { if (!queued(s, sh.build)) { const r = placeAny(s, sh.build); if (sh.build === 'depot' && r?.id) R.setMode(s, r.id, 'air'); } }
+  else if (sh?.chamber !== undefined) {
+    const c = R.chamberOf(s, sh.chamber);
+    if (c.status === 'sealed') R.chamberAction(s, c.id, 'survey');
+    else if (c.status === 'surveyed' && R.openBreaches(s, c).length === 0) R.chamberAction(s, c.id, 'pressurise');
+    else if (c.status === 'surveyed') for (const i of R.openBreaches(s, c)) R.build(s, 'seal', i % s.map.w, (i / s.map.w) | 0, c.deck || 'main');
+  } else if (sh?.tile && g.id === 'seal') R.build(s, 'seal', sh.tile.x, sh.tile.y);
+  else if (sh?.roads) { const c = s.chambers.find((k) => k.status === 'open' && k.kind !== 'landing'); c && roadInto(s, c); }
+  else if (sh?.research) {
+    // a player who opens Research picks what the goal talks about: smelting, then medicine
+    const st = R.techStatus(s), want = ['smelting', 'medicine', 'fabrication', 'reclaim'].find((k) => st.find((t) => t.key === k && t.available && !t.done));
+    if (want && s.research.focus !== want && !st.find((t) => t.key === s.research.focus && !t.done)) R.research(s, want);
+    if (finished(s, 'lab') === 0 && !queued(s, 'lab')) placeAny(s, 'lab');
+  } else if (sh?.defence) {
+    // a player who opens Defence orders the cheapest machine the Arsenal can build
+    if (sh.defence === 'production' && !(s.production || []).length) {
+      const m = R.machineList(s).filter((x) => x.ok).sort((p, q) => p.price - q.price)[0];
+      if (m) R.orderMachine(s, m.type);
+    }
+  } else if (sh?.market) { if (s.guardians.length && s.imported?.beta) R.sellGuardian(s, s.guardians[0].id); else if (s.stock.ore) R.sell(s, 'ore', s.stock.ore); else R.sell(s, 'food', 10); }
+}
+// Stage 2 (the secrets): once the goals reach the journal, a player explores the decks the way the
+// journal points: survey what the lifts reach, seal, clear dangers (pumps for floods, crews for air and
+// radiation, guardians for drones when the odds are good, more machines when not), open what opens,
+// and read every log found.
+const secretsTime = (s) => { const g = goalStatus(s).current; return !g || ['logs5', 'danger', 'vault', 'finalvault'].includes(g.id); };
+function explore(s) {
+  const { w } = s.map;
+  for (const site of s.secrets?.sites || []) {
+    if (!site.found || site.done) continue;
+    if (site.kind === 'log' && !s.secrets.read.includes(site.ref)) R.readLog(s, site.ref);
+    if (site.kind === 'vault') R.openVault(s, site.id);
+  }
+  if (s.stock.credits > 400) for (const c of s.chambers) if (c.status === 'sealed' && R.chamberAction(s, c.id, 'survey').ok) break;
+  for (const c of s.chambers) {
+    if (c.status !== 'surveyed') continue;
+    for (const i of R.openBreaches(s, c)) R.build(s, 'seal', i % w, (i / w) | 0, c.deck || 'main');
+    const d = R.dangerIn ? R.dangerIn(s, c.id) : null;
+    if (d && !d.done) {
+      const pv = R.dangerPreview(s, c.id);
+      if (d.kind === 'flooded') { if (!s.buildings.some((b) => b.key === 'pumpstation' && b.build > 0)) {
+        const p = R.findSpot(s, 'pumpstation', { deck: c.deck || 'main', box: { x0: c.x0, y0: c.y0, x1: c.x1, y1: c.y1 } }); if (p) R.build(s, 'pumpstation', p.x, p.y, c.deck || 'main'); } }
+      else if (d.kind === 'drones') {
+        if ((pv.winChance || 0) > 0.75) R.clearDanger(s, c.id);
+        else {
+          // more guardians, and crews for them
+          if (R.crewCap(s) <= R.guardianList(s).length && !queued(s, 'barracks')) placeAny(s, 'barracks');
+          if ((s.production || []).length < 2) { const m = R.machineList(s).filter((x) => x.ok).sort((p, q) => q.power - p.power || q.price - p.price)[0]; if (m) R.orderMachine(s, m.type); }
+        }
+      }
+      else if (!d.work && pv.canPay) R.clearDanger(s, c.id);
+      continue;
+    }
+    if (R.openBreaches(s, c).length === 0) {
+      // open only what holds something (a vault, survivors) or leads on, a dozen chambers or so; and only
+      // when the air supply can carry one more chamber (a sensible player watches the air)
+      const holds = (s.secrets?.sites || []).some((x) => x.chamber === c.id && x.kind !== 'log' && !x.done);
+      // (the secrets live mostly on the lower deck: a player hunting them keeps opening the way down there)
+      if (!holds && c.deck !== 'lower' && s.chambers.filter((k) => k.status === 'open').length >= 12) continue;
+      const air = R.summary(s).stock.air.delta;
+      if (air < c.tiles / 100 + 10) { if (!queued(s, 'airplant')) placeAny(s, 'airplant'); continue; }
+      const r = R.chamberAction(s, c.id, 'pressurise');
+      if (!r.ok && /more than your stores/.test(r.msg) && !queued(s, 'depot')) { const d = placeAny(s, 'depot'); if (d?.id) R.setMode(s, d.id, 'air'); }
+    }
+  }
+  if (!s.buildings.some((b) => b.key === 'barracks') && s.unlocked.includes('barracks') && !queued(s, 'barracks')) placeAny(s, 'barracks');
+}
+
+const GUIDED_LAST = 'vault';
+function play(opts, days = 450) {
+  const inc = opts.incidents; const s = newGame({ seed: opts.seed, difficulty: opts.difficulty }), rng = stateRng(s), when = {};
+  // version 8: this bot follows the goals' Show me only and never reads a warning, so incidents are off here
+  // (tests/colony-incidents.mjs plays them, and checks a prepared colony comes through them unharmed)
+  s.options.incidents = !!inc;
+  let pop0 = s.pop, deaths = 0, peak = s.pop, early = 0;
+  // The guided path this test checks ends with the first vault (GUIDED_LAST); the Ninefold vault is the
+  // long story arc, played to the end by tests/colony-secrets.mjs's scripted player.
+  for (let d = 0; d < days && goalStatus(s).current && !s.goals.done.includes(GUIDED_LAST); d++) {
+    act(s); upkeep(s); if (secretsTime(s)) explore(s);
+    const before = s.pop;
+    dayTick(s, rng);
+    opts.snap?.(s);
+    for (const p of s.goals.done) when[p] ??= s.day;
+    peak = Math.max(peak, s.pop);
+    if (s.pop < before && s.log.some((l) => l.day === s.day && /die|starv|suffoc/i.test(l.text))) {
+      deaths += before - s.pop;
+      if (!s.goals.done.includes('raid')) early += before - s.pop;
+    }
+    if (process.env.DIAG && s.log.some((l) => l.day === s.day && /died/.test(l.text))) {
+      const m = R.summary(s), n = (k) => s.buildings.filter((b) => b.key === k && b.build === 0).length;
+      console.log(`  day ${s.day} pop ${s.pop}/${m.housing} ${s.log.filter((l) => l.day === s.day && /died/.test(l.text)).map((l) => l.text).join(' ')} | food ${Math.round(m.stock.food.have)} (${m.stock.food.delta.toFixed(1)}) water ${Math.round(m.stock.water.have)} (${m.stock.water.delta.toFixed(1)}) air ${Math.round(m.stock.air.have)} (${m.stock.air.delta.toFixed(1)}) power ${m.power.supply}/${m.power.demand} jobs ${m.jobs} cr ${Math.round(s.stock.credits)} parts ${Math.round(s.stock.parts)} | farms ${n('farm')} air ${n('airplant')} pumps ${n('riverpump')} solar ${n('solar')} hab ${n('habitat')} building ${s.buildings.filter((b) => b.build > 0).length}`);
+    }
+    s.pending.length = 0;
+  }
+  return { s, when, deaths, pop0, peak, early };
+}
+
+
+const snap = (arr) => (s) => {
+  const m = R.summary(s);
+  arr.push({ day: s.day, pop: s.pop, happy: Math.round(s.happy), cr: Math.round(s.stock.credits), parts: Math.round(s.stock.parts),
+    food: Math.round(s.stock.food), water: Math.round(s.stock.water), air: Math.round(s.stock.air),
+    fd: +m.stock.food.delta.toFixed(1), wd: +m.stock.water.delta.toFixed(1), housing: m.housing, jobs: m.jobs, goals: s.goals.done.length, cur: goalStatus(s).current?.id,
+    nb: s.buildings.length, building: s.buildings.filter((b) => b.build > 0).length, rv: JSON.stringify(s.reserve || {}),
+    keys: s.buildings.map((b) => b.key + (b.build ? '*' : '') + (b.off ? '!' : '') + (b.level > 1 ? b.level : '')).join(','), log: s.log.filter((l) => l.day === s.day).map((l) => l.text).join(' | '), unpaid: !!s.flags.unpaid });
+};
+const A = [], B = [];
+const ra = play({ seed: 8, incidents: false, snap: snap(A) });
+const rb = play({ seed: 8, incidents: true, snap: snap(B) });
+console.log('off deaths', ra.deaths, 'on deaths', rb.deaths);
+let first = -1;
+for (let i = 0; i < Math.min(A.length, B.length); i++) {
+  const a = A[i], b = B[i];
+  const diff = Object.keys(a).filter((k) => k !== 'log' && a[k] !== b[k]);
+  if (diff.length && first < 0) first = i;
+  if (diff.length && (i - first < 12 || i % 10 === 0 || (b.day >= 180 && b.day <= 200))) {
+    console.log(`day ${a.day}: ` + diff.filter((k)=>k!=='keys').map((k) => `${k} ${a[k]}→${b[k]}`).join('; '));
+    if (diff.includes('keys')) { const ka = a.keys.split(','), kb = b.keys.split(','); const sa = new Map(); ka.forEach(k=>sa.set(k,(sa.get(k)||0)+1)); const sb=new Map(); kb.forEach(k=>sb.set(k,(sb.get(k)||0)+1)); const all=new Set([...sa.keys(),...sb.keys()]); console.log('   keys:', [...all].filter(k=>sa.get(k)!==sb.get(k)).map(k=>`${k} ${sa.get(k)||0}→${sb.get(k)||0}`).join(' ')); }
+    if (b.log) console.log('   on-log:', b.log.slice(0, 300));
+  }
+}
+for (const [nm, X] of [['off', A], ['on', B]]) for (const r of X) if (r.day >= 80 && r.day <= 125 && /transport|Transport|docks|left|fell/.test(r.log)) console.log(nm, r.day, r.pop, r.happy, r.food, r.fd, r.housing, r.log.match(/[^|]*(transport|docks|left|fell)[^|]*/g)?.join(' / '));
+{
+  const C = [];
+  play({ seed: 8, incidents: true, snap: (s) => { if (s.day >= 95 && s.day <= 100) { const l = s.stats.last; console.log('ON', s.day, 'pop', s.pop, 'food', s.stock.food.toFixed(2), 'prod', JSON.stringify(l.produced.food), 'cons', JSON.stringify(l.consumed.food), 'farms', s.buildings.filter(b=>b.key==='farm').map(b=>b.mode+':'+b.build).join(' '), 'rv', JSON.stringify(s.reserve), 'staff', l.staffing.toFixed(2), 'ration', s.flags.autoRation, 'cap', R.storageCaps(s).food, 'pf', l.power.factor.toFixed(2)); } } }, 101);
+}
+{
+  play({ seed: 8, incidents: true, snap: (s) => { if (s.day === 97) { for (const b of s.buildings) { const sp = R.spec(b); if (sp.makes?.food || sp.uses?.food) console.log('B', b.key, b.mode, b.x, b.y, b.off, b.build, JSON.stringify(sp.makes), JSON.stringify(sp.uses)); } console.log('happyParts', JSON.stringify(s.happyParts)); } } }, 98);
+}

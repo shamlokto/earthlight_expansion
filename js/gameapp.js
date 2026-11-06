@@ -390,6 +390,7 @@ function loadBattle() {
 function resumeExpansion(s) {
   setupBoard(-1);
   battle = restoreBattle(newBattle(-1), s).restored();
+  if (custom?.colony && battle.retreating) $('bRetreat').textContent = 'Retreating…';
   if (battle.blasted.length) paintTerrain();
   log('<b>Saved battle loaded.</b>');
   begin();
@@ -480,7 +481,7 @@ function draw() {
 function hud(msg) {
   const lim = battle.script.limit;
   $('turn').innerHTML = `Turn ${battle.turn}${lim ? ` / ${lim}` : ''} · <span class="${side(battle.army)}">${armyName(battle.army)}</span>`
-    + ` <small>${battle.forces(0).length} vs ${battle.forces(1).length}</small>`
+    + ` <small>${custom?.colony ? `${battle.onMap(0).length} vs ${battle.onMap(1).length}` : `${battle.forces(0).length} vs ${battle.forces(1).length}`}</small>`
     + `<div class="small dim">${battle.script.goal}${battle.hard ? ' · hard mode' : ''}</div>` + (custom ? custom.hud(battle) : '');
   if (msg !== undefined) $('info').innerHTML = msg;
 }
@@ -854,8 +855,8 @@ async function phaseEvents() {
 // ------------------------------------------------------------------ results
 function checkEnd() {
   const w = battle.winner();
-  if (w === null) return false;
   if (battle.fleeing && !battle.fledLogged) { battle.fledLogged = true; draw(); hud(); log('<b>The raiders break off and run for the edge!</b>'); }   // the colony's raid (battle.js checkFlee)
+  if (w === null) return false;
   setTimeout(() => result(w), 400);
   return true;
 }

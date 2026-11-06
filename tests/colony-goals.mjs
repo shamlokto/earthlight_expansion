@@ -136,9 +136,8 @@ function explore(s) {
 const GUIDED_LAST = 'vault';
 function play(opts, days = 450) {
   const s = newGame(opts), rng = stateRng(s), when = {};
-  // version 8: this bot follows the goals' Show me only and never reads a warning, so incidents are off here
-  // (tests/colony-incidents.mjs plays them, and checks a prepared colony comes through them unharmed)
-  s.options.incidents = false;
+  // version 8: incidents stay on: this bot follows the goals' Show me only and never reads a warning, so it is the
+  // unprepared player, and must still come through (tests/colony-incidents.mjs plays them one by one)
   let pop0 = s.pop, deaths = 0, peak = s.pop, early = 0;
   // The guided path this test checks ends with the first vault (GUIDED_LAST); the Ninefold vault is the
   // long story arc, played to the end by tests/colony-secrets.mjs's scripted player.

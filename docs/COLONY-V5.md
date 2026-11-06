@@ -114,3 +114,22 @@ The 11 readouts are too many for a laptop width. They are regrouped as follows:
 - Earth Light's music stays as a choice in Settings.
 
 **The day** is 2.5 s at ×1 (it was 1 s).
+
+### Physical flee and retreat (2026-11-06)
+
+The owner played a raid battle: "My enemies hide in the atmosphere and are immune to my attacks … they will run away immediately. I want them to run to the edge of the map … Same apply to me." This replaces the instant flee described above.
+
+- **No hiding.**
+  - On the Earth map the atmosphere band uses Earth's terrain id, so no unit can enter it and no shot passes. Raiders start just above it.
+  - Magnetic fields are left off raid maps, because beam weapons can't target into them.
+  - Every open hex connects to the dock.
+- **Raiders flee by flying.** When Eden's units on the map reach 2× the raiders' (from turn 2), every raider runs for the nearest edge.
+  - A fleeing raider doesn't attack unless it is cornered.
+  - It escapes by ending its move on an edge hex.
+  - Eden can chase and destroy them; those kills count.
+  - The battle ends when no raider is left on the map.
+- **Eden's retreat is physical too.** Retreat can't be undone. Each guardian has to end a move on an edge hex to leave; a guardian already on one gets a "Leave the map" button.
+  - The battle is a defeat once none of Eden's units that could still get away remains on the map.
+  - Escaped guardians keep their HP.
+- The result format is unchanged. Escaped raiders are not in `killed`.
+- `tests/colony-battle.mjs` has 158 checks. Not checked in a browser (that needs a ROM).

@@ -16,7 +16,7 @@ import {
   heatTarget, warnLead, raidsPossible, raidInterval, makeRaid, raidPreview, answerRaid, raidName, FACTIONS, FROM,
   basesDay, readyBase, raidsOn, baseName, BASE, BASE_RAIDS, releaseCommander, inviteChance,
   mapOf, deckOf, GROW_KEYS, reserveCap, RESERVE_GOODS,
-  demandOf, quadAdds, TRANSIT_KEYS,
+  demandOf, quadAdds, TRANSIT_KEYS, buy, buyPrice,
 } from './rules.js';
 import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { diffOf } from './difficulty.js';
@@ -167,7 +167,12 @@ export function dayTick(state, rng) {
     if (--b.damaged <= 0) { delete b.damaged; say('repaired', `The ${BUILDING[b.key].name} is repaired and back at work.`); }
   }
   const posts = state.buildings.filter((b) => b.key === 'safetypost' && active(b));
-  for (const b of state.buildings) {
+  // (version 8: crews put food, water and air first, so a farm or pump ordered in a pinch never waits behind a
+  // long queue of seals and roads; otherwise oldest order first, as before)
+  const queue = state.buildings.filter((b) => b.build > 0);
+  const vital = (b) => { const m = BUILDING[b.key]?.makes; return m && (m.food > 0 || m.water > 0 || m.air > 0) ? 0 : 1; };
+  if (queue.length > crews) queue.sort((a, b) => vital(a) - vital(b));   // a stable sort: the order stays within each group
+  for (const b of queue) {
     if (b.build <= 0 || crews <= 0) continue;
     crews--;
     const step = b.key === 'seal' && posts.some((p) => covers(p, b)) ? SIM.sealFast : 1;
@@ -351,6 +356,19 @@ export function dayTick(state, rng) {
   f.autoRation = autoRation;
   const need = { food: foodNeed * (ration ? SIM.ration : autoRation ? SIM.autoRation : 1), water: pop * NEEDS.water * nm, air: (pop * NEEDS.air + chamberAir) * nm };
   const got = {}, drawn = [];
+  // version 8, Easy: emergency imports. When the stores and the Emergency Stores cannot cover today's need, the
+  // quartermaster buys a few days of it from the traders at the dock (import prices), keeping some credits back:
+  // a colony with money in the bank never starves for want of a click (docs/COLONY-V8.md, the seed-8 trace).
+  const rescue = diffOf(state).rescue, rescued = [];
+  if (rescue) for (const g in need) {
+    if (st[g] + (rv[g] || 0) >= need[g] - 1e-9 || !(st.credits > rescue.keep)) continue;
+    const unit = buyPrice(state, g) * 1.1, want = Math.ceil(need[g] * rescue.days - st[g]);
+    const qty = Math.min(want, Math.floor((st.credits - rescue.keep) / unit));
+    const r = qty > 0 ? buy(state, g, qty) : null;
+    if (r?.ok) rescued.push(`${r.qty} ${g} (${r.credits} credits)`);
+  }
+  if (rescued.length) say('rescue', `The stores ran short: the quartermaster bought ${rescued.join(' and ')} from the traders at the dock. Build more to stop paying import prices.`, !f.rescued);
+  f.rescued = rescued.length > 0;
   for (const g in need) {
     const before = st[g]; use(g, need[g]);
     let gave = before - st[g];

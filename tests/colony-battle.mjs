@@ -178,9 +178,17 @@ function chase(eden = () => {}, opts = {}) {
   }
 }
 {
+  // never before their first full turn
+  const { b } = chase(); b.turn = 1;
+  kill(b, b.alive(0)[0], b.units.find((u) => u.army === 1 && u.rosterId === 1));
+  check(!b.fleeing && b.winner() === null, 'flee: not on turn 1');
+  b.endTurn(); b.endTurn();
+  check(b.turn === 2 && b.fleeing, 'flee: from turn 2, at the phase change');
+}
+{
   // kills during the chase count; a raider on an edge hex at its turn leaves; all destroyed = annihilate, not fled
   const { b } = chase();
-  const [a0, a1, a2] = b.alive(0);
+  const [a0, a1] = b.alive(0);
   kill(b, a0, b.units.find((u) => u.army === 1 && u.rosterId === 1));
   check(b.fleeing, 'chase: they run');
   kill(b, a1, b.units.find((u) => u.army === 1 && u.rosterId === 0));
@@ -198,7 +206,6 @@ function chase(eden = () => {}, opts = {}) {
   kill(c, c.alive(0)[2], c.alive(1)[0]);
   const rc = colonyResult(c);
   check(c.winner() === 0 && c.result.reason === 'annihilate' && rc.won && !rc.fled && rc.killed.length === 3, 'chase: all shot down before they get away: a win, not fled');
-  void a2;
 }
 {
   // a fleeing raider that can't get any nearer an edge (boxed in by Eden) fires from where it stands
@@ -288,8 +295,6 @@ function chase(eden = () => {}, opts = {}) {
   check(r.guardians.every((x) => !x.lost && x.hp === 1), 'leave: both got away whole');
   // the Earth side's edge is beside the atmosphere band
   const e = new ExpansionBattle(noRom, raidMission(s, { ...raid, from: 'earth' }), types, { tables });
-  const top = m0 => m0;
-  void top;
   let band = 0; for (let y = 1; y <= e.info.rows; y++) if (e.cls(15, y) === 12) { band = y; break; }
   check(band > 0 && e.edgeHex(15, band - 1) && !e.edgeHex(15, band - 2), `earth: the hexes just above the atmosphere are edge hexes (band from row ${band})`);
 }
@@ -322,8 +327,7 @@ function chase(eden = () => {}, opts = {}) {
     const s = colony([0], { seed });
     const raid = { ...raiders3(s), from, day: seed };
     s.raid.coming = raid;
-    const m = raidMission(s, raid), b = new ExpansionBattle(noRom, m, types, { tables }), map = raidMap(from, 0);
-    void map;
+    const m = raidMission(s, raid), b = new ExpansionBattle(noRom, m, types, { tables });
     const dock = b.alive(0)[0];
     const cells = [];
     for (let y = 1; y <= b.info.rows; y++) for (let x = 1; x < b.info.cols; x++) cells.push([x, y]);
@@ -334,35 +338,55 @@ function chase(eden = () => {}, opts = {}) {
       for (let i = 0; i < q.length; i++) for (const [a, c] of neighbours(...q[i])) if (b.inBounds(a, c) && !seen.has(`${a},${c}`) && stand(gt, a, c)) { seen.add(`${a},${c}`); q.push([a, c]); }
       reachFrom.set(gt, [...seen].map((k) => k.split(',').map(Number)));
     }
-    const hits = (gt, rt, x, y, open = false) => {
-      const tgt = { type: rt, x, y }, me = { type: gt, x: 0, y: 0, moved: false };
-      if (open) { // in open space: anything in range from any side
-        me.x = x; me.y = y + 1;
-        const cls0 = b.cls.bind(b); b.cls = () => 0;
-        const ok = types[gt].weapons.some((w) => w && w.power) && [1, 2, 3, 4, 5].some((r) => { me.y = y + r; return b.weaponsAgainst(me, tgt).length > 0; });
-        b.cls = cls0; return ok;
+    const reachSet = new Map([...reachFrom].map(([gt, list]) => [gt, new Set(list.map(([a, c]) => `${a},${c}`))]));
+    const me = { type: 0, x: 0, y: 0, moved: false }, tgt = { type: 0, x: 0, y: 0 };
+    // can guardian gt hit raider rt at (x, y) from a hex it can reach (any weapon reaches 7 at most)
+    const hits = (gt, rt, x, y) => {
+      me.type = gt; tgt.type = rt; tgt.x = x; tgt.y = y;
+      for (let a = x - 7; a <= x + 7; a++) for (let c = y - 8; c <= y + 8; c++) {
+        if (!reachSet.get(gt).has(`${a},${c}`) || distance({ x: a, y: c }, tgt) > 7) continue;
+        me.x = a; me.y = c;
+        if (b.weaponsAgainst(me, tgt).length) return true;
       }
-      return reachFrom.get(gt).some(([a, c]) => { if (distance({ x: a, y: c }, tgt) > 7) return false; me.x = a; me.y = c; return b.weaponsAgainst(me, tgt).length > 0; });
+      return false;
+    };
+    // ... and in open space at all (from beside or a few hexes off)
+    const inOpen = new Map();
+    const canAtAll = (gt, rt) => {
+      const k = `${gt}:${rt}`;
+      if (!inOpen.has(k)) {
+        const cls0 = b.cls; b.cls = () => 0;
+        let ok = false;
+        for (let r = 1; r <= 7 && !ok; r++) ok = b.weaponsAgainst({ type: gt, x: 15, y: 10 + r, moved: false }, { type: rt, x: 15, y: 10 }).length > 0;
+        b.cls = cls0; inOpen.set(k, ok);
+      }
+      return inOpen.get(k);
     };
     let bad = [];
     for (const rt of raiderTypes) for (const [x, y] of cells) {
       if (!stand(rt, x, y)) continue;
-      if (b.cls(x, y) === 6) bad.push(`atmosphere ${x},${y}`);
-      for (const gt of guards) if (hits(gt, rt, 15, 10, true) && !hits(gt, rt, x, y)) bad.push(`${types[gt].code.trim()}→${types[rt].code.trim()}@${x},${y}(cls ${b.cls(x, y)})`);
+      if (b.cls(x, y) === 6) { bad.push(`atmosphere ${x},${y}`); continue; }
+      for (const gt of guards) if (canAtAll(gt, rt) && !hits(gt, rt, x, y)) bad.push(`${types[gt].code.trim()}→${types[rt].code.trim()}@${x},${y}(cls ${b.cls(x, y)})`);
     }
-    for (const u of m.units.filter((v) => v.army === 1)) if (!guards.every((gt) => !hits(gt, u.type, 15, 10, true) || hits(gt, u.type, u.x, u.y))) bad.push(`start ${u.x},${u.y}`);
+    for (const u of m.units.filter((v) => v.army === 1)) if (!guards.every((gt) => !canAtAll(gt, u.type) || hits(gt, u.type, u.x, u.y))) bad.push(`start ${u.x},${u.y}`);
     check(!bad.length, `no hiding (${from}, seed ${seed}): every raider hex can be hit by the common guardians${bad.length ? ': ' + bad.slice(0, 6).join(' ') : ''}`);
   }
 }
 {
   // a full game: the Union AI against a simple player, until it ends; the result stays well formed
   let ends = {};
-  for (let g = 0; g < 6; g++) {
-    const s = colony([0, 1, 2, 3, 4, 38], { seed: 10 + g });
+  // games 6-9: Eden retreats on turn 3 and the AI flies its machines out (Brain flee); 10-13: Eden's AI side is strong enough to make them run
+  for (let g = 0; g < 14; g++) {
+    const strong = g >= 10;
+    const s = colony(strong ? [2, 2, 2, 4, 4, 42, 2, 2] : [0, 1, 2, 3, 4, 38], { seed: 10 + g, level: strong ? 9 : 3 });
     const raid = R.makeRaid(s, rnd, 260); raid.arrived = true; s.raid.coming = raid;
+    if (strong) raid.units = raid.units.slice(0, 3);
     const m = raidMission(s, raid), b = new ExpansionBattle(noRom, m, types, { tables });
     for (let guard = 0; b.winner() === null && guard < 60; guard++) {
-      if (b.army === 0) for (const u of b.alive(0)) {
+      if (g >= 6 && g < 10 && b.turn === 3 && b.army === 0 && !b.retreating) b.retreat();
+      if (b.army === 0 && b.running(0)) { for (const _ of aiTurn(b)) if (b.winner() !== null) break; }
+      else if (b.army === 0 && strong) { for (const _ of aiTurn(b)) if (b.winner() !== null) break; }   // the Union AI plays Eden
+      else if (b.army === 0) for (const u of b.alive(0)) {
         if (b.winner() !== null || u.carrier) continue;
         const reach = [...b.reachable(u).keys()];
         if (reach.length) b.move(u, ...reach[Math.floor(rnd() * reach.length)].split(',').map(Number));
@@ -377,6 +401,8 @@ function chase(eden = () => {}, opts = {}) {
     check(r.killed.every((i) => i >= 0 && i < raid.units.length) && r.guardians.every((x) => x.hp >= 0 && x.hp <= 1 && x.lost === (x.hp === 0)), `game ${g}: a well-formed result`);
     if (b.fled.length) check(b.result?.reason === 'fled' && r.fled && r.killed.length + b.fled.length <= raid.units.length && b.fled.every((u) => !r.killed.includes(u.rosterId)), `game ${g}: the escaped raiders are not in killed`);
     check(b.alive(1).length === 0 || b.winner() !== 0 || b.result?.reason !== 'fled', `game ${g}: fled only once none is on the map`);
+    if (b.retreating) check(b.winner() !== 0 || b.result?.reason === 'annihilate', `game ${g}: a retreat never ends in a raiders' flight`);
+    if (b.result?.reason === 'retreat') check(!r.won && b.escaped.length > 0 && b.escaped.every((u) => r.guardians.find((x) => x.id === u.rosterId)?.hp > 0), `game ${g}: retreat: the escaped are kept`);
   }
   console.log('games:', ends);
 }

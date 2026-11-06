@@ -179,12 +179,12 @@ export function raidMission(state, raid = state.raid?.coming) {
   const briefing = [
     `${who} are coming in from ${fromText(from)}: ${n} machine${n === 1 ? '' : 's'} (${list(units.filter((u) => u.army === 1))}).`,
     `Eden's guard stands at the dock: ${list(units.filter((u) => u.army === 0)) || 'nobody'}.${general ? ' The General flies with them.' : ''}${left.guardians.length ? ` ${left.guardians.length} rail gun${left.guardians.length === 1 ? '' : 's'} had no railway free and stay${left.guardians.length === 1 ? 's' : ''} home.` : ''}`,
-    'Raiders want loot, not a war. Outnumber them two to one and they break off and run. Retreat, or lose the guard, and they are through the gates.',
+    'Raiders want loot, not a war. Outnumber them two to one and they break off and run for the edge of the map: chase them down before they get away. Retreat and your machines have to fly off an edge under fire; once none is left, or the guard is lost, they are through the gates.',
   ].join('\n\n');
   return {
     version: 1, name: 'EDEN', title: 'Raid on Eden', chapter: `Eden · day ${state.day}`,
     screensW: SW, screensH: SH, pairs: PAIRS.map((p) => [...p]), grid: map.grid, units, arrivals: [],
-    objective: { kind: 'annihilate' }, goal: 'Drive off the raiders: destroy them, or outnumber them two to one.',
+    objective: { kind: 'annihilate' }, goal: 'Drive off the raiders: destroy them, or outnumber them two to one until they flee off the map.',
     turnLimit: 20, music: 0, general, briefing, flee: true,
     colony: { day: state.day, raidDay: raid.day, from, faction: raid.faction, tier: raid.tier, count: raid.units.length, left },
   };
