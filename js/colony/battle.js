@@ -25,16 +25,24 @@ const PAIRS = [
   [64, 13],                                  // 4 fortress deck (Eden's dock)
   [123, 19], [104, 19], [122, 19],           // 5-7 turret railway: top end, straight, bottom end
   [6, 3], [5, 2], [4, 1], [16, 4], [17, 5],  // 8 asteroid, 9 meteoroids, 10 magnetic field, 11 plasma, 12 gravity flux
-  [19, 6], [20, 7], [21, 7], [22, 7], [23, 8], [24, 9], [25, 9], [26, 9],   // 13-20 atmosphere
+  [19, 11], [20, 11], [21, 11], [22, 11], [23, 11], [24, 11], [25, 11], [26, 11],   // 13-20 atmosphere, drawn as such
   [27, 11], [28, 11], [29, 11], [30, 11],    // 21-24 Earth
 ];
+// No hiding (owner, 2026-11-06): the atmosphere's own terrain (class 6) can't be attacked by anything,
+// so raiders sheltering in it were immune. On raid maps the band is drawn as the original's
+// atmosphere but carries Earth's terrain id (class 12, Earth's gravity field: nobody enters, no
+// shot passes): an unstandable edge band. Its top row's neighbours count as the map's edge for
+// leaving the battle (js/expansion/battle.js edgeHex). Magnetic fields (beam weapons can't target
+// them) are not placed either, and every rock or field hex keeps an open hex beside it that Eden
+// can reach, so a raider standing anywhere can be hit by any guardian able to hit it in open space.
 const V = { deck: 4, railTop: 5, rail: 6, railEnd: 7, asteroid: 8, meteor: 9, magnetic: 10, plasma: 11, gravity: 12 };
 // Earth side (the original's atmosphere band, as on the Atmosphere and Wreck maps): rows from the
 // top of the band, [even column, odd column]; the last three rows are Earth itself (impassable).
 const EARTH_BAND = [[13, 14], [15, 16], [17, 18], [19, 20], [21, 22], [23, 24], [24, 24]];
 // What may stand where: void, deck and railway for every machine but the rail guns (category 14),
-// which stand on railway only; atmosphere for everything but them too.
-const STANDABLE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 13, 14, 15, 16, 17, 18, 19, 20]);
+// which stand on railway only. (The atmosphere band is unstandable, above.)
+const STANDABLE = new Set([0, 1, 2, 3, 4, 5, 6, 7]);
+const OPEN = (v) => v <= 7;   // void, deck, railway: every machine but the rail guns may stand there
 const RAILS = new Set([5, 6, 7]);
 const RAIL_ONLY = 14;   // Dragon, Hydra, Rahab
 
@@ -66,10 +74,10 @@ export function raidMap(from, seed) {
     grid[y][x] = x === centre.x ? (y === centre.y - 2 ? V.railTop : y === centre.y + 2 ? V.railEnd : V.rail) : V.deck;
     dock.push({ x, y });
   }
-  // the raiders' band: three hexes deep along their edge (in the upper atmosphere from Earth)
-  const band = (x, y) => (from === 'east' ? x >= COLS - 3 : from === 'west' ? x <= 3 : earth ? y >= bandTop && y <= bandTop + 2 : y <= 3);
-  // fields and rocks, kept off the dock's surroundings and the raiders' band
-  const kinds = [V.asteroid, V.asteroid, V.meteor, V.magnetic, V.plasma, V.gravity];
+  // the raiders' band: three hexes deep along their edge (from Earth: just above the atmosphere)
+  const band = (x, y) => (from === 'east' ? x >= COLS - 3 : from === 'west' ? x <= 3 : earth ? y >= bandTop - 3 && y < bandTop : y <= 3);
+  // fields and rocks, kept off the dock's surroundings and the raiders' band (no magnetic fields: no hiding)
+  const kinds = [V.asteroid, V.asteroid, V.meteor, V.plasma, V.gravity];
   for (let n = 0, tries = 0; n < 7 && tries < 200; tries++) {
     const c = { x: 1 + Math.floor(rnd() * (COLS - 1)), y: 1 + Math.floor(rnd() * ROWS) };
     if (c.y >= bandTop - 1 || hexDistance(c, centre) < 6 || band(c.x, c.y)) continue;
@@ -80,9 +88,10 @@ export function raidMap(from, seed) {
     }
     n++;
   }
+  openUp(grid, centre, bandTop);
   // start hexes: Eden's around the dock, nearest the raiders' side first; the raiders' along
   // their edge, nearest its middle first
-  const edgeMid = from === 'east' ? { x: COLS - 1, y: centre.y } : from === 'west' ? { x: 1, y: centre.y } : earth ? { x: centre.x, y: bandTop } : { x: centre.x, y: 1 };
+  const edgeMid = from === 'east' ? { x: COLS - 1, y: centre.y } : from === 'west' ? { x: 1, y: centre.y } : earth ? { x: centre.x, y: bandTop - 1 } : { x: centre.x, y: 1 };
   const cells = [];
   for (let y = 1; y <= ROWS; y++) for (let x = 1; x <= COLS - 1; x++) cells.push({ x, y });
   const home = cells.filter((c) => hexDistance(c, centre) <= 6 && STANDABLE.has(grid[c.y][c.x]) && !RAILS.has(grid[c.y][c.x]) && !band(c.x, c.y))
@@ -90,6 +99,32 @@ export function raidMap(from, seed) {
   const away = cells.filter((c) => band(c.x, c.y) && STANDABLE.has(grid[c.y][c.x]))
     .sort((a, b) => hexDistance(a, edgeMid) - hexDistance(b, edgeMid) || a.y - b.y || a.x - b.x);
   return { grid, centre, home, away, rails: dock.filter((c) => RAILS.has(grid[c.y][c.x])) };
+}
+
+// No pockets: every open hex joins the dock's open space, and every rock or field hex has a
+// joined open hex beside it (else it is cleared to void), so a guardian of any kind can come
+// alongside whatever stands there. Clears field hexes only, until nothing changes.
+function openUp(grid, centre, bandTop) {
+  const field = (x, y) => playable(x, y) && y < bandTop && !OPEN(grid[y][x]);
+  for (let changed = true; changed;) {
+    changed = false;
+    const joined = new Set([`${centre.x},${centre.y}`]), q = [[centre.x, centre.y]];
+    for (let i = 0; i < q.length; i++) for (const [a, b] of hexNeighbours(...q[i])) {
+      if (!playable(a, b) || b >= bandTop || !OPEN(grid[b][a]) || joined.has(`${a},${b}`)) continue;
+      joined.add(`${a},${b}`); q.push([a, b]);
+    }
+    for (let y = 1; y < bandTop && y <= ROWS; y++) for (let x = 1; x <= COLS - 1; x++) {
+      const near = hexNeighbours(x, y).filter(([a, b]) => playable(a, b));
+      if (OPEN(grid[y][x]) && !joined.has(`${x},${y}`)) {   // a pocket: clear the rocks around it
+        for (const [a, b] of near) if (field(a, b)) { grid[b][a] = 0; changed = true; }
+      } else if (field(x, y) && !near.some(([a, b]) => joined.has(`${a},${b}`))) { grid[y][x] = 0; changed = true; }
+    }
+  }
+}
+// The six neighbours on the engine's grid (odd columns shifted down).
+function hexNeighbours(x, y) {
+  const odd = x & 1;
+  return [[x, y - 1], [x, y + 1], [x - 1, y - 1 + odd], [x - 1, y + odd], [x + 1, y - 1 + odd], [x + 1, y + odd]];
 }
 
 // ---------------------------------------------------------------- the mission
@@ -144,12 +179,12 @@ export function raidMission(state, raid = state.raid?.coming) {
   const briefing = [
     `${who} are coming in from ${fromText(from)}: ${n} machine${n === 1 ? '' : 's'} (${list(units.filter((u) => u.army === 1))}).`,
     `Eden's guard stands at the dock: ${list(units.filter((u) => u.army === 0)) || 'nobody'}.${general ? ' The General flies with them.' : ''}${left.guardians.length ? ` ${left.guardians.length} rail gun${left.guardians.length === 1 ? '' : 's'} had no railway free and stay${left.guardians.length === 1 ? 's' : ''} home.` : ''}`,
-    'Raiders want loot, not a war. Outnumber them two to one and they break off and run. Retreat, or lose the guard, and they are through the gates.',
+    'Raiders want loot, not a war. Outnumber them two to one and they break off and run for the edge of the map: chase them down before they get away. Retreat and your machines have to fly off an edge under fire; once none is left, or the guard is lost, they are through the gates.',
   ].join('\n\n');
   return {
     version: 1, name: 'EDEN', title: 'Raid on Eden', chapter: `Eden · day ${state.day}`,
     screensW: SW, screensH: SH, pairs: PAIRS.map((p) => [...p]), grid: map.grid, units, arrivals: [],
-    objective: { kind: 'annihilate' }, goal: 'Drive off the raiders: destroy them, or outnumber them two to one.',
+    objective: { kind: 'annihilate' }, goal: 'Drive off the raiders: destroy them, or outnumber them two to one until they flee off the map.',
     turnLimit: 20, music: 0, general, briefing, flee: true,
     colony: { day: state.day, raidDay: raid.day, from, faction: raid.faction, tier: raid.tier, count: raid.units.length, left },
   };

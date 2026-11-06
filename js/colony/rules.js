@@ -20,6 +20,8 @@ export {
 } from './secrets.js';
 // version 4, stage 3: fleet expeditions on the sector map (js/colony/expeditions.js), re-exported likewise
 import { ensureExpeditions, densCleared, EXP } from './expeditions.js';
+import { valueOf as landValueOf, landValue } from './landvalue.js';   // version 8: land value (docs/COLONY-V8.md)
+export { landValue, landValueGrid, landValueParts, valueOf as landValueOf, LV } from './landvalue.js';
 export {
   ensureExpeditions, launchExpedition, expeditionPreview, recallExpedition, expeditionStatus, makeSectors, sectorOf, densCleared,
   lootPlan, lootText, siteName, travelDays, strengthOf, isAway, SITES, HAZARD, EXP,
@@ -30,6 +32,19 @@ export {
   victoryStatus, victoryText, quotaOf, popTargetOf, ensureRelief, ENDING, EPILOGUE,
   HAPPY_TARGET, massDrivers, convoyLoad, autoConvoyGood,   // version 6 (docs/COLONY-V6.md)
 } from './victory.js';
+// version 8 (docs/COLONY-V8.md): landmarks (js/colony/landmarks.js) and incidents you can prepare for (js/colony/incidents.js)
+import { landmarkWhy, landmarkCrews, landmarkCost, landmarkWarn, landmarkImports, ensureLandmarks } from './landmarks.js';
+import { ensureIncidents, flareMult } from './incidents.js';
+import { ensurePetitions } from './petitions.js';
+export {
+  PETITION, PETITIONS, PETITION_OF, petitionsOn, ensurePetitions, petitionStatus, setPetitions, wantText,
+} from './petitions.js';
+export {
+  LANDMARKS, LM, LINES, isLandmark, landmarkOn, landmarkNeeds, landmarkEarned, landmarkWhy, landmarkStatus, landmarkHappy, ensureLandmarks,
+} from './landmarks.js';
+export {
+  INCIDENT, INCIDENTS, INCIDENT_KINDS, incidentsOn, ensureIncidents, incidentLead, incidentStatus, setIncidents, flareMult, sickShare, incidentHappy,
+} from './incidents.js';
 // The survivors' two commanders (Warden Marrow, Tobias Venn) are commanders like any other once they join.
 for (const c of SURVIVOR_COMMANDERS) COMMANDER[c.key] ??= { portrait: `portrait/${c.key}`, ...c, survivor: true };
 
@@ -97,6 +112,7 @@ export function upgradeState(state) {
   ensureExpeditions(state);   // stage 3: the sector map, from the seed
   ensureBases(state);   // version 5: the raiders' bases on the sector map
   state.options ??= {};
+  ensureLandmarks(state); ensureIncidents(state); ensurePetitions(state);   // version 8
   if (state.unlocked) for (const d of BUILDINGS) if (d.decks && !d.tech && !d.unlock && !d.fixed && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
   return state;
 }
@@ -261,7 +277,7 @@ export const housingOf = (state) => state.buildings.reduce((t, b) => t + (active
 export const jobsOf = (state) => state.buildings.reduce((t, b) => t + (active(b) ? spec(b).jobs || 0 : 0), 0);
 export const staffingOf = (state) => { const j = jobsOf(state); return j ? Math.min(1, state.pop / j) : 1; };
 // Construction crews: the Command Centre's own plus each working Repair Yard's.
-export const crewsOf = (state) => 2 + state.buildings.reduce((t, b) => t + (b.key === 'repairyard' && active(b) ? spec(b).crews || 1 : 0), 0);
+export const crewsOf = (state) => 2 + landmarkCrews(state) + state.buildings.reduce((t, b) => t + (b.key === 'repairyard' && active(b) ? spec(b).crews || 1 : 0), 0);
 
 // Power this day before batteries: { supply, demand }. Producers with jobs scale with staffing.
 export function powerOf(state, staffing = staffingOf(state), moneyF = 1) {
@@ -269,7 +285,7 @@ export function powerOf(state, staffing = staffingOf(state), moneyF = 1) {
   for (const b of state.buildings) {
     if (!active(b)) continue;
     const s = spec(b);
-    if (s.power > 0) supply += s.power * (s.jobs ? staffing : 1) * moneyF * (b.key === 'fusion' ? fusionFactor(state, b) : 1);
+    if (s.power > 0) supply += s.power * (s.jobs ? staffing : 1) * moneyF * (b.key === 'fusion' ? fusionFactor(state, b) : 1) * flareMult(state, b.key);   // version 8: a solar flare
     else if (s.power < 0) demand -= s.power;
   }
   return { supply, demand };
@@ -387,7 +403,8 @@ export function placeCheck(state, key, x, y, opts = {}) {
   if (d.fixed) return `The ${d.name} cannot be built.`;
   const deck = opts.deck || 'main', m = mapOf(state, deck);
   if (!m) return 'There is no such deck.';
-  if (!state.unlocked.includes(key)) return lockedWhy(d);
+  if (d.landmark) { const lw = landmarkWhy(state, key, opts.ignore ?? -1); if (lw) return lw; }   // version 8: one of a kind, its requirement met
+  else if (!state.unlocked.includes(key)) return lockedWhy(d);
   if (!decksOf(d).includes(deck)) return `A ${d.name} stands only on the ${deckList(decksOf(d))} deck${decksOf(d).length > 1 ? 's' : ''}.`;
   const { w, h, t, ch } = m;
   if (x < 0 || y < 0 || x + d.size > w || y + d.size > h) return 'That is off the edge of the map.';
@@ -436,7 +453,7 @@ const lockedWhy = (d) => (d.tech && TECH[d.tech] ? `Research ${TECH[d.tech].name
 // A cost as this colony pays it: scaled by difficulty (js/colony/difficulty.js) and, given the
 // building's key, by finished techs' cost effects (Better Seals); rounded up.
 export function costOf(state, cost, key) {
-  const m = diffOf(state).cost * (key ? techEffect(state, 'cost', key) : 1);
+  const m = diffOf(state).cost * (key ? techEffect(state, 'cost', key) * landmarkCost(state) : 1);   // version 8: Ruess's Workshop
   return { credits: Math.ceil((cost.credits || 0) * m), parts: Math.ceil((cost.parts || 0) * m) };
 }
 function afford(state, raw, key) {
@@ -606,8 +623,9 @@ export function toggle(state, id) {
 // The build menu. With a deck, a building that cannot stand there says so ("Upper deck only.").
 export function buildable(state, deck) {
   return BUILDINGS.filter((d) => !d.fixed).map((d) => {
-    const unlocked = state.unlocked.includes(d.key), onDeck = !deck || decksOf(d).includes(deck);
-    const why = !onDeck ? deckWhy(d) : unlocked ? afford(state, d.cost, d.key) : d.tech && TECH[d.tech] ? `Research ${TECH[d.tech].name}.` : `Unlocks at ${d.unlock?.pop ?? 80} colonists.`;
+    const lw = d.landmark ? landmarkWhy(state, d.key) : null;   // version 8: a landmark waits on its requirement, and stands once
+    const unlocked = d.landmark ? !lw : state.unlocked.includes(d.key), onDeck = !deck || decksOf(d).includes(deck);
+    const why = !onDeck ? deckWhy(d) : lw || (unlocked ? afford(state, d.cost, d.key) : d.tech && TECH[d.tech] ? `Research ${TECH[d.tech].name}.` : `Unlocks at ${d.unlock?.pop ?? 80} colonists.`);
     return { key: d.key, name: d.name, cat: d.cat, cost: costOf(state, d.cost, d.key), unlocked, why, decks: decksOf(d), onDeck };
   });
 }
@@ -698,7 +716,7 @@ export function sell(state, good, qty) {
 // life's essentials can be bought at the dock for twice the sale price; each lot bought pushes that
 // price up, and it recovers over days like a sale's.
 export const IMPORTS = ['parts', 'food', 'water', 'air'], IMPORT_MARKUP = 2;
-export function buyPrice(state, good) { return BASE_PRICE[good] * (state.market?.[good] ?? 1) * IMPORT_MARKUP; }
+export function buyPrice(state, good) { return BASE_PRICE[good] * (state.market?.[good] ?? 1) * IMPORT_MARKUP * landmarkImports(state); }   // version 8: the Orbital Elevator
 export function buy(state, good, qty) {
   if (!IMPORTS.includes(good)) return no('Traders don\'t sell that.');
   qty = Math.floor(qty);
@@ -776,7 +794,7 @@ export function answer(state, pendingId, choiceKey) {
 // Version 7: the quads' need words, and 'demand:R', 'happy:60', 'residents:150', 'tech:skyscrapers' (a level
 // waiting on a tech is offered: its panel says what to research).
 const NEED_WORDS = new Set(['allNeeds', 'park', 'clinic', 'school', 'transit', 'freight', 'shops', 'quiet']);
-const NEED_PREFIX = new Set(['demand', 'happy', 'residents', 'tech']);
+const NEED_PREFIX = new Set(['demand', 'happy', 'residents', 'tech', 'value']);   // version 8: 'value:N' (land value)
 export const habitatLevelReachable = (level) => !level?.needs?.some((n) => {
   const [k, v] = String(n).split(':');
   if (v !== undefined) return !NEED_PREFIX.has(k) || (k === 'tech' && !TECH[v]);
@@ -790,8 +808,8 @@ export function habitatNeeds(state, b, field, ctx = {}) {
   const d = BUILDING[b.key], next = d.levels?.[b.level];
   if (!next?.needs || !habitatLevelReachable(next)) return [];
   const met = state.stats?.last?.met || {};
-  const out = [];
-  for (const n of next.needs) {
+  const out = [], lv = QUAD_VALUE[b.key]?.[b.level];   // version 8: the top levels want land value
+  for (const n of lv && !next.needs.some((q) => q.startsWith('value:')) ? [...next.needs, `value:${lv}`] : next.needs) {
     const [k, v] = n.split(':');
     if (n === 'allNeeds') {
       for (const g of ['food', 'water', 'air', 'power']) out.push({ need: g, label: `Enough ${g} for every colonist`, met: !!met[g] });
@@ -811,6 +829,7 @@ export function habitatNeeds(state, b, field, ctx = {}) {
     } else if (k === 'happy') out.push({ need: n, label: `Happiness ${v} (now ${Math.round(state.happy || 0)})`, met: (state.happy || 0) >= +v, grow: true });
     else if (k === 'residents') { const r = residentsNear(state, b); out.push({ need: n, label: `Homes for ${num(+v)} within ${QUAD.residentsRadius} tiles (now ${num(r)})`, met: r >= +v }); }
     else if (k === 'tech') out.push({ need: n, label: `Research ${TECH[v]?.name || v}`, met: !!state.research?.done?.includes(v), grow: true });
+    else if (k === 'value') { const lv = landValueOf(state, b); out.push({ need: n, label: `Land value ${v} (now ${Math.round(lv)})`, met: lv >= +v, grow: true }); }
     else out.push({ need: n, label: n, met: false });
   }
   return out;
@@ -822,6 +841,9 @@ export function habitatNeeds(state, b, field, ctx = {}) {
 //   C (shops)  = residents − the shoppers Market Quads serve
 //   I (work)   = jobless colonists + a pull for parts (+20 with the parts store empty, −20 full)
 // in units of homes, shoppers and jobs. A quad that grows spends its zone's demand by what it adds (sim.js).
+// Version 8 (docs/COLONY-V8.md): the land value (landvalue.js, 0–100) a Living or Market Quad needs to grow into
+// a level, by the levels' index (4 = level 5, 5 = level 6). It only gates growing, like happiness.
+export const QUAD_VALUE = { livingquad: { 4: 45, 5: 55 }, marketquad: { 4: 45, 5: 55 } };
 export const QUAD = { residentsRadius: 12, transport: 20, hall: 0.5, hallMax: 3, partsPull: 40, scale: 0.1, scaleMin: 40 };
 export const ZONE_NAME = { R: 'Residential', C: 'Commercial', I: 'Industrial' };
 export const TRANSIT_KEYS = new Set(['transit', 'monorail']);
@@ -952,6 +974,11 @@ export function coverage(state, kind, deck = 'main') {
       if (!s.power || deckOf(b) !== deck) continue;
       for (const i of tilesOf(state, b)) out[i] = !active(b) ? 0 : s.power > 0 ? 1 : pf;
     }
+    return out;
+  }
+  if (kind === 'value') {   // version 8: land value / 100, a faint low where an open tile has none
+    const g = landValue(state, deck);
+    for (let i = 0; i < n; i++) if (g[i] >= 0) out[i] = Math.max(0.02, g[i] / 100);
     return out;
   }
   if (kind === 'happiness') {
@@ -1336,7 +1363,7 @@ export function heatTarget(state) {
   if (dens) parts.push({ label: 'Pirate dens cleared', value: -EXP.denHeat * dens });
   return { target: Math.max(0, Math.min(100, parts.reduce((t, p) => t + p.value, 0))), parts };
 }
-export const warnLead = (state) => Math.min(RAID.warnMax, RAID.warn + RAID.warnPerMast * state.buildings.filter((b) => b.key === 'sensormast' && active(b)).length);
+export const warnLead = (state) => Math.min(RAID.warnMax, RAID.warn + RAID.warnPerMast * state.buildings.filter((b) => b.key === 'sensormast' && active(b)).length) + landmarkWarn(state);   // version 8: Sato's Watch
 // Raids on at all (Settings: owner, 2026-11-05 "toggle raiders on and off").
 export const raidsOn = (state) => state.options?.raids !== false;
 // The raiders' bases (state.raid.bases), from the sector map: [{ id, sector, faction, fleet, max, regen,

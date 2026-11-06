@@ -34,6 +34,7 @@ export const CATEGORIES = [
   { key: 'homes', name: 'Homes & parks' },
   { key: 'services', name: 'Services' },
   { key: 'defence', name: 'Defence' },
+  { key: 'landmarks', name: 'Landmarks' },   // version 8 (docs/COLONY-V8.md): one of a kind each
 ];
 
 // What one colonist needs a day.
@@ -260,6 +261,32 @@ export const BUILDINGS = [
     text: 'A stop on the high line: a Transit Station on one tile, reaching 16 tiles.' },
   { key: 'freightyard', name: 'Freight Yard', ver: 7, cat: 'industry', size: 2, zone: 'interior', on: ['deck', 'plain', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 600, parts: 40 }, days: 5, jobs: 8, upkeep: 4, power: -6, radius: 10, storage: { parts: 300, alloy: 200 }, tech: 'lightindustry',
     text: 'Cranes and containers: stores parts and alloy, Workshop Quads in range make a quarter more and can grow into Assembly Plants and Factories.' },
+  // ---------------------------------------------------------------- version 8 (docs/COLONY-V8.md): landmarks and incidents
+  // Landmarks (`landmark`): one per colony, big and slow to build, each with a lasting bonus (js/colony/landmarks.js reads
+  // them). `landmark` lists the requirement, met once and then kept: { pop, chambers: N | 'main' (every main-deck
+  // chamber open), happyDays (happiness of 70 or more held that many days in a row), tech: [keys] }, and `effect` in words.
+  // They carry no top-level `tech`: the requirement, not the research menu, opens them.
+  { key: 'workshop', name: 'Ruess\'s Workshop', ver: 8, cat: 'landmarks', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 3000, parts: 250 }, days: 14, jobs: 12, upkeep: 10, power: -15,
+    landmark: { chambers: 10, tech: ['fabrication'], effect: 'Two more construction crews, and every building costs a tenth less.' },
+    text: 'The professor\'s own works: a great hall of lathes, cranes and drafting tables. Two more construction crews, and every building costs a tenth less.' },
+  { key: 'govgarden', name: 'Governor\'s Garden', ver: 8, cat: 'landmarks', size: 3, zone: 'interior', on: ['plain', 'fertile', 'poor', 'deck', 'hills'], decks: ['upper', 'main'], cost: { credits: 2500, parts: 150 }, days: 12, jobs: 6, upkeep: 8, uses: { water: 10 }, makes: { air: 30 }, radius: 12, park: 12,
+    landmark: { pop: 500, happyDays: 30, effect: '+5 happiness for the whole colony, and the finest park in Eden for every home within 12 tiles.' },
+    text: 'Terraced lawns, a glasshouse and a lake around the Governor\'s old pavilion: +5 happiness colony-wide and a park rating of 12 within 12 tiles.' },
+  { key: 'observatory', name: 'Sato\'s Watch', ver: 8, cat: 'landmarks', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main'], cost: { credits: 2400, parts: 200 }, days: 12, jobs: 8, upkeep: 8, power: -12, makes: { research: 4 },
+    landmark: { pop: 300, tech: ['sensors', 'observation'], effect: 'Incidents and raids are seen 3 days earlier, and the telescopes make 4 research a day.' },
+    text: 'An observatory with a great domed telescope and Sato\'s watch room: incidents and raids are seen 3 days earlier, and 4 research a day.' },
+  { key: 'lantern', name: 'The Lantern', ver: 8, cat: 'landmarks', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['main'], cost: { credits: 4000, parts: 300 }, days: 16, jobs: 10, upkeep: 12, power: -40,
+    landmark: { chambers: 'main', effect: 'Transports bring a quarter more colonists, relief convoys pay half as much again, and +3 happiness.' },
+    text: 'A tower of light that Earth can see from the night side: transports bring a quarter more colonists, relief convoys pay half as much again, +3 happiness.' },
+  { key: 'hallofnames', name: 'Hall of Names', ver: 8, cat: 'landmarks', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 3000, parts: 200 }, days: 14, jobs: 6, upkeep: 8, power: -8,
+    landmark: { pop: 1000, tech: ['civics'], effect: '+4 happiness (+3 more once it holds the Ninefold registry), and grief and fear fade twice as fast.' },
+    text: 'A quiet hall of lamps where Eden remembers its dead: +4 happiness, more once it holds the Ninefold registry, and grief and fear fade twice as fast.' },
+  { key: 'elevator', name: 'Orbital Elevator', ver: 8, cat: 'landmarks', size: 2, zone: 'hull', on: ['hull'], cost: { credits: 8000, parts: 600 }, days: 20, jobs: 30, upkeep: 25, power: -80,
+    landmark: { pop: 3000, tech: ['massdriver'], effect: 'Relief convoys cost half, and goods bought from Earth at the Market cost a quarter less.' },
+    text: 'A cable down the gravity well to Earth\'s upper air, with climbers riding it: relief convoys cost half, and Earth goods at the Market cost a quarter less.' },
+  // Incidents (js/colony/incidents.js): the Flare Shelter is what helps in a solar flare.
+  { key: 'flareshelter', name: 'Flare Shelter', ver: 8, cat: 'power', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 400, parts: 30 }, days: 4, jobs: 1, upkeep: 3, power: -2, storage: { power: 150 }, tech: 'forecasting',
+    text: 'Shielded rooms and a buried switchyard: in a solar flare, solar power drops by a quarter instead of half and nobody panics. Stores 150 power too.' },
 ];
 
 export const BUILDING = Object.fromEntries(BUILDINGS.map((b) => [b.key, b]));

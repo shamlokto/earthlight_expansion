@@ -13,6 +13,7 @@
 import { BASE_PRICE, NEEDS } from './data/buildings.js';
 import { diffOf } from './difficulty.js';
 import { addPending, log } from './rules.js';
+import { landmarkReliefPay, landmarkReliefCost } from './landmarks.js';   // version 8: The Lantern, the Orbital Elevator
 
 export const RELIEF = {
   load: { food: 500, water: 500, air: 500, helium: 100 },   // one load
@@ -48,12 +49,12 @@ const hasDock = (state) => state.buildings.some((b) => b.key === 'dock' && b.bui
 const working = (b) => b.build === 0 && !b.off && !(b.down > 0) && !(b.damaged > 0);
 export const massDrivers = (state) => state.buildings.filter((b) => b.key === 'massdriver' && working(b));
 export function convoyCost(state, heavy = false) {
-  const f = diffOf(state).cost, c = heavy ? RELIEF.heavy.cost : RELIEF.cost;
+  const f = diffOf(state).cost * landmarkReliefCost(state), c = heavy ? RELIEF.heavy.cost : RELIEF.cost;
   return { credits: Math.round(c.credits * f), parts: Math.round(c.parts * f) };
 }
 const loadsOf = (heavy) => (heavy ? RELIEF.heavy.loads : 1);
 export const convoyLoad = (good, heavy = false) => RELIEF.load[good] * loadsOf(heavy);
-export const convoyPay = (good, heavy = false) => Math.round(BASE_PRICE[good] * convoyLoad(good, heavy) * RELIEF.pay);
+export const convoyPay = (good, heavy = false, state = null) => Math.round(BASE_PRICE[good] * convoyLoad(good, heavy) * RELIEF.pay * landmarkReliefPay(state));
 
 // Why a convoy of this good cannot leave today (null when it can). `heavy`: a Mass Driver's launch.
 export function convoyWhy(state, good, heavy = false) {
@@ -73,7 +74,7 @@ export function sendConvoy(state, good, heavy) {
   if (heavy === undefined) heavy = !convoyWhy(state, good, true);
   const why = convoyWhy(state, good, heavy);
   if (why) return no(why);
-  const r = ensureRelief(state), load = convoyLoad(good, heavy), n = loadsOf(heavy), c = convoyCost(state, heavy), pay = convoyPay(good, heavy);
+  const r = ensureRelief(state), load = convoyLoad(good, heavy), n = loadsOf(heavy), c = convoyCost(state, heavy), pay = convoyPay(good, heavy, state);
   state.stock[good] -= load; state.stock.credits -= c.credits; state.stock.parts -= c.parts;
   state.stock.credits += pay;
   r.sent++; r.loads += n; r.byGood[good] = (r.byGood[good] || 0) + n; r.last = state.day;
@@ -101,7 +102,7 @@ export function convoyStatus(state) {
   return {
     sent: r.sent, loads: r.loads, quota: quotaOf(state), station: st ? st.name : null, cost: convoyCost(state), heavyCost: convoyCost(state, true), driver,
     auto: massDrivers(state).some((b) => b.mode === 'auto'),
-    goods: CONVOY_GOODS.map((g) => ({ good: g, load: RELIEF.load[g], heavyLoad: convoyLoad(g, true), pay: convoyPay(g), heavyPay: convoyPay(g, true),
+    goods: CONVOY_GOODS.map((g) => ({ good: g, load: RELIEF.load[g], heavyLoad: convoyLoad(g, true), pay: convoyPay(g, false, state), heavyPay: convoyPay(g, true, state),
       have: Math.floor(state.stock[g] || 0), sent: r.byGood[g] || 0, why: convoyWhy(state, g), whyHeavy: driver ? convoyWhy(state, g, true) : 'Heavy launches need a Mass Driver (research Mass Driver).' })),
   };
 }

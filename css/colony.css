@@ -1318,3 +1318,7 @@ button.cl-jslot:hover { border-color: var(--gold); }
 .cl-rcibar.zR i.up { background: #6fdc6a; }
 .cl-rcibar.zC i.up { background: #6fb8ff; }
 .cl-rcibar.zI i.up { background: #f5c542; }
+/* version 8: the land value legend in the overlay bar */
+.cl-ovl-key { display: inline-flex; align-items: center; gap: 5px; padding: 0 6px; font: 600 10px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.cl-ovl-key[hidden] { display: none; }
+.cl-ovl-key b { display: inline-block; width: 54px; height: 8px; border-radius: 2px; background: linear-gradient(90deg, rgb(58, 111, 240), rgb(63, 224, 160), rgb(255, 240, 122)); }

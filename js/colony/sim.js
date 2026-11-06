@@ -16,7 +16,7 @@ import {
   heatTarget, warnLead, raidsPossible, raidInterval, makeRaid, raidPreview, answerRaid, raidName, FACTIONS, FROM,
   basesDay, readyBase, raidsOn, baseName, BASE, BASE_RAIDS, releaseCommander, inviteChance,
   mapOf, deckOf, GROW_KEYS, reserveCap, RESERVE_GOODS,
-  demandOf, quadAdds, TRANSIT_KEYS,
+  demandOf, quadAdds, TRANSIT_KEYS, buy, buyPrice,
 } from './rules.js';
 import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { diffOf } from './difficulty.js';
@@ -24,6 +24,9 @@ import { updateGoals } from './goals.js';
 import { dangerWork, secretsDay, floodedHere, SECRET } from './secrets.js';
 import { expeditionsDay } from './expeditions.js';
 import { victoryDay } from './victory.js';
+import { incidentsDay, sickShare, incidentHappy } from './incidents.js';   // version 8 (docs/COLONY-V8.md)
+import { landmarksDay, landmarkHappy, landmarkTransport, landmarkFade } from './landmarks.js';
+import { petitionsDay } from './petitions.js';
 
 export { habitatNeeds, stateRng };
 
@@ -165,7 +168,12 @@ export function dayTick(state, rng) {
     if (--b.damaged <= 0) { delete b.damaged; say('repaired', `The ${BUILDING[b.key].name} is repaired and back at work.`); }
   }
   const posts = state.buildings.filter((b) => b.key === 'safetypost' && active(b));
-  for (const b of state.buildings) {
+  // (version 8: crews put food, water and air first, so a farm or pump ordered in a pinch never waits behind a
+  // long queue of seals and roads; otherwise oldest order first, as before)
+  const queue = state.buildings.filter((b) => b.build > 0);
+  const vital = (b) => { const m = BUILDING[b.key]?.makes; return m && (m.food > 0 || m.water > 0 || m.air > 0) ? 0 : 1; };
+  if (queue.length > crews) queue.sort((a, b) => vital(a) - vital(b));   // a stable sort: the order stays within each group
+  for (const b of queue) {
     if (b.build <= 0 || crews <= 0) continue;
     crews--;
     const step = b.key === 'seal' && posts.some((p) => covers(p, b)) ? SIM.sealFast : 1;
@@ -189,9 +197,12 @@ export function dayTick(state, rng) {
   secretsDay(state, { rng, say, ask });
   // version 4 stage 3: squadrons arriving at their sectors, and coming home with their reports
   expeditionsDay(state, { rng, say, ask });
+  // version 8: incidents you can prepare for (their own dice: js/colony/incidents.js)
+  incidentsDay(state, { say, ask });
 
   // 3 labour (Lanternfall): one staffing fraction for every building with jobs.
-  const jobs = jobsOf(state), staffing = jobs ? Math.min(1, state.pop / jobs) : 1;
+  // (version 8: colonists off sick with a fever do not work)
+  const jobs = jobsOf(state), staffing = jobs ? Math.min(1, (state.pop * (1 - sickShare(state))) / jobs) : 1;
   const moneyF = f.unpaid ? SIM.unpaid : 1;
 
   // 4 power: supply plus battery against demand; a shortfall throttles every consumer alike.
@@ -346,6 +357,19 @@ export function dayTick(state, rng) {
   f.autoRation = autoRation;
   const need = { food: foodNeed * (ration ? SIM.ration : autoRation ? SIM.autoRation : 1), water: pop * NEEDS.water * nm, air: (pop * NEEDS.air + chamberAir) * nm };
   const got = {}, drawn = [];
+  // version 8, Easy: emergency imports. When the stores and the Emergency Stores cannot cover today's need, the
+  // quartermaster buys a few days of it from the traders at the dock (import prices), keeping some credits back:
+  // a colony with money in the bank never starves for want of a click (docs/COLONY-V8.md, the seed-8 trace).
+  const rescue = diffOf(state).rescue, rescued = [];
+  if (rescue) for (const g in need) {
+    if (st[g] + (rv[g] || 0) >= need[g] - 1e-9 || !(st.credits > rescue.keep)) continue;
+    const unit = buyPrice(state, g) * 1.1, want = Math.ceil(need[g] * rescue.days - st[g]);
+    const qty = Math.min(want, Math.floor((st.credits - rescue.keep) / unit));
+    const r = qty > 0 ? buy(state, g, qty) : null;
+    if (r?.ok) rescued.push(`${r.qty} ${g} (${r.credits} credits)`);
+  }
+  if (rescued.length) say('rescue', `The stores ran short: the quartermaster bought ${rescued.join(' and ')} from the traders at the dock. Build more to stop paying import prices.`, !f.rescued);
+  f.rescued = rescued.length > 0;
   for (const g in need) {
     const before = st[g]; use(g, need[g]);
     let gave = before - st[g];
@@ -395,6 +419,7 @@ export function dayTick(state, rng) {
     parts.push({ label: k.label, value: Math.round(dwellings.length ? dwellings.reduce((t, h) => t + best(h), 0) / dwellings.length : 0) });
   }
   if (state.buildings.some((b) => b.key === 'obsdeck' && active(b))) parts.push({ label: 'Observation Deck', value: SIM.obsHappy });
+  parts.push(...landmarkHappy(state), ...incidentHappy(state));   // version 8: landmarks, a solar flare
   if (ration) parts.push({ label: 'Rationing', value: SIM.rationHappy });
   else if (autoRation) parts.push({ label: 'Rationing (automatic)', value: SIM.autoRationHappy });
   // version 3: a Welfare head (+ charm / 20), raid fear and tribute shame fading over 15 days,
@@ -403,9 +428,11 @@ export function dayTick(state, rng) {
   if (welfare) parts.push({ label: 'Welfare', value: Math.round((COMMANDER[welfare.key].charm || 0) / 20) });
   const rd = state.raid;
   // (full on the day after, gone `days` days later)
-  rd.moods = rd.moods.filter((m) => state.day - m.day <= m.days);
+  // (version 8: the Hall of Names makes grief and fear fade twice as fast)
+  const fade = landmarkFade(state);
+  rd.moods = rd.moods.filter((m) => state.day - m.day <= m.days / fade);
   const moods = {};
-  for (const m of rd.moods) moods[m.label] = (moods[m.label] || 0) + m.value * (1 - (state.day - m.day - 1) / m.days);
+  for (const m of rd.moods) moods[m.label] = (moods[m.label] || 0) + m.value * Math.max(0, 1 - (fade * (state.day - m.day - 1)) / m.days);
   for (const [label, v] of Object.entries(moods)) if (Math.round(v)) parts.push({ label, value: Math.round(v) });
   if (f.wagesUnpaid && state.commanders.some((c) => c.key === 'w_brann')) parts.push({ label: 'Brann unpaid', value: -2 });
   if (pop > housing) parts.push({ label: 'Crowding', value: -Math.min(30, Math.floor((housing ? (pop - housing) / housing : 1) * 50)) });
@@ -471,7 +498,9 @@ export function dayTick(state, rng) {
     const free = housing - state.pop, surplus = (produced.food || 0) - (consumed.food || 0);
     const short = ['air', 'water', 'food'].filter((g) => !met[g]);
     const why = state.happy < dv.transportHappy ? `the colony is not happy enough (${Math.round(state.happy)}, needs ${dv.transportHappy})`
-      : short.length ? `the colony is short of ${short.join(' and ')}` : free <= 0 ? 'there is no free housing' : surplus <= 0 ? 'there is no food to spare' : null;
+      : short.length ? `the colony is short of ${short.join(' and ')}` : free <= 0 ? 'there is no free housing'
+        // no surplus is fine while the stores hold 20 days of food (a balanced colony no longer stalls)
+        : surplus <= 0 && (state.stock.food || 0) < 20 * (consumed.food || 0) ? 'there is no food to spare' : null;
     if (why) say('transport', `A transport passed by without docking: ${why}.`);
     else {
       // 8–20 arrive; the happier the colony, the larger the transport it attracts.
@@ -480,7 +509,8 @@ export function dayTick(state, rng) {
       // (so the win's population target is a matter of months, not years)
       // version 6: each working Arrivals Hall makes the transport half as big again (up to three halls)
       const halls = Math.min(SIM.hallMax, state.buildings.filter((b) => b.key === 'arrivals' && active(b)).length);
-      const n = Math.min(free, Math.round((SIM.transportMin + Math.floor(rng() * (top - SIM.transportMin + 1)) + Math.floor(state.pop / 100)) * (1 + SIM.hallBonus * halls)));
+      // version 8: The Lantern draws a quarter more
+      const n = Math.min(free, Math.round((SIM.transportMin + Math.floor(rng() * (top - SIM.transportMin + 1)) + Math.floor(state.pop / 100)) * (1 + SIM.hallBonus * halls) * landmarkTransport(state)));
       state.pop += n;
       state.flags.arrival = { day: state.day, n };   // the view flies the transport in (view3d/movers.js)
       ask('transport', 'Transport', `A transport docks with ${n} colonists.`);
@@ -543,6 +573,10 @@ export function dayTick(state, rng) {
   // 13 guided goals: a finished goal pays the Council grant and names the next (js/colony/goals.js)
   const goal = updateGoals(state);
   if (goal) events.push({ kind: 'goal', text: state.log[state.log.length - 1].text, pause: true });
+  // 13b version 8: landmarks: requirements earned, the moment one is finished (js/colony/landmarks.js)
+  landmarksDay(state, { say, ask });
+  // 13c version 8: Council petitions (js/colony/petitions.js)
+  petitionsDay(state, { say, ask });
   // 14 version 4, stage 4: the win, Eden Restored, once (js/colony/victory.js); the colony carries on after it
   if (victoryDay(state)) events.push({ kind: 'victory', text: state.log[state.log.length - 1].text, pause: true });
   return { events };

@@ -28,7 +28,7 @@ let deck = 'main';
 const settings = loadSettings();
 
 function loadSettings() {
-  const d = { pauseOnEvents: true, snap: false, minimap: true, navButtons: true, wheel: 'auto' };
+  const d = { pauseOnEvents: true, snap: false, minimap: true, navButtons: true, wheel: 'auto', dayNight: true };   // version 8: day and night
   try { return { ...d, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }; } catch { return d; }
 }
 function storeSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { } }
@@ -169,7 +169,7 @@ function startGame(s, isNew = false) {
   if (view) { try { view.destroy(); } catch { } view = null; }
   $('#view').innerHTML = '';
   try {
-    view = M.view.createView($('#view'), { onTileClick, onTileHover, onDeck: (dir) => stepDeck(dir) });
+    view = M.view.createView($('#view'), { onTileClick, onTileHover, onDeck: (dir) => stepDeck(dir), dayNight: settings.dayNight !== false });
     view.setState(state);
     view.setSnap?.(settings.snap);
     viewHelpers();
@@ -255,6 +255,7 @@ const api = {
   setSetting: (k, v) => {
     settings[k] = v; storeSettings();
     if (k === 'snap') view?.setSnap?.(v);
+    if (k === 'dayNight') view?.setDayNight?.(v);
     if (k === 'minimap' || k === 'navButtons' || k === 'wheel') viewHelpers();
   },
   openResearch: (key) => ui?.openResearch(key),

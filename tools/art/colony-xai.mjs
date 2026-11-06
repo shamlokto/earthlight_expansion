@@ -26,7 +26,7 @@ const ART_JS = join(ROOT, 'js/colony/art.js');
 const { MANIFEST } = await import(pathToFileURL(ART_JS).href);
 const COL = join(ROOT, 'tools/art/colony');
 const RAW = process.env.COLONY_RAW || join(tmpdir(), 'earthlight-colony-raw');
-const env = { ...process.env, XAI_LIMIT: process.env.XAI_LIMIT || '170', XMODEL: process.env.XMODEL || 'grok-imagine-image-2.0', XAI_QUOTA: process.env.XAI_QUOTA || join(COL, 'quota.txt') };
+const env = { ...process.env, XAI_LIMIT: process.env.XAI_LIMIT || '200', XMODEL: process.env.XMODEL || 'grok-imagine-image-2.0', XAI_QUOTA: process.env.XAI_QUOTA || join(COL, 'quota.txt') };
 
 const ASPECT = { card: '1:1', terrain: '1:1', portrait: '3:4', sky: '2:1', title: '16:9', scene: '16:9', site: '16:9', vault: '16:9', danger: '16:9' };
 const MAX_KB = { card: 40, terrain: 50, portrait: 50, sky: 60, title: 100, scene: 120, site: 30, vault: 30, danger: 30 };
