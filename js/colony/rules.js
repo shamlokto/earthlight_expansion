@@ -35,6 +35,10 @@ export {
 // version 8 (docs/COLONY-V8.md): landmarks (js/colony/landmarks.js) and incidents you can prepare for (js/colony/incidents.js)
 import { landmarkWhy, landmarkCrews, landmarkCost, landmarkWarn, landmarkImports, ensureLandmarks } from './landmarks.js';
 import { ensureIncidents, flareMult } from './incidents.js';
+import { ensurePetitions } from './petitions.js';
+export {
+  PETITION, PETITIONS, PETITION_OF, petitionsOn, ensurePetitions, petitionStatus, setPetitions, wantText,
+} from './petitions.js';
 export {
   LANDMARKS, LM, LINES, isLandmark, landmarkOn, landmarkNeeds, landmarkEarned, landmarkWhy, landmarkStatus, landmarkHappy, ensureLandmarks,
 } from './landmarks.js';
@@ -108,7 +112,7 @@ export function upgradeState(state) {
   ensureExpeditions(state);   // stage 3: the sector map, from the seed
   ensureBases(state);   // version 5: the raiders' bases on the sector map
   state.options ??= {};
-  ensureLandmarks(state); ensureIncidents(state);   // version 8
+  ensureLandmarks(state); ensureIncidents(state); ensurePetitions(state);   // version 8
   if (state.unlocked) for (const d of BUILDINGS) if (d.decks && !d.tech && !d.unlock && !d.fixed && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
   return state;
 }

@@ -81,7 +81,7 @@ const KIND_LABEL = { victory: 'Eden Restored', goal: 'Goal complete', welcome: '
   discovery: 'Discovery', finalvault: 'The Ninefold vault', drones: 'Sentries', dronefight: 'Sentries', reactor: 'The old core', reactorwarn: 'The old core', reactorfail: 'The old core',
   vault: 'Vault opened', survivors: 'Survivors', danger: 'Danger', expedition: 'Expedition',
   // version 8 (docs/COLONY-V8.md): landmarks and incidents
-  landmark: 'Landmark', incidentwarn: 'Incident ahead', incident: 'Incident' };
+  landmark: 'Landmark', incidentwarn: 'Incident ahead', incident: 'Incident', petition: 'Council petition' };
 // Version 4, stage 3: the Star chart's site glyphs and colours.
 const SITE_GLYPH = { belt: '⁂', comet: '☄', derelict: '⚓', babylon: '✠', bunker: '▣', den: '☠', outpost: '⌂', listening: '◉', relief: '✚' };
 const SITE_COLOR = { belt: '#c9b38a', comet: '#8fd8ff', derelict: '#ffb070', babylon: '#ffd36a', bunker: '#b0e07a', den: '#ff6a5a', outpost: '#c3a6ff', listening: '#7affd8', relief: '#6fb8ff' };
@@ -213,7 +213,7 @@ function cardIcon(b) {
 // The help dialog's sections (colony.html #dHelp). Short sentences, pictures from the card art.
 // diff: the difficulty row (js/colony/difficulty.js) the numbers are quoted for, or null.
 export const HELP_SECTIONS = [['goal', 'The goal'], ['time', 'Time'], ['build', 'Building'], ['res', 'Resources'], ['chambers', 'Chambers'],
-  ['homes', 'Homes & happiness'], ['zoning', 'Zoning and growth'], ['landvalue', 'Land value'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['landmarks', 'Landmarks'], ['incidents', 'Incidents'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
+  ['homes', 'Homes & happiness'], ['zoning', 'Zoning and growth'], ['landvalue', 'Land value'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['landmarks', 'Landmarks'], ['incidents', 'Incidents'], ['petitions', 'Petitions'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
 export function helpHtml(art, diff) {
   const pic = (slot, alt = '') => { const u = art?.(slot); return u ? `<img src="${esc(u)}" alt="${esc(alt)}" loading="lazy">` : ''; };
   const card = (key) => { const u = art?.(`card/${key}`); return `<figure class="cl-hfig">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : cardIcon(BUILDING[key])}<figcaption>${esc(BUILDING[key]?.name || key)}</figcaption></figure>`; };
@@ -341,6 +341,14 @@ export function helpHtml(art, diff) {
       <li>And good news: a <b>trade caravan</b> (sell spare goods at half as much again) and a <b>comet pass</b> (free water, as much as your stores can hold).</li>
     </ul>
     <p>Too much? <b>Settings › Incidents</b> turns them off.</p>`)}
+  ${sec('petitions', 'Petitions', card('park') + card('canteen'), `
+    <p>Now and then a group in Eden <b>petitions the Council</b> for something concrete: the garden families a park on the upper deck, the dock traders a Market Quad near the dock, the pump hall crew a Clinic on the lower deck, Capt. Sato another Battery Emplacement. They only ask for what you can already build. None come in the first 40 days (50 on Easy), and at most two are open at once (one on Easy).</p>
+    <ul class="cl-hsteps">
+      <li>The petition arrives in a window with <b>Show me</b>, and stays in the <b>advisor</b> list with how many days are left (40, or 50 on Easy). The advisor warns in the last week.</li>
+      <li><b>Granted in time</b>: build a new one of what they asked for, where they asked. The Council pays its grant, happiness rises for a few weeks, and some groups add a gift of their own (food, parts, research).</li>
+      <li><b>Let lapse</b>: a small dip in happiness that fades in ten days. They may ask again much later.</li>
+    </ul>
+    <p>Not for you? <b>Settings › Petitions</b> turns them off (the open ones are withdrawn without penalty).</p>`)}
   ${sec('secrets', 'Secrets of Eden', `<figure class="cl-hfig cl-hbook">${SICON.book}<figcaption>Discoveries</figcaption></figure>`, `
     <p>Eden was not emptied by an ordinary war, and not everything down there is dead. When a survey finishes, Ruess's team reports what the chamber holds, and the <b>Discoveries</b> journal (top bar, or key <b>J</b>) keeps it all.</p>
     <ul class="cl-hsteps">
@@ -1336,6 +1344,7 @@ export function createUI(root, api) {
       ${musicHtml()}
       ${raidToggleHtml(S())}
       ${incidentToggleHtml(S())}
+      ${petitionToggleHtml(S())}
       <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · M music · WASD / arrows pan · Q / E rotate · PgUp / PgDn deck · Esc cancel · F1 or ? how to play.</p>`;
     for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => { api.setSetting(c.dataset.set, c.checked); helpersShown(); };
     for (const c of pops.settings.querySelectorAll('[data-setsel]')) c.onchange = () => api.setSetting(c.dataset.setsel, c.value);
@@ -1346,6 +1355,8 @@ export function createUI(root, api) {
     if (rd) rd.onchange = () => { result(R.setRaids(S(), rd.checked)); renderSettings(); };
     const inc = pops.settings.querySelector('[data-incidents]');
     if (inc) inc.onchange = () => { result(R.setIncidents(S(), inc.checked)); renderSettings(); };
+    const pet = pops.settings.querySelector('[data-petitions]');
+    if (pet) pet.onchange = () => { result(R.setPetitions(S(), pet.checked)); renderSettings(); };
     if (setup) setup.onclick = () => { setup.disabled = true; api.audio.setUp().then(() => { renderSettings(); toast('Earth Light music is ready.', 'good'); }).catch((e) => { setup.disabled = false; toast(e.message || 'No ROM chosen.', 'bad'); }); };
   }
   // Music (js/colony/audio.js): Lanternfall's soundtrack (default, no setup) or Earth Light's own
@@ -1365,6 +1376,11 @@ export function createUI(root, api) {
     if (!s || typeof R.setIncidents !== 'function') return '';
     const on = s.options?.incidents !== false;
     return `<label class="cl-check"><input type="checkbox" data-incidents ${on ? 'checked' : ''}><span></span><em>Incidents<small>${on ? 'Meteor showers, solar flares, burst mains and fevers, each announced days ahead with what helps (and the odd caravan or comet).' : 'Off: no incidents. Turn them on again whenever you like.'}</small></em></label>`;
+  }
+  function petitionToggleHtml(s) {
+    if (!s || typeof R.setPetitions !== 'function') return '';
+    const on = s.options?.petitions !== false;
+    return `<label class="cl-check"><input type="checkbox" data-petitions ${on ? 'checked' : ''}><span></span><em>Petitions<small>${on ? 'Now and then a group asks the Council for a building it can have, with a generous deadline and a reward.' : 'Off: no petitions. Turn them on again whenever you like.'}</small></em></label>`;
   }
   function raidToggleHtml(s) {
     if (!s || typeof R.setRaids !== 'function') return '';
@@ -2770,7 +2786,7 @@ export function createUI(root, api) {
       ${raid ? raidBody(s, p) : warn ? warnBody(s) : disc ? discoveryBody(s, p) : core ? reactorBody(s, p) : drone ? droneEvBody(s, p) : p.kind === 'survivors' ? survivorsEvBody(s, p) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
       <div class="cl-evchoices">${choices.map((c, i) => { const cant = raid && c.key === 'tribute' && (rule('raidPreview', s) || p.preview)?.canPay === false;
         return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>${raid && c.key === 'fight' ? commandButton() : ''}`; }).join('')}
-        ${p.show && choices.length === 1 ? `<button type="button" class="cl-btn" data-evshow title="Answer and show me">${p.kind === 'landmark' ? 'Show me' : 'Show me what helps'}</button>` : ''}
+        ${p.show && choices.length === 1 ? `<button type="button" class="cl-btn" data-evshow title="Answer and show me">${p.kind === 'landmark' || p.kind === 'petition' ? 'Show me' : 'Show me what helps'}</button>` : ''}
         ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : 'Meet them'}</button>` : ''}
         ${(() => { const d = core && !coreBad && !coreSafe ? reactorOf(s) : null, pv = d && dangerWork(d) == null ? srule('dangerPreview', s, d.chamber) : null;
           return pv ? `<button type="button" class="cl-btn" data-evclear="${d.chamber}" ${pv.why ? `disabled title="${esc(pv.why)}"` : 'title="Answer, and set the crews to work on it now"'}>Stabilise now${pv.cost ? ` <small>${esc(costText(pv.cost))}</small>` : ''}</button>` : ''; })()}

@@ -10,6 +10,7 @@ import { TECH } from './data/tech.js';
 import { sectorOf } from './expeditions.js';
 import { reliefStation, victoryStatus, victoryText } from './victory.js';
 import { incidentStatus } from './incidents.js';   // version 8 (docs/COLONY-V8.md)
+import { petitionStatus } from './petitions.js';
 
 const finished = (s, key) => s.buildings.filter((b) => b.key === key && b.build === 0).length;
 const opened = (s) => s.chambers.filter((c) => c.status === 'open').length;
@@ -255,6 +256,11 @@ export function advise(state) {
     out.push(inc.good
       ? { level: 'tip', text: `${inc.name} ${when}: ${inc.text}.`, show: inc.fix }
       : { level: inc.ready ? 'tip' : 'warn', text: `${inc.name} ${when}${inc.ready ? ', and Eden is ready' : ''}: ${inc.text}.${inc.ready ? '' : ' Show me what helps.'}`, show: inc.fix });
+  }
+  // version 8: open Council petitions, the list of them (a warning in their last days)
+  for (const p of petitionStatus(state)) {
+    if (p.met) continue;
+    out.push({ level: p.days <= 7 ? 'warn' : 'tip', petition: p.key, text: `Petition, ${p.days} day${p.days === 1 ? '' : 's'} left: ${p.who} ask for ${p.want}. Reward: ${p.reward}.`, show: p.show });
   }
   const order = { bad: 0, warn: 1, tip: 2 };
   return out.sort((a, b) => order[a.level] - order[b.level]).slice(0, 5);

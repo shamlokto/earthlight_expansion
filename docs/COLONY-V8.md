@@ -185,3 +185,85 @@ There are 7 new card slots in art.js, each with a prompt in `tools/art/colony/pr
   - `tests/colony-v2.mjs`: 47 techs, and 1 more tech-locked building (the Flare Shelter).
 - **`tests/colony-goals.mjs`**: its goal-following bot turns incidents off. It follows Show me only, never reads a warning, and its seed-8 run is sensitive to any change of course.
 - **Saves.** `upgradeState` adds `state.landmarks` and `state.incidents` to an older save, with incidents on.
+
+## Follow-up: why a solar flare once starved the goals bot, and the fix
+
+`tests/colony-goals.mjs`'s bot follows the goals' Show me and nothing else. With incidents on, its seed-8 run lost 53 colonists, against none with incidents off. A lockstep trace of the two runs found the chain below.
+
+1. **Day 81: a 2-day solar flare.** Power fell short, so happiness dropped from 83 to 38 for two days. The bot reacted the way it always does: two more Parks and one more Solar Array.
+2. **Later buildings landed elsewhere.** Those three buildings took the spots next to the Command Centre. The Clinic, built for its goal on day 101, ended up a few tiles further away and covered fewer homes, so one fewer child was born that day.
+3. **The colony stayed stuck at break-even.** Both runs had been sitting on exactly zero food surplus since day 84: 4 fields and the Command Centre made 81.6 a day, and 102 colonists ate 81.6. Every transport passed with "no food to spare". In the incidents-off run, the day-100 birth tipped food negative, the bot planted a field, and transports resumed on day 105. The flare run stayed at 102 colonists until day 119.
+4. **Days 170–200: the starvation.** The smaller colony had fewer fields when the deck goals arrived, and the bot was queueing 20 to 26 Bulkhead Seals at once. Construction went strictly oldest order first, so the emergency Farm Field and River Pump the bot ordered waited 13 or more days behind the seals. Food ran out on day 190 with 6,000 credits in the bank. Habitats then fell back for unmet needs and crowding set in, so people emigrated and died. Of the safety nets:
+   - **Emergency Stores:** never built, so the reserve was 0;
+   - **Food Security:** never researched;
+   - **Council relief:** came once (day 186; it is limited to once a month) and gave 150 food;
+   - **The advisor:** warned, but the bot doesn't read it.
+
+**The fixes:**
+
+1. **Food, water and air are built first.** `sim.js` step 1 now hands construction crews to buildings that make food, water or air ahead of everything else. Within each group the oldest order still goes first. This was the actual game flaw: a farm ordered in a pinch could wait weeks behind a backlog of seals and roads. A player who builds a lot of seals would starve the same way.
+2. **A new safety net on Easy: emergency imports** (`difficulty.js` `rescue`). When the stores and the Emergency Stores cannot cover today's food, water or air, the quartermaster buys 3 days of it from the traders at the dock at import prices, keeping 200 credits back. It logs "The stores ran short: the quartermaster bought …". The first day of each shortage pauses the clock.
+
+**Results:**
+- Seed 8 with incidents on: 53 deaths before; 18 with the emergency imports alone (they bought 11 times); 0 with both fixes. All five test seeds now finish with 0 deaths and incidents **on**. The goals test runs with incidents on again.
+- Twelve seeds, incidents on and off, on Easy: every seed has 0 deaths in both modes, except seed 9. Seed 9 is a broke colony even with incidents off: upkeep is 3 to 4 times the tax, homes stand for 1,880 against 69 colonists, and it loses 24 colonists from food shortage with incidents off, against 96 with them on. That comes from the bot's spending, not from incidents.
+- One thing is noted but left alone: "no food to spare" refuses transports while the surplus is exactly 0, even with full stores. A balanced colony stalls until a birth tips it over.
+
+## Council petitions (js/colony/petitions.js)
+
+Every so often a group in Eden asks the Council for something concrete it can have: a new building of a kind, sometimes on a given deck or near the dock.
+
+**What is asked.** Only buildings the colony can already build. There are 14 petitions:
+
+| Petition | Asks for | When it can come | Gift |
+|---|---|---|---|
+| the garden families | a Park on the upper deck | they have joined, and an upper chamber is open | 150 food |
+| the landing-quarter families | a Park | 40 colonists | |
+| the dock traders | a Market Quad within 30 tiles of the dock | a dock, 60 colonists | 40 parts |
+| the old market traders | a Market Quad | they have joined | 60 parts |
+| the pump hall crew | a Clinic on the lower deck | they have joined | 40 research |
+| Warden Marrow | a Safety Post on the lower deck | she serves | 40 parts |
+| Tobias Venn | a Pump Station on the lower deck | he serves | 60 research |
+| the workers | a Canteen | 80 colonists | |
+| the parents | a Clinic | 100 colonists | |
+| the guardian pilots | a School | 2 guardians | 30 research |
+| Capt. Sato | a Battery Emplacement | 120 colonists | 30 parts |
+| Prof. Ruess | a second Research Lab | a lab stands | 50 research |
+| Ama Seln | a Hydroponics Bay | she serves | 120 food |
+| Tem Oduya | a Scrapyard | he serves | 60 parts |
+
+**What counts.** Only a new building counts: one more working building of that kind (on that deck, near that anchor) than when the petition was made.
+
+**The schedule:**
+- the first comes no earlier than **day 40 (50 on Easy)**;
+- then one every **25–40 days (40–60 on Easy)**;
+- at most **2 open (1 on Easy)**;
+- the deadline is **40 days (50 on Easy)**;
+- their own dice, as for incidents.
+
+**Granted in time:**
+- the Council's goal grant (400 credits and 40 parts on Easy, 200 and 20 on Normal);
+- a "Petition granted" mood of **+4**, fading over 20 days;
+- the group's gift, if it has one;
+- a log line (no pause). A granted petition is never asked again.
+
+**Let lapse:**
+- a "Petition ignored" mood of **−3**, fading over 10 days;
+- it may come back 150 days later.
+
+**Interface:**
+- A `petition` event window (Council petition) when one arrives, with the speaker's portrait, what is asked, the deadline and the reward, and **Show me** (the building's card, on the right deck).
+- The **advisor** is the list. Each open petition is an item with its days left and a **Fix** button. It is a tip, or a warning in its last 7 days, when a log reminder also comes.
+- **Settings › Petitions** (`state.options.petitions`, `rules.setPetitions`): off withdraws the open ones without penalty.
+- How to play has a **Petitions** section.
+
+**Saves.** `upgradeState` adds `state.petitions` (`{ next, open, used, granted, lapsed, log }`) to an older save, with petitions on.
+
+**Tests.** `tests/colony-petitions.mjs` checks:
+- the data and help;
+- the schedule: not before day 40 or 50, rarer on Easy, the open limit, only buildable asks, lapses, no quick repeats;
+- granted, with its grant, mood and the never-again rule;
+- the advisor's tip and its last-week warning;
+- lapsed, with a small mood that fades;
+- the place rules (near the dock, the upper deck);
+- the switch, save and load, and old saves.

@@ -26,6 +26,7 @@ import { expeditionsDay } from './expeditions.js';
 import { victoryDay } from './victory.js';
 import { incidentsDay, sickShare, incidentHappy } from './incidents.js';   // version 8 (docs/COLONY-V8.md)
 import { landmarksDay, landmarkHappy, landmarkTransport, landmarkFade } from './landmarks.js';
+import { petitionsDay } from './petitions.js';
 
 export { habitatNeeds, stateRng };
 
@@ -497,7 +498,9 @@ export function dayTick(state, rng) {
     const free = housing - state.pop, surplus = (produced.food || 0) - (consumed.food || 0);
     const short = ['air', 'water', 'food'].filter((g) => !met[g]);
     const why = state.happy < dv.transportHappy ? `the colony is not happy enough (${Math.round(state.happy)}, needs ${dv.transportHappy})`
-      : short.length ? `the colony is short of ${short.join(' and ')}` : free <= 0 ? 'there is no free housing' : surplus <= 0 ? 'there is no food to spare' : null;
+      : short.length ? `the colony is short of ${short.join(' and ')}` : free <= 0 ? 'there is no free housing'
+        // no surplus is fine while the stores hold 20 days of food (a balanced colony no longer stalls)
+        : surplus <= 0 && (state.stock.food || 0) < 20 * (consumed.food || 0) ? 'there is no food to spare' : null;
     if (why) say('transport', `A transport passed by without docking: ${why}.`);
     else {
       // 8–20 arrive; the happier the colony, the larger the transport it attracts.
@@ -572,6 +575,8 @@ export function dayTick(state, rng) {
   if (goal) events.push({ kind: 'goal', text: state.log[state.log.length - 1].text, pause: true });
   // 13b version 8: landmarks: requirements earned, the moment one is finished (js/colony/landmarks.js)
   landmarksDay(state, { say, ask });
+  // 13c version 8: Council petitions (js/colony/petitions.js)
+  petitionsDay(state, { say, ask });
   // 14 version 4, stage 4: the win, Eden Restored, once (js/colony/victory.js); the colony carries on after it
   if (victoryDay(state)) events.push({ kind: 'victory', text: state.log[state.log.length - 1].text, pause: true });
   return { events };
