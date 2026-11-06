@@ -942,7 +942,183 @@ export const KITS = {
     ...[-0.8, -0.5].map((x) => cyl([0.22, 0.5, 0.22], [x, 0.12, -0.5], '#c4773a')),
     cyl([0.04, 0.6, 0.04], [-0.6, 0.57, 0.55], STEEL), dome([0.12, 0.1, 0.12], [-0.6, 1.17, 0.55], BEACON, GLOW),
   ],
+
+  // ---------------------------------------------------------------- version 7 (docs/COLONY-V7.md): zoning and growth
+  // The three quads are 2×2 lots that grow by level (1 = the empty lot, 6 = the top): each level is bigger and taller.
+  // Residential reads cream and green, commercial blue and gold with striped awnings, industrial grey and orange.
+  livingquad: (level) => quadKit('R', level),
+  marketquad: (level) => quadKit('C', level),
+  workshopquad: (level) => quadKit('I', level),
+  // 2×2: a cream schoolhouse with a red roof and a bell cupola, a green playing field with goal posts and a flag.
+  school: () => [
+    box([1.96, 0.06, 1.96], [0, 0, 0], '#8a8e94'),
+    box([1.9, 0.03, 0.8], [0, 0.06, 0.52], '#5fae4a'), box([1.5, 0.01, 0.04], [0, 0.09, 0.52], '#f4f6f8'),
+    ...[-0.7, 0.7].flatMap((x) => [box([0.03, 0.22, 0.3], [x, 0.09, 0.52], '#f4f6f8')]),
+    box([1.6, 0.6, 0.8], [-0.1, 0.06, -0.5], '#efe4c8', { slot: 'mat/hab-facade' }),
+    box([1.64, 0.08, 0.84], [-0.1, 0.3, -0.5], '#ffd98a', GLOW),
+    box([1.7, 0.14, 0.9], [-0.1, 0.66, -0.5], '#b03a2a'), box([1.2, 0.12, 0.5], [-0.1, 0.8, -0.5], '#b03a2a'),
+    box([0.26, 0.3, 0.26], [-0.1, 0.92, -0.5], '#f4f0e8'), cone([0.3, 0.26, 0.3], [-0.1, 1.22, -0.5], '#24346a'),
+    cyl([0.12, 0.02, 0.12], [-0.1, 1.06, -0.36], '#ffe3a0', { rot: [HALF_PI, 0, 0], glow: true }),
+    cyl([0.02, 0.7, 0.02], [0.8, 0.06, -0.85], STEEL), box([0.22, 0.14, 0.01], [0.92, 0.6, -0.85], '#4ac0ff'),
+    ...tree(0.85, 0.05, 0.6, true),
+  ],
+  // 2×2: a tram stop: a long platform under a curved glass canopy, a glowing rail and a white tram, a round sign.
+  transit: () => [
+    box([1.96, 0.06, 1.96], [0, 0, 0], '#6a7078'),
+    box([1.96, 0.04, 0.5], [0, 0.06, 0.55], '#3d444d'),
+    ...[0.42, 0.68].map((z) => box([1.96, 0.03, 0.04], [0, 0.1, z], '#7fe0ff', GLOW)),
+    box([1.3, 0.3, 0.36], [0.15, 0.13, 0.55], '#f4f6f8'), box([1.32, 0.08, 0.38], [0.15, 0.28, 0.55], WIN, GLOW),
+    box([0.04, 0.24, 0.38], [0.82, 0.13, 0.55], '#ff8a2a'),
+    box([1.8, 0.16, 0.8], [0, 0.06, -0.25], '#c9ced6'),
+    ...[-0.8, -0.27, 0.27, 0.8].map((x) => cyl([0.05, 0.6, 0.05], [x, 0.22, -0.25], '#f4f6f8')),
+    cyl([0.9, 1.86, 0.9], [0, 0.6, -0.25], '#bfe8ff', { rot: [0, 0, HALF_PI] }),
+    box([1.88, 0.05, 0.92], [0, 0.82, -0.25], '#ffd98a', GLOW),
+    cyl([0.03, 0.9, 0.03], [-0.9, 0.06, 0.15], DARK), cyl([0.26, 0.04, 0.26], [-0.9, 0.96, 0.15], '#4ac0ff', { rot: [HALF_PI, 0, 0], glow: true }),
+  ],
+  // 1×1: a tall white pylon carrying a slim beam of the high line, a glass station pod on top with a glowing ring.
+  monorail: () => [
+    box([0.94, 0.05, 0.94], [0, 0, 0], '#6a7078'),
+    cyl([0.22, 1.5, 0.22], [0, 0.05, 0], '#f4f6f8'),
+    box([0.12, 0.6, 0.6], [0, 0.05, 0.1], '#9aa3ad'),
+    box([0.96, 0.14, 0.22], [0, 1.55, 0], '#d9dde3'), box([0.98, 0.03, 0.06], [0, 1.69, 0], '#7fe0ff', GLOW),
+    cyl([0.7, 0.36, 0.5], [0, 1.72, 0], '#bfe8ff'), dome([0.7, 0.2, 0.5], [0, 2.08, 0], '#f4f6f8'),
+    torus([0.78, 0.05, 0.58], [0, 1.9, 0], '#ffd23a', GLOW),
+  ],
+  // 2×2: stacks of coloured shipping containers, a yellow gantry crane over a rail siding and a little office.
+  freightyard: () => {
+    const parts = [box([1.96, 0.06, 1.96], [0, 0, 0], '#5a5e64'),
+      ...[-0.35, -0.15].map((z) => box([1.96, 0.02, 0.04], [0, 0.06, z], '#9aa3ad'))];
+    const C = ['#c4473a', '#3a7ac4', '#e8b52a', '#3aa06a', '#d8d0c0', '#c46a3a'];
+    let k = 0;
+    for (const [x, z, n] of [[-0.6, -0.75, 3], [0.1, -0.75, 2], [0.7, -0.75, 1], [-0.6, 0.45, 2], [0.1, 0.45, 3], [0.1, 0.8, 1]]) {
+      for (let h = 0; h < n; h++) parts.push(box([0.6, 0.22, 0.3], [x, 0.06 + h * 0.23, z], C[k++ % C.length]));
+    }
+    parts.push(...[-0.95, 0.95].flatMap((x) => [box([0.08, 1.2, 0.08], [x, 0.06, -0.55], HAZARD), box([0.08, 1.2, 0.08], [x, 0.06, 0.05], HAZARD)]),
+      box([2.0, 0.12, 0.16], [0, 1.26, -0.55], HAZARD), box([2.0, 0.12, 0.16], [0, 1.26, 0.05], HAZARD),
+      box([0.3, 0.2, 0.7], [0.3, 1.1, -0.25], '#d9a02a'), cyl([0.02, 0.5, 0.02], [0.3, 0.6, -0.25], DARK),
+      box([0.4, 0.4, 0.3], [0.75, 0.06, 0.6], '#e8eef4'), box([0.42, 0.06, 0.32], [0.75, 0.3, 0.6], WIN, GLOW),
+      dome([0.08, 0.06, 0.08], [0.95, 1.38, 0.05], BEACON, GLOW));
+    return parts;
+  },
 };
+
+// A quad at its level (version 7): 1 the empty lot, 2..6 ever bigger and taller. zone: 'R' | 'C' | 'I'.
+const LOT = { R: ['#7a8a5a', '#5fae4a'], C: ['#8a8e96', '#4ac0ff'], I: ['#7a6a5a', '#ff8a2a'] };
+const AWN = ['#ff6a6a', '#ffd23a', '#6ad0ff', '#7cc04a', '#ff8fd8', '#ffffff'];
+function quadKit(zone, level) {
+  const lv = Math.max(1, Math.min(6, level || 1)), [ground, flag] = LOT[zone];
+  const parts = [box([1.96, 0.05, 1.96], [0, 0, 0], lv === 1 ? ground : zone === 'R' ? '#6a6e74' : zone === 'C' ? '#9a9ea6' : '#5a5e64')];
+  // the empty lot: survey stakes with coloured flags at the corners, a dashed outline and a zoning sign
+  if (lv === 1) {
+    for (const [x, z] of [[-0.85, -0.85], [0.85, -0.85], [-0.85, 0.85], [0.85, 0.85]]) parts.push(cyl([0.03, 0.34, 0.03], [x, 0.05, z], '#d8d0c0'), box([0.12, 0.07, 0.01], [x + 0.06, 0.32, z], flag, GLOW));
+    for (let k = -3; k <= 3; k += 2) parts.push(box([0.16, 0.01, 0.03], [k * 0.24, 0.05, -0.85], flag), box([0.16, 0.01, 0.03], [k * 0.24, 0.05, 0.85], flag),
+      box([0.03, 0.01, 0.16], [-0.85, 0.05, k * 0.24], flag), box([0.03, 0.01, 0.16], [0.85, 0.05, k * 0.24], flag));
+    parts.push(cyl([0.03, 0.22, 0.03], [0, 0.05, 0.3], DARK), box([0.42, 0.2, 0.03], [0, 0.22, 0.3], '#f4f0e8'), box([0.32, 0.05, 0.035], [0, 0.3, 0.3], flag));
+    return parts;
+  }
+  const lit = (w, d, x, y, z) => box([w + 0.02, 0.06, d + 0.02], [x, y, z], zone === 'I' ? '#ffb070' : zone === 'C' ? '#bfe8ff' : '#ffd98a', GLOW);
+  if (zone === 'R') {
+    if (lv === 2) {   // Cottages: four little houses with red and slate roofs, gardens and a tree
+      for (const [x, z, k] of [[-0.5, -0.5, 0], [0.5, -0.5, 1], [-0.5, 0.5, 2], [0.5, 0.5, 3]]) {
+        parts.push(box([0.6, 0.03, 0.6], [x, 0.05, z], '#6fbf4a'), box([0.42, 0.36, 0.36], [x, 0.08, z - 0.04], '#efe4c8', { slot: 'mat/hab-facade' }),
+          lit(0.42, 0.36, x, 0.22, z - 0.04), box([0.48, 0.12, 0.42], [x, 0.44, z - 0.04], k % 2 ? '#5a6478' : '#b03a2a'), box([0.3, 0.1, 0.3], [x, 0.56, z - 0.04], k % 2 ? '#5a6478' : '#b03a2a'));
+      }
+      parts.push(...tree(0, 0, 0.5, true));
+    } else if (lv === 3) {   // Row Houses: two terraced rows of two storeys, coloured doors, a green strip between
+      parts.push(box([1.8, 0.03, 0.4], [0, 0.05, 0], '#6fbf4a'));
+      for (const z of [-0.6, 0.6]) {
+        parts.push(box([1.8, 0.6, 0.5], [0, 0.05, z], '#efe4c8', { slot: 'mat/hab-facade' }), lit(1.8, 0.5, 0, 0.22, z), lit(1.8, 0.5, 0, 0.45, z));
+        for (let k = 0; k < 4; k++) parts.push(box([0.44, 0.1, 0.54], [-0.675 + k * 0.45, 0.65, z], k % 2 ? '#8a3a2a' : '#b03a2a'), box([0.1, 0.16, 0.02], [-0.675 + k * 0.45, 0.05, z + (z < 0 ? 0.26 : -0.26)], AWN[k]));
+      }
+      parts.push(...tree(-0.6, 0, 0.45, true), ...tree(0.6, 0, 0.45, true));
+    } else if (lv === 4) {   // Courtyard Flats: three-storey blocks round a green courtyard with a fountain
+      const h = 1.0;
+      for (const [w, d, x, z] of [[1.9, 0.5, 0, -0.7], [1.9, 0.5, 0, 0.7], [0.5, 0.9, -0.7, 0], [0.5, 0.9, 0.7, 0]]) {
+        parts.push(box([w, h, d], [x, 0.05, z], '#ece2cc', { slot: 'mat/hab-facade' }), lit(w, d, x, 0.3, z), lit(w, d, x, 0.62, z), box([w + 0.04, 0.06, d + 0.04], [x, 0.05 + h, z], '#5fae4a'));
+      }
+      parts.push(box([0.86, 0.04, 0.86], [0, 0.05, 0], '#6fbf4a'), cyl([0.3, 0.06, 0.3], [0, 0.08, 0], '#4ac0ff', GLOW), ...tree(0.3, 0.3, 0.4, true));
+    } else if (lv === 5) {   // Mid-rise: two six-storey slabs with balconies on a podium, roof gardens
+      parts.push(box([1.9, 0.3, 1.9], [0, 0.05, 0], '#d8d0c0'), lit(1.9, 1.9, 0, 0.18, 0));
+      for (const [x, z, h] of [[-0.45, -0.3, 1.9], [0.5, 0.35, 1.5]]) {
+        parts.push(box([0.85, h, 0.85], [x, 0.35, z], '#f0e8d8', { slot: 'mat/hab-facade' }));
+        for (let y = 0.25; y < h - 0.1; y += 0.3) parts.push(lit(0.85, 0.85, x, 0.35 + y, z), box([0.95, 0.03, 0.12], [x, 0.33 + y, z + 0.47], '#d8d0c0'));
+        parts.push(box([0.8, 0.06, 0.8], [x, 0.35 + h, z], '#5fae4a'), ...tree(x + 0.2, z - 0.2, 0.4, true).map((p) => ({ ...p, pos: [p.pos[0], p.pos[1] + 0.41 + h, p.pos[2]] })));
+      }
+    } else {   // Residential Tower: a tall stepped tower of lit floors on a green podium, a crown and a beacon
+      parts.push(box([1.9, 0.35, 1.9], [0, 0.05, 0], '#d8d0c0'), box([1.94, 0.05, 1.94], [0, 0.4, 0], '#5fae4a'),
+        ...tree(-0.75, 0.75, 0.5, true).map((p) => ({ ...p, pos: [p.pos[0], p.pos[1] + 0.42, p.pos[2]] })), ...tree(0.75, 0.75, 0.5, true).map((p) => ({ ...p, pos: [p.pos[0], p.pos[1] + 0.42, p.pos[2]] })));
+      let y = 0.45;
+      for (const [w, h] of [[1.3, 1.5], [1.05, 1.2], [0.8, 0.9]]) {
+        parts.push(box([w, h, w], [0, y, -0.1], '#f2ede2', { slot: 'mat/hab-facade' }));
+        for (let k = 0.2; k < h - 0.05; k += 0.28) parts.push(lit(w, w, 0, y + k, -0.1));
+        parts.push(box([w + 0.06, 0.05, w + 0.06], [0, y + h, -0.1], '#5fae4a'));
+        y += h + 0.05;
+      }
+      parts.push(cyl([0.05, 0.8, 0.05], [0, y, -0.1], STEEL), dome([0.12, 0.1, 0.12], [0, y + 0.8, -0.1], BEACON, GLOW));
+    }
+    return parts;
+  }
+  if (zone === 'C') {
+    const awning = (x, z, w, k, y = 0.38) => box([w, 0.05, 0.3], [x, y, z], AWN[k % AWN.length], { rot: [0.35, 0, 0] });
+    if (lv === 2) {   // Stalls: six market stalls with striped awnings, crates of goods
+      for (let k = 0; k < 6; k++) {
+        const x = -0.6 + (k % 3) * 0.6, z = k < 3 ? -0.45 : 0.45;
+        parts.push(box([0.44, 0.24, 0.3], [x, 0.05, z], '#9a7450'), awning(x, z + 0.05, 0.5, k), box([0.14, 0.08, 0.14], [x - 0.1, 0.29, z], AWN[(k + 2) % 6]));
+        parts.push(cyl([0.02, 0.42, 0.02], [x - 0.22, 0.05, z + 0.16], DARK), cyl([0.02, 0.42, 0.02], [x + 0.22, 0.05, z + 0.16], DARK));
+      }
+    } else if (lv === 3) {   // Shops: a row of two-storey shopfronts with awnings and lit signs
+      for (let k = 0; k < 4; k++) {
+        const x = -0.72 + k * 0.48, h = 0.8 + 0.14 * (k % 2);
+        parts.push(box([0.44, h, 0.9], [x, 0.05, -0.3], ['#e8dcc4', '#d8e4f0', '#f0d8d8', '#e4f0d8'][k], { slot: 'mat/hab-facade' }),
+          box([0.46, 0.2, 0.92], [x, 0.08, -0.3], '#bfe8ff', GLOW), awning(x, 0.22, 0.44, k, 0.3), box([0.3, 0.1, 0.02], [x, 0.05 + h - 0.18, 0.16], AWN[(k + 3) % 6], GLOW));
+      }
+      parts.push(box([1.9, 0.02, 0.5], [0, 0.05, 0.65], '#c9b890'), ...tree(-0.6, 0.7, 0.4, true), ...tree(0.6, 0.7, 0.4, true));
+    } else if (lv === 4) {   // Market Hall: a long hall under a barrel roof of glass, gold trim, a clock
+      parts.push(box([1.8, 0.6, 1.3], [0, 0.05, -0.1], '#e8e0d0', { slot: 'mat/hab-facade' }), box([1.82, 0.22, 1.32], [0, 0.1, -0.1], '#bfe8ff', GLOW),
+        cyl([1.3, 1.8, 0.9], [0, 0.5, -0.1], '#9ad8f0', { rot: [0, 0, HALF_PI] }), box([1.84, 0.06, 0.06], [0, 1.08, -0.1], '#d9b23a'),
+        cyl([0.24, 0.03, 0.24], [0, 0.8, 0.57], '#ffe3a0', { rot: [HALF_PI, 0, 0], glow: true }),
+        awning(-0.6, 0.72, 0.5, 0), awning(0, 0.72, 0.5, 1), awning(0.6, 0.72, 0.5, 2));
+    } else if (lv === 5) {   // Arcade: two four-storey blocks joined by a glowing glass roof, a sign mast
+      for (const x of [-0.6, 0.6]) {
+        parts.push(box([0.7, 1.4, 1.8], [x, 0.05, 0], '#e4e8f0', { slot: 'mat/hab-facade' }));
+        for (let y = 0.2; y < 1.35; y += 0.3) parts.push(lit(0.7, 1.8, x, 0.05 + y, 0));
+      }
+      parts.push(box([0.5, 0.05, 1.8], [0, 0.05, 0], '#d8c070'), cyl([0.5, 1.8, 0.5], [0, 1.2, 0], '#bfe8ff', { rot: [HALF_PI, 0, 0], glow: true }),
+        cyl([0.03, 0.8, 0.03], [0.6, 1.45, 0.6], STEEL), box([0.5, 0.24, 0.04], [0.6, 2.0, 0.6], '#ff5ad8', GLOW));
+    } else {   // Trade Tower: a tall blue glass tower on a shopping podium with awnings, a lit gold crown
+      parts.push(box([1.9, 0.5, 1.9], [0, 0.05, 0], '#d8dce4'), box([1.92, 0.16, 1.92], [0, 0.12, 0], '#bfe8ff', GLOW),
+        ...[-0.6, 0, 0.6].map((x, k) => awning(x, 0.98, 0.5, k + 3, 0.4)));
+      const h = 3.6;
+      parts.push(box([1.1, h, 1.1], [0, 0.55, -0.15], '#4a8ac4', { slot: 'mat/glass' }));
+      for (let y = 0.3; y < h - 0.1; y += 0.3) parts.push(box([1.12, 0.04, 1.12], [0, 0.55 + y, -0.15], '#bfe8ff', GLOW));
+      parts.push(box([0.8, 0.5, 0.8], [0, 0.55 + h, -0.15], '#3a6a9a'), torus([1.0, 0.07, 1.0], [0, 0.65 + h, -0.15], '#ffd23a', GLOW),
+        cyl([0.04, 0.9, 0.04], [0, 1.05 + h, -0.15], STEEL), dome([0.1, 0.08, 0.1], [0, 1.95 + h, -0.15], BEACON, GLOW));
+    }
+    return parts;
+  }
+  // industrial
+  const saw = (x, z, w, d, y, n) => { const out = []; for (let k = 0; k < n; k++) out.push(box([w / n, 0.06, d], [x - w / 2 + (k + 0.5) * (w / n), y + 0.06, z], '#9aa3ad', { rot: [0, 0, 0.5] }), box([0.02, 0.1, d], [x - w / 2 + (k + 0.9) * (w / n), y + 0.02, z], '#7fe0ff', GLOW)); return out; };
+  const stack = (x, z, h, r = 0.12) => [cyl([r, h, r], [x, 0.05, z], '#8a7a6a'), box([r + 0.02, 0.06, r + 0.02], [x, 0.05 + h * 0.8, z], HAZARD), cyl([r * 0.8, 0.06, r * 0.8], [x, 0.05 + h, z], '#ff8a2a', GLOW)];
+  if (lv === 2) {   // Workshops: two sheds with sawtooth roofs and a yard of crates
+    for (const x of [-0.5, 0.5]) parts.push(box([0.8, 0.35, 0.9], [x, 0.05, -0.4], '#a8a29a'), ...saw(x, -0.4, 0.8, 0.9, 0.4, 3), lit(0.8, 0.9, x, 0.15, -0.4));
+    parts.push(box([0.3, 0.2, 0.3], [-0.5, 0.05, 0.55], '#9a7450'), box([0.3, 0.2, 0.3], [-0.15, 0.05, 0.6], '#9a7450'), box([0.5, 0.2, 0.3], [0.5, 0.05, 0.6], '#c4773a'));
+  } else if (lv === 3) {   // Machine Shops: a bigger hall, a chimney and a little crane
+    parts.push(box([1.7, 0.55, 1.0], [0, 0.05, -0.35], '#a8a29a'), ...saw(0, -0.35, 1.7, 1.0, 0.6, 4), lit(1.7, 1.0, 0, 0.25, -0.35), ...stack(0.75, 0.6, 1.0),
+      box([0.06, 0.8, 0.06], [-0.6, 0.05, 0.6], HAZARD), box([0.7, 0.06, 0.06], [-0.35, 0.82, 0.6], HAZARD), box([0.3, 0.2, 0.3], [-0.2, 0.05, 0.6], '#c4773a'));
+  } else if (lv === 4) {   // Works: a tall hall, two hot stacks and round tanks
+    parts.push(box([1.4, 0.85, 1.2], [-0.25, 0.05, -0.3], '#9a948c'), ...saw(-0.25, -0.3, 1.4, 1.2, 0.9, 4), lit(1.4, 1.2, -0.25, 0.4, -0.3),
+      ...stack(0.7, -0.6, 1.5), ...stack(0.7, -0.2, 1.3), cyl([0.36, 0.5, 0.36], [0.6, 0.05, 0.55], '#c9ced6'), cyl([0.36, 0.5, 0.36], [0.1, 0.05, 0.65], '#c9ced6'));
+  } else if (lv === 5) {   // Assembly Plant: a long plant, a conveyor bridge, tanks and three stacks
+    parts.push(box([1.9, 1.0, 1.1], [0, 0.05, -0.4], '#9a948c'), ...saw(0, -0.4, 1.9, 1.1, 1.05, 5), lit(1.9, 1.1, 0, 0.35, -0.4), lit(1.9, 1.1, 0, 0.7, -0.4),
+      ...stack(-0.7, 0.55, 1.9), ...stack(-0.35, 0.6, 1.7), ...stack(0, 0.55, 1.5),
+      box([0.16, 0.12, 0.8], [0.6, 0.6, 0.45], HAZARD), cyl([0.4, 0.7, 0.4], [0.6, 0.05, 0.6], '#c9ced6'));
+  } else {   // Factory: a huge block with a sawtooth roof, a cooling tower and four tall hot stacks
+    parts.push(box([1.9, 1.4, 1.2], [0, 0.05, -0.35], '#8a847c'), ...saw(0, -0.35, 1.9, 1.2, 1.45, 6), lit(1.9, 1.2, 0, 0.4, -0.35), lit(1.9, 1.2, 0, 0.8, -0.35), lit(1.9, 1.2, 0, 1.15, -0.35),
+      ...stack(-0.75, 0.6, 2.8, 0.14), ...stack(-0.4, 0.62, 2.5, 0.14), ...stack(-0.05, 0.6, 2.2, 0.14), ...stack(0.75, -0.75, 3.0, 0.12),
+      cyl([0.6, 1.2, 0.6], [0.55, 0.05, 0.55], '#c9ced6'), cyl([0.5, 0.1, 0.5], [0.55, 1.25, 0.55], '#e8eef4'));
+  }
+  return parts;
+}
 
 // A plain block for any key without a kit (later buildings), so the view never fails on new data.
 const fallback = (n) => [box([n * 0.9, 0.6, n * 0.9], [0, 0, 0], '#b0b4ba'), box([n * 0.92, 0.08, n * 0.92], [0, 0.45, 0], WIN, GLOW)];

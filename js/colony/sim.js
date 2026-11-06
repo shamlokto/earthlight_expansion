@@ -16,6 +16,7 @@ import {
   heatTarget, warnLead, raidsPossible, raidInterval, makeRaid, raidPreview, answerRaid, raidName, FACTIONS, FROM,
   basesDay, readyBase, raidsOn, baseName, BASE, BASE_RAIDS, releaseCommander, inviteChance,
   mapOf, deckOf, GROW_KEYS, reserveCap, RESERVE_GOODS,
+  demandOf, quadAdds, TRANSIT_KEYS,
 } from './rules.js';
 import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { diffOf } from './difficulty.js';
@@ -29,7 +30,8 @@ export { habitatNeeds, stateRng };
 // Rules numbers the table has no column for.
 // Buildings on the priority power circuit (see the power step).
 const LIFE_SUPPORT = new Set(['riverpump', 'airplant', 'reclaimer', 'hydro', 'habitat', 'terrace', 'clinic', 'iceharvester', 'gasscoop', 'pumpstation', 'mushroom', 'cistern',
-  'vertfarm', 'waterworks', 'atmoproc', 'towerblock', 'arcology']);   // version 6
+  'vertfarm', 'waterworks', 'atmoproc', 'towerblock', 'arcology',   // version 6
+  'livingquad']);   // version 7
 
 export const SIM = {
   river: 1.25,            // farm beside the river
@@ -59,6 +61,10 @@ export const SIM = {
   hallBonus: 0.5, hallMax: 3,        // Arrivals Halls: each makes a transport half as big again, up to three
   autoRation: 0.85, autoRationHappy: -3, autoRationDays: 3,   // Food Security: automatic rationing when food lasts < 3 days
   reserveFill: 0.1, reserveKeep: 2,  // Emergency Stores refill 10% of their reserve a day from stock above 2 days of need
+  // version 7 (docs/COLONY-V7.md): zoning
+  quadGrowDays: 4,                   // a quad grows a level after 4 days of its needs met (Habitats: growDays)
+  transitGrowDays: 2,                // any home or quad in a Transit Station's or Monorail Stop's range: 2 days
+  freightBonus: 1.25,                // Workshop Quads in a Freight Yard's range make a quarter more
 };
 // Department heads (version 3): which buildings each one's bonus multiplies.
 const DEPT_OF = {
@@ -227,10 +233,11 @@ export function dayTick(state, rng) {
   const dumpsNeeded = mines > SIM.minesFree ? Math.ceil((mines - SIM.minesFree) / SIM.minesPerDump) : 0;
   const tailF = dumps.length >= dumpsNeeded ? 1 : SIM.tailingsHalf;
   if (dumpsNeeded > dumps.length && state.day % 10 === 0) say('tailings', `${mines} Ore Mines and ${dumps.length ? `only ${dumps.length}` : 'no'} working Tailings Dump${dumps.length === 1 ? '' : 's'}: the mines run at half output (${dumpsNeeded} needed).`);
+  const freights = state.buildings.filter((b) => b.key === 'freightyard' && active(b));   // version 7
   const run = (b, s, r) => {
     rates.set(b, r);
     if (!s.makes || r <= 0) return;
-    const m = om(b.key);
+    const m = om(b.key) * (b.key === 'workshopquad' && freights.some((y) => covers(y, b)) ? SIM.freightBonus : 1);
     if (b.key === 'farm') {
       const soil = farmSoil(state, b);
       if (b.mode === 'cash') { make('food', s.makes.food * soil * SIM.cash.food * r * m); make('credits', SIM.cash.credits * soil * r * m); }
@@ -376,7 +383,7 @@ export function dayTick(state, rng) {
   // park coverage stays on its deck (version 4): each home reads its own deck's field
   const fields = {}, fieldOf = (b) => (fields[deckOf(b)] ??= parkField(state, deckOf(b)));
   const homes = state.buildings.filter((b) => GROW_KEYS.has(b.key) && active(b));   // version 6: Tower Blocks grow too
-  const dwellings = state.buildings.filter((b) => HOME_KEYS.has(b.key) && active(b));   // habitats and terrace homes
+  const dwellings = state.buildings.filter((b) => HOME_KEYS.has(b.key) && active(b) && (spec(b).housing || 0) > 0);   // habitats and terrace homes (not an empty lot)
   const parkAvg = dwellings.length ? dwellings.reduce((t, b) => t + parkAt(state, b, fieldOf(b)), 0) / dwellings.length : 0;
   parts.push({ label: 'Parks near homes', value: Math.round(parkAvg) });
   // services (version 2): the best of each kind covering a home, averaged over the homes; a
@@ -407,18 +414,38 @@ export function dayTick(state, rng) {
   state.happy = Math.max(0, Math.min(100, parts.reduce((t, p) => t + p.value, 0)));
 
   // 8 habitats grow when the colony's needs are met and a park covers them; they shrink back when
-  // their own level's needs fail for a while.
+  // their own level's needs fail for a while. Version 7 (docs/COLONY-V7.md): the quads grow the same
+  // way, from an empty lot, and each one that grows spends its zone's demand (rules demandOf) by what it
+  // adds, so a town fills in a few lots at a time; any home in transit's range grows in 2 days.
   state.stats.last = { ...(state.stats.last || {}), met };
+  const ctx = { demand: demandOf(state) }, budget = { R: ctx.demand.R.units, C: ctx.demand.C.units, I: ctx.demand.I.units };
+  const transits = state.buildings.filter((b) => TRANSIT_KEYS.has(b.key) && active(b));
+  const quadsGrew = [], quadsShrank = [];
   for (const b of homes) {
-    const field = fieldOf(b), d = BUILDING[b.key], nextOk = habitatNeeds(state, b, field);
+    const field = fieldOf(b), d = BUILDING[b.key], nextOk = habitatNeeds(state, b, field, ctx);
     const canGrow = nextOk.length > 0 && nextOk.every((n) => n.met);
-    const holds = b.level === 1 || habitatNeeds(state, { ...b, level: b.level - 1 }, field).every((n) => n.met);
+    const holds = b.level === 1 || habitatNeeds(state, { ...b, level: b.level - 1 }, field, ctx).every((n) => n.met || n.grow);
+    const days = transits.some((t) => covers(t, b)) ? SIM.transitGrowDays : d.quad ? SIM.quadGrowDays : SIM.growDays;
     if (canGrow) b.grow = Math.max(0, b.grow || 0) + 1;
     else if (!holds) b.grow = Math.min(0, b.grow || 0) - 1;
     else b.grow = 0;
-    if (b.grow >= SIM.growDays) { b.level++; b.grow = 0; say('grew', `A ${d.name} grew into ${d.levels[b.level - 1].name}: room for ${d.levels[b.level - 1].housing}.`); }
-    else if (b.grow <= -SIM.shrinkDays) { b.level--; b.grow = 0; say('shrank', `A ${d.name} fell back to ${d.levels[b.level - 1].name}: its needs went unmet.`); }
+    if (b.grow >= days) {
+      if (d.quad) {
+        if (budget[d.quad] <= 0) { b.grow = days; continue; }   // today's demand is spent: it waits
+        budget[d.quad] -= quadAdds(b);
+      }
+      b.level++; b.grow = 0;
+      if (d.quad) quadsGrew.push(b);
+      else say('grew', `A ${d.name} grew into ${d.levels[b.level - 1].name}: room for ${d.levels[b.level - 1].housing}.`);
+    } else if (b.grow <= -SIM.shrinkDays) {
+      b.level--; b.grow = 0;
+      if (d.quad) quadsShrank.push(b);
+      else say('shrank', `A ${d.name} fell back to ${d.levels[b.level - 1].name}: its needs went unmet.`);
+    }
   }
+  const quadList = (list) => list.map((b) => `${BUILDING[b.key].name} → ${spec(b).levelName}`).join(', ');
+  if (quadsGrew.length) say('grew', `Zoning: ${quadList(quadsGrew)}.`);
+  if (quadsShrank.length) say('shrank', `Zoning: ${quadList(quadsShrank)} (fell back: its panel says what is missing).`);
 
   // 9 population: deaths after days without food, water or air; emigration when unhappy;
   // a transport every ten days when the colony looks worth joining.
@@ -467,7 +494,7 @@ export function dayTick(state, rng) {
   // 80-colonist milestone: before it the officers serve as the Council's staff)
   const machines = machineUpkeep(state);
   for (const g of state.guardians) if (g.free > 0) g.free--;
-  const upkeep = diffOf(state).upkeep * state.buildings.reduce((t, b) => t + (b.build === 0 ? (BUILDING[b.key].upkeep || 0) * (b.key === 'clinic' && b.mode === 'triage' ? 0.5 : 1) : 0), 0) + machines;
+  const upkeep = diffOf(state).upkeep * state.buildings.reduce((t, b) => t + (b.build === 0 ? (spec(b).upkeep || 0) * (b.key === 'clinic' && b.mode === 'triage' ? 0.5 : 1) : 0), 0) + machines;
   make('credits', tax);
   const paid = Math.min(upkeep, st.credits);
   use('credits', paid);

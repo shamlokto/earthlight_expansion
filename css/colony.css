@@ -1304,3 +1304,17 @@ button.cl-jslot:hover { border-color: var(--gold); }
   .cl-stat i { letter-spacing: .06em; }
   .cl-more { position: fixed; top: 112px; left: 8px; right: 8px; min-width: 0; }
 }
+
+/* version 7 (docs/COLONY-V7.md): RCI demand bars in the build menu's header */
+.cl-rci { display: flex; align-items: center; gap: 8px; padding: 0 2px; }
+.cl-rcilabel { font: 600 10.5px var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-right: auto; cursor: help; }
+.cl-rcibar { display: flex; align-items: center; gap: 4px; cursor: help; }
+.cl-rcibar b { font: 700 11px var(--f-display); color: var(--ink); width: 9px; }
+.cl-rcitrack { position: relative; width: 34px; height: 18px; border: 1px solid var(--edge); background: rgba(8, 14, 46, .55); border-radius: 2px; overflow: hidden; }
+.cl-rcitrack::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(255, 255, 255, .25); }
+.cl-rcitrack i { position: absolute; left: 3px; right: 3px; display: block; }
+.cl-rcitrack i.up { bottom: 50%; }
+.cl-rcitrack i.down { top: 50%; background: #c0504a !important; opacity: .8; }
+.cl-rcibar.zR i.up { background: #6fdc6a; }
+.cl-rcibar.zC i.up { background: #6fb8ff; }
+.cl-rcibar.zI i.up { background: #f5c542; }
