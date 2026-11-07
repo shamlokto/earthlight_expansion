@@ -99,13 +99,13 @@ function s0Can(s, key) { return s.unlocked.includes(R.PETITION_OF[key].want.key)
   check(mood(s, 'Petition ignored') === 0, 'that fades');
 }
 {
-  // a petition with a place: a Market Quad near the dock counts only near the dock; one far away does not
+  // a petition with a place: a Warehouse near the dock counts only near the dock; one far away does not
   const s = colony(4), rng = stateRng(s), dock = s.buildings.find((b) => b.key === 'dock');
   open(s, 'traders', 40);
-  stand(s, 'marketquad', (dock.x + 100) % s.map.w, dock.y);
+  stand(s, 'warehouse', (dock.x + 100) % s.map.w, dock.y);
   tick(s, rng);
-  check(s.petitions.open.length === 1, 'a Market Quad far from the dock does not answer the traders');
-  stand(s, 'marketquad', dock.x + 3, dock.y - 3);
+  check(s.petitions.open.length === 1, 'a Warehouse far from the dock does not answer the traders');
+  stand(s, 'warehouse', dock.x + 3, dock.y - 3);
   tick(s, rng);
   check(s.petitions.granted === 1 && s.stock.parts > 0, 'one within reach of the dock does');
   // a deck: a park on the main deck does not answer the garden families

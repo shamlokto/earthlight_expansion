@@ -32,6 +32,10 @@ const REGISTRY_LINE = ['sato', 'We read the Ninefold registry aloud in the Hall 
 
 const working = (b) => b.build === 0 && !b.off && !(b.down > 0) && !(b.damaged > 0);
 export const isLandmark = (key) => !!BUILDING[key]?.landmark;
+// Version 9 (docs/COLONY-V9.md): wonders share the requirement and the one-of-a-kind rule (`wonder` in place of
+// `landmark`). A wonder counts as standing finished only once its last stage is done.
+const reqOf = (d) => d?.landmark || d?.wonder || null;
+export const isComplete = (b) => b.build === 0 && (!BUILDING[b.key]?.wonder || b.level >= (BUILDING[b.key].levels?.length || 1));
 // A working landmark of this key stands in the colony.
 export const landmarkOn = (state, key) => (state.buildings || []).some((b) => b.key === key && working(b));
 
@@ -44,7 +48,7 @@ export function ensureLandmarks(state) {
 
 // The requirement, item by item: [{ label, met, now }].
 export function landmarkNeeds(state, key) {
-  const d = BUILDING[key], q = d?.landmark;
+  const d = BUILDING[key], q = reqOf(d);
   if (!q) return [];
   const l = ensureLandmarks(state), out = [], chambers = state.chambers || [];
   if (q.pop) out.push({ label: `${q.pop.toLocaleString('en-US')} colonists`, met: state.pop >= q.pop, now: `now ${Math.floor(state.pop).toLocaleString('en-US')}` });
@@ -56,6 +60,7 @@ export function landmarkNeeds(state, key) {
     out.push({ label: `${q.chambers} chambers open`, met: open >= q.chambers, now: `now ${open}` });
   }
   if (q.happyDays) out.push({ label: `Happiness ${LM.happyAt}+ for ${q.happyDays} days`, met: l.happyDays >= q.happyDays, now: `${Math.min(l.happyDays, q.happyDays)} of ${q.happyDays} days` });
+  for (const k of q.built || []) out.push({ label: `${BUILDING[k]?.name || k} finished`, met: (state.buildings || []).some((b) => b.key === k && isComplete(b)), now: '', proper: true });   // version 9
   for (const t of q.tech || []) out.push({ label: `Research ${TECH[t]?.name || t}`, met: !!state.research?.done?.includes(t), now: '' });
   return out;
 }
@@ -63,11 +68,11 @@ export const landmarkEarned = (state, key) => !!ensureLandmarks(state).earned[ke
 // Why this landmark cannot be ordered now (null when it can, cost aside). `ignore`: a building id to leave out (moving it).
 export function landmarkWhy(state, key, ignore = -1) {
   const d = BUILDING[key];
-  if (!d?.landmark) return null;
-  if ((state.buildings || []).some((b) => b.key === key && b.id !== ignore)) return `Eden already has ${d.name}: a landmark is one of a kind.`;
+  if (!reqOf(d)) return null;
+  if ((state.buildings || []).some((b) => b.key === key && b.id !== ignore)) return `Eden already has ${d.name}: a ${d.wonder ? 'wonder' : 'landmark'} is one of a kind.`;
   if (landmarkEarned(state, key)) return null;
   const miss = landmarkNeeds(state, key).filter((n) => !n.met);
-  return `Needs ${miss.map((n) => `${n.label[0].toLowerCase()}${n.label.slice(1)}${n.now ? ` (${n.now})` : ''}`).join(', ')}.`;
+  return `Needs ${miss.map((n) => `${n.proper ? n.label[0] : n.label[0].toLowerCase()}${n.label.slice(1)}${n.now ? ` (${n.now})` : ''}`).join(', ')}.`;
 }
 
 // ---------------------------------------------------------------- the lasting effects (rules.js, sim.js, victory.js read these)

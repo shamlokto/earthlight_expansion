@@ -880,13 +880,14 @@ export const KITS = {
   ],
   // 2×2: a slim white high-rise of lit floors and balconies; a Tower is taller, a Spire taller still with a mast.
   towerblock: (level) => {
-    const lv = Math.max(1, Math.min(3, level || 1)), h = [1.6, 2.6, 3.6][lv - 1], w = lv === 3 ? 1.2 : 1.36;
+    const lv = Math.max(1, Math.min(4, level || 1)), h = [1.6, 2.6, 3.6, 4.8][lv - 1], w = lv >= 3 ? (lv === 4 ? 1.1 : 1.2) : 1.36;   // version 9: a Skyscraper
     const parts = [box([1.96, 0.06, 1.96], [0, 0, 0], '#6a6e74'), box([1.9, 0.03, 0.5], [0, 0.06, 0.72], '#6fbf4a'),
       box([w, h, w], [0, 0.06, -0.1], '#ece6da', { slot: 'mat/hab-facade' })];
     for (let y = 0.3; y < h - 0.1; y += 0.32) parts.push(box([w + 0.03, 0.08, w + 0.03], [0, 0.06 + y, -0.1], '#ffd98a', GLOW), box([w + 0.14, 0.03, 0.12], [0, 0.04 + y, -0.1 + w / 2 + 0.05], '#d8d0c0'));
     parts.push(box([w - 0.1, 0.08, w - 0.1], [0, 0.06 + h, -0.1], '#5fae4a'), ...tree(0.3, -0.3, 0.5, true).map((p) => ({ ...p, pos: [p.pos[0], p.pos[1] + h + 0.1, p.pos[2]] })),
       box([0.6, 0.3, 0.2], [0, 0.06, 0.6], '#bfe8ff'));
-    if (lv === 3) parts.push(cyl([0.05, 0.7, 0.05], [-0.3, 0.14 + h, -0.4], STEEL), dome([0.1, 0.08, 0.1], [-0.3, 0.84 + h, -0.4], BEACON, GLOW));
+    if (lv >= 3) parts.push(cyl([0.05, 0.7, 0.05], [-0.3, 0.14 + h, -0.4], STEEL), dome([0.1, 0.08, 0.1], [-0.3, 0.84 + h, -0.4], BEACON, GLOW));
+    if (lv === 4) parts.push(torus([1.2, 0.06, 1.2], [0, 0.1 + h, -0.1], '#ffd23a', GLOW));
     return parts;
   },
   // 3×3: a stepped white and gold pyramid-tower of garden terraces round a glowing atrium, rising to a spire.
@@ -1097,7 +1098,177 @@ export const KITS = {
     ...[0.55, 0.75].map((x) => cyl([0.04, 0.3, 0.04], [x, 0.41, 0.4], '#c4773a')),
     box([0.08, 0.06, 1.2], [0.4, 0.06, 0.1], '#2a2e34'),
   ],
+  // ---------------------------------------------------------------- version 9 (docs/COLONY-V9.md): wonders and tourism
+  // A wonder grows in stages (wonderKit): below its last stage only the lower part of the finished kit stands, in
+  // bare concrete and steel, inside scaffolding with tower cranes; the last stage is the whole thing, with a teal and
+  // gold trim (the Wonders tab's colour). Each is a skyline of its own and the biggest thing on its deck.
+  // 6×6 on the upper deck: a great glass dome over a tree older than Eden, stepped garden terraces, canals, two
+  // smaller glasshouses and an avenue of flowering trees.
+  arboretum: (level) => wonderKit('arboretum', level, () => [
+    box([5.96, 0.06, 5.96], [0, 0, 0], '#4f9a3a'),
+    box([5.2, 0.24, 5.2], [0, 0.06, 0], '#5fae4a'), box([4.2, 0.24, 4.2], [0, 0.3, 0], '#6abf52'), box([5.22, 0.05, 5.22], [0, 0.28, 0], '#ffd98a'),
+    ...[[-2.7, 0], [2.7, 0], [0, -2.7], [0, 2.7]].map(([x, z]) => box(x ? [0.3, 0.05, 5.4] : [5.4, 0.05, 0.3], [x, 0.07, z], '#3a8ae0', GLOW)),
+    cyl([3.3, 0.35, 3.3], [0, 0.54, 0], '#f4f0e8'), torus([3.34, 0.1, 3.34], [0, 0.86, 0], TEAL, GLOW),
+    dome([3.2, 2.6, 3.2], [0, 0.89, 0], '#bfe8ff', { shimmer: true }),
+    ...[0, 1, 2, 3, 4, 5].map((k) => box([0.05, 2.5, 0.05], [Math.cos(k * 1.047) * 1.55, 0.89, Math.sin(k * 1.047) * 1.55], '#e8eef4', { rot: [Math.sin(k * 1.047) * 0.55, 0, -Math.cos(k * 1.047) * 0.55] })),
+    cyl([0.32, 1.6, 0.32], [0, 0.89, 0], '#6a4a2a'), dome([2.0, 1.5, 2.0], [0, 2.1, 0], '#3f8a32'), dome([1.3, 1.0, 1.3], [0.2, 2.9, -0.1], '#4f9a3a'),
+    ...[[-0.5, 0.4], [0.5, -0.3], [0.1, 0.6]].map(([x, z]) => dome([0.3, 0.26, 0.3], [x, 2.5, z], '#ff9ad0')),
+    cyl([0.07, 0.6, 0.07], [0, 3.48, 0], '#d9b23a'), dome([0.16, 0.14, 0.16], [0, 4.0, 0], '#fff2b0', GLOW),
+    ...[[-2.2, -2.2], [2.2, 2.2]].flatMap(([x, z]) => [cyl([0.9, 0.2, 0.9], [x, 0.3, z], '#f4f0e8'), dome([0.85, 0.75, 0.85], [x, 0.5, z], '#cfefff'), dome([0.5, 0.4, 0.5], [x, 0.52, z], '#5fae4a')]),
+    ...[[-2.4, 1.2], [-2.4, 2.2], [-1.3, 2.4], [2.4, -1.2], [2.4, -2.2], [1.3, -2.4], [-2.4, -0.6], [2.4, 0.6]].flatMap(([x, z], k) => tree(x, z, 1.0, k % 2 === 0)),
+    ...[[-2.0, 0.9], [2.0, -0.9]].map(([x, z]) => dome([0.3, 0.28, 0.3], [x, 0.3, z], '#ff9ad0')),
+  ]),
+  // 5×5: the Archive of Earth: a stepped white plinth, a colonnade round a great reading dome with a gold lantern,
+  // two long wings of lit stacks, broad steps and two obelisks.
+  library: (level) => wonderKit('library', level, () => [
+    box([4.96, 0.1, 4.96], [0, 0, 0], '#cfc8b8'), box([4.4, 0.3, 4.4], [0, 0.1, 0], '#e8e2d4'), box([4.42, 0.06, 4.42], [0, 0.28, 0], TEAL, GLOW),
+    ...[-1.6, 1.6].flatMap((x) => [box([1.0, 1.4, 3.6], [x, 0.4, 0], '#efe8da', { slot: 'mat/hab-facade' }), box([1.02, 0.1, 3.62], [x, 0.8, 0], '#ffd98a', GLOW), box([1.02, 0.1, 3.62], [x, 1.2, 0], '#ffd98a', GLOW), box([1.1, 0.12, 3.7], [x, 1.8, 0], '#bfb3a0')]),
+    cyl([2.4, 1.3, 2.4], [0, 0.4, 0], '#f4f0e8'),
+    ...Array.from({ length: 12 }, (_, k) => cyl([0.12, 1.3, 0.12], [Math.cos(k * 0.5236) * 1.3, 0.4, Math.sin(k * 0.5236) * 1.3], '#fbf8f0')),
+    cyl([2.7, 0.14, 2.7], [0, 1.7, 0], '#d8d0c0'), cyl([2.0, 0.5, 2.0], [0, 1.84, 0], '#efe8da'),
+    dome([2.0, 1.4, 2.0], [0, 2.34, 0], '#e8eef4', { slot: 'mat/glass' }), torus([2.04, 0.08, 2.04], [0, 2.34, 0], '#d9b23a', GLOW),
+    cyl([0.4, 0.5, 0.4], [0, 3.7, 0], '#ffe9a0', GLOW), cone([0.5, 0.4, 0.5], [0, 4.2, 0], '#d9b23a'),
+    ...[0.15, 0.3, 0.45].map((y, k) => box([1.6 - k * 0.3, 0.1, 0.4], [0, 0.1 + y * 0.6, 2.25 - k * 0.2], '#f4f0e8')),
+    ...[-0.9, 0.9].flatMap((x) => [box([0.22, 2.2, 0.22], [x, 0.4, 2.1], '#ece6da'), cone([0.26, 0.3, 0.26], [x, 2.6, 2.1], '#ffd98a', GLOW)]),
+  ]),
+  // 4×4: white sail-shells of a roof over two auditoriums, a glowing glass foyer, a podium of steps.
+  concerthall: (level) => wonderKit('concerthall', level, () => [
+    box([3.96, 0.1, 3.96], [0, 0, 0], '#d8d0c0'), box([3.6, 0.35, 3.0], [0, 0.1, -0.2], '#e8e2d4'), box([3.62, 0.06, 3.02], [0, 0.3, -0.2], TEAL, GLOW),
+    box([3.0, 0.6, 1.0], [0, 0.45, 1.0], '#bfe8ff', GLOW),
+    ...[[-0.9, -0.6, 2.4], [0.9, -0.6, 2.4], [-0.9, 0.3, 1.8], [0.9, 0.3, 1.8], [0, -1.2, 1.6]].map(([x, z, h]) => cone([1.3, h, 1.5], [x, 0.45, z], '#fbfbf6', { rot: [-0.35, 0, x * 0.12] })),
+    ...[[-0.9, -0.6], [0.9, -0.6]].map(([x, z]) => box([1.1, 0.06, 0.06], [x, 0.5, z + 0.55], '#ffd98a', GLOW)),
+    ...[0, 1, 2].map((k) => box([3.0 - k * 0.3, 0.08, 0.3], [0, 0.1 + k * 0.08, 1.75 + k * 0.0], '#f4f0e8')),
+    ...[[-1.7, 1.7], [1.7, 1.7]].flatMap(([x, z]) => [cyl([0.05, 0.9, 0.05], [x, 0.1, z], DARK), dome([0.16, 0.14, 0.16], [x, 1.0, z], '#ffe3a0', GLOW)]),
+  ]),
+  // 5×5 on the main deck: lawns, two long reflecting pools, a ring of dark walls of names, cypresses, a white spire
+  // and the eternal flame on a plinth at the centre.
+  memorial: (level) => wonderKit('memorial', level, () => [
+    box([4.96, 0.06, 4.96], [0, 0, 0], '#5fae4a'), box([4.4, 0.04, 0.5], [0, 0.06, 0], '#d8ccb0'), box([0.5, 0.04, 4.4], [0, 0.06, 0], '#d8ccb0'),
+    ...[[-1.35, -1.35], [1.35, -1.35], [-1.35, 1.35], [1.35, 1.35]].map(([x, z]) => box([1.5, 0.05, 1.5], [x, 0.06, z], '#2a4a6a', GLOW)),
+    ...Array.from({ length: 16 }, (_, k) => k).filter((k) => k % 4 !== 0).map((k) => { const a = k * 0.3927; return box([0.7, 0.9, 0.14], [Math.cos(a) * 2.2, 0.06, Math.sin(a) * 2.2], '#3a3f46', { rot: [0, -a + HALF_PI, 0] }); }),
+    cyl([0.9, 0.35, 0.9], [0, 0.06, 0], '#e8e2d4'), cyl([0.92, 0.05, 0.92], [0, 0.3, 0], TEAL, GLOW),
+    cyl([0.5, 0.25, 0.5], [0, 0.41, 0], '#3a3f46'), cone([0.32, 0.6, 0.32], [0, 0.66, 0], '#ff8a2a', GLOW), cone([0.18, 0.4, 0.18], [0, 0.9, 0], '#ffe36a', GLOW),
+    box([0.3, 3.6, 0.3], [1.3, 0.06, -0.5], '#f4f0e8'), cone([0.34, 0.5, 0.34], [1.3, 3.66, -0.5], '#ffd98a', GLOW),
+    ...[[-2.2, -0.6], [-2.2, 0.6], [2.2, -0.6], [2.2, 0.6], [-0.6, 2.2], [0.6, 2.2], [-0.6, -2.2], [0.6, -2.2]].flatMap(([x, z]) => [cyl([0.05, 0.2, 0.05], [x, 0.06, z], '#4a3a2a'), cone([0.32, 1.6, 0.32], [x, 0.2, z], '#1f4a2f')]),
+  ]),
+  // 6×6 on the lower deck: a great bowl of stands round a lit field, four floodlight masts and the weightless
+  // sphere where the teams fly, glowing above the field.
+  arena: (level) => wonderKit('arena', level, () => [
+    box([5.96, 0.08, 5.96], [0, 0, 0], '#5a6068', { slot: 'mat/hull-plate' }),
+    cyl([5.6, 0.5, 5.6], [0, 0.08, 0], '#7a828c'), cyl([5.0, 0.5, 5.0], [0, 0.58, 0], '#9aa3ad'), cyl([4.4, 0.5, 4.4], [0, 1.08, 0], '#c9ced6'),
+    torus([5.64, 0.12, 5.64], [0, 0.56, 0], TEAL, GLOW), torus([4.44, 0.1, 4.44], [0, 1.56, 0], '#ffd98a', GLOW),
+    ...Array.from({ length: 8 }, (_, k) => k).map((k) => { const a = k * 0.785; return box([1.0, 0.05, 0.3], [Math.cos(a) * 2.3, 1.6, Math.sin(a) * 2.3], AWN[k % AWN.length], { rot: [0, -a, 0] }); }),
+    cyl([3.2, 0.06, 3.2], [0, 1.6, 0], '#3fae5a', GLOW),
+    dome([2.4, 2.4, 2.4], [0, 2.0, 0], '#7fe0ff', { shimmer: true }), torus([2.5, 0.08, 2.5], [0, 3.2, 0], '#7fe0ff', GLOW),
+    ...[[-0.5, 2.8, 0.3], [0.6, 3.4, -0.2], [0.1, 2.5, -0.6]].map(([x, y, z]) => dome([0.14, 0.14, 0.14], [x, y, z], '#ffd23a', GLOW)),
+    ...[[-2.6, -2.6], [2.6, -2.6], [-2.6, 2.6], [2.6, 2.6]].flatMap(([x, z]) => [box([0.16, 3.8, 0.16], [x, 0.08, z], STEEL), box([0.6, 0.3, 0.2], [x * 0.92, 3.9, z * 0.92], '#fff6c2', GLOW)]),
+  ]),
+  // 5×5 in space by the hull: four lit piers round a concourse tower, a liner berthed at one, a gold-and-teal ring.
+  starport: (level) => wonderKit('starport', level, () => [
+    box([4.96, 0.12, 4.96], [0, 0, 0], '#4a525c', { slot: 'mat/hull-plate' }), torus([4.6, 0.1, 4.6], [0, 0.12, 0], TEAL, GLOW),
+    ...[[2.0, 0], [-2.0, 0], [0, 2.0], [0, -2.0]].flatMap(([x, z]) => [box(x ? [1.6, 0.2, 0.5] : [0.5, 0.2, 1.6], [x * 0.75, 0.12, z * 0.75], '#c9ced6'), box(x ? [1.62, 0.04, 0.06] : [0.06, 0.04, 1.62], [x * 0.75, 0.33, z * 0.75], '#ffd23a', GLOW)]),
+    cyl([1.6, 0.8, 1.6], [0, 0.12, 0], '#dfe3ea'), cyl([1.62, 0.1, 1.62], [0, 0.6, 0], WIN, GLOW),
+    cyl([0.9, 2.2, 0.9], [0, 0.92, 0], '#f4f6f8', { slot: 'mat/glass' }), ...[1.4, 2.0, 2.6].map((y) => cyl([0.92, 0.08, 0.92], [0, y, 0], WIN, GLOW)),
+    cyl([1.4, 0.2, 1.4], [0, 3.12, 0], '#d9b23a'), cyl([0.06, 0.9, 0.06], [0, 3.32, 0], STEEL), dome([0.14, 0.12, 0.14], [0, 4.22, 0], BEACON, GLOW),
+    box([2.0, 0.5, 0.6], [1.6, 0.6, 1.2], '#e8eef4'), cone([0.6, 0.6, 0.5], [2.9, 0.6, 1.2], '#e8eef4', { rot: [0, 0, -HALF_PI] }), box([2.02, 0.08, 0.62], [1.6, 0.85, 1.2], WIN, GLOW),
+    ...[[-2.2, -2.2], [2.2, -2.2], [-2.2, 2.2]].map(([x, z]) => dome([0.14, 0.12, 0.14], [x, 0.12, z], BEACON, GLOW)),
+  ]),
+  // 6×6 in space: a great spinning wheel of lit windows on four spokes round a hub, with solar wings.
+  spinring: (level) => wonderKit('spinring', level, () => [
+    box([5.96, 0.08, 5.96], [0, 0, 0], '#3a4048', { slot: 'mat/hull-plate' }),
+    cyl([1.4, 2.4, 1.4], [0, 0.08, 0], '#dfe3ea'), cyl([1.42, 0.1, 1.42], [0, 1.2, 0], TEAL, GLOW), dome([1.4, 0.6, 1.4], [0, 2.48, 0], '#f4f6f8'),
+    torus([5.4, 0.9, 5.4], [0, 1.0, 0], '#e8eef4'), torus([5.42, 0.18, 5.42], [0, 1.5, 0], WIN, GLOW), torus([5.42, 0.08, 5.42], [0, 1.05, 0], '#ffd98a', GLOW),
+    box([4.8, 0.18, 0.24], [0, 1.4, 0], '#c9ced6'), box([0.24, 0.18, 4.8], [0, 1.4, 0], '#c9ced6'),
+    box([1.6, 0.04, 0.8], [0, 2.9, -1.4], '#2a4a8a', { rot: [0.3, 0, 0] }), box([1.6, 0.04, 0.8], [0, 2.9, 1.4], '#2a4a8a', { rot: [-0.3, 0, 0] }),
+    cyl([0.06, 0.9, 0.06], [0, 3.08, 0], STEEL), dome([0.14, 0.12, 0.14], [0, 3.98, 0], BEACON, GLOW),
+  ]),
+  // 7×7 in space beside the hull: the Ark in her dock: gantries and cradles round a long white ship with a ring of
+  // habitat decks, a drive of three engine bells, lit windows. Once she has flown (b.launched), the empty dock.
+  ark: (level, mode, b) => {
+    const dock = [
+      box([6.96, 0.1, 6.96], [0, 0, 0], '#3a4048', { slot: 'mat/hull-plate' }), torus([6.6, 0.1, 6.6], [0, 0.1, 0], TEAL, GLOW),
+      ...[-2.6, -0.9, 0.9, 2.6].flatMap((x) => [box([0.2, 2.6, 0.2], [x, 0.1, -2.6], HAZARD), box([0.2, 2.6, 0.2], [x, 0.1, 2.6], HAZARD), box([0.24, 0.24, 5.4], [x, 2.7, 0], HAZARD)]),
+      ...[-2.0, 0, 2.0].map((x) => box([0.5, 0.6, 2.2], [x, 0.1, 0], '#5a6068')),
+      ...[[-3.2, -3.2], [3.2, -3.2], [-3.2, 3.2], [3.2, 3.2]].map(([x, z]) => dome([0.16, 0.14, 0.16], [x, 0.1, z], BEACON, GLOW)),
+    ];
+    if (b?.launched) return [...dock, box([5.6, 0.04, 1.8], [0, 0.72, 0], '#7fe0ff', GLOW), cyl([0.08, 1.2, 0.08], [0, 2.94, 0], STEEL), dome([0.2, 0.16, 0.2], [0, 4.1, 0], '#7ff0d0', GLOW)];
+    return wonderKit('ark', level, () => [
+      ...dock,
+      // (a rotated part turns about its own centre, pos[1] + size[1] / 2: the ship's axis lies 1.9 above the dock)
+      cyl([1.9, 5.4, 1.9], [0, 1.9 - 2.7, 0], '#f4f6f8', { rot: [0, 0, HALF_PI], slot: 'mat/hull-plate' }),
+      ...[-2.0, -1.0, 0, 1.0, 2.0].map((x) => cyl([1.94, 0.08, 1.94], [x, 1.86, 0], WIN, { rot: [0, 0, HALF_PI], glow: true })),
+      cone([1.9, 1.3, 1.9], [-3.35, 1.9 - 0.65, 0], '#e8eef4', { rot: [0, 0, HALF_PI] }),
+      torus([3.4, 0.5, 3.4], [0.6, 1.65, 0], '#dfe3ea', { rot: [0, 0, HALF_PI] }), torus([3.42, 0.12, 3.42], [0.6, 1.84, 0], '#ffd98a', { rot: [0, 0, HALF_PI], glow: true }),
+      ...[[-0.45, 0], [0.4, 0.45], [0.4, -0.45]].map(([y, z]) => cone([0.7, 0.8, 0.7], [3.1, 1.5 + y, z], '#7a828c', { rot: [0, 0, -HALF_PI] })),
+      ...[[-0.45, 0], [0.4, 0.45], [0.4, -0.45]].map(([y, z]) => cyl([0.5, 0.06, 0.5], [3.5, 1.87 + y, z], '#7fe0ff', { rot: [0, 0, HALF_PI], glow: true })),
+    ]);
+  },
+  // 2×2: a Guest House (two storeys, an awning, a lit sign), a Hotel (six lit storeys with balconies and a roof
+  // garden), a Grand Hotel (a tall stepped tower with a pool deck, a gold crown and a teal sign).
+  hotel: (level) => {
+    const lv = Math.max(1, Math.min(3, level || 1)), parts = [box([1.96, 0.06, 1.96], [0, 0, 0], '#8a8e96'), box([1.9, 0.03, 0.4], [0, 0.06, 0.75], '#6fbf4a')];
+    const h = [0.7, 1.8, 3.4][lv - 1], w = [1.5, 1.4, 1.2][lv - 1];
+    parts.push(box([w, h, w], [0, 0.06, -0.15], '#f2e6d8', { slot: 'mat/hab-facade' }));
+    for (let y = 0.25; y < h - 0.1; y += 0.3) parts.push(box([w + 0.03, 0.08, w + 0.03], [0, 0.06 + y, -0.15], '#ffd98a', GLOW), box([w + 0.12, 0.03, 0.1], [0, 0.04 + y, -0.15 + w / 2 + 0.04], '#d8d0c0'));
+    parts.push(box([0.9, 0.06, 0.36], [0, 0.42, 0.62], '#c03a4a', { rot: [0.3, 0, 0] }), box([0.6, 0.14, 0.04], [0, 0.06 + h - 0.22, -0.15 + w / 2 + 0.03], '#7ff0d0', GLOW));
+    if (lv >= 2) parts.push(box([w - 0.1, 0.06, w - 0.1], [0, 0.06 + h, -0.15], '#5fae4a'), box([0.5, 0.03, 0.3], [0.3, 0.12 + h, -0.3], '#4ac0ff', GLOW));
+    if (lv === 3) parts.push(box([0.8, 0.4, 0.8], [0, 0.12 + h, -0.15], '#d9b23a'), cyl([0.05, 0.7, 0.05], [0, 0.52 + h, -0.15], STEEL), dome([0.1, 0.08, 0.1], [0, 1.22 + h, -0.15], BEACON, GLOW));
+    return parts;
+  },
+  // 2×2: a paved walk with lamp posts, two striped kiosks, café tables, a round fountain and trees.
+  promenade: () => [
+    box([1.96, 0.05, 1.96], [0, 0, 0], '#d8ccb0'), box([1.9, 0.02, 0.5], [0, 0.05, 0], '#c9b890'),
+    cyl([0.6, 0.12, 0.6], [0, 0.05, 0], '#e8e2d4'), cyl([0.5, 0.05, 0.5], [0, 0.15, 0], '#4ac0ff', GLOW), cyl([0.06, 0.3, 0.06], [0, 0.15, 0], '#e8e2d4'),
+    ...[[-0.6, -0.6, 0], [0.6, -0.6, 1]].flatMap(([x, z, k]) => [box([0.4, 0.3, 0.3], [x, 0.05, z], '#f4f0e8'), box([0.46, 0.06, 0.36], [x, 0.38, z], AWN[k], { rot: [0.2, 0, 0] })]),
+    ...[[-0.8, 0.7], [0.8, 0.7], [-0.8, -0.1], [0.8, -0.1]].flatMap(([x, z]) => [cyl([0.03, 0.6, 0.03], [x, 0.05, z], DARK), dome([0.1, 0.08, 0.1], [x, 0.65, z], '#ffe3a0', GLOW)]),
+    ...tree(-0.4, 0.75, 0.45, true), ...tree(0.4, 0.75, 0.45, true),
+  ],
+  // 2×2: a classical façade with columns under a red pediment, a glowing marquee, a fly tower behind.
+  theatre: () => [
+    box([1.96, 0.06, 1.96], [0, 0, 0], '#8a8e96'),
+    box([1.6, 1.0, 1.2], [0, 0.06, -0.3], '#e8dcc8', { slot: 'mat/hab-facade' }), box([1.0, 0.6, 0.8], [0, 1.06, -0.45], '#d0c4b0'),
+    box([1.7, 0.14, 0.5], [0, 1.0, 0.45], '#b03a3a'), ...[-0.6, -0.2, 0.2, 0.6].map((x) => cyl([0.08, 0.94, 0.08], [x, 0.06, 0.55], '#fbf8f0')),
+    box([1.2, 0.18, 0.06], [0, 0.6, 0.31], '#ffd23a', GLOW), box([0.8, 0.12, 0.04], [0, 0.82, 0.31], '#ff5ad8', GLOW),
+  ],
+  // 3×3: a glitzy tower in neon bands under a gold dome, a lit podium and a great sign.
+  casino: () => [
+    box([2.96, 0.08, 2.96], [0, 0, 0], '#4a4e58'), box([2.6, 0.6, 2.6], [0, 0.08, 0], '#2a2e3a'), box([2.62, 0.12, 2.62], [0, 0.4, 0], '#ff5ad8', GLOW),
+    cyl([1.5, 2.2, 1.5], [0, 0.68, -0.2], '#3a3050'), ...[1.0, 1.5, 2.0, 2.5].map((y, k) => cyl([1.52, 0.07, 1.52], [0, y, -0.2], ['#ffd23a', '#ff5ad8', '#4ac0ff', '#ffd23a'][k], GLOW)),
+    dome([1.5, 0.9, 1.5], [0, 2.88, -0.2], '#d9b23a'), cyl([0.05, 0.6, 0.05], [0, 3.7, -0.2], STEEL), dome([0.14, 0.12, 0.14], [0, 4.3, -0.2], '#ff5ad8', GLOW),
+    box([1.6, 0.5, 0.06], [0, 0.9, 1.25], '#ffd23a', GLOW), box([0.06, 0.9, 0.06], [-0.7, 0.08, 1.25], STEEL), box([0.06, 0.9, 0.06], [0.7, 0.08, 1.25], STEEL),
+  ],
 };
+
+// Version 9: a wonder at its stage (1 .. its last). The last stage is the finished kit. Before it: the kit cut off at
+// stage / stages of its height, greyed toward bare concrete (the first stage) or steel (later stages), with no glow,
+// inside scaffolding of corner towers, and two tower cranes reaching over it. So it visibly grows, stage by stage.
+const TEAL = '#7ff0d0';
+const mix = (a, b, t) => { const p = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); const [x, y] = [p(a), p(b)]; return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
+function wonderKit(key, level, full) {
+  const n = BUILDING[key]?.levels?.length || 1, lv = Math.max(1, Math.min(n, level || 1)), parts = full();
+  if (lv >= n) return parts;
+  const size = BUILDING[key]?.size || 4, half = size / 2, H = kitHeight(parts), cut = Math.max(0.3, (H * lv) / n);
+  const bare = lv === 1 ? '#9a968c' : '#a3aab4', t = lv === 1 ? 0.75 : 0.5;
+  const out = [box([size - 0.04, 0.05, size - 0.04], [0, 0, 0], lv === 1 ? '#6e6a62' : '#5e646c')];
+  for (const p of parts) {
+    if (p.shimmer || p.pos[1] >= cut) continue;
+    const top = p.pos[1] + p.size[1];
+    const q = { ...p, color: /^#[0-9a-f]{6}$/i.test(p.color) ? mix(p.color, bare, t) : bare, glow: false, slot: undefined };
+    if (top > cut) q.size = [p.size[0], cut - p.pos[1], p.size[2]];   // (a tilted part is shortened along its own axis: half-built)
+    out.push(q);
+  }
+  // scaffolding: corner towers and rails to just above the cut, then two tower cranes
+  const sh = cut + 0.35;
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) out.push(box([0.08, sh, 0.08], [x * (half - 0.15), 0.05, z * (half - 0.15)], HAZARD));
+  for (let y = 0.6; y < sh; y += 0.6) for (const z of [-1, 1]) out.push(box([size - 0.3, 0.04, 0.04], [0, 0.05 + y, z * (half - 0.15)], '#c9a23a'), box([0.04, 0.04, size - 0.3], [z * (half - 0.15), 0.05 + y, 0], '#c9a23a'));
+  for (const [x, z, a] of [[-1, -1, 0], [1, 1, Math.PI]]) {
+    const cx = x * (half - 0.55), cz = z * (half - 0.55), mast = cut + 1.6, jib = size * 0.55;
+    out.push(box([0.16, mast, 0.16], [cx, 0.05, cz], HAZARD), box([jib, 0.12, 0.12], [cx + Math.cos(a) * (jib / 2 - 0.3), 0.05 + mast, cz], HAZARD),
+      box([0.4, 0.22, 0.22], [cx - Math.cos(a) * 0.5, 0.0 + mast, cz], '#5a5e64'), cyl([0.02, 1.0, 0.02], [cx + Math.cos(a) * (jib - 0.6), mast - 0.95, cz], DARK),
+      dome([0.08, 0.07, 0.08], [cx, 0.17 + mast, cz], BEACON, GLOW));
+  }
+  return out;
+}
 
 // A quad at its level (version 7): 1 the empty lot, 2..6 ever bigger and taller. zone: 'R' | 'C' | 'I'.
 const LOT = { R: ['#7a8a5a', '#5fae4a'], C: ['#8a8e96', '#4ac0ff'], I: ['#7a6a5a', '#ff8a2a'] };

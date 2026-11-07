@@ -245,7 +245,7 @@ const api = {
   show: (sh) => doShow(sh),
   help: () => openHelp(),
   answered: (p) => {
-    if (p?.kind === 'victory') save(true);   // the win is kept in the save (D25); the colony carries on
+    if (p?.kind === 'victory' || p?.kind === 'ark') save(true);   // the win is kept in the save (D25); the colony carries on (version 9: the Ark's ending too)
     if (p?.kind === 'welcome' && fresh) {
       fresh = false;
       let seen = false; try { seen = !!localStorage.getItem(HELP_SEEN); } catch { }
@@ -661,7 +661,7 @@ function tick() {
   if (placing && hover) ghostAt(hover.x, hover.y);
   // music: the defenders' theme while raiders are at the gates; fanfares for a raid beaten and the win
   for (const ev of res?.events || []) {
-    if (ev?.kind === 'victory') audio.sting('victory');
+    if (ev?.kind === 'victory' || ev?.kind === 'ark') audio.sting('victory');
     else if (ev?.kind === 'raidresult') audio.sting(state.raid?.last?.won ? 'won' : 'lost');
   }
   musicMode();

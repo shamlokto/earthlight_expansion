@@ -24,6 +24,7 @@
 //   crews                    machines this building crews (version 3)
 //   decks                    decks it may stand on: 'upper' | 'main' | 'lower' (version 4; absent = main only)
 //   fixed                    cannot be built, moved or demolished by the player
+//   retired                  no longer built (off the menu, never unlocked); old saves' copies keep working (version 9)
 //   text                     one line for the build menu
 export const CATEGORIES = [
   { key: 'core', name: 'Command' },
@@ -35,6 +36,7 @@ export const CATEGORIES = [
   { key: 'services', name: 'Services' },
   { key: 'defence', name: 'Defence' },
   { key: 'landmarks', name: 'Landmarks' },   // version 8 (docs/COLONY-V8.md): one of a kind each
+  { key: 'wonders', name: 'Wonders' },       // version 9 (docs/COLONY-V9.md): grander, built in stages
 ];
 
 // What one colonist needs a day.
@@ -209,8 +211,9 @@ export const BUILDINGS = [
   { key: 'sunmirror', name: 'Sun Mirror', cat: 'power', size: 2, zone: 'space', on: ['void'], cost: { credits: 1600, parts: 120 }, days: 8, jobs: 4, upkeep: 10, power: 350, tech: 'mirrors',
     text: 'A great foil mirror in open space focusing sunlight on a boiler: 350 power with no fuel. Near a dock or a Tether Mast.' },
   { key: 'towerblock', name: 'Tower Block', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 700, parts: 50 }, days: 6, jobs: 0, upkeep: 6, power: -10, housing: 150, tech: 'highrise',
-    levels: [{ housing: 150, name: 'Block' }, { housing: 300, name: 'Tower', needs: ['allNeeds', 'park'] }, { housing: 450, name: 'Spire', needs: ['allNeeds', 'park', 'clinic'] }],
-    text: 'High-rise homes for 150 that grow, like Habitats, into Towers (300) and Spires (450) when their needs are met.' },
+    levels: [{ housing: 150, name: 'Block' }, { housing: 300, name: 'Tower', needs: ['allNeeds', 'park'] }, { housing: 450, name: 'Spire', needs: ['allNeeds', 'park', 'clinic'] },
+      { housing: 600, name: 'Skyscraper', power: -14, needs: ['allNeeds', 'park', 'clinic', 'transit', 'tech:skyscrapers'] }],   // version 9: the 4th level
+    text: 'High-rise homes for 150 that grow, like Habitats, into Towers (300) and Spires (450) when their needs are met, and with Skyscrapers and transit in reach into a Skyscraper (600).' },
   { key: 'arcology', name: 'Arcology', cat: 'homes', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 5000, parts: 400 }, days: 16, jobs: 250, upkeep: 30, power: -60, housing: 1500, radius: 5, park: 8, tech: 'arcology',
     text: 'A city in one building: homes for 1,500, shops, schools and workshops inside (250 jobs), and roof gardens that count as a park nearby.' },
   { key: 'arrivals', name: 'Arrivals Hall', cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['main'], cost: { credits: 1200, parts: 80 }, days: 8, jobs: 12, upkeep: 8, power: -8, tech: 'immigration',
@@ -222,6 +225,8 @@ export const BUILDINGS = [
             { key: 'auto', name: 'Automatic', text: 'Launches a heavy convoy a day by itself, of whatever Eden can best spare, always keeping ten days of needs at home.' }],
     text: 'A magnetic rail on the hull that throws cargo pods down to Earth: a relief convoy becomes a heavy launch of three loads. Can run by itself.' },
   // ---------------------------------------------------------------- version 7 (docs/COLONY-V7.md): zoning and growth
+  // Retired on 2026-11-07 (owner: "the simcity style pods of land don't work"; docs/COLONY-V9.md): `retired`, so they are
+  // off the menu and never unlocked, but quads already standing in an old save keep working and growing as below.
   // Quads (`quad`: 'R' | 'C' | 'I'): cheap 2×2 lots that develop by themselves, level by level, like Habitats (sim.js
   // step 8, rules GROW_KEYS). Level 1 is the empty lot; each level's fields override the table's (rules.spec).
   // `shoppers`: the residents a Market Quad level serves (commercial demand, rules demandOf); `nuisance`: a Workshop
@@ -229,7 +234,7 @@ export const BUILDINGS = [
   // Level needs (rules habitatNeeds): 'allNeeds' | 'park' | 'clinic' | 'school' | 'transit' | 'freight' | 'shops' | 'quiet'
   // | 'demand:R|C|I' | 'happy:N' | 'residents:N' (homes within 12 tiles) | 'tech:<key>'. Demand, happiness and tech
   // only gate growing; the others must also hold, or the quad shrinks back after SIM.shrinkDays.
-  { key: 'livingquad', name: 'Living Quad', ver: 7, quad: 'R', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 120, parts: 5 }, days: 2, jobs: 0, upkeep: 1, power: 0, housing: 0,
+  { key: 'livingquad', retired: true, name: 'Living Quad', ver: 7, quad: 'R', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 120, parts: 5 }, days: 2, jobs: 0, upkeep: 1, power: 0, housing: 0,
     levels: [{ name: 'Zoned lot', housing: 0, power: 0, upkeep: 1 },
       { name: 'Cottages', housing: 40, power: -2, upkeep: 2, needs: ['demand:R'] },
       { name: 'Row Houses', housing: 100, power: -4, upkeep: 3, needs: ['demand:R', 'allNeeds', 'park', 'quiet'] },
@@ -237,7 +242,7 @@ export const BUILDINGS = [
       { name: 'Mid-rise', housing: 400, power: -14, upkeep: 8, needs: ['demand:R', 'allNeeds', 'park', 'quiet', 'shops', 'clinic', 'school', 'happy:60', 'tech:urbanplan'] },
       { name: 'Residential Tower', housing: 700, power: -24, upkeep: 12, needs: ['demand:R', 'allNeeds', 'park', 'quiet', 'shops', 'clinic', 'school', 'transit', 'happy:65', 'tech:skyscrapers'] }],
     text: 'Zone a residential lot: it builds itself up, from Cottages (40) to a Residential Tower (700), while people want homes and the street has what it needs.' },
-  { key: 'marketquad', name: 'Market Quad', ver: 7, quad: 'C', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 150, parts: 10 }, days: 2, jobs: 0, upkeep: 1, power: 0,
+  { key: 'marketquad', retired: true, name: 'Market Quad', ver: 7, quad: 'C', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 150, parts: 10 }, days: 2, jobs: 0, upkeep: 1, power: 0,
     levels: [{ name: 'Market lot', jobs: 0, power: 0, upkeep: 1 },
       { name: 'Stalls', jobs: 6, power: -2, upkeep: 1, makes: { credits: 15 }, shoppers: 150, service: 2, radius: 8, needs: ['demand:C', 'residents:40'] },
       { name: 'Shops', jobs: 15, power: -4, upkeep: 2, makes: { credits: 40 }, shoppers: 400, service: 3, radius: 9, needs: ['demand:C', 'residents:150', 'allNeeds'] },
@@ -245,7 +250,7 @@ export const BUILDINGS = [
       { name: 'Arcade', jobs: 55, power: -14, upkeep: 7, makes: { credits: 180 }, shoppers: 1800, service: 5, radius: 12, needs: ['demand:C', 'residents:900', 'allNeeds', 'happy:60', 'tech:urbanplan'] },
       { name: 'Trade Tower', jobs: 100, power: -24, upkeep: 12, makes: { credits: 360 }, shoppers: 3500, service: 6, radius: 14, needs: ['demand:C', 'residents:1800', 'allNeeds', 'transit', 'happy:65', 'tech:skyscrapers'] }],
     text: 'Zone a commercial lot: stalls grow into shops, a market hall and a Trade Tower while there are shoppers. Jobs, credits, and shopping for the homes around it.' },
-  { key: 'workshopquad', name: 'Workshop Quad', ver: 7, quad: 'I', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 150, parts: 10 }, days: 2, jobs: 0, upkeep: 1, power: 0,
+  { key: 'workshopquad', retired: true, name: 'Workshop Quad', ver: 7, quad: 'I', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 150, parts: 10 }, days: 2, jobs: 0, upkeep: 1, power: 0,
     levels: [{ name: 'Industrial lot', jobs: 0, power: 0, upkeep: 1 },
       { name: 'Workshops', jobs: 10, power: -3, upkeep: 1, makes: { parts: 3 }, nuisance: 2, needs: ['demand:I'] },
       { name: 'Machine Shops', jobs: 24, power: -6, upkeep: 2, makes: { parts: 7 }, nuisance: 3, needs: ['demand:I', 'allNeeds'] },
@@ -254,13 +259,13 @@ export const BUILDINGS = [
       { name: 'Factory', jobs: 140, power: -40, upkeep: 12, makes: { parts: 35, alloy: 10 }, nuisance: 6, needs: ['demand:I', 'allNeeds', 'freight', 'tech:automation'] }],
     text: 'Zone an industrial lot: workshops grow into a Factory while people want work. Jobs and parts (alloy later), but the noise keeps Living Quads nearby small.' },
   { key: 'school', name: 'School', ver: 7, cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 500, parts: 30 }, days: 5, jobs: 8, upkeep: 4, power: -4, radius: 10, service: 3, makes: { research: 2 }, tech: 'schooling',
-    text: 'Classrooms and a playing field: happiness for homes in range, a little research, and Living Quads in range can grow into Mid-rises.' },
+    text: 'Classrooms and a playing field: happiness for homes in range and a little research.' },
   { key: 'transit', name: 'Transit Station', ver: 7, cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 900, parts: 60 }, days: 6, jobs: 10, upkeep: 6, power: -10, radius: 10, service: 2, tech: 'urbanplan',
-    text: 'Trams through the chambers: homes and quads in range grow in 2 days instead of 4 or 5, and quads in range can reach their top level.' },
+    text: 'Trams through the chambers: Habitats and Tower Blocks in range grow in 2 days instead of 5, and Tower Blocks in range can become Skyscrapers.' },
   { key: 'monorail', name: 'Monorail Stop', ver: 7, cat: 'services', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 800, parts: 60 }, days: 5, jobs: 4, upkeep: 6, power: -8, radius: 16, service: 2, tech: 'skyscrapers',
     text: 'A stop on the high line: a Transit Station on one tile, reaching 16 tiles.' },
   { key: 'freightyard', name: 'Freight Yard', ver: 7, cat: 'industry', size: 2, zone: 'interior', on: ['deck', 'plain', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 600, parts: 40 }, days: 5, jobs: 8, upkeep: 4, power: -6, radius: 10, storage: { parts: 300, alloy: 200 }, tech: 'lightindustry',
-    text: 'Cranes and containers: stores parts and alloy, Workshop Quads in range make a quarter more and can grow into Assembly Plants and Factories.' },
+    text: 'Cranes and containers: stores 300 parts and 200 alloy, and Smelters and Fabricators in range make a quarter more.' },
   // ---------------------------------------------------------------- version 8 (docs/COLONY-V8.md): landmarks and incidents
   // Landmarks (`landmark`): one per colony, big and slow to build, each with a lasting bonus (js/colony/landmarks.js reads
   // them). `landmark` lists the requirement, met once and then kept: { pop, chambers: N | 'main' (every main-deck
@@ -287,6 +292,81 @@ export const BUILDINGS = [
   // Incidents (js/colony/incidents.js): the Flare Shelter is what helps in a solar flare.
   { key: 'flareshelter', name: 'Flare Shelter', ver: 8, cat: 'power', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 400, parts: 30 }, days: 4, jobs: 1, upkeep: 3, power: -2, storage: { power: 150 }, tech: 'forecasting',
     text: 'Shielded rooms and a buried switchyard: in a solar flare, solar power drops by a quarter instead of half and nobody panics. Stores 150 power too.' },
+  // ---------------------------------------------------------------- version 9 (docs/COLONY-V9.md): wonders, tourism, the Ark
+  // Wonders (`wonder`, cat 'wonders'): a grander tier above the landmarks, one of a kind, with big footprints (4×4 to
+  // 7×7), built in STAGES. Placing one orders its first stage (`cost`, `days`); each later stage is a level (`levels`,
+  // ordered from its panel like an upgrade, with its own `cost` and `days`; a cost may include alloy, helium-3 and
+  // food, water or air). Only the last stage works: its fields (jobs, upkeep, power, makes, park...) are the working
+  // wonder's. `wonder` is the requirement, met once and kept, as a landmark's: { pop, tech: [keys], built: [landmark or
+  // wonder keys that must stand finished] }, plus what the finished wonder does (js/colony/wonders.js reads them):
+  //   tourism (attraction points), happy (colony-wide), value + valueRadius (land value nearby), research (a day per
+  //   1,000 colonists), transport (× transports), visitors (× the visitors that can arrive), fade (× how fast grief and
+  //   fear fade), megaproject (the Ark: the second ending)
+  { key: 'arboretum', name: 'Grand Arboretum', ver: 9, cat: 'wonders', size: 6, zone: 'interior', on: ['plain', 'fertile', 'poor', 'deck', 'hills'], decks: ['upper'], cost: { credits: 6000, parts: 400 }, days: 12, jobs: 0, upkeep: 4, power: 0,
+    wonder: { pop: 5000, built: ['govgarden'], tech: ['monumental'], tourism: 40, happy: 4, value: 15, valueRadius: 24,
+      effect: '+4 happiness for the whole colony, a park of 14 within 20 tiles, land value +15 within 24 tiles, 500 air a day, and 40 tourism.' },
+    levels: [{ name: 'Terraces' }, { name: 'Glasshouses', cost: { credits: 8000, parts: 600, alloy: 150 }, days: 14 },
+      { name: 'Grand Arboretum', cost: { credits: 10000, parts: 800, alloy: 250 }, days: 16, jobs: 40, upkeep: 25, uses: { water: 150 }, makes: { air: 500 }, radius: 20, park: 14 }],
+    text: 'A forest under glass on the upper deck\'s gardens: a great dome around a tree older than Eden, terraces and canals. Happiness everywhere, the finest park and the highest land value for streets around.' },
+  { key: 'library', name: 'Great Library', ver: 9, cat: 'wonders', size: 5, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['upper', 'main'], cost: { credits: 5000, parts: 400 }, days: 10, jobs: 0, upkeep: 4, power: 0,
+    wonder: { pop: 5000, built: ['hallofnames'], tech: ['monumental'], tourism: 25, research: 4, value: 8, valueRadius: 16,
+      effect: 'The Archive of Earth: 4 research a day for every 1,000 colonists, land value +8 within 16 tiles, and 25 tourism.' },
+    levels: [{ name: 'Foundations' }, { name: 'Stacks', cost: { credits: 7000, parts: 500, alloy: 100 }, days: 12 },
+      { name: 'Great Library', cost: { credits: 9000, parts: 700, alloy: 200 }, days: 14, jobs: 60, upkeep: 20, power: -40 }],
+    text: 'The Archive of Earth: every book, film and song the colony could save, under a reading dome. Research grows with the city: 4 a day for every 1,000 colonists.' },
+  { key: 'concerthall', name: 'Concert Hall', ver: 9, cat: 'wonders', size: 4, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main'], cost: { credits: 3000, parts: 200 }, days: 8, jobs: 0, upkeep: 3, power: 0,
+    wonder: { pop: 2500, tech: ['monumental'], tourism: 25, value: 10, valueRadius: 20,
+      effect: 'Happiness 8 for every home within 24 tiles, land value +10 within 20 tiles, 3 leisure for visitors, and 25 tourism.' },
+    levels: [{ name: 'Foundations' }, { name: 'Shell', cost: { credits: 4000, parts: 300, alloy: 80 }, days: 10 },
+      { name: 'Concert Hall', cost: { credits: 5000, parts: 400, alloy: 120 }, days: 12, jobs: 30, upkeep: 15, power: -25, radius: 24, service: 8, leisure: 3 }],
+    text: 'White shells of a roof over two auditoriums and a glass foyer: happiness for every home in a wide reach, higher land value, and a night out for visitors.' },
+  { key: 'memorial', name: 'Memorial Garden', ver: 9, cat: 'wonders', size: 5, zone: 'interior', on: ['plain', 'fertile', 'poor', 'deck', 'hills'], decks: ['main'], cost: { credits: 3000, parts: 150 }, days: 8, jobs: 0, upkeep: 3, power: 0,
+    wonder: { pop: 2500, built: ['hallofnames'], tech: ['monumental'], tourism: 30, happy: 5, fade: 2, value: 10, valueRadius: 16,
+      effect: '+5 happiness for the whole colony, grief and fear fade twice as fast again, a park of 12 within 16 tiles, land value +10 within 16, and 30 tourism.' },
+    levels: [{ name: 'Grounds' }, { name: 'Walls of Names', cost: { credits: 4000, parts: 250 }, days: 10 },
+      { name: 'Memorial Garden', cost: { credits: 5000, parts: 300, alloy: 60 }, days: 10, jobs: 8, upkeep: 10, uses: { water: 30 }, radius: 16, park: 12 }],
+    text: 'A garden to the war on the main deck: long pools, walls of names of both sides, cypresses and an eternal flame. Eden grieves more gently, and visitors come from Earth to stand there.' },
+  { key: 'arena', name: 'Zero-G Arena', ver: 9, cat: 'wonders', size: 6, zone: 'interior', on: ['deck', 'conduit', 'rock'], decks: ['lower'], cost: { credits: 8000, parts: 600 }, days: 12, jobs: 0, upkeep: 6, power: 0,
+    wonder: { pop: 10000, tech: ['monumental'], tourism: 50, happy: 6,
+      effect: '+6 happiness for the whole colony, 300 credits a day in tickets, and 50 tourism: the biggest draw in Eden.' },
+    levels: [{ name: 'Excavation' }, { name: 'Frame', cost: { credits: 10000, parts: 800, alloy: 300 }, days: 14 },
+      { name: 'Zero-G Arena', cost: { credits: 12000, parts: 1000, alloy: 400 }, days: 16, jobs: 120, upkeep: 30, power: -120, makes: { credits: 300 } }],
+    text: 'A great bowl dug into the lower deck\'s machinery halls, with a weightless sphere above the field where teams fly. Happiness, ticket money, and crowds from Earth.' },
+  { key: 'starport', name: 'Starport', ver: 9, cat: 'wonders', size: 5, zone: 'any', on: ['void', 'hull', 'asteroid', 'magnetic'], cost: { credits: 8000, parts: 600, alloy: 200 }, days: 12, jobs: 0, upkeep: 6, power: 0,
+    wonder: { pop: 5000, built: ['elevator'], tech: ['monumental'], tourism: 20, transport: 2, visitors: 4,
+      effect: 'Transports bring twice as many colonists, four times as many visitors can arrive (liners from Earth), and 20 tourism.' },
+    levels: [{ name: 'Moorings' }, { name: 'Piers', cost: { credits: 10000, parts: 800, alloy: 300 }, days: 14 },
+      { name: 'Starport', cost: { credits: 12000, parts: 1000, alloy: 400 }, days: 16, jobs: 80, upkeep: 30, power: -100 }],
+    text: 'Piers for liners in space beside the hull, with a concourse tower: transports bring twice as many colonists, and tourist liners bring four times the visitors.' },
+  { key: 'spinring', name: 'Spin-Gravity Ring', ver: 9, cat: 'wonders', size: 6, zone: 'any', on: ['void', 'hull', 'asteroid', 'magnetic'], cost: { credits: 12000, parts: 1000, alloy: 400 }, days: 14, jobs: 0, upkeep: 8, power: 0,
+    wonder: { pop: 10000, built: ['starport'], tech: ['monumental'], tourism: 20, happy: 3,
+      effect: 'Homes for 3,000 in real gravity, +3 happiness for the whole colony, and 20 tourism.' },
+    levels: [{ name: 'Hub' }, { name: 'Spokes', cost: { credits: 15000, parts: 1200, alloy: 600 }, days: 16 },
+      { name: 'Spin-Gravity Ring', cost: { credits: 18000, parts: 1500, alloy: 800, helium: 100 }, days: 18, jobs: 200, upkeep: 40, power: -200, housing: 3000 }],
+    text: 'A wheel in space by the hull that spins to make real gravity: homes for 3,000 people who walk like they did on Earth.' },
+  // The Ark (`megaproject`): the very late game's goal and a second ending, "Beyond Eden". Optional: it never blocks
+  // Eden Restored. Five stages, each a big bill of alloy, parts and helium-3, and finally the provisions.
+  { key: 'ark', name: 'The Ark', ver: 9, cat: 'wonders', size: 7, zone: 'any', on: ['void', 'hull', 'asteroid', 'magnetic'], cost: { credits: 20000, parts: 2000, alloy: 1500 }, days: 20, jobs: 0, upkeep: 10, power: 0,
+    wonder: { pop: 15000, built: ['starport'], tech: ['generation'], tourism: 30, happy: 5, megaproject: true,
+      effect: 'A generation ship for the stars: finishing it is the second ending, Beyond Eden. Afterwards +5 happiness for the whole colony, and 30 tourism.' },
+    levels: [{ name: 'Keel' }, { name: 'Hull', cost: { credits: 25000, parts: 3000, alloy: 3000 }, days: 24 },
+      { name: 'Drive', cost: { credits: 30000, parts: 2500, alloy: 2000, helium: 800 }, days: 28 },
+      { name: 'Habitat Decks', cost: { credits: 30000, parts: 4000, alloy: 2000 }, days: 24 },
+      { name: 'The Ark', cost: { credits: 40000, parts: 2000, helium: 600, food: 8000, water: 8000 }, days: 20, jobs: 300, upkeep: 50, power: -150 }],
+    text: 'A generation ship in a dock of its own beside the hull, built over five great stages. Finishing it is a second ending: Beyond Eden. It never stands in the way of Eden Restored.' },
+  // Tourism (js/colony/tourism.js): visitors come for the wonders, landmarks, parks and a happy, valuable city; they
+  // need beds (`beds`: Hotels, which grow like Habitats) and spend more with leisure around (`leisure`). Research Tourism.
+  { key: 'hotel', name: 'Hotel', ver: 9, cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 900, parts: 60 }, days: 6, jobs: 6, upkeep: 4, power: -6, beds: 80, tech: 'tourism',
+    levels: [{ name: 'Guest House', beds: 80 },
+      { name: 'Hotel', beds: 200, jobs: 15, upkeep: 8, power: -12, needs: ['allNeeds', 'park', 'leisure'] },
+      { name: 'Grand Hotel', beds: 400, jobs: 30, upkeep: 14, power: -20, needs: ['allNeeds', 'park', 'leisure', 'value:55'] }],
+    text: 'Beds for visitors: a Guest House for 80 grows by itself, like a Habitat, into a Hotel (200) with a park and leisure in reach, and a Grand Hotel (400) on land worth 55.' },
+  { key: 'promenade', name: 'Promenade', ver: 9, cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 700, parts: 40 }, days: 5, jobs: 6, upkeep: 4, power: -4, radius: 10, service: 3, leisure: 1, tech: 'tourism',
+    text: 'A lamp-lit walk of kiosks, cafés and a fountain: happiness for homes in range, and leisure for hotels and visitors.' },
+  { key: 'theatre', name: 'Theatre', ver: 9, cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 1200, parts: 80 }, days: 6, jobs: 14, upkeep: 8, power: -8, radius: 12, service: 4, leisure: 2, tech: 'tourism',
+    text: 'Plays and music hall under a lit marquee: happiness for homes in range, and more leisure for visitors.' },
+  { key: 'casino', name: 'Casino', ver: 9, cat: 'services', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['main', 'lower'], cost: { credits: 2500, parts: 150 }, days: 8, jobs: 40, upkeep: 12, power: -20, makes: { credits: 100 }, leisure: 3, tech: 'tourism',
+    text: 'Neon, a gold dome and tables that never close: 100 credits a day, and the most leisure for visitors.' },
 ];
 
 export const BUILDING = Object.fromEntries(BUILDINGS.map((b) => [b.key, b]));

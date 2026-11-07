@@ -42,6 +42,14 @@ export {
 export {
   LANDMARKS, LM, LINES, isLandmark, landmarkOn, landmarkNeeds, landmarkEarned, landmarkWhy, landmarkStatus, landmarkHappy, ensureLandmarks,
 } from './landmarks.js';
+// version 9 (docs/COLONY-V9.md): wonders built in stages and the Ark (js/colony/wonders.js), tourism (js/colony/tourism.js)
+import { ensureWonders } from './wonders.js';
+export {
+  WONDERS, WLINES, ARK_ENDING, ARK_TEXT, isWonder, stagesOf, wonderWorks, wonderOn, wondersOn, wonderStage, wonderStatus, ensureWonders,
+  wonderHappy, wonderTransport, wonderVisitors, wonderResearch,
+} from './wonders.js';
+export { TOUR, tourismOf, tourismLimitText } from './tourism.js';
+export { isComplete } from './landmarks.js';
 export {
   INCIDENT, INCIDENTS, INCIDENT_KINDS, incidentsOn, ensureIncidents, incidentLead, incidentStatus, setIncidents, flareMult, sickShare, incidentHappy,
 } from './incidents.js';
@@ -113,7 +121,10 @@ export function upgradeState(state) {
   ensureBases(state);   // version 5: the raiders' bases on the sector map
   state.options ??= {};
   ensureLandmarks(state); ensureIncidents(state); ensurePetitions(state);   // version 8
-  if (state.unlocked) for (const d of BUILDINGS) if (d.decks && !d.tech && !d.unlock && !d.fixed && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
+  ensureWonders(state);   // version 9
+  if (state.unlocked) for (const d of BUILDINGS) if (d.decks && !d.tech && !d.unlock && !d.fixed && !d.retired && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
+  // version 9: the quads are retired (owner, 2026-11-07): never unlocked again, though those standing keep working
+  if (state.unlocked) state.unlocked = state.unlocked.filter((k) => !BUILDING[k]?.retired);
   return state;
 }
 
@@ -403,8 +414,9 @@ export function placeCheck(state, key, x, y, opts = {}) {
   if (d.fixed) return `The ${d.name} cannot be built.`;
   const deck = opts.deck || 'main', m = mapOf(state, deck);
   if (!m) return 'There is no such deck.';
-  if (d.landmark) { const lw = landmarkWhy(state, key, opts.ignore ?? -1); if (lw) return lw; }   // version 8: one of a kind, its requirement met
-  else if (!state.unlocked.includes(key)) return lockedWhy(d);
+  if (d.retired && opts.ignore == null) return retiredWhy(d);   // version 9: off the menu (moving an old one is fine)
+  if (d.landmark || d.wonder) { const lw = landmarkWhy(state, key, opts.ignore ?? -1); if (lw) return lw; }   // version 8: one of a kind, its requirement met (version 9: wonders too)
+  else if (!state.unlocked.includes(key) && !(d.retired && opts.ignore != null)) return lockedWhy(d);
   if (!decksOf(d).includes(deck)) return `A ${d.name} stands only on the ${deckList(decksOf(d))} deck${decksOf(d).length > 1 ? 's' : ''}.`;
   const { w, h, t, ch } = m;
   if (x < 0 || y < 0 || x + d.size > w || y + d.size > h) return 'That is off the edge of the map.';
@@ -449,20 +461,28 @@ export function placeCheck(state, key, x, y, opts = {}) {
   return null;
 }
 // Why a locked building is locked: a version 2 building waits on its tech, the rest on 80 colonists.
+// Version 9 (docs/COLONY-V9.md): the growable quads are retired; those already standing keep working.
+const retiredWhy = (d) => `${d.name}s are no longer built: zoned lots are retired. Build Habitats and Tower Blocks instead (those already standing keep working).`;
 const lockedWhy = (d) => (d.tech && TECH[d.tech] ? `Research ${TECH[d.tech].name}.` : `The ${d.name} unlocks at ${d.unlock?.pop ?? 80} colonists.`);
 // A cost as this colony pays it: scaled by difficulty (js/colony/difficulty.js) and, given the
 // building's key, by finished techs' cost effects (Better Seals); rounded up.
+// Version 9: a wonder's stage may also cost alloy, helium-3, food, water or air (scaled the same way).
+export const EXTRA_COST = ['alloy', 'helium', 'food', 'water', 'air'];
+const GOOD_WORD = { alloy: 'alloy', helium: 'helium-3', food: 'food', water: 'water', air: 'air' };
 export function costOf(state, cost, key) {
   const m = diffOf(state).cost * (key ? techEffect(state, 'cost', key) * landmarkCost(state) : 1);   // version 8: Ruess's Workshop
-  return { credits: Math.ceil((cost.credits || 0) * m), parts: Math.ceil((cost.parts || 0) * m) };
+  const out = { credits: Math.ceil((cost.credits || 0) * m), parts: Math.ceil((cost.parts || 0) * m) };
+  for (const g of EXTRA_COST) if (cost[g]) out[g] = Math.ceil(cost[g] * m);
+  return out;
 }
 function afford(state, raw, key) {
   const cost = costOf(state, raw, key);
   if (state.stock.credits < cost.credits) return `Needs ${Math.ceil(cost.credits - state.stock.credits)} more credits.`;
   if (state.stock.parts < (cost.parts || 0)) return `Needs ${Math.ceil(cost.parts - state.stock.parts)} more parts.`;
+  for (const g of EXTRA_COST) if (cost[g] && (state.stock[g] || 0) < cost[g]) return `Needs ${Math.ceil(cost[g] - (state.stock[g] || 0))} more ${GOOD_WORD[g]} (stores hold ${num(storageCaps(state)[g] || 0)}).`;
   return null;
 }
-const pay = (state, raw, key) => { const cost = costOf(state, raw, key); state.stock.credits -= cost.credits; state.stock.parts -= cost.parts; };
+const pay = (state, raw, key) => { const cost = costOf(state, raw, key); state.stock.credits -= cost.credits; state.stock.parts -= cost.parts; for (const g of EXTRA_COST) if (cost[g]) state.stock[g] -= cost[g]; };
 
 // Best free spot for `key` (lowest score) in a box of tiles; null if none. For setup and bots.
 export function findSpot(state, key, { box, score = () => 0, free = false, deck = 'main' } = {}) {
@@ -605,7 +625,11 @@ export function upgrade(state, id) {
   if (poor) return no(poor);
   pay(state, next.cost, b.key);
   b.level++;
-  b.build = Math.max(1, Math.ceil(d.days / 2));
+  b.build = Math.max(1, next.days ?? Math.ceil(d.days / 2));   // version 9: a wonder's stage has its own days
+  if (d.wonder) {
+    log(state, `${d.name}: stage ${b.level} of ${d.levels.length}, ${next.name}, ordered.`);
+    return ok(`${d.name}: ${next.name} (stage ${b.level} of ${d.levels.length}) ordered: ${b.build} days of work for a crew.`);
+  }
   log(state, `${d.name} upgrade to level ${b.level} ordered.`);
   return ok(`${d.name} upgrading to level ${b.level}: ${b.build} days of work for a crew.`);
 }
@@ -622,9 +646,9 @@ export function toggle(state, id) {
 
 // The build menu. With a deck, a building that cannot stand there says so ("Upper deck only.").
 export function buildable(state, deck) {
-  return BUILDINGS.filter((d) => !d.fixed).map((d) => {
-    const lw = d.landmark ? landmarkWhy(state, d.key) : null;   // version 8: a landmark waits on its requirement, and stands once
-    const unlocked = d.landmark ? !lw : state.unlocked.includes(d.key), onDeck = !deck || decksOf(d).includes(deck);
+  return BUILDINGS.filter((d) => !d.fixed && !d.retired).map((d) => {   // version 9: retired buildings are off the menu
+    const lw = d.landmark || d.wonder ? landmarkWhy(state, d.key) : null;   // version 8: a landmark waits on its requirement, and stands once (version 9: wonders too)
+    const unlocked = d.landmark || d.wonder ? !lw : state.unlocked.includes(d.key), onDeck = !deck || decksOf(d).includes(deck);
     const why = !onDeck ? deckWhy(d) : lw || (unlocked ? afford(state, d.cost, d.key) : d.tech && TECH[d.tech] ? `Research ${TECH[d.tech].name}.` : `Unlocks at ${d.unlock?.pop ?? 80} colonists.`);
     return { key: d.key, name: d.name, cat: d.cat, cost: costOf(state, d.cost, d.key), unlocked, why, decks: decksOf(d), onDeck };
   });
@@ -706,7 +730,7 @@ export function sell(state, good, qty) {
   const step = Math.pow(1 - PRICE.drop, 1 / PRICE.lot);
   let f = state.market[good] ?? 1, gain = 0;
   for (let k = 0; k < qty; k++) { gain += BASE_PRICE[good] * f; f = Math.max(PRICE.floor, f * step); }
-  gain = Math.floor(gain * deptMult(state, 'trade'));
+  gain = Math.floor(gain * deptMult(state, 'trade') * techEffect(state, 'output', 'market'));   // version 9: Commerce
   state.stock[good] -= qty; state.stock.credits += gain; state.market[good] = f;
   state.flags.sold = (state.flags.sold || 0) + gain;
   return ok(`Sold ${qty} ${good} for ${gain} credits.`, { credits: gain });
@@ -793,7 +817,7 @@ export function answer(state, pendingId, choiceKey) {
 // A level whose needs name a building the game doesn't have (none since version 2) is not offered.
 // Version 7: the quads' need words, and 'demand:R', 'happy:60', 'residents:150', 'tech:skyscrapers' (a level
 // waiting on a tech is offered: its panel says what to research).
-const NEED_WORDS = new Set(['allNeeds', 'park', 'clinic', 'school', 'transit', 'freight', 'shops', 'quiet']);
+const NEED_WORDS = new Set(['allNeeds', 'park', 'clinic', 'school', 'transit', 'freight', 'shops', 'quiet', 'leisure']);   // version 9: 'leisure' (Hotels)
 const NEED_PREFIX = new Set(['demand', 'happy', 'residents', 'tech', 'value']);   // version 8: 'value:N' (land value)
 export const habitatLevelReachable = (level) => !level?.needs?.some((n) => {
   const [k, v] = String(n).split(':');
@@ -818,6 +842,7 @@ export function habitatNeeds(state, b, field, ctx = {}) {
     // version 7 (docs/COLONY-V7.md): the quads' needs
     else if (n === 'school') out.push({ need: n, label: 'A School in reach', met: serviceAt(state, b, 'school') > 0 });
     else if (n === 'transit') out.push({ need: n, label: 'A Transit Station or Monorail Stop in reach', met: coveredBy(state, b, TRANSIT_KEYS) });
+    else if (n === 'leisure') out.push({ need: n, label: `Leisure within ${LEISURE_REACH} tiles (a Promenade, Theatre, Casino or the Concert Hall)`, met: leisureNear(state, b) });   // version 9
     else if (n === 'freight') out.push({ need: n, label: 'A Freight Yard in reach', met: coveredBy(state, b, FREIGHT_KEYS) });
     else if (n === 'shops') out.push({ need: n, label: 'Shops in reach (a Market Quad with stalls or more)', met: state.buildings.some((s) => s.key === 'marketquad' && s.level > 1 && active(s) && covers(s, b)) });
     else if (n === 'quiet') {
@@ -843,7 +868,16 @@ export function habitatNeeds(state, b, field, ctx = {}) {
 // in units of homes, shoppers and jobs. A quad that grows spends its zone's demand by what it adds (sim.js).
 // Version 8 (docs/COLONY-V8.md): the land value (landvalue.js, 0–100) a Living or Market Quad needs to grow into
 // a level, by the levels' index (4 = level 5, 5 = level 6). It only gates growing, like happiness.
-export const QUAD_VALUE = { livingquad: { 4: 45, 5: 55 }, marketquad: { 4: 45, 5: 55 } };
+// Version 9 (docs/COLONY-V9.md): the quads are retired and their land-value gates dropped (an old save's quads grow on
+// their other needs); land value now speeds Habitats and Tower Blocks instead (VALUE_GROW, sim.js step 8).
+export const QUAD_VALUE = {};
+export const VALUE_GROW = { at: 60, days: 1, keys: new Set(['habitat', 'towerblock']) };
+// Version 9: a Hotel's 'leisure' need: a working building with `leisure` on its deck within LEISURE_REACH tiles.
+export const LEISURE_REACH = 16;
+export function leisureNear(state, b) {
+  const c = centre(b);
+  return state.buildings.some((s) => s.id !== b.id && (spec(s).leisure || 0) > 0 && active(s) && deckOf(s) === deckOf(b) && (() => { const e = centre(s); return Math.max(Math.abs(e.x - c.x), Math.abs(e.y - c.y)) <= LEISURE_REACH; })());
+}
 export const QUAD = { residentsRadius: 12, transport: 20, hall: 0.5, hallMax: 3, partsPull: 40, scale: 0.1, scaleMin: 40 };
 export const ZONE_NAME = { R: 'Residential', C: 'Commercial', I: 'Industrial' };
 export const TRANSIT_KEYS = new Set(['transit', 'monorail']);
@@ -903,12 +937,14 @@ export function quadAdds(b) {
 // building kind covering the home (Clinic triage halves it; a Canteen on rationing gives none).
 export const SERVICE_KINDS = [{ key: 'clinic', label: 'Clinic' }, { key: 'canteen', label: 'Canteen' }, { key: 'safetypost', label: 'Safety' }, { key: 'terrace', label: 'Terraces' },
   { key: 'gallery', label: 'Gallery' }, { key: 'plaza', label: 'Civic Plaza' },   // version 6: the Gallery counts at last; Civic Plazas
-  { key: 'marketquad', label: 'Shopping' }, { key: 'school', label: 'School' }, { key: 'transit', label: 'Transit' }, { key: 'monorail', label: 'Monorail' }];   // version 7
+  { key: 'marketquad', label: 'Shopping' }, { key: 'school', label: 'School' }, { key: 'transit', label: 'Transit' }, { key: 'monorail', label: 'Monorail' },   // version 7
+  { key: 'promenade', label: 'Promenade' }, { key: 'theatre', label: 'Theatre' }, { key: 'concerthall', label: 'Concert Hall' }];   // version 9
 // Homes for service averages (version 3: Terrace Homes count beside Habitats; version 6: Tower Blocks and Arcologies).
 export const HOME_KEYS = new Set(['habitat', 'terrace', 'towerblock', 'arcology', 'livingquad']);   // version 7: Living Quads
 // Homes that grow a level by themselves when their needs are met (version 6: Tower Blocks grow like Habitats).
 // Version 7: the three quads (data/buildings.js `quad`) grow the same way, from an empty lot.
-export const GROW_KEYS = new Set(['habitat', 'towerblock', 'livingquad', 'marketquad', 'workshopquad']);
+// Version 9: Hotels grow the same way, by their beds.
+export const GROW_KEYS = new Set(['habitat', 'towerblock', 'livingquad', 'marketquad', 'workshopquad', 'hotel']);
 // Version 6: Emergency Stores hold back `reserve` of each of food, water and air (Food Security doubles it).
 export const RESERVE_GOODS = ['food', 'water', 'air'];
 export const reserveCap = (state) => state.buildings.reduce((t, b) => t + (finished(b) && BUILDING[b.key]?.reserve ? BUILDING[b.key].reserve : 0), 0) * techEffect(state, 'reserve');

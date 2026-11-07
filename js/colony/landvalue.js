@@ -8,11 +8,15 @@
 // landValueGrid builds a whole deck by stamping each source's area (cheap); landValueParts explains one tile
 // with the same numbers (the inspector). landValue caches a deck's grid per state: it is rebuilt when a
 // building is placed, finished or removed, when a chamber opens, or every LV.refreshDays days, never per frame.
-// Living and Market Quads need land value for their top levels (rules.QUAD_VALUE, the 'value:N' need).
+// Version 9 (docs/COLONY-V9.md): + a finished wonder nearby (the Grand Arboretum, the Great Library, the Concert Hall, the
+// Memorial Garden: `wonder.value` within `valueRadius`, all of them together up to LV.wonderMax). The quads are retired,
+// so no level needs land value any more except a Grand Hotel's ('value:55'); Habitats and Tower Blocks on land worth
+// 60 or more grow a day sooner (rules.VALUE_GROW), and tourism counts the land value at the hotels.
 // Imports from rules.js are used inside functions only (rules.js imports this module back).
 import { T, zoneOf } from './data/terrain.js';
 import { BUILDING } from './data/buildings.js';
 import { mapOf, chamberOf, active, spec, deckOf, serviceValue, SERVICE_KINDS, TRANSIT_KEYS, parkField, openBreaches } from './rules.js';
+import { wonderValues } from './wonders.js';
 
 export const LV = {
   base: 25,                          // an open, pressurised tile with nothing around it
@@ -25,6 +29,7 @@ export const LV = {
   industry: 3, industryRange: 4,     // industry next door: (range − gap) × industry (the nearest)
   hull: 4, hullRange: 3,             // exposed hull: (range + 1 − distance) × hull
   breach: 10,                        // an unsealed breach in the chamber
+  wonderMax: 25,                     // version 9: finished wonders nearby, all together
   refreshDays: 3,
 };
 const OPEN = 'open';
@@ -65,6 +70,7 @@ function sourcesOf(state, deck) {
     transit: on.filter((b) => TRANSIT_KEYS.has(b.key) && active(b)),
     noisy: on.filter((b) => b.key === 'workshopquad' && active(b) && (spec(b).nuisance || 0) > 0),
     industry: on.filter(isIndustry),
+    wonders: wonderValues(state, deck),   // version 9
     happy: ((state.happy ?? 50) - 50) * LV.happy,
   };
 }
@@ -90,6 +96,12 @@ export function landValueGrid(state, deck = 'main') {
   best.fill(0);
   for (const b of src.transit) stamp(b, Math.ceil(spec(b).radius || 0), (i, x, y) => { if (cheb(x, y, b) <= spec(b).radius) best[i] = LV.transit; });
   for (let i = 0; i < n; i++) sum[i] += best[i];
+  // version 9: finished wonders nearby, summed and capped
+  if (src.wonders.length) {
+    best.fill(0);
+    for (const { b, value, radius } of src.wonders) stamp(b, Math.ceil(radius), (i, x, y) => { if (cheb(x, y, b) <= radius) best[i] += value; });
+    for (let i = 0; i < n; i++) sum[i] += Math.min(LV.wonderMax, best[i]);
+  }
   // the strongest noise, the nearest industry (penalties, so `best` holds the worst)
   best.fill(0);
   for (const b of src.noisy) { const r = spec(b).nuisance; stamp(b, r, (i, x, y) => { const p = (r - gapTo(b, x, y)) * LV.noise; if (p > best[i]) best[i] = p; }); }
@@ -140,6 +152,8 @@ export function landValueParts(state, deck, x, y) {
   }
   add(`Services in reach (${names.join(', ')})`, Math.min(LV.serviceMax, svc * LV.service));
   if (src.transit.some((b) => cheb(x, y, b) <= spec(b).radius)) add('Transit in reach', LV.transit);
+  const near = src.wonders.filter(({ b, radius }) => cheb(x, y, b) <= radius);
+  if (near.length) add(`A wonder nearby (${near.map(({ b }) => BUILDING[b.key].name).join(', ')})`, Math.min(LV.wonderMax, near.reduce((t, w) => t + w.value, 0)));
   const dist = (pred, R) => { let d = Infinity; for (let yy = Math.max(0, y - R); yy <= Math.min(h - 1, y + R); yy++) for (let xx = Math.max(0, x - R); xx <= Math.min(w - 1, x + R); xx++) if (pred(yy * w + xx)) d = Math.min(d, Math.max(Math.abs(xx - x), Math.abs(yy - y))); return d; };
   const dw = dist((j) => isWater(t[j]), LV.waterRange);
   if (dw <= LV.waterRange) add('A view of the water', (LV.waterRange + 1 - dw) * LV.water);

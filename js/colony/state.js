@@ -37,7 +37,7 @@ export function newGame({ seed = 1, importSave = null, beta = false, types = nul
     stock: { ...START.stock }, battery: 0, pop: START.pop, housing: 0,
     happy: 50, happyParts: [],
     market: { ore: 1, food: 1, parts: 1, water: 1, air: 1, alloy: 1, helium: 1 },
-    unlocked: BUILDINGS.filter((d) => !d.fixed && !d.unlock && !d.tech).map((d) => d.key),   // version 2 buildings wait on research
+    unlocked: BUILDINGS.filter((d) => !d.fixed && !d.retired && !d.unlock && !d.tech).map((d) => d.key),   // version 2 buildings wait on research
     log: [], pending: [], stats: { last: { produced: {}, consumed: {} } },
     imported: null, guardians: [], flags: { short: { food: 0, water: 0, air: 0, power: 0 } },
     research: { points: 0, focus: null, progress: {}, done: [] },   // version 2 (docs/COLONY-V2.md)

@@ -1,5 +1,7 @@
 # Earthlight Space Colony Rebuild: version 7, zoning and growth
 
+> **Retired (2026-11-07).** The owner: "The simcity style pods of land don't work... remove them unfortunately they took a long time to develop and i went back to the traditional habitat". In version 9 (docs/COLONY-V9.md) the three quads are marked `retired`: off the build menu, never unlocked for new or old colonies, refused by `rules.build` with "Living Quads are no longer built: zoned lots are retired. Build Habitats and Tower Blocks instead (those already standing keep working)." Quads already standing in an old save keep working exactly as below (homes, jobs, credits, parts, their levels and growth) and can be moved and demolished. The RCI bars, the "Zoning and growth" help and the advisor's "zone Living Quads" are gone; the land-value gates (`QUAD_VALUE`) are dropped. School, Transit Station, Monorail Stop and Freight Yard stay (re-worded: they serve Habitats, Tower Blocks, Smelters and Fabricators), and so do the six techs (Skyscrapers now lets Tower Blocks grow into a 600-home Skyscraper). The rest of this page describes version 7 as it was built; tests/colony-quads.mjs is now a small legacy test.
+
 The owner's request (2026-11-06): "new tech and buildings, I like growable buildings like towers and living quads, like SimCity."
 
 Version 7 adds SimCity-style zoning. The player zones cheap 2×2 lots, called **quads**, and they develop by themselves:

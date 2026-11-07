@@ -16,7 +16,7 @@ import {
   heatTarget, warnLead, raidsPossible, raidInterval, makeRaid, raidPreview, answerRaid, raidName, FACTIONS, FROM,
   basesDay, readyBase, raidsOn, baseName, BASE, BASE_RAIDS, releaseCommander, inviteChance,
   mapOf, deckOf, GROW_KEYS, reserveCap, RESERVE_GOODS,
-  demandOf, quadAdds, TRANSIT_KEYS, buy, buyPrice,
+  demandOf, quadAdds, TRANSIT_KEYS, buy, buyPrice, VALUE_GROW, landValueOf,
 } from './rules.js';
 import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { diffOf } from './difficulty.js';
@@ -27,6 +27,8 @@ import { victoryDay } from './victory.js';
 import { incidentsDay, sickShare, incidentHappy } from './incidents.js';   // version 8 (docs/COLONY-V8.md)
 import { landmarksDay, landmarkHappy, landmarkTransport, landmarkFade } from './landmarks.js';
 import { petitionsDay } from './petitions.js';
+import { wondersDay, wonderHappy, wonderTransport, wonderFade, wonderResearch } from './wonders.js';   // version 9 (docs/COLONY-V9.md)
+import { tourismDay } from './tourism.js';
 
 export { habitatNeeds, stateRng };
 
@@ -68,7 +70,9 @@ export const SIM = {
   quadGrowDays: 4,                   // a quad grows a level after 4 days of its needs met (Habitats: growDays)
   transitGrowDays: 2,                // any home or quad in a Transit Station's or Monorail Stop's range: 2 days
   freightBonus: 1.25,                // Workshop Quads in a Freight Yard's range make a quarter more
+  // (version 9: so do Smelters and Fabricators, now that the quads are retired)
 };
+const FREIGHT_HELPS = new Set(['workshopquad', 'smelter', 'fabricator']);
 // Department heads (version 3): which buildings each one's bonus multiplies.
 const DEPT_OF = {
   farm: 'agriculture', orchard: 'agriculture', fishery: 'agriculture', mushroom: 'agriculture', vertfarm: 'agriculture',
@@ -180,7 +184,9 @@ export function dayTick(state, rng) {
     b.build = Math.max(0, b.build - step);
     if (b.build > 0) continue;
     const d = BUILDING[b.key];
-    say('built', `${d.name}${b.level > 1 ? ` level ${b.level}` : ''} finished.`);
+    // version 9: a wonder's stage, and what comes next
+    if (d.wonder) say('built', b.level < d.levels.length ? `${d.name}: ${d.levels[b.level - 1].name} finished (stage ${b.level} of ${d.levels.length}). Order the next stage, ${d.levels[b.level].name}, from its panel.` : `${d.name}: the last stage is finished.`);
+    else say('built', `${d.name}${b.level > 1 ? ` level ${b.level}` : ''} finished.`);
     if (b.key === 'seal') {
       const i = idx(state, b.x, b.y);
       for (const c of state.chambers) if (deckOf(c) === deckOf(b) && c.breaches.includes(i) && c.status === 'surveyed' && !openBreaches(state, c).length) say('sealed', `Every breach of ${c.name} is sealed: it can be pressurised.`);
@@ -248,7 +254,7 @@ export function dayTick(state, rng) {
   const run = (b, s, r) => {
     rates.set(b, r);
     if (!s.makes || r <= 0) return;
-    const m = om(b.key) * (b.key === 'workshopquad' && freights.some((y) => covers(y, b)) ? SIM.freightBonus : 1);
+    const m = om(b.key) * (FREIGHT_HELPS.has(b.key) && freights.some((y) => covers(y, b)) ? SIM.freightBonus : 1);
     if (b.key === 'farm') {
       const soil = farmSoil(state, b);
       if (b.mode === 'cash') { make('food', s.makes.food * soil * SIM.cash.food * r * m); make('credits', SIM.cash.credits * soil * r * m); }
@@ -321,6 +327,8 @@ export function dayTick(state, rng) {
     if (i >= 0) { m.t[i] = deckOf(b) === 'main' ? T.PLAIN : T.DECK; say('drain', `A Pump Station drained a tile of flooded ground on the ${deckOf(b)} deck.`); }
   }
 
+  // version 9: the Great Library's research grows with the colony (4 a day per 1,000 colonists, at its working rate)
+  researchMade += wonderResearch(state, (b) => Math.min(1, rates.get(b) ?? 1)) * om('library');
   // 5b research: the labs' points go to the tech being studied (or into the bank, which flows into
   // the next one); a finished tech unlocks its buildings and its effects apply from now on.
   const rs = state.research;
@@ -420,6 +428,7 @@ export function dayTick(state, rng) {
   }
   if (state.buildings.some((b) => b.key === 'obsdeck' && active(b))) parts.push({ label: 'Observation Deck', value: SIM.obsHappy });
   parts.push(...landmarkHappy(state), ...incidentHappy(state));   // version 8: landmarks, a solar flare
+  parts.push(...wonderHappy(state));   // version 9: wonders
   if (ration) parts.push({ label: 'Rationing', value: SIM.rationHappy });
   else if (autoRation) parts.push({ label: 'Rationing (automatic)', value: SIM.autoRationHappy });
   // version 3: a Welfare head (+ charm / 20), raid fear and tribute shame fading over 15 days,
@@ -429,7 +438,7 @@ export function dayTick(state, rng) {
   const rd = state.raid;
   // (full on the day after, gone `days` days later)
   // (version 8: the Hall of Names makes grief and fear fade twice as fast)
-  const fade = landmarkFade(state);
+  const fade = landmarkFade(state) * wonderFade(state);   // version 9: the Memorial Garden too
   rd.moods = rd.moods.filter((m) => state.day - m.day <= m.days / fade);
   const moods = {};
   for (const m of rd.moods) moods[m.label] = (moods[m.label] || 0) + m.value * Math.max(0, 1 - (fade * (state.day - m.day - 1)) / m.days);
@@ -452,7 +461,9 @@ export function dayTick(state, rng) {
     const field = fieldOf(b), d = BUILDING[b.key], nextOk = habitatNeeds(state, b, field, ctx);
     const canGrow = nextOk.length > 0 && nextOk.every((n) => n.met);
     const holds = b.level === 1 || habitatNeeds(state, { ...b, level: b.level - 1 }, field, ctx).every((n) => n.met || n.grow);
-    const days = transits.some((t) => covers(t, b)) ? SIM.transitGrowDays : d.quad ? SIM.quadGrowDays : SIM.growDays;
+    let days = transits.some((t) => covers(t, b)) ? SIM.transitGrowDays : d.quad ? SIM.quadGrowDays : SIM.growDays;
+    // version 9: Habitats and Tower Blocks on land worth 60 or more grow a day sooner
+    if (VALUE_GROW.keys.has(b.key) && b.grow > 0 && days > 1 && landValueOf(state, b) >= VALUE_GROW.at) days -= VALUE_GROW.days;
     if (canGrow) b.grow = Math.max(0, b.grow || 0) + 1;
     else if (!holds) b.grow = Math.min(0, b.grow || 0) - 1;
     else b.grow = 0;
@@ -463,7 +474,7 @@ export function dayTick(state, rng) {
       }
       b.level++; b.grow = 0;
       if (d.quad) quadsGrew.push(b);
-      else say('grew', `A ${d.name} grew into ${d.levels[b.level - 1].name}: room for ${d.levels[b.level - 1].housing}.`);
+      else say('grew', `A ${d.name} grew into ${d.levels[b.level - 1].name}: room for ${d.levels[b.level - 1].beds != null ? `${d.levels[b.level - 1].beds} visitors` : d.levels[b.level - 1].housing}.`);
     } else if (b.grow <= -SIM.shrinkDays) {
       b.level--; b.grow = 0;
       if (d.quad) quadsShrank.push(b);
@@ -510,7 +521,7 @@ export function dayTick(state, rng) {
       // version 6: each working Arrivals Hall makes the transport half as big again (up to three halls)
       const halls = Math.min(SIM.hallMax, state.buildings.filter((b) => b.key === 'arrivals' && active(b)).length);
       // version 8: The Lantern draws a quarter more
-      const n = Math.min(free, Math.round((SIM.transportMin + Math.floor(rng() * (top - SIM.transportMin + 1)) + Math.floor(state.pop / 100)) * (1 + SIM.hallBonus * halls) * landmarkTransport(state)));
+      const n = Math.min(free, Math.round((SIM.transportMin + Math.floor(rng() * (top - SIM.transportMin + 1)) + Math.floor(state.pop / 100)) * (1 + SIM.hallBonus * halls) * landmarkTransport(state) * wonderTransport(state)));   // version 9: the Starport ×2
       state.pop += n;
       state.flags.arrival = { day: state.day, n };   // the view flies the transport in (view3d/movers.js)
       ask('transport', 'Transport', `A transport docks with ${n} colonists.`);
@@ -526,6 +537,8 @@ export function dayTick(state, rng) {
   for (const g of state.guardians) if (g.free > 0) g.free--;
   const upkeep = diffOf(state).upkeep * state.buildings.reduce((t, b) => t + (b.build === 0 ? (spec(b).upkeep || 0) * (b.key === 'clinic' && b.mode === 'triage' ? 0.5 : 1) : 0), 0) + machines;
   make('credits', tax);
+  const tourism = tourismDay(state);   // version 9: visitors' spending (js/colony/tourism.js)
+  make('credits', tourism);
   const paid = Math.min(upkeep, st.credits);
   use('credits', paid);
   f.unpaid = paid < upkeep - 1e-9;
@@ -569,7 +582,7 @@ export function dayTick(state, rng) {
     ask('unlock', 'Eighty colonists', `Eden has ${state.pop} colonists. New buildings: ${keys.map((k) => BUILDING[k].name).join(', ')}.`);
   }
 
-  state.stats.last = { produced, consumed, met, staffing, jobs, power: { supply, demand, factor: pf }, tax, upkeep, research: researchMade, machines, wages: f.wagesUnpaid ? 0 : wages };
+  state.stats.last = { produced, consumed, met, staffing, jobs, power: { supply, demand, factor: pf }, tax, upkeep, research: researchMade, machines, wages: f.wagesUnpaid ? 0 : wages, tourism };
   // 13 guided goals: a finished goal pays the Council grant and names the next (js/colony/goals.js)
   const goal = updateGoals(state);
   if (goal) events.push({ kind: 'goal', text: state.log[state.log.length - 1].text, pause: true });
@@ -577,6 +590,8 @@ export function dayTick(state, rng) {
   landmarksDay(state, { say, ask });
   // 13c version 8: Council petitions (js/colony/petitions.js)
   petitionsDay(state, { say, ask });
+  // 13d version 9: wonders: requirements earned, the moment one is finished, and the Ark's second ending
+  if (wondersDay(state, { say, ask })) events.push({ kind: 'ark', text: state.log[state.log.length - 1].text, pause: true });
   // 14 version 4, stage 4: the win, Eden Restored, once (js/colony/victory.js); the colony carries on after it
   if (victoryDay(state)) events.push({ kind: 'victory', text: state.log[state.log.length - 1].text, pause: true });
   return { events };
