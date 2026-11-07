@@ -89,6 +89,8 @@ That is 145,000 credits, 13,500 parts, 8,500 alloy, 1,400 helium-3 and 116 days 
 
 ## 4. The quads retired (owner, 2026-11-07)
 
+> Reinstated later the same day, faster and with a lenient R/C/I gauge: see docs/COLONY-V7.md "Reinstated (2026-11-07)". The rest of this section describes the retirement as it was.
+
 - `livingquad`, `marketquad`, `workshopquad` carry `retired: true`. They are off `buildable` and the build menu, never unlocked (`newGame` skips them; `upgradeState` removes them from an old save's `unlocked`), and `placeCheck` refuses a new one: "Living Quads are no longer built: zoned lots are retired. Build Habitats and Tower Blocks instead (those already standing keep working)." Moving an old one is allowed.
 - **Old saves' quads keep working exactly as before**: homes, jobs, credits, parts, shopping, noise, their level logic and the demand that paces it. `rules.QUAD_VALUE` is now empty: their land-value gates are dropped.
 - **Gone from the interface**: the R/C/I demand bars (`renderRci` hides its element), the "Zoning and growth" help section, the quads' card sort, and the advisor's "or zone Living Quads".

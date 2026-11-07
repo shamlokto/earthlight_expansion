@@ -16,7 +16,7 @@ import {
   heatTarget, warnLead, raidsPossible, raidInterval, makeRaid, raidPreview, answerRaid, raidName, FACTIONS, FROM,
   basesDay, readyBase, raidsOn, baseName, BASE, BASE_RAIDS, releaseCommander, inviteChance,
   mapOf, deckOf, GROW_KEYS, reserveCap, RESERVE_GOODS,
-  demandOf, quadAdds, TRANSIT_KEYS, buy, buyPrice, VALUE_GROW, landValueOf,
+  demandOf, quadAdds, QUAD, TRANSIT_KEYS, buy, buyPrice, VALUE_GROW, landValueOf,
 } from './rules.js';
 import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { diffOf } from './difficulty.js';
@@ -72,10 +72,13 @@ export const SIM = {
   autoRation: 0.85, autoRationHappy: -3, autoRationDays: 3,   // Food Security: automatic rationing when food lasts < 3 days
   reserveFill: 0.1, reserveKeep: 2,  // Emergency Stores refill 10% of their reserve a day from stock above 2 days of need
   // version 7 (docs/COLONY-V7.md): zoning
-  quadGrowDays: 4,                   // a quad grows a level after 4 days of its needs met (Habitats: growDays)
-  transitGrowDays: 2,                // any home or quad in a Transit Station's or Monorail Stop's range: 2 days
+  // (reinstated 2026-11-07, faster: docs/COLONY-V7.md "Reinstated")
+  quadGrowDays: 2,                   // a quad grows a level after 2 days of its needs met (Habitats: growDays)
+  quadTransitGrowDays: 1,            // a quad in a Transit Station's or Monorail Stop's range: 1 day
+  quadShrinkDays: 20,                // a quad falls back a level after 20 days of a level need failing (Habitats: shrinkDays)
+  transitGrowDays: 2,                // any other home in a Transit Station's or Monorail Stop's range: 2 days
   freightBonus: 1.25,                // Workshop Quads in a Freight Yard's range make a quarter more
-  // (version 9: so do Smelters and Fabricators, now that the quads are retired)
+  // (version 9: so do Smelters and Fabricators)
 };
 const FREIGHT_HELPS = new Set(['workshopquad', 'smelter', 'fabricator']);
 // Department heads (version 3): which buildings each one's bonus multiplies.
@@ -466,7 +469,8 @@ export function dayTick(state, rng) {
   // 8 habitats grow when the colony's needs are met and a park covers them; they shrink back when
   // their own level's needs fail for a while. Version 7 (docs/COLONY-V7.md): the quads grow the same
   // way, from an empty lot, and each one that grows spends its zone's demand (rules demandOf) by what it
-  // adds, so a town fills in a few lots at a time; any home in transit's range grows in 2 days.
+  // adds, so a town fills in a few lots at a time; any home in transit's range grows in 2 days. Reinstated
+  // (2026-11-07): quads grow in 2 days (1 near transit), spend half of what they add, and fall back after 20.
   state.stats.last = { ...(state.stats.last || {}), met };
   const ctx = { demand: demandOf(state) }, budget = { R: ctx.demand.R.units, C: ctx.demand.C.units, I: ctx.demand.I.units };
   const transits = state.buildings.filter((b) => TRANSIT_KEYS.has(b.key) && active(b));
@@ -475,7 +479,8 @@ export function dayTick(state, rng) {
     const field = fieldOf(b), d = BUILDING[b.key], nextOk = habitatNeeds(state, b, field, ctx);
     const canGrow = nextOk.length > 0 && nextOk.every((n) => n.met);
     const holds = b.level === 1 || habitatNeeds(state, { ...b, level: b.level - 1 }, field, ctx).every((n) => n.met || n.grow);
-    let days = transits.some((t) => covers(t, b)) ? SIM.transitGrowDays : d.quad ? SIM.quadGrowDays : SIM.growDays;
+    const nearTransit = transits.some((t) => covers(t, b));
+    let days = d.quad ? (nearTransit ? SIM.quadTransitGrowDays : SIM.quadGrowDays) : nearTransit ? SIM.transitGrowDays : SIM.growDays;
     // version 9: Habitats and Tower Blocks on land worth 60 or more grow a day sooner
     if (VALUE_GROW.keys.has(b.key) && b.grow > 0 && days > 1 && landValueOf(state, b) >= VALUE_GROW.at) days -= VALUE_GROW.days;
     if (canGrow) b.grow = Math.max(0, b.grow || 0) + 1;
@@ -484,12 +489,12 @@ export function dayTick(state, rng) {
     if (b.grow >= days) {
       if (d.quad) {
         if (budget[d.quad] <= 0) { b.grow = days; continue; }   // today's demand is spent: it waits
-        budget[d.quad] -= quadAdds(b);
+        budget[d.quad] -= quadAdds(b) * QUAD.spend;   // (reinstated: half of it, so several lots grow at once)
       }
       b.level++; b.grow = 0;
       if (d.quad) quadsGrew.push(b);
       else say('grew', `A ${d.name} grew into ${d.levels[b.level - 1].name}: room for ${d.levels[b.level - 1].beds != null ? `${d.levels[b.level - 1].beds} visitors` : d.levels[b.level - 1].housing}.`);
-    } else if (b.grow <= -SIM.shrinkDays) {
+    } else if (b.grow <= -(d.quad ? SIM.quadShrinkDays : SIM.shrinkDays)) {
       b.level--; b.grow = 0;
       if (d.quad) quadsShrank.push(b);
       else say('shrank', `A ${d.name} fell back to ${d.levels[b.level - 1].name}: its needs went unmet.`);
