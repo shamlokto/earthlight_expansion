@@ -244,8 +244,9 @@ const api = {
   diff: diffOf,
   show: (sh) => doShow(sh),
   help: () => openHelp(),
+  photo: () => togglePhoto(),   // version 10: photo mode
   answered: (p) => {
-    if (p?.kind === 'victory' || p?.kind === 'ark') save(true);   // the win is kept in the save (D25); the colony carries on (version 9: the Ark's ending too)
+    if (p?.kind === 'victory' || p?.kind === 'ark' || p?.kind === 'garden') save(true);   // the win is kept in the save (D25); the colony carries on (version 9: the Ark's ending too; version 10: the Garden of Eden)
     if (p?.kind === 'welcome' && fresh) {
       fresh = false;
       let seen = false; try { seen = !!localStorage.getItem(HELP_SEEN); } catch { }
@@ -610,6 +611,9 @@ function onKey(e) {
   }
   if ($('#dHelp').open) return;
   if (!state || $('#sGame').hidden) return;
+  // version 10: photo mode takes P and Esc; the view keeps its own camera keys
+  if (photoBar) { if (e.key === 'Escape' || ((e.key === 'p' || e.key === 'P') && !e.ctrlKey && !e.metaKey)) { e.preventDefault(); togglePhoto(false); } return; }
+  if ((e.key === 'p' || e.key === 'P') && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest?.('input, textarea, select') && !ui.eventOpen()) { togglePhoto(true); return; }
   if (e.target.closest?.('input, textarea, select') && e.key !== 'Escape') return;
   if (ui.eventOpen() && settings.pauseOnEvents && e.key !== 'Escape') return;
   // PageUp / PageDown: one deck up or down (the view's tilt moved to Alt + scroll and its buttons).
@@ -650,6 +654,59 @@ viewEl.addEventListener('pointerup', (e) => {
   downAt = null;
 });
 
+// ---------------------------------------------------------------- version 10: photo mode (docs/COLONY-V10.md)
+// P or the ◉ button: the interface hides, the camera is freed and orbits slowly; a small bar offers orbit, a fly-through,
+// a time of day (view.setDayTime) and Save picture (the canvas as a PNG). Esc or P leaves. The clock keeps its speed.
+let photoBar = null;
+function togglePhoto(on = !photoBar) {
+  if (!view?.setPhoto || !state) return;
+  if (on && !photoBar) {
+    if (ui.eventOpen?.()) return;
+    setPlacing(null); ui.closePops?.(); ui.closeInspector?.(); ui.tip?.(null);
+    view.setPhoto(true, { orbit: 0.06, fly: 0 });
+    $('#sGame').classList.add('cl-photo');
+    photoBar = document.createElement('div');
+    photoBar.className = 'cl-photobar';
+    photoBar.setAttribute('role', 'toolbar'); photoBar.setAttribute('aria-label', 'Photo mode');
+    photoBar.innerHTML = `<b>Photo mode</b>
+      <button type="button" class="cl-btn xs" data-ph="orbit" aria-pressed="true" title="A slow orbit round the view">Orbit</button>
+      <button type="button" class="cl-btn xs" data-ph="fly" aria-pressed="false" title="Fly slowly along the deck">Fly</button>
+      <label title="Hold the time of day (0 noon, ½ midnight)"><input type="checkbox" data-ph="hold"> Time <input type="range" data-ph="time" min="0" max="1" step="0.01" value="0.15" disabled></label>
+      <button type="button" class="cl-btn xs primary" data-ph="save" title="Save the picture as a PNG">Save picture</button>
+      <button type="button" class="cl-btn xs" data-ph="hide" title="Hide this bar (click anywhere near the bottom to bring it back)">Hide bar</button>
+      <button type="button" class="cl-btn xs" data-ph="leave" title="Leave photo mode (Esc or P)">Leave ✕</button>`;
+    $('#sGame').appendChild(photoBar);
+    const q = (k) => photoBar.querySelector(`[data-ph="${k}"]`), press = (b, v) => b.setAttribute('aria-pressed', String(v));
+    photoBar.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-ph]');
+      if (!b) { if (photoBar.classList.contains('hid')) photoBar.classList.remove('hid'); return; }
+      const k = b.dataset.ph, p = view.photo || {};
+      if (k === 'orbit') press(b, !!view.setPhoto(true, { orbit: p.orbit ? 0 : 0.06 }).orbit);
+      else if (k === 'fly') press(b, !!view.setPhoto(true, { fly: p.fly ? 0 : 3 }).fly);
+      else if (k === 'save') savePicture();
+      else if (k === 'hide') photoBar.classList.add('hid');
+      else if (k === 'leave') togglePhoto(false);
+    });
+    const hold = q('hold'), time = q('time');
+    const setTime = () => { time.disabled = !hold.checked; view.setDayTime?.(hold.checked ? +time.value : null); };
+    hold.onchange = setTime; time.oninput = setTime;
+  } else if (!on && photoBar) {
+    view.setPhoto(false); view.setDayTime?.(null);
+    photoBar.remove(); photoBar = null;
+    $('#sGame').classList.remove('cl-photo');
+  }
+}
+function savePicture() {
+  let url = null;
+  try { url = view.snapshot(); } catch (e) { console.error(e); }
+  if (!url || url.length < 100) { ui.toast('The picture could not be taken in this browser.', 'bad'); return; }
+  const a = document.createElement('a');
+  a.href = url; a.download = `eden-day-${state.day}.png`;
+  document.body.appendChild(a); a.click(); a.remove();
+  const lbl = photoBar?.querySelector('b');
+  if (lbl) { lbl.textContent = 'Saved ✓'; setTimeout(() => { if (lbl.isConnected) lbl.textContent = 'Photo mode'; }, 1600); }
+}
+
 // ---------------------------------------------------------------- loop
 function tick() {
   let res = null;
@@ -661,11 +718,12 @@ function tick() {
   if (placing && hover) ghostAt(hover.x, hover.y);
   // music: the defenders' theme while raiders are at the gates; fanfares for a raid beaten and the win
   for (const ev of res?.events || []) {
-    if (ev?.kind === 'victory' || ev?.kind === 'ark') audio.sting('victory');
+    if (ev?.kind === 'victory' || ev?.kind === 'ark' || ev?.kind === 'garden') audio.sting('victory');
     else if (ev?.kind === 'raidresult') audio.sting(state.raid?.last?.won ? 'won' : 'lost');
   }
   musicMode();
   ui.update();
+  if (photoBar && state.pending?.length && settings.pauseOnEvents) togglePhoto(false);   // an event needs an answer: back to the interface
 }
 function musicMode() {
   if (!state || $('#sGame')?.hidden) return;
@@ -724,7 +782,7 @@ async function main() {
   }
   showTitle();
   audio.init().then((ok) => { if (ok && !$('#sTitle').hidden) audio.play('title'); });
-  window.__colony = { get audio() { return audio; }, get state() { return state; }, get view() { return view; }, get ui() { return ui; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings, show: doShow,
+  window.__colony = { togglePhoto, get photo() { return !!photoBar; }, get audio() { return audio; }, get state() { return state; }, get view() { return view; }, get ui() { return ui; }, get M() { return M; }, get lastSpot() { return lastSpot; }, tick, setSpeed, settings, show: doShow,
     get deck() { return deck; }, setDeck, stepDeck, mapOf, get placing() { return placing; } };
   // back from a commanded raid battle: straight into the saved colony, where its result is applied
   let saved = null; try { saved = localStorage.getItem(KEY); } catch { }

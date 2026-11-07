@@ -17,6 +17,7 @@ import { T, zoneOf } from './data/terrain.js';
 import { BUILDING } from './data/buildings.js';
 import { mapOf, chamberOf, active, spec, deckOf, serviceValue, SERVICE_KINDS, TRANSIT_KEYS, parkField, openBreaches } from './rules.js';
 import { wonderValues } from './wonders.js';
+import { districtValue } from './districts.js';   // version 10: a Garden District's land value
 
 export const LV = {
   base: 25,                          // an open, pressurised tile with nothing around it
@@ -131,7 +132,7 @@ export function landValueGrid(state, deck = 'main') {
     if (!c) continue;
     let lk = leaky.get(c.id);
     if (lk === undefined) leaky.set(c.id, (lk = openBreaches(state, c).length > 0));
-    out[i] = clamp(sum[i] - (lk ? LV.breach : 0));
+    out[i] = clamp(sum[i] - (lk ? LV.breach : 0) + districtValue(c));
   }
   return out;
 }
@@ -166,6 +167,7 @@ export function landValueParts(state, deck, x, y) {
   if (dh <= LV.hullRange) add('Exposed hull (raiders, meteoroids)', -(LV.hullRange + 1 - dh) * LV.hull);
   const leak = openBreaches(state, c).length > 0;
   if (leak) add('An unsealed breach in the chamber', -LV.breach);
+  if (districtValue(c)) add('A Garden District', districtValue(c));   // version 10
   const value = clamp(LV.base + parts.reduce((s, p) => s + p.value, 0));
   parts.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
   return { value, parts, open: true };
@@ -176,8 +178,9 @@ const cache = new WeakMap();
 const signature = (state) => {
   let built = 0, open = 0;
   for (const b of state.buildings) if (b.build === 0 && !b.off) built += 1 + (b.level || 0);
-  for (const c of state.chambers || []) if (c.status === OPEN) open++;
-  return `${state.buildings.length}:${built}:${open}`;
+  let dist = '';
+  for (const c of state.chambers || []) { if (c.status === OPEN) open++; if (c.district) dist += `${c.id}${c.district.theme[0]}${c.district.tier || 0}`; }
+  return `${state.buildings.length}:${built}:${open}:${dist}`;
 };
 export function landValue(state, deck = 'main') {
   let c = cache.get(state);

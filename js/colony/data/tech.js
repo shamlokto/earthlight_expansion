@@ -78,6 +78,8 @@ export const TECHS = [
   // requirement (data/buildings.js `wonder.tech`) names Monumental Engineering, and the Ark Generation Ships.
   { key: 'tourism', name: 'Tourism', ver: 9, branch: 'society', cost: 260, needs: ['civics'], unlocks: ['hotel', 'promenade', 'theatre', 'casino'], text: 'Hotels, Promenades, Theatres and Casinos: visitors come for Eden\'s sights and pay to stay.' },
   { key: 'monumental', name: 'Monumental Engineering', ver: 9, branch: 'industry', cost: 500, needs: ['fabrication', 'civics'], unlocks: [], text: 'Great works raised in stages: the wonders (each also waits on its own colonists and landmarks).' },
+  // ---- version 10 (docs/COLONY-V10.md): luxuries for the well-off (js/colony/luxuries.js)
+  { key: 'luxuries', name: 'Luxury Goods', ver: 10, branch: 'society', cost: 300, needs: ['highrise'], unlocks: ['coffee', 'vineyard', 'artisan'], text: 'Coffee Terraces, Vineyard Domes and Artisan Workshops: coffee, wine and art for the well-off in Spires, Skyscrapers, Arcologies and the Ring. They are happier for it, and Skyscrapers need coffee and wine to hold.' },
   { key: 'generation', name: 'Generation Ships', ver: 9, branch: 'logistics', cost: 1200, needs: ['monumental', 'fusion', 'arcology'], unlocks: [], text: 'A ship that is a world for three hundred years: the Ark, Eden\'s last and greatest project.' },
 ];
 export const TECH = Object.fromEntries(TECHS.map((t) => [t.key, t]));

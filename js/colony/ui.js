@@ -47,17 +47,18 @@ import('../expansion/portraits.js').then((m) => { svgPortrait = m.portrait; }).c
 let battleMod = null, packReady = null;
 import('./battle.js').then((m) => { battleMod = m; }).catch((e) => console.warn('battle.js not loaded', e));
 
-const GOODS = ['food', 'water', 'air', 'parts', 'ore', 'alloy', 'helium', 'credits'];
-const GOOD_NAME = { food: 'Food', water: 'Water', air: 'Air', parts: 'Parts', ore: 'Ore', alloy: 'Alloy', helium: 'Helium-3', credits: 'Credits', power: 'Power', research: 'Research' };
+const GOODS = ['food', 'water', 'air', 'parts', 'ore', 'alloy', 'helium', 'coffee', 'wine', 'art', 'credits'];   // version 10: the luxuries
+const GOOD_NAME = { food: 'Food', water: 'Water', air: 'Air', parts: 'Parts', ore: 'Ore', alloy: 'Alloy', helium: 'Helium-3', credits: 'Credits', power: 'Power', research: 'Research', coffee: 'Coffee', wine: 'Wine', art: 'Art' };
 // Version 2 goods: in the top bar and the market only once the colony has any, or the tech that makes them is done.
-const LATE = { alloy: 'smelting', helium: 'plasma' };
-const SELLABLE = ['ore', 'food', 'parts', 'alloy', 'helium'];
+// (version 10: the luxuries likewise, once Luxury Goods is researched or any are made)
+const LATE = { alloy: 'smelting', helium: 'plasma', coffee: 'luxuries', wine: 'luxuries', art: 'luxuries' };
+const SELLABLE = ['ore', 'food', 'parts', 'alloy', 'helium', 'coffee', 'wine', 'art'];
 const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8', services: '#c3a6ff', defence: '#ff6a5a', landmarks: '#ffd98a', wonders: '#7ff0d0' };
 const BRANCH_COLOR = { life: '#5aa8ff', industry: '#ff9a52', society: '#ff8fd8', logistics: '#f5c542', defence: '#ff6a5a' };
 // Version 3 (docs/COLONY-V3.md): machine classes, the Defence panel's tabs, raid words.
 const CLASS_COLOR = { hu: '#6fd3ff', planes: '#c3a6ff', armour: '#ff9a52', ships: '#f5c542', support: '#8fe38a' };
 const CAT_CLASS = { 1: 'ships', 2: 'ships', 3: 'ships', 4: 'ships', 8: 'hu', 9: 'planes', 10: 'planes', 11: 'armour', 12: 'armour', 13: 'support', 14: 'support', 15: 'support' };
-const DEF_TABS = [['guardians', 'Guardians'], ['production', 'Production'], ['commanders', 'Commanders'], ['raids', 'Raids']];
+const DEF_TABS = [['guardians', 'Guardians'], ['production', 'Production'], ['commanders', 'Commanders'], ['raids', 'Raids'], ['neighbours', 'Neighbours']];   // version 10: the neighbours
 const FROM_TEXT = { north: 'the north edge of Eden', south: 'the south edge of Eden', east: 'the east edge of Eden', west: 'the west edge of Eden', earth: 'up from the atmosphere, Earth side' };
 const FACTION_NAME = { scavengers: 'Scavengers', scavenger: 'Scavengers', cartel: 'The Ashfall Cartel', ashfall: 'The Ashfall Cartel', pirates: 'The Ashfall Cartel',
   union: 'Union deserters', galt: 'Galt deserters', deserters: 'Deserters', remnant: 'The Directorate remnant', directorate: 'The Directorate remnant' };
@@ -75,7 +76,7 @@ const STATUS = {
   open: ['Open', 'Pressurised: build inside.'],
 };
 const OVERLAYS = [[null, 'None'], ['reach', 'Reach'], ['park', 'Parks'], ['power', 'Power'], ['value', 'Value']];   // version 8: land value
-const KIND_LABEL = { victory: 'Eden Restored', goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost', tech: 'Research complete',
+const KIND_LABEL = { garden: 'The Garden of Eden', wildlife: 'Wildlife returns', neighbour: 'Neighbours', district: 'District', victory: 'Eden Restored', goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost', tech: 'Research complete',
   raid: 'Raid', raidwarn: 'Raid warning', wanderer: 'Wanderer', raidreport: 'After the raid', report: 'After the raid', commander: 'Commanders', machine: 'Arsenal',
   // version 4, stage 2: the secrets
   discovery: 'Discovery', finalvault: 'The Ninefold vault', drones: 'Sentries', dronefight: 'Sentries', reactor: 'The old core', reactorwarn: 'The old core', reactorfail: 'The old core',
@@ -215,7 +216,7 @@ function cardIcon(b) {
 // The help dialog's sections (colony.html #dHelp). Short sentences, pictures from the card art.
 // diff: the difficulty row (js/colony/difficulty.js) the numbers are quoted for, or null.
 export const HELP_SECTIONS = [['goal', 'The goal'], ['time', 'Time'], ['build', 'Building'], ['res', 'Resources'], ['chambers', 'Chambers'],
-  ['homes', 'Homes & happiness'], ['landvalue', 'Land value'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['landmarks', 'Landmarks'], ['wonders', 'Wonders'], ['tourism', 'Tourism'], ['ark', 'The Ark'], ['incidents', 'Incidents'], ['petitions', 'Petitions'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
+  ['homes', 'Homes & happiness'], ['landvalue', 'Land value'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['landmarks', 'Landmarks'], ['wonders', 'Wonders'], ['tourism', 'Tourism'], ['ark', 'The Ark'], ['districts', 'Districts'], ['gardens', 'Eden\'s gardens'], ['luxuries', 'Luxuries'], ['neighbours', 'Neighbours'], ['incidents', 'Incidents'], ['petitions', 'Petitions'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['photo', 'Photo mode'], ['tips', 'First 10 days']];
 export function helpHtml(art, diff) {
   const pic = (slot, alt = '') => { const u = art?.(slot); return u ? `<img src="${esc(u)}" alt="${esc(alt)}" loading="lazy">` : ''; };
   const card = (key) => { const u = art?.(`card/${key}`); return `<figure class="cl-hfig">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : cardIcon(BUILDING[key])}<figcaption>${esc(BUILDING[key]?.name || key)}</figcaption></figure>`; };
@@ -349,6 +350,31 @@ export function helpHtml(art, diff) {
   ${sec('ark', 'The Ark', `<figure class="cl-hfig cl-hbook"><span style="font-size:42px;color:#7ff0d0">✧</span><figcaption>Beyond Eden</figcaption></figure>`, `
     <p><b>The Ark</b> is Eden's last and greatest project: a generation ship built in a 7×7 dock in space beside the hull, in <b>five stages</b> (Keel, Hull, Drive, Habitat Decks, and the provisions). Each stage needs thousands of alloy and parts, then helium-3, food and water, so build Warehouses, Granaries and Freight Yards to hold it all.</p>
     <p>It waits on <b>15,000 colonists</b>, the <b>Starport</b> and <b>Generation Ships</b> (research). Finishing it is a <b>second ending, Beyond Eden</b>, kept in your save. It is entirely optional: it never stands in the way of Eden Restored, and it gives the city after the win something to build towards.</p>`)}
+  ${sec('districts', 'Districts', card('park') + card('lab'), `
+    <p>Click any tile of an <b>open chamber</b> and the inspector offers four <b>districts</b>. Declare one and the chamber earns a bonus that grows as you fill its land with buildings that <b>fit</b>: at <b>25%, 50% and 75%</b> of its land (roads left out) it reaches tiers 1, 2 and 3. The inspector shows the fill and what the next tier gives; the minimap tints the chamber in the district's colour.</p>
+    <ul class="cl-hsteps">
+      <li><b>❀ Garden District</b>: parks, groves, gardens, orchards and homes (forests count already). Each tier: +1 happiness for everyone, 20 air a day, land value +4 in the chamber.</li>
+      <li><b>⚙ Industrial Quarter</b>: industry, power, plants, stores and workshops (no homes). Each tier: its buildings make 5% more.</li>
+      <li><b>✎ University Quarter</b>: labs, schools, galleries, clinics, campus greens and student homes. Each tier: its labs make 10% more, and 2 research a day.</li>
+      <li><b>★ Entertainment District</b>: hotels, promenades, theatres, casinos, cafés and the homes round them. Each tier: +6 tourism attraction and +1 happiness.</li>
+    </ul>
+    <p><b>Homes fit every district but the Industrial Quarter.</b> A chamber has one theme; you may change it 30 days after the last change. Districts' happiness together is at most +8. It is all optional: a chamber without a district works exactly as before.</p>`)}
+  ${sec('gardens', 'Eden\'s gardens', card('grove') + card('skygarden'), `
+    <p>Every park, grove, sky garden, orchard and vineyard, the forests and the water in your open chambers, Garden Districts and the Grand Arboretum add up to Eden's <b>greenery</b> (click Happiness in the top bar to see it). As it grows, <b>wildlife comes back</b>, once each, with a small lasting gift:</p>
+    <ul class="cl-hsteps">
+      <li><b>80: bees and butterflies</b>: orchards, coffee and vines make a tenth more.</li>
+      <li><b>160: birds in the sky gardens</b>: +2 happiness and +5 attraction for visitors.</li>
+      <li><b>280: fish in the canals</b>: Fisheries make a quarter more.</li>
+      <li><b>420: deer in the forests</b>: +2 happiness and +10 attraction.</li>
+    </ul>
+    <p><b>The Garden of Eden</b> is an optional ending: <b>greenery 600</b> and <b>happiness 70</b> on the same day. It is kept in your save and never stands in the way of Eden Restored or the Ark.</p>`)}
+  ${sec('luxuries', 'Luxuries', card('coffee') + card('vineyard') + card('artisan'), `
+    <p>Research <b>Luxury Goods</b> (after High-rise Homes). The <b>well-off</b>, who live in <b>Spires and Skyscrapers</b> (Tower Blocks at levels 3 and 4), <b>Arcologies</b> and the <b>Spin-Gravity Ring</b>, would like <b>coffee</b> (Coffee Terraces, on the hills), <b>wine</b> (Vineyard Domes, upper deck) and <b>art</b> (Artisan Workshops, from a little parts).</p>
+    <p>Each luxury they get in full gives <b>+2 happiness</b>, and art on show draws visitors. A <b>Skyscraper</b> needs coffee and wine to grow, and to stay a Skyscraper. <b>Nothing else suffers without them</b>: no shortages, no unrest. The new goods appear in the More pop-out and the Market only once you can make them; what the stores cannot hold is sold to the traders by itself.</p>`)}
+  ${sec('neighbours', 'Neighbours', '', `
+    <p>Three settlements watch Eden: <b>the Union remnant</b>, <b>the Galt remnant</b> and <b>Moraine's Ashfall Cartel</b>. Each has a <b>mood</b> toward Eden, from −100 to 100 (Defence panel › <b>Neighbours</b>).</p>
+    <p><b>Trade</b> at the Market, <b>relief convoys</b> to Earth, <b>petitions granted</b>, <b>raids beaten off</b> and squadrons calling at their <b>outposts</b> warm them; paying raiders off, refusing their requests or clearing the Cartel's den cools them. Moods drift slowly back over time.</p>
+    <p>Every month or two one of them sends a <b>trade deal</b>, a <b>request for aid</b>, a <b>warning</b> about a raider base or a <b>gift</b>. At <b>Friendly (30)</b> and <b>Allied (60)</b> they offer perks: better prices, a Union officer for the Lodge, a Galt machine, the Cartel's lower tribute and a truce. At <b>Hostile (−40)</b> their raider den grows bold. Switch them off in Settings if you like.</p>`)}
   ${sec('incidents', 'Incidents', card('shieldpylon') + card('flareshelter'), `
     <p>Now and then something happens to Eden, but <b>never without warning</b>. None come in the first 60 days (75 on Easy), then one every two or three months (less often on Easy). Each is announced <b>5 days ahead</b> with exactly what helps, and the advisor repeats it with a <b>Fix</b> button. Hazard Forecasting and Sato's Watch see them sooner.</p>
     <ul class="cl-hsteps">
@@ -413,6 +439,8 @@ export function helpHtml(art, diff) {
       <li>Keys: <b>W A S D</b> or the <b>arrows</b> pan, <b>Q / E</b> rotate, <b>+ / −</b> zoom, <b>PgUp / PgDn</b> one deck up or down, <b>Home</b> back to the Command Centre.</li>
     </ul>
     <p>With a mouse: drag to rotate, right-drag to pan, the wheel zooms. The map buttons and the minimap can be switched off in Settings (⚙).</p>`)}
+  ${sec('photo', 'Photo mode', '', `
+    <p>Press <b>P</b> or the <b>◉</b> button for <b>photo mode</b>: the interface hides and the camera orbits the colony slowly. The little bar at the bottom turns the <b>orbit</b> and a slow <b>fly-through</b> on or off, holds a <b>time of day</b>, and <b>Save picture</b> downloads the view as a PNG. Drag, scroll and the camera keys still work. <b>Esc</b> or P leaves.</p>`)}
   ${sec('tips', 'Your first 10 days', '', `
     <ol class="cl-hsteps">
       <li>Read Ruess's welcome, then follow the <b>goal panel</b>. Press <b>Show me</b>.</li>
@@ -454,7 +482,7 @@ export function createUI(root, api) {
       <div class="cl-morewrap">
         <button type="button" class="cl-morebtn" data-more aria-expanded="false" aria-haspopup="true" title="More: ore, alloy, helium-3, research, heat and the tax"><span>More</span><b>▾</b><i class="cl-moredot" data-moredot hidden></i></button>
         <div class="cl-more" data-morepop hidden>
-          ${goodStat('ore')}${goodStat('alloy')}${goodStat('helium')}
+          ${goodStat('ore')}${goodStat('alloy')}${goodStat('helium')}${goodStat('coffee')}${goodStat('wine')}${goodStat('art')}
           <button type="button" class="cl-stat cl-resstat" data-g="research" hidden title="Research a day from the labs"><i>Research</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
           <button type="button" class="cl-stat cl-tourstat" data-g="tourism" hidden title="Tourism: visitors staying today and what they spend; click for the Market's tourism read-out"><i>Tourism</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
           <button type="button" class="cl-stat cl-heatstat" data-g="heat" hidden title="Heat: how tempting Eden looks to raiders"><i>Heat</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
@@ -469,6 +497,7 @@ export function createUI(root, api) {
       <button type="button" class="cl-btn sm cl-xbtn" data-tool="chart" title="Star chart: expeditions to the sectors around Eden (X)"><span class="cl-ico">✦</span><span class="cl-lbl">Star chart</span></button>
       <button type="button" class="cl-btn sm cl-jbtn" data-tool="journal" hidden title="Discoveries: logs, vaults, survivors and dangers (J)"><span class="cl-ico cl-bookico">${SICON.book}</span><span class="cl-lbl">Discoveries</span><span class="cl-jnew" data-jnew hidden></span></button>
       <button type="button" class="cl-btn sm" data-tool="market" title="Sell goods and guardians"><span class="cl-ico">⚖</span><span class="cl-lbl">Market</span></button>
+      <button type="button" class="cl-btn sm icon" data-tool="photo" title="Photo mode (P): hide the interface, orbit the colony, save a picture" aria-label="Photo mode">◉</button>
       <button type="button" class="cl-btn sm" data-tool="save" title="Save the colony in this browser"><span class="cl-ico">⤓</span><span class="cl-lbl">Save</span></button>
       <button type="button" class="cl-btn sm icon cl-helpbtn" data-tool="help" title="How to play (F1 or ?)" aria-label="How to play">?</button>
       <button type="button" class="cl-btn sm icon" data-tool="settings" title="Settings">⚙</button>
@@ -759,6 +788,7 @@ export function createUI(root, api) {
     else if (t === 'chart') toggleChart();
     else if (t === 'market') togglePop('market');
     else if (t === 'save') api.save();
+    else if (t === 'photo') api.photo?.();   // version 10: photo mode (main.js)
     else if (t === 'settings') togglePop('settings');
     else if (t === 'help') api.help?.();
     else if (t === 'title') api.toTitle();
@@ -858,6 +888,14 @@ export function createUI(root, api) {
       <div class="cl-fillrow"><span>Arrivals</span>${bar(t.cap, top)}<b>${num(t.cap)}</b></div>
       <p class="cl-dim">Visitors are the least of the three. ${esc(R.tourismLimitText ? R.tourismLimitText(t) : '')}</p>
       ${t.parts.length ? `<table class="cl-table cl-mkt"><tbody>${t.parts.map((p) => `<tr><td>${esc(p.label)}</td><td class="n">+${num(p.value)}</td></tr>`).join('')}<tr><td><b>Attraction</b></td><td class="n"><b>${num(t.score)}</b> <small>× ${R.TOUR?.perPoint ?? 8} visitors</small></td></tr></tbody></table>` : ''}`;
+  }
+  // version 10: what the well-off want and get (the Market panel), once luxuries are relevant
+  function luxuryHtml(s) {
+    if (typeof R.luxuryStatus !== 'function' || !R.luxuriesShown(s)) return '';
+    const L = R.luxuryStatus(s);
+    return `<h4>Luxuries <small>${num(L.wellOff)} well-off in Spires, Skyscrapers, Arcologies and the Ring</small></h4>
+      <table class="cl-table cl-mkt"><thead><tr><th>Good</th><th class="n">Wanted</th><th class="n">Had</th><th class="n">Store</th></tr></thead><tbody>${L.goods.map((g) => `<tr><td>${esc(g.name)}</td><td class="n">${num(g.want)}<small>/d</small></td><td class="n ${g.want > 0 ? (g.share >= 0.9 ? 'good' : 'bad') : ''}">${g.want > 0 ? `${Math.round(g.share * 100)}%` : '–'}</td><td class="n">${num(g.have)} <small>/ ${num(L.cap)}</small></td></tr>`).join('')}</tbody></table>
+      <p class="cl-dim">Each luxury met gives +2 happiness; Skyscrapers need coffee and wine to hold. Nothing else suffers without them. Beyond the store, the surplus is sold to the traders by itself${L.exported ? ` (+${num(L.exported)} cr yesterday)` : ''}.</p>`;
   }
   function researchWhy(s, li, rs, list) {
     const f = list.find((t) => t.focus);
@@ -993,6 +1031,7 @@ export function createUI(root, api) {
     const s = S(), id = +a.dataset.id, v = a.dataset.v;
     switch (a.dataset.a) {
       case 'survey': case 'pressurise': result(R.chamberAction(s, id, a.dataset.a)); break;
+      case 'district': result(R.setDistrict(s, id, v || null)); inspSig = ''; break;   // version 10
       case 'mode': result(R.setMode(s, id, v)); break;
       case 'upgrade': result(R.upgrade(s, id)); break;
       case 'toggle': result(R.toggle(s, id)); break;
@@ -1129,10 +1168,30 @@ export function createUI(root, api) {
         </div>${!surveyR.ok && ch.status === 'sealed' ? `<p class="cl-why">${esc(surveyR.msg)}</p>` : ''}${!pressR.ok && ch.status === 'surveyed' ? `<p class="cl-why">${esc(pressR.msg)}</p>` : ''}` : ''}
       </section>`);
     }
+    if (ch?.status === 'open' && R.THEMES) parts.push(districtHtml(s, ch));   // version 10
     if (ch?.status === 'open') parts.push(landValueHtml(s, x, y, d));   // version 8
     if (b) parts.push(buildingHtml(s, b));
     if (b?.key === 'lift' || (!b && ter?.id === T.SHAFT)) parts.push(shaftHtml(s, x, y, b?.key === 'lift' ? b : null));
     return parts.join('');
+  }
+
+  // Version 10 (docs/COLONY-V10.md): the chamber's district: its theme, how much of it is built to fit, the tier and the
+  // next, and the four themes to choose from (a change waits DISTRICT.cooldown days after the last).
+  function districtHtml(s, ch) {
+    let st = null; try { st = R.districtStatus(s, ch); } catch { return ''; }
+    const pct = (v) => `${Math.round(v * 100)}%`, wait = st.wait || 0;
+    const btns = R.THEME_KEYS.map((k) => { const T = R.THEMES[k], on = st.theme === k;
+      return `<button type="button" data-a="district" data-id="${ch.id}" data-v="${k}" aria-pressed="${on}" ${on || (st.theme && wait > 0) ? 'disabled' : ''} title="${esc(`${T.name}: ${T.text} Each tier: ${T.bonusText(1)}.`)}" style="--dc:${T.color}"><b style="color:${T.color}">${T.icon}</b> ${esc({ garden: 'Garden', industry: 'Industrial', university: 'University', entertainment: 'Entertainment' }[k])}</button>`; }).join('');
+    const head = st.theme ? `<span class="cl-badge" style="background:${st.color}22;color:${st.color};border-color:${st.color}66">${st.icon} ${esc(st.name)} · tier ${st.tier}</span>` : '<span class="cl-badge st-surveying">None</span>';
+    const marks = (R.DISTRICT?.tiers || []).map((k) => `<i style="position:absolute;left:${k * 100}%;top:-2px;bottom:-2px;width:1px;background:rgba(255,255,255,.55)"></i>`).join('');
+    const body = st.theme ? `<div class="cl-fillrow"><span>Built to fit</span><span class="cl-fill" style="position:relative"><span style="width:${pct(st.fill)};background:${st.color}"></span>${marks}</span><b>${pct(st.fill)}</b></div>
+        <p class="cl-dim">${num(st.fit)} of ${num(st.land)} tiles of land (roads left out). ${esc(R.THEMES[st.theme].text)}</p>
+        ${st.tier ? `<p class="cl-good">Tier ${st.tier}: ${esc(st.bonus)}.</p>` : ''}
+        ${st.next != null ? `<p class="cl-dim">At ${pct(st.next)}: ${esc(st.nextBonus)}.</p>` : '<p class="cl-dim">The top tier: the chamber is a district through and through.</p>'}
+        ${wait > 0 ? `<p class="cl-dim">The theme can change in ${wait} day${wait === 1 ? '' : 's'}.</p>` : ''}`
+      : '<p class="cl-dim">Declare this chamber a district: its bonus grows as you fill its land with buildings that fit (25%, 50%, 75%).</p>';
+    return `<section class="cl-isec cl-dist"><h4>District ${head}</h4>${body}
+      <div class="cl-modes" role="group" aria-label="District">${btns}${st.theme ? `<button type="button" class="cl-dclear" data-a="district" data-id="${ch.id}" data-v="" ${wait > 0 ? 'disabled' : ''} title="No district">× No district</button>` : ''}</div></section>`;
   }
 
   // Version 8 (docs/COLONY-V8.md): a tile's land value and its main reasons (rules.landValueParts).
@@ -1265,7 +1324,7 @@ export function createUI(root, api) {
     const i = inspAt.y * s.map.w + inspAt.x;
     const b = buildingAt(s, inspAt.x, inspAt.y, null), ch = chamberOf(s, inspAt.x, inspAt.y, null);
     const lifts = s.buildings.filter((k) => k.key === 'lift').map((k) => [k.id, k.build, k.off, deckOf(k)]);
-    const sig = JSON.stringify([inspAt.deck, mapOf(s).t[i], lifts, b?.key === 'lift' || mapOf(s).t[i] === T.SHAFT ? s.chambers.filter((c) => c.deck).map((c) => c.status) : 0, b, ch && [ch.status, ch.work, sealedCount(s, ch)], Math.floor(s.stock.credits / 50), Math.floor(s.stock.parts / 5), Math.floor(s.stock.air / 10), summary?.jobs, summary?.workers, s.day % 5 === 0 ? s.day : 0, BUILDING[b?.key]?.cat === 'defence' || b?.key === 'lodge' || b?.key === 'quarters' ? [s.production, (s.guardians || []).length, (s.wanderers || []).length, s.commanders?.length] : 0, b?.key === 'lab' ? [s.research?.focus, Math.floor(s.research?.progress?.[s.research?.focus] || 0), s.stats?.last?.research] : 0, ch && secOf(s) ? [JSON.stringify(dangerAt(s, ch.id)), sitesOf(s).filter((k) => k.chamber === ch.id).map((k) => `${k.found ? 1 : 0}${k.done ? 1 : 0}`).join(''), (s.secrets.read || []).length, (s.guardians || []).length, spareMW()] : 0]);
+    const sig = JSON.stringify([inspAt.deck, mapOf(s).t[i], lifts, b?.key === 'lift' || mapOf(s).t[i] === T.SHAFT ? s.chambers.filter((c) => c.deck).map((c) => c.status) : 0, b, ch && [ch.status, ch.work, sealedCount(s, ch), ch.district, ch.status === 'open' ? s.buildings.length : 0], Math.floor(s.stock.credits / 50), Math.floor(s.stock.parts / 5), Math.floor(s.stock.air / 10), summary?.jobs, summary?.workers, s.day % 5 === 0 ? s.day : 0, BUILDING[b?.key]?.cat === 'defence' || b?.key === 'lodge' || b?.key === 'quarters' ? [s.production, (s.guardians || []).length, (s.wanderers || []).length, s.commanders?.length] : 0, b?.key === 'lab' ? [s.research?.focus, Math.floor(s.research?.progress?.[s.research?.focus] || 0), s.stats?.last?.research] : 0, ch && secOf(s) ? [JSON.stringify(dangerAt(s, ch.id)), sitesOf(s).filter((k) => k.chamber === ch.id).map((k) => `${k.found ? 1 : 0}${k.done ? 1 : 0}`).join(''), (s.secrets.read || []).length, (s.guardians || []).length, spareMW()] : 0]);
     if (sig === inspSig) return;
     inspSig = sig;
     inspBody.innerHTML = inspectorHtml(s, inspAt.x, inspAt.y);
@@ -1295,7 +1354,7 @@ export function createUI(root, api) {
     if (pops.happy.hidden) return;
     const s = S();
     const partsList = summary?.happyParts || s.happyParts || [];
-    const sig = JSON.stringify(partsList) + (summary?.happy ?? s.happy);
+    const sig = JSON.stringify(partsList) + (summary?.happy ?? s.happy) + (s.gardens?.score ?? '') + JSON.stringify(s.gardens?.wildlife || {});
     if (sig === happySig) return;
     happySig = sig;
     const total = Math.round(summary?.happy ?? s.happy);
@@ -1303,7 +1362,18 @@ export function createUI(root, api) {
       <h3>Happiness <b class="cl-big">${total}</b></h3>
       <table class="cl-table"><tbody>${partsList.map((p) => `<tr><td>${esc(p.label)}</td><td class="n ${p.value > 0 ? 'good' : p.value < 0 ? 'bad' : ''}">${p.value > 0 ? '+' : ''}${num(p.value)}</td></tr>`).join('') || '<tr><td colspan="2" class="cl-dim">No breakdown yet: it appears after the first day.</td></tr>'}</tbody>
       <tfoot><tr><td>Total <small>(0–100)</small></td><td class="n">${total}</td></tr></tfoot></table>
-      <p class="cl-dim">≥ 55 and free housing with a food surplus: a transport every 10 days. Below 25: colonists leave.</p>`;
+      <p class="cl-dim">≥ 55 and free housing with a food surplus: a transport every 10 days. Below 25: colonists leave.</p>
+      ${gardensHtml(s)}`;
+  }
+  // version 10 (docs/COLONY-V10.md): Eden's gardens: the greenery, the wildlife that has come back, the Garden of Eden
+  function gardensHtml(s) {
+    if (typeof R.gardenStatus !== 'function') return '';
+    let g; try { g = R.gardenStatus(s); } catch { return ''; }
+    const next = g.wildlife.find((w) => w.day == null);
+    return `<h4 class="cl-gardens">❀ Eden's gardens <small>greenery ${num(g.score)}</small></h4>
+      <div class="cl-fillrow"><span>Greenery</span><span class="cl-fill"><span style="width:${Math.round(Math.min(1, g.score / g.target) * 100)}%;background:#7fd36a"></span></span><b>${num(g.score)} / ${num(g.target)}</b></div>
+      <ul class="cl-needs" style="list-style:none;padding:0;margin:4px 0">${g.wildlife.map((w) => `<li class="${w.day != null ? 'ok' : 'no'}">${w.day != null ? '✓' : '○'} <b>${esc(w.name)}</b> <small>(${w.at}${w.day != null ? `, day ${w.day}` : ''})</small> ${esc(w.bonus)}</li>`).join('')}</ul>
+      <p class="cl-dim">${g.eden ? `The Garden of Eden on day ${g.eden.day}.` : `${next ? `Next: ${esc(next.name.toLowerCase())} at ${next.at}. ` : ''}The Garden of Eden: greenery ${num(g.target)} and happiness ${g.happy}.`} ${g.parts.map((p) => `${esc(p.label)} ${num(p.value)}`).join(' · ')}</p>`;
   }
 
   pops.market.addEventListener('click', (e) => {
@@ -1329,7 +1399,7 @@ export function createUI(root, api) {
     const yard = finishedOf(s, 'scrapyard').length > 0;
     const imports = R.IMPORTS || [], buyP = imports.map((g) => { try { return R.buyPrice(s, g); } catch { return null; } });
     const cv = R.convoyStatus ? R.convoyStatus(s) : null, vs = R.victoryStatus ? R.victoryStatus(s) : null;
-    const sig = JSON.stringify([cv, vs && R.victoryText(vs), s.tourism?.visitors, s.tourism?.score, goods, prices, buyP, Math.floor(s.stock.credits), goods.map((g) => Math.floor(s.stock[g] || 0)), (s.guardians || []).map((g) => [g.id, g.level, g.hp]), yard]);
+    const sig = JSON.stringify([cv, vs && R.victoryText(vs), s.luxuries?.share, s.luxuries?.wellOff, s.tourism?.visitors, s.tourism?.score, goods, prices, buyP, Math.floor(s.stock.credits), goods.map((g) => Math.floor(s.stock[g] || 0)), (s.guardians || []).map((g) => [g.id, g.level, g.hp]), yard]);
     if (sig === marketSig) return;
     marketSig = sig;
     const hasDock = s.buildings.some((b) => b.key === 'dock' && !b.build);
@@ -1347,6 +1417,7 @@ export function createUI(root, api) {
         <td class="cl-sellbtns">${[10, 100].map((q) => `<button type="button" class="cl-btn xs" data-buy="${g}" data-q="${q}" ${hasDock && buyP[i] != null && s.stock.credits >= buyP[i] ? '' : 'disabled'} title="≈ ${buyP[i] != null ? num(Math.ceil(buyP[i] * q)) : '?'} cr">+${q}</button>`).join('')}</td></tr>`).join('')}</tbody></table>
       <p class="cl-dim">Every 10 units bought raises that price 2%; it settles back over a few days.</p>` : ''}
       ${tourismHtml(s)}
+      ${luxuryHtml(s)}
       ${cv ? convoyHtml(s, cv, vs) : ''}
       ${guards.length ? `<h4>Guardians <small>${guards.length} machine${guards.length === 1 ? '' : 's'}${yard ? ' · Scrapyard: +20%' : ''}</small></h4>
       ${yard ? '' : '<p class="cl-dim">A Scrapyard sells machines for a fifth more.</p>'}
@@ -1383,6 +1454,7 @@ export function createUI(root, api) {
       ${raidToggleHtml(S())}
       ${incidentToggleHtml(S())}
       ${petitionToggleHtml(S())}
+      ${neighbourToggleHtml(S())}
       <p class="cl-dim">The colony autosaves every 10 days in this browser. Keys: space pause · 1 / 2 / 3 speed · R build again · T research · G defence · M music · WASD / arrows pan · Q / E rotate · PgUp / PgDn deck · Esc cancel · F1 or ? how to play.</p>`;
     for (const c of pops.settings.querySelectorAll('[data-set]')) c.onchange = () => { api.setSetting(c.dataset.set, c.checked); helpersShown(); };
     for (const c of pops.settings.querySelectorAll('[data-setsel]')) c.onchange = () => api.setSetting(c.dataset.setsel, c.value);
@@ -1393,6 +1465,8 @@ export function createUI(root, api) {
     if (rd) rd.onchange = () => { result(R.setRaids(S(), rd.checked)); renderSettings(); };
     const inc = pops.settings.querySelector('[data-incidents]');
     if (inc) inc.onchange = () => { result(R.setIncidents(S(), inc.checked)); renderSettings(); };
+    const nbt = pops.settings.querySelector('[data-neighbours]');   // version 10
+    if (nbt) nbt.onchange = () => { result(R.setNeighbours(S(), nbt.checked)); renderSettings(); };
     const pet = pops.settings.querySelector('[data-petitions]');
     if (pet) pet.onchange = () => { result(R.setPetitions(S(), pet.checked)); renderSettings(); };
     if (setup) setup.onclick = () => { setup.disabled = true; api.audio.setUp().then(() => { renderSettings(); toast('Earth Light music is ready.', 'good'); }).catch((e) => { setup.disabled = false; toast(e.message || 'No ROM chosen.', 'bad'); }); };
@@ -1414,6 +1488,11 @@ export function createUI(root, api) {
     if (!s || typeof R.setIncidents !== 'function') return '';
     const on = s.options?.incidents !== false;
     return `<label class="cl-check"><input type="checkbox" data-incidents ${on ? 'checked' : ''}><span></span><em>Incidents<small>${on ? 'Meteor showers, solar flares, burst mains and fevers, each announced days ahead with what helps (and the odd caravan or comet).' : 'Off: no incidents. Turn them on again whenever you like.'}</small></em></label>`;
+  }
+  function neighbourToggleHtml(s) {
+    if (!s || typeof R.setNeighbours !== 'function') return '';
+    const on = s.options?.neighbours !== false;
+    return `<label class="cl-check"><input type="checkbox" data-neighbours ${on ? 'checked' : ''}><span></span><em>Neighbours<small>${on ? 'The Union, Galt and the Cartel send an offer, a request or a gift every month or two, and remember what Eden does.' : 'Off: no offers, and their moods hold. Turn them on again whenever you like.'}</small></em></label>`;
   }
   function petitionToggleHtml(s) {
     if (!s || typeof R.setPetitions !== 'function') return '';
@@ -1686,10 +1765,10 @@ export function createUI(root, api) {
       const on = t.dataset.dtab === defTab;
       if (t.getAttribute('aria-selected') !== String(on)) t.setAttribute('aria-selected', String(on));
     }
-    const counts = { guardians: (s.guardians || []).length || '', production: (s.production || []).length || '', commanders: (s.wanderers || []).length ? `+${s.wanderers.length}` : '', raids: s.raid?.coming || s.raid?.warned ? '!' : '' };
+    const counts = { guardians: (s.guardians || []).length || '', production: (s.production || []).length || '', commanders: (s.wanderers || []).length ? `+${s.wanderers.length}` : '', raids: s.raid?.coming || s.raid?.warned ? '!' : '', neighbours: '' };
     for (const n of defEl.querySelectorAll('[data-dtabn]')) { const v = String(counts[n.dataset.dtabn] ?? ''); if (n.textContent !== v) n.textContent = v; }
     liveRender(defStats, (L) => defStatsHtml(s, L));
-    const fn = { guardians: guardiansHtml, production: productionHtml, commanders: commandersHtml, raids: raidsHtml }[defTab];
+    const fn = { guardians: guardiansHtml, production: productionHtml, commanders: commandersHtml, raids: raidsHtml, neighbours: neighboursHtml }[defTab];
     liveRender(defBody, (L, W) => `<div class="cl-dtab-${defTab}">${fn(s, L, W)}</div>`);
   }
   function defStatsHtml(s, L) {
@@ -1900,6 +1979,29 @@ export function createUI(root, api) {
       ${goods(rep.stolen) ? kv('Stolen', esc(goods(rep.stolen)), 'bad') : ''}
       ${goods(rep.salvage) ? kv('Salvage', '+' + esc(goods(rep.salvage)), 'good') : ''}
       ${paid ? kv('Tribute', esc(trib)) : ''}</div>`;
+  }
+  // -- Neighbours (version 10, docs/COLONY-V10.md): the Union remnant, the Galt remnant and the Ashfall Cartel
+  function neighboursHtml(s) {
+    if (typeof R.neighbourStatus !== 'function') return note('Neighbours are not in this build.', 'warn');
+    const list = R.neighbourStatus(s), on = R.neighboursOn(s), NB = R.NB;
+    const pos = (m) => Math.round(((m + 100) / 200) * 100);
+    const cards = list.map((n) => {
+      const cls = n.mood >= NB.friendly ? 'good' : n.mood <= NB.hostile ? 'bad' : '';
+      const perks = n.perks.map((p) => `<li class="${p.on ? 'ok' : 'no'}">${p.on ? '✓' : '○'} <b>${esc(p.name)}</b> <small>(${p.at >= NB.allied ? 'Allied' : 'Friendly'}, ${p.at}${p.once ? ', once' : ''})</small> ${esc(p.text)}</li>`).join('');
+      const base = n.base ? (n.base.destroyed ? `<p class="cl-dim">Their raider den is destroyed.</p>`
+        : n.base.truce ? `<p class="cl-good">Truce: their den sends no raids.</p>`
+          : n.base.bold ? `<p class="cl-why">Hostile: their raider den is bold (its fleet regrows twice as fast, ${num(n.base.fleet)} / ${num(n.base.max)}).</p>`
+            : `<p class="cl-dim">Their raider den: ${num(n.base.fleet)} / ${num(n.base.max)} machines. At ${NB.hostile} or below it grows bold.</p>`) : '';
+      const hist = n.log.length ? `<ul class="cl-nblog">${n.log.map((e) => `<li><small>Day ${e.day}</small> ${esc(e.text)} <b class="${e.delta > 0 ? 'good' : 'bad'}">${e.delta > 0 ? '+' : '−'}${Math.abs(e.delta)}</b></li>`).join('')}</ul>` : '<p class="cl-dim">Nothing between you yet.</p>';
+      return `<article class="cl-nbcard" style="--nc:${n.color};border:1px solid ${n.color}55;border-radius:10px;padding:10px 12px;margin:0 0 10px">
+        <h4 style="margin:0 0 4px;color:${n.color}">${esc(n.name[0].toUpperCase() + n.name.slice(1))} <small class="${cls}">${esc(n.standing)} · ${n.mood > 0 ? '+' : ''}${n.mood}</small></h4>
+        <p class="cl-dim" style="margin:0 0 6px">${esc(n.text)}</p>
+        <div class="cl-fillrow"><span>Mood</span><span class="cl-fill" style="position:relative"><span style="width:${pos(n.mood)}%;background:${n.color}"></span><i style="position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:rgba(255,255,255,.6)"></i></span><b>${n.mood}</b></div>
+        <ul class="cl-needs" style="list-style:none;padding:0;margin:6px 0">${perks}</ul>${base}${hist}</article>`;
+    }).join('');
+    return `${on ? '' : note('<b>Neighbours are off</b> (Settings): no offers, and their moods hold where they are.', 'warn')}
+      <p class="cl-dim">Three settlements beyond the hull watch Eden. <b>Trade</b> at the Market, <b>relief convoys</b>, <b>petitions granted</b>, <b>raids beaten off</b> and <b>expeditions</b> to their outposts warm them; paying raiders and refusing their requests cools them. Now and then one sends an offer, a request, a warning or a gift. Moods drift slowly back over time.</p>
+      ${cards}`;
   }
   function raidsHtml(s, L, W) {
     const r = s.raid;
@@ -2569,14 +2671,15 @@ export function createUI(root, api) {
   // Version 4, stage 4: the ending, Eden Restored (shown once; the colony carries on after it, D25).
   // The clip (art slot video/ending) opens it; the page beside the words shows its still (scene/ending), else the title art.
   function victoryPicture(ark = false) {
-    const still = (ark ? api.art?.('scene/ark') : null) || api.art?.('scene/ending') || api.art?.('title/rebuild');
-    return still ? `<img class="cl-fvmedia" src="${esc(still)}" alt="${ark ? 'The Ark leaving Eden for the stars' : 'Eden, restored, above the Earth'}">` : '';
+    const still = (ark === 'garden' ? api.art?.('scene/garden') : ark ? api.art?.('scene/ark') : null) || api.art?.('scene/ending') || api.art?.('title/rebuild');
+    return still ? `<img class="cl-fvmedia" src="${esc(still)}" alt="${ark === 'garden' ? 'Eden green from end to end, a garden in the sky' : ark ? 'The Ark leaving Eden for the stars' : 'Eden, restored, above the Earth'}">` : '';
   }
   // Stage 0, when there is a clip: the cinematic, full width (the clip plays, the title fades in;
   // Continue or Skip, and it moves on by itself when the clip ends). Stage 1: the words and the numbers.
   let vStage = { id: null, stage: 0 };
   function renderVictory(s, p, stage) {
-    const ark = p.kind === 'ark';   // version 9: the second ending, Beyond Eden, in the same style (no clip for now)
+    const ark = p.kind === 'ark' || p.kind === 'garden';   // version 9: the second ending, Beyond Eden, in the same style (no clip for now)
+    const garden = p.kind === 'garden';   // version 10: the third, the Garden of Eden
     if (vStage.id !== p.id) vStage = { id: p.id, stage: !ark && api.art?.('video/ending') && !reduceMotion() ? 0 : 1 };
     if (stage != null) vStage.stage = stage;
     evId = p.id;
@@ -2595,17 +2698,17 @@ export function createUI(root, api) {
       return;
     }
     evBox.className = 'cl-win cl-event cl-evfinal cl-evvictory';
-    const v = (ark ? s.ark : s.victory) || {}, choice = p.choices?.[0] || { key: 'keep', label: 'Keep building Eden' };
-    const stats = ark ? [['Day', v.day], ['Colonists', v.pop], ['Wonders', v.wonders], ['Landmarks', v.landmarks], ['Buildings', v.buildings], ['Visitors a day', v.visitors], ['Eden Restored on day', v.restored]]
+    const v = (garden ? s.gardens?.eden : ark ? s.ark : s.victory) || {}, choice = p.choices?.[0] || { key: 'keep', label: 'Keep building Eden' };
+    const stats = garden ? [['Day', v.day], ['Colonists', v.pop], ['Greenery', v.greenery], ['Happiness', v.happy], ['Wildlife returned', v.wildlife], ['Parks and gardens', v.parks], ['Eden Restored on day', v.restored]] : ark ? [['Day', v.day], ['Colonists', v.pop], ['Wonders', v.wonders], ['Landmarks', v.landmarks], ['Buildings', v.buildings], ['Visitors a day', v.visitors], ['Eden Restored on day', v.restored]]
       : [['Day', v.day], ['Colonists', v.pop], ['Chambers open', v.chambers], ...(v.happy != null ? [['Happiness', v.happy]] : []), ['Relief loads', v.convoys], ['Buildings', v.buildings], ['Raids beaten', v.raids], ['Pirate dens cleared', v.dens], ['Logs read', v.logs]];
-    evBox.innerHTML = `<div class="cl-fvpic">${victoryPicture(ark)}</div>
+    evBox.innerHTML = `<div class="cl-fvpic">${victoryPicture(garden ? 'garden' : ark)}</div>
       <div class="cl-fvmain">
         <div class="cl-evkind">${esc(KIND_LABEL[p.kind] || KIND_LABEL.victory)} · Day ${s.day}</div>
         <div class="cl-fvpage"><h2 id="evTitle">${esc(p.title || 'Eden Restored')}</h2><p class="cl-vlead">${esc(p.text)}</p>
           <dl class="cl-vstats">${stats.filter(([, n]) => n != null).map(([k, n]) => `<div><dt>${k}</dt><dd>${num(n)}</dd></div>`).join('')}</dl>
-          <div class="cl-fvclose">${((ark ? R.ARK_ENDING : R.ENDING) || []).map(([k, who, line], i) => `<figure style="--i:${i}">${eventFace(k) || `<span class="cl-portrait cl-fvinit">${esc(who.split(' ').pop()[0])}</span>`}<blockquote><p>“${esc(line)}”</p><figcaption>${esc(who)}</figcaption></blockquote></figure>`).join('')}</div>
+          <div class="cl-fvclose">${((garden ? R.GARDEN_ENDING : ark ? R.ARK_ENDING : R.ENDING) || []).map(([k, who, line], i) => `<figure style="--i:${i}">${eventFace(k) || `<span class="cl-portrait cl-fvinit">${esc(who.split(' ').pop()[0])}</span>`}<blockquote><p>“${esc(line)}”</p><figcaption>${esc(who)}</figcaption></blockquote></figure>`).join('')}</div>
           ${!ark && v.finalVault && R.EPILOGUE ? `<p class="cl-fvreward"><i>Epilogue</i> ${esc(R.EPILOGUE)}</p>` : ''}
-          <p class="cl-dim">${ark ? 'The Ark\'s voyage is kept in your save. Eden carries on: keep building.' : 'Your colony is saved, victory and all. Keep building: Eden is yours.'}</p></div>
+          <p class="cl-dim">${garden ? 'The Garden of Eden is kept in your save. Eden carries on: keep building.' : ark ? 'The Ark\'s voyage is kept in your save. Eden carries on: keep building.' : 'Your colony is saved, victory and all. Keep building: Eden is yours.'}</p></div>
         <div class="cl-evchoices"><button type="button" class="cl-btn primary" data-choice="${esc(choice.key)}">${esc(choice.label)}</button></div>
       </div>`;
     modal.hidden = false;
@@ -2802,7 +2905,7 @@ export function createUI(root, api) {
     }
     if (evId === p.id && !modal.hidden) return;
     if (p.kind === 'finalvault') { renderFinal(s, p); return; }
-    if (p.kind === 'victory' || p.kind === 'ark') { renderVictory(s, p); return; }   // version 9: the Ark's ending, Beyond Eden
+    if (p.kind === 'victory' || p.kind === 'ark' || p.kind === 'garden') { renderVictory(s, p); return; }   // version 9: the Ark's ending, Beyond Eden; version 10: the Garden of Eden
     modal.classList.remove('final');
     evId = p.id;
     if (/report|result/.test(p.kind || '')) repSeen = reportSig(s);   // the sim's own report: no second one
@@ -2818,16 +2921,16 @@ export function createUI(root, api) {
     evBox.className = 'cl-win cl-event' + (tone ? tone : expd ? (p.report.recalled ? ' cl-evwarn' : p.report.won ? ' cl-evwon' : ' cl-evraid') : raid || coreBad ? ' cl-evraid' : coreSafe ? ' cl-evwon' : warn || core ? ' cl-evwarn' : disc || p.kind === 'survivors' ? ' cl-evdisc' : drone ? (droneWon ? ' cl-evwon' : ' cl-evraid') : '');
     const jtab = disc ? 'logs' : (core && !coreSafe) || drone ? 'dangers' : p.kind === 'survivors' ? 'survivors' : null;
     const choices = p.choices?.length ? p.choices : [{ key: 'ok', label: 'Understood' }];
-    const tab = warn ? 'raids' : wkey ? 'commanders' : null;
+    const tab = warn ? 'raids' : wkey ? 'commanders' : p.kind === 'neighbour' ? 'neighbours' : null;
     evBox.innerHTML = `<div class="cl-evkind">${esc(KIND_LABEL[p.kind] || p.kind || 'Event')} · Day ${s.day}${s.pending.length > 1 ? ` · ${s.pending.length - 1} more waiting` : ''}</div>
       <div class="cl-evbody">${pic}
       <div><h2 id="evTitle">${esc(p.title)}</h2>${raid && (rule('raidPreview', s) || p.preview) ? `<p>${esc(raidLine(s, p))}</p>` : `<p>${esc(disc && discoveryItems(s, p).length ? discoveryLead(s, p) : p.text)}</p>`}</div></div>
-      ${p.kind === 'landmark' || p.kind === 'wonder' ? landmarkBody(s, p) : ''}
+      ${p.kind === 'landmark' || p.kind === 'wonder' || p.kind === 'wildlife' ? landmarkBody(s, p) : ''}
       ${raid ? raidBody(s, p) : warn ? warnBody(s) : disc ? discoveryBody(s, p) : core ? reactorBody(s, p) : drone ? droneEvBody(s, p) : p.kind === 'survivors' ? survivorsEvBody(s, p) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
       <div class="cl-evchoices">${choices.map((c, i) => { const cant = raid && c.key === 'tribute' && (rule('raidPreview', s) || p.preview)?.canPay === false;
         return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>${raid && c.key === 'fight' ? commandButton() : ''}`; }).join('')}
-        ${p.show && choices.length === 1 ? `<button type="button" class="cl-btn" data-evshow title="Answer and show me">${p.kind === 'landmark' || p.kind === 'wonder' || p.kind === 'petition' ? 'Show me' : 'Show me what helps'}</button>` : ''}
-        ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : 'Meet them'}</button>` : ''}
+        ${p.show && choices.length === 1 ? `<button type="button" class="cl-btn" data-evshow title="Answer and show me">${p.kind === 'landmark' || p.kind === 'wonder' || p.kind === 'petition' || p.kind === 'wildlife' ? 'Show me' : 'Show me what helps'}</button>` : ''}
+        ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : tab === 'neighbours' ? 'Neighbours' : 'Meet them'}</button>` : ''}
         ${(() => { const d = core && !coreBad && !coreSafe ? reactorOf(s) : null, pv = d && dangerWork(d) == null ? srule('dangerPreview', s, d.chamber) : null;
           return pv ? `<button type="button" class="cl-btn" data-evclear="${d.chamber}" ${pv.why ? `disabled title="${esc(pv.why)}"` : 'title="Answer, and set the crews to work on it now"'}>Stabilise now${pv.cost ? ` <small>${esc(costText(pv.cost))}</small>` : ''}</button>` : ''; })()}
         ${jtab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evj="${jtab}${(core || drone) && p.chamber != null ? `:${p.chamber}` : p.kind === 'survivors' && p.group ? `:${p.group}` : ''}" title="Answer and open the Discoveries journal (J)">${disc ? 'Open the journal' : p.kind === 'survivors' ? 'Survivors' : 'Dangers'}</button>` : ''}</div>

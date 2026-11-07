@@ -46,7 +46,7 @@ export const CHAMBER_AIR_PER_100 = 1;
 // Space buildings must stand within this many tiles (Chebyshev) of a finished dock's centre.
 export const DOCK_REACH = 24;
 // Wanderers of the market: base sale price in credits per unit (rules.sell moves it).
-export const BASE_PRICE = { ore: 3, food: 3, parts: 10, water: 1, air: 2, alloy: 12, helium: 30 };
+export const BASE_PRICE = { ore: 3, food: 3, parts: 10, water: 1, air: 2, alloy: 12, helium: 30, coffee: 4, wine: 5, art: 9 };   // version 10: the luxuries
 
 export const BUILDINGS = [
   { key: 'command', name: 'Command Centre', cat: 'core', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor'], fixed: true,
@@ -212,8 +212,8 @@ export const BUILDINGS = [
     text: 'A great foil mirror in open space focusing sunlight on a boiler: 350 power with no fuel. Near a dock or a Tether Mast.' },
   { key: 'towerblock', name: 'Tower Block', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 700, parts: 50 }, days: 6, jobs: 0, upkeep: 6, power: -10, housing: 150, tech: 'highrise',
     levels: [{ housing: 150, name: 'Block' }, { housing: 300, name: 'Tower', needs: ['allNeeds', 'park'] }, { housing: 450, name: 'Spire', needs: ['allNeeds', 'park', 'clinic'] },
-      { housing: 600, name: 'Skyscraper', power: -14, needs: ['allNeeds', 'park', 'clinic', 'transit', 'tech:skyscrapers'] }],   // version 9: the 4th level
-    text: 'High-rise homes for 150 that grow, like Habitats, into Towers (300) and Spires (450) when their needs are met, and with Skyscrapers and transit in reach into a Skyscraper (600).' },
+      { housing: 600, name: 'Skyscraper', power: -14, needs: ['allNeeds', 'park', 'clinic', 'transit', 'tech:skyscrapers', 'luxuries'] }],   // version 9: the 4th level; version 10: luxuries
+    text: 'High-rise homes for 150 that grow, like Habitats, into Towers (300) and Spires (450) when their needs are met, and with Skyscrapers and transit in reach into a Skyscraper (600), which also wants coffee and wine (Luxury Goods).' },
   { key: 'arcology', name: 'Arcology', cat: 'homes', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 5000, parts: 400 }, days: 16, jobs: 250, upkeep: 30, power: -60, housing: 1500, radius: 5, park: 8, tech: 'arcology',
     text: 'A city in one building: homes for 1,500, shops, schools and workshops inside (250 jobs), and roof gardens that count as a park nearby.' },
   { key: 'arrivals', name: 'Arrivals Hall', cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['main'], cost: { credits: 1200, parts: 80 }, days: 8, jobs: 12, upkeep: 8, power: -8, tech: 'immigration',
@@ -367,6 +367,17 @@ export const BUILDINGS = [
     text: 'Plays and music hall under a lit marquee: happiness for homes in range, and more leisure for visitors.' },
   { key: 'casino', name: 'Casino', ver: 9, cat: 'services', size: 3, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['main', 'lower'], cost: { credits: 2500, parts: 150 }, days: 8, jobs: 40, upkeep: 12, power: -20, makes: { credits: 100 }, leisure: 3, tech: 'tourism',
     text: 'Neon, a gold dome and tables that never close: 100 credits a day, and the most leisure for visitors.' },
+  // ---- version 10 (docs/COLONY-V10.md): luxuries for the well-off (js/colony/luxuries.js). Spires, Skyscrapers, Arcologies and
+  // the Spin-Gravity Ring want coffee, wine and art; meeting the want gives happiness, and a Skyscraper needs coffee and wine to hold.
+  { key: 'coffee', name: 'Coffee Terrace', ver: 10, cat: 'food', size: 2, zone: 'interior', on: ['hills'], decks: ['upper', 'main'], cost: { credits: 600, parts: 30 }, days: 5, jobs: 4, upkeep: 3, power: 0,
+    uses: { water: 3 }, makes: { coffee: 20 }, radius: 3, park: 3, tech: 'luxuries',
+    text: 'Coffee bushes in green terraces on the hills: 20 coffee a day for the well-off in Spires, Skyscrapers, Arcologies and the Ring. Hills only.' },
+  { key: 'vineyard', name: 'Vineyard Dome', ver: 10, cat: 'food', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'hills'], decks: ['upper'], cost: { credits: 700, parts: 40 }, days: 5, jobs: 4, upkeep: 3, power: -4,
+    uses: { water: 4 }, makes: { wine: 16 }, radius: 3, park: 2, tech: 'luxuries',
+    text: 'Vines under a glass dome in the sky-panel light: 16 wine a day for the well-off. Upper deck only.' },
+  { key: 'artisan', name: 'Artisan Workshop', ver: 10, cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 800, parts: 50 }, days: 5, jobs: 6, upkeep: 4, power: -4,
+    uses: { parts: 2 }, makes: { art: 10 }, tech: 'luxuries',
+    text: 'Glass-blowers, painters and potters: 10 art a day from 2 parts, for the well-off\'s walls and for visitors to admire.' },
 ];
 
 export const BUILDING = Object.fromEntries(BUILDINGS.map((b) => [b.key, b]));
