@@ -52,7 +52,7 @@ const GOOD_NAME = { food: 'Food', water: 'Water', air: 'Air', parts: 'Parts', or
 // Version 2 goods: in the top bar and the market only once the colony has any, or the tech that makes them is done.
 const LATE = { alloy: 'smelting', helium: 'plasma' };
 const SELLABLE = ['ore', 'food', 'parts', 'alloy', 'helium'];
-const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8', services: '#c3a6ff', defence: '#ff6a5a', landmarks: '#ffd98a' };
+const CAT_COLOR = { core: '#f5c542', power: '#6fd3ff', life: '#5aa8ff', food: '#8fe38a', industry: '#ff9a52', homes: '#ff8fd8', services: '#c3a6ff', defence: '#ff6a5a', landmarks: '#ffd98a', wonders: '#7ff0d0' };
 const BRANCH_COLOR = { life: '#5aa8ff', industry: '#ff9a52', society: '#ff8fd8', logistics: '#f5c542', defence: '#ff6a5a' };
 // Version 3 (docs/COLONY-V3.md): machine classes, the Defence panel's tabs, raid words.
 const CLASS_COLOR = { hu: '#6fd3ff', planes: '#c3a6ff', armour: '#ff9a52', ships: '#f5c542', support: '#8fe38a' };
@@ -81,7 +81,8 @@ const KIND_LABEL = { victory: 'Eden Restored', goal: 'Goal complete', welcome: '
   discovery: 'Discovery', finalvault: 'The Ninefold vault', drones: 'Sentries', dronefight: 'Sentries', reactor: 'The old core', reactorwarn: 'The old core', reactorfail: 'The old core',
   vault: 'Vault opened', survivors: 'Survivors', danger: 'Danger', expedition: 'Expedition',
   // version 8 (docs/COLONY-V8.md): landmarks and incidents
-  landmark: 'Landmark', incidentwarn: 'Incident ahead', incident: 'Incident', petition: 'Council petition' };
+  landmark: 'Landmark', incidentwarn: 'Incident ahead', incident: 'Incident', petition: 'Council petition',
+  wonder: 'Wonder', ark: 'Beyond Eden' };   // version 9 (docs/COLONY-V9.md)
 // Version 4, stage 3: the Star chart's site glyphs and colours.
 const SITE_GLYPH = { belt: '⁂', comet: '☄', derelict: '⚓', babylon: '✠', bunker: '▣', den: '☠', outpost: '⌂', listening: '◉', relief: '✚' };
 const SITE_COLOR = { belt: '#c9b38a', comet: '#8fd8ff', derelict: '#ffb070', babylon: '#ffd36a', bunker: '#b0e07a', den: '#ff6a5a', outpost: '#c3a6ff', listening: '#7affd8', relief: '#6fb8ff' };
@@ -187,7 +188,8 @@ const num = (n) => {
 const signed = (n) => (n > 0 ? '+' : n < 0 ? '−' : '±') + num(Math.abs(n));
 // version 7: what a quad grows into at its top level, for its card ("lot, grows to 700 homes")
 const quadTop = (d) => { const l = d.levels[d.levels.length - 1]; return d.quad === 'R' ? `${num(l.housing)} homes` : `${num(l.jobs)} jobs`; };
-const costText = (c) => c ? [c.credits ? `${num(c.credits)} cr` : '', c.parts ? `${num(c.parts)} parts` : ''].filter(Boolean).join(' · ') || 'free' : 'free';
+// (version 9: a wonder's stage may also cost alloy, helium-3 and provisions)
+const costText = (c) => c ? [c.credits ? `${num(c.credits)} cr` : '', c.parts ? `${num(c.parts)} parts` : '', ...['alloy', 'helium', 'food', 'water', 'air'].map((g) => c[g] ? `${num(c[g])} ${g === 'helium' ? 'helium-3' : g}` : '')].filter(Boolean).join(' · ') || 'free' : 'free';
 const flows = (o) => Object.entries(o || {}).filter(([, v]) => v).map(([k, v]) => `${num(v)} ${GOOD_NAME[k] || k}`).join(', ');
 
 // A clone the rules can try an order on: tells why an order would fail without changing the game.
@@ -213,7 +215,7 @@ function cardIcon(b) {
 // The help dialog's sections (colony.html #dHelp). Short sentences, pictures from the card art.
 // diff: the difficulty row (js/colony/difficulty.js) the numbers are quoted for, or null.
 export const HELP_SECTIONS = [['goal', 'The goal'], ['time', 'Time'], ['build', 'Building'], ['res', 'Resources'], ['chambers', 'Chambers'],
-  ['homes', 'Homes & happiness'], ['zoning', 'Zoning and growth'], ['landvalue', 'Land value'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['landmarks', 'Landmarks'], ['incidents', 'Incidents'], ['petitions', 'Petitions'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
+  ['homes', 'Homes & happiness'], ['landvalue', 'Land value'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['landmarks', 'Landmarks'], ['wonders', 'Wonders'], ['tourism', 'Tourism'], ['ark', 'The Ark'], ['incidents', 'Incidents'], ['petitions', 'Petitions'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['tips', 'First 10 days']];
 export function helpHtml(art, diff) {
   const pic = (slot, alt = '') => { const u = art?.(slot); return u ? `<img src="${esc(u)}" alt="${esc(alt)}" loading="lazy">` : ''; };
   const card = (key) => { const u = art?.(`card/${key}`); return `<figure class="cl-hfig">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : cardIcon(BUILDING[key])}<figcaption>${esc(BUILDING[key]?.name || key)}</figcaption></figure>`; };
@@ -262,24 +264,16 @@ export function helpHtml(art, diff) {
     <p><b>Habitats</b> house 20 colonists. They <b>grow by themselves</b> into Quarters (40) when food, water, air and power are enough for everyone and a <b>park or grove</b> is nearby.</p>
     <p><b>Happiness</b> (top bar, click it for the breakdown) starts at 50. Needs met add, shortages take a lot away. Parks add. High tax takes away.</p>
     <p>On ${esc(name)}, a <b>transport</b> calls every <b>${every} days</b>. It brings new colonists if happiness is at least <b>${happy}</b>, there are <b>free homes</b>, and food, water and air are not short.</p>
-    <p><b>Tax</b> (top bar slider) pays upkeep. 10% is neutral. Lower makes people happier; higher makes them unhappy.</p>`)}
-  ${sec('zoning', 'Zoning and growth', card('livingquad') + card('marketquad') + card('workshopquad'), `
-    <p><b>Quads</b> are cheap 2×2 lots you zone in <b>Homes &amp; parks</b>. You don't build them up: they <b>grow by themselves</b>, a level every 4 days (2 near a <b>Transit Station</b>), while their conditions hold, and fall back if a condition fails for 10 days.</p>
-    <ul class="cl-hsteps">
-      <li><b>Living Quad</b> (homes): Cottages 40 → Row Houses 100 → Courtyard Flats 220 → Mid-rise 400 → Residential Tower 700.</li>
-      <li><b>Market Quad</b> (shops): Stalls → Shops → Market Hall → Arcade → Trade Tower. Jobs, credits every day, and <b>shopping</b> happiness for the homes around it. It needs homes nearby.</li>
-      <li><b>Workshop Quad</b> (work): Workshops → Machine Shops → Works → Assembly Plant → Factory. Jobs and parts, later alloy. It is <b>noisy</b>: keep Living Quads a few tiles away or they stay Cottages.</li>
-    </ul>
-    <p>Click a quad to see <b>To grow into …</b>: every condition with a ✓ or ✗, such as a park in reach, a Clinic, a School, shops, happiness 60, or a tech to research.</p>
-    <p>The <b>R C I</b> bars at the top of the build menu show <b>demand</b>. <b>R</b> rises when people are coming and homes are full. <b>C</b> rises when residents outnumber the shops. <b>I</b> rises when colonists have no work or parts run low. A quad grows only while its bar is up, and each one that grows uses some of it up.</p>
-    <p>Research <b>Schools</b>, <b>Commerce</b>, <b>Light Industry</b>, <b>Urban Planning</b>, <b>Skyscrapers</b> and <b>Automation</b> for the upper levels. Quads are a cheap way to grow a town, but slower than placing Habitats and Tower Blocks yourself.</p>`)}
+    <p><b>Tax</b> (top bar slider) pays upkeep. 10% is neutral. Lower makes people happier; higher makes them unhappy.</p>
+    <p><b>Growing faster.</b> Later, <b>Tower Blocks</b> grow the same way (Tower 300, Spire 450, and with <b>Skyscrapers</b> and transit in reach a Skyscraper of 600). <b>Schools</b> make homes happier, a <b>Transit Station</b> or <b>Monorail Stop</b> in reach makes Habitats and Tower Blocks grow in 2 days instead of 5, and homes on land worth <b>60</b> or more grow a day sooner.</p>`)}
   ${sec('landvalue', 'Land value', '', `
     <p><b>Land value</b> says how much people want to live and shop on a tile, from 0 to 100. Press <b>Value</b> in the overlay bar to see it as a heat map: <b>blue</b> is low, <b>green</b> middling, <b>yellow</b> high. Click any tile and the inspector shows its value and the main reasons.</p>
     <ul class="cl-hsteps">
       <li><b>Raise it</b> with parks, services in reach (Clinic, Canteen, School, shops...), a Transit Station, a view of the river or a lake, and a happy colony.</li>
-      <li><b>It falls</b> beside Workshop Quads (their noise) and other industry, next to the outer hull where raiders and meteoroids come, and in a chamber with an unsealed breach. Sealed chambers have none.</li>
+      <li><b>Wonders</b> raise it far around them: the Grand Arboretum +15 within 24 tiles, the Concert Hall and the Memorial Garden +10, the Great Library +8.</li>
+      <li><b>It falls</b> beside industry, next to the outer hull where raiders and meteoroids come, and in a chamber with an unsealed breach. Sealed chambers have none.</li>
     </ul>
-    <p>Living and Market Quads need land value <b>45</b> to grow into a Mid-rise or an Arcade, and <b>55</b> for their towers. Put homes and shops where it is high, and industry where it is low.</p>`)}
+    <p>Habitats and Tower Blocks on land worth <b>60</b> or more grow a day sooner, a <b>Grand Hotel</b> needs <b>55</b>, and visitors pay more attention to hotels on valuable land. Put homes and hotels where it is high, and industry where it is low.</p>`)}
   ${sec('roads', 'Roads', '', `
     <p>Colonists walk and rovers drive <b>only on roads</b>. Without roads your colony still works, but nobody moves.</p>
     <p>Choose <b>Road</b> (Command menu). <b>Click where it starts</b>, then <b>click where it ends</b>: it lays an L-shaped line. Roads pass through gates once both chambers are open.</p>`)}
@@ -331,6 +325,30 @@ export function helpHtml(art, diff) {
       <li><b>Hall of Names</b> (1,000 colonists, Civic Planning): +4 happiness, grief and fear fade twice as fast; once the Ninefold vault is open it holds the registry, and +3 more.</li>
       <li><b>Orbital Elevator</b> (3,000 colonists, Mass Driver; on the hull): relief convoys cost half, and Earth goods at the Market a quarter less.</li>
     </ul>`)}
+  ${sec('wonders', 'Wonders', card('arboretum') + card('starport'), `
+    <p><b>Wonders</b> are a grander tier above the landmarks, in their own <b>Wonders</b> tab. Each is one of a kind and <b>big</b> (4×4 to 7×7), so plan the space. A wonder is built in <b>stages</b>: placing it orders the first stage; when that is done, click it and order the <b>next stage</b> (each costs credits and parts, often alloy, and takes days). You can watch it grow. Only the finished wonder works. All wait on <b>Monumental Engineering</b> (research), colonists, and sometimes a landmark.</p>
+    <ul class="cl-hsteps">
+      <li><b>Concert Hall</b> (4×4, upper or main; 2,500 colonists): happiness 8 for every home within 24 tiles, land value +10, leisure for visitors.</li>
+      <li><b>Memorial Garden</b> (5×5, main deck; 2,500, Hall of Names): +5 happiness, grief and fear fade twice as fast again, a park, land value +10.</li>
+      <li><b>Grand Arboretum</b> (6×6, upper deck gardens; 5,000, Governor's Garden): +4 happiness, a park of 14 within 20 tiles, land value +15 within 24, 500 air a day.</li>
+      <li><b>Great Library</b> (5×5, upper or main; 5,000, Hall of Names): 4 research a day for every 1,000 colonists.</li>
+      <li><b>Starport</b> (5×5, in space by the hull; 5,000, Orbital Elevator): transports bring <b>twice</b> the colonists, and four times the visitors can arrive.</li>
+      <li><b>Zero-G Arena</b> (6×6, lower deck; 10,000): +6 happiness, 300 credits a day, the biggest draw for tourists.</li>
+      <li><b>Spin-Gravity Ring</b> (6×6, in space; 10,000, the Starport): homes for 3,000, +3 happiness.</li>
+    </ul>
+    <p>Every wonder also draws <b>tourists</b>. Its moment comes when the last stage is done.</p>`)}
+  ${sec('tourism', 'Tourism', card('hotel') + card('promenade'), `
+    <p>Visitors come to see Eden and <b>pay credits</b> every day they stay. Research <b>Tourism</b> (after Civic Planning) for Hotels, Promenades, Theatres and Casinos. The <b>More</b> menu in the top bar shows today's visitors and earnings; the <b>Market</b> lists what draws them and what holds them back.</p>
+    <ul class="cl-hsteps">
+      <li><b>Attraction</b>: wonders (20 to 50 each), working landmarks (8 each), parks and greenery, leisure, a happy city, and land value at the hotels. Each point brings 8 visitors a day who want to come.</li>
+      <li><b>Beds</b>: a <b>Hotel</b> starts as a Guest House for 80 and grows by itself, like a Habitat, into a Hotel (200) with a park and leisure within 16 tiles, and a Grand Hotel (400) on land worth 55.</li>
+      <li><b>Arrivals</b>: 300 visitors a day come through the dock; the <b>Starport</b> brings four times as many.</li>
+      <li><b>Spending</b>: 1 credit a visitor a day, more with leisure around (a Promenade 1, a Theatre 2, a Casino 3, the Concert Hall 3), up to 3; Commerce adds a fifth.</li>
+    </ul>
+    <p>Visitors are the least of attraction, beds and arrivals. Fill the space around a wonder with parks, a Promenade and hotels, and it pays.</p>`)}
+  ${sec('ark', 'The Ark', `<figure class="cl-hfig cl-hbook"><span style="font-size:42px;color:#7ff0d0">✧</span><figcaption>Beyond Eden</figcaption></figure>`, `
+    <p><b>The Ark</b> is Eden's last and greatest project: a generation ship built in a 7×7 dock in space beside the hull, in <b>five stages</b> (Keel, Hull, Drive, Habitat Decks, and the provisions). Each stage needs thousands of alloy and parts, then helium-3, food and water, so build Warehouses, Granaries and Freight Yards to hold it all.</p>
+    <p>It waits on <b>15,000 colonists</b>, the <b>Starport</b> and <b>Generation Ships</b> (research). Finishing it is a <b>second ending, Beyond Eden</b>, kept in your save. It is entirely optional: it never stands in the way of Eden Restored, and it gives the city after the win something to build towards.</p>`)}
   ${sec('incidents', 'Incidents', card('shieldpylon') + card('flareshelter'), `
     <p>Now and then something happens to Eden, but <b>never without warning</b>. None come in the first 60 days (75 on Easy), then one every two or three months (less often on Easy). Each is announced <b>5 days ahead</b> with exactly what helps, and the advisor repeats it with a <b>Fix</b> button. Hazard Forecasting and Sato's Watch see them sooner.</p>
     <ul class="cl-hsteps">
@@ -342,7 +360,7 @@ export function helpHtml(art, diff) {
     </ul>
     <p>Too much? <b>Settings › Incidents</b> turns them off.</p>`)}
   ${sec('petitions', 'Petitions', card('park') + card('canteen'), `
-    <p>Now and then a group in Eden <b>petitions the Council</b> for something concrete: the garden families a park on the upper deck, the dock traders a Market Quad near the dock, the pump hall crew a Clinic on the lower deck, Capt. Sato another Battery Emplacement. They only ask for what you can already build. None come in the first 40 days (50 on Easy), and at most two are open at once (one on Easy).</p>
+    <p>Now and then a group in Eden <b>petitions the Council</b> for something concrete: the garden families a park on the upper deck, the dock traders a Warehouse near the dock, the pump hall crew a Clinic on the lower deck, Capt. Sato another Battery Emplacement. They only ask for what you can already build. None come in the first 40 days (50 on Easy), and at most two are open at once (one on Easy).</p>
     <ul class="cl-hsteps">
       <li>The petition arrives in a window with <b>Show me</b>, and stays in the <b>advisor</b> list with how many days are left (40, or 50 on Easy). The advisor warns in the last week.</li>
       <li><b>Granted in time</b>: build a new one of what they asked for, where they asked. The Council pays its grant, happiness rises for a few weeks, and some groups add a gift of their own (food, parts, research).</li>
@@ -438,6 +456,7 @@ export function createUI(root, api) {
         <div class="cl-more" data-morepop hidden>
           ${goodStat('ore')}${goodStat('alloy')}${goodStat('helium')}
           <button type="button" class="cl-stat cl-resstat" data-g="research" hidden title="Research a day from the labs"><i>Research</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
+          <button type="button" class="cl-stat cl-tourstat" data-g="tourism" hidden title="Tourism: visitors staying today and what they spend; click for the Market's tourism read-out"><i>Tourism</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
           <button type="button" class="cl-stat cl-heatstat" data-g="heat" hidden title="Heat: how tempting Eden looks to raiders"><i>Heat</i><b><span data-v></span><small data-c></small></b><em data-d></em></button>
           <div class="cl-stat cl-tax" title="Tax rate: 0% +8 happiness, 10% 0, 20% −14, 30% −32. Shift-click steps 5%."><i>Tax</i>
             <b class="cl-taxctl"><button type="button" data-taxstep="-1" aria-label="Lower the tax">−</button><span data-tax></span><button type="button" data-taxstep="1" aria-label="Raise the tax">+</button></b><em data-taxfx></em></div>
@@ -731,6 +750,7 @@ export function createUI(root, api) {
   });
   $('.cl-happybtn').addEventListener('click', () => togglePop('happy'));
   statEls.research.el.addEventListener('click', () => toggleResearch());
+  statEls.tourism?.el.addEventListener('click', () => { moreOpen(false); openPop('market'); });   // version 9
   $('.cl-tools').addEventListener('click', (e) => {
     const t = e.target.closest('[data-tool]')?.dataset.tool;
     if (t === 'research') toggleResearch();
@@ -820,6 +840,25 @@ export function createUI(root, api) {
     const perDay = s.day > 0 && Number.isFinite(made) ? made : nominal * staff * Math.min(1, pf);
     return { labs: labs.length, live: live.length, building: labs.filter((b) => b.build > 0).length, perDay, nominal };
   }
+  // version 9: the tourism read-out's explanation (More pop-out tooltip, and the Market's section)
+  function tourismWhy(t) {
+    return `Tourism: ${num(t.visitors)} visitors today, spending ${t.spend} cr each: +${num(t.credits)} credits a day.`
+      + `\nAttraction ${num(t.score)} (${t.parts.map((p) => `${p.label} ${p.value}`).join(', ') || 'nothing yet'}): ${num(t.want)} would like to come.`
+      + `\nBeds ${num(t.beds)} in ${t.hotels} hotel${t.hotels === 1 ? '' : 's'} · arrivals ${num(t.cap)} a day.`
+      + `\n${R.tourismLimitText ? R.tourismLimitText(t) : ''}\nClick for the Market's tourism read-out.`;
+  }
+  function tourismHtml(s) {
+    if (typeof R.tourismOf !== 'function' || !(techDone(s, 'tourism') || s.tourism?.visitors > 0)) return '';
+    let t; try { t = R.tourismOf(s); } catch { return ''; }
+    const bar = (v, max) => `<span class="cl-fill"><span style="width:${Math.round(Math.min(1, max > 0 ? v / max : 0) * 100)}%"></span></span>`;
+    const top = Math.max(t.want, t.beds, t.cap, 1);
+    return `<h4>Tourism <small>${num(t.visitors)} visitors · +${num(t.credits)} cr a day · ${t.spend} cr each</small></h4>
+      <div class="cl-fillrow"><span>Want to come</span>${bar(t.want, top)}<b>${num(t.want)}</b></div>
+      <div class="cl-fillrow"><span>Beds</span>${bar(t.beds, top)}<b>${num(t.beds)}</b></div>
+      <div class="cl-fillrow"><span>Arrivals</span>${bar(t.cap, top)}<b>${num(t.cap)}</b></div>
+      <p class="cl-dim">Visitors are the least of the three. ${esc(R.tourismLimitText ? R.tourismLimitText(t) : '')}</p>
+      ${t.parts.length ? `<table class="cl-table cl-mkt"><tbody>${t.parts.map((p) => `<tr><td>${esc(p.label)}</td><td class="n">+${num(p.value)}</td></tr>`).join('')}<tr><td><b>Attraction</b></td><td class="n"><b>${num(t.score)}</b> <small>× ${R.TOUR?.perPoint ?? 8} visitors</small></td></tr></tbody></table>` : ''}`;
+  }
   function researchWhy(s, li, rs, list) {
     const f = list.find((t) => t.focus);
     return `Research: ${num(li.perDay)} points a day from ${li.live} working lab${li.live === 1 ? '' : 's'}${li.building ? ` (${li.building} being built)` : ''}.`
@@ -863,6 +902,14 @@ export function createUI(root, api) {
         rd.coming || rd.warned ? 'alert' : heat >= 60 ? 'down' : heat < 30 ? 'up' : '');
       setTitle('heat', heatWhy(s));
     }
+    // version 9 (docs/COLONY-V9.md): tourism, once the colony can have visitors (Tourism researched, or any already)
+    let tour = null;
+    if (typeof R.tourismOf === 'function' && (techDone(s, 'tourism') || s.tourism?.visitors > 0)) { try { tour = R.tourismOf(s); } catch { tour = null; } }
+    show('tourism', !!tour);
+    if (tour) {
+      stat('tourism', num(tour.visitors), ' visitors', `+${num(tour.credits)} cr/d`, tour.visitors > 0 ? 'up' : 'idle');
+      setTitle('tourism', tourismWhy(tour));
+    }
     setTitle('power', powerWhy(s, m));
     setTitle('pop', popWhy(s, m));
     stat('power', num(p.supply ?? 0), `/${num(p.demand ?? 0)}`, p.cap ? `bat ${num(p.battery ?? 0)}/${num(p.cap)}` : '', (p.supply ?? 0) < (p.demand ?? 0) ? 'down' : 'up');
@@ -899,27 +946,8 @@ export function createUI(root, api) {
     if (matchMedia('(max-width: 760px)').matches) $('.cl-build').classList.remove('open');
   });
 
-  // Version 7 (docs/COLONY-V7.md): RCI demand, three small bars in the build menu's header (rules.demandOf).
-  // A bar rises when the colony wants more of that zone and sinks when it has too much.
-  let rciSig = '';
-  function renderRci() {
-    if (!rciEl || typeof R.demandOf !== 'function') return;
-    let dm; try { dm = R.demandOf(S()); } catch { return; }
-    const sig = ['R', 'C', 'I'].map((z) => `${dm[z].units}:${Math.round(dm[z].value * 20)}`).join('|');
-    if (sig === rciSig) return;
-    rciSig = sig;
-    const w = dm.R.why, c = dm.C.why, i = dm.I.why;
-    const tips = {
-      R: `Residential demand ${signed(dm.R.units)}: about ${num(w.arriving)} arriving on the next transport, ${num(w.freeJobs)} free jobs, ${num(w.freeHomes)} free homes. Living Quads grow while it is above zero.`,
-      C: `Commercial demand ${signed(dm.C.units)}: ${num(c.residents)} residents, shops for ${num(c.shoppers)}. Market Quads grow while it is above zero.`,
-      I: `Industrial demand ${signed(dm.I.units)}: ${num(i.jobless)} colonists without work${i.partsPull ? `, ${signed(i.partsPull)} for parts (the parts store is ${i.partsPull > 0 ? 'low' : 'well stocked'})` : ''}. Workshop Quads grow while it is above zero.`,
-    };
-    rciEl.hidden = false;
-    rciEl.innerHTML = `<span class="cl-rcilabel" title="Zoning demand: what the colony wants more of. Zone Living, Market and Workshop Quads in Homes &amp; parks.">Demand</span>${['R', 'C', 'I'].map((z) => {
-      const v = dm[z].value, h = Math.round(Math.abs(v) * 100);
-      return `<span class="cl-rcibar z${z}" data-z="${z}" title="${esc(tips[z])}"><span class="cl-rcitrack"><i class="${v >= 0 ? 'up' : 'down'}" style="height:${h / 2}%"></i></span><b>${z}</b></span>`;
-    }).join('')}`;
-  }
+  // Version 7 had RCI demand bars here; version 9 (docs/COLONY-V9.md) retired the quads, and the bars with them.
+  function renderRci() { if (rciEl && !rciEl.hidden) rciEl.hidden = true; }
 
   function buildMenu() {
     const s = S();
@@ -927,7 +955,7 @@ export function createUI(root, api) {
     let list; try { list = R.buildable(s, dk); } catch { list = []; }
     const by = Object.fromEntries((list || []).map((o) => [o.key, o]));
     // version 7: the zoning lots lead Homes & parks, under the RCI bars
-    const items = BUILDINGS.filter((b) => b.cat === cat && !b.fixed).sort((a, b) => (b.quad ? 1 : 0) - (a.quad ? 1 : 0)).map((b) => {
+    const items = BUILDINGS.filter((b) => b.cat === cat && !b.fixed && !b.retired).map((b) => {   // version 9: retired buildings are off the menu
       const o = by[b.key] || { key: b.key, name: b.name, cost: b.cost, unlocked: !b.unlock && !b.tech, why: b.unlock ? `At ${b.unlock.pop} colonists` : '' };
       const cost = o.cost || b.cost;
       const poor = (cost.credits || 0) > (s.stock.credits || 0) || (cost.parts || 0) > (s.stock.parts || 0);
@@ -953,7 +981,7 @@ export function createUI(root, api) {
         <span class="cl-cardpic">${url ? `<img src="${esc(url)}" alt="" loading="lazy">` : cardIcon(b)}</span>
         <span class="cl-cardname">${esc(o.name || b.name)}</span>
         <span class="cl-cardcost${poor && !locked ? ' poor' : ''}">${costText(cost)}</span>
-        <span class="cl-cardmeta">${b.size}×${b.size}${b.power ? ` · ${b.power > 0 ? '+' : ''}${b.power} MW` : ''}${b.jobs ? ` · ${b.jobs} jobs` : ''}${b.housing ? ` · ${b.housing} homes` : ''}${b.quad ? ` · lot, grows to ${quadTop(b)}` : ''}</span>
+        <span class="cl-cardmeta">${b.size}×${b.size}${b.power ? ` · ${b.power > 0 ? '+' : ''}${b.power} MW` : ''}${b.jobs ? ` · ${b.jobs} jobs` : ''}${b.housing ? ` · ${b.housing} homes` : ''}${b.quad ? ` · lot, grows to ${quadTop(b)}` : ''}${b.wonder ? ` · ${b.levels.length} stages` : ''}</span>
         ${locked ? `<span class="cl-cardwhy">${tech ? '⚗' : deckLock ? (decks[0] === 'upper' ? '▲' : decks[0] === 'lower' ? '▼' : '◆') : '🔒'} ${esc(why)}${tech || deckLock ? ' <i>›</i>' : ''}</span>` : `<span class="cl-cardtext">${esc(b.text)}</span>`}
       </button>`;
     }).join('') || '<p class="cl-dim">Nothing to build here yet.</p>';
@@ -1164,6 +1192,15 @@ export function createUI(root, api) {
     if (b.key === 'barracks' || b.key === 'command') { const gs = s.guardians || []; if (b.key === 'barracks' || gs.length) rows.push(kv('Guardian crews', `${num(crewCap(s))} in all · ${num(gs.length)} machine${gs.length === 1 ? '' : 's'}`, gs.length > crewCap(s) ? 'bad' : '')); }
     if (b.key === 'scrapyard') { const hurt = (s.guardians || []).filter((g) => hpOf(g) < maxHp(g)).length; rows.push(kv('Repairing', hurt ? `${hurt} machine${hurt === 1 ? '' : 's'} · 2 HP a day each` : 'nothing damaged')); }
     if (b.key === 'lodge') rows.push(kv('Wanderers here', num((s.wanderers || []).length)));
+    // version 9 (docs/COLONY-V9.md): a wonder's stages; a Hotel's beds
+    if (d.wonder) {
+      const n = d.levels.length, works = R.wonderWorks ? R.wonderWorks(b) : false;
+      rows.push(kv('Stage', `${b.level} of ${n}: ${esc(d.levels[b.level - 1]?.name || '')}${b.build > 0 ? ' (being built)' : b.level < n ? ' (done)' : ''}`, b.level >= n && b.build === 0 ? 'good' : ''));
+      extra += `<div class="cl-fillrow"><span>Built</span><span class="cl-fill"><span style="width:${Math.round(((b.level - (b.build > 0 ? 1 : 0)) / n) * 100)}%"></span></span><b>${b.level - (b.build > 0 ? 1 : 0)}/${n}</b></div>
+        <p class="cl-dim">${works ? 'Working: ' : b.level < n || b.build > 0 ? 'When finished: ' : 'Not working (switched off or damaged): '}${esc(d.wonder.effect)}</p>`;
+    }
+    if (sp.beds) rows.push(kv('Beds', `${num(sp.beds)} visitors`));
+    if (sp.leisure) rows.push(kv('Leisure', `${sp.leisure} for hotels within 16 tiles and visitors' spending`));
     if (b.key === 'quarters') rows.push(kv('Commanders', `${commanders(s).length} / ${cmdCap(s)}`));
     if (b.key === 'clinic' && next) extra = `<p class="cl-dim">Next: <b>${esc(next.name || 'level ' + (b.level + 1))}</b>, range ${next.radius ?? sp.radius} tiles. Habitats in range can grow into Apartments.</p>`;
     const modes = d.modes ? `<div class="cl-modes" role="group" aria-label="Mode">${d.modes.map((mo, i) => {
@@ -1200,7 +1237,7 @@ export function createUI(root, api) {
     if (dtab) acts.push(`<button type="button" class="cl-btn sm primary" data-a="defence" data-v="${dtab}" data-id="${b.id}">${esc(DEF_TABS.find(([k]) => k === dtab)[1])}</button>`);
     if (next?.cost) {
       const r = dry(s, (c) => R.upgrade(c, b.id));
-      acts.push(`<button type="button" class="cl-btn sm" data-a="upgrade" data-id="${b.id}" ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? `Upgrade${next.name ? ' to ' + next.name : ''}` : r.msg)}">Upgrade <small>${costText((() => { try { return R.costOf?.(s, next.cost, b.key) || next.cost; } catch { return next.cost; } })())}</small></button>`);
+      acts.push(`<button type="button" class="cl-btn sm" data-a="upgrade" data-id="${b.id}" ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? (d.wonder ? `Order the next stage: ${next.name} (${next.days ?? Math.ceil(d.days / 2)} days)` : `Upgrade${next.name ? ' to ' + next.name : ''}`) : r.msg)}">${d.wonder ? `Next stage: ${esc(next.name)}` : 'Upgrade'} <small>${costText((() => { try { return R.costOf?.(s, next.cost, b.key) || next.cost; } catch { return next.cost; } })())}</small></button>`);
     }
     if (!d.fixed) {
       acts.push(`<button type="button" class="cl-btn sm" data-a="move" data-id="${b.id}" title="Move it (20% of its cost)">Move</button>`);
@@ -1212,7 +1249,7 @@ export function createUI(root, api) {
       <div class="cl-ibuild"><span class="cl-ipic">${api.art?.(`card/${b.key}`) ? `<img src="${esc(api.art(`card/${b.key}`))}" alt="">` : cardIcon(d)}</span>
       <div><div class="cl-iname">${esc(d.name)}</div><p class="cl-dim">${esc(d.text || '')}</p></div></div>
       ${rows.join('')}${extra}${modes}${needs}
-      ${!next && d.levels && !grows ? '<p class="cl-dim">Fully upgraded.</p>' : ''}${!next && d.quad ? '<p class="cl-dim">Top level: it has grown as far as a quad can.</p>' : ''}
+      ${!next && d.levels && !grows && !d.wonder ? '<p class="cl-dim">Fully upgraded.</p>' : ''}${!next && d.quad ? '<p class="cl-dim">Top level: it has grown as far as a quad can.</p>' : ''}
       <div class="cl-acts">${acts.join('')}</div></section>`;
   }
 
@@ -1292,7 +1329,7 @@ export function createUI(root, api) {
     const yard = finishedOf(s, 'scrapyard').length > 0;
     const imports = R.IMPORTS || [], buyP = imports.map((g) => { try { return R.buyPrice(s, g); } catch { return null; } });
     const cv = R.convoyStatus ? R.convoyStatus(s) : null, vs = R.victoryStatus ? R.victoryStatus(s) : null;
-    const sig = JSON.stringify([cv, vs && R.victoryText(vs), goods, prices, buyP, Math.floor(s.stock.credits), goods.map((g) => Math.floor(s.stock[g] || 0)), (s.guardians || []).map((g) => [g.id, g.level, g.hp]), yard]);
+    const sig = JSON.stringify([cv, vs && R.victoryText(vs), s.tourism?.visitors, s.tourism?.score, goods, prices, buyP, Math.floor(s.stock.credits), goods.map((g) => Math.floor(s.stock[g] || 0)), (s.guardians || []).map((g) => [g.id, g.level, g.hp]), yard]);
     if (sig === marketSig) return;
     marketSig = sig;
     const hasDock = s.buildings.some((b) => b.key === 'dock' && !b.build);
@@ -1309,6 +1346,7 @@ export function createUI(root, api) {
       <table class="cl-table cl-mkt"><tbody>${imports.map((g, i) => `<tr><td>${GOOD_NAME[g]}</td><td class="n">${buyP[i] == null ? '–' : (+buyP[i]).toFixed(2)} <small>cr</small></td>
         <td class="cl-sellbtns">${[10, 100].map((q) => `<button type="button" class="cl-btn xs" data-buy="${g}" data-q="${q}" ${hasDock && buyP[i] != null && s.stock.credits >= buyP[i] ? '' : 'disabled'} title="≈ ${buyP[i] != null ? num(Math.ceil(buyP[i] * q)) : '?'} cr">+${q}</button>`).join('')}</td></tr>`).join('')}</tbody></table>
       <p class="cl-dim">Every 10 units bought raises that price 2%; it settles back over a few days.</p>` : ''}
+      ${tourismHtml(s)}
       ${cv ? convoyHtml(s, cv, vs) : ''}
       ${guards.length ? `<h4>Guardians <small>${guards.length} machine${guards.length === 1 ? '' : 's'}${yard ? ' · Scrapyard: +20%' : ''}</small></h4>
       ${yard ? '' : '<p class="cl-dim">A Scrapyard sells machines for a fifth more.</p>'}
@@ -2530,15 +2568,16 @@ export function createUI(root, api) {
   }
   // Version 4, stage 4: the ending, Eden Restored (shown once; the colony carries on after it, D25).
   // The clip (art slot video/ending) opens it; the page beside the words shows its still (scene/ending), else the title art.
-  function victoryPicture() {
-    const still = api.art?.('scene/ending') || api.art?.('title/rebuild');
-    return still ? `<img class="cl-fvmedia" src="${esc(still)}" alt="Eden, restored, above the Earth">` : '';
+  function victoryPicture(ark = false) {
+    const still = (ark ? api.art?.('scene/ark') : null) || api.art?.('scene/ending') || api.art?.('title/rebuild');
+    return still ? `<img class="cl-fvmedia" src="${esc(still)}" alt="${ark ? 'The Ark leaving Eden for the stars' : 'Eden, restored, above the Earth'}">` : '';
   }
   // Stage 0, when there is a clip: the cinematic, full width (the clip plays, the title fades in;
   // Continue or Skip, and it moves on by itself when the clip ends). Stage 1: the words and the numbers.
   let vStage = { id: null, stage: 0 };
   function renderVictory(s, p, stage) {
-    if (vStage.id !== p.id) vStage = { id: p.id, stage: api.art?.('video/ending') && !reduceMotion() ? 0 : 1 };
+    const ark = p.kind === 'ark';   // version 9: the second ending, Beyond Eden, in the same style (no clip for now)
+    if (vStage.id !== p.id) vStage = { id: p.id, stage: !ark && api.art?.('video/ending') && !reduceMotion() ? 0 : 1 };
     if (stage != null) vStage.stage = stage;
     evId = p.id;
     modal.classList.remove('soft'); modal.classList.add('final');
@@ -2556,16 +2595,17 @@ export function createUI(root, api) {
       return;
     }
     evBox.className = 'cl-win cl-event cl-evfinal cl-evvictory';
-    const v = s.victory || {}, choice = p.choices?.[0] || { key: 'keep', label: 'Keep building Eden' };
-    const stats = [['Day', v.day], ['Colonists', v.pop], ['Chambers open', v.chambers], ...(v.happy != null ? [['Happiness', v.happy]] : []), ['Relief loads', v.convoys], ['Buildings', v.buildings], ['Raids beaten', v.raids], ['Pirate dens cleared', v.dens], ['Logs read', v.logs]];
-    evBox.innerHTML = `<div class="cl-fvpic">${victoryPicture()}</div>
+    const v = (ark ? s.ark : s.victory) || {}, choice = p.choices?.[0] || { key: 'keep', label: 'Keep building Eden' };
+    const stats = ark ? [['Day', v.day], ['Colonists', v.pop], ['Wonders', v.wonders], ['Landmarks', v.landmarks], ['Buildings', v.buildings], ['Visitors a day', v.visitors], ['Eden Restored on day', v.restored]]
+      : [['Day', v.day], ['Colonists', v.pop], ['Chambers open', v.chambers], ...(v.happy != null ? [['Happiness', v.happy]] : []), ['Relief loads', v.convoys], ['Buildings', v.buildings], ['Raids beaten', v.raids], ['Pirate dens cleared', v.dens], ['Logs read', v.logs]];
+    evBox.innerHTML = `<div class="cl-fvpic">${victoryPicture(ark)}</div>
       <div class="cl-fvmain">
-        <div class="cl-evkind">${esc(KIND_LABEL.victory)} · Day ${s.day}</div>
+        <div class="cl-evkind">${esc(KIND_LABEL[p.kind] || KIND_LABEL.victory)} · Day ${s.day}</div>
         <div class="cl-fvpage"><h2 id="evTitle">${esc(p.title || 'Eden Restored')}</h2><p class="cl-vlead">${esc(p.text)}</p>
           <dl class="cl-vstats">${stats.filter(([, n]) => n != null).map(([k, n]) => `<div><dt>${k}</dt><dd>${num(n)}</dd></div>`).join('')}</dl>
-          <div class="cl-fvclose">${(R.ENDING || []).map(([k, who, line], i) => `<figure style="--i:${i}">${eventFace(k) || `<span class="cl-portrait cl-fvinit">${esc(who.split(' ').pop()[0])}</span>`}<blockquote><p>“${esc(line)}”</p><figcaption>${esc(who)}</figcaption></blockquote></figure>`).join('')}</div>
-          ${v.finalVault && R.EPILOGUE ? `<p class="cl-fvreward"><i>Epilogue</i> ${esc(R.EPILOGUE)}</p>` : ''}
-          <p class="cl-dim">Your colony is saved, victory and all. Keep building: Eden is yours.</p></div>
+          <div class="cl-fvclose">${((ark ? R.ARK_ENDING : R.ENDING) || []).map(([k, who, line], i) => `<figure style="--i:${i}">${eventFace(k) || `<span class="cl-portrait cl-fvinit">${esc(who.split(' ').pop()[0])}</span>`}<blockquote><p>“${esc(line)}”</p><figcaption>${esc(who)}</figcaption></blockquote></figure>`).join('')}</div>
+          ${!ark && v.finalVault && R.EPILOGUE ? `<p class="cl-fvreward"><i>Epilogue</i> ${esc(R.EPILOGUE)}</p>` : ''}
+          <p class="cl-dim">${ark ? 'The Ark\'s voyage is kept in your save. Eden carries on: keep building.' : 'Your colony is saved, victory and all. Keep building: Eden is yours.'}</p></div>
         <div class="cl-evchoices"><button type="button" class="cl-btn primary" data-choice="${esc(choice.key)}">${esc(choice.label)}</button></div>
       </div>`;
     modal.hidden = false;
@@ -2762,7 +2802,7 @@ export function createUI(root, api) {
     }
     if (evId === p.id && !modal.hidden) return;
     if (p.kind === 'finalvault') { renderFinal(s, p); return; }
-    if (p.kind === 'victory') { renderVictory(s, p); return; }
+    if (p.kind === 'victory' || p.kind === 'ark') { renderVictory(s, p); return; }   // version 9: the Ark's ending, Beyond Eden
     modal.classList.remove('final');
     evId = p.id;
     if (/report|result/.test(p.kind || '')) repSeen = reportSig(s);   // the sim's own report: no second one
@@ -2774,7 +2814,7 @@ export function createUI(root, api) {
     const pic = eventFace(p.speaker);
     modal.classList.toggle('soft', !api.settings.pauseOnEvents && !raid && !core);
     const expd = p.kind === 'expedition' && p.report;
-    const tone = p.tone ? (p.tone === 'good' ? ' cl-evwon' : p.tone === 'bad' ? ' cl-evraid' : ' cl-evwarn') : p.kind === 'landmark' ? ' cl-evwon' : '';   // version 8
+    const tone = p.tone ? (p.tone === 'good' ? ' cl-evwon' : p.tone === 'bad' ? ' cl-evraid' : ' cl-evwarn') : p.kind === 'landmark' || p.kind === 'wonder' ? ' cl-evwon' : '';   // version 8 (version 9: wonders)
     evBox.className = 'cl-win cl-event' + (tone ? tone : expd ? (p.report.recalled ? ' cl-evwarn' : p.report.won ? ' cl-evwon' : ' cl-evraid') : raid || coreBad ? ' cl-evraid' : coreSafe ? ' cl-evwon' : warn || core ? ' cl-evwarn' : disc || p.kind === 'survivors' ? ' cl-evdisc' : drone ? (droneWon ? ' cl-evwon' : ' cl-evraid') : '');
     const jtab = disc ? 'logs' : (core && !coreSafe) || drone ? 'dangers' : p.kind === 'survivors' ? 'survivors' : null;
     const choices = p.choices?.length ? p.choices : [{ key: 'ok', label: 'Understood' }];
@@ -2782,11 +2822,11 @@ export function createUI(root, api) {
     evBox.innerHTML = `<div class="cl-evkind">${esc(KIND_LABEL[p.kind] || p.kind || 'Event')} · Day ${s.day}${s.pending.length > 1 ? ` · ${s.pending.length - 1} more waiting` : ''}</div>
       <div class="cl-evbody">${pic}
       <div><h2 id="evTitle">${esc(p.title)}</h2>${raid && (rule('raidPreview', s) || p.preview) ? `<p>${esc(raidLine(s, p))}</p>` : `<p>${esc(disc && discoveryItems(s, p).length ? discoveryLead(s, p) : p.text)}</p>`}</div></div>
-      ${p.kind === 'landmark' ? landmarkBody(s, p) : ''}
+      ${p.kind === 'landmark' || p.kind === 'wonder' ? landmarkBody(s, p) : ''}
       ${raid ? raidBody(s, p) : warn ? warnBody(s) : disc ? discoveryBody(s, p) : core ? reactorBody(s, p) : drone ? droneEvBody(s, p) : p.kind === 'survivors' ? survivorsEvBody(s, p) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
       <div class="cl-evchoices">${choices.map((c, i) => { const cant = raid && c.key === 'tribute' && (rule('raidPreview', s) || p.preview)?.canPay === false;
         return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>${raid && c.key === 'fight' ? commandButton() : ''}`; }).join('')}
-        ${p.show && choices.length === 1 ? `<button type="button" class="cl-btn" data-evshow title="Answer and show me">${p.kind === 'landmark' || p.kind === 'petition' ? 'Show me' : 'Show me what helps'}</button>` : ''}
+        ${p.show && choices.length === 1 ? `<button type="button" class="cl-btn" data-evshow title="Answer and show me">${p.kind === 'landmark' || p.kind === 'wonder' || p.kind === 'petition' ? 'Show me' : 'Show me what helps'}</button>` : ''}
         ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : 'Meet them'}</button>` : ''}
         ${(() => { const d = core && !coreBad && !coreSafe ? reactorOf(s) : null, pv = d && dangerWork(d) == null ? srule('dangerPreview', s, d.chamber) : null;
           return pv ? `<button type="button" class="cl-btn" data-evclear="${d.chamber}" ${pv.why ? `disabled title="${esc(pv.why)}"` : 'title="Answer, and set the crews to work on it now"'}>Stabilise now${pv.cost ? ` <small>${esc(costText(pv.cost))}</small>` : ''}</button>` : ''; })()}
@@ -2877,7 +2917,7 @@ export function createUI(root, api) {
     const p = S().pending?.[0]; if (!p) return;
     const key = b.dataset.choice ?? (p.choices?.[0]?.key || 'ok');
     evId = null; modal.hidden = true;
-    if (p.kind === 'finalvault' || p.kind === 'victory') { if (fv) cancelAnimationFrame(fv.raf); fv = null; modal.classList.remove('final'); }
+    if (p.kind === 'finalvault' || p.kind === 'victory' || p.kind === 'ark') { if (fv) cancelAnimationFrame(fv.raf); fv = null; modal.classList.remove('final'); }
     let r = R.answer(S(), p.id, key);
     // a raid the generic answer() did not resolve: the rules' own raid answer
     if (p.kind === 'raid' && r?.ok === false && typeof R.answerRaid === 'function' && S().pending?.some((x) => x.id === p.id)) { const r2 = rule('answerRaid', S(), key); if (r2) r = r2; }

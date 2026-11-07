@@ -1,7 +1,7 @@
 // Version 8 (docs/COLONY-V8.md): land value (js/colony/landvalue.js), the SimCity read of the city. Values move the
 // right way: parks, services, transit, water and happiness raise them; workshop noise, industry, exposed hull and an
 // unsealed breach lower them; sealed chambers have none. The grid and a tile's reasons agree; the cache refreshes;
-// the top levels of Living and Market Quads wait on land value; the overlay and the help.
+// a Grand Hotel waits on land value and Habitats grow sooner on it (version 9; the quads' gates are gone); the overlay and the help.
 //   node tests/colony-landvalue.mjs
 import { newGame } from '../js/colony/state.js';
 import * as R from '../js/colony/rules.js';
@@ -128,29 +128,30 @@ for (let y = 1; y < m.h - 8 && !probe; y++) for (let x = 1; x < w - 8 && !probe;
   s.happy = 50; drop(p);
 }
 
-// ---------------------------------------------------------------- growth: the top levels want land value
+// ---------------------------------------------------------------- growth (version 9: the quads are retired, their gates dropped)
 {
+  const h = push('hotel', probe.x + 2, probe.y, { level: 2 });
+  const need = R.habitatNeeds(s, h, R.parkField(s)).find((n) => n.need.startsWith('value:'));
+  check(need && need.need === 'value:55' && need.grow === true, 'a Hotel needs land value 55 to grow into a Grand Hotel (only gates growth)');
+  check(need && need.met === (valueOf(s, h) >= 55) && /^Land value \d+ \(now \d+\)$/.test(need.label), `…and says so: "${need?.label}"`);
+  h.level = 1;
+  check(!R.habitatNeeds(s, h, R.parkField(s)).some((n) => n.need.startsWith('value:')), 'a Guest House does not');
+  drop(h);
   const lq = push('livingquad', probe.x + 2, probe.y, { level: 4 });
-  const need = R.habitatNeeds(s, lq, R.parkField(s)).find((n) => n.need.startsWith('value:'));
-  check(need && need.need === `value:${R.QUAD_VALUE.livingquad[4]}` && need.grow === true, `a Courtyard Flats needs land value ${R.QUAD_VALUE.livingquad[4]} to grow into a Mid-rise (only gates growth)`);
-  check(need && need.met === (valueOf(s, lq) >= R.QUAD_VALUE.livingquad[4]) && /^Land value \d+ \(now \d+\)$/.test(need.label), `…and says so: "${need?.label}"`);
-  lq.level = 2;
-  check(!R.habitatNeeds(s, lq, R.parkField(s)).some((n) => n.need.startsWith('value:')), 'the lower levels do not');
-  lq.key = 'marketquad'; lq.level = 5;
-  check(R.habitatNeeds(s, lq, R.parkField(s)).some((n) => n.need === `value:${R.QUAD_VALUE.marketquad[5]}`), 'an Arcade needs it for a Trade Tower');
-  lq.key = 'workshopquad';
-  check(!R.habitatNeeds(s, lq, R.parkField(s)).some((n) => n.need.startsWith('value:')), 'Workshop Quads do not care');
-  check(R.habitatLevelReachable({ needs: ['value:40'] }), "'value:N' is a known need word");
+  check(!R.habitatNeeds(s, lq, R.parkField(s)).some((n) => n.need.startsWith('value:')) && !Object.keys(R.QUAD_VALUE).length, 'a retired quad in an old save no longer waits on land value');
   drop(lq);
-  // a noisy, low-value lot fails it; a good one passes
-  const low = push('livingquad', probe.x + 2, probe.y, { level: 4 });
+  check(R.habitatLevelReachable({ needs: ['value:40'] }), "'value:N' is a known need word");
+  // Habitats and Tower Blocks on land worth 60 or more grow a day sooner (sim.js step 8)
+  const low = push('habitat', probe.x + 2, probe.y);
   const loud = push('workshopquad', probe.x + 4, probe.y, { level: 6 });
   s.happy = 20; s.day += LV.refreshDays;
-  check(R.habitatNeeds(s, low, R.parkField(s)).find((n) => n.need.startsWith('value:'))?.met === false, 'beside a Factory, unhappy: no Mid-rise');
+  const v0 = valueOf(s, low);
+  check(v0 < R.VALUE_GROW.at, `beside a Factory, unhappy: value ${Math.round(v0)}, no faster growth`);
   drop(loud);
   for (const k of ['park', 'clinic', 'school', 'canteen', 'transit']) push(k, probe.x + 2 + ({ park: 0, clinic: 2, school: 4, canteen: 6, transit: 8 }[k]), probe.y + 3);
-  s.happy = 70; s.day += LV.refreshDays;
-  check(R.habitatNeeds(s, low, R.parkField(s)).find((n) => n.need.startsWith('value:'))?.met === true, `with parks, services and transit: value ${Math.round(valueOf(s, low))}, a Mid-rise may grow`);
+  s.happy = 90; s.day += LV.refreshDays;
+  check(valueOf(s, low) > v0 + 20, `with parks, services and transit, happy: value ${Math.round(valueOf(s, low))}`);
+  check(R.VALUE_GROW.at === 60 && R.VALUE_GROW.days === 1 && R.VALUE_GROW.keys.has('habitat'), 'at 60 or more a Habitat grows a day sooner');
 }
 
 // ---------------------------------------------------------------- overlay, help

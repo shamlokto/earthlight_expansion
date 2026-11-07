@@ -714,7 +714,7 @@ export function createView(container, opts = {}) {
   // everything a kit draws from: the Tailings Dump's heap also follows its fill (in steps of 5)
   // version 3: a raid-damaged building is drawn sooty; the Fusion Reactor's torus goes dark with no helium-3
   const noHelium = () => !((st?.stock?.helium ?? 1) > 0);
-  const sigOf = (b) => `${b.key}|${b.x}|${b.y}|${b.level}|${b.build > 0 ? 1 : 0}|${b.off ? 1 : 0}|${b.mode}${b.key === 'tailings' ? '|' + Math.round((b.fill || 0) / 5) : ''}${b.damaged > 0 ? '|d' : ''}${b.key === 'fusion' && noHelium() ? '|he0' : ''}`;
+  const sigOf = (b) => `${b.key}|${b.x}|${b.y}|${b.level}|${b.build > 0 ? 1 : 0}|${b.off ? 1 : 0}|${b.mode}${b.key === 'tailings' ? '|' + Math.round((b.fill || 0) / 5) : ''}${b.damaged > 0 ? '|d' : ''}${b.key === 'fusion' && noHelium() ? '|he0' : ''}${b.launched ? '|L' : ''}`;   // version 9: the Ark has flown
   const SOOT = [0.42, 0.37, 0.34];
   const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), e4 = new THREE.Euler(), v4 = new THREE.Vector3(), s4 = new THREE.Vector3(), c4 = new THREE.Color();
   const sizeOf = (key) => BUILDING[key]?.size || 1;
@@ -732,6 +732,14 @@ export function createView(container, opts = {}) {
     if (b.key === 'road') return addRoad(b);
     const n = sizeOf(b.key), parts = kitParts(b.key, b.level, b.mode, b, b.key === 'fusion' ? { noHelium: noHelium() } : null), g = groundOf(b.x, b.y, n);
     const cx = b.x + n / 2, cz = b.y + n / 2, building = b.build > 0, hurt = b.damaged > 0 && !building;
+    // version 9 (docs/COLONY-V9.md): a wonder's next stage under way: the stage it has stands solid, the new one is a ghost around it
+    if (building && b.level > 1 && BUILDING[b.key]?.wonder) {
+      for (const p of kitParts(b.key, b.level - 1, b.mode, b)) {
+        if (p.shimmer) continue;
+        c4.set(p.color);
+        pool(p.shape, p.glow ? 'glow' : 'solid').add(b.id, partMatrix(p, cx, g, cz), [c4.r, c4.g, c4.b]);
+      }
+    }
     for (const p of parts) {
       const m = partMatrix(p, cx, g, cz);
       if (building) {
