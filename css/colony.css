@@ -1322,3 +1322,20 @@ button.cl-jslot:hover { border-color: var(--gold); }
 .cl-ovl-key { display: inline-flex; align-items: center; gap: 5px; padding: 0 6px; font: 600 10px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
 .cl-ovl-key[hidden] { display: none; }
 .cl-ovl-key b { display: inline-block; width: 54px; height: 8px; border-radius: 2px; background: linear-gradient(90deg, rgb(58, 111, 240), rgb(63, 224, 160), rgb(255, 240, 122)); }
+
+/* version 10 (docs/COLONY-V10.md): photo mode hides the interface; a small bar floats at the bottom */
+.cl-photo #ui { display: none !important; }
+.cl-photobar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 60; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 12px; background: rgba(6, 12, 24, .72); border: 1px solid rgba(111, 211, 255, .25); color: #dfe8f4; font: 13px/1.2 system-ui, sans-serif;
+  backdrop-filter: blur(6px); max-width: calc(100vw - 32px); transition: opacity .25s; }
+.cl-photobar b { color: #7ff0d0; margin-right: 4px; }
+.cl-photobar label { display: inline-flex; align-items: center; gap: 4px; }
+.cl-photobar input[type=range] { width: 110px; }
+.cl-photobar [aria-pressed="true"] { outline: 1px solid #7ff0d0; }
+.cl-photobar.hid { opacity: 0; }
+.cl-photobar.hid:hover { opacity: .9; }
+.cl-nblog { list-style: none; padding: 0; margin: 4px 0 0; font-size: 12px; }
+.cl-nblog li { padding: 1px 0; }
+.cl-dist .cl-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.cl-dist .cl-modes button { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl-dist .cl-modes button.cl-dclear { grid-column: 1 / -1; }

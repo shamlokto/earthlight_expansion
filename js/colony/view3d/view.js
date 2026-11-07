@@ -1032,7 +1032,44 @@ export function createView(container, opts = {}) {
     glide.x = x; glide.z = z;
     if (phase === 'end') glide.held = false;
   }
+  // Version 10 (docs/COLONY-V10.md): photo mode. setPhoto(true, { orbit, fly }) hides the minimap and the camera buttons,
+  // frees the camera (down to the horizon, closer in) and turns a slow orbit (radians a second) and a fly-through drift
+  // (tiles a second along the deck, turning at its ends) on or off; setPhoto(false) puts everything back. snapshot()
+  // draws a frame now and returns it as a PNG data URL (render, then read, in the same task: no preserveDrawingBuffer).
+  const photo = { on: false, orbit: 0, fly: 0, dir: 1, saved: null };
+  function setPhoto(on, o = {}) {
+    if (on && !photo.on) {
+      photo.saved = { mm: minimap.visible, nav: navPad.visible, maxPolar: controls.maxPolarAngle, minDist: controls.minDistance };
+      minimap.setVisible(false); navPad.setVisible(false);
+      controls.maxPolarAngle = 1.48; controls.minDistance = 2.5;
+    } else if (!on && photo.on && photo.saved) {
+      minimap.setVisible(photo.saved.mm); navPad.setVisible(photo.saved.nav);
+      controls.maxPolarAngle = photo.saved.maxPolar; controls.minDistance = photo.saved.minDist;
+      photo.saved = null;
+    }
+    photo.on = !!on;
+    if ('orbit' in o) photo.orbit = +o.orbit || 0;
+    if ('fly' in o) photo.fly = +o.fly || 0;
+    if (!on) photo.orbit = photo.fly = 0;
+    return { on: photo.on, orbit: photo.orbit, fly: photo.fly };
+  }
+  function snapshot(type = 'image/png') {
+    for (const p of pools.values()) p.flush();
+    renderer.render(scene, camera);
+    return canvas.toDataURL(type);
+  }
+  function stepPhoto(dt) {
+    if (photo.orbit) {
+      const o = offset(), a = photo.orbit * dt, c = Math.cos(a), s = Math.sin(a);
+      camera.position.set(controls.target.x + o.x * c + o.z * s, camera.position.y, controls.target.z - o.x * s + o.z * c);
+    }
+    if (photo.fly) {
+      if (controls.target.x > W - 6) photo.dir = -1; else if (controls.target.x < 6) photo.dir = 1;
+      moveBy(photo.fly * photo.dir * dt, Math.sin(performance.now() / 9000) * photo.fly * 0.25 * dt);
+    }
+  }
   function stepCamera(dt, now) {
+    if (photo.on && (photo.orbit || photo.fly) && !anim) stepPhoto(dt);
     // keyboard pan relative to where the camera looks; Q / E rotate
     const o = offset(), dist = o.length(), f = new THREE.Vector2(-o.x, -o.z).normalize(), sp = dist * 0.9 * dt;
     let fx = 0, fz = 0;
@@ -1350,6 +1387,7 @@ export function createView(container, opts = {}) {
     return out;
   }
   let liftSig = '';
+  let distSig = '';   // version 10: the districts tint the minimap
   const liftSigOf = (l) => l.map((o) => `${o.x},${o.y},${o.deck},${o.working ? 1 : 0}`).join(';');
   function minimapExtra() {
     const lifts = liftList();
@@ -1450,7 +1488,8 @@ export function createView(container, opts = {}) {
     secrets.refresh(st, { terrTop });
     const lifts = full.buildings?.some((b) => b.key === 'lift') || liftSig ? liftList() : [];
     const ls = liftSigOf(lifts);
-    if (cc || bc || ls !== liftSig) { liftSig = ls; minimap.refresh(st, { lifts, below: deck === 'upper' ? full.map.t : null }); }
+    const ds = (full.chambers || []).map((c) => (c.district ? `${c.id}${c.district.theme[0]}` : '')).join('');
+    if (cc || bc || ls !== liftSig || ds !== distSig) { liftSig = ls; distSig = ds; minimap.refresh(st, { lifts, below: deck === 'upper' ? full.map.t : null }); }
     updateDeckPad();
   }
 
@@ -1588,6 +1627,8 @@ export function createView(container, opts = {}) {
   // Version 4: setDeck(deck, { animate }) and the current deck (view.deck); DECKS / DECK_INFO are
   // exported for the interface's names.
   return { setState, refresh, setOverlay, setGhost, focus, setSnap, setSpeed, destroy, setMinimap, setNavButtons, setWheelMode, nav, home, setDeck, setDayNight,
+    setPhoto, snapshot, get photo() { return { on: photo.on, orbit: photo.orbit, fly: photo.fly }; },   // version 10: photo mode
+    setDayTime(p) { dn.hold = p == null ? null : ((+p % 1) + 1) % 1; },
     get deck() { return deck; },
     debug: {
       // the deck change held at progress k (0..1) for a screenshot mid-move (k = 1 finishes it);

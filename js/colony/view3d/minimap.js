@@ -33,6 +33,8 @@ const rgbOf = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16)
 const CAT_RGB = Object.fromEntries(Object.entries(CAT_COLOR).map(([k, v]) => [k, rgbOf(v)]));
 const TERRAIN_RGB = TERRAIN.map((d) => rgbOf(d.color));
 const OUTSIDE_RGB = [5, 7, 15], SHAFT_RGB = [26, 24, 20];
+// version 10 (docs/COLONY-V10.md): a district's chamber is tinted with its theme's colour (districts.js THEMES)
+const DISTRICT_RGB = { garden: [127, 211, 106], industry: [255, 154, 82], university: [195, 166, 255], entertainment: [255, 90, 216] };
 const hash = (x, y) => { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
 // Space reach as a tile mask: Chebyshev DOCK_REACH around each finished dock's centre, then each
@@ -149,7 +151,8 @@ export function createMinimap(host, { onMove = () => {}, onWheel = null } = {}) 
         if (k === undefined) { r = 70; g = 70; b = 76; } else if (!k) { r = 40; g = 22; b = 20; }
       } else if (ch[i] !== 255) {
         const c = status.get(ch[i]);
-        if (c && c.status === 'sealed') { r = r * 0.16 + 4; g = g * 0.16 + 5; b = b * 0.16 + 10; }
+        if (c && c.status === 'open' && DISTRICT_RGB[c.district?.theme]) { const k = DISTRICT_RGB[c.district.theme]; r += (k[0] - r) * 0.22; g += (k[1] - g) * 0.22; b += (k[2] - b) * 0.22; }
+        else if (c && c.status === 'sealed') { r = r * 0.16 + 4; g = g * 0.16 + 5; b = b * 0.16 + 10; }
         else if (c && c.status !== 'open') {
           const l = 0.3 * r + 0.59 * g + 0.11 * b, keep = c.status === 'pressurising' ? 0.25 + 0.6 * (1 - (c.work || 0) / 5) : 0.15;
           r = (l * 0.62 + 8) * (1 - keep) + r * keep; g = (l * 0.72 + 12) * (1 - keep) + g * keep; b = (l * 0.95 + 30) * (1 - keep) + b * keep;

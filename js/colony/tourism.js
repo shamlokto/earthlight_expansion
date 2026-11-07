@@ -12,6 +12,9 @@ import { LANDMARKS, landmarkOn } from './landmarks.js';
 import { wondersOn, wonderVisitors } from './wonders.js';
 import { valueOf } from './landvalue.js';
 import { active, spec, techEffect } from './rules.js';   // used inside functions only
+import { districtTourism } from './districts.js';   // version 10 (docs/COLONY-V10.md)
+import { gardenTourism } from './gardens.js';
+import { luxuryTourism } from './luxuries.js';
 
 export const TOUR = {
   landmark: 8,                          // a working landmark
@@ -40,6 +43,11 @@ export function tourismOf(state) {
   if (leisure) parts.push({ label: 'Leisure', value: round(clamp(leisure * TOUR.leisure, TOUR.leisureMax)) });
   const happy = round(clamp(((state.happy ?? 50) - TOUR.happyFrom) * TOUR.happy, TOUR.happyMax));
   if (happy) parts.push({ label: `A happy city (${round(state.happy || 0)})`, value: happy });
+  // version 10: Entertainment Districts, wildlife (birds, deer), art on show
+  const ent = districtTourism(state), wild = gardenTourism(state), art = luxuryTourism(state);
+  if (ent) parts.push({ label: 'Entertainment Districts', value: ent });
+  if (wild) parts.push({ label: 'Wildlife', value: wild });
+  if (art) parts.push({ label: 'Art on show', value: art });
   const hotels = on.filter((b) => HOTELS.has(b.key));
   const beds = hotels.reduce((t, b) => t + (spec(b).beds || 0), 0);
   let lv = 0;

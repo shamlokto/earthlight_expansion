@@ -40,7 +40,9 @@ const SLOTS = {
     // version 8 (docs/COLONY-V8.md): the landmarks and the Flare Shelter (prompts written; pictures not made yet)
     'workshop', 'govgarden', 'observatory', 'lantern', 'hallofnames', 'elevator', 'flareshelter',
     // version 9 (docs/COLONY-V9.md): the wonders, the Ark and the tourism buildings (prompts written; pictures not made yet)
-    'arboretum', 'library', 'concerthall', 'memorial', 'arena', 'starport', 'spinring', 'ark', 'hotel', 'promenade', 'theatre', 'casino'],
+    'arboretum', 'library', 'concerthall', 'memorial', 'arena', 'starport', 'spinring', 'ark', 'hotel', 'promenade', 'theatre', 'casino',
+    // version 10 (docs/COLONY-V10.md): the luxuries (prompts written; pictures not made yet)
+    'coffee', 'vineyard', 'artisan'],
   title: ['rebuild'],
   sky: ['earth-below'],
   terrain: ['void', 'asteroid', 'magnetic', 'atmosphere', 'hull', 'deck', 'plain', 'fertile', 'river', 'rubble', 'breach',
@@ -57,7 +59,7 @@ const SLOTS = {
     // version 4, stage 4: the player, at last (the ending)
     'general'],
   // version 4, stage 4: the big moments (D26); each still is the first frame of its clip
-  scene: ['ending', 'finalvault', 'ark'],   // version 9: the Ark's ending, Beyond Eden (prompt written; picture not made yet)
+  scene: ['ending', 'finalvault', 'ark', 'garden'],   // version 9: the Ark's ending, Beyond Eden; version 10: the Garden of Eden (prompts written; pictures not made yet)
   // the Star chart's sites (js/colony/expeditions.js SITES), the journal's vaults and dangers (data/secrets.js)
   site: ['belt', 'comet', 'derelict', 'babylon', 'bunker', 'den', 'outpost', 'listening', 'relief'],
   vault: ['v_stores', 'v_helium', 'v_msnp', 'v_msfb', 'v_seeds', 'v_blue'],
@@ -147,6 +149,18 @@ const FILES = {
   'card/hallofnames': 'art/colony/card/hallofnames.webp',
   'card/elevator': 'art/colony/card/elevator.webp',
   'card/flareshelter': 'art/colony/card/flareshelter.webp',
+  'card/arboretum': 'art/colony/card/arboretum.webp',
+  'card/library': 'art/colony/card/library.webp',
+  'card/concerthall': 'art/colony/card/concerthall.webp',
+  'card/memorial': 'art/colony/card/memorial.webp',
+  'card/arena': 'art/colony/card/arena.webp',
+  'card/starport': 'art/colony/card/starport.webp',
+  'card/spinring': 'art/colony/card/spinring.webp',
+  'card/ark': 'art/colony/card/ark.webp',
+  'card/hotel': 'art/colony/card/hotel.webp',
+  'card/promenade': 'art/colony/card/promenade.webp',
+  'card/theatre': 'art/colony/card/theatre.webp',
+  'card/casino': 'art/colony/card/casino.webp',
   'title/rebuild': 'art/colony/title/rebuild.webp',
   'sky/earth-below': 'art/colony/sky/earth-below.webp',
   'terrain/void': 'art/colony/terrain/void.webp',
@@ -194,6 +208,7 @@ const FILES = {
   'portrait/general': 'art/colony/portrait/general.webp',
   'scene/ending': 'art/colony/scene/ending.webp',
   'scene/finalvault': 'art/colony/scene/finalvault.webp',
+  'scene/ark': 'art/colony/scene/ark.webp',
   'site/belt': 'art/colony/site/belt.webp',
   'site/comet': 'art/colony/site/comet.webp',
   'site/derelict': 'art/colony/site/derelict.webp',

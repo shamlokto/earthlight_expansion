@@ -29,6 +29,11 @@ import { landmarksDay, landmarkHappy, landmarkTransport, landmarkFade } from './
 import { petitionsDay } from './petitions.js';
 import { wondersDay, wonderHappy, wonderTransport, wonderFade, wonderResearch } from './wonders.js';   // version 9 (docs/COLONY-V9.md)
 import { tourismDay } from './tourism.js';
+// version 10 (docs/COLONY-V10.md): districts, Eden's gardens, luxuries and the neighbours
+import { districtsDay, districtHappy, districtMults, districtAir, districtResearch } from './districts.js';
+import { gardensDay, gardenHappy, gardenOutput } from './gardens.js';
+import { luxuriesDay, luxuryHappy } from './luxuries.js';
+import { neighboursDay } from './neighbours.js';
 
 export { habitatNeeds, stateRng };
 
@@ -205,6 +210,8 @@ export function dayTick(state, rng) {
   expeditionsDay(state, { rng, say, ask });
   // version 8: incidents you can prepare for (their own dice: js/colony/incidents.js)
   incidentsDay(state, { say, ask });
+  // version 10: each district's fill and tier, before the day's work (js/colony/districts.js)
+  districtsDay(state, { say });
 
   // 3 labour (Lanternfall): one staffing fraction for every building with jobs.
   // (version 8: colonists off sick with a fever do not work)
@@ -241,7 +248,8 @@ export function dayTick(state, rng) {
   const use = (g, n) => { if (n > 0) { n = Math.min(n, st[g]); st[g] -= n; consumed[g] = (consumed[g] || 0) + n; } };
   const rate = (s, key) => (s.jobs ? staffing : 1) * (s.power < 0 ? (LIFE_SUPPORT.has(key) ? pfLife : pfOther) : 1) * moneyF;
   const usesOf = (b, s) => (b.key === 'farm' && b.mode === 'fallow' ? null : s.uses);
-  const outMult = {}, om = (key) => (outMult[key] ??= techEffect(state, 'output', key) * (DEPT_OF[key] ? deptMult(state, DEPT_OF[key]) : 1));
+  const outMult = {}, om = (key) => (outMult[key] ??= techEffect(state, 'output', key) * (DEPT_OF[key] ? deptMult(state, DEPT_OF[key]) : 1) * gardenOutput(state, key));   // version 10: bees, fish
+  const dmOf = districtMults(state);   // version 10: an Industrial or University Quarter's chamber
   const rates = new Map();   // each building's working rate today (services scale with it)
   let researchMade = 0;
   // Tailings: more than 4 Ore Mines need a Dump (not full) per 4 beyond the first 4, else half output.
@@ -254,7 +262,8 @@ export function dayTick(state, rng) {
   const run = (b, s, r) => {
     rates.set(b, r);
     if (!s.makes || r <= 0) return;
-    const m = om(b.key) * (FREIGHT_HELPS.has(b.key) && freights.some((y) => covers(y, b)) ? SIM.freightBonus : 1);
+    const dm = dmOf(b), dr = dm ? dm.research : 1;
+    const m = om(b.key) * (FREIGHT_HELPS.has(b.key) && freights.some((y) => covers(y, b)) ? SIM.freightBonus : 1) * (dm ? dm.make : 1);
     if (b.key === 'farm') {
       const soil = farmSoil(state, b);
       if (b.mode === 'cash') { make('food', s.makes.food * soil * SIM.cash.food * r * m); make('credits', SIM.cash.credits * soil * r * m); }
@@ -266,7 +275,7 @@ export function dayTick(state, rng) {
       const careful = b.mode === 'careful';
       make('parts', strip(state, b, s.makes.parts * r * m * (careful ? 0.5 : 1)) * (careful ? 2 : 1));
     } else for (const [g, n] of Object.entries(s.makes)) {
-      if (g === 'research') researchMade += n * r * m;
+      if (g === 'research') researchMade += n * r * m * dr;
       else make(g, n * r * m);
     }
   };
@@ -327,6 +336,10 @@ export function dayTick(state, rng) {
     if (i >= 0) { m.t[i] = deckOf(b) === 'main' ? T.PLAIN : T.DECK; say('drain', `A Pump Station drained a tile of flooded ground on the ${deckOf(b)} deck.`); }
   }
 
+  // version 10: a Garden District's air, a University Quarter's own research; the well-off's luxuries
+  make('air', districtAir(state));
+  researchMade += districtResearch(state);
+  luxuriesDay(state, { produced, consumed });
   // version 9: the Great Library's research grows with the colony (4 a day per 1,000 colonists, at its working rate)
   researchMade += wonderResearch(state, (b) => Math.min(1, rates.get(b) ?? 1)) * om('library');
   // 5b research: the labs' points go to the tech being studied (or into the bank, which flows into
@@ -429,6 +442,7 @@ export function dayTick(state, rng) {
   if (state.buildings.some((b) => b.key === 'obsdeck' && active(b))) parts.push({ label: 'Observation Deck', value: SIM.obsHappy });
   parts.push(...landmarkHappy(state), ...incidentHappy(state));   // version 8: landmarks, a solar flare
   parts.push(...wonderHappy(state));   // version 9: wonders
+  parts.push(...districtHappy(state), ...gardenHappy(state), ...luxuryHappy(state));   // version 10: districts, wildlife, luxuries
   if (ration) parts.push({ label: 'Rationing', value: SIM.rationHappy });
   else if (autoRation) parts.push({ label: 'Rationing (automatic)', value: SIM.autoRationHappy });
   // version 3: a Welfare head (+ charm / 20), raid fear and tribute shame fading over 15 days,
@@ -592,6 +606,9 @@ export function dayTick(state, rng) {
   petitionsDay(state, { say, ask });
   // 13d version 9: wonders: requirements earned, the moment one is finished, and the Ark's second ending
   if (wondersDay(state, { say, ask })) events.push({ kind: 'ark', text: state.log[state.log.length - 1].text, pause: true });
+  // 13e version 10: Eden's gardens (wildlife and the Garden of Eden), the neighbours
+  if (gardensDay(state, { say, ask })) events.push({ kind: 'garden', text: state.log[state.log.length - 1].text, pause: true });
+  neighboursDay(state, { say, ask });
   // 14 version 4, stage 4: the win, Eden Restored, once (js/colony/victory.js); the colony carries on after it
   if (victoryDay(state)) events.push({ kind: 'victory', text: state.log[state.log.length - 1].text, pause: true });
   return { events };

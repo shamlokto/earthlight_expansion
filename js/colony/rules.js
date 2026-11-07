@@ -49,6 +49,18 @@ export {
   wonderHappy, wonderTransport, wonderVisitors, wonderResearch,
 } from './wonders.js';
 export { TOUR, tourismOf, tourismLimitText } from './tourism.js';
+// version 10 (docs/COLONY-V10.md): districts, Eden's gardens, luxuries and the neighbours
+import { ensureGardens } from './gardens.js';
+import { ensureLuxuries, luxuriesMet, luxuriesHold, LUX_GOODS, luxCap } from './luxuries.js';
+import { ensureNeighbours, answerNeighbour, neighbourSell, neighbourBuy, neighbourTribute, neighbourTruce } from './neighbours.js';
+export {
+  DISTRICT, THEMES, THEME_KEYS, fitsTheme, districtFill, districtStatus, setDistrict, districtsOf, districtHappy, tierText,
+} from './districts.js';
+export { GARDEN, WILDLIFE, GARDEN_ENDING, GARDEN_TEXT, greeneryOf, gardenStatus, ensureGardens } from './gardens.js';
+export { LUX, LUX_GOODS, LUX_NAME, luxuryStatus, luxuriesShown, wellOffOf, luxCap, ensureLuxuries } from './luxuries.js';
+export {
+  NB, NEIGHBOURS, NEIGHBOUR_KEYS, PERKS, neighbourStatus, setNeighbours, neighboursOn, moodOf, standing, ensureNeighbours, shiftMood,
+} from './neighbours.js';
 export { isComplete } from './landmarks.js';
 export {
   INCIDENT, INCIDENTS, INCIDENT_KINDS, incidentsOn, ensureIncidents, incidentLead, incidentStatus, setIncidents, flareMult, sickShare, incidentHappy,
@@ -122,6 +134,7 @@ export function upgradeState(state) {
   state.options ??= {};
   ensureLandmarks(state); ensureIncidents(state); ensurePetitions(state);   // version 8
   ensureWonders(state);   // version 9
+  ensureGardens(state); ensureLuxuries(state); ensureNeighbours(state);   // version 10
   if (state.unlocked) for (const d of BUILDINGS) if (d.decks && !d.tech && !d.unlock && !d.fixed && !d.retired && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
   // version 9: the quads are retired (owner, 2026-11-07): never unlocked again, though those standing keep working
   if (state.unlocked) state.unlocked = state.unlocked.filter((k) => !BUILDING[k]?.retired);
@@ -730,7 +743,7 @@ export function sell(state, good, qty) {
   const step = Math.pow(1 - PRICE.drop, 1 / PRICE.lot);
   let f = state.market[good] ?? 1, gain = 0;
   for (let k = 0; k < qty; k++) { gain += BASE_PRICE[good] * f; f = Math.max(PRICE.floor, f * step); }
-  gain = Math.floor(gain * deptMult(state, 'trade') * techEffect(state, 'output', 'market'));   // version 9: Commerce
+  gain = Math.floor(gain * deptMult(state, 'trade') * techEffect(state, 'output', 'market') * neighbourSell(state));   // version 9: Commerce; version 10: Union buyers
   state.stock[good] -= qty; state.stock.credits += gain; state.market[good] = f;
   state.flags.sold = (state.flags.sold || 0) + gain;
   return ok(`Sold ${qty} ${good} for ${gain} credits.`, { credits: gain });
@@ -740,7 +753,7 @@ export function sell(state, good, qty) {
 // life's essentials can be bought at the dock for twice the sale price; each lot bought pushes that
 // price up, and it recovers over days like a sale's.
 export const IMPORTS = ['parts', 'food', 'water', 'air'], IMPORT_MARKUP = 2;
-export function buyPrice(state, good) { return BASE_PRICE[good] * (state.market?.[good] ?? 1) * IMPORT_MARKUP * landmarkImports(state); }   // version 8: the Orbital Elevator
+export function buyPrice(state, good) { return BASE_PRICE[good] * (state.market?.[good] ?? 1) * IMPORT_MARKUP * landmarkImports(state) * neighbourBuy(state); }   // version 8: the Orbital Elevator; version 10: Galt traders
 export function buy(state, good, qty) {
   if (!IMPORTS.includes(good)) return no('Traders don\'t sell that.');
   qty = Math.floor(qty);
@@ -752,7 +765,7 @@ export function buy(state, good, qty) {
   const step = Math.pow(1 + PRICE.drop, 1 / PRICE.lot);
   let f = state.market[good] ?? 1, cost = 0, n = 0;
   for (; n < qty; n++) {
-    const unit = BASE_PRICE[good] * f * IMPORT_MARKUP;
+    const unit = BASE_PRICE[good] * f * IMPORT_MARKUP * neighbourBuy(state);
     if (cost + unit > state.stock.credits) break;
     cost += unit; f *= step;
   }
@@ -803,6 +816,12 @@ export function answer(state, pendingId, choiceKey) {
     if (r.ok) state.pending = state.pending.filter((x) => x.id !== pendingId);
     return r;
   }
+  // version 10: a neighbour's offer or request
+  if (p.kind === 'neighbour') {
+    const r = answerNeighbour(state, p, choiceKey);
+    if (r.ok) state.pending = state.pending.filter((x) => x.id !== pendingId);
+    return r;
+  }
   if (p.kind === 'wanderer' && choiceKey === 'invite') {
     const r = inviteWanderer(state, p.wanderer);
     if (r.ok) state.pending = state.pending.filter((x) => x.id !== pendingId);
@@ -817,7 +836,7 @@ export function answer(state, pendingId, choiceKey) {
 // A level whose needs name a building the game doesn't have (none since version 2) is not offered.
 // Version 7: the quads' need words, and 'demand:R', 'happy:60', 'residents:150', 'tech:skyscrapers' (a level
 // waiting on a tech is offered: its panel says what to research).
-const NEED_WORDS = new Set(['allNeeds', 'park', 'clinic', 'school', 'transit', 'freight', 'shops', 'quiet', 'leisure']);   // version 9: 'leisure' (Hotels)
+const NEED_WORDS = new Set(['allNeeds', 'park', 'clinic', 'school', 'transit', 'freight', 'shops', 'quiet', 'leisure', 'luxuries']);   // version 9: 'leisure' (Hotels); version 10: 'luxuries'
 const NEED_PREFIX = new Set(['demand', 'happy', 'residents', 'tech', 'value']);   // version 8: 'value:N' (land value)
 export const habitatLevelReachable = (level) => !level?.needs?.some((n) => {
   const [k, v] = String(n).split(':');
@@ -843,6 +862,8 @@ export function habitatNeeds(state, b, field, ctx = {}) {
     else if (n === 'school') out.push({ need: n, label: 'A School in reach', met: serviceAt(state, b, 'school') > 0 });
     else if (n === 'transit') out.push({ need: n, label: 'A Transit Station or Monorail Stop in reach', met: coveredBy(state, b, TRANSIT_KEYS) });
     else if (n === 'leisure') out.push({ need: n, label: `Leisure within ${LEISURE_REACH} tiles (a Promenade, Theatre, Casino or the Concert Hall)`, met: leisureNear(state, b) });   // version 9
+    // version 10: coffee and wine for a Skyscraper's well-off (js/colony/luxuries.js); before Luxury Goods it only gates growing
+    else if (n === 'luxuries') { const L = state.luxuries; out.push({ need: n, label: `Coffee and wine for the well-off (${['coffee', 'wine'].map((g) => `${g} ${Math.round(Math.min(1, L?.share?.[g] ?? 0) * 100)}%`).join(', ')})`, met: luxuriesMet(state), grow: !luxuriesHold(state) }); }
     else if (n === 'freight') out.push({ need: n, label: 'A Freight Yard in reach', met: coveredBy(state, b, FREIGHT_KEYS) });
     else if (n === 'shops') out.push({ need: n, label: 'Shops in reach (a Market Quad with stalls or more)', met: state.buildings.some((s) => s.key === 'marketquad' && s.level > 1 && active(s) && covers(s, b)) });
     else if (n === 'quiet') {
@@ -982,6 +1003,7 @@ export function summary(state) {
   const cap = storageCaps(state), last = state.stats?.last || {}, pr = last.produced || {}, co = last.consumed || {};
   const stock = {};
   for (const g of GOODS) stock[g] = { have: state.stock[g], cap: g === 'credits' ? null : cap[g], delta: (pr[g] || 0) - (co[g] || 0) };
+  for (const g of LUX_GOODS) stock[g] = { have: state.stock[g] || 0, cap: luxCap(state), delta: (pr[g] || 0) - (co[g] || 0) };   // version 10
   const p = powerOf(state), jobs = jobsOf(state);
   return {
     stock, power: { supply: p.supply, demand: p.demand, battery: state.battery, cap: cap.power },
@@ -1431,7 +1453,7 @@ export function noticeEden(state, b, rng = stateRng(state), why = '') {
 }
 // The base whose raiders come next: aware, standing, past its first wait, with enough of its fleet home.
 export function readyBase(state) {
-  const ok = ensureBases(state).filter((b) => b.aware && !b.destroyed && state.day >= (b.since ?? 0) - warnLead(state) && b.fleet >= Math.max(1, Math.ceil(b.max * BASE_RAIDS.ready)));
+  const ok = ensureBases(state).filter((b) => b.aware && !b.destroyed && !neighbourTruce(state, b) && state.day >= (b.since ?? 0) - warnLead(state) && b.fleet >= Math.max(1, Math.ceil(b.max * BASE_RAIDS.ready)));
   return ok.sort((a, b) => b.fleet / b.max - a.fleet / a.max)[0] || null;
 }
 // The raid clock runs while raiders are on, Eden has 500 colonists, and some base knows of it and stands.
@@ -1525,7 +1547,7 @@ export function defenceOf(state, raid = state.raid?.coming) {
 }
 export const winChance = (d, a) => (a <= 0 ? 1 : (d * d) / (d * d + a * a));
 export function tributeOf(state, raid = state.raid?.coming) {
-  const credits = Math.ceil((raid?.strength || 0) * RAID.tributePer);
+  const credits = Math.ceil((raid?.strength || 0) * RAID.tributePer * neighbourTribute(state));   // version 10: Cartel manners
   return { credits, food: Math.ceil(credits / BASE_PRICE.food) };
 }
 // Buildings raiders can knock out: on their side of the colony, not homes, life support, food or
