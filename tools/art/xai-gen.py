@@ -7,7 +7,7 @@ import sys, json, base64, subprocess, os
 out, n, pf, refs = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4:]
 cnt = os.environ.get('XAI_QUOTA')
 used = int(open(cnt).read()) if cnt and os.path.exists(cnt) else 0
-limit = int(os.environ.get('XAI_LIMIT', '100'))   # the owner's budget: 100, a reserve of 50 (2026-11-04), 20 more (2026-11-05), 30 more (2026-11-06)
+limit = int(os.environ.get('XAI_LIMIT', '100'))   # the owner's budget: 100, a reserve of 50 (2026-11-04), 20 more (2026-11-05), 30 more (2026-11-06), 20 more (2026-11-07)
 if used + n > limit: sys.exit(f'quota: {used} used, {n} more would exceed {limit}')
 prompt = open(pf).read().strip()
 # Note (HANDOFF.md): grok-imagine-image-quality is retired on 2026-11-02 and then served by
