@@ -225,32 +225,34 @@ export const BUILDINGS = [
             { key: 'auto', name: 'Automatic', text: 'Launches a heavy convoy a day by itself, of whatever Eden can best spare, always keeping ten days of needs at home.' }],
     text: 'A magnetic rail on the hull that throws cargo pods down to Earth: a relief convoy becomes a heavy launch of three loads. Can run by itself.' },
   // ---------------------------------------------------------------- version 7 (docs/COLONY-V7.md): zoning and growth
-  // Retired on 2026-11-07 (owner: "the simcity style pods of land don't work"; docs/COLONY-V9.md): `retired`, so they are
-  // off the menu and never unlocked, but quads already standing in an old save keep working and growing as below.
+  // Retired on 2026-11-07 (docs/COLONY-V9.md), then reinstated the same day (owner: "reinstate the quads but make r, c,
+  // and i gauge more lenient ... so that it will build faster"; docs/COLONY-V7.md "Reinstated"): on the menu again from
+  // day 1, with stronger demand (rules demandOf), 2 days a level (1 near transit, sim.js SIM.quadGrowDays) and lighter
+  // early levels: Cottages and Row Houses want only demand and the colony's needs met.
   // Quads (`quad`: 'R' | 'C' | 'I'): cheap 2×2 lots that develop by themselves, level by level, like Habitats (sim.js
   // step 8, rules GROW_KEYS). Level 1 is the empty lot; each level's fields override the table's (rules.spec).
   // `shoppers`: the residents a Market Quad level serves (commercial demand, rules demandOf); `nuisance`: a Workshop
   // Quad's noise, the gap in tiles within which Living Quads cannot hold Row Houses or more ('quiet').
   // Level needs (rules habitatNeeds): 'allNeeds' | 'park' | 'clinic' | 'school' | 'transit' | 'freight' | 'shops' | 'quiet'
   // | 'demand:R|C|I' | 'happy:N' | 'residents:N' (homes within 12 tiles) | 'tech:<key>'. Demand, happiness and tech
-  // only gate growing; the others must also hold, or the quad shrinks back after SIM.shrinkDays.
-  { key: 'livingquad', retired: true, name: 'Living Quad', ver: 7, quad: 'R', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 120, parts: 5 }, days: 2, jobs: 0, upkeep: 1, power: 0, housing: 0,
+  // only gate growing; the others must also hold, or the quad shrinks back after SIM.quadShrinkDays (20 days).
+  { key: 'livingquad', name: 'Living Quad', ver: 7, quad: 'R', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 120, parts: 5 }, days: 2, jobs: 0, upkeep: 1, power: 0, housing: 0,
     levels: [{ name: 'Zoned lot', housing: 0, power: 0, upkeep: 1 },
       { name: 'Cottages', housing: 40, power: -2, upkeep: 2, needs: ['demand:R'] },
-      { name: 'Row Houses', housing: 100, power: -4, upkeep: 3, needs: ['demand:R', 'allNeeds', 'park', 'quiet'] },
-      { name: 'Courtyard Flats', housing: 220, power: -8, upkeep: 5, needs: ['demand:R', 'allNeeds', 'park', 'quiet', 'shops', 'happy:55'] },
-      { name: 'Mid-rise', housing: 400, power: -14, upkeep: 8, needs: ['demand:R', 'allNeeds', 'park', 'quiet', 'shops', 'clinic', 'school', 'happy:60', 'tech:urbanplan'] },
-      { name: 'Residential Tower', housing: 700, power: -24, upkeep: 12, needs: ['demand:R', 'allNeeds', 'park', 'quiet', 'shops', 'clinic', 'school', 'transit', 'happy:65', 'tech:skyscrapers'] }],
+      { name: 'Row Houses', housing: 100, power: -4, upkeep: 3, needs: ['demand:R', 'allNeeds'] },
+      { name: 'Courtyard Flats', housing: 220, power: -8, upkeep: 5, needs: ['demand:R', 'allNeeds', 'park', 'clinic', 'quiet'] },
+      { name: 'Mid-rise', housing: 400, power: -14, upkeep: 8, needs: ['demand:R', 'allNeeds', 'park', 'clinic', 'quiet', 'shops', 'school', 'happy:55', 'tech:urbanplan'] },
+      { name: 'Residential Tower', housing: 700, power: -24, upkeep: 12, needs: ['demand:R', 'allNeeds', 'park', 'clinic', 'quiet', 'shops', 'school', 'transit', 'happy:60', 'tech:skyscrapers'] }],
     text: 'Zone a residential lot: it builds itself up, from Cottages (40) to a Residential Tower (700), while people want homes and the street has what it needs.' },
-  { key: 'marketquad', retired: true, name: 'Market Quad', ver: 7, quad: 'C', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 150, parts: 10 }, days: 2, jobs: 0, upkeep: 1, power: 0,
+  { key: 'marketquad', name: 'Market Quad', ver: 7, quad: 'C', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 150, parts: 10 }, days: 2, jobs: 0, upkeep: 1, power: 0,
     levels: [{ name: 'Market lot', jobs: 0, power: 0, upkeep: 1 },
-      { name: 'Stalls', jobs: 6, power: -2, upkeep: 1, makes: { credits: 15 }, shoppers: 150, service: 2, radius: 8, needs: ['demand:C', 'residents:40'] },
-      { name: 'Shops', jobs: 15, power: -4, upkeep: 2, makes: { credits: 40 }, shoppers: 400, service: 3, radius: 9, needs: ['demand:C', 'residents:150', 'allNeeds'] },
-      { name: 'Market Hall', jobs: 30, power: -8, upkeep: 4, makes: { credits: 90 }, shoppers: 900, service: 4, radius: 10, needs: ['demand:C', 'residents:400', 'allNeeds', 'happy:55', 'tech:commerce'] },
-      { name: 'Arcade', jobs: 55, power: -14, upkeep: 7, makes: { credits: 180 }, shoppers: 1800, service: 5, radius: 12, needs: ['demand:C', 'residents:900', 'allNeeds', 'happy:60', 'tech:urbanplan'] },
-      { name: 'Trade Tower', jobs: 100, power: -24, upkeep: 12, makes: { credits: 360 }, shoppers: 3500, service: 6, radius: 14, needs: ['demand:C', 'residents:1800', 'allNeeds', 'transit', 'happy:65', 'tech:skyscrapers'] }],
+      { name: 'Stalls', jobs: 6, power: -2, upkeep: 1, makes: { credits: 15 }, shoppers: 150, service: 2, radius: 8, needs: ['demand:C', 'residents:20'] },
+      { name: 'Shops', jobs: 15, power: -4, upkeep: 2, makes: { credits: 40 }, shoppers: 400, service: 3, radius: 9, needs: ['demand:C', 'residents:60', 'allNeeds'] },
+      { name: 'Market Hall', jobs: 30, power: -8, upkeep: 4, makes: { credits: 90 }, shoppers: 900, service: 4, radius: 10, needs: ['demand:C', 'residents:200', 'allNeeds', 'tech:commerce'] },
+      { name: 'Arcade', jobs: 55, power: -14, upkeep: 7, makes: { credits: 180 }, shoppers: 1800, service: 5, radius: 12, needs: ['demand:C', 'residents:500', 'allNeeds', 'happy:55', 'tech:urbanplan'] },
+      { name: 'Trade Tower', jobs: 100, power: -24, upkeep: 12, makes: { credits: 360 }, shoppers: 3500, service: 6, radius: 14, needs: ['demand:C', 'residents:1200', 'allNeeds', 'transit', 'happy:60', 'tech:skyscrapers'] }],
     text: 'Zone a commercial lot: stalls grow into shops, a market hall and a Trade Tower while there are shoppers. Jobs, credits, and shopping for the homes around it.' },
-  { key: 'workshopquad', retired: true, name: 'Workshop Quad', ver: 7, quad: 'I', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 150, parts: 10 }, days: 2, jobs: 0, upkeep: 1, power: 0,
+  { key: 'workshopquad', name: 'Workshop Quad', ver: 7, quad: 'I', cat: 'homes', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 150, parts: 10 }, days: 2, jobs: 0, upkeep: 1, power: 0,
     levels: [{ name: 'Industrial lot', jobs: 0, power: 0, upkeep: 1 },
       { name: 'Workshops', jobs: 10, power: -3, upkeep: 1, makes: { parts: 3 }, nuisance: 2, needs: ['demand:I'] },
       { name: 'Machine Shops', jobs: 24, power: -6, upkeep: 2, makes: { parts: 7 }, nuisance: 3, needs: ['demand:I', 'allNeeds'] },
@@ -259,13 +261,13 @@ export const BUILDINGS = [
       { name: 'Factory', jobs: 140, power: -40, upkeep: 12, makes: { parts: 35, alloy: 10 }, nuisance: 6, needs: ['demand:I', 'allNeeds', 'freight', 'tech:automation'] }],
     text: 'Zone an industrial lot: workshops grow into a Factory while people want work. Jobs and parts (alloy later), but the noise keeps Living Quads nearby small.' },
   { key: 'school', name: 'School', ver: 7, cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 500, parts: 30 }, days: 5, jobs: 8, upkeep: 4, power: -4, radius: 10, service: 3, makes: { research: 2 }, tech: 'schooling',
-    text: 'Classrooms and a playing field: happiness for homes in range and a little research.' },
+    text: 'Classrooms and a playing field: happiness for homes in range, a little research, and Living Quads in range can grow into Mid-rises.' },
   { key: 'transit', name: 'Transit Station', ver: 7, cat: 'services', size: 2, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 900, parts: 60 }, days: 6, jobs: 10, upkeep: 6, power: -10, radius: 10, service: 2, tech: 'urbanplan',
-    text: 'Trams through the chambers: Habitats and Tower Blocks in range grow in 2 days instead of 5, and Tower Blocks in range can become Skyscrapers.' },
+    text: 'Trams through the chambers: Habitats and Tower Blocks in range grow in 2 days instead of 5, quads in 1 day instead of 2, and Tower Blocks and quads in range can reach their top level.' },
   { key: 'monorail', name: 'Monorail Stop', ver: 7, cat: 'services', size: 1, zone: 'interior', on: ['deck', 'plain', 'fertile', 'poor', 'rock', 'conduit', 'hills'], decks: ['upper', 'main', 'lower'], cost: { credits: 800, parts: 60 }, days: 5, jobs: 4, upkeep: 6, power: -8, radius: 16, service: 2, tech: 'skyscrapers',
     text: 'A stop on the high line: a Transit Station on one tile, reaching 16 tiles.' },
   { key: 'freightyard', name: 'Freight Yard', ver: 7, cat: 'industry', size: 2, zone: 'interior', on: ['deck', 'plain', 'poor', 'rock', 'conduit'], decks: ['upper', 'main', 'lower'], cost: { credits: 600, parts: 40 }, days: 5, jobs: 8, upkeep: 4, power: -6, radius: 10, storage: { parts: 300, alloy: 200 }, tech: 'lightindustry',
-    text: 'Cranes and containers: stores 300 parts and 200 alloy, and Smelters and Fabricators in range make a quarter more.' },
+    text: 'Cranes and containers: stores 300 parts and 200 alloy; Smelters, Fabricators and Workshop Quads in range make a quarter more, and Workshop Quads in range can grow into Assembly Plants and Factories.' },
   // ---------------------------------------------------------------- version 8 (docs/COLONY-V8.md): landmarks and incidents
   // Landmarks (`landmark`): one per colony, big and slow to build, each with a lasting bonus (js/colony/landmarks.js reads
   // them). `landmark` lists the requirement, met once and then kept: { pop, chambers: N | 'main' (every main-deck

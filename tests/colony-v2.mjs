@@ -76,7 +76,7 @@ function walk(v, path, out) {
   // (17 version 2 buildings carry a tech; version 3 adds 9 more, version 6 9 more (the Granary is open from the start), also locked;
   // version 7 4 more: School, Transit Station, Monorail Stop, Freight Yard (the quads are open from the start);
   // version 8 1 more: the Flare Shelter (the landmarks wait on their own requirements, not a `tech`);
-  // version 9 4 more: the Hotel, Promenade, Theatre and Casino (the wonders wait on their requirements; the quads are retired);
+  // version 9 4 more: the Hotel, Promenade, Theatre and Casino (the wonders wait on their requirements; the quads, retired then reinstated, carry no tech);
   // version 10 3 more: the Coffee Terrace, Vineyard Dome and Artisan Workshop (Luxury Goods))
   check(v2keys.length === 17 + 9 + 9 + 4 + 1 + 4 + 3 && v2keys.every((k) => !s.unlocked.includes(k)) && !s.unlocked.includes('lab'), 'nothing of version 2 is available at the start');
   const bl = R.buildable(s);

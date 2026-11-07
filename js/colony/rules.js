@@ -136,7 +136,8 @@ export function upgradeState(state) {
   ensureWonders(state);   // version 9
   ensureGardens(state); ensureLuxuries(state); ensureNeighbours(state);   // version 10
   if (state.unlocked) for (const d of BUILDINGS) if (d.decks && !d.tech && !d.unlock && !d.fixed && !d.retired && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
-  // version 9: the quads are retired (owner, 2026-11-07): never unlocked again, though those standing keep working
+  // version 9: a retired building is never unlocked again (the quads were, briefly; reinstated on 2026-11-07, the loop
+  // above puts them back on a version 9 save's menu)
   if (state.unlocked) state.unlocked = state.unlocked.filter((k) => !BUILDING[k]?.retired);
   return state;
 }
@@ -474,7 +475,8 @@ export function placeCheck(state, key, x, y, opts = {}) {
   return null;
 }
 // Why a locked building is locked: a version 2 building waits on its tech, the rest on 80 colonists.
-// Version 9 (docs/COLONY-V9.md): the growable quads are retired; those already standing keep working.
+// Version 9 (docs/COLONY-V9.md): a `retired` building is no longer built (those standing keep working). Nothing carries it
+// now: the quads it was made for were reinstated on 2026-11-07.
 const retiredWhy = (d) => `${d.name}s are no longer built: zoned lots are retired. Build Habitats and Tower Blocks instead (those already standing keep working).`;
 const lockedWhy = (d) => (d.tech && TECH[d.tech] ? `Research ${TECH[d.tech].name}.` : `The ${d.name} unlocks at ${d.unlock?.pop ?? 80} colonists.`);
 // A cost as this colony pays it: scaled by difficulty (js/colony/difficulty.js) and, given the
@@ -882,15 +884,19 @@ export function habitatNeeds(state, b, field, ctx = {}) {
 }
 
 // ---------------------------------------------------------------- version 7: zoning (docs/COLONY-V7.md)
-// Quads are 2×2 lots (data/buildings.js `quad`) that grow like Habitats. RCI demand says what the colony wants:
-//   R (homes)  = the next transport's likely size + free jobs − free homes
-//   C (shops)  = residents − the shoppers Market Quads serve
-//   I (work)   = jobless colonists + a pull for parts (+20 with the parts store empty, −20 full)
-// in units of homes, shoppers and jobs. A quad that grows spends its zone's demand by what it adds (sim.js).
+// Quads are 2×2 lots (data/buildings.js `quad`) that grow like Habitats. RCI demand says what the colony wants, in
+// units of homes, shoppers and jobs. Reinstated on 2026-11-07 (docs/COLONY-V7.md "Reinstated") with a lenient gauge, so
+// that even a small colony's first lots grow at once and a town of quads keeps ahead of its transports:
+//   R (homes)  = max(80, 10% of colonists) + the next 2 transports' likely size + free jobs − half the free homes
+//   C (shops)  = 40 + 1.5 × colonists − the shoppers Market Quads serve
+//   I (work)   = 30 + 5% of colonists + (colonists − jobs) + a pull for parts (+20 with the store empty, −20 full)
+//                (a small cushion of open jobs, not more: staffing is colony-wide, so idle jobs would slow everything)
+// A quad that grows spends only half of what it adds from its zone's demand that day (QUAD.spend), so several lots grow
+// at once (sim.js step 8).
 // Version 8 (docs/COLONY-V8.md): the land value (landvalue.js, 0–100) a Living or Market Quad needs to grow into
 // a level, by the levels' index (4 = level 5, 5 = level 6). It only gates growing, like happiness.
-// Version 9 (docs/COLONY-V9.md): the quads are retired and their land-value gates dropped (an old save's quads grow on
-// their other needs); land value now speeds Habitats and Tower Blocks instead (VALUE_GROW, sim.js step 8).
+// Version 9 (docs/COLONY-V9.md): the quads' land-value gates dropped (they stay dropped now the quads are reinstated:
+// the owner wants them to grow faster); land value speeds Habitats and Tower Blocks instead (VALUE_GROW, sim.js step 8).
 export const QUAD_VALUE = {};
 export const VALUE_GROW = { at: 60, days: 1, keys: new Set(['habitat', 'towerblock']) };
 // Version 9: a Hotel's 'leisure' need: a working building with `leisure` on its deck within LEISURE_REACH tiles.
@@ -899,7 +905,9 @@ export function leisureNear(state, b) {
   const c = centre(b);
   return state.buildings.some((s) => s.id !== b.id && (spec(s).leisure || 0) > 0 && active(s) && deckOf(s) === deckOf(b) && (() => { const e = centre(s); return Math.max(Math.abs(e.x - c.x), Math.abs(e.y - c.y)) <= LEISURE_REACH; })());
 }
-export const QUAD = { residentsRadius: 12, transport: 20, hall: 0.5, hallMax: 3, partsPull: 40, scale: 0.1, scaleMin: 40 };
+export const QUAD = { residentsRadius: 12, transport: 20, hall: 0.5, hallMax: 3, partsPull: 40, scale: 0.1, scaleMin: 40,
+  // reinstated (2026-11-07): the lenient gauge (see above)
+  baseR: 80, baseRShare: 0.1, pipeline: 2, freeHomesWeight: 0.5, baseC: 40, perC: 1.5, baseI: 30, perI: 0.05, spend: 0.5 };
 export const ZONE_NAME = { R: 'Residential', C: 'Commercial', I: 'Industrial' };
 export const TRANSIT_KEYS = new Set(['transit', 'monorail']);
 const FREIGHT_KEYS = new Set(['freightyard']);
@@ -934,6 +942,8 @@ export function demandOf(state) {
   const pop = state.pop || 0, housing = housingOf(state), jobs = jobsOf(state);
   const halls = Math.min(QUAD.hallMax, state.buildings.filter((b) => b.key === 'arrivals' && active(b)).length);
   const arriving = Math.round((QUAD.transport + Math.floor(pop / 100)) * (1 + QUAD.hall * halls));
+  const pipeline = arriving * QUAD.pipeline, baseR = Math.max(QUAD.baseR, Math.round(pop * QUAD.baseRShare));
+  const wantShops = Math.round(QUAD.baseC + pop * QUAD.perC), baseI = Math.round(QUAD.baseI + pop * QUAD.perI);
   const freeJobs = Math.max(0, jobs - pop), freeHomes = housing - pop;
   let shoppers = 0;
   for (const b of state.buildings) if (b.key === 'marketquad' && active(b)) shoppers += spec(b).shoppers || 0;
@@ -942,12 +952,12 @@ export function demandOf(state) {
   const scale = Math.max(QUAD.scaleMin, pop * QUAD.scale);
   const z = (units, why) => ({ units: Math.round(units), value: Math.max(-1, Math.min(1, units / scale)), why });
   return {
-    R: z(arriving + freeJobs - freeHomes, { arriving, freeJobs, freeHomes }),
-    C: z(pop - shoppers, { residents: pop, shoppers }),
-    I: z(pop - jobs + partsPull, { jobless: pop - jobs, partsPull }),
+    R: z(baseR + pipeline + freeJobs - Math.round(freeHomes * QUAD.freeHomesWeight), { base: baseR, arriving, pipeline, freeJobs, freeHomes }),
+    C: z(wantShops - shoppers, { residents: pop, wantShops, shoppers }),
+    I: z(baseI + pop - jobs + partsPull, { base: baseI, jobless: pop - jobs, partsPull }),
   };
 }
-// What a quad growing from `level` adds to its zone (homes, shoppers or jobs): what it spends of the demand.
+// What a quad growing from `level` adds to its zone (homes, shoppers or jobs); it spends QUAD.spend of it from the demand.
 export function quadAdds(b) {
   const d = BUILDING[b.key], f = { R: 'housing', C: 'shoppers', I: 'jobs' }[d.quad], lv = d.levels || [];
   return (lv[b.level]?.[f] || 0) - (lv[b.level - 1]?.[f] || 0);

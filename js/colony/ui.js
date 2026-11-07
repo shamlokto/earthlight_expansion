@@ -216,7 +216,7 @@ function cardIcon(b) {
 // The help dialog's sections (colony.html #dHelp). Short sentences, pictures from the card art.
 // diff: the difficulty row (js/colony/difficulty.js) the numbers are quoted for, or null.
 export const HELP_SECTIONS = [['goal', 'The goal'], ['time', 'Time'], ['build', 'Building'], ['res', 'Resources'], ['chambers', 'Chambers'],
-  ['homes', 'Homes & happiness'], ['landvalue', 'Land value'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['landmarks', 'Landmarks'], ['wonders', 'Wonders'], ['tourism', 'Tourism'], ['ark', 'The Ark'], ['districts', 'Districts'], ['gardens', 'Eden\'s gardens'], ['luxuries', 'Luxuries'], ['neighbours', 'Neighbours'], ['incidents', 'Incidents'], ['petitions', 'Petitions'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['photo', 'Photo mode'], ['tips', 'First 10 days']];
+  ['homes', 'Homes & happiness'], ['zoning', 'Zoning and growth'], ['landvalue', 'Land value'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['landmarks', 'Landmarks'], ['wonders', 'Wonders'], ['tourism', 'Tourism'], ['ark', 'The Ark'], ['districts', 'Districts'], ['gardens', 'Eden\'s gardens'], ['luxuries', 'Luxuries'], ['neighbours', 'Neighbours'], ['incidents', 'Incidents'], ['petitions', 'Petitions'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['photo', 'Photo mode'], ['tips', 'First 10 days']];
 export function helpHtml(art, diff) {
   const pic = (slot, alt = '') => { const u = art?.(slot); return u ? `<img src="${esc(u)}" alt="${esc(alt)}" loading="lazy">` : ''; };
   const card = (key) => { const u = art?.(`card/${key}`); return `<figure class="cl-hfig">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : cardIcon(BUILDING[key])}<figcaption>${esc(BUILDING[key]?.name || key)}</figcaption></figure>`; };
@@ -266,7 +266,17 @@ export function helpHtml(art, diff) {
     <p><b>Happiness</b> (top bar, click it for the breakdown) starts at 50. Needs met add, shortages take a lot away. Parks add. High tax takes away.</p>
     <p>On ${esc(name)}, a <b>transport</b> calls every <b>${every} days</b>. It brings new colonists if happiness is at least <b>${happy}</b>, there are <b>free homes</b>, and food, water and air are not short.</p>
     <p><b>Tax</b> (top bar slider) pays upkeep. 10% is neutral. Lower makes people happier; higher makes them unhappy.</p>
-    <p><b>Growing faster.</b> Later, <b>Tower Blocks</b> grow the same way (Tower 300, Spire 450, and with <b>Skyscrapers</b> and transit in reach a Skyscraper of 600). <b>Schools</b> make homes happier, a <b>Transit Station</b> or <b>Monorail Stop</b> in reach makes Habitats and Tower Blocks grow in 2 days instead of 5, and homes on land worth <b>60</b> or more grow a day sooner.</p>`)}
+    <p><b>Growing faster.</b> Later, <b>Tower Blocks</b> grow the same way (Tower 300, Spire 450, and with <b>Skyscrapers</b> and transit in reach a Skyscraper of 600). <b>Schools</b> make homes happier, a <b>Transit Station</b> or <b>Monorail Stop</b> in reach makes Habitats and Tower Blocks grow in 2 days instead of 5, and homes on land worth <b>60</b> or more grow a day sooner. Or zone <b>Living Quads</b> (below).</p>`)}
+  ${sec('zoning', 'Zoning and growth', card('livingquad') + card('marketquad') + card('workshopquad'), `
+    <p><b>Quads</b> are cheap 2×2 lots you zone in <b>Homes &amp; parks</b>, from day 1. You don't build them up: they <b>grow by themselves</b>, a level every <b>2 days</b> (every day near a <b>Transit Station</b> or Monorail Stop), while their zone has demand and their conditions hold, and fall back a level only if a condition fails for <b>20 days</b>.</p>
+    <ul class="cl-hsteps">
+      <li><b>Living Quad</b> (homes): Cottages 40 → Row Houses 100 → Courtyard Flats 220 → Mid-rise 400 → Residential Tower 700. Cottages and Row Houses need only demand and food, water, air and power for everyone; Courtyard Flats a park and a Clinic in reach, and no workshop noise.</li>
+      <li><b>Market Quad</b> (shops): Stalls → Shops → Market Hall → Arcade → Trade Tower. Jobs, credits every day, and <b>shopping</b> happiness for the homes around it. It needs some homes nearby.</li>
+      <li><b>Workshop Quad</b> (work): Workshops → Machine Shops → Works → Assembly Plant → Factory. Jobs and parts, later alloy; a <b>Freight Yard</b> in range makes it a quarter more. It is <b>noisy</b>: keep Living Quads a few tiles away or they stop at Row Houses.</li>
+    </ul>
+    <p>Click a quad to see <b>To grow into …</b>: every condition with a ✓ or ✗, such as a park in reach, a Clinic, a School, shops, happiness, or a tech to research.</p>
+    <p>The <b>R C I</b> bars at the top of the build menu show <b>demand</b>. There is always some, even in a small colony, so the first lots grow at once. <b>R</b> counts the next two transports and free jobs, less half the free homes. <b>C</b> grows with the residents and falls as Market Quads serve them. <b>I</b> grows with the colonists and the jobless, and when parts run low. A quad grows only while its bar is up, and each one that grows uses up half of what it adds, so several grow together.</p>
+    <p>Research <b>Schools</b>, <b>Commerce</b>, <b>Light Industry</b>, <b>Urban Planning</b>, <b>Skyscrapers</b> and <b>Automation</b> for the upper levels. Quads are a cheap, quick way to grow a town; Habitats and Tower Blocks are placed where you want them and need no demand.</p>`)}
   ${sec('landvalue', 'Land value', '', `
     <p><b>Land value</b> says how much people want to live and shop on a tile, from 0 to 100. Press <b>Value</b> in the overlay bar to see it as a heat map: <b>blue</b> is low, <b>green</b> middling, <b>yellow</b> high. Click any tile and the inspector shows its value and the main reasons.</p>
     <ul class="cl-hsteps">
@@ -984,8 +994,28 @@ export function createUI(root, api) {
     if (matchMedia('(max-width: 760px)').matches) $('.cl-build').classList.remove('open');
   });
 
-  // Version 7 had RCI demand bars here; version 9 (docs/COLONY-V9.md) retired the quads, and the bars with them.
-  function renderRci() { if (rciEl && !rciEl.hidden) rciEl.hidden = true; }
+  // Version 7 (docs/COLONY-V7.md): RCI demand, three small bars in the build menu's header (rules.demandOf).
+  // A bar rises when the colony wants more of that zone and sinks when it has too much. (Retired in version 9 with the
+  // quads; back since they were reinstated on 2026-11-07, with the lenient gauge.)
+  let rciSig = '';
+  function renderRci() {
+    if (!rciEl || typeof R.demandOf !== 'function') return;
+    let dm; try { dm = R.demandOf(S()); } catch { return; }
+    const sig = ['R', 'C', 'I'].map((z) => `${dm[z].units}:${Math.round(dm[z].value * 20)}`).join('|');
+    if (sig === rciSig) return;
+    rciSig = sig;
+    const w = dm.R.why, c = dm.C.why, i = dm.I.why;
+    const tips = {
+      R: `Residential demand ${signed(dm.R.units)}: a base of ${num(w.base)}, about ${num(w.pipeline)} arriving on the next two transports, ${num(w.freeJobs)} free jobs, less half of ${num(w.freeHomes)} free homes. Living Quads grow while it is above zero.`,
+      C: `Commercial demand ${signed(dm.C.units)}: ${num(c.residents)} residents want shops for ${num(c.wantShops)}; Market Quads serve ${num(c.shoppers)}. Market Quads grow while it is above zero.`,
+      I: `Industrial demand ${signed(dm.I.units)}: a base of ${num(i.base)}, ${signed(i.jobless)} colonists without work${i.partsPull ? `, ${signed(i.partsPull)} for parts (the parts store is ${i.partsPull > 0 ? 'low' : 'well stocked'})` : ''}. Workshop Quads grow while it is above zero.`,
+    };
+    rciEl.hidden = false;
+    rciEl.innerHTML = `<span class="cl-rcilabel" title="Zoning demand: what the colony wants more of. Zone Living, Market and Workshop Quads in Homes &amp; parks.">Demand</span>${['R', 'C', 'I'].map((z) => {
+      const v = dm[z].value, h = Math.round(Math.abs(v) * 100);
+      return `<span class="cl-rcibar z${z}" data-z="${z}" title="${esc(tips[z])}"><span class="cl-rcitrack"><i class="${v >= 0 ? 'up' : 'down'}" style="height:${h / 2}%"></i></span><b>${z}</b></span>`;
+    }).join('')}`;
+  }
 
   function buildMenu() {
     const s = S();
@@ -993,7 +1023,7 @@ export function createUI(root, api) {
     let list; try { list = R.buildable(s, dk); } catch { list = []; }
     const by = Object.fromEntries((list || []).map((o) => [o.key, o]));
     // version 7: the zoning lots lead Homes & parks, under the RCI bars
-    const items = BUILDINGS.filter((b) => b.cat === cat && !b.fixed && !b.retired).map((b) => {   // version 9: retired buildings are off the menu
+    const items = BUILDINGS.filter((b) => b.cat === cat && !b.fixed && !b.retired).sort((a, b) => (b.quad ? 1 : 0) - (a.quad ? 1 : 0)).map((b) => {   // version 9: retired buildings are off the menu
       const o = by[b.key] || { key: b.key, name: b.name, cost: b.cost, unlocked: !b.unlock && !b.tech, why: b.unlock ? `At ${b.unlock.pop} colonists` : '' };
       const cost = o.cost || b.cost;
       const poor = (cost.credits || 0) > (s.stock.credits || 0) || (cost.parts || 0) > (s.stock.parts || 0);

@@ -128,7 +128,7 @@ for (let y = 1; y < m.h - 8 && !probe; y++) for (let x = 1; x < w - 8 && !probe;
   s.happy = 50; drop(p);
 }
 
-// ---------------------------------------------------------------- growth (version 9: the quads are retired, their gates dropped)
+// ---------------------------------------------------------------- growth (version 9: the quads' land-value gates dropped; reinstated quads still have none)
 {
   const h = push('hotel', probe.x + 2, probe.y, { level: 2 });
   const need = R.habitatNeeds(s, h, R.parkField(s)).find((n) => n.need.startsWith('value:'));
@@ -138,7 +138,7 @@ for (let y = 1; y < m.h - 8 && !probe; y++) for (let x = 1; x < w - 8 && !probe;
   check(!R.habitatNeeds(s, h, R.parkField(s)).some((n) => n.need.startsWith('value:')), 'a Guest House does not');
   drop(h);
   const lq = push('livingquad', probe.x + 2, probe.y, { level: 4 });
-  check(!R.habitatNeeds(s, lq, R.parkField(s)).some((n) => n.need.startsWith('value:')) && !Object.keys(R.QUAD_VALUE).length, 'a retired quad in an old save no longer waits on land value');
+  check(!R.habitatNeeds(s, lq, R.parkField(s)).some((n) => n.need.startsWith('value:')) && !Object.keys(R.QUAD_VALUE).length, 'a quad no longer waits on land value (the gates stay dropped since the quads were reinstated)');
   drop(lq);
   check(R.habitatLevelReachable({ needs: ['value:40'] }), "'value:N' is a known need word");
   // Habitats and Tower Blocks on land worth 60 or more grow a day sooner (sim.js step 8)
