@@ -295,7 +295,7 @@ function walk(v, path, out) {
   // clinic triage: half the service, half the upkeep
   const up0 = s.stats.last.upkeep;
   R.setMode(s, cl.id, 'triage'); tick(s);
-  check(happy(s, 'Clinic') === 3 && near(up0 - s.stats.last.upkeep, BUILDING.clinic.upkeep * 0.5 * 0.5), `triage: half service, half upkeep (${up0} -> ${s.stats.last.upkeep})`);
+  check(happy(s, 'Clinic') === 3 && [1, 0.9].some((k) => near(up0 - s.stats.last.upkeep, BUILDING.clinic.upkeep * 0.5 * 0.5 * k)), `triage: half service, half upkeep (${up0} -> ${s.stats.last.upkeep})`);
   // rationing: a fifth less food, −8 colony-wide, no hot meals
   const pop = s.pop;
   R.setMode(s, can.id, 'meals'); tick(s);

@@ -947,9 +947,9 @@ export const KITS = {
   // ---------------------------------------------------------------- version 7 (docs/COLONY-V7.md): zoning and growth
   // The three quads are 2×2 lots that grow by level (1 = the empty lot, 6 = the top): each level is bigger and taller.
   // Residential reads cream and green, commercial blue and gold with striped awnings, industrial grey and orange.
-  livingquad: (level) => quadKit('R', level),
-  marketquad: (level) => quadKit('C', level),
-  workshopquad: (level) => quadKit('I', level),
+  livingquad: (level, mode, b) => quadKit('R', level, b),
+  marketquad: (level, mode, b) => quadKit('C', level, b),
+  workshopquad: (level, mode, b) => quadKit('I', level, b),
   // 2×2: a cream schoolhouse with a red roof and a bell cupola, a green playing field with goal posts and a flag.
   school: () => [
     box([1.96, 0.06, 1.96], [0, 0, 0], '#8a8e94'),
@@ -1283,8 +1283,10 @@ export const KITS = {
 // inside scaffolding of corner towers, and two tower cranes reaching over it. So it visibly grows, stage by stage.
 const TEAL = '#7ff0d0';
 const mix = (a, b, t) => { const p = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); const [x, y] = [p(a), p(b)]; return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
+// Version 11 (docs/COLONY-V11.md): the wonders grew two tiles; their kits, drawn for `kitSize`, scale up evenly (taller too).
+const scaleKit = (parts, f) => f === 1 ? parts : parts.map((p) => ({ ...p, size: p.size.map((v) => v * f), pos: p.pos.map((v) => v * f) }));
 function wonderKit(key, level, full) {
-  const n = BUILDING[key]?.levels?.length || 1, lv = Math.max(1, Math.min(n, level || 1)), parts = full();
+  const n = BUILDING[key]?.levels?.length || 1, lv = Math.max(1, Math.min(n, level || 1)), parts = scaleKit(full(), (BUILDING[key]?.size || 1) / (BUILDING[key]?.kitSize || BUILDING[key]?.size || 1));
   if (lv >= n) return parts;
   const size = BUILDING[key]?.size || 4, half = size / 2, H = kitHeight(parts), cut = Math.max(0.3, (H * lv) / n);
   const bare = lv === 1 ? '#9a968c' : '#a3aab4', t = lv === 1 ? 0.75 : 0.5;
@@ -1312,7 +1314,146 @@ function wonderKit(key, level, full) {
 // A quad at its level (version 7): 1 the empty lot, 2..6 ever bigger and taller. zone: 'R' | 'C' | 'I'.
 const LOT = { R: ['#7a8a5a', '#5fae4a'], C: ['#8a8e96', '#4ac0ff'], I: ['#7a6a5a', '#ff8a2a'] };
 const AWN = ['#ff6a6a', '#ffd23a', '#6ad0ff', '#7cc04a', '#ff8fd8', '#ffffff'];
-function quadKit(zone, level) {
+// Version 11 (docs/COLONY-V11.md): eight built levels and two merged ones. The version 7 kits keep their meaning
+// (LEGACY: new level → the old kit's level); the new levels and the megastructures have kits of their own below.
+const LEGACY = { R: { 2: 2, 3: 3, 4: 4, 6: 5, 7: 6 }, C: { 2: 2, 3: 3, 4: 4, 5: 5, 7: 6 }, I: { 2: 2, 3: 3, 4: 4, 6: 5, 7: 6 } };
+function quadKit(zone, level, b) {
+  const lv = Math.max(1, Math.min(11, level || 1));
+  if (lv >= 10) return b?.mega && b.mega.lead !== b.id ? [] : megaKit(zone, lv === 11 ? 4 : 2, b?.mega);   // the lead draws it all
+  if (lv === 1 || LEGACY[zone][lv]) return legacyQuadKit(zone, lv === 1 ? 1 : LEGACY[zone][lv]);
+  return newQuadKit(zone, lv);
+}
+const lift = (parts, dy) => parts.map((p) => ({ ...p, pos: [p.pos[0], p.pos[1] + dy, p.pos[2]] }));
+const litOf = (zone) => (w, d, x, y, z) => box([w + 0.02, 0.06, d + 0.02], [x, y, z], zone === 'I' ? '#ffb070' : zone === 'C' ? '#bfe8ff' : '#ffd98a', GLOW);
+const floors = (lit, w, d, x, z, y0, h, step = 0.28) => { const out = []; for (let k = 0.2; k < h - 0.05; k += step) out.push(lit(w, d, x, y0 + k, z)); return out; };
+function newQuadKit(zone, lv) {
+  const lit = litOf(zone);
+  const parts = [box([1.96, 0.05, 1.96], [0, 0, 0], zone === 'R' ? '#6a6e74' : zone === 'C' ? '#9a9ea6' : '#5a5e64')];
+  if (zone === 'R') {
+    if (lv === 5) {   // Garden Terraces: three stepped terraces of homes, each roof a garden, a pergola on top
+      let y = 0.05;
+      for (const [w, d, h, z] of [[1.9, 1.8, 0.55, 0], [1.6, 1.3, 0.5, -0.2], [1.2, 0.8, 0.45, -0.4]]) {
+        parts.push(box([w, h, d], [0, y, z], '#efe6d0', { slot: 'mat/hab-facade' }), ...floors(lit, w, d, 0, z, y, h, 0.22), box([w + 0.04, 0.06, d + 0.04], [0, y + h, z], '#5fae4a'));
+        y += h + 0.06;
+      }
+      parts.push(...lift(tree(-0.6, 0.7, 0.4, true), 0.62), ...lift(tree(0.6, 0.7, 0.4, true), 0.62), ...lift(tree(0.5, 0.25, 0.35, true), 1.18),
+        box([0.8, 0.04, 0.5], [0, y + 0.3, -0.4], '#c9a26a'), cyl([0.03, 0.3, 0.03], [-0.35, y, -0.4], '#c9a26a'), cyl([0.03, 0.3, 0.03], [0.35, y, -0.4], '#c9a26a'));
+    } else if (lv === 8) {   // Sky Tower: a slender glass tower with sky gardens every third of its height and a beacon
+      parts.push(box([1.9, 0.4, 1.9], [0, 0.05, 0], '#d8d0c0'), box([1.94, 0.05, 1.94], [0, 0.45, 0], '#5fae4a'));
+      const h = 5.6;
+      parts.push(box([1.1, h, 1.1], [0, 0.5, 0], '#e8eef4', { slot: 'mat/glass' }), ...floors(lit, 1.1, 1.1, 0, 0, 0.5, h, 0.3));
+      for (const y of [1.9, 3.8]) parts.push(box([1.3, 0.12, 1.3], [0, 0.5 + y, 0], '#5fae4a'), ...lift(tree(0.45, 0.45, 0.35, true), 0.62 + y), ...lift(tree(-0.45, -0.45, 0.35, true), 0.62 + y));
+      parts.push(box([0.8, 0.3, 0.8], [0, 0.5 + h, 0], '#c9d4de'), cyl([0.04, 1.0, 0.04], [0, 0.8 + h, 0], STEEL), dome([0.12, 0.1, 0.12], [0, 1.8 + h, 0], BEACON, GLOW));
+    } else {   // Crown Spire: a tall tapering spire of lit floors, a glowing gold crown ring and a needle
+      parts.push(box([1.9, 0.5, 1.9], [0, 0.05, 0], '#d8d0c0'), box([1.94, 0.05, 1.94], [0, 0.55, 0], '#5fae4a'), ...lift(tree(-0.75, 0.75, 0.5, true), 0.57), ...lift(tree(0.75, -0.75, 0.5, true), 0.57));
+      let y = 0.6;
+      for (const [w, h] of [[1.4, 2.2], [1.15, 2.0], [0.9, 1.8], [0.6, 1.2]]) {
+        parts.push(box([w, h, w], [0, y, 0], '#f4efe4', { slot: 'mat/hab-facade' }), ...floors(lit, w, w, 0, 0, y, h, 0.28), box([w + 0.08, 0.06, w + 0.08], [0, y + h, 0], '#d9b23a'));
+        y += h + 0.06;
+      }
+      parts.push(torus([0.9, 0.08, 0.9], [0, y - 0.6, 0], '#ffd23a', GLOW), cyl([0.03, 1.4, 0.03], [0, y, 0], '#f4f6f8'), dome([0.1, 0.1, 0.1], [0, y + 1.4, 0], BEACON, GLOW));
+    }
+    return parts;
+  }
+  if (zone === 'C') {
+    if (lv === 6) {   // Galleria: a glass-roofed shopping street between two arcaded blocks, a dome over the crossing
+      for (const x of [-0.62, 0.62]) parts.push(box([0.66, 1.9, 1.86], [x, 0.05, 0], '#efe6dc', { slot: 'mat/hab-facade' }), ...floors(lit, 0.66, 1.86, x, 0, 0.05, 1.9, 0.32));
+      parts.push(box([0.6, 0.05, 1.86], [0, 0.05, 0], '#d8c070'), cyl([0.6, 1.86, 0.6], [0, 1.6, 0], '#bfe8ff', { rot: [HALF_PI, 0, 0], glow: true }),
+        cyl([0.5, 0.4, 0.5], [0, 1.95, 0], '#e8e0d0'), dome([0.7, 0.55, 0.7], [0, 2.35, 0], '#9ad8f0'), cyl([0.03, 0.4, 0.03], [0, 2.9, 0], '#d9b23a'), dome([0.08, 0.08, 0.08], [0, 3.3, 0], '#ffd23a', GLOW));
+    } else if (lv === 8) {   // Exchange: twin glass towers over a trading floor, a lit ticker band, a sky bridge
+      parts.push(box([1.92, 0.7, 1.92], [0, 0.05, 0], '#d8dce4'), box([1.94, 0.12, 1.94], [0, 0.35, 0], '#ffd23a', GLOW));
+      for (const [x, h] of [[-0.48, 5.4], [0.48, 6.0]]) {
+        parts.push(box([0.8, h, 0.9], [x, 0.75, 0], '#3a7ab4', { slot: 'mat/glass' }));
+        for (let y = 0.3; y < h - 0.1; y += 0.3) parts.push(box([0.82, 0.04, 0.92], [x, 0.75 + y, 0], '#bfe8ff', GLOW));
+        parts.push(box([0.6, 0.3, 0.7], [x, 0.75 + h, 0], '#2a5a8a'), cyl([0.03, 0.6, 0.03], [x, 1.05 + h, 0], STEEL));
+      }
+      parts.push(box([0.3, 0.25, 0.4], [0, 4.2, 0], '#bfe8ff', GLOW), dome([0.08, 0.08, 0.08], [0.48, 7.35, 0], BEACON, GLOW));
+    } else {   // Grand Bazaar: a great glowing dome on a ring of arcades, four slim towers with lanterns
+      parts.push(box([1.94, 0.9, 1.94], [0, 0.05, 0], '#efe0c8', { slot: 'mat/hab-facade' }), box([1.96, 0.25, 1.96], [0, 0.2, 0], '#ffd98a', GLOW));
+      for (let k = 0; k < 6; k++) parts.push(box([0.3, 0.05, 0.3], [-0.75 + k * 0.3, 0.6, 1.0], AWN[k], { rot: [0.35, 0, 0] }));
+      parts.push(cyl([1.5, 0.9, 1.5], [0, 0.95, 0], '#e8d8b8'), dome([1.5, 1.4, 1.5], [0, 1.85, 0], '#ffcf6a', GLOW), cyl([0.2, 0.6, 0.2], [0, 3.25, 0], '#d9b23a'), dome([0.25, 0.25, 0.25], [0, 3.85, 0], '#ffd23a', GLOW));
+      for (const [x, z] of [[-0.82, -0.82], [0.82, -0.82], [-0.82, 0.82], [0.82, 0.82]]) parts.push(cyl([0.22, 7.0, 0.22], [x, 0.05, z], '#f0e6d4'), box([0.26, 0.06, 0.26], [x, 4.6, z], '#d9b23a'), cyl([0.26, 0.3, 0.26], [x, 7.05, z], '#ffd98a', GLOW), cone([0.26, 0.6, 0.26], [x, 7.35, z], '#d9b23a'));
+    }
+    return parts;
+  }
+  const saw = (x, z, w, d, y, n) => { const out = []; for (let k = 0; k < n; k++) out.push(box([w / n, 0.06, d], [x - w / 2 + (k + 0.5) * (w / n), y + 0.06, z], '#9aa3ad', { rot: [0, 0, 0.5] }), box([0.02, 0.1, d], [x - w / 2 + (k + 0.9) * (w / n), y + 0.02, z], '#7fe0ff', GLOW)); return out; };
+  const stack = (x, z, h, r = 0.12) => [cyl([r, h, r], [x, 0.05, z], '#8a7a6a'), box([r + 0.02, 0.06, r + 0.02], [x, 0.05 + h * 0.8, z], HAZARD), cyl([r * 0.8, 0.06, r * 0.8], [x, 0.05 + h, z], '#ff8a2a', GLOW)];
+  if (lv === 5) {   // Foundry: a dark casting hall, a glowing crucible and pouring ladle, two hot stacks
+    parts.push(box([1.5, 0.95, 1.12], [-0.2, 0.05, -0.3], '#7a726a'), ...saw(-0.2, -0.3, 1.5, 1.12, 1.0, 4), lit(1.5, 1.12, -0.2, 0.45, -0.3),
+      ...stack(0.72, -0.7, 1.75, 0.13), ...stack(0.72, -0.25, 1.6, 0.13), cyl([0.34, 0.4, 0.34], [0.45, 0.05, 0.6], '#5a5048'), cyl([0.28, 0.06, 0.28], [0.45, 0.45, 0.6], '#ff6a1a', GLOW),
+      box([0.6, 0.05, 0.1], [-0.2, 0.06, 0.6], '#ff8a2a', GLOW));
+  } else if (lv === 8) {   // Robotic Works: a clean white hall with a blue-lit roof, robot arms in the yard, a drone mast
+    parts.push(box([1.9, 1.6, 1.3], [0, 0.05, -0.3], '#e8eef4'), box([1.92, 0.1, 1.32], [0, 1.65, -0.3], '#4ac0ff', GLOW), lit(1.9, 1.3, 0, 0.5, -0.3), lit(1.9, 1.3, 0, 1.05, -0.3),
+      ...stack(-0.75, 0.65, 3.3, 0.12), ...stack(-0.4, 0.68, 3.0, 0.12));
+    for (const x of [0.1, 0.6]) parts.push(cyl([0.12, 0.3, 0.12], [x, 0.05, 0.6], '#ff8a2a'), box([0.08, 0.5, 0.08], [x, 0.35, 0.6], '#ffd23a', { rot: [0, 0, 0.5] }), box([0.3, 0.06, 0.06], [x + 0.2, 0.75, 0.6], '#ffd23a'));
+    parts.push(cyl([0.04, 1.6, 0.04], [0.8, 1.7, -0.8], STEEL), dome([0.08, 0.08, 0.08], [0.8, 3.3, -0.8], '#4ac0ff', GLOW));
+  } else {   // Megafactory: a vast stepped plant with a glowing roof band, a cooling tower, a row of tall stacks
+    parts.push(box([1.94, 1.8, 1.4], [0, 0.05, -0.25], '#7e7870'), ...saw(0, -0.25, 1.94, 1.4, 1.85, 7), lit(1.94, 1.4, 0, 0.5, -0.25), lit(1.94, 1.4, 0, 1.0, -0.25), lit(1.94, 1.4, 0, 1.5, -0.25),
+      box([1.0, 0.6, 0.6], [-0.4, 2.0, -0.25], '#8a847c'), box([1.02, 0.06, 0.62], [-0.4, 2.35, -0.25], '#ff8a2a', GLOW));
+    for (let k = 0; k < 5; k++) parts.push(...stack(-0.8 + k * 0.4, 0.72, 3.3 + 0.18 * k, 0.12));
+    parts.push(cyl([0.55, 1.6, 0.55], [0.6, 2.0, -0.4], '#c9ced6'), cyl([0.45, 0.1, 0.45], [0.6, 3.6, -0.4], '#e8eef4'));
+  }
+  return parts;
+}
+// The megastructures (version 11): drawn on the lead quad over the whole block, `w`×`h` tiles (4×2, 2×4 or 4×4).
+// Parts are laid out for a block 4 wide (x) and `h` deep, then turned for a 2×4 block, then moved to the block's centre.
+function megaKit(zone, n, mega) {
+  const w = mega?.w || 4, h = mega?.h || (n === 4 ? 4 : 2), turn = h > w, W = turn ? h : w, D = turn ? w : h;
+  const lit = litOf(zone), parts = [box([W - 0.04, 0.08, D - 0.04], [0, 0, 0], zone === 'R' ? '#6a6e74' : zone === 'C' ? '#9a9ea6' : '#5a5e64')];
+  const saw = (x, z, sw, sd, y, k) => { const out = []; for (let i = 0; i < k; i++) out.push(box([sw / k, 0.08, sd], [x - sw / 2 + (i + 0.5) * (sw / k), y + 0.08, z], '#9aa3ad', { rot: [0, 0, 0.5] })); return out; };
+  const stack = (x, z, sh, r = 0.15) => [cyl([r, sh, r], [x, 0.08, z], '#8a7a6a'), box([r + 0.03, 0.08, r + 0.03], [x, 0.08 + sh * 0.8, z], HAZARD), cyl([r * 0.8, 0.08, r * 0.8], [x, 0.08 + sh, z], '#ff8a2a', GLOW)];
+  if (zone === 'R' && n === 2) {   // Twin Spires: two tapering towers on a green podium, joined by glowing sky bridges
+    parts.push(box([3.9, 0.6, 1.9], [0, 0.08, 0], '#d8d0c0'), box([3.94, 0.06, 1.94], [0, 0.68, 0], '#5fae4a'));
+    for (const x of [-1, 1]) {
+      let y = 0.74;
+      for (const [s, th] of [[1.5, 3.2], [1.2, 3.0], [0.9, 2.4], [0.55, 1.2]]) { parts.push(box([s, th, s], [x, y, 0], '#f4efe4', { slot: 'mat/hab-facade' }), ...floors(lit, s, s, x, 0, y, th, 0.3), box([s + 0.08, 0.06, s + 0.08], [x, y + th, 0], '#d9b23a')); y += th + 0.06; }
+      parts.push(cyl([0.04, 1.6, 0.04], [x, y, 0], '#f4f6f8'), dome([0.12, 0.12, 0.12], [x, y + 1.6, 0], BEACON, GLOW));
+    }
+    for (const y of [2.6, 5.4, 7.6]) parts.push(box([0.8, 0.3, 0.5], [0, y, 0], '#bfe8ff', GLOW));
+    parts.push(torus([3.0, 0.08, 1.4], [0, 8.2, 0], '#ffd23a', GLOW));
+  } else if (zone === 'R') {   // Arcology Crown: a great stepped pyramid city with hanging gardens and a crown of light
+    let y = 0.08;
+    for (const [s, th] of [[3.9, 1.4], [3.3, 1.6], [2.7, 1.8], [2.1, 1.8], [1.5, 1.6], [0.9, 1.4]]) {
+      parts.push(box([s, th, s], [0, y, 0], '#f2ede2', { slot: 'mat/hab-facade' }), ...floors(lit, s, s, 0, 0, y, th, 0.32), box([s + 0.06, 0.08, s + 0.06], [0, y + th, 0], '#5fae4a'));
+      if (s > 1) for (const [x, z] of [[-1, -1], [1, 1], [-1, 1], [1, -1]]) parts.push(...lift(tree(x * (s / 2 - 0.15), z * (s / 2 - 0.15), 0.45, true), y + th + 0.08));
+      y += th + 0.08;
+    }
+    parts.push(torus([1.6, 0.1, 1.6], [0, y + 0.3, 0], '#ffd23a', GLOW), torus([1.1, 0.08, 1.1], [0, y + 0.9, 0], '#ffd23a', GLOW), cyl([0.05, 2.4, 0.05], [0, y, 0], '#f4f6f8'), dome([0.16, 0.16, 0.16], [0, y + 2.4, 0], BEACON, GLOW));
+  } else if (zone === 'C' && n === 2) {   // Grand Concourse: a long glass vault of shops between two glass towers
+    parts.push(box([3.9, 0.9, 1.9], [0, 0.08, 0], '#e8e0d0', { slot: 'mat/hab-facade' }), box([3.92, 0.3, 1.92], [0, 0.2, 0], '#bfe8ff', GLOW),
+      cyl([1.7, 2.6, 1.6], [0, 0.6, 0], '#9ad8f0', { rot: [0, 0, HALF_PI] }), box([2.64, 0.08, 0.08], [0, 1.45, 0], '#d9b23a'));
+    for (const x of [-1.55, 1.55]) {
+      parts.push(box([0.8, 6.6, 1.2], [x, 0.98, 0], '#3a7ab4', { slot: 'mat/glass' }));
+      for (let y = 0.3; y < 6.5; y += 0.34) parts.push(box([0.82, 0.04, 1.22], [x, 0.98 + y, 0], '#bfe8ff', GLOW));
+      parts.push(torus([0.7, 0.06, 0.9], [x, 7.6, 0], '#ffd23a', GLOW), cyl([0.03, 0.8, 0.03], [x, 7.58, 0], STEEL));
+    }
+  } else if (zone === 'C') {   // Megamall: a vast glowing glass dome on a ring of terraces, four glass towers at the corners
+    parts.push(box([3.9, 1.0, 3.9], [0, 0.08, 0], '#e8e0d0', { slot: 'mat/hab-facade' }), box([3.92, 0.3, 3.92], [0, 0.25, 0], '#bfe8ff', GLOW));
+    for (let k = 0; k < 10; k++) parts.push(box([0.34, 0.06, 0.34], [-1.55 + k * 0.34, 0.8, 1.98], AWN[k % AWN.length], { rot: [0.35, 0, 0] }));
+    parts.push(cyl([2.8, 0.8, 2.8], [0, 1.08, 0], '#e4e8f0'), dome([2.8, 2.4, 2.8], [0, 1.88, 0], '#9ad8f0', GLOW), cyl([0.3, 0.6, 0.3], [0, 4.25, 0], '#d9b23a'), dome([0.3, 0.3, 0.3], [0, 4.85, 0], '#ffd23a', GLOW));
+    for (const [x, z] of [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]]) {
+      parts.push(box([0.7, 7.4, 0.7], [x, 1.08, z], '#3a7ab4', { slot: 'mat/glass' }));
+      for (let y = 0.3; y < 7.3; y += 0.36) parts.push(box([0.72, 0.04, 0.72], [x, 1.08 + y, z], '#bfe8ff', GLOW));
+      parts.push(cone([0.5, 0.8, 0.5], [x, 8.48, z], '#d9b23a'), dome([0.08, 0.08, 0.08], [x, 9.28, z], BEACON, GLOW));
+    }
+  } else if (n === 2) {   // Industrial Complex: two long sawtooth halls, a conveyor bridge and a row of tall stacks
+    for (const z of [-0.45, 0.45]) parts.push(box([3.8, 1.6, 0.8], [0, 0.08, z], '#8a847c'), ...saw(0, z, 3.8, 0.8, 1.7, 10), lit(3.8, 0.8, 0, 0.5, z), lit(3.8, 0.8, 0, 1.1, z));
+    parts.push(box([3.6, 0.14, 0.2], [0, 1.95, 0], HAZARD));
+    for (let k = 0; k < 6; k++) parts.push(...stack(-1.6 + k * 0.64, 0, 3.6 + 0.2 * (k % 3), 0.16));
+    parts.push(cyl([0.6, 1.8, 0.6], [1.5, 1.8, 0], '#c9ced6'));
+  } else {   // Gigafactory: one enormous plant with a glowing roof, two cooling towers and a forest of stacks
+    parts.push(box([3.9, 2.4, 3.0], [0, 0.08, -0.4], '#7e7870'), ...saw(0, -0.4, 3.9, 3.0, 2.48, 14), lit(3.9, 3.0, 0, 0.6, -0.4), lit(3.9, 3.0, 0, 1.2, -0.4), lit(3.9, 3.0, 0, 1.8, -0.4),
+      box([2.2, 0.08, 1.6], [-0.6, 2.7, -0.6], '#2a4a8a', GLOW));
+    for (let k = 0; k < 8; k++) parts.push(...stack(-1.75 + k * 0.5, 1.55, 4.0 + 0.25 * (k % 4), 0.15));
+    for (const x of [0.9, 1.5]) parts.push(cyl([0.75, 2.6, 0.75], [x, 2.5, -1.2], '#c9ced6'), cyl([0.6, 0.12, 0.6], [x, 5.1, -1.2], '#e8eef4'));
+  }
+  const ox = w / 2 - 1, oz = h / 2 - 1;
+  return parts.map((p) => {
+    const q = turn ? { ...p, size: [p.size[2], p.size[1], p.size[0]], pos: [p.pos[2], p.pos[1], p.pos[0]], ...(p.rot ? { rot: [p.rot[2], p.rot[1], p.rot[0]] } : {}) } : p;
+    return { ...q, pos: [q.pos[0] + ox, q.pos[1], q.pos[2] + oz] };
+  });
+}
+function legacyQuadKit(zone, level) {
   const lv = Math.max(1, Math.min(6, level || 1)), [ground, flag] = LOT[zone];
   const parts = [box([1.96, 0.05, 1.96], [0, 0, 0], lv === 1 ? ground : zone === 'R' ? '#6a6e74' : zone === 'C' ? '#9a9ea6' : '#5a5e64')];
   // the empty lot: survey stakes with coloured flags at the corners, a dashed outline and a zoning sign

@@ -188,7 +188,8 @@ const num = (n) => {
 };
 const signed = (n) => (n > 0 ? '+' : n < 0 ? '−' : '±') + num(Math.abs(n));
 // version 7: what a quad grows into at its top level, for its card ("lot, grows to 700 homes")
-const quadTop = (d) => { const l = d.levels[d.levels.length - 1]; return d.quad === 'R' ? `${num(l.housing)} homes` : `${num(l.jobs)} jobs`; };
+// (version 11: the top grown level, before the merged ones)
+const quadTop = (d) => { const l = d.levels.filter((v) => !v.mega).at(-1); return d.quad === 'R' ? `${num(l.housing)} homes` : `${num(l.jobs)} jobs`; };
 // (version 9: a wonder's stage may also cost alloy, helium-3 and provisions)
 const costText = (c) => c ? [c.credits ? `${num(c.credits)} cr` : '', c.parts ? `${num(c.parts)} parts` : '', ...['alloy', 'helium', 'food', 'water', 'air'].map((g) => c[g] ? `${num(c[g])} ${g === 'helium' ? 'helium-3' : g}` : '')].filter(Boolean).join(' · ') || 'free' : 'free';
 const flows = (o) => Object.entries(o || {}).filter(([, v]) => v).map(([k, v]) => `${num(v)} ${GOOD_NAME[k] || k}`).join(', ');
@@ -268,12 +269,13 @@ export function helpHtml(art, diff) {
     <p><b>Tax</b> (top bar slider) pays upkeep. 10% is neutral. Lower makes people happier; higher makes them unhappy.</p>
     <p><b>Growing faster.</b> Later, <b>Tower Blocks</b> grow the same way (Tower 300, Spire 450, and with <b>Skyscrapers</b> and transit in reach a Skyscraper of 600). <b>Schools</b> make homes happier, a <b>Transit Station</b> or <b>Monorail Stop</b> in reach makes Habitats and Tower Blocks grow in 2 days instead of 5, and homes on land worth <b>60</b> or more grow a day sooner. Or zone <b>Living Quads</b> (below).</p>`)}
   ${sec('zoning', 'Zoning and growth', card('livingquad') + card('marketquad') + card('workshopquad'), `
-    <p><b>Quads</b> are cheap 2×2 lots you zone in <b>Homes &amp; parks</b>, from day 1. You don't build them up: they <b>grow by themselves</b>, a level every <b>2 days</b> (every day near a <b>Transit Station</b> or Monorail Stop), while their zone has demand and their conditions hold, and fall back a level only if a condition fails for <b>20 days</b>.</p>
+    <p><b>Quads</b> are cheap 2×2 lots you zone in <b>Homes &amp; parks</b>, from day 1. You don't build them up: they <b>grow by themselves</b>, eight levels, while their zone has demand and their conditions hold, and fall back a level only if a condition fails for <b>20 days</b>. The first levels take <b>2 days</b> each (1 with a <b>road</b> beside the lot or transit near), the later ones 3 to 5 days (a day less with a road, half near a <b>Transit Station</b>, Monorail Stop or monorail line).</p>
     <ul class="cl-hsteps">
-      <li><b>Living Quad</b> (homes): Cottages 40 → Row Houses 100 → Courtyard Flats 220 → Mid-rise 400 → Residential Tower 700. Cottages and Row Houses need only demand and food, water, air and power for everyone; Courtyard Flats a park and a Clinic in reach, and no workshop noise.</li>
-      <li><b>Market Quad</b> (shops): Stalls → Shops → Market Hall → Arcade → Trade Tower. Jobs, credits every day, and <b>shopping</b> happiness for the homes around it. It needs some homes nearby.</li>
-      <li><b>Workshop Quad</b> (work): Workshops → Machine Shops → Works → Assembly Plant → Factory. Jobs and parts, later alloy; a <b>Freight Yard</b> in range makes it a quarter more. It is <b>noisy</b>: keep Living Quads a few tiles away or they stop at Row Houses.</li>
+      <li><b>Living Quad</b> (homes): Cottages 40 → Row Houses 100 → Courtyard Flats 220 → Garden Terraces 300 → Mid-rise 400 → Residential Tower 700 → Sky Tower 1,000 → Crown Spire 1,400. Cottages and Row Houses need only demand and food, water, air and power for everyone; Courtyard Flats a park and a Clinic in reach, no workshop noise, and a road; the top levels shops, a School, transit, land value, a monorail line, coffee and wine.</li>
+      <li><b>Market Quad</b> (shops): Stalls → Shops → Market Hall → Arcade → Galleria → Trade Tower → Exchange → Grand Bazaar. Jobs, credits every day, and <b>shopping</b> happiness for the homes around it. It needs homes nearby (3,000 for a Grand Bazaar). From the Arcade up it is a <b>monorail station</b>, and on a line it earns a quarter more.</li>
+      <li><b>Workshop Quad</b> (work): Workshops → Machine Shops → Works → Foundry → Assembly Plant → Factory → Robotic Works → Megafactory. Jobs and parts, later alloy; a <b>Freight Yard</b> in range makes it a quarter more. It is <b>noisy</b>: keep Living Quads a few tiles away or they stop at Row Houses. (Noise never travels along roads.)</li>
     </ul>
+    <p><b>Megastructures.</b> When two quads of the same kind stand side by side at their top level (Crown Spires, Grand Bazaars, Megafactories), they merge into something huge: <b>Twin Spires</b>, a <b>Grand Concourse</b> or an <b>Industrial Complex</b> (a quarter more than the two). Four in a square merge into an <b>Arcology Crown</b>, a <b>Megamall</b> or a <b>Gigafactory</b> (half as much again as the four, and a wider reach). Lay the lots on a 2-tile grid to let them merge. A megastructure splits back only if its needs fail for 30 days, or at once if one of its quads is moved or demolished.</p>
     <p>Click a quad to see <b>To grow into …</b>: every condition with a ✓ or ✗, such as a park in reach, a Clinic, a School, shops, happiness, or a tech to research.</p>
     <p>The <b>R C I</b> bars at the top of the build menu show <b>demand</b>. There is always some, even in a small colony, so the first lots grow at once. <b>R</b> counts the next two transports and free jobs, less half the free homes. <b>C</b> grows with the residents and falls as Market Quads serve them. <b>I</b> grows with the colonists and the jobless, and when parts run low. A quad grows only while its bar is up, and each one that grows uses up half of what it adds, so several grow together.</p>
     <p>Research <b>Schools</b>, <b>Commerce</b>, <b>Light Industry</b>, <b>Urban Planning</b>, <b>Skyscrapers</b> and <b>Automation</b> for the upper levels. Quads are a cheap, quick way to grow a town; Habitats and Tower Blocks are placed where you want them and need no demand.</p>`)}
@@ -287,7 +289,15 @@ export function helpHtml(art, diff) {
     <p>Habitats and Tower Blocks on land worth <b>60</b> or more grow a day sooner, a <b>Grand Hotel</b> needs <b>55</b>, and visitors pay more attention to hotels on valuable land. Put homes and hotels where it is high, and industry where it is low.</p>`)}
   ${sec('roads', 'Roads', '', `
     <p>Colonists walk and rovers drive <b>only on roads</b>. Without roads your colony still works, but nobody moves.</p>
-    <p>Choose <b>Road</b> (Command menu). <b>Click where it starts</b>, then <b>click where it ends</b>: it lays an L-shaped line. Roads pass through gates once both chambers are open.</p>`)}
+    <p>Choose <b>Road</b> (Command menu). <b>Click where it starts</b>, then <b>click where it ends</b>: it lays an L-shaped line. Roads pass through gates once both chambers are open.</p>
+    <p><b>What roads give.</b> A building with a road beside it is on that road's network (Lifts join the decks'):</p>
+    <ul class="cl-hsteps">
+      <li><b>Longer reach</b>: services (Clinics, Schools, Canteens, transit…), parks and shops reach <b>4 tiles further</b> to buildings on the same roads. Workshop <b>noise does not</b> travel along roads.</li>
+      <li><b>Linked to the Command Centre</b> (or a dock) by road: <b>upkeep −10%</b>, and building sites go up a quarter faster.</li>
+      <li><b>Growth</b>: quads grow a day sooner with a road beside them, and need one to grow past Row Houses, Shops or Machine Shops; Habitats need one to grow into Apartments, Tower Blocks into Spires. Nothing shrinks for want of a road: it just stops growing.</li>
+    </ul>
+    <p>Every area effect also reaches a tile further than it used to. Click a building: its <b>Road</b> line says whether it is on a road, linked, and what that gives.</p>
+    <p><b>Monorail lines</b> build themselves once you know <b>Skyscrapers</b>: every Monorail Stop and every Market Quad from the Arcade up links to its nearest one or two stations within 24 tiles on its deck, with an elevated rail and cars. Everything within 3 tiles of a line (6 of a station) counts as near transit.</p>`)}
   ${sec('market', 'Market & guardians', card('dock'), `
     <p>Traders land at the <b>Dock</b>. Open the <b>Market</b> (top bar) to sell <b>ore, food and parts</b> (later <b>alloy</b> and <b>helium-3</b>) for credits. Each sale lowers the price a little; it recovers over a few days. Sell in batches.</p>
     <p><b>Guardians</b> are Eden's machines: built at an Arsenal, or, for <b>beta testers</b>, your old army. They eat nothing. Sell one at the Market for credits and parts (a fifth more with a <b>Scrapyard</b>), or keep it to fight raiders.</p>`)}
@@ -337,15 +347,15 @@ export function helpHtml(art, diff) {
       <li><b>Orbital Elevator</b> (3,000 colonists, Mass Driver; on the hull): relief convoys cost half, and Earth goods at the Market a quarter less.</li>
     </ul>`)}
   ${sec('wonders', 'Wonders', card('arboretum') + card('starport'), `
-    <p><b>Wonders</b> are a grander tier above the landmarks, in their own <b>Wonders</b> tab. Each is one of a kind and <b>big</b> (4×4 to 7×7), so plan the space. A wonder is built in <b>stages</b>: placing it orders the first stage; when that is done, click it and order the <b>next stage</b> (each costs credits and parts, often alloy, and takes days). You can watch it grow. Only the finished wonder works. All wait on <b>Monumental Engineering</b> (research), colonists, and sometimes a landmark.</p>
+    <p><b>Wonders</b> are a grander tier above the landmarks, in their own <b>Wonders</b> tab. Each is one of a kind and <b>huge</b> (6×6 to 8×8), so plan the space. A wonder is built in <b>stages</b>: placing it orders the first stage; when that is done, click it and order the <b>next stage</b> (each costs credits and parts, often alloy, and takes days). You can watch it grow. Only the finished wonder works. All wait on <b>Monumental Engineering</b> (research), colonists, and sometimes a landmark.</p>
     <ul class="cl-hsteps">
-      <li><b>Concert Hall</b> (4×4, upper or main; 2,500 colonists): happiness 8 for every home within 24 tiles, land value +10, leisure for visitors.</li>
-      <li><b>Memorial Garden</b> (5×5, main deck; 2,500, Hall of Names): +5 happiness, grief and fear fade twice as fast again, a park, land value +10.</li>
-      <li><b>Grand Arboretum</b> (6×6, upper deck gardens; 5,000, Governor's Garden): +4 happiness, a park of 14 within 20 tiles, land value +15 within 24, 500 air a day.</li>
-      <li><b>Great Library</b> (5×5, upper or main; 5,000, Hall of Names): 4 research a day for every 1,000 colonists.</li>
-      <li><b>Starport</b> (5×5, in space by the hull; 5,000, Orbital Elevator): transports bring <b>twice</b> the colonists, and four times the visitors can arrive.</li>
-      <li><b>Zero-G Arena</b> (6×6, lower deck; 10,000): +6 happiness, 300 credits a day, the biggest draw for tourists.</li>
-      <li><b>Spin-Gravity Ring</b> (6×6, in space; 10,000, the Starport): homes for 3,000, +3 happiness.</li>
+      <li><b>Concert Hall</b> (6×6, upper or main; 2,500 colonists; 4 stages): <b>all tourism doubled</b>, +6 happiness everywhere and 10 for every home within 28 tiles, land value +12, leisure for visitors.</li>
+      <li><b>Memorial Garden</b> (7×7, main deck; 2,500, Hall of Names; 4 stages): <b>no grief or fear at all</b>, +8 happiness, a park, land value +12.</li>
+      <li><b>Grand Arboretum</b> (8×8, upper deck gardens; 5,000, Governor's Garden; 4 stages): <b>air for 5,000</b> a day, <b>land value +25 across the whole deck</b>, +6 happiness, a park of 16 within 26 tiles.</li>
+      <li><b>Great Library</b> (7×7, upper or main; 5,000, Hall of Names; 4 stages): <b>all research doubled</b>, plus 4 a day for every 1,000 colonists.</li>
+      <li><b>Starport</b> (7×7, in space by the hull; 5,000, Orbital Elevator; 4 stages): transports bring <b>three times</b> the colonists, five times the visitors can arrive, 800 credits a day in trade.</li>
+      <li><b>Zero-G Arena</b> (8×8, lower deck; 10,000; 4 stages): grows with the city: +6 happiness and 1 more per 2,000 colonists (up to +16), 300 credits a day and 60 more per 1,000 colonists, the biggest draw for tourists.</li>
+      <li><b>Spin-Gravity Ring</b> (8×8, in space; 10,000, the Starport; 4 stages): homes for <b>8,000</b>, +5 happiness.</li>
     </ul>
     <p>Every wonder also draws <b>tourists</b>. Its moment comes when the last stage is done.</p>`)}
   ${sec('tourism', 'Tourism', card('hotel') + card('promenade'), `
@@ -1303,6 +1313,19 @@ export function createUI(root, api) {
       if (sp.shoppers) rows.push(kv('Serves', `${num(sp.shoppers)} shoppers`));
       if (sp.nuisance) rows.push(kv('Noise', `${sp.nuisance} tiles: Living Quads that close stay Cottages`, 'bad'));
       try { const z = R.demandOf(s)[d.quad]; rows.push(kv(`${{ R: 'Residential', C: 'Commercial', I: 'Industrial' }[d.quad]} demand`, `${z.units > 0 ? '+' : ''}${num(z.units)}`, z.units > 0 ? 'good' : 'bad')); } catch { }
+    }
+    // version 11 (docs/COLONY-V11.md): roads, the monorail, megastructures
+    if (d.zone !== 'road' && d.zone !== 'any' && R.roadInfo) {
+      try { const ri = R.roadInfo(s, b); rows.push(kv('Road', `${ri.linked ? 'Linked to the Command Centre' : ri.touches ? 'On a road' : 'None'}<br><small>${esc(ri.text)}</small>`, ri.linked ? 'good' : '')); } catch { }
+      try {
+        if (R.onMonorail(s, b)) rows.push(kv('Monorail', R.monorailMarket(s, b) ? 'A station on a line: credits +25%, counts as near transit' : b.key === 'monorail' ? 'A stop on a line' : 'On a line: counts as near transit', 'good'));
+        else if (b.key === 'monorail' || (b.key === 'marketquad' && b.level >= R.LINE.marketLevel)) rows.push(kv('Monorail', s.research?.done?.includes(R.LINE.tech) ? `No other station within ${R.LINE.range} tiles on this deck yet` : 'Research Skyscrapers: stations then link into lines by themselves'));
+      } catch { }
+    }
+    if (d.quad && R.megaInfo) {
+      const mi = R.megaInfo(s, b);
+      if (mi) rows.push(kv('Megastructure', `${esc(mi.name)}: ${mi.n} quads merged${mi.failing ? ` · a need failing, ${mi.failing} of ${R.MEGA.splitDays} days` : ''}`, mi.failing ? 'bad' : 'good'));
+      else if (b.level === R.topLevelOf(b.key)) rows.push(kv('Top level', 'Two of these side by side, or four in a square, merge into a megastructure', 'good'));
     }
     if (grows && b.build === 0 && b.grow) rows.push(kv(b.grow > 0 ? 'Growing' : 'Declining', b.grow > 0 ? `${b.grow} day${b.grow === 1 ? '' : 's'} so far` : `${-b.grow} of 10 days: a need is failing`, b.grow > 0 ? 'good' : 'bad'));
     if (b.key === 'reserve' && R.reserveCap) { const rv = s.reserve || {}, cap = R.reserveCap(s); rows.push(kv('Held back', ['food', 'water', 'air'].map((g) => `${num(Math.floor(rv[g] || 0))} ${g}`).join(' · ') + ` <small>of ${num(cap)} each</small>`)); }

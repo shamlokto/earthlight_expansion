@@ -16,8 +16,9 @@ import {
   heatTarget, warnLead, raidsPossible, raidInterval, makeRaid, raidPreview, answerRaid, raidName, FACTIONS, FROM,
   basesDay, readyBase, raidsOn, baseName, BASE, BASE_RAIDS, releaseCommander, inviteChance,
   mapOf, deckOf, GROW_KEYS, reserveCap, RESERVE_GOODS,
-  demandOf, quadAdds, QUAD, TRANSIT_KEYS, buy, buyPrice, VALUE_GROW, landValueOf,
+  demandOf, quadAdds, QUAD, TRANSIT_KEYS, buy, buyPrice, VALUE_GROW, landValueOf, nearTransit,
 } from './rules.js';
+import { hubLinked, touchesRoad, megaDay, monorailMarket, ROAD, LINE } from './network.js';   // version 11 (docs/COLONY-V11.md)
 import { COMMANDER, WANDERERS } from './data/commanders.js';
 import { diffOf } from './difficulty.js';
 import { updateGoals } from './goals.js';
@@ -27,7 +28,7 @@ import { victoryDay } from './victory.js';
 import { incidentsDay, sickShare, incidentHappy } from './incidents.js';   // version 8 (docs/COLONY-V8.md)
 import { landmarksDay, landmarkHappy, landmarkTransport, landmarkFade } from './landmarks.js';
 import { petitionsDay } from './petitions.js';
-import { wondersDay, wonderHappy, wonderTransport, wonderFade, wonderResearch } from './wonders.js';   // version 9 (docs/COLONY-V9.md)
+import { wondersDay, wonderHappy, wonderTransport, wonderFade, wonderResearch, wonderResearchMul, wonderIncome, wonderNoGrief } from './wonders.js';   // version 9 (docs/COLONY-V9.md)
 import { tourismDay } from './tourism.js';
 // version 10 (docs/COLONY-V10.md): districts, Eden's gardens, luxuries and the neighbours
 import { districtsDay, districtHappy, districtMults, districtAir, districtResearch } from './districts.js';
@@ -77,10 +78,20 @@ export const SIM = {
   quadTransitGrowDays: 1,            // a quad in a Transit Station's or Monorail Stop's range: 1 day
   quadShrinkDays: 20,                // a quad falls back a level after 20 days of a level need failing (Habitats: shrinkDays)
   transitGrowDays: 2,                // any other home in a Transit Station's or Monorail Stop's range: 2 days
+  // version 11 (docs/COLONY-V11.md): days a quad takes to grow into level 5..9 (levels 2..4 take quadGrowDays)
+  quadGrowLate: { 5: 3, 6: 3, 7: 4, 8: 4, 9: 5 },
   freightBonus: 1.25,                // Workshop Quads in a Freight Yard's range make a quarter more
   // (version 9: so do Smelters and Fabricators)
 };
 const FREIGHT_HELPS = new Set(['workshopquad', 'smelter', 'fabricator']);
+// Version 11: the days a quad needs to grow its next level: by the level, a day less with a road beside it, halved near
+// transit (rounded up), never under a day. Early levels: 2 days (1 with a road or transit), as before.
+export function quadDays(b, transit, road) {
+  let days = SIM.quadGrowLate[b.level + 1] || SIM.quadGrowDays;
+  if (road) days -= ROAD.growFaster;
+  if (transit) days = Math.ceil(days / 2);
+  return Math.max(SIM.quadTransitGrowDays, days);
+}
 // Department heads (version 3): which buildings each one's bonus multiplies.
 const DEPT_OF = {
   farm: 'agriculture', orchard: 'agriculture', fishery: 'agriculture', mushroom: 'agriculture', vertfarm: 'agriculture',
@@ -188,7 +199,8 @@ export function dayTick(state, rng) {
   for (const b of queue) {
     if (b.build <= 0 || crews <= 0) continue;
     crews--;
-    const step = b.key === 'seal' && posts.some((p) => covers(p, b)) ? SIM.sealFast : 1;
+    // version 11: a site on a road linked to the Command Centre or a dock gets an extra day's work every ROAD.buildEvery days
+    const step = (b.key === 'seal' && posts.some((p) => covers(p, b)) ? SIM.sealFast : 1) + (b.key !== 'road' && state.day % ROAD.buildEvery === 0 && hubLinked(state, b) ? 1 : 0);
     b.build = Math.max(0, b.build - step);
     if (b.build > 0) continue;
     const d = BUILDING[b.key];
@@ -266,7 +278,8 @@ export function dayTick(state, rng) {
     rates.set(b, r);
     if (!s.makes || r <= 0) return;
     const dm = dmOf(b), dr = dm ? dm.research : 1;
-    const m = om(b.key) * (FREIGHT_HELPS.has(b.key) && freights.some((y) => covers(y, b)) ? SIM.freightBonus : 1) * (dm ? dm.make : 1);
+    const m = om(b.key) * (FREIGHT_HELPS.has(b.key) && freights.some((y) => covers(y, b, state)) ? SIM.freightBonus : 1) * (dm ? dm.make : 1)
+      * (b.key === 'marketquad' && monorailMarket(state, b) ? LINE.marketBonus : 1);   // version 11: a Market Quad on a monorail line
     if (b.key === 'farm') {
       const soil = farmSoil(state, b);
       if (b.mode === 'cash') { make('food', s.makes.food * soil * SIM.cash.food * r * m); make('credits', SIM.cash.credits * soil * r * m); }
@@ -345,6 +358,9 @@ export function dayTick(state, rng) {
   luxuriesDay(state, { produced, consumed });
   // version 9: the Great Library's research grows with the colony (4 a day per 1,000 colonists, at its working rate)
   researchMade += wonderResearch(state, (b) => Math.min(1, rates.get(b) ?? 1)) * om('library');
+  // version 11 (docs/COLONY-V11.md): the Great Library doubles all research; the Zero-G Arena's takings grow with the city
+  researchMade *= wonderResearchMul(state);
+  make('credits', wonderIncome(state, (b) => Math.min(1, rates.get(b) ?? 1)));
   // 5b research: the labs' points go to the tech being studied (or into the bank, which flows into
   // the next one); a finished tech unlocks its buildings and its effects apply from now on.
   const rs = state.research;
@@ -439,7 +455,7 @@ export function dayTick(state, rng) {
   for (const k of SERVICE_KINDS) {
     const list = state.buildings.filter((b) => b.key === k.key && active(b));
     if (!list.length) continue;
-    const best = (h) => list.reduce((m, b) => (covers(b, h) ? Math.max(m, serviceValue(b) * Math.min(1, rates.get(b) ?? 1)) : m), 0);
+    const best = (h) => list.reduce((m, b) => (covers(b, h, state) ? Math.max(m, serviceValue(b) * Math.min(1, rates.get(b) ?? 1)) : m), 0);
     parts.push({ label: k.label, value: Math.round(dwellings.length ? dwellings.reduce((t, h) => t + best(h), 0) / dwellings.length : 0) });
   }
   if (state.buildings.some((b) => b.key === 'obsdeck' && active(b))) parts.push({ label: 'Observation Deck', value: SIM.obsHappy });
@@ -459,7 +475,8 @@ export function dayTick(state, rng) {
   rd.moods = rd.moods.filter((m) => state.day - m.day <= m.days / fade);
   const moods = {};
   for (const m of rd.moods) moods[m.label] = (moods[m.label] || 0) + m.value * Math.max(0, 1 - (fade * (state.day - m.day - 1)) / m.days);
-  for (const [label, v] of Object.entries(moods)) if (Math.round(v)) parts.push({ label, value: Math.round(v) });
+  const noGrief = wonderNoGrief(state);   // version 11: the Memorial Garden ends grief and fear
+  for (const [label, v] of Object.entries(moods)) if (Math.round(v) && !(noGrief && v < 0)) parts.push({ label, value: Math.round(v) });
   if (f.wagesUnpaid && state.commanders.some((c) => c.key === 'w_brann')) parts.push({ label: 'Brann unpaid', value: -2 });
   if (pop > housing) parts.push({ label: 'Crowding', value: -Math.min(30, Math.floor((housing ? (pop - housing) / housing : 1) * 50)) });
   if (pop > 0 && (pop - jobs) / pop > 0.2) parts.push({ label: 'Unemployment', value: -5 });
@@ -473,14 +490,17 @@ export function dayTick(state, rng) {
   // (2026-11-07): quads grow in 2 days (1 near transit), spend half of what they add, and fall back after 20.
   state.stats.last = { ...(state.stats.last || {}), met };
   const ctx = { demand: demandOf(state) }, budget = { R: ctx.demand.R.units, C: ctx.demand.C.units, I: ctx.demand.I.units };
-  const transits = state.buildings.filter((b) => TRANSIT_KEYS.has(b.key) && active(b));
+  // Version 11 (docs/COLONY-V11.md): a quad's later levels take longer (SIM.quadGrowLate by the level it grows into), a
+  // road beside it takes a day off (ROAD.growFaster), transit or a monorail line halves it; a merged quad (b.mega) grows
+  // no more: network.js megaDay looks after it.
   const quadsGrew = [], quadsShrank = [];
   for (const b of homes) {
+    if (b.mega) continue;
     const field = fieldOf(b), d = BUILDING[b.key], nextOk = habitatNeeds(state, b, field, ctx);
     const canGrow = nextOk.length > 0 && nextOk.every((n) => n.met);
     const holds = b.level === 1 || habitatNeeds(state, { ...b, level: b.level - 1 }, field, ctx).every((n) => n.met || n.grow);
-    const nearTransit = transits.some((t) => covers(t, b));
-    let days = d.quad ? (nearTransit ? SIM.quadTransitGrowDays : SIM.quadGrowDays) : nearTransit ? SIM.transitGrowDays : SIM.growDays;
+    const transit = nearTransit(state, b);
+    let days = d.quad ? quadDays(b, transit, touchesRoad(state, b)) : transit ? SIM.transitGrowDays : SIM.growDays;
     // version 9: Habitats and Tower Blocks on land worth 60 or more grow a day sooner
     if (VALUE_GROW.keys.has(b.key) && b.grow > 0 && days > 1 && landValueOf(state, b) >= VALUE_GROW.at) days -= VALUE_GROW.days;
     if (canGrow) b.grow = Math.max(0, b.grow || 0) + 1;
@@ -503,6 +523,7 @@ export function dayTick(state, rng) {
   const quadList = (list) => list.map((b) => `${BUILDING[b.key].name} → ${spec(b).levelName}`).join(', ');
   if (quadsGrew.length) say('grew', `Zoning: ${quadList(quadsGrew)}.`);
   if (quadsShrank.length) say('shrank', `Zoning: ${quadList(quadsShrank)} (fell back: its panel says what is missing).`);
+  megaDay(state, (kind, text, loud) => say(kind, text, loud));   // version 11: megastructures merge and split
 
   // 9 population: deaths after days without food, water or air; emigration when unhappy;
   // a transport every ten days when the colony looks worth joining.
@@ -519,7 +540,7 @@ export function dayTick(state, rng) {
   // Clinic births (full care): every 10 days, +1 colonist per 50 living in homes a clinic covers.
   const clinics = state.buildings.filter((b) => b.key === 'clinic' && b.mode !== 'triage' && active(b));
   if (clinics.length && state.day % SIM.birthEvery === 0 && housing > 0) {
-    const coveredHomes = dwellings.reduce((t, h) => t + (clinics.some((c) => covers(c, h)) ? spec(h).housing || 0 : 0), 0);
+    const coveredHomes = dwellings.reduce((t, h) => t + (clinics.some((c) => covers(c, h, state)) ? spec(h).housing || 0 : 0), 0);
     const n = Math.min(Math.max(0, housing - state.pop), Math.floor((state.pop * Math.min(1, coveredHomes / housing)) / SIM.birthPer));
     if (n > 0) { state.pop += n; say('births', `${n} child${n > 1 ? 'ren were' : ' was'} born in the Clinic's care.`); }
   }
@@ -554,7 +575,8 @@ export function dayTick(state, rng) {
   // 80-colonist milestone: before it the officers serve as the Council's staff)
   const machines = machineUpkeep(state);
   for (const g of state.guardians) if (g.free > 0) g.free--;
-  const upkeep = diffOf(state).upkeep * state.buildings.reduce((t, b) => t + (b.build === 0 ? (spec(b).upkeep || 0) * (b.key === 'clinic' && b.mode === 'triage' ? 0.5 : 1) : 0), 0) + machines;
+  // (version 11: a building on a road linked to the Command Centre or a dock pays ROAD.upkeep of its upkeep)
+  const upkeep = diffOf(state).upkeep * state.buildings.reduce((t, b) => t + (b.build === 0 && spec(b).upkeep ? spec(b).upkeep * (b.key === 'clinic' && b.mode === 'triage' ? 0.5 : 1) * (hubLinked(state, b) ? ROAD.upkeep : 1) : 0), 0) + machines;
   make('credits', tax);
   const tourism = tourismDay(state);   // version 9: visitors' spending (js/colony/tourism.js)
   make('credits', tourism);

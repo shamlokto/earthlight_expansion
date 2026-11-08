@@ -139,6 +139,7 @@ function play(seed, difficulty, maxDays = 2400) {
   for (let k = 0; k < 3; k++) place(s, 'sunmirror', { decks: ['main'], instant: true });
   const tb = place(s, 'towerblock', { decks: ['main'], instant: true });
   const at = { deck: 'main', x: tb.x, y: tb.y };
+  s.buildings.push({ id: s.nextId++, key: 'road', x: tb.x - 1, y: tb.y, level: 1, mode: null, build: 0, off: false });   // version 11: a Spire needs a road beside it
   for (const k of ['park', 'clinic', 'gallery', 'plaza']) { const b = place(s, k, { decks: ['main'], near: at }); if (b) b.build = 0; }
   const rng = stateRng(s);
   for (let k = 0; k < 14; k++) { s.stock.food = Math.max(s.stock.food, 2000); dayTick(s, rng); }

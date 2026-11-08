@@ -9,7 +9,7 @@
 // sim.js adds the credits each day (step 10) and keeps the day's figures in state.tourism (not needed to load).
 import { BUILDING } from './data/buildings.js';
 import { LANDMARKS, landmarkOn } from './landmarks.js';
-import { wondersOn, wonderVisitors } from './wonders.js';
+import { wondersOn, wonderVisitors, wonderTourismMul } from './wonders.js';
 import { valueOf } from './landvalue.js';
 import { active, spec, techEffect } from './rules.js';   // used inside functions only
 import { districtTourism } from './districts.js';   // version 10 (docs/COLONY-V10.md)
@@ -56,6 +56,9 @@ export function tourismOf(state) {
     const v = round(clamp((lv - TOUR.valueFrom) * TOUR.value, TOUR.valueMax));
     if (v) parts.push({ label: `Land value at the hotels (${round(lv)})`, value: v });
   }
+  // version 11: the Concert Hall doubles all tourism
+  const tmul = wonderTourismMul(state), base = parts.reduce((t, p) => t + p.value, 0);
+  if (tmul > 1 && base > 0) parts.push({ label: `Wonders draw crowds (×${tmul})`, value: round(base * (tmul - 1)) });
   const score = parts.reduce((t, p) => t + p.value, 0);
   const want = round(score * TOUR.perPoint);
   const dock = bs.some((b) => b.key === 'dock' && b.build === 0);

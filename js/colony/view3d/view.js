@@ -58,6 +58,7 @@ import { TERRAIN, T, R } from '../data/terrain.js';
 import { BUILDING } from '../data/buildings.js';
 import { kitParts, kitHeight, ROAD } from './kits.js';
 import { createMovers } from './movers.js';
+import { createMonorail } from './monorail.js';   // version 11: the monorail lines
 import { createDefence } from './defence.js';
 import { createSecrets } from './secrets.js';
 import { createMinimap, reachMask } from './minimap.js';
@@ -365,6 +366,8 @@ export function createView(container, opts = {}) {
   const terrainGroup = new THREE.Group(), buildGroup = new THREE.Group(), fxGroup = new THREE.Group(), roadGroup = new THREE.Group();
   world.add(terrainGroup, buildGroup, fxGroup, roadGroup);
   const movers = createMovers(world);
+  const monorail = createMonorail(world);   // version 11 (docs/COLONY-V11.md)
+  const railTop = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? terrTop[y * W + x] : 0);
   let buildVersion = 0;   // bumps when buildings change: the guardians' aprons follow
   const defence = createDefence(world, {
     topAt: (x, y) => Math.max(0, tops[y * W + x]),
@@ -714,7 +717,7 @@ export function createView(container, opts = {}) {
   // everything a kit draws from: the Tailings Dump's heap also follows its fill (in steps of 5)
   // version 3: a raid-damaged building is drawn sooty; the Fusion Reactor's torus goes dark with no helium-3
   const noHelium = () => !((st?.stock?.helium ?? 1) > 0);
-  const sigOf = (b) => `${b.key}|${b.x}|${b.y}|${b.level}|${b.build > 0 ? 1 : 0}|${b.off ? 1 : 0}|${b.mode}${b.key === 'tailings' ? '|' + Math.round((b.fill || 0) / 5) : ''}${b.damaged > 0 ? '|d' : ''}${b.key === 'fusion' && noHelium() ? '|he0' : ''}${b.launched ? '|L' : ''}`;   // version 9: the Ark has flown
+  const sigOf = (b) => `${b.key}|${b.x}|${b.y}|${b.level}|${b.build > 0 ? 1 : 0}|${b.off ? 1 : 0}|${b.mode}${b.key === 'tailings' ? '|' + Math.round((b.fill || 0) / 5) : ''}${b.damaged > 0 ? '|d' : ''}${b.key === 'fusion' && noHelium() ? '|he0' : ''}${b.launched ? '|L' : ''}${b.mega ? `|M${b.mega.w}x${b.mega.h}${b.mega.lead === b.id ? 'L' : ''}` : ''}`;   // version 11: a megastructure's shape   // version 9: the Ark has flown
   const SOOT = [0.42, 0.37, 0.34];
   const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), e4 = new THREE.Euler(), v4 = new THREE.Vector3(), s4 = new THREE.Vector3(), c4 = new THREE.Color();
   const sizeOf = (key) => BUILDING[key]?.size || 1;
@@ -1331,6 +1334,7 @@ export function createView(container, opts = {}) {
     if (plasmaMat) plasmaMat.color.setScalar(0.9 + 0.1 * Math.sin(now / 900));
     const camDist = camera.position.distanceTo(controls.target);
     if (st) movers.update(dt, camDist);
+    if (st) monorail.update(dt * movers.getSpeed());
     if (st && deck === 'main') defence.update(dt, movers.getSpeed());
     if (st) secrets.update(dt, movers.getSpeed(), camDist);
     stepDayNight(dt);
@@ -1431,6 +1435,7 @@ export function createView(container, opts = {}) {
     showOverlay(); lap('artifacts');
     movers.reset();
     movers.refresh(st, { terrTop, reset: true, buildingsChanged: true, chambersChanged: true }); lap('movers');
+    monorail.reset(); monorail.refresh(full, deck, railTop);
     defence.group.visible = deck === 'main';
     if (deck === 'main') defence.refresh(st, fresh ? { terrTop, reset: true } : { terrTop, terrainChanged: true });
     lap('defence');
@@ -1484,6 +1489,7 @@ export function createView(container, opts = {}) {
     if (cc || bc || rc) buildArtifacts();
     if (overlayName && !overlayValues && bc) showOverlay();
     movers.refresh(st, { terrTop, buildingsChanged: bc, chambersChanged: cc });
+    monorail.refresh(full, deck, railTop);
     if (deck === 'main') defence.refresh(st, { terrTop });
     secrets.refresh(st, { terrTop });
     const lifts = full.buildings?.some((b) => b.key === 'lift') || liftSig ? liftList() : [];
@@ -1637,7 +1643,7 @@ export function createView(container, opts = {}) {
       // version 8: hold the time of day (0 noon, 0.25 dusk, 0.5 midnight; null lets it run); dayNight() reads it
       setDayTime(p) { dn.hold = p == null ? null : ((+p % 1) + 1) % 1; },
       dayNight: () => ({ on: dn.on, clock: dn.clock, night: dn.night, hold: dn.hold }),
-      deckState: () => st, world, rebuildMs, scene, camera, controls, renderer, placeCamera, pick, movers, defence, secrets, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse'),
+      deckState: () => st, world, rebuildMs, scene, camera, controls, renderer, placeCamera, pick, movers, monorail, defence, secrets, minimap, navPad, footprint, wheelKind: () => (gest.pad ? 'trackpad' : 'mouse'),
       // n camera steps of 1/60 s now, without rendering (tests on slow software GL)
       setRender(on) { dbg.noRender = !on; },
       tick(n = 1) { for (let k = 0; k < n && st; k++) stepCamera(1 / 60, performance.now()); if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], deckMarks()); },

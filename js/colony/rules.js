@@ -44,10 +44,13 @@ export {
 } from './landmarks.js';
 // version 9 (docs/COLONY-V9.md): wonders built in stages and the Ark (js/colony/wonders.js), tourism (js/colony/tourism.js)
 import { ensureWonders } from './wonders.js';
+import { roadNet, roadLinked, touchesRoad, onMonorail, ROAD, netMoved, megaBreak } from './network.js';   // version 11 (docs/COLONY-V11.md)
 export {
   WONDERS, WLINES, ARK_ENDING, ARK_TEXT, isWonder, stagesOf, wonderWorks, wonderOn, wondersOn, wonderStage, wonderStatus, ensureWonders,
-  wonderHappy, wonderTransport, wonderVisitors, wonderResearch,
+  wonderHappy, wonderTransport, wonderVisitors, wonderResearch, wonderTourismMul, wonderResearchMul, wonderIncome, wonderNoGrief,
 } from './wonders.js';
+// version 11 (docs/COLONY-V11.md): roads, monorail lines, megastructures (js/colony/network.js)
+export { ROAD, LINE, MEGA, roadNet, touchesRoad, roadLinked, hubLinked, roadInfo, monorailNet, onMonorail, monorailMarket, megaDay, megaInfo, topLevelOf, megaLevelOf } from './network.js';
 export { TOUR, tourismOf, tourismLimitText } from './tourism.js';
 // version 10 (docs/COLONY-V10.md): districts, Eden's gardens, luxuries and the neighbours
 import { ensureGardens } from './gardens.js';
@@ -139,6 +142,12 @@ export function upgradeState(state) {
   // version 9: a retired building is never unlocked again (the quads were, briefly; reinstated on 2026-11-07, the loop
   // above puts them back on a version 9 save's menu)
   if (state.unlocked) state.unlocked = state.unlocked.filter((k) => !BUILDING[k]?.retired);
+  // version 11: the quads' levels in a save from before the new levels (the same building, the same meaning)
+  state.flags ??= {};
+  if (!state.flags.quads11) {
+    for (const b of state.buildings || []) { const m = QUAD_REMAP[b.key]; if (m && b.level >= 1 && b.level <= m.length) b.level = m[b.level - 1]; }
+    state.flags.quads11 = true;
+  }
   return state;
 }
 
@@ -390,7 +399,22 @@ const touchesOpen = (state, c) => [...(chamberLinks(state).get(c.id) || [])].som
 // (8 directions) through open chambers and gates, never through bulkheads (docs/COLONY.md §10.1).
 // Each deck has its own (version 4): coverage stays on its deck.
 let seen = new Int32Array(0), stamp = 0;
+// Version 11: cached per state and deck while its parks (place, level, working) and the chambers' status stay the same
+// (the field is read, never written, by its users).
+const parkCache = new WeakMap();
 export function parkField(state, deck = 'main') {
+  let hsh = 0;
+  for (const b of state.buildings) if (deckOf(b) === deck && spec(b).park) hsh = (Math.imul(hsh, 31) + b.id * 7 + b.x * 131 + b.y * 8191 + b.level * 3 + (active(b) ? 1 : 0)) | 0;
+  for (const c of state.chambers) if (deckOf(c) === deck) hsh = (Math.imul(hsh, 17) + (c.status === OPEN ? 1 : 2)) | 0;
+  const pc = parkCache.get(state) || {};
+  const hit = pc[deck];
+  if (hit && hit.hsh === hsh && hit.t === mapOf(state, deck).t) return hit.field;
+  const field = parkFieldRaw(state, deck);
+  pc[deck] = { hsh, t: mapOf(state, deck).t, field };
+  parkCache.set(state, pc);
+  return field;
+}
+function parkFieldRaw(state, deck) {
   const { w, h, t, ch } = mapOf(state, deck), n = w * h, field = new Float32Array(n);
   if (seen.length !== n) { seen = new Int32Array(n); stamp = 0; }
   const passable = (i) => t[i] === T.GATE || (ch[i] !== 255 && chamberOf(state, ch[i])?.status === OPEN);
@@ -400,11 +424,12 @@ export function parkField(state, deck = 'main') {
     stamp++;
     let q = [...tilesOf(state, b)], d = 0;
     for (const i of q) seen[i] = stamp;
-    while (q.length && d <= s.radius) {
+    const rad = s.radius + AREA.bonus;   // version 11: area effects reach a tile further
+    while (q.length && d <= rad) {
       const next = [];
       for (const i of q) {
         if (field[i] < s.park) field[i] = s.park;
-        if (d === s.radius) continue;
+        if (d === rad) continue;
         const x = i % w, y = (i / w) | 0;
         for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
           const nx = x + dx, ny = y + dy, j = ny * w + nx;
@@ -417,7 +442,20 @@ export function parkField(state, deck = 'main') {
   return field;
 }
 // Best park rating over a building's footprint.
-export const parkAt = (state, b, field = parkField(state, deckOf(b))) => Math.max(0, ...[...tilesOf(state, b)].map((i) => field[i]));
+// Version 11: a park on the same road network reaches ROAD.reach tiles further (as the crow flies from its footprint).
+export const parkAt = (state, b, field = parkField(state, deckOf(b))) => {
+  let best = Math.max(0, ...[...tilesOf(state, b)].map((i) => field[i]));
+  const net = roadNet(state);
+  if (!net.parks.length || !net.compsOf(b).length) return best;
+  const c = centre(b);
+  for (const p of net.parks) {
+    const s = spec(p);
+    if (!s.park || s.park <= best || !active(p) || deckOf(p) !== deckOf(b)) continue;
+    const e = centre(p), d = Math.max(Math.abs(e.x - c.x), Math.abs(e.y - c.y)) - (BUILDING[p.key].size + BUILDING[b.key].size) / 2;
+    if (d <= s.radius + AREA.bonus + ROAD.reach && roadLinked(state, p, b)) best = s.park;
+  }
+  return best;
+};
 
 // ---------------------------------------------------------------- placement
 
@@ -592,6 +630,7 @@ export function demolish(state, id) {
   const air = holdsAir(state, b);
   if (air) return no(air);
   const c = costOf(state, spent(b), b.key), back = { credits: Math.floor(c.credits / 2), parts: Math.floor(c.parts / 2) };
+  if (b.mega) megaBreak(state, b);   // version 11: the others go back to top-level quads
   state.buildings.splice(state.buildings.indexOf(b), 1);
   state.stock.credits += back.credits; state.stock.parts += back.parts;
   if (d.builds) rehomeOrders(state);
@@ -612,7 +651,9 @@ export function move(state, id, x, y) {
   const poor = afford(state, fee, b.key);
   if (poor) return no(`Moving costs ${fee.credits} credits and ${fee.parts} parts. ${poor}`);
   pay(state, fee, b.key);
+  if (b.mega) megaBreak(state, b);   // version 11: a megastructure's quad moved: it splits back into quads
   b.x = x; b.y = y;
+  netMoved();
   return ok(`${d.name} moved for ${fee.credits} credits and ${fee.parts} parts.`);
 }
 
@@ -838,7 +879,7 @@ export function answer(state, pendingId, choiceKey) {
 // A level whose needs name a building the game doesn't have (none since version 2) is not offered.
 // Version 7: the quads' need words, and 'demand:R', 'happy:60', 'residents:150', 'tech:skyscrapers' (a level
 // waiting on a tech is offered: its panel says what to research).
-const NEED_WORDS = new Set(['allNeeds', 'park', 'clinic', 'school', 'transit', 'freight', 'shops', 'quiet', 'leisure', 'luxuries']);   // version 9: 'leisure' (Hotels); version 10: 'luxuries'
+const NEED_WORDS = new Set(['allNeeds', 'park', 'clinic', 'school', 'transit', 'freight', 'shops', 'quiet', 'leisure', 'luxuries', 'road', 'monorail']);   // version 11: 'road', 'monorail'   // version 9: 'leisure' (Hotels); version 10: 'luxuries'
 const NEED_PREFIX = new Set(['demand', 'happy', 'residents', 'tech', 'value']);   // version 8: 'value:N' (land value)
 export const habitatLevelReachable = (level) => !level?.needs?.some((n) => {
   const [k, v] = String(n).split(':');
@@ -851,10 +892,12 @@ export const habitatLevelReachable = (level) => !level?.needs?.some((n) => {
 // the level the building has, or it shrinks back. ctx (optional): { demand } from demandOf, to share a day's.
 export function habitatNeeds(state, b, field, ctx = {}) {
   const d = BUILDING[b.key], next = d.levels?.[b.level];
-  if (!next?.needs || !habitatLevelReachable(next)) return [];
+  if (!next?.needs || next.mega || !habitatLevelReachable(next)) return [];   // version 11: a merged level is never grown into
   const met = state.stats?.last?.met || {};
   const out = [], lv = QUAD_VALUE[b.key]?.[b.level];   // version 8: the top levels want land value
-  for (const n of lv && !next.needs.some((q) => q.startsWith('value:')) ? [...next.needs, `value:${lv}`] : next.needs) {
+  let list = lv && !next.needs.some((q) => q.startsWith('value:')) ? [...next.needs, `value:${lv}`] : next.needs;
+  if (ROAD_GATE[b.key] && b.level + 1 >= ROAD_GATE[b.key] && !list.includes('road')) list = [...list, 'road'];   // version 11
+  for (const n of list) {
     const [k, v] = n.split(':');
     if (n === 'allNeeds') {
       for (const g of ['food', 'water', 'air', 'power']) out.push({ need: g, label: `Enough ${g} for every colonist`, met: !!met[g] });
@@ -862,12 +905,15 @@ export function habitatNeeds(state, b, field, ctx = {}) {
     else if (n === 'clinic') out.push({ need: 'clinic', label: 'A Clinic in reach', met: serviceAt(state, b, 'clinic') > 0 });
     // version 7 (docs/COLONY-V7.md): the quads' needs
     else if (n === 'school') out.push({ need: n, label: 'A School in reach', met: serviceAt(state, b, 'school') > 0 });
-    else if (n === 'transit') out.push({ need: n, label: 'A Transit Station or Monorail Stop in reach', met: coveredBy(state, b, TRANSIT_KEYS) });
+    else if (n === 'transit') out.push({ need: n, label: 'A Transit Station, Monorail Stop or monorail line in reach', met: nearTransit(state, b) });
+    // version 11 (docs/COLONY-V11.md): a road beside it (only gates growing), a monorail line
+    else if (n === 'road') out.push({ need: n, label: 'A road beside it', met: touchesRoad(state, b), grow: true });
+    else if (n === 'monorail') out.push({ need: n, label: 'On a monorail line (stops and Market Quads from the Arcade up link by themselves)', met: onMonorail(state, b) });
     else if (n === 'leisure') out.push({ need: n, label: `Leisure within ${LEISURE_REACH} tiles (a Promenade, Theatre, Casino or the Concert Hall)`, met: leisureNear(state, b) });   // version 9
     // version 10: coffee and wine for a Skyscraper's well-off (js/colony/luxuries.js); before Luxury Goods it only gates growing
     else if (n === 'luxuries') { const L = state.luxuries; out.push({ need: n, label: `Coffee and wine for the well-off (${['coffee', 'wine'].map((g) => `${g} ${Math.round(Math.min(1, L?.share?.[g] ?? 0) * 100)}%`).join(', ')})`, met: luxuriesMet(state), grow: !luxuriesHold(state) }); }
     else if (n === 'freight') out.push({ need: n, label: 'A Freight Yard in reach', met: coveredBy(state, b, FREIGHT_KEYS) });
-    else if (n === 'shops') out.push({ need: n, label: 'Shops in reach (a Market Quad with stalls or more)', met: state.buildings.some((s) => s.key === 'marketquad' && s.level > 1 && active(s) && covers(s, b)) });
+    else if (n === 'shops') out.push({ need: n, label: 'Shops in reach (a Market Quad with stalls or more)', met: state.buildings.some((s) => s.key === 'marketquad' && s.level > 1 && active(s) && covers(s, b, state)) });
     else if (n === 'quiet') {
       const w = noiseAt(state, b);
       out.push({ need: n, label: w ? `No workshop noise: a ${spec(w.b).levelName} is ${w.gap} tile${w.gap === 1 ? '' : 's'} away (it carries ${spec(w.b).nuisance})` : 'No workshop noise nearby', met: !w });
@@ -898,6 +944,13 @@ export function habitatNeeds(state, b, field, ctx = {}) {
 // Version 9 (docs/COLONY-V9.md): the quads' land-value gates dropped (they stay dropped now the quads are reinstated:
 // the owner wants them to grow faster); land value speeds Habitats and Tower Blocks instead (VALUE_GROW, sim.js step 8).
 export const QUAD_VALUE = {};
+// Version 11 (docs/COLONY-V11.md): growing into this level or higher needs a road beside the building ('road', only gates
+// growing: a building without one keeps its level). Quads: Courtyard Flats, Market Hall, Works; Habitats: Apartments;
+// Tower Blocks: Spire.
+export const ROAD_GATE = { livingquad: 4, marketquad: 4, workshopquad: 4, habitat: 3, towerblock: 3 };
+// Version 11: levels were inserted (Garden Terraces, Galleria, Foundry), so a version 10 save's quad levels are remapped
+// (old level n → QUAD_REMAP[key][n - 1]) once, on load (upgradeState, state.flags.quads11).
+export const QUAD_REMAP = { livingquad: [1, 2, 3, 4, 6, 7], marketquad: [1, 2, 3, 4, 5, 7], workshopquad: [1, 2, 3, 4, 6, 7] };
 export const VALUE_GROW = { at: 60, days: 1, keys: new Set(['habitat', 'towerblock']) };
 // Version 9: a Hotel's 'leisure' need: a working building with `leisure` on its deck within LEISURE_REACH tiles.
 export const LEISURE_REACH = 16;
@@ -912,7 +965,9 @@ export const ZONE_NAME = { R: 'Residential', C: 'Commercial', I: 'Industrial' };
 export const TRANSIT_KEYS = new Set(['transit', 'monorail']);
 const FREIGHT_KEYS = new Set(['freightyard']);
 const num = (n) => Math.round(n).toLocaleString('en-US');
-const coveredBy = (state, b, keys) => state.buildings.some((s) => keys.has(s.key) && active(s) && covers(s, b));
+const coveredBy = (state, b, keys) => state.buildings.some((s) => keys.has(s.key) && active(s) && covers(s, b, state));
+// Version 11: transit in reach: a Transit Station or Monorail Stop (further along roads), or a monorail line nearby.
+export const nearTransit = (state, b) => coveredBy(state, b, TRANSIT_KEYS) || onMonorail(state, b);
 // Homes (capacity) whose centres lie within QUAD.residentsRadius tiles of b's, on its deck.
 export function residentsNear(state, b) {
   const c = centre(b);
@@ -986,10 +1041,17 @@ export function serviceValue(b) {
   if (b.key === 'canteen' && b.mode === 'ration') return 0;
   return s.service;
 }
-export const covers = (svc, b) => { if (deckOf(svc) !== deckOf(b)) return false; const c = centre(b); return cheb(c.x - 0.5, c.y - 0.5, centre(svc)) <= spec(svc).radius; };
+// Version 11 (docs/COLONY-V11.md): every area effect reaches AREA.bonus tile further; given the state, a service also
+// reaches ROAD.reach tiles further to a building on the same road network (never noise: noiseAt is its own rule).
+export const AREA = { bonus: 1 };
+export const covers = (svc, b, state = null) => {
+  if (deckOf(svc) !== deckOf(b)) return false;
+  const c = centre(b), d = cheb(c.x - 0.5, c.y - 0.5, centre(svc)), r = (spec(svc).radius || 0) + AREA.bonus;
+  return d <= r || (!!state && d <= r + ROAD.reach && roadLinked(state, svc, b));
+};
 export function serviceAt(state, home, key, list = state.buildings) {
   let best = 0;
-  for (const s of list) if (s.key === key && active(s) && covers(s, home)) best = Math.max(best, serviceValue(s));
+  for (const s of list) if (s.key === key && active(s) && covers(s, home, state)) best = Math.max(best, serviceValue(s));
   return best;
 }
 
