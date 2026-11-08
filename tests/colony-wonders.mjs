@@ -69,7 +69,7 @@ function late(seed = 1, pop = 20000) {
   check(KEYS.every((k) => BUILDING[k]?.wonder && BUILDING[k].cat === 'wonders' && BUILDING[k].ver === 9), 'eight wonders (the Ark among them), all in the Wonders category');
   check(CATEGORIES.some((c) => c.key === 'wonders' && c.name === 'Wonders'), 'a Wonders tab in the build menu');
   check(R.WONDERS.length === 8 && KEYS.every((k) => R.WONDERS.includes(k)), 'rules.WONDERS lists them');
-  check(KEYS.every((k) => BUILDING[k].size >= 4 && BUILDING[k].size <= 7) && KEYS.filter((k) => BUILDING[k].size >= 6).length >= 4 && BUILDING.ark.size === 7, `big footprints (${KEYS.map((k) => BUILDING[k].size).join(' ')})`);
+  check(KEYS.every((k) => BUILDING[k].size >= 6 && BUILDING[k].size <= 8) && KEYS.filter((k) => k !== 'ark' && BUILDING[k].size >= 7).length >= 6 && BUILDING.ark.size === 7, `big footprints, 6×6 to 8×8 since version 11 (${KEYS.map((k) => BUILDING[k].size).join(' ')})`);
   check(KEYS.every((k) => !BUILDING[k].tech && BUILDING[k].wonder.effect && (BUILDING[k].wonder.tech || []).every((t) => TECH[t]) && BUILDING[k].wonder.pop >= 2500), 'no research `tech` of their own; requirements name known techs and at least 2,500 colonists');
   check(KEYS.filter((k) => BUILDING[k].wonder.pop >= 5000).length >= 5 && KEYS.filter((k) => BUILDING[k].wonder.pop >= 10000).length >= 3, 'some after 5,000 colonists, some after 10,000');
   check(KEYS.every((k) => { const lv = BUILDING[k].levels; return lv.length >= 3 && lv.slice(1).every((l) => l.cost && l.days >= 8 && l.name); }), 'built in stages: three or more, each a cost and days of its own');
@@ -111,24 +111,26 @@ function late(seed = 1, pop = 20000) {
   check(!R.landmarkWhy(s2, 'arboretum'), 'once earned, kept');
   s2.pop = 20000;
   const b = place(s2, 'arboretum');
-  check(!!b && b.deck === 'upper' && b.level === 1 && b.build === BUILDING.arboretum.days, 'placed on the upper deck: stage 1, Terraces, 12 days');
+  check(!!b && b.deck === 'upper' && b.level === 1 && b.build === BUILDING.arboretum.days, 'placed on the upper deck: stage 1, Terraces, 16 days');
   check(/already has Grand Arboretum: a wonder is one of a kind/.test(R.landmarkWhy(s2, 'arboretum')), 'one of a kind');
   check(!R.wonderWorks(b) && !R.wonderHappy(s2).length, 'a foundation does nothing yet');
   check(/Finish building it first/.test(R.upgrade(s2, b.id).msg), 'the next stage waits for this one');
   b.build = 1; tick(s2, rng);
-  check(s2.log.some((l) => /Grand Arboretum: Terraces finished \(stage 1 of 3\)\. Order the next stage, Glasshouses/.test(l.text)), 'a stage done: the log says what comes next');
+  check(s2.log.some((l) => /Grand Arboretum: Terraces finished \(stage 1 of 4\)\. Order the next stage, Canals/.test(l.text)), 'a stage done: the log says what comes next');
   rich(s2, false); s2.stock.alloy = 10;
   const poor = R.upgrade(s2, b.id);
   check(!poor.ok && /more alloy/.test(poor.msg), `the next stage needs alloy ("${poor.msg}")`);
   s2.stock.alloy = 1000;
   const c0 = { ...s2.stock }, cost = R.costOf(s2, BUILDING.arboretum.levels[1].cost, 'arboretum');
   const r = R.upgrade(s2, b.id);
-  check(r.ok && b.level === 2 && b.build === 14 && /Glasshouses \(stage 2 of 3\)/.test(r.msg), `stage 2 ordered: ${r.msg}`);
+  check(r.ok && b.level === 2 && b.build === 16 && /Canals \(stage 2 of 4\)/.test(r.msg), `stage 2 ordered: ${r.msg}`);
   check(c0.alloy - s2.stock.alloy === cost.alloy && c0.credits - s2.stock.credits === cost.credits, `it pays its credits, parts and alloy (${cost.credits} cr, ${cost.alloy} alloy)`);
   check(!R.wonderWorks(b), 'still not working while the frame goes up');
-  check(R.wonderStage(b).stage === 2 && R.wonderStage(b).next?.name === 'Grand Arboretum' && R.wonderStage(b).building, 'wonderStage reads the stage and the next');
+  check(R.wonderStage(b).stage === 2 && R.wonderStage(b).next?.name === 'Glasshouses' && R.wonderStage(b).building, 'wonderStage reads the stage and the next');
   b.build = 1; s2.pending.length = 0; tick(s2, rng);
   check(!s2.pending.some((p) => p.kind === 'wonder'), 'no moment until the last stage');
+  rich(s2); R.upgrade(s2, b.id); b.build = 1; s2.pending.length = 0; tick(s2, rng);
+  check(!s2.pending.some((x) => x.kind === 'wonder'), 'nor after the third (version 11: four stages)');
   rich(s2); R.upgrade(s2, b.id); b.build = 1; s2.pending.length = 0; tick(s2, rng);
   const p = s2.pending.find((x) => x.kind === 'wonder');
   check(R.wonderWorks(b) && p && p.wonder === 'arboretum' && p.quote === R.WLINES.arboretum[1] && p.show?.tile?.deck === 'upper', 'the last stage: it works, and its moment plays with the General\'s line and a Show me');
@@ -136,7 +138,7 @@ function late(seed = 1, pop = 20000) {
   check(!s2.pending.some((x) => x.kind === 'wonder'), 'played once');
   check(!R.upgrade(s2, b.id).ok, 'nothing beyond the last stage');
   const st = R.wonderStatus(s2).find((x) => x.key === 'arboretum');
-  check(st.state === 'working' && st.stage === 3 && st.stages === 3 && st.done != null, 'wonderStatus reads it');
+  check(st.state === 'working' && st.stage === 4 && st.stages === 4 && st.done != null, 'wonderStatus reads it');
   // demolishing refunds half of every stage's credits and parts
   const cr = s2.stock.credits, back = R.demolish(s2, b.id);
   check(back.ok && s2.stock.credits - cr >= Math.floor(R.costOf(s2, BUILDING.arboretum.cost, 'arboretum').credits / 2), 'demolished: half its cost back');
@@ -153,23 +155,31 @@ function late(seed = 1, pop = 20000) {
     if (built[k]) { const why = finish(s, built[k], rng); check(!why && R.wonderWorks(built[k]), `${k}: every stage built (${why || 'ok'})`); }
   }
   const hp = Object.fromEntries(R.wonderHappy(s).map((x) => [x.label, x.value]));
-  check(hp['Grand Arboretum'] === 4 && hp['Memorial Garden'] === 5 && hp['Zero-G Arena'] === 6, `happiness for the whole colony (${JSON.stringify(hp)})`);
-  check(s.happyParts.some((x) => x.label === 'Zero-G Arena' && x.value === 6), 'and in the happiness breakdown');
+  const arenaHp = 6 + Math.min(10, Math.floor(s.pop / 2000));
+  check(hp['Grand Arboretum'] === 6 && hp['Memorial Garden'] === 8 && hp['Concert Hall'] === 6 && hp['Zero-G Arena'] === arenaHp, `version 11: stronger happiness for the whole colony, the Arena's growing with the city (${JSON.stringify(hp)})`);
+  check(s.happyParts.some((x) => x.label === 'Zero-G Arena' && x.value === arenaHp), 'and in the happiness breakdown');
   const a = built.arboretum;
-  check(R.spec(a).park === 14 && R.spec(a).radius === 20 && R.parkAt(s, a) >= 14, 'the Arboretum: a park of 14 within 20 tiles');
+  check(R.spec(a).park === 16 && R.spec(a).radius === 26 && R.parkAt(s, a) >= 16 && R.spec(a).makes.air === 5000, 'the Arboretum: a park of 16 within 26 tiles, air for 5,000');
   const lvArb = R.landValueParts(s, 'upper', a.x + 8, a.y + 2);
-  check(lvArb.parts.some((x) => /A wonder nearby \(Grand Arboretum\)/.test(x.label) && x.value === 15), 'the Arboretum raises land value +15 around it');
+  check(lvArb.parts.some((x) => /A wonder nearby \(Grand Arboretum\)/.test(x.label) && x.value === 25), 'the Arboretum raises land value +25 around it');
+  check(BUILDING.arboretum.wonder.valueRadius >= Math.max(s.map.w, s.map.h), 'deck-wide: its reach spans the whole upper deck');
   const res = R.wonderResearch(s);
   check(res > 0 && Math.abs(res - 4 * s.pop / 1000) < 1e-9, `the Great Library: 4 research per 1,000 colonists (${res.toFixed(1)} at ${s.pop})`);
-  check(R.serviceValue(built.concerthall) === 8 && R.spec(built.concerthall).radius === 24 && R.spec(built.concerthall).leisure === 3, 'the Concert Hall: happiness 8 within 24 tiles, and leisure');
-  check(R.wonderTransport(s) === 2 && R.wonderVisitors(s) === 4, 'the Starport: transports ×2, visitors ×4');
+  check(R.serviceValue(built.concerthall) === 10 && R.spec(built.concerthall).radius === 28 && R.spec(built.concerthall).leisure === 5, 'the Concert Hall: happiness 10 within 28 tiles, and leisure');
+  check(R.wonderTransport(s) === 3 && R.wonderVisitors(s) === 5 && R.spec(built.starport).makes.credits === 800, 'the Starport: transports ×3, visitors ×5, 800 credits of trade');
+  check(R.wonderTourismMul(s) === 2 && R.tourismOf(s).parts.some((x) => /Wonders draw crowds/.test(x.label)), 'the Concert Hall: tourism ×2');
+  check(R.wonderResearchMul(s) === 2, 'the Great Library: all research ×2');
+  check(R.wonderIncome(s) > 0 && Math.abs(R.wonderIncome(s) - 60 * s.pop / 1000) < 1e-6, `the Zero-G Arena: 60 credits a day per 1,000 colonists (${R.wonderIncome(s).toFixed(0)})`);
   const st = R.stagesOf('spinring'), ring = place(s, 'spinring');
   check(!!ring && !finish(s, ring, rng) && ring.level === st, 'the Spin-Gravity Ring, once the Starport stands');
-  check(R.spec(ring).housing === 3000 && R.housingOf(s) >= 3000, 'homes for 3,000 in space');
+  check(R.spec(ring).housing === 8000 && R.housingOf(s) >= 8000, 'homes for 8,000 in space');
   // the Memorial Garden: grief and fear fade twice as fast again (on top of the Hall of Names)
   s.raid.moods = [{ label: 'Raid fear', value: -12, day: s.day, days: 12 }];
   tick(s, rng, 4);
   check(!s.raid.moods.length, 'the Memorial Garden and the Hall of Names: a 12-day fear is gone in 4 days (12 alone, 6 with the Hall)');
+  s.raid.moods = [{ label: 'Raid fear', value: -12, day: s.day, days: 12 }];
+  tick(s, rng, 1);
+  check(!s.happyParts.some((x) => x.label === 'Raid fear'), 'version 11: with the Memorial Garden Eden feels no fear at all');
   // a damaged or switched-off wonder gives nothing
   built.starport.off = true;
   check(R.wonderTransport(s) === 1, 'switched off, its effect stops');
@@ -178,20 +188,20 @@ function late(seed = 1, pop = 20000) {
   const first = (port) => {
     const t = colony(4); t.difficulty = 'easy'; t.pop = 300;
     for (const key of ['towerblock', 'towerblock', 'towerblock', 'towerblock', 'dock', 'vertfarm', 'sunmirror', 'park', 'park']) stand(t, key);
-    if (port) { stand(t, 'starport', { level: 3 }); t.wonders.done.starport = 0; }
+    if (port) { stand(t, 'starport', { level: R.stagesOf('starport') }); t.wonders.done.starport = 0; }
     const rng2 = stateRng(t);
     for (let d = 0; d < 30; d++) { feed(t); t.pending.length = 0; dayTick(t, rng2); if (t.flags.arrival?.day === t.day) return t.flags.arrival.n; }
     return 0;
   };
   const without = first(false), withS = first(true);
-  check(without > 0 && Math.abs(withS - 2 * without) <= 1, `the Starport: a transport brings twice as many (${without} → ${withS})`);
+  check(without > 0 && Math.abs(withS - 3 * without) <= 1, `the Starport: a transport brings three times as many (${without} → ${withS})`);
 }
 
 // ---------------------------------------------------------------- the Ark: the second ending
 {
   const s = late(4, 16000), rng = stateRng(s);
   check(/Needs Starport finished/.test(R.landmarkWhy(s, 'ark')), 'the Ark waits on the Starport');
-  const port = stand(s, 'starport', { level: 3 });
+  const port = stand(s, 'starport', { level: R.stagesOf('starport') });
   stand(s, 'elevator');
   s.pop = 14000;
   check(/15,000 colonists/.test(R.landmarkWhy(s, 'ark')), 'and on 15,000 colonists');
@@ -221,7 +231,7 @@ function late(seed = 1, pop = 20000) {
   check(R.wonderHappy(s).some((x) => x.label === 'The Ark' && x.value === 5), 'afterwards, +5 happiness');
   const back = loadState(saveState(s));
   check(back.ark && back.ark.day === s.ark.day && back.buildings.find((x) => x.key === 'ark').launched === b.launched, 'save and load keep the Ark\'s ending');
-  check(port.level === 3, 'the Starport still stands');
+  check(port.level === R.stagesOf('starport'), 'the Starport still stands');
 }
 
 // ---------------------------------------------------------------- saves
@@ -230,7 +240,7 @@ function late(seed = 1, pop = 20000) {
   for (const g of R.EXTRA_COST) s.stock[g] = 1e5;
   const b = place(s, 'arboretum'); b.build = 0; rich(s); R.upgrade(s, b.id);
   const back = loadState(saveState(s)), bb = back.buildings.find((x) => x.key === 'arboretum');
-  check(bb.level === 2 && bb.build === 14 && back.wonders && back.ark === null, 'loaded mid-stage: the stage and its days are kept');
+  check(bb.level === 2 && bb.build === 16 && back.wonders && back.ark === null, 'loaded mid-stage: the stage and its days are kept');
   const old = JSON.parse(saveState(s)); delete old.wonders; delete old.ark;
   const up = loadState(JSON.stringify(old));
   check(up.wonders && up.wonders.done && up.ark === null && R.wonderStatus(up).length === 8, 'an older save gets the wonder state');

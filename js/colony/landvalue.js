@@ -30,7 +30,7 @@ export const LV = {
   industry: 3, industryRange: 4,     // industry next door: (range − gap) × industry (the nearest)
   hull: 4, hullRange: 3,             // exposed hull: (range + 1 − distance) × hull
   breach: 10,                        // an unsealed breach in the chamber
-  wonderMax: 25,                     // version 9: finished wonders nearby, all together
+  wonderMax: 40,                     // version 9: finished wonders nearby, all together (version 11: 40, was 25)
   refreshDays: 3,
 };
 const OPEN = 'open';

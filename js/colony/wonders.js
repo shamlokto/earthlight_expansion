@@ -52,11 +52,19 @@ export function ensureWonders(state) {
 
 // ---------------------------------------------------------------- the lasting effects (rules.js, sim.js, landvalue.js read these)
 // Happiness for the whole colony: [{ label, value }] (sim.js step 7).
-export const wonderHappy = (state) => wondersOn(state).filter((b) => W(b).happy).map((b) => ({ label: BUILDING[b.key].name, value: W(b).happy }));
+// Version 11 (docs/COLONY-V11.md): `happyPer` adds 1 more per that many colonists, up to `happyMax` (the Zero-G Arena).
+export const wonderHappy = (state) => wondersOn(state).filter((b) => W(b).happy).map((b) => ({ label: BUILDING[b.key].name,
+  value: W(b).happy + (W(b).happyPer ? Math.min(W(b).happyMax || 0, Math.floor((state.pop || 0) / W(b).happyPer)) : 0) }));
 const product = (state, field) => wondersOn(state).reduce((m, b) => m * (W(b)[field] || 1), 1);
 export const wonderTransport = (state) => product(state, 'transport');   // the Starport: ×2 transports
 export const wonderVisitors = (state) => product(state, 'visitors');     // the Starport: ×4 visitors can arrive
 export const wonderFade = (state) => product(state, 'fade');             // the Memorial Garden: grief and fear fade ×2
+// version 11 (docs/COLONY-V11.md): stronger perks
+export const wonderTourismMul = (state) => product(state, 'tourismMul');   // the Concert Hall: all tourism ×2
+export const wonderResearchMul = (state) => product(state, 'researchMul'); // the Great Library: all research ×2
+export const wonderNoGrief = (state) => wondersOn(state).some((b) => W(b).noGrief);   // the Memorial Garden: no grief or fear
+// Credits a day that grow with the city: `perPop` per 1,000 colonists (the Zero-G Arena), at the wonder's working rate.
+export const wonderIncome = (state, rateOf = () => 1) => wondersOn(state).reduce((t, b) => t + (W(b).perPop?.credits || 0) * ((state.pop || 0) / 1000) * rateOf(b), 0);
 // Research a day: `research` per 1,000 colonists (the Great Library), at the wonder's working rate.
 export const wonderResearch = (state, rateOf = () => 1) => wondersOn(state).reduce((t, b) => t + (W(b).research || 0) * ((state.pop || 0) / 1000) * rateOf(b), 0);
 // Land value: { b, value, radius } for the working wonders on a deck.

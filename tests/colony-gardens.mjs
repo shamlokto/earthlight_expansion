@@ -53,8 +53,8 @@ const asks = (s) => ({ ask: (kind, title, text) => R.addPending(s, kind, title, 
   off.off = false;
   const arb = stand(s, 'arboretum', { level: 1, deck: 'upper' });
   check(score(s) === base + 40, 'a wonder adds nothing before its last stage');
-  arb.level = 3;
-  check(score(s) === base + 40 + 14 + R.GARDEN.arboretum, 'the finished Grand Arboretum: its park 14 and 40 more');
+  arb.level = R.stagesOf('arboretum');
+  check(score(s) === base + 40 + 16 + R.GARDEN.arboretum, 'the finished Grand Arboretum: its park 16 and 40 more');
 }
 
 // ---------------------------------------------------------------- wildlife

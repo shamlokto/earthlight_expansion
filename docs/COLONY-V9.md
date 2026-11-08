@@ -120,3 +120,5 @@ How to play gains **Wonders**, **Tourism** and **The Ark** after Landmarks, lose
 - **Saves.** `upgradeState` adds `state.wonders = { done }` and `state.ark = null` to an older save. Nothing else is new in the save: a wonder's stage is its `level` and `build`.
 
 **Checked in the browser** (Playwright, chromium with SwiftShader): a Concert Hall at stage 1 (shells half up, scaffolding and cranes), stage 2 under construction (stage 1 solid inside the ghost), stage 2 done, finished with its moment; the Tourism stat in the More pop-out and the Market's Tourism section; the Wonders tab; no console errors (only the existing `__test_rom` / `__test_patch` probes answer 404).
+
+> **Version 11 (2026-11-08, docs/COLONY-V11.md §5).** Every wonder but the Ark is now two tiles bigger, has four stages, costs more and has much stronger perks. Examples: the Concert Hall doubles tourism, the Great Library doubles research, the Starport triples transports, the Arboretum gives air for 5,000 and land value +25 across its deck, the Arena grows with the city, the Spin-Gravity Ring houses 8,000, and the Memorial Garden ends grief and fear.

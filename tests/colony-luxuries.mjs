@@ -62,9 +62,9 @@ const L3 = ['coffee', 'vineyard', 'artisan'];
   check(R.wellOffOf(s) === 450, 'a full Spire: 450 well-off');
   stand(s, 'arcology'); s.housing = R.housingOf(s); s.pop = Math.round(s.housing / 2);
   check(Math.abs(R.wellOffOf(s) - 975) <= 1, 'an Arcology too, scaled by how full Eden\'s homes are');
-  stand(s, 'spinring', { level: 2 });
+  stand(s, 'spinring', { level: R.stagesOf('spinring') - 1 });
   const w = R.wellOffOf(s);
-  stand(s, 'spinring', { level: 3, id: 9999 });
+  stand(s, 'spinring', { level: R.stagesOf('spinring'), id: 9999 });
   check(R.wellOffOf(s) > w, 'the finished Spin-Gravity Ring, not before its last stage');
 }
 
