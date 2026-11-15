@@ -1339,3 +1339,26 @@ button.cl-jslot:hover { border-color: var(--gold); }
 .cl-dist .cl-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .cl-dist .cl-modes button { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cl-dist .cl-modes button.cl-dclear { grid-column: 1 / -1; }
+
+/* ------------------------------------------------------------------ version 13 (docs/COLONY-V13.md): the Hope and the Ark panel */
+.cl-hopewin { --br: #c8b46a; --glass: rgba(18, 14, 8, .95); position: fixed; right: 350px; top: 72px; width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 150px);
+  overflow-y: auto; z-index: 7; padding-bottom: 10px; scrollbar-width: thin; animation: toast-in .2s var(--ease); }
+.cl-hopebody { padding: 4px 14px 6px; font-size: 13px; }
+.cl-hopebar { margin: 6px 0; }
+.cl-hopebar > span { display: flex; justify-content: space-between; gap: 8px; }
+.cl-hopebar b { color: #9fe38a; }
+.cl-hopebar i { display: block; height: 7px; margin-top: 4px; border-radius: 4px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.cl-hopebar i b { display: block; height: 100%; background: linear-gradient(90deg, #8a7a4a, #6fbf4a, #4ac0ff); }
+.cl-hoperow { display: flex; justify-content: space-between; gap: 8px; margin: 4px 0; flex-wrap: wrap; }
+.cl-hopegoods { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 4px 0; font-variant-numeric: tabular-nums; }
+.cl-hopeman { border: 1px solid rgba(200, 180, 106, .3); border-radius: 6px; margin: 8px 0; padding: 6px 8px; display: grid; gap: 4px; }
+.cl-hopeman[disabled] { opacity: .55; }
+.cl-hopeman label { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cl-hopeman input { width: 84px; background: rgba(0, 0, 0, .35); border: 1px solid rgba(255, 255, 255, .15); border-radius: 4px; color: inherit; padding: 2px 4px; text-align: right; }
+.cl-hopeauto { font-size: 12px; display: inline-flex; gap: 4px; align-items: center; margin-left: 8px; }
+.cl-hopedrop h4, .cl-hopems summary { font-size: 13px; margin: 8px 0 4px; }
+.cl-hopems ul { list-style: none; padding: 0; margin: 4px 0; }
+.cl-hopems li.no { color: var(--dim); }
+.cl-hopehint { grid-column: 1 / -1; }
+.cl-decks [data-hope-ark] { border-color: rgba(200, 180, 106, .5); }
+@media (max-width: 760px) { .cl-hopewin { right: 16px; left: 16px; width: auto; top: 60px; } }

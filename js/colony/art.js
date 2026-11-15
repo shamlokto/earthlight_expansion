@@ -44,14 +44,18 @@ const SLOTS = {
     // version 9 (docs/COLONY-V9.md): the wonders, the Ark and the tourism buildings (prompts written; pictures not made yet)
     'arboretum', 'library', 'concerthall', 'memorial', 'arena', 'starport', 'spinring', 'ark', 'hotel', 'promenade', 'theatre', 'casino',
     // version 10 (docs/COLONY-V10.md): the luxuries (prompts written; pictures not made yet)
-    'coffee', 'vineyard', 'artisan'],
+    'coffee', 'vineyard', 'artisan',
+    // version 13 (docs/COLONY-V13.md): the Hope's buildings on Earth (prompts written; pictures not made yet)
+    'landingfield', 'sealeddome', 'airscrubber', 'deconplant', 'soilreactor', 'seapurifier', 'tidewall', 'seedbank', 'firstfields', 'reforest'],
   title: ['rebuild'],
   sky: ['earth-below'],
   terrain: ['void', 'asteroid', 'magnetic', 'atmosphere', 'hull', 'deck', 'plain', 'fertile', 'river', 'rubble', 'breach',
     // version 2
     'forest', 'hills', 'rock', 'meteoroid', 'comet', 'plasma', 'gravity',
     // owner's reserve of 50 (2026-11-04): the terrains still drawn by hand, mostly the decks'
-    'poor', 'lake', 'marsh', 'bulkhead', 'gate', 'glass', 'conduit', 'catacomb'],
+    'poor', 'lake', 'marsh', 'bulkhead', 'gate', 'glass', 'conduit', 'catacomb',
+    // version 13: Earth, the Hope (prompts written; pictures not made yet)
+    'ash', 'ruins', 'toxic', 'radzone', 'mire', 'deadsea', 'sea', 'landing'],
   portrait: ['ruess', 'sato',
     // version 3: the wanderers (data/commanders.js WANDERERS)
     'w_kestrel', 'w_brann', 'w_ilves', 'w_oduya', 'w_vashti', 'w_corran', 'w_maris', 'w_thorne', 'w_seln', 'w_okafor',
@@ -61,7 +65,7 @@ const SLOTS = {
     // version 4, stage 4: the player, at last (the ending)
     'general'],
   // version 4, stage 4: the big moments (D26); each still is the first frame of its clip
-  scene: ['ending', 'finalvault', 'ark', 'garden'],   // version 9: the Ark's ending, Beyond Eden; version 10: the Garden of Eden (prompts written; pictures not made yet)
+  scene: ['ending', 'finalvault', 'ark', 'garden', 'hope', 'earthlight', 'justice'],   // version 12: Justice for Eden (prompt written; picture not made yet)   // version 13: the Hope opens, and its ending, Earthlight   // version 9: the Ark's ending, Beyond Eden; version 10: the Garden of Eden (prompts written; pictures not made yet)
   // the Star chart's sites (js/colony/expeditions.js SITES), the journal's vaults and dangers (data/secrets.js)
   site: ['belt', 'comet', 'derelict', 'babylon', 'bunker', 'den', 'outpost', 'listening', 'relief'],
   vault: ['v_stores', 'v_helium', 'v_msnp', 'v_msfb', 'v_seeds', 'v_blue'],
@@ -181,6 +185,16 @@ const FILES = {
   'card/coffee': 'art/colony/card/coffee.webp',
   'card/vineyard': 'art/colony/card/vineyard.webp',
   'card/artisan': 'art/colony/card/artisan.webp',
+  'card/landingfield': 'art/colony/card/landingfield.webp',
+  'card/sealeddome': 'art/colony/card/sealeddome.webp',
+  'card/airscrubber': 'art/colony/card/airscrubber.webp',
+  'card/deconplant': 'art/colony/card/deconplant.webp',
+  'card/soilreactor': 'art/colony/card/soilreactor.webp',
+  'card/seapurifier': 'art/colony/card/seapurifier.webp',
+  'card/tidewall': 'art/colony/card/tidewall.webp',
+  'card/seedbank': 'art/colony/card/seedbank.webp',
+  'card/firstfields': 'art/colony/card/firstfields.webp',
+  'card/reforest': 'art/colony/card/reforest.webp',
   'title/rebuild': 'art/colony/title/rebuild.webp',
   'sky/earth-below': 'art/colony/sky/earth-below.webp',
   'terrain/void': 'art/colony/terrain/void.webp',
@@ -209,6 +223,14 @@ const FILES = {
   'terrain/glass': 'art/colony/terrain/glass.webp',
   'terrain/conduit': 'art/colony/terrain/conduit.webp',
   'terrain/catacomb': 'art/colony/terrain/catacomb.webp',
+  'terrain/ash': 'art/colony/terrain/ash.webp',
+  'terrain/ruins': 'art/colony/terrain/ruins.webp',
+  'terrain/toxic': 'art/colony/terrain/toxic.webp',
+  'terrain/radzone': 'art/colony/terrain/radzone.webp',
+  'terrain/mire': 'art/colony/terrain/mire.webp',
+  'terrain/deadsea': 'art/colony/terrain/deadsea.webp',
+  'terrain/sea': 'art/colony/terrain/sea.webp',
+  'terrain/landing': 'art/colony/terrain/landing.webp',
   'portrait/ruess': 'art/colony/portrait/ruess.webp',
   'portrait/sato': 'art/colony/portrait/sato.webp',
   'portrait/w_kestrel': 'art/colony/portrait/w_kestrel.webp',
@@ -230,6 +252,9 @@ const FILES = {
   'scene/finalvault': 'art/colony/scene/finalvault.webp',
   'scene/ark': 'art/colony/scene/ark.webp',
   'scene/garden': 'art/colony/scene/garden.webp',
+  'scene/hope': 'art/colony/scene/hope.webp',
+  'scene/earthlight': 'art/colony/scene/earthlight.webp',
+  'scene/justice': 'art/colony/scene/justice.webp',
   'site/belt': 'art/colony/site/belt.webp',
   'site/comet': 'art/colony/site/comet.webp',
   'site/derelict': 'art/colony/site/derelict.webp',

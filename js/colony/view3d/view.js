@@ -112,18 +112,28 @@ const SHAPE = {
   conduit: (x, y) => [0.1, (x % 4 === 0 || y % 6 === 0 ? 0.78 : 1) * (0.92 + 0.12 * hash(x, y))],   // pipe runs in the plating
   catacomb: (x, y) => [0.22 + 0.16 * hash(x, y), 0.7 + 0.45 * smooth(x / 3, y / 3)],
   shaft: () => [-0.5, 1],
+  // version 13: Earth, the Hope: rough dead ground, broken ruins, gas pools, hot zones, the drowned lowland and the sea
+  ash: (x, y) => [0.12 + 0.35 * smooth(x / 5, y / 5) + 0.1 * hash(x, y), 0.8 + 0.35 * hash(x + 7, y)],
+  ruins: (x, y) => [0.25 + 1.1 * hash(x, y) * hash(x + 3, y + 1), 0.55 + 0.6 * hash(x + 7, y)],
+  toxic: (x, y) => [0.08 + 0.12 * smooth(x / 4, y / 4), 0.75 + 0.4 * smooth(x / 3 + 9, y / 3)],
+  radzone: (x, y) => [0.06 + 0.08 * hash(x, y), 0.7 + 0.5 * smooth(x / 2, y / 2)],
+  mire: (x, y) => [0.0 + 0.04 * hash(x, y), 0.75 + 0.4 * smooth(x / 3, y / 3)],
+  deadsea: () => [-0.35, 1], sea: () => [-0.35, 1],
+  landing: (x, y) => [0.12, ((x >> 1) + (y >> 1)) & 1 ? 1 : 0.92],
 };
 // Tile-top colours that differ from terrain.js (whose colour then goes to the rocks or water).
-const TOP_COLOR = { asteroid: '#2c2622', meteoroid: '#27221f', river: '#1b3049', lake: '#182c44', shaft: '#0c0d11' };
+const TOP_COLOR = { asteroid: '#2c2622', meteoroid: '#27221f', river: '#1b3049', lake: '#182c44', shaft: '#0c0d11', deadsea: '#1a221c', sea: '#16304a', radzone: '#6a3a8a' };
 const SHAFT_RIM = '#f0be48';
+const HOPE_SKY = new THREE.Color('#4a3e2c');   // version 13: the Hope's sky, thick with dust and gas
 export const DECKS = ['upper', 'main', 'lower'];
 export const DECK_INFO = {
   upper: { name: 'Upper deck', text: 'Galleries, sky gardens and the sky panels' },
   main: { name: 'Main deck', text: 'Fields, the river, industry and the docks' },
   lower: { name: 'Lower deck', text: 'Machinery halls, flooded tunnels and catacombs' },
+  earth: { name: 'The Hope', text: 'Earth: poison, ruins and the first clean ground' },   // version 13 (docs/COLONY-V13.md)
 };
 // light per deck: [hemisphere, sun, earthlight]; the main deck's are the version 1-3 values
-const DECK_LIGHT = { upper: [2.4, 2.8, 0.9], main: [2.2, 2.6, 0.9], lower: [1.75, 2.1, 0.55] };
+const DECK_LIGHT = { upper: [2.4, 2.8, 0.9], main: [2.2, 2.6, 0.9], lower: [1.75, 2.1, 0.55], earth: [1.9, 2.3, 0.3] };
 const hasDeck = (state, d) => d === 'main' || !!state?.decks?.[d]?.t;
 const isOnDeck = (o, d) => (o.deck || 'main') === d;
 // The state as one deck sees it: its map, chambers and buildings; everything else reads through.
@@ -132,8 +142,8 @@ function deckView(state, d) {
   if (d === 'main' && !anyDeck(state.buildings) && !anyDeck(state.chambers)) return state;   // a version 1-3 colony
   const v = Object.create(state), D = d === 'main' ? null : state.decks[d];
   v.map = D ? { w: state.map.w, h: state.map.h, t: D.t, r: D.r, ch: D.ch, sv: D.sv, deck: d } : state.map;
-  v.chambers = (state.chambers || []).filter((c) => isOnDeck(c, d));
-  v.buildings = (state.buildings || []).filter((b) => isOnDeck(b, d));
+  v.chambers = d === 'earth' ? [] : (state.chambers || []).filter((c) => isOnDeck(c, d));
+  v.buildings = d === 'earth' ? (state.hope?.buildings || []) : (state.buildings || []).filter((b) => isOnDeck(b, d));   // version 13: the Hope keeps its own
   v.deck = d;
   return v;
 }
@@ -156,7 +166,7 @@ function glassTexture() {
   glassTex.colorSpace = THREE.SRGBColorSpace; glassTex.anisotropy = 4;
   return glassTex;
 }
-const GLOW_TERRAIN = new Set(['plasma', 'breach']);   // unlit: plasma glows, breaches burn
+const GLOW_TERRAIN = new Set(['plasma', 'breach', 'radzone']);   // unlit: plasma glows, breaches burn, Earth's hot zones shine (version 13)
 
 const lin = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
 const TERRAIN_RGB = TERRAIN.map((d) => lin(TOP_COLOR[d.key] || d.color));
@@ -404,6 +414,7 @@ export function createView(container, opts = {}) {
   let meshes = [], slot = null, waterMesh = null, waterSlot = null, terrTop = null, tops = null, baseRgb = null;
   let underMesh = null, underSlot = null;             // upper deck: the main deck's ground seen through the glass
   let rockMesh = null, gemMesh = null, wreckMesh = null, breachMat = null, plasmaMat = null;
+  const hopeHazeMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.2, depthWrite: false });   // version 13
   let occ = null;                                     // building id + 1 per tile, 0 = free
   const chamberSig = new Map(), chamberById = new Map(), built = new Map();
   let breachOwners = new Map();
@@ -504,7 +515,7 @@ export function createView(container, opts = {}) {
       if (def.key === 'plasma') plasmaMat = mesh.material;
       meshes[def.id] = mesh; terrGroup.add(mesh);
     }
-    const nWater = count[T.RIVER] + count[T.LAKE];
+    const nWater = count[T.RIVER] + count[T.LAKE] + count[T.DEADSEA] + count[T.SEA];   // version 13: Earth's sea
     waterMesh = new THREE.InstancedMesh(PLANE, terrainShader(new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.8, emissive: '#0a2a50' }), OV), Math.max(1, nWater));
     waterMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, nWater) * 3), 3);
     waterMesh.userData.base = new Float32Array(Math.max(1, nWater) * 3);
@@ -554,7 +565,7 @@ export function createView(container, opts = {}) {
           rims.push(x + 0.5 + dx * 0.44, y + 0.5 + dy * 0.44, dx !== 0);
         }
       }
-      if (id === T.RIVER || id === T.LAKE) {
+      if (id === T.RIVER || id === T.LAKE || id === T.DEADSEA || id === T.SEA) {
         const w = waterSlot[i] = waterMesh.count++, wa = waterMesh.instanceMatrix.array, wo = w * 16;
         wa[wo] = 1; wa[wo + 5] = 1; wa[wo + 10] = 1; wa[wo + 12] = x + 0.5; wa[wo + 13] = -0.08; wa[wo + 14] = y + 0.5;
         const wc = TERRAIN_LIN[id], wb = 0.85 + 0.3 * smooth(x / 3, y / 3), wB = waterMesh.userData.base;
@@ -605,6 +616,25 @@ export function createView(container, opts = {}) {
       ra[n * 3] = rc[0] * k.b; ra[n * 3 + 1] = rc[1] * k.b; ra[n * 3 + 2] = rc[2] * k.b;
     });
     terrGroup.add(rockMesh);
+    // version 13: the Hope's poison in the air: a low yellow-green haze over toxic gas, a violet shimmer over hot zones
+    if (count[T.TOXIC] || count[T.RADZONE]) {
+      const n = count[T.TOXIC] + count[T.RADZONE], hz = new THREE.InstancedMesh(PLANE, hopeHazeMat, n);
+      hz.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
+      hz.frustumCulled = false; hz.name = 'hope-haze'; hz.renderOrder = 3;
+      const ha = hz.instanceMatrix.array, hc = hz.instanceColor.array, TOX = lin('#b8c040'), RAD = lin('#b060ff');
+      let k = 0;
+      for (let i = 0; i < N; i++) {
+        if (t[i] !== T.TOXIC && t[i] !== T.RADZONE) continue;
+        const x = i % W, y = (i / W) | 0, tox = t[i] === T.TOXIC, o = k * 16;
+        ha.fill(0, o, o + 16); ha[o] = 1; ha[o + 5] = 1; ha[o + 10] = 1; ha[o + 15] = 1;
+        ha[o + 12] = x + 0.5; ha[o + 13] = (tox ? 0.5 : 0.3) + 0.25 * smooth(x / 3, y / 3); ha[o + 14] = y + 0.5;
+        const c = tox ? TOX : RAD, b = (tox ? 0.7 : 0.45) + 0.4 * smooth(x / 4 + 5, y / 4);
+        hc[k * 3] = c[0] * b; hc[k * 3 + 1] = c[1] * b; hc[k * 3 + 2] = c[2] * b;
+        k++;
+      }
+      hz.count = k; hz.instanceMatrix.needsUpdate = true;
+      terrGroup.add(hz);
+    }
     if (pipes.length) {
       const n = pipes.length / 4, pm = new THREE.InstancedMesh(UNIT.cylinder, new THREE.MeshLambertMaterial(), n);
       pm.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
@@ -717,7 +747,7 @@ export function createView(container, opts = {}) {
   // everything a kit draws from: the Tailings Dump's heap also follows its fill (in steps of 5)
   // version 3: a raid-damaged building is drawn sooty; the Fusion Reactor's torus goes dark with no helium-3
   const noHelium = () => !((st?.stock?.helium ?? 1) > 0);
-  const sigOf = (b) => `${b.key}|${b.x}|${b.y}|${b.level}|${b.build > 0 ? 1 : 0}|${b.off ? 1 : 0}|${b.mode}${b.key === 'tailings' ? '|' + Math.round((b.fill || 0) / 5) : ''}${b.damaged > 0 ? '|d' : ''}${b.key === 'fusion' && noHelium() ? '|he0' : ''}${b.launched ? '|L' : ''}${b.mega ? `|M${b.mega.w}x${b.mega.h}${b.mega.lead === b.id ? 'L' : ''}` : ''}`;   // version 11: a megastructure's shape   // version 9: the Ark has flown
+  const sigOf = (b) => `${b.key}|${b.x}|${b.y}|${b.level}|${b.build > 0 ? 1 : 0}|${b.off ? 1 : 0}|${b.mode}${b.key === 'tailings' ? '|' + Math.round((b.fill || 0) / 5) : ''}${b.damaged > 0 ? '|d' : ''}${b.key === 'fusion' && noHelium() ? '|he0' : ''}${b.launched ? '|L' : ''}${b.ship ? '|S' : ''}${b.mega ? `|M${b.mega.w}x${b.mega.h}${b.mega.lead === b.id ? 'L' : ''}` : ''}`;   // version 11: a megastructure's shape   // version 9: the Ark has flown
   const SOOT = [0.42, 0.37, 0.34];
   const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), e4 = new THREE.Euler(), v4 = new THREE.Vector3(), s4 = new THREE.Vector3(), c4 = new THREE.Color();
   const sizeOf = (key) => BUILDING[key]?.size || 1;
@@ -992,6 +1022,10 @@ export function createView(container, opts = {}) {
     return { x: controls.target.x, z: controls.target.z, d: sph.radius, th: sph.theta, ph: sph.phi };
   }
   function homeTile() {
+    if (st && deck === 'earth') {   // version 13: the Hope's landing field
+      const l = (st.buildings || []).find((b) => b.key === 'landingfield');
+      if (l) return [l.x + 2, l.y + 2];
+    }
     if (st && deck !== 'main') {   // another deck: its first Lift, else the middle of its chambers
       const l = (st.buildings || []).find((b) => b.key === 'lift');
       if (l) return [l.x + 1, l.y + 1];
@@ -1332,6 +1366,7 @@ export function createView(container, opts = {}) {
     if (trans && !trans.hold) stepTransition(now);
     if (breachMat) breachMat.color.setScalar(0.75 + 0.25 * Math.sin(now / 260));   // breaches throb
     if (plasmaMat) plasmaMat.color.setScalar(0.9 + 0.1 * Math.sin(now / 900));
+    if (deck === 'earth') { hopeHazeMat.opacity = 0.18 + 0.07 * Math.sin(now / 700); const rz = meshes[T.RADZONE]?.material; if (rz?.color) rz.color.setScalar(0.62 + 0.18 * Math.sin(now / 330)); }   // version 13: the poison breathes, the hot zones flicker
     const camDist = camera.position.distanceTo(controls.target);
     if (st) movers.update(dt, camDist);
     if (st) monorail.update(dt * movers.getSpeed());
@@ -1362,6 +1397,7 @@ export function createView(container, opts = {}) {
     if (on) { const a = p * Math.PI * 2; sun.position.set(dn.sun0.x + 220 * Math.sin(a), Math.max(40, dn.sun0.y * (0.35 + 0.65 * Math.max(0, c))), dn.sun0.z); }
     else sun.position.copy(dn.sun0);
     scene.background.copy(DN_C.bgDay).lerp(DN_C.bgNight, night);
+    if (deck === 'earth') scene.background.copy(HOPE_SKY).lerp(DN_C.bgNight, night * 0.8);   // version 13
     KIND_MAT.glow.color.setScalar(on ? 0.82 + 0.4 * night : 1);
     lampMat.color.copy(DN_C.lamp).multiplyScalar(on ? 0.55 + 0.6 * night : 0.7);
     lampGlowMat.color.copy(DN_C.lamp).multiplyScalar(on ? 0.6 * night : 0);
@@ -1460,8 +1496,10 @@ export function createView(container, opts = {}) {
       placeCamera(W / 2, H / 2 + 6, fitDistance(), 0.5, 0);
       loadArt();
     }
+    if (earthGroup) earthGroup.visible = deck !== 'earth';   // version 13
   }
 
+  let earthBuilt = 0;
   function refresh(state) {
     if (!st || state.map.w !== W || state.map.h !== H || state.map.t.length !== N) return setState(state);
     full = state;
@@ -1471,7 +1509,9 @@ export function createView(container, opts = {}) {
     let tc = false, rc = false;
     for (let i = 0; i < N; i++) { if (t[i] !== tCopy[i]) { tc = true; break; } }
     for (let i = 0; i < N && !rc; i++) if (r[i] !== rCopy[i]) rc = true;
+    if (tc && deck === 'earth' && performance.now() - earthBuilt < 1500) tc = false;   // version 13: the Hope's ground changes daily; rebuild it at most every 1.5 s
     if (tc) {   // the ground itself changed (salvage cleared rubble, fallow mended soil): rare, rebuild it
+      if (deck === 'earth') earthBuilt = performance.now();
       syncChambers(true);
       buildTerrain();
       for (const id of [...built.keys()]) removeBuilding(id);
@@ -1533,6 +1573,7 @@ export function createView(container, opts = {}) {
   function applyDeck(d) {
     stashTerrain();
     deck = d;
+    if (earthGroup) earthGroup.visible = d !== 'earth';   // version 13: on Earth, no Earth below and no stars: a poisoned sky
     st = deckView(full, d);
     rebuild(false);
   }
@@ -1551,7 +1592,7 @@ export function createView(container, opts = {}) {
   // Shows a deck: 'upper' | 'main' | 'lower'. False when the colony has no such deck. Before the
   // first setState it only remembers the deck. { animate: false } swaps at once (still names it).
   function setDeck(d, { animate = true } = {}) {
-    if (!DECKS.includes(d)) return false;
+    if (!DECKS.includes(d) && d !== 'earth') return false;
     if (!full) { deck = d; return true; }
     if (!hasDeck(full, d)) return false;
     if (trans) endTransition();

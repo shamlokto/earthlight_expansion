@@ -11,6 +11,7 @@ export const T = {
   PLAIN: 13, FERTILE: 14, POOR: 15, RIVER: 16, LAKE: 17, FOREST: 18, HILLS: 19, ROCK: 20,
   MARSH: 21, RUBBLE: 22, BREACH: 23,
   GLASS: 24, CONDUIT: 25, CATACOMB: 26, SHAFT: 27, OUTSIDE: 28,   // version 4: the upper and lower decks
+  ASH: 29, RUINS: 30, TOXIC: 31, RADZONE: 32, MIRE: 33, DEADSEA: 34, SEA: 35, LANDING: 36,   // version 13: Earth, the Hope
 };
 
 export const TERRAIN = [
@@ -44,6 +45,16 @@ export const TERRAIN = [
   { id: 26, key: 'catacomb',   name: 'Catacomb',        zone: 'interior', build: false, height: 0.3,  color: '#4a4238', ver: 4, text: 'Old tunnels and crypts under the fields. Something may still be down here.' },
   { id: 27, key: 'shaft',      name: 'Lift shaft',      zone: 'interior', build: true,  height: 0,    color: '#d8b04a', ver: 4, text: 'A lift shaft through all three decks. Repair a Lift on it to link the decks.' },
   { id: 28, key: 'outside',    name: '',                zone: 'none',     build: false, height: 0,    color: '#000000', ver: 4, text: '' },
+  // ---- version 13: Earth, the Hope deck (docs/COLONY-V13.md). Treated ground recovers step by step:
+  //      toxic / radiation / flooded / ruins → dead ground → plain → fertile → forest; the poisoned sea → clean sea
+  { id: 29, key: 'ash',        name: 'Dead ground',     zone: 'ground',   build: true,  height: 0.2,  color: '#6e6259', ver: 13, text: 'Ash and grit over dead soil. Earth buildings can stand here; a Soil Reactor brings it back to life.' },
+  { id: 30, key: 'ruins',      name: 'City ruins',      zone: 'ground',   build: false, height: 0.7,  color: '#4d4844', ver: 13, text: 'What is left of a city. A Soil Reactor breaks it down into ground (and parts).' },
+  { id: 31, key: 'toxic',      name: 'Toxic gas',       zone: 'ground',   build: false, height: 0.15, color: '#8a8a3a', ver: 13, text: 'A pool of heavy poisonous gas. Nothing can be built in it or right beside a home. An Air Scrubber Tower clears it.' },
+  { id: 32, key: 'radzone',    name: 'Radiation zone',  zone: 'ground',   build: false, height: 0.12, color: '#5a3a6e', ver: 13, text: 'A hot zone from the war\'s last bombs. A Decontamination Plant makes it safe.' },
+  { id: 33, key: 'mire',       name: 'Flooded lowland', zone: 'ground',   build: false, height: 0.02, color: '#3f4a3a', ver: 13, text: 'Lowland drowned by the risen sea: black water and sludge. Tide Walls drain it.' },
+  { id: 34, key: 'deadsea',    name: 'Poisoned sea',    zone: 'ground',   build: false, height: -0.1, color: '#3a4a3c', ver: 13, text: 'The sea, thick with poison. A Sea Purifier cleans it, tile by tile.' },
+  { id: 35, key: 'sea',        name: 'Clean sea',       zone: 'ground',   build: false, height: -0.1, color: '#2f6aa0', ver: 13, text: 'Clean water again. It counts toward Earth\'s recovery.' },
+  { id: 36, key: 'landing',    name: 'Landing field',   zone: 'ground',   build: true,  height: 0.12, color: '#8a8e92', ver: 13, text: 'Ground cleared and sealed for the first landers.' },
 ];
 
 // Artifacts (map.r): one per tile at most, revealed when the chamber is surveyed (space: always visible).

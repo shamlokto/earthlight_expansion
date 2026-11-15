@@ -35,6 +35,8 @@ import { districtsDay, districtHappy, districtMults, districtAir, districtResear
 import { gardensDay, gardenHappy, gardenOutput } from './gardens.js';
 import { luxuriesDay, luxuryHappy } from './luxuries.js';
 import { neighboursDay } from './neighbours.js';
+import { reckoningDay } from './reckoning.js';   // version 12: story arc The Reckoning
+import { hopeDay } from './hope.js';   // version 13 (docs/COLONY-V13.md): story arc 2, The Hope
 
 export { habitatNeeds, stateRng };
 
@@ -636,6 +638,9 @@ export function dayTick(state, rng) {
   // 13e version 10: Eden's gardens (wildlife and the Garden of Eden), the neighbours
   if (gardensDay(state, { say, ask })) events.push({ kind: 'garden', text: state.log[state.log.length - 1].text, pause: true });
   neighboursDay(state, { say, ask });
+  reckoningDay(state, { say, ask });   // version 12: the Reckoning (nothing until the General broadcasts the truth)
+  // 13f version 13: the Hope (Earth): the Ark's trips, the ground treated, the story beats and the Earthlight ending
+  if (hopeDay(state, { say, ask })) events.push({ kind: 'earthlight', text: state.log[state.log.length - 1].text, pause: true });
   // 14 version 4, stage 4: the win, Eden Restored, once (js/colony/victory.js); the colony carries on after it
   if (victoryDay(state)) events.push({ kind: 'victory', text: state.log[state.log.length - 1].text, pause: true });
   return { events };

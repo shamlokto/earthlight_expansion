@@ -37,6 +37,7 @@ import { BRANCHES, TECHS, TECH } from './data/tech.js';
 import { MACHINES, MACHINE, MACHINE_COST } from './data/machines.js';
 import { CLASSES, CLASS_NAME, STYLES, PERKS, DEPARTMENTS, COMMANDER, GENERAL, BASE_COMMANDERS, PER_QUARTERS } from './data/commanders.js';
 import { LOGS, VAULTS, SURVIVORS, SURVIVOR_COMMANDERS, DANGERS, FINAL_CODE_PARTS } from './data/secrets.js';
+import { hopeCards, hopeInspector, mountHope, HOPE_HELP } from './hopeui.js';   // version 13 (docs/COLONY-V13.md): the Hope
 
 // The expansion's SVG busts (story characters) for commanders without a painted portrait; loaded
 // lazily so the colony still runs if the expansion's files are missing.
@@ -76,22 +77,22 @@ const STATUS = {
   open: ['Open', 'Pressurised: build inside.'],
 };
 const OVERLAYS = [[null, 'None'], ['reach', 'Reach'], ['park', 'Parks'], ['power', 'Power'], ['value', 'Value']];   // version 8: land value
-const KIND_LABEL = { garden: 'The Garden of Eden', wildlife: 'Wildlife returns', neighbour: 'Neighbours', district: 'District', victory: 'Eden Restored', goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost', tech: 'Research complete',
+const KIND_LABEL = { reckoning: 'The Reckoning', justice: 'Justice for Eden', garden: 'The Garden of Eden', wildlife: 'Wildlife returns', neighbour: 'Neighbours', district: 'District', victory: 'Eden Restored', goal: 'Goal complete', welcome: 'Landfall', transport: 'Transport', chamber: 'Chamber', unlock: 'Milestone', lost: 'Colony lost', tech: 'Research complete',
   raid: 'Raid', raidwarn: 'Raid warning', wanderer: 'Wanderer', raidreport: 'After the raid', report: 'After the raid', commander: 'Commanders', machine: 'Arsenal',
   // version 4, stage 2: the secrets
   discovery: 'Discovery', finalvault: 'The Ninefold vault', drones: 'Sentries', dronefight: 'Sentries', reactor: 'The old core', reactorwarn: 'The old core', reactorfail: 'The old core',
   vault: 'Vault opened', survivors: 'Survivors', danger: 'Danger', expedition: 'Expedition',
   // version 8 (docs/COLONY-V8.md): landmarks and incidents
   landmark: 'Landmark', incidentwarn: 'Incident ahead', incident: 'Incident', petition: 'Council petition',
-  wonder: 'Wonder', ark: 'Beyond Eden' };   // version 9 (docs/COLONY-V9.md)
+  wonder: 'Wonder', ark: 'Beyond Eden', hope: 'The Hope', earthlight: 'Earthlight' };   // version 13: the Hope's beats and its ending   // version 9 (docs/COLONY-V9.md)
 // Version 4, stage 3: the Star chart's site glyphs and colours.
 const SITE_GLYPH = { belt: '⁂', comet: '☄', derelict: '⚓', babylon: '✠', bunker: '▣', den: '☠', outpost: '⌂', listening: '◉', relief: '✚' };
 const SITE_COLOR = { belt: '#c9b38a', comet: '#8fd8ff', derelict: '#ffb070', babylon: '#ffd36a', bunker: '#b0e07a', den: '#ff6a5a', outpost: '#c3a6ff', listening: '#7affd8', relief: '#6fb8ff' };
 const SPEAKER = { ruess: 'Prof. Ruess', sato: 'Capt. Sato', marrow: 'Warden Marrow', venn: 'Tobias Venn', general: 'The General' };
 // Version 4 (docs/COLONY-V4.md): the three decks, top to bottom.
 const DECKS = ['upper', 'main', 'lower'];
-const DECK_NAME = { upper: 'Upper', main: 'Main', lower: 'Lower' };
-const DECK_TEXT = { upper: 'Habitat rings under the sky panels: homes, sky gardens, galleries.', main: 'The fields, the river, industry and the docks to space.', lower: 'Machinery halls and flooded tunnels: power, water and heavy industry.' };
+const DECK_NAME = { upper: 'Upper', main: 'Main', lower: 'Lower', earth: 'Hope' };   // version 13: Earth
+const DECK_TEXT = { upper: 'Habitat rings under the sky panels: homes, sky gardens, galleries.', main: 'The fields, the river, industry and the docks to space.', lower: 'Machinery halls and flooded tunnels: power, water and heavy industry.', earth: 'Earth below: poisoned ground to recover, reached only by the Ark.' };
 const deckOf = (o) => o?.deck || 'main';
 // "Upper deck only", "Main or lower deck", "Upper, main or lower"
 const decksText = (list) => list.length === 1 ? `${DECK_NAME[list[0]]} deck only` : list.length === 3 ? 'Upper, main or lower'
@@ -217,7 +218,7 @@ function cardIcon(b) {
 // The help dialog's sections (colony.html #dHelp). Short sentences, pictures from the card art.
 // diff: the difficulty row (js/colony/difficulty.js) the numbers are quoted for, or null.
 export const HELP_SECTIONS = [['goal', 'The goal'], ['time', 'Time'], ['build', 'Building'], ['res', 'Resources'], ['chambers', 'Chambers'],
-  ['homes', 'Homes & happiness'], ['zoning', 'Zoning and growth'], ['landvalue', 'Land value'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['landmarks', 'Landmarks'], ['wonders', 'Wonders'], ['tourism', 'Tourism'], ['ark', 'The Ark'], ['districts', 'Districts'], ['gardens', 'Eden\'s gardens'], ['luxuries', 'Luxuries'], ['neighbours', 'Neighbours'], ['incidents', 'Incidents'], ['petitions', 'Petitions'], ['secrets', 'Secrets of Eden'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['photo', 'Photo mode'], ['tips', 'First 10 days']];
+  ['homes', 'Homes & happiness'], ['zoning', 'Zoning and growth'], ['landvalue', 'Land value'], ['roads', 'Roads'], ['market', 'Market & guardians'], ['research', 'Research'], ['defence', 'Defence and raids'], ['decks', 'Decks and lifts'], ['landmarks', 'Landmarks'], ['wonders', 'Wonders'], ['tourism', 'Tourism'], ['ark', 'The Ark'], ['hope', 'The Hope'], ['districts', 'Districts'], ['gardens', 'Eden\'s gardens'], ['luxuries', 'Luxuries'], ['neighbours', 'Neighbours'], ['incidents', 'Incidents'], ['petitions', 'Petitions'], ['secrets', 'Secrets of Eden'], ['reckoning', 'The Reckoning'], ['commanders', 'Commanders'], ['nav', 'Trackpad & keys'], ['photo', 'Photo mode'], ['tips', 'First 10 days']];
 export function helpHtml(art, diff) {
   const pic = (slot, alt = '') => { const u = art?.(slot); return u ? `<img src="${esc(u)}" alt="${esc(alt)}" loading="lazy">` : ''; };
   const card = (key) => { const u = art?.(`card/${key}`); return `<figure class="cl-hfig">${u ? `<img src="${esc(u)}" alt="" loading="lazy">` : cardIcon(BUILDING[key])}<figcaption>${esc(BUILDING[key]?.name || key)}</figcaption></figure>`; };
@@ -370,6 +371,7 @@ export function helpHtml(art, diff) {
   ${sec('ark', 'The Ark', `<figure class="cl-hfig cl-hbook"><span style="font-size:42px;color:#7ff0d0">✧</span><figcaption>Beyond Eden</figcaption></figure>`, `
     <p><b>The Ark</b> is Eden's last and greatest project: a generation ship built in a 7×7 dock in space beside the hull, in <b>five stages</b> (Keel, Hull, Drive, Habitat Decks, and the provisions). Each stage needs thousands of alloy and parts, then helium-3, food and water, so build Warehouses, Granaries and Freight Yards to hold it all.</p>
     <p>It waits on <b>15,000 colonists</b>, the <b>Starport</b> and <b>Generation Ships</b> (research). Finishing it is a <b>second ending, Beyond Eden</b>, kept in your save. It is entirely optional: it never stands in the way of Eden Restored, and it gives the city after the win something to build towards.</p>`)}
+  ${sec('hope', 'The Hope', card('sealeddome') + card('airscrubber'), HOPE_HELP)}
   ${sec('districts', 'Districts', card('park') + card('lab'), `
     <p>Click any tile of an <b>open chamber</b> and the inspector offers four <b>districts</b>. Declare one and the chamber earns a bonus that grows as you fill its land with buildings that <b>fit</b>: at <b>25%, 50% and 75%</b> of its land (roads left out) it reaches tiers 1, 2 and 3. The inspector shows the fill and what the next tier gives; the minimap tints the chamber in the district's colour.</p>
     <ul class="cl-hsteps">
@@ -424,6 +426,14 @@ export function helpHtml(art, diff) {
       <li><b>Something stirs</b> deep under Eden. If a survey wakes it, a countdown appears in the top bar: deal with it before it runs out.</li>
     </ul>
     <p>The inspector shows what a chamber holds: click a surveyed chamber to read, open or clear right there.</p>`)}
+  ${sec('reckoning', 'The Reckoning', `<figure class="cl-hfig cl-hbook"><span style="font-size:42px;color:#ff8a6a">⚖</span><figcaption>The Reckoning</figcaption></figure>`, `
+    <p>What the Ninefold vault proves can be told to everyone, or kept. <b>Nothing happens until you choose</b>: once the vault is open, Ruess offers to broadcast the truth, and the offer waits in <b>Defence › Raids</b> for as long as you like.</p>
+    <ul class="cl-hsteps">
+      <li><b>After the broadcast</b> the people it names will not go quietly. Watch for signs over the following months (the Market, the traders, the neighbours), and use the time: machines, crews, Battery Emplacements.</li>
+      <li><b>Its battles are fought on the Earth Light hex map</b> (they need the Earth Light pack), turn by turn: no auto-fight and no tribute. Until a battle is fought, it waits.</li>
+      <li>Eden fields up to 40 crewed guardians at home, the General leading, and every working emplacement as a hull gun. Keep the General's machine safe: if it falls, the battle is lost.</li>
+      <li>A battle lost is not the end of the story. Eden recovers, and so do they.</li>
+    </ul>`)}
   ${sec('expeditions', 'Expeditions', `<figure class="cl-hfig cl-hbook"><span style="font-size:42px;color:#7affd8">✦</span><figcaption>Star chart</figcaption></figure>`, `
     <p>Eden's guardians can fly beyond the hull. The <b>Star chart</b> (top bar, or key <b>X</b>) shows the sectors in three rings around Eden, Earth below. The inner ring is charted at the start; visiting a sector charts the ones beyond it.</p>
     <ul class="cl-hsteps">
@@ -602,7 +612,7 @@ export function createUI(root, api) {
     </header>
     <div class="cl-xbody"><div class="cl-xmap" data-xmap></div><div class="cl-xside" data-xside></div></div>
   </section>
-  <div class="cl-decks" role="group" aria-label="Deck" title="Decks: open / all chambers on each. PageUp / PageDown move between them."><i>Deck</i>${DECKS.map((d) => `<button type="button" data-deck="${d}" aria-pressed="${d === 'main'}"><b>${DECK_NAME[d]}</b><small data-deckn="${d}"></small></button>`).join('')}</div>
+  <div class="cl-decks" role="group" aria-label="Deck" title="Decks: open / all chambers on each. PageUp / PageDown move between them."><i>Deck</i>${DECKS.map((d) => `<button type="button" data-deck="${d}" aria-pressed="${d === 'main'}"><b>${DECK_NAME[d]}</b><small data-deckn="${d}"></small></button>`).join('')}<button type="button" data-deck="earth" aria-pressed="false" hidden><b>Hope</b><small data-deckn="earth"></small></button><button type="button" data-hope-ark hidden title="The Ark: load colonists and goods for the Hope">⇅ <b>Ark</b><small data-arkn></small></button></div>
   <div class="cl-ovl" role="group" aria-label="Overlay"><i>Overlay</i>${OVERLAYS.map(([k, n]) => `<button type="button" data-ovl="${k ?? ''}" aria-pressed="${k === null}"${k === 'value' ? ' title="Land value: where homes and shops want to grow"' : ''}>${n}</button>`).join('')}<span class="cl-ovl-key" data-ovlkey hidden title="Land value: low (blue) to high (yellow)">Low<b></b>High</span></div>
   <div class="cl-placing" hidden><span data-placing></span> <button type="button" class="cl-btn sm" data-cancel>Cancel</button></div>
   <div class="cl-log" data-log title="Colony log (click to expand)"></div>
@@ -631,6 +641,8 @@ export function createUI(root, api) {
   const pops = { happy: $('[data-pop=happy]'), market: $('[data-pop=market]'), settings: $('[data-pop=settings]') };
   let cat = CATEGORIES[0].key, cardSig = '', inspAt = null, inspSig = '', logSig = '', logOpen = false, evId = null, marketSig = '', happySig = '';
   let summary = null, dirty = false;
+  // version 13 (docs/COLONY-V13.md): the Ark panel for the Hope (js/colony/hopeui.js)
+  const hopeWin = (() => { try { return mountHope(root, { S, R: api.rules, act: (r) => api.act(r), esc, setDeck: (d) => api.setDeck?.(d) }); } catch (e) { console.warn('hope ui', e); return null; } })();
 
   const result = (r) => api.act(r);
 
@@ -650,7 +662,7 @@ export function createUI(root, api) {
   function renderDecks() {
     const s = S(), d = D();
     const counts = DECKS.map((k) => { const cs = s.chambers.filter((c) => deckOf(c) === k); return [k, cs.filter((c) => c.status === 'open').length, cs.length, hasDeck(s, k)]; });
-    const sig = d + JSON.stringify(counts);
+    const sig = d + JSON.stringify(counts) + (s.hope ? `|${s.day}|${s.hope.ark.at}` : '');
     if (sig === deckSig) return;
     deckSig = sig;
     for (const [k, open, total, has] of counts) {
@@ -660,8 +672,18 @@ export function createUI(root, api) {
       b.querySelector('[data-deckn]').textContent = has ? `${open}/${total}` : '–';
       b.title = has ? `${DECK_NAME[k]} deck: ${open} of ${total} chambers open.\n${DECK_TEXT[k]}${k === d ? '' : `\nClick (or ${DECKS.indexOf(k) < DECKS.indexOf(d) ? 'PageUp' : 'PageDown'}) to go there.`}` : `${DECK_NAME[k]} deck: not in this colony yet.`;
     }
+    // version 13: the Hope (Earth) and the Ark, once the Ark is complete
+    const eb = $('.cl-decks [data-deck="earth"]'), ab = $('.cl-decks [data-hope-ark]'), hs = hasDeck(s, 'earth') && s.hope;
+    eb.hidden = ab.hidden = !hs;
+    if (hs) {
+      eb.setAttribute('aria-pressed', String(d === 'earth'));
+      eb.querySelector('[data-deckn]').textContent = `${Math.round((s.hope.recovery || 0) * 100)}%`;
+      eb.title = `The Hope, on Earth: ${Math.round((s.hope.recovery || 0) * 1000) / 10}% recovered, ${Math.floor(s.hope.pop)} colonists.\n${DECK_TEXT.earth}`;
+      ab.querySelector('[data-arkn]').textContent = s.hope.ark.at === 'eden' ? 'home' : `${s.hope.ark.days}d`;
+    }
+    hopeWin?.update();
     const nm = $('[data-h=deck]');
-    nm.textContent = `${DECK_NAME[d]} deck`; nm.dataset.deck = d;
+    nm.textContent = d === 'earth' ? 'The Hope' : `${DECK_NAME[d]} deck`; nm.dataset.deck = d;
     root.dataset.deck = d;
   }
 
@@ -1036,6 +1058,13 @@ export function createUI(root, api) {
   function buildMenu() {
     const s = S();
     const dk = D();
+    if (dk === 'earth') {   // version 13: the Hope's own buildings, whatever tab is open
+      const hs = `earth|${s.stock.credits >= 1500}|${JSON.stringify(s.hope?.stock)}|${s.hope?.buildings.length}|${api.placingKey?.()}`;
+      if (hs === cardSig) return;
+      cardSig = hs;
+      cardsEl.innerHTML = hopeCards(s, R, { art: api.art, esc, placing: api.placingKey?.(), icon: cardIcon });
+      return;
+    }
     let list; try { list = R.buildable(s, dk); } catch { list = []; }
     const by = Object.fromEntries((list || []).map((o) => [o.key, o]));
     // version 7: the zoning lots lead Homes & parks, under the RCI bars
@@ -1187,6 +1216,7 @@ export function createUI(root, api) {
 
   function inspectorHtml(s, x, y) {
     const d = D();
+    if (d === 'earth') return hopeInspector(s, x, y, R, esc);   // version 13: the Hope
     let info = null; try { info = R.tileInfo(s, x, y, d); } catch { }
     const ter = terrainOf(s, x, y, info), art = artifactOf(s, x, y, info), ch = chamberOf(s, x, y, info), b = buildingAt(s, x, y, info);
     const parts = [];
@@ -2084,7 +2114,7 @@ export function createUI(root, api) {
         ${pv ? winBar(pv, L, W) : ''}</div>`;
     } else if (r.warned && eta != null) next = `<p><b class="warn">Sato's sensors: raiders in ${L(plural(eta, 'day'))}.</b>${r.from ? ` From ${esc(fromText(r.from))}.` : ''} Get the guardians crewed and repaired.</p>`;
     else next = `<p>No contact. Sato warns you <b>${sensorDays(s)} days</b> before a raid${n('sensormast') < 3 ? '; each Sensor Mast adds 3 (up to 9)' : ''}.</p>`;
-    return `<div class="cl-raidcols">
+    return `${reckoningCard(s)}<div class="cl-raidcols">
       <section class="cl-dsec"><h4>Heat <small>how tempting Eden looks</small></h4>
         <div class="cl-heat" title="0: nobody looks twice · 100: every crew in the belt knows Eden's name"><span class="cl-heatbar"><span ${W(100 - heat)}></span></span><b>${L(heat)}</b></div>
         <p class="cl-dim">The hotter Eden is, the sooner the next raid comes. Heat moves a tenth of the way each day toward:</p>
@@ -2130,7 +2160,11 @@ export function createUI(root, api) {
     const tech = t.closest('[data-mtech]');
     if (tech) { openResearch(tech.dataset.mtech); return; }
     const b = t.closest('button'); if (!b || b.disabled) return;
-    if (b.dataset.morder != null) {
+    if (b.dataset.rbroadcast != null) {   // version 12: the Reckoning
+      if (!confirm('Broadcast the truth? Hesk and his circle will be named and their arrest ordered. They will come for Eden.')) return;
+      result(rule('broadcast', S()) ?? notReady('The broadcast'));
+    } else if (b.dataset.reckon) { reckonGo(b.dataset.reckon); return; }
+    else if (b.dataset.morder != null) {
       const type = +b.dataset.morder, r = rule('orderMachine', s, type) ?? notReady('Production');
       result(r && r.ok !== false && !r.msg ? { ok: true, msg: `${mInfo(type).name} ordered.` } : r);
     } else if (b.dataset.ocancel != null) result(rule('cancelOrder', s, +b.dataset.ocancel) ?? notReady('Cancelling orders'));
@@ -2730,15 +2764,16 @@ export function createUI(root, api) {
   // Version 4, stage 4: the ending, Eden Restored (shown once; the colony carries on after it, D25).
   // The clip (art slot video/ending) opens it; the page beside the words shows its still (scene/ending), else the title art.
   function victoryPicture(ark = false) {
-    const still = (ark === 'garden' ? api.art?.('scene/garden') : ark ? api.art?.('scene/ark') : null) || api.art?.('scene/ending') || api.art?.('title/rebuild');
-    return still ? `<img class="cl-fvmedia" src="${esc(still)}" alt="${ark === 'garden' ? 'Eden green from end to end, a garden in the sky' : ark ? 'The Ark leaving Eden for the stars' : 'Eden, restored, above the Earth'}">` : '';
+    const still = (ark === 'earthlight' ? api.art?.('scene/earthlight') : ark === 'garden' ? api.art?.('scene/garden') : ark ? api.art?.('scene/ark') : null) || api.art?.('scene/ending') || api.art?.('title/rebuild');   // version 13: Earthlight
+    return still ? `<img class="cl-fvmedia" src="${esc(still)}" alt="${ark === 'earthlight' ? 'A green light on the face of Earth, seen from Eden' : ark === 'garden' ? 'Eden green from end to end, a garden in the sky' : ark ? 'The Ark leaving Eden for the stars' : 'Eden, restored, above the Earth'}">` : '';
   }
   // Stage 0, when there is a clip: the cinematic, full width (the clip plays, the title fades in;
   // Continue or Skip, and it moves on by itself when the clip ends). Stage 1: the words and the numbers.
   let vStage = { id: null, stage: 0 };
   function renderVictory(s, p, stage) {
-    const ark = p.kind === 'ark' || p.kind === 'garden';   // version 9: the second ending, Beyond Eden, in the same style (no clip for now)
+    const ark = p.kind === 'ark' || p.kind === 'garden' || p.kind === 'earthlight';   // version 9: the second ending, Beyond Eden, in the same style (no clip for now)
     const garden = p.kind === 'garden';   // version 10: the third, the Garden of Eden
+    const earthlight = p.kind === 'earthlight';   // version 13: story arc 2's ending, Earthlight
     if (vStage.id !== p.id) vStage = { id: p.id, stage: !ark && api.art?.('video/ending') && !reduceMotion() ? 0 : 1 };
     if (stage != null) vStage.stage = stage;
     evId = p.id;
@@ -2757,17 +2792,45 @@ export function createUI(root, api) {
       return;
     }
     evBox.className = 'cl-win cl-event cl-evfinal cl-evvictory';
-    const v = (garden ? s.gardens?.eden : ark ? s.ark : s.victory) || {}, choice = p.choices?.[0] || { key: 'keep', label: 'Keep building Eden' };
-    const stats = garden ? [['Day', v.day], ['Colonists', v.pop], ['Greenery', v.greenery], ['Happiness', v.happy], ['Wildlife returned', v.wildlife], ['Parks and gardens', v.parks], ['Eden Restored on day', v.restored]] : ark ? [['Day', v.day], ['Colonists', v.pop], ['Wonders', v.wonders], ['Landmarks', v.landmarks], ['Buildings', v.buildings], ['Visitors a day', v.visitors], ['Eden Restored on day', v.restored]]
+    const v = (earthlight ? s.hope?.earthlight : garden ? s.gardens?.eden : ark ? s.ark : s.victory) || {}, choice = p.choices?.[0] || { key: 'keep', label: 'Keep building Eden' };
+    const stats = earthlight ? [['Day', v.day], ['Colonists on Earth', v.pop], ['Earth recovered %', v.recovery], ['Ark trips', v.trips], ['Buildings on Earth', v.buildings], ['Tiles treated', v.treated], ['Colonists in Eden', v.edenPop]] : garden ? [['Day', v.day], ['Colonists', v.pop], ['Greenery', v.greenery], ['Happiness', v.happy], ['Wildlife returned', v.wildlife], ['Parks and gardens', v.parks], ['Eden Restored on day', v.restored]] : ark ? [['Day', v.day], ['Colonists', v.pop], ['Wonders', v.wonders], ['Landmarks', v.landmarks], ['Buildings', v.buildings], ['Visitors a day', v.visitors], ['Eden Restored on day', v.restored]]
       : [['Day', v.day], ['Colonists', v.pop], ['Chambers open', v.chambers], ...(v.happy != null ? [['Happiness', v.happy]] : []), ['Relief loads', v.convoys], ['Buildings', v.buildings], ['Raids beaten', v.raids], ['Pirate dens cleared', v.dens], ['Logs read', v.logs]];
-    evBox.innerHTML = `<div class="cl-fvpic">${victoryPicture(garden ? 'garden' : ark)}</div>
+    evBox.innerHTML = `<div class="cl-fvpic">${victoryPicture(earthlight ? 'earthlight' : garden ? 'garden' : ark)}</div>
       <div class="cl-fvmain">
         <div class="cl-evkind">${esc(KIND_LABEL[p.kind] || KIND_LABEL.victory)} · Day ${s.day}</div>
         <div class="cl-fvpage"><h2 id="evTitle">${esc(p.title || 'Eden Restored')}</h2><p class="cl-vlead">${esc(p.text)}</p>
           <dl class="cl-vstats">${stats.filter(([, n]) => n != null).map(([k, n]) => `<div><dt>${k}</dt><dd>${num(n)}</dd></div>`).join('')}</dl>
-          <div class="cl-fvclose">${((garden ? R.GARDEN_ENDING : ark ? R.ARK_ENDING : R.ENDING) || []).map(([k, who, line], i) => `<figure style="--i:${i}">${eventFace(k) || `<span class="cl-portrait cl-fvinit">${esc(who.split(' ').pop()[0])}</span>`}<blockquote><p>“${esc(line)}”</p><figcaption>${esc(who)}</figcaption></blockquote></figure>`).join('')}</div>
+          <div class="cl-fvclose">${((earthlight ? R.HOPE_ENDING : garden ? R.GARDEN_ENDING : ark ? R.ARK_ENDING : R.ENDING) || []).map(([k, who, line], i) => `<figure style="--i:${i}">${eventFace(k) || `<span class="cl-portrait cl-fvinit">${esc(who.split(' ').pop()[0])}</span>`}<blockquote><p>“${esc(line)}”</p><figcaption>${esc(who)}</figcaption></blockquote></figure>`).join('')}</div>
           ${!ark && v.finalVault && R.EPILOGUE ? `<p class="cl-fvreward"><i>Epilogue</i> ${esc(R.EPILOGUE)}</p>` : ''}
-          <p class="cl-dim">${garden ? 'The Garden of Eden is kept in your save. Eden carries on: keep building.' : ark ? 'The Ark\'s voyage is kept in your save. Eden carries on: keep building.' : 'Your colony is saved, victory and all. Keep building: Eden is yours.'}</p></div>
+          <p class="cl-dim">${earthlight ? 'Earthlight is kept in your save. The Hope carries on: keep recovering Earth.' : garden ? 'The Garden of Eden is kept in your save. Eden carries on: keep building.' : ark ? 'The Ark\'s voyage is kept in your save. Eden carries on: keep building.' : 'Your colony is saved, victory and all. Keep building: Eden is yours.'}</p></div>
+        <div class="cl-evchoices"><button type="button" class="cl-btn primary" data-choice="${esc(choice.key)}">${esc(choice.label)}</button></div>
+      </div>`;
+    modal.hidden = false;
+    evBox.querySelector('[data-choice]')?.focus({ preventScroll: true });
+  }
+  // Version 12: the Reckoning's ending, Justice for Eden, in the victory style: the clip (art slot
+  // video/justice) or its still (scene/justice; else the vault's or the title art), the numbers, the
+  // registry read aloud, and the last lines. Shown once; kept in the save (state.reckoning.justice).
+  function renderJustice(s, p) {
+    evId = p.id;
+    modal.classList.remove('soft'); modal.classList.add('final');
+    evBox.className = 'cl-win cl-event cl-evfinal cl-evvictory';
+    const v = s.reckoning?.justice || {}, choice = p.choices?.[0] || { key: 'keep', label: 'Keep building Eden' };
+    const vid = !reduceMotion() && api.art?.('video/justice'), still = api.art?.('scene/justice') || api.art?.('scene/finalvault') || api.art?.('title/rebuild');
+    const pic = vid ? `<video class="cl-fvmedia" src="${esc(vid)}"${still ? ` poster="${esc(still)}"` : ''} autoplay muted playsinline></video>`
+      : still ? `<img class="cl-fvmedia" src="${esc(still)}" alt="The Hall of Names at Eden, the registry read aloud">` : finalPicture();
+    const marrow = (s.commanders || []).some((c) => c.key === 'marrow');
+    const lines = [...(R.JUSTICE_ENDING || []), ...(marrow && R.JUSTICE_MARROW ? [R.JUSTICE_MARROW] : [])];
+    const stats = [['Day', v.day], ['Colonists', v.pop], ['Broadcast on day', v.broadcast], ['Sieges', v.sieges], ['Strikes', v.strikes], ['Enemy machines destroyed', v.destroyed], ['Guardians lost', v.lost]];
+    evBox.innerHTML = `<div class="cl-fvpic">${pic}</div>
+      <div class="cl-fvmain">
+        <div class="cl-evkind">${esc(KIND_LABEL.justice)} · Day ${s.day}</div>
+        <div class="cl-fvpage"><h2 id="evTitle">${esc(p.title || 'Justice for Eden')}</h2><p class="cl-vlead">${esc(p.text)}</p>
+          <dl class="cl-vstats">${stats.filter(([, n]) => n != null).map(([k, n]) => `<div><dt>${k}</dt><dd>${num(n)}</dd></div>`).join('')}</dl>
+          <div class="cl-reg" data-reg tabindex="0" aria-label="The registry of Eden, read aloud" style="max-height:200px"><ol>${REGISTRY.map((n) => `<li${n.mark ? ' class="stayed"' : ''}><b>${esc(n.name)}</b><small>${n.age} · ${esc(n.home)}${n.mark ? ' · stayed' : ''}</small></li>`).join('')}</ol>
+          <p class="cl-regmore">… and eleven thousand more, read out in the Hall of Names while the whole Union listens.</p></div>
+          <div class="cl-fvclose">${lines.map(([k, who, line], i) => `<figure style="--i:${i}">${eventFace(k) || `<span class="cl-portrait cl-fvinit">${esc(who.split(' ').pop()[0])}</span>`}<blockquote><p>“${esc(line)}”</p><figcaption>${esc(who)}</figcaption></blockquote></figure>`).join('')}</div>
+          <p class="cl-dim">Justice for Eden is kept in your save. Every other ending is still ahead of you: keep building.</p></div>
         <div class="cl-evchoices"><button type="button" class="cl-btn primary" data-choice="${esc(choice.key)}">${esc(choice.label)}</button></div>
       </div>`;
     modal.hidden = false;
@@ -2964,7 +3027,8 @@ export function createUI(root, api) {
     }
     if (evId === p.id && !modal.hidden) return;
     if (p.kind === 'finalvault') { renderFinal(s, p); return; }
-    if (p.kind === 'victory' || p.kind === 'ark' || p.kind === 'garden') { renderVictory(s, p); return; }   // version 9: the Ark's ending, Beyond Eden; version 10: the Garden of Eden
+    if (p.kind === 'victory' || p.kind === 'ark' || p.kind === 'garden' || p.kind === 'earthlight') { renderVictory(s, p); return; }   // version 13: Earthlight
+    if (p.kind === 'justice') { renderJustice(s, p); return; }   // version 12: the Reckoning's ending   // version 9: the Ark's ending, Beyond Eden; version 10: the Garden of Eden
     modal.classList.remove('final');
     evId = p.id;
     if (/report|result/.test(p.kind || '')) repSeen = reportSig(s);   // the sim's own report: no second one
@@ -2984,10 +3048,11 @@ export function createUI(root, api) {
     evBox.innerHTML = `<div class="cl-evkind">${esc(KIND_LABEL[p.kind] || p.kind || 'Event')} · Day ${s.day}${s.pending.length > 1 ? ` · ${s.pending.length - 1} more waiting` : ''}</div>
       <div class="cl-evbody">${pic}
       <div><h2 id="evTitle">${esc(p.title)}</h2>${raid && (rule('raidPreview', s) || p.preview) ? `<p>${esc(raidLine(s, p))}</p>` : `<p>${esc(disc && discoveryItems(s, p).length ? discoveryLead(s, p) : p.text)}</p>`}</div></div>
-      ${p.kind === 'landmark' || p.kind === 'wonder' || p.kind === 'wildlife' ? landmarkBody(s, p) : ''}
+      ${p.kind === 'landmark' || p.kind === 'wonder' || p.kind === 'wildlife' ? landmarkBody(s, p) : p.kind === 'reckoning' ? reckoningBody(s, p) : ''}
       ${raid ? raidBody(s, p) : warn ? warnBody(s) : disc ? discoveryBody(s, p) : core ? reactorBody(s, p) : drone ? droneEvBody(s, p) : p.kind === 'survivors' ? survivorsEvBody(s, p) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
       <div class="cl-evchoices">${choices.map((c, i) => { const cant = raid && c.key === 'tribute' && (rule('raidPreview', s) || p.preview)?.canPay === false;
         return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>${raid && c.key === 'fight' ? commandButton() : ''}`; }).join('')}
+        ${p.kind === 'reckoning' && (p.step === 'siege' || p.step === 'hideout') ? reckonButton(p.step === 'siege' ? 'siege' : 'stronghold') : ''}
         ${p.show && choices.length === 1 ? `<button type="button" class="cl-btn" data-evshow title="Answer and show me">${p.kind === 'landmark' || p.kind === 'wonder' || p.kind === 'petition' || p.kind === 'wildlife' ? 'Show me' : 'Show me what helps'}</button>` : ''}
         ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : tab === 'neighbours' ? 'Neighbours' : 'Meet them'}</button>` : ''}
         ${(() => { const d = core && !coreBad && !coreSafe ? reactorOf(s) : null, pv = d && dangerWork(d) == null ? srule('dangerPreview', s, d.chamber) : null;
@@ -2996,9 +3061,41 @@ export function createUI(root, api) {
       ${api.settings.pauseOnEvents || raid ? '<p class="cl-dim cl-evpause">❚❚ The clock waits for your answer.</p>' : ''}`;
     modal.hidden = false;
     evBox.querySelector('[data-choice]')?.focus({ preventScroll: true });
-    if (raid) checkCommand();
+    if (raid || p.kind === 'reckoning') checkCommand();
   }
   // version 8: a landmark's moment: the speaker's line, and the Hall of Names' registry once the Ninefold vault is open
+  // version 12: the Reckoning's events (js/colony/reckoning.js): the speaker's line, and the names
+  function reckoningBody(s, p) {
+    const names = p.conspirators ? `<ul class="cl-dim" style="margin:8px 0 0;padding-left:18px">${p.conspirators.map((c) => `<li><b>${esc(c.name)}</b>: ${esc(c.role)}</li>`).join('')}</ul>` : '';
+    const pack = p.step === 'offer' ? '<p class="cl-dim">After the broadcast, the arc\'s two battles are fought on the Earth Light hex map (they need the Earth Light pack).</p>' : '';
+    return landmarkBody(s, p) + names + pack;
+  }
+  // "Command the siege" / "Strike the stronghold": off to the hex map (js/colony/battle.js commandReckoning)
+  function reckonButton(which) {
+    const label = which === 'siege' ? 'Command the siege' : 'Strike the stronghold';
+    return `<button type="button" class="cl-btn fight" data-command data-reckon="${which}" ${packReady ? '' : `disabled title="${esc(COMMAND_WHY[packReady])}"`}>${label}</button>`;
+  }
+  function reckonGo(which) {
+    const go = () => battleMod.commandReckoning(S(), which, () => api.save()).then((r) => { if (r?.ok === false) toast(r.msg, 'bad'); });
+    if (battleMod?.commandReckoning) go(); else import('./battle.js').then((m) => { battleMod = m; go(); });
+  }
+  // The Defence panel's Raids tab: where the arc stands, and its buttons
+  function reckoningCard(s) {
+    const st = rule('reckoningStatus', s);
+    if (!st || st.stage === 'locked') return '';
+    if (packReady === null && (st.stage === 'siege' || st.stage === 'strike')) {   // is the Earth Light pack here? then redraw
+      const ask = battleMod?.canCommand ? battleMod.canCommand() : import('./battle.js').then((m) => { battleMod = m; return m.canCommand(); });
+      ask.catch(() => false).then((ok) => { if (packReady === null) { packReady = !!ok; renderDefence(true); } });
+    }
+    const n = st.stage === 'gathering' ? `${st.clues} of ${st.cluesTotal} signs so far.` : '';
+    const body = st.stage === 'ready' ? `<p>The Ninefold vault is open. Ruess can broadcast the truth and name the people behind Protocol Ash. Once it is sent, it cannot be taken back.</p><button type="button" class="cl-btn sm primary" data-rbroadcast>Broadcast the truth</button>`
+      : st.stage === 'gathering' ? `<p>The truth is out; Hesk and his circle are gathering a fleet somewhere. Build machines, crews and emplacements. ${n}</p><p class="cl-dim">Expected in about ${st.eta} day${st.eta === 1 ? '' : 's'}.</p>`
+      : st.stage === 'siege' ? `<p><b>Hesk's fleet is at the gates.</b> Eden is blockaded until the siege is fought.</p>${reckonButton('siege')}`
+      : st.stage === 'regroup' ? `<p>The siege was lost. Hesk's fleet will be back in about ${st.eta} day${st.eta === 1 ? '' : 's'}.</p>`
+      : st.stage === 'strike' ? (st.strike ? `<p>Hesk's stronghold is found. The General takes Eden's best (up to 40 crewed machines at home).</p>${reckonButton('stronghold')}` : `<p>The fleet is recovering: the next strike in ${Math.max(0, (st.nextStrike || 0) - s.day)} days.</p>`)
+      : `<p>Justice for Eden, day ${st.justice?.day}. Major Hesk's flagship is sunk.</p>`;
+    return `<div class="cl-rnote cl-dnote${st.stage === 'siege' ? ' warn' : ''}"><b>The Reckoning</b>${body}</div>`;
+  }
   function landmarkBody(s, p) {
     const who = SPEAKER[p.speaker] || '';
     const quote = p.quote ? `<blockquote class="cl-lmquote" style="margin:10px 0 4px;padding:8px 14px;border-left:3px solid #ffd98a;background:rgba(255,217,138,.06)"><p style="margin:0">“${esc(p.quote)}”</p>${who ? `<small class="cl-dim">${esc(who)}</small>` : ''}</blockquote>` : '';
@@ -3068,6 +3165,14 @@ export function createUI(root, api) {
     }
     const ok = e.target.closest('[data-repok]');
     if (ok) { repSeen = reportSig(S()); evId = null; modal.hidden = true; if (ok.dataset.repok) openDefence(ok.dataset.repok); renderEvent(); return; }
+    const rk = e.target.closest('[data-reckon]');
+    if (rk) {   // version 12: the Reckoning's battle; the event is answered first (it stays in the Raids tab)
+      if (rk.disabled) return;
+      const p = S().pending?.[0];
+      if (p?.kind === 'reckoning') { evId = null; modal.hidden = true; R.answer(S(), p.id, p.choices?.[0]?.key || 'ok'); }
+      reckonGo(rk.dataset.reckon);
+      return;
+    }
     const cmd = e.target.closest('[data-command]');
     if (cmd) {   // Command the battle: off to game.html?colony=1 (js/colony/battle.js); the raid stays pending until its result comes back
       if (cmd.disabled || !battleMod) return;
@@ -3079,7 +3184,7 @@ export function createUI(root, api) {
     const p = S().pending?.[0]; if (!p) return;
     const key = b.dataset.choice ?? (p.choices?.[0]?.key || 'ok');
     evId = null; modal.hidden = true;
-    if (p.kind === 'finalvault' || p.kind === 'victory' || p.kind === 'ark') { if (fv) cancelAnimationFrame(fv.raf); fv = null; modal.classList.remove('final'); }
+    if (p.kind === 'finalvault' || p.kind === 'victory' || p.kind === 'ark' || p.kind === 'justice') { if (fv) cancelAnimationFrame(fv.raf); fv = null; modal.classList.remove('final'); }
     let r = R.answer(S(), p.id, key);
     // a raid the generic answer() did not resolve: the rules' own raid answer
     if (p.kind === 'raid' && r?.ok === false && typeof R.answerRaid === 'function' && S().pending?.some((x) => x.id === p.id)) { const r2 = rule('answerRaid', S(), key); if (r2) r = r2; }

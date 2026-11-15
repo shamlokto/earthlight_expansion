@@ -26,6 +26,8 @@
 //   fixed                    cannot be built, moved or demolished by the player
 //   retired                  no longer built (off the menu, never unlocked); old saves' copies keep working (version 9)
 //   text                     one line for the build menu
+import { HOPE_BUILDINGS } from './hope.js';
+
 export const CATEGORIES = [
   { key: 'core', name: 'Command' },
   { key: 'power', name: 'Power' },
@@ -415,3 +417,5 @@ export const BUILDINGS = [
 ];
 
 export const BUILDING = Object.fromEntries(BUILDINGS.map((b) => [b.key, b]));
+// version 13 (docs/COLONY-V13.md): the Hope's Earth-only buildings are looked up here too (size, kit, ghost), never listed in BUILDINGS
+for (const d of HOPE_BUILDINGS) BUILDING[d.key] = d;

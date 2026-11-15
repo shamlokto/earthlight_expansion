@@ -54,6 +54,14 @@ export { ROAD, LINE, MEGA, roadNet, touchesRoad, roadLinked, hubLinked, roadInfo
 export { TOUR, tourismOf, tourismLimitText } from './tourism.js';
 // version 10 (docs/COLONY-V10.md): districts, Eden's gardens, luxuries and the neighbours
 import { ensureGardens } from './gardens.js';
+// version 12 (docs/COLONY-V12.md): story arc The Reckoning (js/colony/reckoning.js)
+import { answerReckoning } from './reckoning.js';
+export { RECKONING, CLUES, CONSPIRATORS, JUSTICE_TEXT, JUSTICE_ENDING, JUSTICE_MARROW, ensureReckoning, reckoningStatus, broadcast, canBroadcast, siegeWaiting, strikeReady, justiceDone, resolveReckoningBattle } from './reckoning.js';
+// version 13 (docs/COLONY-V13.md): story arc 2, The Hope (Earth, js/colony/hope.js)
+import { ensureHope, hopeCanBuild, hopeBuild, hopeDemolish, hopeTileInfo, hopeToggle } from './hope.js';
+export { HOPE, HOPE_BEATS, HOPE_ENDING, HOPE_ENDING_TEXT, HOPE_UNLOCK, generateHope, ensureHope, unlockHope, hopeOn, hopeMap, hopeStatus, hopeRecovery,
+  hopeCanBuild, hopeBuild, hopeDemolish, hopeToggle, hopeTileInfo, hopeBuildingAt, hopeHousing, hopeCaps, hopeJobs, hopeCost, hopeGoalPop, launchArk, setManifest,
+  setArkAuto, sendDown, dropper, arkLoad, tripDays } from './hope.js';
 import { ensureLuxuries, luxuriesMet, luxuriesHold, LUX_GOODS, luxCap } from './luxuries.js';
 import { ensureNeighbours, answerNeighbour, neighbourSell, neighbourBuy, neighbourTribute, neighbourTruce } from './neighbours.js';
 export {
@@ -138,6 +146,7 @@ export function upgradeState(state) {
   ensureLandmarks(state); ensureIncidents(state); ensurePetitions(state);   // version 8
   ensureWonders(state);   // version 9
   ensureGardens(state); ensureLuxuries(state); ensureNeighbours(state);   // version 10
+  ensureHope(state);   // version 13: the Hope
   if (state.unlocked) for (const d of BUILDINGS) if (d.decks && !d.tech && !d.unlock && !d.fixed && !d.retired && !state.unlocked.includes(d.key)) state.unlocked.push(d.key);
   // version 9: a retired building is never unlocked again (the quads were, briefly; reinstated on 2026-11-07, the loop
   // above puts them back on a version 9 save's menu)
@@ -555,7 +564,7 @@ export function findSpot(state, key, { box, score = () => 0, free = false, deck 
 
 // ---------------------------------------------------------------- actions
 
-export const canBuild = (state, key, x, y, deck = 'main') => placeCheck(state, key, x, y, { deck });
+export const canBuild = (state, key, x, y, deck = 'main') => (deck === 'earth' ? hopeCanBuild(state, key, x, y) : placeCheck(state, key, x, y, { deck }));   // version 13: Earth has its own rules
 
 // A gate a road may cross: every chamber beside it is open.
 export function gateOpen(state, i, deck = 'main') {
@@ -600,6 +609,7 @@ export function buildRoad(state, x0, y0, x1, y1, deck = 'main') {
 
 export function build(state, key, x, y, deck = 'main') {
   deck ||= 'main';
+  if (deck === 'earth') return hopeBuild(state, key, x, y);   // version 13
   const why = canBuild(state, key, x, y, deck);
   if (why) return no(why);
   const d = BUILDING[key];
@@ -623,6 +633,7 @@ function holdsAir(state, b) {
 }
 
 export function demolish(state, id) {
+  if (state.hope?.buildings?.some((b) => b.id === id)) return hopeDemolish(state, id);   // version 13: on Earth
   const b = byId(state, id);
   if (!b) return no('That building is gone.');
   const d = BUILDING[b.key];
@@ -859,6 +870,8 @@ export function answer(state, pendingId, choiceKey) {
     if (r.ok) state.pending = state.pending.filter((x) => x.id !== pendingId);
     return r;
   }
+  // version 12: the Reckoning's events (the broadcast, the clues, the siege at the gates)
+  if (p.kind === 'reckoning') return answerReckoning(state, p, choiceKey);
   // version 10: a neighbour's offer or request
   if (p.kind === 'neighbour') {
     const r = answerNeighbour(state, p, choiceKey);
@@ -1056,6 +1069,7 @@ export function serviceAt(state, home, key, list = state.buildings) {
 }
 
 export function tileInfo(state, x, y, deck = 'main') {
+  if (deck === 'earth') return hopeTileInfo(state, x, y);   // version 13
   const m = mapOf(state, deck);
   if (!m) return null;
   const { w, h, t, r, ch } = m;

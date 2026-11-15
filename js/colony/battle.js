@@ -195,6 +195,7 @@ export function commandBattle(state, save = () => {}) {
   const raid = state.raid?.coming;
   if (!raid) return { ok: false, msg: 'No raiders are coming.' };
   if (state.day < raid.day) return { ok: false, msg: 'The raiders are not here yet.' };
+  if (state.reckoning?.fighting) return { ok: false, msg: 'The Reckoning\'s battle is still being fought.' };
   const mission = raidMission(state, raid);
   if (!mission.units.some((u) => u.army === 0)) return { ok: false, msg: 'No crewed guardian is at home to fight.' };
   try {
@@ -203,6 +204,105 @@ export function commandBattle(state, save = () => {}) {
     localStorage.removeItem('el-colony-battle');   // an old raid's mid-battle save
   } catch (e) { return { ok: false, msg: `Could not store the battle: ${e.message}` }; }
   raid.battle = true;
+  save();
+  if (typeof location !== 'undefined') location.href = BATTLE_URL;
+  return { ok: true, msg: 'To the battle.' };
+}
+
+// ---------------------------------------------------------------- the Reckoning's battles (docs/COLONY-V12.md)
+// Two hand-made maps (missions/colony/siege.json, stronghold.json, written by tools/colony-reckoning-maps.mjs)
+// filled in at launch with Eden's side: its crewed guardians at home (up to RECKONING_CAP, the General's
+// machine first (on the map's `generalAt` hex), then the strongest; no rail guns on the stronghold's map: it has no railway for them), placed on the map's `home` hexes nearest-first (ships only where
+// ships may stand, rail guns on `rails`); for the siege also the hull guns (one per working Battery
+// Emplacement, Dragon or Hydra by its mode) on the lift shafts and the hull's gun points. The siege's
+// waves are cut down when Eden fields fewer machines (each group keeps its `core` units and a share of
+// the rest); the stronghold always brings everything (100+). Pure.
+export const RECKONING_CAP = 40, RECKONING_FILES = { siege: 'missions/colony/siege.json', stronghold: 'missions/colony/stronghold.json' };
+const SHIP_CATS = new Set([1, 2, 3, 4]);
+const power = (g) => (MACHINE[g.type]?.price || 8) * (1 + (g.level || 0) / 5);
+// Eden's crewed guardians at home, best first, the General's machine leading; `fixedOk`: rail guns may come
+export function reckoningCrew(state, fixedOk = true) {
+  const crew = R.homeCrew(state);
+  return state.guardians.filter((g) => crew.has(g.id) && g.hp > 0 && !g.away && (fixedOk || catOf(g.type) !== RAIL_ONLY))
+    .sort((a, b) => generalAboard(state, b) - generalAboard(state, a) || power(b) - power(a) || a.id - b.id).slice(0, RECKONING_CAP);
+}
+const strip = (u) => { const { core, ...rest } = u; return rest; };
+export function siegeShare(n) { return Math.max(0.2, Math.min(1, (n + 4) / 44)); }
+function cut(list, f) {
+  const core = list.filter((u) => u.core), rest = list.filter((u) => !u.core);
+  return [...core, ...rest.slice(0, Math.ceil(rest.length * f))].map(strip);
+}
+function placeEden(state, base, gs, extraRails = []) {
+  const used = new Set(base.units.map((u) => `${u.x},${u.y}`)), units = [], left = [];
+  let general = null;
+  const free = (x, y) => !used.has(`${x},${y}`);
+  for (const g of gs) {
+    const cat = catOf(g.type), rail = cat === RAIL_ONLY;
+    const lead = !general && base.generalAt && generalAboard(state, g) && free(...base.generalAt) && !rail ? (base.home || []).find(([x, y, ships]) => x === base.generalAt[0] && y === base.generalAt[1] && (ships || !SHIP_CATS.has(cat))) : null;
+    const c = lead || (rail ? (base.rails || []).map(([x, y]) => [x, y, 1]).find(([x, y]) => free(x, y))
+      : (base.home || []).find(([x, y, ships]) => free(x, y) && (ships || !SHIP_CATS.has(cat)) && (cat !== RAIL_ONLY)));
+    if (!c) { left.push(g.id); continue; }
+    used.add(`${c[0]},${c[1]}`);
+    const max = hpOf(g.type), frac = Math.max(0, Math.min(1, g.hp / (R.maxHp(state, g) || max)));
+    units.push({ type: g.type, army: 0, x: c[0], y: c[1], level: clampLevel(g.level), hp: Math.max(1, Math.min(max, Math.round(max * frac))), rosterId: g.id });
+    if (!general && generalAboard(state, g)) general = { x: c[0], y: c[1] };
+  }
+  const guns = [];
+  for (const type of extraRails) {
+    const c = (base.rails || []).find(([x, y]) => free(x, y));
+    if (!c) break;
+    used.add(`${c[0]},${c[1]}`);
+    guns.push({ type, army: 0, x: c[0], y: c[1], level: 4, gun: true, name: type === 24 ? 'Hydra · hull gun' : 'Dragon · hull gun' });
+  }
+  return { units, guns, left, general };
+}
+const easyLevels = (state, list) => (state.difficulty === 'easy' ? list.map((u) => ({ ...u, level: Math.max(0, (u.level || 0) - 2) })) : list);
+
+export function siegeMission(state, base) {
+  const gs = reckoningCrew(state), r = state.reckoning || {};
+  const guns = state.buildings.filter((b) => b.key === 'emplacement' && b.build === 0 && !b.off && !(b.damaged > 0)).map((b) => (b.mode === 'hydra' ? 24 : 23));
+  const eden = placeEden(state, base, gs, guns);
+  const f = siegeShare(eden.units.length);
+  const fixed = base.units.filter((u) => u.army === 0), foes = easyLevels(state, cut(base.units.filter((u) => u.army === 1), f));
+  const arrivals = base.arrivals.map((a) => ({ turn: a.turn, army: a.army, units: easyLevels(state, cut(a.units, f)) }));
+  const n = foes.length + arrivals.reduce((t, a) => t + a.units.length, 0);
+  const tries = (r.sieges || []).length;
+  return {
+    ...base, units: [...eden.units, ...eden.guns, ...fixed.map(strip), ...foes], arrivals, general: eden.general,
+    briefing: `${base.briefing}\n\nEden fields ${eden.units.length} guardian${eden.units.length === 1 ? '' : 's'}${eden.guns.length ? ` and ${eden.guns.length} hull gun${eden.guns.length === 1 ? '' : 's'}` : ''}${eden.general ? ', the General leading' : ''}. Hesk brings ${n} machines${tries ? ', and he has done this before' : ''}.`,
+    colony: { day: state.day, battle: 'siege', from: 'north', count: n, guns: eden.guns.length, left: { guardians: eden.left, raiders: [] } },
+  };
+}
+export function strongholdMission(state, base) {
+  const gs = reckoningCrew(state, false), eden = placeEden(state, base, gs);
+  const foes = easyLevels(state, base.units.map(strip));
+  const arrivals = base.arrivals.map((a) => ({ turn: a.turn, army: a.army, units: easyLevels(state, a.units.map(strip)) }));
+  const n = foes.reduce((t, u) => t + 1 + (u.cargo || []).length, 0) + arrivals.reduce((t, a) => t + a.units.reduce((k, u) => k + 1 + (u.cargo || []).length, 0), 0);
+  return {
+    ...base, units: [...eden.units, ...foes], arrivals, general: eden.general,
+    briefing: `${base.briefing}\n\nThe General takes ${eden.units.length} machine${eden.units.length === 1 ? '' : 's'}: Eden's best, crewed and at home. Hesk has ${n}.`,
+    colony: { day: state.day, battle: 'stronghold', from: 'west', count: n, left: { guardians: eden.left, raiders: [] } },
+  };
+}
+
+// Off to the battle page with one of the Reckoning's battles ('siege' | 'stronghold'). Async: the map
+// is fetched. Marks state.reckoning.fighting until the result comes back (main.js).
+export async function commandReckoning(state, which, save = () => {}, load = null) {
+  const r = state.reckoning;
+  if (!r) return { ok: false, msg: 'Nothing is waiting.' };
+  if (which === 'siege' && r.stage !== 'siege') return { ok: false, msg: 'Hesk\'s fleet is not at the gates.' };
+  if (which === 'stronghold' && !(r.stage === 'strike' && (r.nextStrike == null || state.day >= r.nextStrike))) return { ok: false, msg: 'The fleet is not ready to strike yet.' };
+  if (state.raid?.coming?.battle) return { ok: false, msg: 'A raid battle is already being fought.' };
+  let base;
+  try { base = load ? await load(RECKONING_FILES[which]) : await (await fetch(RECKONING_FILES[which], { cache: 'no-cache' })).json(); } catch (e) { return { ok: false, msg: `Could not load the map: ${e.message}` }; }
+  const mission = which === 'siege' ? siegeMission(state, base) : strongholdMission(state, base);
+  if (!mission.units.some((u) => u.army === 0 && u.rosterId !== undefined)) return { ok: false, msg: 'No crewed guardian is at home to fight.' };
+  try {
+    localStorage.setItem(RAID_KEY, JSON.stringify(mission));
+    localStorage.removeItem(RESULT_KEY);
+    localStorage.removeItem('el-colony-battle');
+  } catch (e) { return { ok: false, msg: `Could not store the battle: ${e.message}` }; }
+  r.fighting = which;
   save();
   if (typeof location !== 'undefined') location.href = BATTLE_URL;
   return { ok: true, msg: 'To the battle.' };
