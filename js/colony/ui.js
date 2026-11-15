@@ -816,6 +816,12 @@ export function createUI(root, api) {
 
   function setSpeed(s) { for (const b of $$('[data-speed]')) b.setAttribute('aria-pressed', String(+b.dataset.speed === s)); }
 
+  // A level's own card (card/lvl-<level name>, e.g. a Crown Spire or an Arcology Crown), else the building's.
+  function levelCard(b) {
+    const nm = BUILDING[b.key]?.levels?.[b.level - 1]?.name;
+    const own = nm && api.art?.(`card/lvl-${nm.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
+    return own || api.art?.(`card/${b.key}`) || null;
+  }
   function stat(g, v, c, d, cls) {
     const e = statEls[g]; if (!e) return;
     if (e.v && e.v.textContent !== v) e.v.textContent = v;
@@ -1358,7 +1364,7 @@ export function createUI(root, api) {
     }
     if (b.key === 'dock' || b.key === 'massdriver') acts.unshift(`<button type="button" class="cl-btn sm primary" data-a="market">Market</button>`);
     return `<section class="cl-isec"><h4>Building ${status}</h4>
-      <div class="cl-ibuild"><span class="cl-ipic">${api.art?.(`card/${b.key}`) ? `<img src="${esc(api.art(`card/${b.key}`))}" alt="">` : cardIcon(d)}</span>
+      <div class="cl-ibuild"><span class="cl-ipic">${levelCard(b) ? `<img src="${esc(levelCard(b))}" alt="">` : cardIcon(d)}</span>
       <div><div class="cl-iname">${esc(d.name)}</div><p class="cl-dim">${esc(d.text || '')}</p></div></div>
       ${rows.join('')}${extra}${modes}${needs}
       ${!next && d.levels && !grows && !d.wonder ? '<p class="cl-dim">Fully upgraded.</p>' : ''}${!next && d.quad ? '<p class="cl-dim">Top level: it has grown as far as a quad can.</p>' : ''}

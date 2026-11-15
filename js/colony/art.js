@@ -34,7 +34,9 @@ const SLOTS = {
     // version 4: the deck buildings
     'lift', 'skygarden', 'gallery', 'cistern', 'geotap', 'pumpstation',
     // version 6 (docs/COLONY-V6.md): the big city (prompts written; pictures not made yet)
-    'reserve', 'granary', 'warehouse', 'vertfarm', 'waterworks', 'atmoproc', 'sunmirror', 'towerblock', 'arcology', 'arrivals', 'plaza', 'massdriver',
+    'reserve', 'granary', 'warehouse',
+    // version 11: the quads' new top levels and their megastructures (ui.js levelCard)
+    'lvl-garden-terraces', 'lvl-sky-tower', 'lvl-crown-spire', 'lvl-twin-spires', 'lvl-arcology-crown', 'lvl-galleria', 'lvl-exchange', 'lvl-grand-bazaar', 'lvl-grand-concourse', 'lvl-megamall', 'lvl-foundry', 'lvl-robotic-works', 'lvl-megafactory', 'lvl-industrial-complex', 'lvl-gigafactory', 'vertfarm', 'waterworks', 'atmoproc', 'sunmirror', 'towerblock', 'arcology', 'arrivals', 'plaza', 'massdriver',
     // version 7 (docs/COLONY-V7.md): zoning and growth (prompts written; pictures not made yet)
     'livingquad', 'marketquad', 'workshopquad', 'school', 'transit', 'monorail', 'freightyard',
     // version 8 (docs/COLONY-V8.md): the landmarks and the Flare Shelter (prompts written; pictures not made yet)
@@ -126,6 +128,21 @@ const FILES = {
   'card/reserve': 'art/colony/card/reserve.webp',
   'card/granary': 'art/colony/card/granary.webp',
   'card/warehouse': 'art/colony/card/warehouse.webp',
+  'card/lvl-garden-terraces': 'art/colony/card/lvl-garden-terraces.webp',
+  'card/lvl-sky-tower': 'art/colony/card/lvl-sky-tower.webp',
+  'card/lvl-crown-spire': 'art/colony/card/lvl-crown-spire.webp',
+  'card/lvl-twin-spires': 'art/colony/card/lvl-twin-spires.webp',
+  'card/lvl-arcology-crown': 'art/colony/card/lvl-arcology-crown.webp',
+  'card/lvl-galleria': 'art/colony/card/lvl-galleria.webp',
+  'card/lvl-exchange': 'art/colony/card/lvl-exchange.webp',
+  'card/lvl-grand-bazaar': 'art/colony/card/lvl-grand-bazaar.webp',
+  'card/lvl-grand-concourse': 'art/colony/card/lvl-grand-concourse.webp',
+  'card/lvl-megamall': 'art/colony/card/lvl-megamall.webp',
+  'card/lvl-foundry': 'art/colony/card/lvl-foundry.webp',
+  'card/lvl-robotic-works': 'art/colony/card/lvl-robotic-works.webp',
+  'card/lvl-megafactory': 'art/colony/card/lvl-megafactory.webp',
+  'card/lvl-industrial-complex': 'art/colony/card/lvl-industrial-complex.webp',
+  'card/lvl-gigafactory': 'art/colony/card/lvl-gigafactory.webp',
   'card/vertfarm': 'art/colony/card/vertfarm.webp',
   'card/waterworks': 'art/colony/card/waterworks.webp',
   'card/atmoproc': 'art/colony/card/atmoproc.webp',
