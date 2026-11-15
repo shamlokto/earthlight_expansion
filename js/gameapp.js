@@ -170,7 +170,7 @@ async function expansionBriefing() {
   soundHint($('briefBody').querySelector('.bHead'));
   $('bBriefGo').onclick = () => { fx.stop(); silence(); startMission(-1); };
   $('bBriefBack').onclick = () => { fx.stop(); silence(); if (custom.colony) location.href = 'colony.html'; else if (custom.campaign) location.href = interUrl(); else location.search = ''; };
-  if (custom.colony) { $('bBriefBack').textContent = 'Back to Eden'; $('bBriefGo').textContent = 'Defend Eden'; }
+  if (custom.colony) { $('bBriefBack').textContent = 'Back to Eden'; $('bBriefGo').textContent = custom.mission.colony?.battle === 'stronghold' ? 'Attack' : 'Defend Eden'; }
 }
 
 // First run (and ☰ → ROM & patch): pick the ROM and, optionally, the English patch; both are
@@ -214,7 +214,7 @@ if (new URLSearchParams(location.search).has('debug')) window.earthlight = { bat
 // ------------------------------------------------------------------ progress
 const progress = loadProgress;
 const label = (i) => (en ? en.labels[i] : '');
-const nameOf = (u) => (en ? en.unitNames[u.type] : types[u.type].name);
+const nameOf = (u) => u.name || (en ? en.unitNames[u.type] : types[u.type].name);   // u.name: a named machine (the colony's Reckoning)
 const missionTitle = (m) => (en ? en.labels[LAYOUT.mapTitles + m].replace(/\n/g, ' ') : mapInfo(rom, m).name);
 const side = (a) => (a === NEUTRAL ? 'neutral' : a ? 'armyB' : 'armyA');
 const armyName = (a) => (custom ? custom.names[a] : a ? 'Galt' : 'Union');
@@ -931,6 +931,7 @@ function expansionResult(w) {
 function colonyEnd(w) {
   const r = battle.result.reason, res = custom.result(battle, w === 0), c = custom.mission.colony || {};
   const stored = custom.store(res);
+  if (c.battle === 'siege' || c.battle === 'stronghold') { reckoningEnd(w, r, res, c, stored); return; }
   $('resKicker').textContent = w === 0 ? 'Eden holds' : 'Eden is raided';
   $('resTitle').textContent = w === 0 ? (r === 'fled' ? 'The raiders break off and run' : 'The raiders are destroyed') : 'The raiders got through';
   $('resText').textContent = (w === 0
@@ -940,6 +941,25 @@ function colonyEnd(w) {
     : r === 'timeup' ? 'The raiders held out long enough to loot the outer works.'
     : 'The guard is gone. The raiders are through the gates.')
     + `\n\n${res.killed.length} of ${c.count ?? res.killed.length} raider${(c.count ?? 0) === 1 ? '' : 's'} destroyed · ${res.guardians.filter((g) => g.lost).length} guardian${res.guardians.filter((g) => g.lost).length === 1 ? '' : 's'} lost.`
+    + (stored ? '' : '\n\nThe result could not be stored (browser storage unavailable).');
+  const supply = $('resStats').querySelector('[data-k=supply]');
+  if (supply) supply.closest('div').hidden = true;
+  $('bResNext').textContent = 'Back to Eden';
+  $('bResNext').onclick = () => { location.href = 'colony.html?raid=1'; };
+  $('bResTitle').hidden = true;
+}
+
+// The Reckoning's battles (js/colony/reckoning.js): the Siege of Eden and Hesk's stronghold.
+function reckoningEnd(w, r, res, c, stored) {
+  const siege = c.battle === 'siege', lost = res.guardians.filter((g) => g.lost).length;
+  $('resKicker').textContent = siege ? (w === 0 ? 'Eden holds' : 'Eden has fallen') : (w === 0 ? 'Justice for Eden' : 'The General withdraws');
+  $('resTitle').textContent = siege
+    ? (w === 0 ? (r === 'held' ? 'The siege is broken' : 'Hesk\'s fleet is destroyed') : r === 'tower' ? 'The Command Centre is lost' : 'They are inside the hull')
+    : (w === 0 ? 'The Verdict is sinking' : 'The stronghold holds');
+  $('resText').textContent = (siege
+    ? (w === 0 ? `Eden held to the end of turn ${battle.turn - 1}. What is left of Hesk's fleet runs for the dark, and one of its pilots talks.` : r === 'tower' ? 'The Command Centre went dark. Hesk\'s people are through the dock.' : r === 'general' ? 'The General\'s machine is down. The guard breaks.' : r === 'retreat' ? 'You pulled the guard back off the hull.' : 'The guard is gone.')
+    : (w === 0 ? `Major Hesk's flagship went down on turn ${battle.turn}.` : r === 'timeup' ? 'Thirty turns, and the Verdict still afloat. The General pulls out.' : r === 'general' ? 'The General\'s machine is down. The strike is over.' : r === 'retreat' ? 'You pulled the strike force out.' : 'The strike force is gone.'))
+    + `\n\n${res.enemiesDestroyed} of ${res.enemies} enemy machines destroyed · ${lost} guardian${lost === 1 ? '' : 's'} lost.`
     + (stored ? '' : '\n\nThe result could not be stored (browser storage unavailable).');
   const supply = $('resStats').querySelector('[data-k=supply]');
   if (supply) supply.closest('div').hidden = true;

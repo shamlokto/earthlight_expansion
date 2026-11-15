@@ -129,7 +129,7 @@ function layStarterRoads(state, cmd) {
 // ---------------------------------------------------------------- save / load
 
 const MAP_ARRAYS = ['t', 'r', 'ch', 'sv'];
-const EXTRA_DECKS = ['upper', 'lower'];   // state.decks (version 4), stored like the main map
+const EXTRA_DECKS = ['upper', 'lower', 'earth'];   // version 13: the Hope (Earth) too   // state.decks (version 4), stored like the main map
 function toB64(u8) {
   let s = '';
   for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));

@@ -201,6 +201,16 @@ function applyRaidResult() {
   try { res = JSON.parse(localStorage.getItem(RAID_RESULT) || 'null'); } catch { res = null; }
   if (!res) return;
   const drop = () => { try { localStorage.removeItem(RAID_RESULT); localStorage.removeItem(RAID_MISSION); } catch { } };
+  // version 12: the Reckoning's battles (the Siege of Eden, Hesk's stronghold): js/colony/reckoning.js
+  if (res.battle === 'siege' || res.battle === 'stronghold') {
+    if (state.reckoning?.fighting !== res.battle || typeof M.rules.resolveReckoningBattle !== 'function') { drop(); return; }
+    let rr;
+    try { rr = M.rules.resolveReckoningBattle(state, res); } catch (e) { console.error(e); ui.toast('The battle\'s result could not be applied: ' + e.message, 'bad'); return; }
+    drop(); save(false);
+    try { view?.setState?.(state); } catch (e) { console.warn('setState', e); }
+    ui.toast(rr?.msg || (res.won ? 'Eden holds.' : 'The battle is lost.'), res.won ? 'good' : 'bad');
+    return;
+  }
   if (!state.raid?.coming?.battle) { drop(); return; }   // stale: that raid was answered some other way
   if (typeof M.rules.resolveRaidBattle !== 'function') { ui.toast('This build cannot apply the battle\'s result yet. It is kept for later.', 'bad'); return; }
   let r;
@@ -246,7 +256,7 @@ const api = {
   help: () => openHelp(),
   photo: () => togglePhoto(),   // version 10: photo mode
   answered: (p) => {
-    if (p?.kind === 'victory' || p?.kind === 'ark' || p?.kind === 'garden') save(true);   // the win is kept in the save (D25); the colony carries on (version 9: the Ark's ending too; version 10: the Garden of Eden)
+    if (p?.kind === 'victory' || p?.kind === 'ark' || p?.kind === 'justice' || p?.kind === 'earthlight' || p?.kind === 'garden') save(true);   // the win is kept in the save (D25); the colony carries on (version 9: the Ark's ending too; version 10: the Garden of Eden)
     if (p?.kind === 'welcome' && fresh) {
       fresh = false;
       let seen = false; try { seen = !!localStorage.getItem(HELP_SEEN); } catch { }
@@ -276,7 +286,7 @@ const api = {
 
 // ---------------------------------------------------------------- decks (version 4)
 const DECKS = ['upper', 'main', 'lower'];
-const DECK_NAME = { upper: 'Upper deck', main: 'Main deck', lower: 'Lower deck' };
+const DECK_NAME = { upper: 'Upper deck', main: 'Main deck', lower: 'Lower deck', earth: 'The Hope' };   // version 13: Earth, off the PageUp / PageDown stack
 const deckOf = (o) => o?.deck || 'main';
 // A deck exists in this colony: the main one always, the others once state.decks has them.
 const hasDeck = (d) => d === 'main' || !!(state?.decks?.[d]?.t);
@@ -299,7 +309,7 @@ const openOn = (d) => d === 'main' || state.chambers.some((c) => deckOf(c) === d
 
 // Show deck d: the view, the overlay, the panels. Returns false when this colony has no such deck.
 function setDeck(d, { quiet = false } = {}) {
-  if (!state || !DECKS.includes(d)) return false;
+  if (!state || !(DECKS.includes(d) || d === 'earth')) return false;
   if (!hasDeck(d)) { if (!quiet) ui?.toast(`${DECK_NAME[d]}: not in this colony yet.`, 'bad'); return false; }
   if (d === deck) { try { if (view && view.deck !== undefined && view.deck !== d) view.setDeck?.(d); } catch { } return true; }
   deck = d;
@@ -315,7 +325,8 @@ function setDeck(d, { quiet = false } = {}) {
 }
 // One deck up (▲, PageUp) or down (▼, PageDown). dir: 'up' | 'down' | +1 (up) | -1 (down) | a deck name.
 function stepDeck(dir) {
-  if (DECKS.includes(dir)) return setDeck(dir);
+  if (DECKS.includes(dir) || dir === 'earth') return setDeck(dir);
+  if (deck === 'earth') return setDeck('main');   // version 13: from the Hope, either key goes home to Eden
   const up = dir === 'up' || (typeof dir === 'number' && dir > 0);
   const down = dir === 'down' || (typeof dir === 'number' && dir < 0);
   if (!up && !down) return false;
@@ -718,7 +729,7 @@ function tick() {
   if (placing && hover) ghostAt(hover.x, hover.y);
   // music: the defenders' theme while raiders are at the gates; fanfares for a raid beaten and the win
   for (const ev of res?.events || []) {
-    if (ev?.kind === 'victory' || ev?.kind === 'ark' || ev?.kind === 'garden') audio.sting('victory');
+    if (ev?.kind === 'victory' || ev?.kind === 'ark' || ev?.kind === 'garden' || ev?.kind === 'justice' || ev?.kind === 'earthlight') audio.sting('victory');
     else if (ev?.kind === 'raidresult') audio.sting(state.raid?.last?.won ? 'won' : 'lost');
   }
   musicMode();

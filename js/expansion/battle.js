@@ -8,6 +8,7 @@
 //   * a turn limit from the mission
 // The player is army 0 (pink, on the left in fights), the Union army 1, as in the original.
 import { Battle, neighbours } from '../game/rules.js';
+import { outcome } from '../game/scripts.js';
 import { romView, deployList, arrivalList } from './mission.js';
 import { mapPoints } from '../game/points.js';
 import { loadExpansionData } from './data.js';
@@ -49,10 +50,12 @@ export class ExpansionBattle extends Battle {
     super(view, info, types, list, arrivalList(mission), { script: scriptOf(mission), hard: opts.hard, tables: opts.tables });
     this.mission = mission;
     // campaign machines bring their pilot's level and their roster id (Battle spawns in list order)
-    list.forEach((d, i) => { if (d.level !== undefined) this.units[i].level = d.level; if (d.rosterId !== undefined) this.units[i].rosterId = d.rosterId; if (d.hold) this.units[i].hold = d.hold; if (d.wakes) this.units[i].wakes = true; });
+    list.forEach((d, i) => { if (d.name) this.units[i].name = d.name; if (d.level !== undefined) this.units[i].level = d.level; if (d.rosterId !== undefined) this.units[i].rosterId = d.rosterId; if (d.hold) this.units[i].hold = d.hold; if (d.wakes) this.units[i].wakes = true; if (d.gun) this.units[i].gun = true; });
     // a damaged machine starts with what HP it has left (the colony's guardians: mission unit `hp`)
     list.forEach((d, i) => { if (d.hp !== undefined) this.units[i].hp = Math.max(1, Math.min(this.units[i].hp, d.hp)); });
     this.escaped = [];
+    // the colony's battles: Eden's own machines, marked at the start (a captured dock takes its side's cargo with it)
+    if (mission.colony) for (const u of this.units) if (u.army === 0) u.eden = true;
     // the colony's raid (mission.flee): raiders who broke off and got off the map; whether they
     // are running for the edge (fleeing) and whether Eden is pulling back (retreating)
     this.fled = []; this.fleeing = false; this.retreating = false;
@@ -185,7 +188,7 @@ export class ExpansionBattle extends Battle {
   // run for the edge (ai.js flee) and leave the map one by one; the battle goes on until none is
   // left on it. Not while Eden retreats; once they run they don't turn back.
   checkFlee() {
-    if (this.fleeing || this.retreating || this.winner() !== null) return false;
+    if (this.mission.noFlee || this.fleeing || this.retreating || this.winner() !== null) return false;   // the Reckoning: Hesk's people never break off
     // not before the raiders have had one full turn: a band that came in outnumbered still tries its luck once
     if ((this.turn || 1) < 2) return false;
     const theirs = this.onMap(1);
@@ -206,13 +209,22 @@ export class ExpansionBattle extends Battle {
   }
 
   winner() {
-    if (!this.result) this.result = this.expansionOutcome();
-    return super.winner();
+    if (!this.result) this.result = this.expansionOutcome() || outcome(this);
+    this.awaitArrivals();
+    return this.result ? this.result.winner : null;
+  }
+  // mission.awaitArrivals (the Reckoning's maps): wiping out what is on the map wins nothing while
+  // enemy waves are still to come (the flagship arrives late); the battle goes on until they do.
+  awaitArrivals() {
+    if (!this.mission.awaitArrivals || this.result?.winner !== 0 || this.result.reason !== 'annihilate') return;
+    if (this.arrivals.some((e) => !e.done && e.army === 1)) this.result = null;
   }
   expansionOutcome() {
-    if (this.mission.flee) return this.colonyOutcome();
-    if (this.general && this.general.hp <= 0) return { winner: 1, reason: 'general' };
     const o = this.mission.objective || {};
+    if (this.mission.flee) return this.colonyOutcome() || this.holdOutcome(o);
+    if (this.general && this.general.hp <= 0) return { winner: 1, reason: 'general' };
+    const h = this.holdOutcome(o);
+    if (h) return h;
     if (o.kind === 'escape') {
       const need = (o.count ?? 3) + (this.general ? 1 : 0);
       if (this.escaped.length >= need && (!this.general || this.general.escaped)) return { winner: 0, reason: 'escape' };
@@ -227,6 +239,12 @@ export class ExpansionBattle extends Battle {
       if (o.edge && marked.some((u) => u.hp > 0 && !u.carrier && this.onEdge(o.edge, u.x, u.y))) return { winner: 1, reason: 'breakthrough' };
     }
     return null;
+  }
+
+  // objective { kind: 'hold', turns }: the player's side wins by still standing when turn `turns` is
+  // over (its command centre and the general alive: the base rules and colonyOutcome end it before).
+  holdOutcome(o) {
+    return o.kind === 'hold' && (this.turn || 1) > (o.turns || 0) ? { winner: 0, reason: 'held' } : null;
   }
 
   // After savegame.restoreBattle: relink the general and the escaped units.
@@ -258,11 +276,19 @@ export const raidersFlee = (mine, theirs) => theirs > 0 && mine >= 2 * theirs;
 export function colonyResult(b, won = b.winner() === 0) {
   const c = b.mission.colony || {};
   const raiders = b.units.filter((u) => u.army === 1 && u.rosterId !== undefined);
+  // the Reckoning's battles (mission.colony.battle 'siege' | 'stronghold'): what Eden lost besides its guardians
+  const reckoning = c.battle && c.battle !== 'raid' ? {
+    battle: c.battle, reason: b.result?.reason ?? null,
+    enemies: b.units.filter((u) => u.army === 1).length, enemiesDestroyed: b.units.filter((u) => u.army === 1 && u.hp <= 0).length,
+    cortexLost: b.units.some((u) => u.eden && u.type === 56 && (u.hp <= 0 || u.army !== 0)), dockLost: b.units.some((u) => u.eden && u.type === 52 && (u.hp <= 0 || u.army !== 0)),
+    gunsLost: b.units.filter((u) => u.army === 0 && u.gun && u.hp <= 0).length,
+    flagshipSunk: !!(b.stakes?.[1]?.flagship && b.stakes[1].flagship.hp <= 0),
+  } : {};
   return {
-    day: c.day ?? null, won: !!won, fled: !!(won && raiders.some((u) => u.fled && u.hp > 0)), turns: b.turn,
+    ...reckoning, day: c.day ?? null, won: !!won, fled: !!(won && raiders.some((u) => u.fled && u.hp > 0)), turns: b.turn,
     killed: raiders.filter((u) => u.hp <= 0).map((u) => u.rosterId).sort((x, y) => x - y),
-    guardians: b.units.filter((u) => u.army === 0 && u.rosterId !== undefined).map((u) => ({
-      id: u.rosterId, hp: u.hp > 0 ? Math.round((u.hp / b.types[u.type].hp) * 1000) / 1000 : 0, lost: u.hp <= 0,
+    guardians: b.units.filter((u) => (u.eden ?? u.army === 0) && u.rosterId !== undefined && !u.gun).map((u) => ({
+      id: u.rosterId, hp: u.hp > 0 && u.army === 0 ? Math.round((u.hp / b.types[u.type].hp) * 1000) / 1000 : 0, lost: u.hp <= 0 || u.army !== 0,
     })),
   };
 }
@@ -277,6 +303,8 @@ export function expansionHud(b) {
     const left = b.onMap(0).filter((u) => !b.stranded(u)).length;
     parts.push(`<b>Retreat</b>: ${b.escaped.length} off the map, ${left} still to go. Move each machine onto an edge hex (the map's border${b.mission.colony?.from === 'earth' ? ', or beside the atmosphere' : ''}) to leave.`);
   }
+  if (o.kind === 'hold') parts.push(`<b>Hold</b> to the end of turn ${o.turns}: turn ${Math.min(b.turn, o.turns)} of ${o.turns}`);
+  if (b.mission.awaitArrivals && b.arrivals.some((e) => !e.done && e.army === 1)) parts.push('More of them are coming.');
   if (b.general) parts.push(`General aboard: ${b.general.hp > 0 ? (b.general.escaped ? 'escaped' : 'on the map') : 'lost'}`);
   if (o.kind === 'escape') {
     const need = (o.count ?? 3) + (b.general ? 1 : 0), names = b.escaped.map((u) => (u.general ? `${b.types[u.type].code.trim()} ★` : b.types[u.type].code.trim()));
@@ -357,7 +385,7 @@ function colonyBattle(rom, data) {
   const { types, tables } = data, c = mission.colony || {};
   const { rom: view, info } = romView(rom, mission);
   return {
-    url: `colony:${c.day}:${c.from}`, mission, rom: view, info, musicMap: mission.music ?? 0, names: ['Eden', 'Raiders'],
+    url: `colony:${c.battle || 'raid'}:${c.day}:${c.from}`, mission, rom: view, info, musicMap: mission.music ?? 0, names: ['Eden', c.battle && c.battle !== 'raid' ? 'Hesk\'s fleet' : 'Raiders'],
     campaign: false, colony: true, battleKey: COLONY_BATTLE, campaignId: null, total: null, choice: undefined, ending: null,
     types, tables, text: data.text, terrain: data.terrain, finish: () => 0, secret: null,
     newBattle: (opts) => new ExpansionBattle(rom, mission, types, { ...opts, tables }),

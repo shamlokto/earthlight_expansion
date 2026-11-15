@@ -75,7 +75,7 @@ export function romView(rom, mission) {
 export function deployList(mission) {
   const out = [];
   for (const u of mission.units) {
-    const host = { type: u.type, army: u.army, x: u.x, y: u.y, flag40: !!u.neutral, level: u.level, rosterId: u.rosterId, hold: u.hold, wakes: !!u.wakes, hp: u.hp };
+    const host = { type: u.type, army: u.army, x: u.x, y: u.y, flag40: !!u.neutral, level: u.level, rosterId: u.rosterId, hold: u.hold, wakes: !!u.wakes, hp: u.hp, name: u.name, gun: u.gun };
     out.push(host);
     // cargo: unit types, or campaign machines { type, level, rosterId } (campaign.applyRoster)
     for (const c of u.cargo || []) out.push(typeof c === 'number' ? { type: c, army: u.army, x: u.x, y: u.y, carrier: host }
@@ -88,6 +88,6 @@ export function deployList(mission) {
 export function arrivalList(mission) {
   return (mission.arrivals || []).map((e) => ({
     turn: e.turn, army: e.army, screen: [0, 0],
-    units: e.units.map((u) => ({ type: u.type, flag40: false, x: u.x, y: u.y, cargo: u.cargo || [], ...(u.chase ? { chase: u.chase } : {}), ...(u.level !== undefined ? { level: u.level } : {}), ...(u.burner ? { burner: true } : {}) })),
+    units: e.units.map((u) => ({ type: u.type, flag40: false, x: u.x, y: u.y, cargo: u.cargo || [], ...(u.chase ? { chase: u.chase } : {}), ...(u.level !== undefined ? { level: u.level } : {}), ...(u.burner ? { burner: true } : {}), ...(u.name ? { name: u.name } : {}) })),
   }));
 }

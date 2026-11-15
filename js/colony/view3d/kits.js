@@ -1191,7 +1191,8 @@ export const KITS = {
       ...[-2.0, 0, 2.0].map((x) => box([0.5, 0.6, 2.2], [x, 0.1, 0], '#5a6068')),
       ...[[-3.2, -3.2], [3.2, -3.2], [-3.2, 3.2], [3.2, 3.2]].map(([x, z]) => dome([0.16, 0.14, 0.16], [x, 0.1, z], BEACON, GLOW)),
     ];
-    if (b?.launched) return [...dock, box([5.6, 0.04, 1.8], [0, 0.72, 0], '#7fe0ff', GLOW), cyl([0.08, 1.2, 0.08], [0, 2.94, 0], STEEL), dome([0.2, 0.16, 0.2], [0, 4.1, 0], '#7ff0d0', GLOW)];
+    if (b?.launched && !b.ship) return [...dock, box([5.6, 0.04, 1.8], [0, 0.72, 0], '#7fe0ff', GLOW), cyl([0.08, 1.2, 0.08], [0, 2.94, 0], STEEL), dome([0.2, 0.16, 0.2], [0, 4.1, 0], '#7ff0d0', GLOW)];
+    if (b?.launched && b.ship) return [...dock, ...arkShip()];   // version 13: home from a trip to the Hope
     return wonderKit('ark', level, () => [
       ...dock,
       // (a rotated part turns about its own centre, pos[1] + size[1] / 2: the ship's axis lies 1.9 above the dock)
@@ -1582,3 +1583,85 @@ export function kitParts(key, level = 1, mode = null, b = null, ctx = null) {
 
 // Height of a kit's top above its base (picking and the ghost use it).
 export const kitHeight = (parts) => parts.reduce((m, p) => (p.shimmer ? m : Math.max(m, p.pos[1] + (p.rot ? Math.max(...p.size) : p.size[1]))), 0);
+
+// ---- version 13 (docs/COLONY-V13.md): the Ark's hull (in her dock at Eden, or on the Hope's landing field) and the
+// Hope's buildings on Earth: heavy, sealed, industrial; amber hazard lights and teal clean-air glows over grey ground.
+const arkShip = (k = 1, y0 = 0) => [
+  cyl([1.9 * k, 5.4 * k, 1.9 * k], [0, y0 + 1.9 * k - 2.7 * k, 0], '#f4f6f8', { rot: [0, 0, HALF_PI], slot: 'mat/hull-plate' }),
+  ...[-2.0, -1.0, 0, 1.0, 2.0].map((x) => cyl([1.94 * k, 0.08 * k, 1.94 * k], [x * k, y0 + 1.86 * k, 0], WIN, { rot: [0, 0, HALF_PI], glow: true })),
+  cone([1.9 * k, 1.3 * k, 1.9 * k], [-3.35 * k, y0 + (1.9 - 0.65) * k, 0], '#e8eef4', { rot: [0, 0, HALF_PI] }),
+  torus([3.4 * k, 0.5 * k, 3.4 * k], [0.6 * k, y0 + 1.65 * k, 0], '#dfe3ea', { rot: [0, 0, HALF_PI] }),
+  torus([3.42 * k, 0.12 * k, 3.42 * k], [0.6 * k, y0 + 1.84 * k, 0], '#ffd98a', { rot: [0, 0, HALF_PI], glow: true }),
+  ...[[-0.45, 0], [0.4, 0.45], [0.4, -0.45]].map(([y, z]) => cone([0.7 * k, 0.8 * k, 0.7 * k], [3.1 * k, y0 + (1.5 + y) * k, z * k], '#7a828c', { rot: [0, 0, -HALF_PI] })),
+];
+const HOPE_GREY = '#5e5a56', SEAL = '#d8dcd6', AMBER = '#ffb23a', CLEAN = '#7ff0d0';
+const pad = (n, c = HOPE_GREY) => box([n * 0.98, 0.08, n * 0.98], [0, 0, 0], c);
+Object.assign(KITS, {
+  // 4×4: a sealed pad with landing lights, pressure tents and a stores block; the Ark stands on it while she is down.
+  landingfield: (level, mode, b) => [
+    pad(4, '#6e7276'), torus([3.2, 0.05, 3.2], [0, 0.08, 0], AMBER, GLOW),
+    ...[[-1.7, -1.7], [1.7, -1.7], [-1.7, 1.7], [1.7, 1.7]].map(([x, z]) => dome([0.14, 0.12, 0.14], [x, 0.08, z], BEACON, GLOW)),
+    ...(b?.ship ? arkShip(0.55, 0.08) : [
+      ...[-1.1, 0, 1.1].map((x) => dome([0.7, 0.45, 0.7], [x, 0.08, 1.45], '#e8e2d4')),
+      box([1.2, 0.5, 0.7], [1.2, 0.08, -1.4], '#8a7a5a'), box([1.22, 0.06, 0.72], [1.2, 0.58, -1.4], AMBER, GLOW),
+      cyl([0.06, 1.3, 0.06], [-1.6, 0.08, -1.5], STEEL), box([0.36, 0.22, 0.04], [-1.42, 1.2, -1.5], '#ff8a3a'),
+    ]),
+  ],
+  // 3×3: a big pale pressure dome on a ring footing, lit from inside, with an airlock and a recycler stack.
+  sealeddome: () => [
+    pad(3), cyl([2.8, 0.25, 2.8], [0, 0.08, 0], '#8a8e92'),
+    dome([2.6, 1.6, 2.6], [0, 0.33, 0], SEAL, { slot: 'mat/hull-plate' }), torus([2.62, 0.06, 2.62], [0, 0.45, 0], WIN, GLOW),
+    dome([1.0, 0.6, 1.0], [0, 1.25, 0], '#bfe8f0'), box([0.6, 0.5, 0.5], [0, 0.08, 1.3], '#9aa3ad'), box([0.3, 0.3, 0.05], [0, 0.18, 1.56], AMBER, GLOW),
+    cyl([0.18, 0.9, 0.18], [1.1, 0.08, -1.1], '#7a828c'), cyl([0.2, 0.06, 0.2], [1.1, 0.98, -1.1], CLEAN, GLOW),
+  ],
+  // 2×2: a tall ribbed tower with intake fans and a glowing clean-air crown.
+  airscrubber: () => [
+    pad(2), cyl([1.3, 0.4, 1.3], [0, 0.08, 0], '#7a7e84'), cyl([0.9, 2.6, 0.9], [0, 0.48, 0], '#c9ced6'),
+    ...[0.9, 1.6, 2.3].map((y) => torus([1.0, 0.08, 1.0], [0, y, 0], '#6a7078')),
+    ...[[-0.7, 0], [0.7, 0], [0, -0.7], [0, 0.7]].map(([x, z]) => cyl([0.42, 0.12, 0.42], [x, 0.5, z], '#3d444d', { rot: [HALF_PI, 0, 0] })),
+    torus([1.05, 0.12, 1.05], [0, 3.0, 0], CLEAN, GLOW), dome([0.5, 0.3, 0.5], [0, 3.08, 0], '#e8eef4'),
+  ],
+  // 3×3: wash bays and lead-lined tanks under a yellow gantry, the radiation trefoil lit amber.
+  deconplant: () => [
+    pad(3), box([2.6, 0.7, 1.2], [0, 0.08, -0.7], '#8a8e92'), box([2.62, 0.08, 1.22], [0, 0.78, -0.7], AMBER, GLOW),
+    ...[-0.9, 0, 0.9].map((x) => cyl([0.7, 1.1, 0.7], [x, 0.08, 0.7], '#6a7a6a')),
+    box([0.15, 1.6, 0.15], [-1.3, 0.08, 1.3], HAZARD), box([0.15, 1.6, 0.15], [1.3, 0.08, 1.3], HAZARD), box([2.75, 0.15, 0.2], [0, 1.68, 1.3], HAZARD),
+    cyl([0.5, 0.05, 0.5], [0, 0.86, -0.7], '#ffd23a', GLOW),
+  ],
+  // 3×3: a squat reactor hall and a rotating soil drum, the conveyor feeding dark living earth onto a heap.
+  soilreactor: () => [
+    pad(3), box([1.6, 1.0, 1.6], [-0.55, 0.08, -0.55], '#9a8a6a'), box([1.62, 0.1, 1.62], [-0.55, 1.08, -0.55], '#ff9a52', GLOW),
+    cyl([0.9, 1.6, 0.9], [0.7, 0.2, 0.6], '#7a6a5a', { rot: [0, 0, HALF_PI] }),
+    box([1.4, 0.08, 0.3], [0.4, 0.7, -0.9], '#4d4844', { rot: [0, 0, -0.3] }),
+    dome([1.1, 0.5, 1.1], [-0.8, 0.08, 0.9], '#5a4a32'), cyl([0.16, 1.2, 0.16], [-1.2, 1.08, -1.2], '#6a6460'),
+  ],
+  // 3×3: a shoreline plant: intake pipes, filter beds glowing blue and a white desalination block.
+  seapurifier: () => [
+    pad(3), box([1.4, 0.9, 1.4], [-0.6, 0.08, -0.6], '#e8ecf0', { slot: 'mat/hull-plate' }), box([1.42, 0.08, 1.42], [-0.6, 0.98, -0.6], WIN, GLOW),
+    ...[[0.8, -0.8], [0.8, 0.2], [-0.2, 0.9], [0.8, 1.0]].map(([x, z]) => box([0.8, 0.12, 0.7], [x, 0.08, z], '#3a8ad0', GLOW)),
+    cyl([0.2, 2.6, 0.2], [0, 0.4, 1.4], '#9aa3ad', { rot: [0, HALF_PI, HALF_PI] }), cyl([0.2, 2.6, 0.2], [1.4, 0.4, 0], '#9aa3ad', { rot: [HALF_PI, 0, 0] }),
+  ],
+  // 1×1: a heavy concrete wall block with a pump head.
+  tidewall: () => [
+    box([0.98, 0.7, 0.98], [0, 0, 0], '#8a8680'), box([1.0, 0.08, 1.0], [0, 0.7, 0], '#6a6660'),
+    cyl([0.3, 0.3, 0.3], [0, 0.78, 0], '#5a6a7a'), dome([0.1, 0.08, 0.1], [0.3, 0.78, 0.3], AMBER, GLOW),
+  ],
+  // 2×2: a sealed vault with a glass seed hall, green-lit racks inside.
+  seedbank: () => [
+    pad(2), box([1.7, 0.6, 1.0], [0, 0.08, -0.4], '#c9c2b0'), box([1.72, 0.06, 1.02], [0, 0.68, -0.4], '#8fe38a', GLOW),
+    box([1.6, 0.5, 0.7], [0, 0.08, 0.55], '#bfe8f0'), ...[-0.5, 0, 0.5].map((x) => box([0.18, 0.4, 0.5], [x, 0.08, 0.55], '#4f9a3a')),
+  ],
+  // 3×3: furrowed rows of young green crops on dark soil, an irrigation boom and a little shed.
+  firstfields: () => [
+    box([2.96, 0.06, 2.96], [0, 0, 0], '#4a3a26'),
+    ...[-1.1, -0.55, 0, 0.55, 1.1].map((z) => box([2.6, 0.12, 0.26], [0, 0.06, z], '#6fbf4a')),
+    box([2.8, 0.06, 0.08], [0, 0.6, 0.2], '#9aa3ad'), cyl([0.06, 0.55, 0.06], [-1.3, 0.06, 0.2], STEEL), cyl([0.06, 0.55, 0.06], [1.3, 0.06, 0.2], STEEL),
+    box([0.5, 0.4, 0.4], [1.15, 0.06, -1.25], '#a07a4a'),
+  ],
+  // 2×2: nursery greenhouses and rows of saplings, a drone mast.
+  reforest: () => [
+    pad(2, '#4a3a26'), box([0.9, 0.45, 0.8], [-0.45, 0.08, -0.5], '#bfe8f0'), box([0.92, 0.04, 0.82], [-0.45, 0.53, -0.5], '#8fe38a', GLOW),
+    ...[[0.4, -0.5], [0.7, 0.1], [0.2, 0.5], [-0.4, 0.5], [-0.7, 0.2]].flatMap(([x, z]) => tree(x, z, 0.8, (x + z) > 0)),
+    cyl([0.05, 1.2, 0.05], [0.8, 0.08, -0.8], STEEL), dome([0.12, 0.1, 0.12], [0.8, 1.28, -0.8], CLEAN, GLOW),
+  ],
+});
