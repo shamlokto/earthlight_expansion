@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Earthlight: Sato's Harvest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
+  <link rel="stylesheet" href="css/farm.css">
+  <script type="importmap">{"imports":{"three":"./js/vendor/three/three.module.min.js"}}</script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" hidden>
+    <div class="fm-panel fm-clock"><div><b id="hDate"></b><span id="hWeather"></span></div><div><span id="hTime"></span><span id="hMoney"></span></div>
+      <div class="fm-stam" title="Stamina"><i id="hStam"></i></div><div class="fm-place" id="hPlace"></div></div>
+    <div class="fm-panel fm-goal" id="hGoal" hidden></div>
+    <button class="fm-menubtn" id="bMenu" title="Menu (Esc or Tab)">☰</button>
+    <div id="toasts"></div>
+    <div id="labels"></div>
+    <div class="fm-prompt" id="prompt" hidden></div>
+    <div class="fm-held" id="hHeld"></div>
+    <div class="fm-bar" id="bar"></div>
+    <div id="touch" hidden>
+      <div id="stick"><i></i></div>
+      <button id="tUse">Use</button><button id="tAct">Act</button>
+    </div>
+  </div>
+
+  <!-- pictures and films behind dialogue -->
+  <div id="scene" hidden></div>
+  <div class="fm-dialog" id="dialog" hidden><div id="dFace"></div><div class="fm-dbody"><div class="fm-dname" id="dName"></div><div id="dText"></div><div class="fm-more">▼</div></div></div>
+  <div class="fm-choice" id="choice" hidden></div>
+  <div class="fm-win" id="win" hidden><div class="fm-winbox"><div class="fm-winhead"><h2 id="winTitle"></h2><button id="winX" title="Close (Esc)">×</button></div><div id="winBody"></div></div></div>
+
+  <!-- title -->
+  <section id="title">
+    <div id="titleArt"></div>
+    <div class="fm-titlebox">
+      <div class="fm-eyebrow">Earth Light · after the war</div>
+      <h1>Sato's Harvest</h1>
+      <p>Captain Mira Sato handed in her bars and bought a neglected field.<br>She has never grown anything. She means to learn.</p>
+      <div class="fm-trow"><button class="primary" id="bNew">New farm</button><button id="bContinue" hidden>Continue</button></div>
+      <div class="fm-trow small"><button id="bHelp">How to play</button><label class="fm-file">Import save<input type="file" id="fImport" accept=".json,application/json" hidden></label></div>
+      <p class="fm-sub" id="contInfo"></p>
+      <nav class="fm-trow small"><a href="colony.html">Colony Rebuild</a><a href="expansion.html">Expansion</a><a href="game.html">Original game</a></nav>
+      <p class="fm-sub" id="loadInfo">Loading…</p>
+    </div>
+  </section>
+  <div id="fade"></div>
+  <script type="module" src="js/farm/main.js"></script>
+</body>
+</html>
