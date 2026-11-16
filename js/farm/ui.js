@@ -22,7 +22,7 @@ export function icon(id) {
 }
 export function face(who) {
   const n = NPCS[who]; if (!n) return '';
-  const own = art.url(`people/${who}_portrait`); if (own) return `<div class="fm-face"><img src="${own}" alt=""></div>`;
+  const own = art.url(`people/${who}_portrait`) || art.url(`people/${who}_front`); if (own) return `<div class="fm-face"><img src="${own}" alt=""></div>`;
   if (n.portrait && n.portrait.startsWith('svg:')) return `<div class="fm-face">${svgPortrait(n.portrait.slice(4))}</div>`;
   return `<div class="fm-face"><img src="${n.portrait}" alt=""></div>`;
 }

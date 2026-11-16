@@ -1,0 +1,87 @@
+{
+ "version": 1,
+ "files": {
+  "people/corran_front": {
+   "file": "people/corran_front.webp",
+   "w": 390,
+   "h": 768,
+   "anchor": [
+    168,
+    765
+   ]
+  },
+  "people/general_front": {
+   "file": "people/general_front.webp",
+   "w": 289,
+   "h": 768,
+   "anchor": [
+    135,
+    766
+   ]
+  },
+  "people/maris_front": {
+   "file": "people/maris_front.webp",
+   "w": 272,
+   "h": 768,
+   "anchor": [
+    122,
+    765
+   ]
+  },
+  "people/marrow_front": {
+   "file": "people/marrow_front.webp",
+   "w": 302,
+   "h": 768,
+   "anchor": [
+    140,
+    765
+   ]
+  },
+  "people/oduya_front": {
+   "file": "people/oduya_front.webp",
+   "w": 340,
+   "h": 768,
+   "anchor": [
+    146,
+    766
+   ]
+  },
+  "people/ruess_front": {
+   "file": "people/ruess_front.webp",
+   "w": 319,
+   "h": 768,
+   "anchor": [
+    136,
+    766
+   ]
+  },
+  "people/sato_front": {
+   "file": "people/sato_front.webp",
+   "w": 340,
+   "h": 1024,
+   "anchor": [
+    150,
+    1021
+   ]
+  },
+  "people/sato_portrait": {
+   "file": "people/sato_portrait.webp",
+   "w": 512,
+   "h": 640
+  },
+  "people/sato_portrait_happy": {
+   "file": "people/sato_portrait_happy.webp",
+   "w": 512,
+   "h": 640
+  },
+  "people/seln_front": {
+   "file": "people/seln_front.webp",
+   "w": 273,
+   "h": 768,
+   "anchor": [
+    129,
+    765
+   ]
+  }
+ }
+}
