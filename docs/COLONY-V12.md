@@ -256,11 +256,15 @@ sets nothing that other endings read: Eden Restored, Beyond Eden, the Garden and
 
 The counterattack is two battles. The General **must** fly it: his machine is always in the strike force (`reckoningCrew`
 puts it first, whatever it is), the strike cannot launch without him serving, fit and his machine crewed at home and not a
-rail gun (`generalReady`, the button says why), and losing his machine loses the battle as before. Up to 40 machines.
+rail gun (`generalReady`, the button says why), and losing his machine loses the battle as before. Up to 40 machines,
+**the player's choice** (owner, 2026-11-16: "the player can select which 40 units to bring"): *Launch the strike* (phase 1)
+and *Strike the stronghold* (phase 2 straight after a regroup or a failed assault) open the **strike picker** first (§7f);
+the chosen ids go into the mission (`commandReckoning(state, 'strike', save, load, { ids })` → `ambushMission` /
+`strongholdMission` `opts.ids`, checked by `strikeSelection`). Pressing on after the ambush still takes the survivors only.
 
 ```
   Launch the strike ──► PHASE 1: THE AMBUSH ──lost──► home; again in 30 days (the ambush again)
-                              │ won (held 12 turns, or the picket destroyed)
+  (the picker: ≤ 40)          │ won (held 15 turns, or the picket destroyed)
                               ▼
                      The General decides (crossroads)
              ┌────────────────┴─────────────────┐
@@ -282,66 +286,79 @@ holds* for the counterstrike) route them; `colonyResult` adds `survivors` (the e
 
 Deep space halfway to the far belt: debris (meteoroid patches), five small asteroid clusters for cover (48 rock hexes),
 one plasma cloud, two flux points, nothing else. The strike force flies east in a column round the General (`@`, 14,15).
-Hesk's picket waits ahead and closes from every side in waves. **Objective: hold to the end of turn 12** (the jump drives
-charge) or destroy the whole picket (`awaitArrivals`); no flee for Hesk's side (`noFlee`), no auto-resolve.
+Hesk's picket waits ahead and closes from every side in waves. **Objective: hold to the end of turn 15** (the jump drives
+charge) or destroy the whole picket (`awaitArrivals`: every wave must have come); no flee for Hesk's side (`noFlee`), no
+auto-resolve. The hold is 15 so that the last wave (behind, turn 13) is fought for three turns, not skipped.
 
 Legend: `A` asteroid, `M` meteoroids, `P` plasma, `G` gravity flux, `o` the strike force's first 40 hexes,
 `@` the General, `H` the picket's leader (*Hound*, always slot 1), `1` the picket on the map at turn 1 (holding
-behind the rocks for two turns), `4` both flanks on turn 4, `7` the far corners on turn 7, `9` behind (the west
-edge: the way home) on turn 9.
+behind the rocks for four turns: `hold` 5), `6` both flanks on turn 6, `T` the far corners on turn 10, `B` behind (the
+west edge: the way home) on turn 13. (In the JSON a wave's `turn` is one less: arrival turn k comes on turn k + 1.)
 
 ```
- 1 ....................................4.4.4.4...........7.7.7
- 2 ...................................4.4.4.4.4.........7.7.7.
- 3 ..........................M.........4.4.4.4...........7.7.7
- 4 .......G.................MMM.......................M...7.7.
+ 1 ....................................6.6.6.6...........T.T.T
+ 2 ...................................6.6.6.6.6.........T.T.T.
+ 3 ..........................M.........6.6.6.6...........T.T.T
+ 4 .......G.................MMM.......................M...T.T.
  5 ............AAAA.........MMM...............................
  6 ............AAA............................................
  7 ...........A.A..........................A..................
  8 ................................M......AAA.................
  9 .......................................AAAA...........M....
 10 .......................................A.............MMM...
-11 9.9.........ooo.............................1.1......MMM...
-12 .9..........ooo........A...................1.1.1...........
-13 9.9.....M.ooooooo.....A...........MMM.....1.1.1.1..........
-14 .9........ooooooo....A............MMM....1.1.H.1.1.........
-15 9.9.......ooo@ooo..................M......1.1.1.1.....G....
-16 .9........ooooooo........................1.1M1.1.1.........
-17 9.9........ooooo............................1.1............
-18 .9.........M.o...............................1.............
-19 9.9......................M......................AAA........
+11 B.B.........ooo.............................1.1......MMM...
+12 .B..........ooo........A...................1.1.1...........
+13 B.B.....M.ooooooo.....A...........MMM.....1.1.1.1..........
+14 .B........ooooooo....A............MMM....1.1.H.1.1.........
+15 B.B.......ooo@ooo..................M......1.1.1.1.....G....
+16 .B........ooooooo........................1.1M1.1.1.........
+17 B.B........ooooo............................1.1............
+18 .B.........M.o...............................1.............
+19 B.B......................M......................AAA........
 20 ................................................AAA........
 21 ....MMM.......................A..................A.........
 22 ....MMM.....................AAAAA..........................
 23 .....M......................AAAAA.........PPP..............
 24 ............................AAAAA.........PPP...........M..
 25 ................MMM.........AAAA...........P...............
-26 ................MMM...........................M..........7.
-27 .................M...........................MMM......7.7.7
-28 ...................................4.M.4.4.4.MMM.......7.7.
-29 ....................................4.4.4.4...........7.7.7
-30 ...................................4.4.4.4.4...........7.7.
+26 ................MMM...........................M..........T.
+27 .................M...........................MMM......T.T.T
+28 ...................................6.M.6.6.6.MMM.......T.T.
+29 ....................................6.6.6.6...........T.T.T
+30 ...................................6.6.6.6.6...........T.T.
 ```
 
-**Scaling (by number, owner's follow-up: "twice in number first because it may get too hard")**: the picket is
-`RECKONING.ambushRatio` (**2**) × the strike force's machines, at least `ambushFloor` (**12**), capped by the 88 slots.
-The slots are stored in an order that takes 3 : 3 : 2.5 : 1.5 from front, flanks, hammer and behind in every 10, so any
-count keeps all four directions (80 slots for 40: 24 / 24 / 20 / 12; 24 for 12: 9 / 7 / 5 / 3). Each slot has a role
-(craft, mecha, armour, ship) and the colony picks its machine **by the strike force's own tier** (its mean price: under 14
-light, under 30 middle, else heavy; every third slot one tier lower) and **level** (its mean pilot level, 1–8; the leader +1;
-Easy −2). Types per role and tier (`AMBUSH_TYPES`): craft Lobster/Crane · Horus/Athena/Brontes · Athena Kai/Lobster
+**Scaling (by number; owner, 2026-11-16: "the ambush is too hard ... the enemy ambush force reduces strength and the
+waves come later")**: the picket is `RECKONING.ambushRatio` (**1.5**, was 2) × the strike force's machines (rounded up),
+at least `ambushFloor` (**12**), capped by the 88 slots. The slots are stored in an order that takes 3 : 3 : 2.5 : 1.5
+from front, flanks, hammer and behind in every 10, so any count keeps all four directions (60 slots for 40: 18 / 18 / 15
+/ 9; 18 for 12: 6 / 6 / 5 / 1). Each slot has a role (craft, mecha, armour, ship) and the colony picks its machine **by
+the strike force's own tier** (its mean price: under 14 light, under 30 middle, else heavy; `ambushLighter` (**2**, was 1)
+slots in every 3 one tier lower, so only a third are of the fleet's own tier) and **level** (the fleet's mean pilot level
+less `ambushLevels` (**2**), 0–8; the leader +1; Easy −2 more). The waves come later: the picket ahead moves from turn 5
+(was 3), the flanks on turn 6 (was 4), the far corners on turn 10 (was 8), behind on turn 13 (was 6). Types per role and tier (`AMBUSH_TYPES`): craft Lobster/Crane · Horus/Athena/Brontes · Athena Kai/Lobster
 Kai/Crane Kai; mecha Mars/Medusa/Titan · Talos/Directorate Talos · Directorate Talos/Directorate Medusa/Mars Kai/Titan Kai;
 armour Cyclops/Phoibos · Cyclops Kai/Cyclops · Cyclops Kai; ships Fenrir/Hannibal/Cerberus · Corvus/Asura-II/Selene ·
 Tiamat/Asura-II Kai/Asura-II/Hastur. No Leviathan, no unique machines.
 
 **AI against AI** (`tests/colony-reckoning.mjs`, both sides the Union AI; Eden on a "leash": the General's machine holds
-its hex and only fires, the rest stay within 8 hexes of him and fight whatever comes within 6, as a player would ring him):
-40 strong machines (level 8) won 3 of 3 and 4 of 4 in the tuning runs, losing 17–29 machines and leaving 15–21 of the
-80 alive; 40 middling ones (level 6) 3 of 4 (26–37 lost); 20 (level 5) 2 of 4; 5–6 weak ones always lose. Without the
-leash (the AI's own play: it chases east and leaves the General alone) every game was lost on turns 7–10, the wave behind
-finishing the General: the leash is what "good play" means here. Tuning history: the General first stood on the west
-edge of the column (the turn-5 wave behind killed him); the waves came on turns 1/3/5/7 (too dense); now 1 (holding
-to turn 3) / 4 / 7 / 9.
+its hex and only fires, the rest fight whatever comes within 6 hexes of him if they are within 8 of him, and one that has
+drifted more than 5 hexes away with no enemy beside it first closes up on him, as a player keeps the ring). 12 games each
+(the scratch harness; the test runs 3 per side), machines lost in a won game:
+
+| strike force (40) | before (×2, waves 1/4/8/6, hold 12) | now (×1.5, −2 levels, lighter, waves 1(5)/6/10/13, hold 15) |
+| --- | --- | --- |
+| strong (level 8, heavy) | 12 / 12 won, 16–30 lost (mean 22.5) | 12 / 12 won, 11–19 lost (mean 14.6), 7–12 of 60 left |
+| middling (level 6, mixed) | 7 / 12 won, 32–39 lost (mean 35.7) | 12 / 12 won, 10–21 lost (mean 15.6), 4–10 of 60 left |
+| weak (5, level 2) | 0 / 12 | 0 / 12 (the floor of 12 still beats them) |
+
+With the old leash (no closing up: the ring drifts east after the picket) the same new ambush gave the middling fleet 11 of
+12 but the strong one only 4 of 12, every loss the wave behind (turn 13) reaching a General left alone: a late wave from
+behind punishes a fleet that chases. The test checks a strong 40 wins at least 80% of its games, a middling one at least
+half, and a won ambush costs a strong fleet at most 20 machines on average (a middling one 26). Tuning history: the General
+first stood on the west edge of the column (the turn-5 wave behind killed him); the waves came on turns 1/3/5/7 (too
+dense); then 1 (holding to turn 3) / 4 / 8 / 6 with hold 12; now as above (owner, 2026-11-16). The rear wave on turn 13
+with a 12- or 13-turn hold was tried: it either never mattered or the General had one turn to answer it.
 
 ### 7b. The choice
 
@@ -421,15 +438,24 @@ pressing on with 30 machines at 70% HP, 0 of 6 each in the tuning runs: pressing
 
 ### 7e. Numbers (`RECKONING`)
 
-`ambushRatio` 2, `ambushFloor` 12, `survivorsCap` 20, `counterDelay` 12 days, `afterCounter` 10 days,
+`ambushRatio` 1.5 (was 2), `ambushLevels` 2 (new), `ambushLighter` 2 (new; was a fixed 1 in 3), `ambushFloor` 12, `survivorsCap` 20, `counterDelay` 12 days, `afterCounter` 10 days,
 `reinforceStep` 8, `reinforceMax` 3, `strikeRetry` 30 days (unchanged).
 
 ### 7f. Interface
 
-The Raids card: *Launch the strike* (phase 1, "two battles: the road there, twice your number, then the rock; the General
-must lead it"), *Strike the stronghold* (phase 2, the reinforcement shown), the counterstrike countdown, *Defend Eden*, the
+The Raids card: *Launch the strike* (phase 1, "two battles: the road there, half as many again as you bring, then the
+rock; the General must lead it"), *Strike the stronghold* (phase 2, the reinforcement shown), the counterstrike countdown, *Defend Eden*, the
 pressing-on fleet (machines, HP). Strike buttons are disabled with the reason when the General cannot fly. The crossroads
-event shows the summary and what each way means; *Press on* launches phase 2 directly. The battle page: *Break out* on the
+event shows the summary and what each way means; *Press on* launches phase 2 directly (no picker: the survivors go).
+
+**The strike picker** (`ui.js` `openStrikePick`, the Star chart squadron picker's rows; `battle.js` `strikeCandidates`,
+`strikeBest`, `strikeSelection`): *Launch the strike* and *Strike the stronghold* (not pressing on) open a window listing
+every machine that may fly (crewed, fit, at home, not a rail gun; best first): type, level, commander, power, HP, with a
+checkbox. It opens with the automatic best 40 ticked; the General's machine is ticked and locked (always in); at 40 the
+other boxes grey out. *Best 40* and *Clear* (back to the General alone), the count and total power in the heading;
+*Launch* is disabled with the reason until the choice is valid (≤ 40, the General in); *Cancel*, Esc or a click outside
+closes it. Ticking updates in place (the list keeps its scroll). Launch sends the ids; `commandReckoning` checks them again
+(`strikeSelection`: unknown ids dropped, more than 40 refused, the General added). The battle page: *Break out* on the
 ambush's briefing. How to play: a paragraph on the strike (spoiler-light).
 
 Files: `js/colony/reckoning.js` (stages, `generalReady`, `strikePhase`, the choice, the results), `js/colony/battle.js`

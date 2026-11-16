@@ -226,6 +226,26 @@ export function reckoningCrew(state, fixedOk = true) {
   return state.guardians.filter((g) => crew.has(g.id) && g.hp > 0 && !g.away && (fixedOk || catOf(g.type) !== RAIL_ONLY))
     .sort((a, b) => generalAboard(state, b) - generalAboard(state, a) || power(b) - power(a) || a.id - b.id).slice(0, RECKONING_CAP);
 }
+// The strike picker (js/colony/ui.js): every machine that may fly the strike (crewed, fit, at home, not
+// a rail gun), best first, the General's machine leading (locked in: `general`). Pure.
+export function strikeCandidates(state) {
+  const crew = R.homeCrew(state);
+  return state.guardians.filter((g) => crew.has(g.id) && g.hp > 0 && !g.away && catOf(g.type) !== RAIL_ONLY)
+    .sort((a, b) => generalAboard(state, b) - generalAboard(state, a) || power(b) - power(a) || a.id - b.id)
+    .map((g) => ({ g, general: generalAboard(state, g), power: Math.round(power(g)) }));
+}
+// The automatic choice: the General's machine and the 39 strongest.
+export const strikeBest = (state) => strikeCandidates(state).slice(0, RECKONING_CAP).map((c) => c.g.id);
+// The player's choice, checked: known candidates only (others dropped), at most RECKONING_CAP, the
+// General's machine always in. { ok, msg, gs } with gs the machines in the automatic order.
+export function strikeSelection(state, ids) {
+  const want = new Set(ids || []), all = strikeCandidates(state);
+  const gen = all.find((c) => c.general);
+  const gs = all.filter((c) => c.general || want.has(c.g.id)).map((c) => c.g);
+  if (!gen) return { ok: false, msg: 'The General\'s machine must lead the strike.', gs };
+  if (gs.length > RECKONING_CAP) return { ok: false, msg: `At most ${RECKONING_CAP} machines fly the strike (${gs.length} chosen).`, gs: gs.slice(0, RECKONING_CAP) };
+  return { ok: true, msg: `${gs.length} machine${gs.length === 1 ? '' : 's'}, the General leading.`, gs };
+}
 const strip = (u) => { const { core, ...rest } = u; return rest; };
 export function siegeShare(n) { return Math.max(0.2, Math.min(1, (n + 4) / 44)); }
 function cut(list, f) {
@@ -290,8 +310,9 @@ export function counterMission(state, siegeBase) {
 
 // Phase 1 of the strike: the ambush (missions/colony/ambush.json). Hesk's picket is RECKONING.ambushRatio
 // times the strike force by number (at least ambushFloor), its machines of the strike force's own tier
-// (by the fleet's mean price) and level (its mean pilot level): the slots' order keeps all four
-// directions at any count. Pure.
+// (by the fleet's mean price; ambushLighter slots in 3 a tier lighter) and level (its mean pilot level,
+// ambushLevels lower): the slots' order keeps all four directions at any count. opts.ids: the machines
+// the player picked (strikeSelection), else the automatic best 40. Pure.
 export const AMBUSH_TYPES = {   // role -> [light, mid, heavy] (price ~8 | ~16-24 | ~32-66)
   craft: [[8, 9], [12, 4, 10], [73, 66, 67]], mecha: [[0, 3, 1], [2, 60], [60, 80, 69, 68]],
   armour: [[16, 15], [70, 16], [70]], ship: [[49, 39, 50], [42, 31, 38], [30, 72, 31, 33]],
@@ -301,15 +322,17 @@ export function ambushTier(gs) {
   return mean < 14 ? 0 : mean < 30 ? 1 : 2;
 }
 export const ambushCount = (n) => Math.max(R.RECKONING.ambushFloor, Math.ceil(R.RECKONING.ambushRatio * n));
-export function ambushMission(state, base) {
-  const gs = reckoningCrew(state, false), eden = placeEden(state, base, gs);
+export function ambushMission(state, base, opts = {}) {
+  const gs = opts.ids ? strikeSelection(state, opts.ids).gs : reckoningCrew(state, false), eden = placeEden(state, base, gs);
   const placed = gs.filter((g) => eden.units.some((u) => u.rosterId === g.id));
   const tier = ambushTier(placed), n = eden.units.length;
-  const lv = Math.max(1, Math.min(8, Math.round(placed.reduce((t, g) => t + (g.level || 0), 0) / Math.max(1, placed.length))));
+  const mean = Math.round(placed.reduce((t, g) => t + (g.level || 0), 0) / Math.max(1, placed.length));
+  const lv = Math.max(0, Math.min(8, mean - (R.RECKONING.ambushLevels ?? 0)));
+  const light = R.RECKONING.ambushLighter ?? 1;
   const want = Math.min(base.slots.length, ambushCount(n));
   const hold = new Map(base.waves.filter((w) => w.hold).map((w) => [w.key, w.hold]));
   const units = base.slots.slice(0, want).map((sl, i) => {
-    const t = i % 3 === 2 ? Math.max(0, tier - 1) : tier, list = AMBUSH_TYPES[sl.role][t];
+    const t = i % 3 >= 3 - light ? Math.max(0, tier - 1) : tier, list = AMBUSH_TYPES[sl.role][t];
     return { type: list[Math.floor(i / 8) % list.length], army: 1, x: sl.x, y: sl.y, level: Math.min(9, lv + (sl.name ? 1 : 0)), ...(sl.name ? { name: sl.name } : {}), ...(hold.has(sl.wave) ? { hold: hold.get(sl.wave) } : {}) };
   });
   const lowered = easyLevels(state, units);
@@ -326,12 +349,13 @@ export function ambushMission(state, base) {
 }
 
 // Phase 2: Hesk's stronghold. opts.fleet [{ id, hp }]: the General pressed on after the ambush: only
-// those machines, at no more than the HP they came out with. opts.reinforce n: the base had time (a regroup, a failed assault): the first
+// those machines, at no more than the HP they came out with. opts.ids: the machines the player picked
+// (strikeSelection; ignored when pressing on), else the automatic best 40. opts.reinforce n: the base had time (a regroup, a failed assault): the first
 // RECKONING.reinforceStep x n of base.reinforcements join the garrison, every enemy n levels higher (at most 9).
 export function strongholdMission(state, base, opts = {}) {
   const r = state.reckoning || {}, fleet = opts.fleet ?? (r.onward ? r.fleet : null);
   const reinforce = opts.reinforce ?? r.reinforce ?? 0;
-  let gs = reckoningCrew(state, false), hpOver = null;
+  let gs = opts.ids && !fleet ? strikeSelection(state, opts.ids).gs : reckoningCrew(state, false), hpOver = null;
   if (fleet) {
     const ids = new Set(fleet.map((f) => f.id));
     gs = state.guardians.filter((g) => ids.has(g.id) && g.hp > 0 && !g.away && catOf(g.type) !== RAIL_ONLY)
@@ -360,8 +384,9 @@ export const generalReady = (state) => R.generalReady(state);
 // is fetched. Marks state.reckoning.fighting until the result comes back (main.js).
 // Off to the battle page with one of the Reckoning's battles ('siege' | 'counter' | 'ambush' | 'stronghold';
 // 'strike' picks the strike's next phase). Async: the map is fetched. Marks state.reckoning.fighting until
-// the result comes back (main.js).
-export async function commandReckoning(state, which, save = () => {}, load = null) {
+// the result comes back (main.js). opts.ids: the strike force the player picked (the picker; checked by
+// strikeSelection), else the automatic best 40; pressing on always takes the survivors.
+export async function commandReckoning(state, which, save = () => {}, load = null, opts = {}) {
   const r = state.reckoning;
   if (!r) return { ok: false, msg: 'Nothing is waiting.' };
   if (which === 'strike') which = R.strikePhase ? R.strikePhase(state) || 'ambush' : 'ambush';
@@ -372,12 +397,13 @@ export async function commandReckoning(state, which, save = () => {}, load = nul
     if (!onward && which !== (R.strikePhase ? R.strikePhase(state) : which)) return { ok: false, msg: which === 'stronghold' ? 'The way to the rock is still guarded.' : 'The picket is spent: the strike goes straight to the rock.' };
     const gr = generalReady(state);
     if (!gr.ok) return gr;
+    if (opts.ids && !onward) { const sel = strikeSelection(state, opts.ids); if (!sel.ok) return sel; }
   }
   if (state.raid?.coming?.battle) return { ok: false, msg: 'A raid battle is already being fought.' };
   let base;
   const file = RECKONING_FILES[which === 'counter' ? 'siege' : which];
   try { base = load ? await load(file) : await (await fetch(file, { cache: 'no-cache' })).json(); } catch (e) { return { ok: false, msg: `Could not load the map: ${e.message}` }; }
-  const mission = which === 'siege' ? siegeMission(state, base) : which === 'counter' ? counterMission(state, base) : which === 'ambush' ? ambushMission(state, base) : strongholdMission(state, base);
+  const mission = which === 'siege' ? siegeMission(state, base) : which === 'counter' ? counterMission(state, base) : which === 'ambush' ? ambushMission(state, base, { ids: opts.ids }) : strongholdMission(state, base, { ids: opts.ids });
   if (!mission.units.some((u) => u.army === 0 && u.rosterId !== undefined)) return { ok: false, msg: 'No crewed guardian is at home to fight.' };
   if ((which === 'ambush' || which === 'stronghold') && !mission.general) return { ok: false, msg: 'The General\'s machine could not join the strike force.' };
   try {
