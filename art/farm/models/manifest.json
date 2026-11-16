@@ -1,0 +1,63 @@
+{
+ "farmhouse": {
+  "file": "farmhouse.glb",
+  "tris": 20000,
+  "size": [
+   0.8064,
+   1.0,
+   0.9048
+  ],
+  "note": "Sato's house; porch and door on +Z"
+ },
+ "barn": {
+  "file": "barn.glb",
+  "tris": 20000,
+  "size": [
+   0.955,
+   1.0,
+   0.8975
+  ],
+  "note": "double doors on +Z"
+ },
+ "coop": {
+  "file": "coop.glb",
+  "tris": 12000,
+  "size": [
+   0.7935,
+   1.0,
+   0.9786
+  ],
+  "note": "ramp and door on +Z; a hen sits on the roof"
+ },
+ "cow": {
+  "file": "cow.glb",
+  "tris": 12000,
+  "size": [
+   0.5657,
+   0.7848,
+   1.0
+  ],
+  "note": "head towards +Z"
+ },
+ "chicken": {
+  "file": "chicken.glb",
+  "tris": 8000,
+  "size": [
+   0.7968,
+   1.0,
+   0.9778
+  ],
+  "note": "head towards +Z"
+ },
+ "sato": {
+  "file": "_tmp/sato_s3.glb",
+  "tris": 0,
+  "size": [
+   0.6,
+   1,
+   0.6
+  ],
+  "unit": "height",
+  "note": "TEST ENTRY by lead, replace"
+ }
+}

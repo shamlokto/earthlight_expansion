@@ -1,0 +1,50 @@
+{
+"people/corran_front": {
+"anchor": [
+168,
+765
+]
+},
+"people/general_front": {
+"anchor": [
+135,
+766
+]
+},
+"people/maris_front": {
+"anchor": [
+122,
+765
+]
+},
+"people/marrow_front": {
+"anchor": [
+140,
+765
+]
+},
+"people/oduya_front": {
+"anchor": [
+146,
+766
+]
+},
+"people/ruess_front": {
+"anchor": [
+136,
+766
+]
+},
+"people/sato_front": {
+"anchor": [
+150,
+1021
+]
+},
+"people/seln_front": {
+"anchor": [
+129,
+765
+]
+}
+}

@@ -1,0 +1,55 @@
+# Farm art pipeline (Earthlight: Sato's Harvest)
+
+Everything under `art/farm/` is generated with open models on a rented GPU running ComfyUI
+(Qwen-Image, Qwen-Image-Edit 2509, WAN 2.2 I2V) and finished here. All of it is original;
+no existing game, film, studio or artist is named or imitated in any prompt.
+
+| file | what |
+|---|---|
+| `prompts.py` | every prompt, keyed by slot, plus the shared style paragraphs (`STYLE`, `CHARA`, `COLONY`) and `jobs(group)` |
+| `comfy.py` | ComfyUI client: `g_t2i` (Qwen + 8-step Lightning), `g_edit` (Qwen-Edit 2509, 1-3 reference images), `g_i2v` (WAN 2.2 high+low, 4 steps), queue / poll / download |
+| `post.py` | picks, seamless tiling, panorama wrap, cut-outs, sprite sheets, video encoding, `manifest.json` |
+| `pod_cut.py` | runs on the GPU machine: BiRefNet (rembg) alpha mattes for everything that becomes a cut-out |
+| `picks.json` | which seed was chosen per slot (`null` = rejected, the game uses its procedural fallback) |
+| `tile_modes.json` | optional per-texture override of the tiling method (`quilt`, `period`, `mirror`) |
+| `meta.json` | extras that go into the manifest (anchors, sheet layouts) - written by `post.py` |
+
+## Rerun
+
+Models (ComfyUI `models/`): `diffusion_models/qwen_image_fp8_e4m3fn.safetensors`,
+`diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors`, `text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors`,
+`vae/qwen_image_vae.safetensors`, `loras/Qwen-Image-Lightning-8steps-V2.0.safetensors`,
+`loras/Qwen-Image-Edit-2509-Lightning-8steps-V1.0-bf16.safetensors`, the two `wan2.2_i2v_*_14B_fp8_scaled` models with
+their `lightx2v_4steps` LoRAs, `text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors`, `vae/wan_2.1_vae.safetensors`.
+
+```sh
+export COMFY_URL=https://<pod>-8188.proxy.runpod.net     # temporary; never commit it
+export FARM_ART_WORK=/tmp/farm-art                         # raw PNGs, mattes, review sheets (not in the repo)
+cd tools/art/farm
+
+python3 comfy.py run people --only sato_front --seeds 6    # 1. Sato first; look, then set picks.json
+python3 post.py sel people                                 #    picked raws become references
+python3 comfy.py run sato_portraits --only sato_portrait --seeds 3 ; python3 post.py sel sato_portraits
+python3 comfy.py run sato_portraits                        #    happy / tired from the picked portrait
+python3 comfy.py run people --seeds 2                      # 2. villagers (Qwen-Edit from art/colony/portrait)
+python3 comfy.py run textures ; python3 comfy.py run sky   # 3.
+python3 comfy.py run scenes --seeds 2                      # 4.
+python3 comfy.py run icons                                 # 5.
+#    on the pod:  /workspace/rb/bin/python pod_cut.py people icons     (venv with `pip install "rembg[cpu]"`)
+python3 post.py masks people ; python3 post.py cut people  #    same for icons
+python3 post.py textures ; python3 post.py sky ; python3 post.py scenes ; python3 post.py portraits
+python3 post.py sel scenes ; python3 comfy.py run video ; python3 post.py video   # 6. WAN clips from the stills
+python3 post.py manifest
+```
+
+`post.py sheet <group>` writes contact sheets to `$FARM_ART_WORK/review/` - look at them before picking.
+On a shared queue use `--batch 4 --gap 1` (queues four jobs at the front, waits, then pauses).
+
+Groups that exist in `prompts.py` but are not used by the current game (the world became 3D models):
+`sprites`, `pallas`, `buildings`, `people_views`, `walk`, `action`, `sato_poses`.
+
+## Manifest
+
+`art/farm/manifest.json`: `{ "version": 1, "files": { "<folder>/<name>": { "file", "w", "h", ... } } }`.
+Keys are the path without extension (`textures/grass_spring`, `people/sato_front`, `video/title`).
+Cut-outs carry `anchor: [x, y]` (ground contact, pixels); textures carry `tile` (method used); videos `fps`, `frames`.
