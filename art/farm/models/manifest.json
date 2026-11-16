@@ -59,5 +59,96 @@
   ],
   "note": "Mira Sato, chibi figurine in a relaxed A-pose, straw hat on her head; faces +Z; 2048 px texture",
   "unit": "height"
+ },
+ "stump": {
+  "file": "stump.glb",
+  "tris": 5000,
+  "size": [
+   0.9925,
+   0.7398,
+   1.0
+  ],
+  "note": "tree stump (field debris)"
+ },
+ "tree": {
+  "file": "tree.glb",
+  "tris": 12000,
+  "size": [
+   0.8775,
+   1.0,
+   0.8617
+  ],
+  "note": "broadleaf tree, summer green"
+ },
+ "well": {
+  "file": "well.glb",
+  "tris": 8000,
+  "size": [
+   0.9591,
+   0.9347,
+   1.0
+  ],
+  "note": "stone well with red roof, on a small grass patch"
+ },
+ "fence": {
+  "file": "fence.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.5285,
+   0.1682
+  ],
+  "note": "one straight section, length along X"
+ },
+ "silo": {
+  "file": "silo.glb",
+  "tris": 12000,
+  "size": [
+   0.8256,
+   1.0,
+   0.9391
+  ],
+  "note": "feed silo, hatch on +Z, small grass patch"
+ },
+ "memorial": {
+  "file": "memorial.glb",
+  "tris": 6000,
+  "size": [
+   0.9162,
+   1.0,
+   0.9594
+  ],
+  "note": "stone memorial with wreath and plaque (provisional: a tiny face sits inside the wreath)"
+ },
+ "lift": {
+  "file": "lift.glb",
+  "tris": 12000,
+  "size": [
+   0.5083,
+   1.0,
+   0.6035
+  ],
+  "note": "cargo lift head-frame on a small stone base"
+ },
+ "pallas": {
+  "file": "pallas.glb",
+  "tris": 20000,
+  "size": [
+   0.781,
+   1.0,
+   0.5882
+  ],
+  "note": "Sato's Pallas: navy with rose trim, claw on its left side as seen from the front, cargo basket on the back; faces +Z",
+  "unit": "height"
+ },
+ "drone": {
+  "file": "drone.glb",
+  "tris": 8000,
+  "size": [
+   0.9849,
+   1.0,
+   0.6707
+  ],
+  "note": "old spherical maintenance drone with small rotors; eye faces +Z"
  }
 }

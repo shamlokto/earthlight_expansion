@@ -185,6 +185,10 @@ def sky():
     prev = []
     for slot, f in picked("sky").items():
         im = Image.open(f).convert("RGB")
+        if slot == "sky_storm":   # the model keeps blue gaps in a "storm": grade it to a grey rain haze
+            from PIL import ImageEnhance
+            im = ImageEnhance.Brightness(ImageEnhance.Color(im).enhance(0.22)).enhance(0.74)
+            im = Image.blend(im, Image.new("RGB", im.size, (96, 104, 116)), 0.18)
         a = np.asarray(im, float)
         O = im.width // 8
         T = im.width - O

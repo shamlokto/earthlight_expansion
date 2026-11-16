@@ -38,7 +38,7 @@
  },
  "boulder": {
   "tris": 5000,
-  "x": "large rounded grey boulder with soft facets and a few patches of bright green moss",
+  "x": "big smooth grey boulder, one plain solid lump of stone, with green moss on its top",
   "opts": "t512"
  },
  "tree": {
@@ -204,7 +204,7 @@
  "rock": {
   "tris": 3000,
   "kind": "obj",
-  "x": "small rounded grey field stone, a single chunky rock with soft facets",
+  "x": "small grey field stone, a plain natural angular rock with a crack",
   "opts": "t512"
  },
  "branch": {

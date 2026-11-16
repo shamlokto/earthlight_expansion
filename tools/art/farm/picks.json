@@ -1,1 +1,14 @@
-{"people/sato_front": 1004, "sato_portraits/sato_portrait": 1001, "sato_portraits/sato_portrait_happy": 1001, "sato_portraits/sato_portrait_tired": 2000}
+{
+ "people/sato_front": 1004,
+ "sato_portraits/sato_portrait": 1001,
+ "sato_portraits/sato_portrait_happy": 1001,
+ "sato_portraits/sato_portrait_tired": 2000,
+ "sky/sky_day": 3000,
+ "sky/sky_dusk": 3000,
+ "sky/sky_night": 3000,
+ "sky/sky_storm": 3001,
+ "sky/sky_ruins": 3001,
+ "people/moraine_front": 2001,
+ "textures/sand": 2000,
+ "textures/grass_autumn": 2000
+}

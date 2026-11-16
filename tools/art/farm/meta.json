@@ -25,7 +25,7 @@
 },
 "people/moraine_front": {
 "anchor": [
-126,
+124,
 765
 ]
 },
@@ -59,10 +59,25 @@
 765
 ]
 },
+"textures/cliff_rock": {
+"tile": "quilt"
+},
 "textures/cobble": {
 "tile": "period"
 },
+"textures/grass_autumn": {
+"tile": "quilt"
+},
 "textures/grass_spring": {
+"tile": "quilt"
+},
+"textures/grass_summer": {
+"tile": "quilt"
+},
+"textures/grass_winter": {
+"tile": "quilt"
+},
+"textures/path_dirt": {
 "tile": "quilt"
 },
 "textures/plank_wall": {
@@ -71,7 +86,16 @@
 "textures/roof_red": {
 "tile": "period"
 },
+"textures/sand": {
+"tile": "quilt"
+},
+"textures/soil_dry": {
+"tile": "quilt"
+},
 "textures/soil_tilled": {
+"tile": "period"
+},
+"textures/soil_wet": {
 "tile": "period"
 },
 "textures/water": {

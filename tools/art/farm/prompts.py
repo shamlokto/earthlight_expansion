@@ -17,8 +17,8 @@ CHARA = ("Cute appealing Japanese anime character art: clean line work, soft cel
 COLONY = ("The sky is unusual and beautiful: high overhead, where the top of the sky should be, a faint pale upside-down landscape is seen through soft blue haze, "
           "tiny patchwork fields, woods and thin silver rivers hanging far above like a second land; and one thin straight horizontal line of bright light crosses the whole sky "
           "from left to right instead of a sun. Open air, no metal structures, no domes, no rings and no sun disc in the sky. ")
-NIGHTSKY = ("Overhead, a deep blue night sky in which, far above, a faint dark upside-down landscape sprinkled with tiny warm village lights hangs like a second land, "
-            "crossed by one thin dim straight horizontal line of silver light; no moon, no structures in the sky. ")
+NIGHTSKY = ("Overhead, a deep blue night sky full of small stars, crossed from left to right by one thin dim straight horizontal line of silver light; "
+            "near the top edge of the picture, very faint and far away, scattered tiny warm points of village lights seen through the haze; no moon, no clouds, nothing floating in the sky. ")
 PHOTO = STYLE + " A calm pastoral world of ordinary earthy things: wood, soil, crops, tin roofs, with small traces of salvaged spacecraft parts."
 # Textures are painted by Qwen-Edit over a flat procedural layout guide (texref.py): text alone always
 # came back with perspective. TEX/WALL are kept as (empty) prefixes of the surface descriptions.
@@ -43,14 +43,14 @@ PERSON = (" Full-body character illustration. Standing relaxed and upright, {vie
 TEXTURES = {
     "grass_spring": (TEX + "a fresh spring meadow lawn, short dense bright green grass blades with a few tiny clover leaves and a scattering of very small white daisies.", "quilt"),
     "grass_summer": (TEX + "a summer pasture lawn, dense deep green grass blades, slightly longer, lush and uniform.", "quilt"),
-    "grass_autumn": (TEX + "an autumn lawn, dry gold-green grass with scattered small fallen leaves in ochre, rust and brown.", "quilt"),
+    "grass_autumn": (TEX + "an autumn lawn of short dry gold-green grass blades, with many small fallen maple and oak leaves in orange, rust red and brown scattered evenly all over it.", "quilt"),
     "grass_winter": (TEX + "fresh smooth white snow, soft powdery surface with very subtle gentle undulation and fine sparkle, almost uniform.", "quilt"),
     "soil_dry": (TEX + "bare dry untilled garden dirt, pale brown crumbly earth with small clods, fine cracks and a few tiny pebbles, no rows, no furrows.", "quilt"),
     "soil_tilled": (TEX + "freshly hoed garden soil: about eight straight parallel furrows and rounded ridges of loose crumbly medium brown earth, running exactly horizontally from the left edge to the right edge, equally spaced and equally wide from top to bottom.", "mirror"),
     "soil_wet": (TEX + "freshly watered hoed garden soil: about eight straight parallel furrows and rounded ridges of very dark brown wet glistening earth, running exactly horizontally from the left edge to the right edge, equally spaced and equally wide from top to bottom.", "mirror"),
     "path_dirt": (TEX + "hard-packed trodden light brown earth with fine gravel and small stones pressed in, uniform all over, no grass, no edges, no wheel tracks.", "quilt"),
     "cobble": (TEX + "an old village cobblestone pavement, rounded grey and warm brown river stones closely set with earth and a little moss in the joints.", "quilt"),
-    "sand": (TEX + "fine pale river sand with very soft small ripples and a few tiny pebbles.", "quilt"),
+    "sand": (TEX + "plain dry pale golden sand only, a uniform sandy surface with very soft small wind ripples and fine grains, the same everywhere; no water, no waves, no foam, no stones, no shells.", "quilt"),
     "cliff_rock": (WALL + "a natural cliff face of rough layered grey-brown rock with cracks, ledges and a few patches of lichen.", "quilt"),
     "wood_floor": (TEX + "an old farmhouse floor of wide worn honey-brown wooden floorboards running left to right, visible grain, knots and narrow dark gaps.", "mirror"),
     "plank_wall": (WALL + "weathered pale grey-white painted vertical wood siding boards of a farmhouse wall, peeling paint, visible grain, narrow gaps between boards.", "mirror"),

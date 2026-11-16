@@ -39,10 +39,10 @@
   },
   "people/moraine_front": {
    "file": "people/moraine_front.webp",
-   "w": 259,
+   "w": 251,
    "h": 768,
    "anchor": [
-    126,
+    124,
     765
    ]
   },
@@ -105,6 +105,103 @@
     130,
     765
    ]
+  },
+  "sky/sky_day": {
+   "file": "sky/sky_day.webp",
+   "w": 2048,
+   "h": 1024
+  },
+  "sky/sky_dusk": {
+   "file": "sky/sky_dusk.webp",
+   "w": 2048,
+   "h": 1024
+  },
+  "sky/sky_night": {
+   "file": "sky/sky_night.webp",
+   "w": 2048,
+   "h": 1024
+  },
+  "sky/sky_ruins": {
+   "file": "sky/sky_ruins.webp",
+   "w": 2048,
+   "h": 1024
+  },
+  "sky/sky_storm": {
+   "file": "sky/sky_storm.webp",
+   "w": 2048,
+   "h": 1024
+  },
+  "textures/cliff_rock": {
+   "file": "textures/cliff_rock.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "quilt"
+  },
+  "textures/cobble": {
+   "file": "textures/cobble.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "period"
+  },
+  "textures/grass_spring": {
+   "file": "textures/grass_spring.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "quilt"
+  },
+  "textures/grass_summer": {
+   "file": "textures/grass_summer.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "quilt"
+  },
+  "textures/grass_winter": {
+   "file": "textures/grass_winter.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "quilt"
+  },
+  "textures/path_dirt": {
+   "file": "textures/path_dirt.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "quilt"
+  },
+  "textures/plank_wall": {
+   "file": "textures/plank_wall.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "period"
+  },
+  "textures/roof_red": {
+   "file": "textures/roof_red.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "period"
+  },
+  "textures/soil_dry": {
+   "file": "textures/soil_dry.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "quilt"
+  },
+  "textures/soil_tilled": {
+   "file": "textures/soil_tilled.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "period"
+  },
+  "textures/soil_wet": {
+   "file": "textures/soil_wet.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "period"
+  },
+  "textures/water": {
+   "file": "textures/water.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "quilt"
   }
  }
 }
