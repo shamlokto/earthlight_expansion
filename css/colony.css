@@ -1236,6 +1236,10 @@ button.cl-jslot:hover { border-color: var(--gold); }
 .cl-xglist { display: grid; gap: 3px; max-height: 260px; overflow-y: auto; }
 .cl-xg { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; font-size: 12.5px; padding: 3px 6px; border: 1px solid var(--edge); border-radius: 2px; cursor: pointer; }
 .cl-xg.off { opacity: .5; cursor: default; }
+.cl-xg.lock { border-color: rgba(245, 197, 66, .5); cursor: default; }
+.cl-spick { width: min(640px, 100%); }
+.cl-spick .cl-spglist { max-height: min(52vh, 420px); }
+.cl-spick .cl-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
 .cl-xg small, .cl-xg em { color: var(--dim); font-style: normal; font-size: 11px; }
 .cl-xg span { font: 600 12px var(--f-data); color: var(--gold); }
 .cl-xcmd { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 12.5px; }

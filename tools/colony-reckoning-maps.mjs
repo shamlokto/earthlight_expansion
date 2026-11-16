@@ -239,14 +239,14 @@ function ambush() {
   const area = (test, centre, n) => pick(cv, test, centre, n, used);
   const ROLES = ['craft', 'mecha', 'ship', 'craft', 'armour', 'mecha', 'craft', 'ship'];
   const waves = [
-    // turn 1, on the map: the picket ahead, east, waiting behind the NE and SE rocks
-    { key: 'front', turn: 0, hold: 3, share: 3, hexes: area((x, y) => x >= 38 && x <= 57 && y >= 5 && y <= 26, { x: 46, y: 15 }, 26) },
-    // turn 4: both flanks close in ahead of the fleet, from the north and south edges
-    { key: 'flanks', turn: 3, share: 3, hexes: [...area((x, y) => y <= 3 && x >= 26 && x <= 54, { x: 40, y: 1 }, 13), ...area((x, y) => y >= 28 && x >= 26 && x <= 54, { x: 40, y: 30 }, 13)] },
-    // turn 7: the hammer, out of the far corners
-    { key: 'hammer', turn: 7, share: 2.5, hexes: [...area((x, y) => x >= 48 && y <= 9, { x: 58, y: 1 }, 11), ...area((x, y) => x >= 48 && y >= 22, { x: 58, y: 30 }, 11)] },
-    // turn 9: behind, the west edge: the way home is shut
-    { key: 'behind', turn: 5, share: 1.5, hexes: area((x, y) => x <= 3 && y >= 2 && y <= 29, { x: 1, y: 15 }, 14) },
+    // turn 1, on the map: the picket ahead, east, waiting behind the NE and SE rocks (moving from turn 5)
+    { key: 'front', turn: 0, hold: 5, share: 3, hexes: area((x, y) => x >= 38 && x <= 57 && y >= 5 && y <= 26, { x: 46, y: 15 }, 26) },
+    // turn 6: both flanks close in ahead of the fleet, from the north and south edges (arrival turn k comes on turn k + 1)
+    { key: 'flanks', turn: 5, share: 3, hexes: [...area((x, y) => y <= 3 && x >= 26 && x <= 54, { x: 40, y: 1 }, 13), ...area((x, y) => y >= 28 && x >= 26 && x <= 54, { x: 40, y: 30 }, 13)] },
+    // turn 10: the hammer, out of the far corners
+    { key: 'hammer', turn: 9, share: 2.5, hexes: [...area((x, y) => x >= 48 && y <= 9, { x: 58, y: 1 }, 11), ...area((x, y) => x >= 48 && y >= 22, { x: 58, y: 30 }, 11)] },
+    // turn 13: behind, the west edge: the way home is shut
+    { key: 'behind', turn: 12, share: 1.5, hexes: area((x, y) => x <= 3 && y >= 2 && y <= 29, { x: 1, y: 15 }, 14) },
   ];
   // the slot order: take each wave's share in turn, so any count keeps all four directions
   const slots = [];
@@ -265,22 +265,22 @@ function ambush() {
     version: 1, name: 'AMBUSH', title: 'The Ambush', chapter: 'The Reckoning · II',
     screensW: 4, screensH: 3, pairs: PAIRS.map((p) => [...p]), grid: grid(cv), units: [], arrivals: [],
     waves: waves.map((w) => ({ key: w.key, turn: w.turn, ...(w.hold ? { hold: w.hold } : {}) })), slots,
-    objective: { kind: 'hold', turns: 12 }, flee: true, noFlee: true, awaitArrivals: true, music: 29, cap: 40,
-    goal: 'Break out: keep the strike force together to the end of turn 12, when the jump drives are charged. Destroying the whole picket also wins. If the General falls, it is over.',
+    objective: { kind: 'hold', turns: 15 }, flee: true, noFlee: true, awaitArrivals: true, music: 29, cap: 40,
+    goal: 'Break out: keep the strike force together to the end of turn 15, when the jump drives are charged. Destroying the whole picket also wins. If the General falls, it is over.',
     home, generalAt,
     briefing: [
       'Halfway to the far belt, in the dark between nowhere and nothing, the scopes light up.',
-      'Hesk knew the way we would come. His picket was waiting: twice our number, and more of them coming from every side.',
-      'The jump drives need twelve turns to charge for the last leg. Until then the fleet has to stay alive, and so does the General.',
+      'Hesk knew the way we would come. His picket was waiting: half as many again as we are, and more of them coming from every side.',
+      'The jump drives need fifteen turns to charge for the last leg. Until then the fleet has to stay alive, and so does the General.',
     ].join('\n\n'),
     strategy: [
-      'They come in waves: ahead of you at once (waiting behind the rocks for two turns), both flanks on turn 4, the far corners on turn 7, behind you on turn 9.',
+      'They come in waves: ahead of you at once (waiting behind the rocks for four turns), both flanks on turn 6, the far corners on turn 10, behind you on turn 13.',
       'The rocks are the only cover out here. A tight ring around the General beats a charge.',
       'Whatever you lose here, you will not have at the rock.',
     ],
     transmission: 'You did not think I would let you knock on my door, General?',
   };
-  const marks = [...slots.map((s) => ({ x: s.x, y: s.y, mark: { front: '1', flanks: '4', hammer: '7', behind: '9' }[s.wave] })),
+  const marks = [...slots.map((s) => ({ x: s.x, y: s.y, mark: { front: '1', flanks: '6', hammer: 'T', behind: 'B' }[s.wave] })),
     ...home.slice(0, 40).map(([x, y]) => ({ x, y, mark: 'o' })), { x: generalAt[0], y: generalAt[1], mark: '@' }];
   marks[0].mark = 'H';
   return { mission, ascii: cv.ascii(marks) };

@@ -75,19 +75,19 @@
   {
    "key": "front",
    "turn": 0,
-   "hold": 3
+   "hold": 5
   },
   {
    "key": "flanks",
-   "turn": 3
+   "turn": 5
   },
   {
    "key": "hammer",
-   "turn": 7
+   "turn": 9
   },
   {
    "key": "behind",
-   "turn": 5
+   "turn": 12
   }
  ],
  "slots": [
@@ -623,14 +623,14 @@
  ],
  "objective": {
   "kind": "hold",
-  "turns": 12
+  "turns": 15
  },
  "flee": true,
  "noFlee": true,
  "awaitArrivals": true,
  "music": 29,
  "cap": 40,
- "goal": "Break out: keep the strike force together to the end of turn 12, when the jump drives are charged. Destroying the whole picket also wins. If the General falls, it is over.",
+ "goal": "Break out: keep the strike force together to the end of turn 15, when the jump drives are charged. Destroying the whole picket also wins. If the General falls, it is over.",
  "home": [
   [14,15,1],
   [13,14,1],
@@ -874,9 +874,9 @@
   [24,21,1]
  ],
  "generalAt": [14,15],
- "briefing": "Halfway to the far belt, in the dark between nowhere and nothing, the scopes light up.\n\nHesk knew the way we would come. His picket was waiting: twice our number, and more of them coming from every side.\n\nThe jump drives need twelve turns to charge for the last leg. Until then the fleet has to stay alive, and so does the General.",
+ "briefing": "Halfway to the far belt, in the dark between nowhere and nothing, the scopes light up.\n\nHesk knew the way we would come. His picket was waiting: half as many again as we are, and more of them coming from every side.\n\nThe jump drives need fifteen turns to charge for the last leg. Until then the fleet has to stay alive, and so does the General.",
  "strategy": [
-  "They come in waves: ahead of you at once (waiting behind the rocks for two turns), both flanks on turn 4, the far corners on turn 7, behind you on turn 9.",
+  "They come in waves: ahead of you at once (waiting behind the rocks for four turns), both flanks on turn 6, the far corners on turn 10, behind you on turn 13.",
   "The rocks are the only cover out here. A tight ring around the General beats a charge.",
   "Whatever you lose here, you will not have at the rock."
  ],
