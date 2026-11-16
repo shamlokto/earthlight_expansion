@@ -169,7 +169,7 @@ function startGame(s, isNew = false) {
   if (view) { try { view.destroy(); } catch { } view = null; }
   $('#view').innerHTML = '';
   try {
-    view = M.view.createView($('#view'), { onTileClick, onTileHover, onDeck: (dir) => stepDeck(dir), dayNight: settings.dayNight !== false });
+    view = M.view.createView($('#view'), { onTileClick, onTileHover, onDeck: (dir) => stepDeck(dir), dayNight: settings.dayNight !== false, onError: viewError });
     view.setState(state);
     view.setSnap?.(settings.snap);
     viewHelpers();
@@ -362,6 +362,16 @@ function setSpeed(s) {
   try { view?.setSpeed?.(s); } catch { }   // movers freeze when paused, hurry at x2/x4
 }
 
+// The 3D view's errors on screen (owner, 2026-11-16: "the 3D engine no longer work"), so they can be reported.
+function viewError(part, e) {
+  const msg = `3D view: ${part} failed: ${e?.message || e}`;
+  try { ui?.toast(msg + ' (the rest keeps running; please report this message)', 'bad'); } catch { }
+  let box = document.getElementById('viewErr');
+  if (!box) { box = document.createElement('div'); box.id = 'viewErr'; box.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99;max-width:60vw;padding:8px 10px;font:12px monospace;color:#ffd0d0;background:rgba(40,0,0,.85);border:1px solid #f66;border-radius:3px;white-space:pre-wrap;user-select:text'; document.body.appendChild(box); }
+  box.textContent = (box.textContent ? box.textContent + '\n' : '') + msg + (e?.stack ? '\n  ' + String(e.stack).split('\n').slice(1, 3).join('\n  ') : '');
+}
+addEventListener('error', (ev) => { if (ev.error) viewError('page', ev.error); });
+addEventListener('unhandledrejection', (ev) => viewError('page', ev.reason));
 function save(announce) {
   if (!state) return;
   try { localStorage.setItem(KEY, M.state.saveState(state)); if (announce) ui?.toast(`Colony saved (day ${state.day}).`, 'good'); }

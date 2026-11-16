@@ -334,6 +334,7 @@ function terrainShader(mat, ov) {
 export function createView(container, opts = {}) {
   const { onTileClick = () => {}, onTileHover = () => {}, onDeck = null } = opts;
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); opts.onError?.('graphics', new Error('The graphics card dropped the 3D view (WebGL context lost). Close other heavy tabs, then reload the page.')); });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   const canvas = renderer.domElement;
   canvas.style.cssText = 'display:block;width:100%;height:100%;touch-action:none;outline:none';
@@ -1359,26 +1360,30 @@ export function createView(container, opts = {}) {
   let raf = 0, last = performance.now();
   const shimmerMat = KIND_MAT.shimmer;
   const dbg = { noRender: false };   // tests on slow software GL skip drawing (debug.setRender)
+  // owner, 2026-11-16 ("the 3D engine no longer work"): one failing part (movers, monorail, day and night,
+  // minimap…) must never stop the drawing; each step is guarded, and its first error is reported once.
+  const failed = new Set();
+  const guard = (name, fn) => { if (failed.has(name)) return; try { fn(); } catch (e) { failed.add(name); console.error(`3D view: ${name} stopped`, e); opts.onError?.(name, e); } };
   function frame(now) {
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
-    if (st) stepCamera(dt, now);
-    if (trans && !trans.hold) stepTransition(now);
-    if (breachMat) breachMat.color.setScalar(0.75 + 0.25 * Math.sin(now / 260));   // breaches throb
-    if (plasmaMat) plasmaMat.color.setScalar(0.9 + 0.1 * Math.sin(now / 900));
-    if (deck === 'earth') { hopeHazeMat.opacity = 0.18 + 0.07 * Math.sin(now / 700); const rz = meshes[T.RADZONE]?.material; if (rz?.color) rz.color.setScalar(0.62 + 0.18 * Math.sin(now / 330)); }   // version 13: the poison breathes, the hot zones flicker
+    if (st) guard('camera', () => stepCamera(dt, now));
+    if (trans && !trans.hold) guard('transition', () => stepTransition(now));
+    guard('materials', () => {
+      if (breachMat) breachMat.color.setScalar(0.75 + 0.25 * Math.sin(now / 260));   // breaches throb
+      if (plasmaMat) plasmaMat.color.setScalar(0.9 + 0.1 * Math.sin(now / 900));
+      if (deck === 'earth') { hopeHazeMat.opacity = 0.18 + 0.07 * Math.sin(now / 700); const rz = meshes[T.RADZONE]?.material; if (rz?.color) rz.color.setScalar(0.62 + 0.18 * Math.sin(now / 330)); }   // version 13: the poison breathes, the hot zones flicker
+      if (shimmerMat) shimmerMat.opacity = 0.26 + 0.12 * Math.sin(now / 480) + 0.05 * Math.sin(now / 137);
+    });
     const camDist = camera.position.distanceTo(controls.target);
-    if (st) movers.update(dt, camDist);
-    if (st) monorail.update(dt * movers.getSpeed());
-    if (st && deck === 'main') defence.update(dt, movers.getSpeed());
-    if (st) secrets.update(dt, movers.getSpeed(), camDist);
-    stepDayNight(dt);
-    if (shimmerMat) shimmerMat.opacity = 0.26 + 0.12 * Math.sin(now / 480) + 0.05 * Math.sin(now / 137);
-    if (st && minimap.visible) minimap.frame(footprint(), [controls.target.x, controls.target.z], deckMarks());
-    for (const p of pools.values()) p.flush();
-    for (const a of dirty) a.needsUpdate = true;
-    dirty.clear();
-    if (!dbg.noRender) renderer.render(scene, camera);
+    if (st) guard('movers', () => movers.update(dt, camDist));
+    if (st) guard('monorail', () => monorail.update(dt * movers.getSpeed()));
+    if (st && deck === 'main') guard('defence', () => defence.update(dt, movers.getSpeed()));
+    if (st) guard('secrets', () => secrets.update(dt, movers.getSpeed(), camDist));
+    guard('day and night', () => stepDayNight(dt));
+    if (st && minimap.visible) guard('minimap', () => minimap.frame(footprint(), [controls.target.x, controls.target.z], deckMarks()));
+    guard('pools', () => { for (const p of pools.values()) p.flush(); for (const a of dirty) a.needsUpdate = true; dirty.clear(); });
+    if (!dbg.noRender) guard('draw', () => renderer.render(scene, camera));
   }
   raf = requestAnimationFrame(frame);
 
