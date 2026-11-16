@@ -64,7 +64,8 @@ export function hud(state, extra = {}) {
   $('hStam').style.width = pct + '%'; $('hStam').className = pct < 20 ? 'low' : pct < 45 ? 'mid' : '';
   $('hPlace').textContent = extra.place || '';
   const g = sim.goalState(state), next = sim.GOALS.find((q, i) => !g[i].done);
-  $('hGoal').innerHTML = next ? `<b>${esc(next.title)}</b><span>${esc(next.hint)}</span>` : ''; $('hGoal').hidden = !next;
+  const qh = extra.quest ? `<b>Favour for ${esc(extra.quest.who)}</b><span>${esc(extra.quest.text)}</span>` : '';
+  $('hGoal').innerHTML = (next ? `<b>${esc(next.title)}</b><span>${esc(next.hint)}</span>` : '') + qh; $('hGoal').hidden = !next && !qh;
   let h = '';
   p.inv.forEach((s, i) => {
     let tag = '';

@@ -66,7 +66,7 @@ async function go(to, { quick = false } = {}) {
   busy = false;
   await checkEvents();
 }
-function refreshHud() { ui.hud(S, { place: map ? map.name : '' }); const s = sim.selected(S); if (me && !map.ruins) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
+function refreshHud() { const q = S.flags.quest; ui.hud(S, { place: map ? map.name : '', quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); const s = sim.selected(S); if (me && !map.ruins) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
 // ---------------------------------------------------------------- people
@@ -101,16 +101,38 @@ async function talkTo(id) {
     const r = sim.talk(S, id); if (S.npc[id]) S.npc[id].met = true;
     await ui.say(lines.map((t) => ({ who: id, text: t })));
     if (r.first) floatText(n.actor.x, n.actor.y, '♥');
+    await favour(id, r.first);
     await maybeConfess(id);
   } else if (what === 1) { await ui.shop(S, sh, id, refreshHud); }
   else if (what === 2) await donate();
   mode = 'play'; goals(); refreshHud();
+}
+// Favours: now and then someone asks Sato for something. Bringing it is worth more than a gift.
+const hash = (s) => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
+async function favour(id, firstToday) {
+  const Q = (story.QUESTS || {})[id] || [], q = S.flags.quest;
+  if (q && q.npc === id) {
+    const def = Q.find((x) => x.id === q.id) || q;
+    if (sim.countItem(S, q.item) < q.n) { await ui.say([{ who: id, text: `(${NPCS[id].short || NPCS[id].name} is still hoping for ${q.n} × ${ITEMS[q.item].name}.)` }]); return; }
+    const i = await ui.choose(`Give ${q.n} × ${ITEMS[q.item].name}?`, ['Hand it over', 'Not yet']); if (i !== 0) return;
+    sim.removeItem(S, q.item, q.n); sim.addLove(S, id, 6); const pay = Math.round((ITEMS[q.item].sell || 40) * q.n * 1.5); S.player.money += pay;
+    sim.setFlag(S, 'quest', null); sim.setFlag(S, 'favours_' + id, (S.flags['favours_' + id] || 0) + 1); sim.setFlag(S, 'favours', (S.flags.favours || 0) + 1); sim.setFlag(S, 'qdone_' + q.id, sim.absDay(S));
+    sfx('good'); floatText(me.x, me.y, '♥♥'); await ui.say([{ who: id, text: def.thanks || 'Thank you. Truly.' }]); ui.toast(`Favour done for ${NPCS[id].short || NPCS[id].name}  (+${pay} cr)`, 3600); refreshHud(); return;
+  }
+  if (q || !firstToday || !Q.length || hash(id + ':' + sim.absDay(S)) % 3 !== 0) return;
+  const h = sim.hearts(S, id), open = Q.filter((x) => (x.season == null || x.season === S.cal.season) && (x.minHearts || 0) <= h && ITEMS[x.item] && (S.flags['qdone_' + x.id] == null || sim.absDay(S) - S.flags['qdone_' + x.id] > 20));
+  if (!open.length) return;
+  const pickQ = open[hash(id + '/' + sim.absDay(S)) % open.length];
+  await ui.say([{ who: id, text: pickQ.ask }]);
+  const i = await ui.choose(`${NPCS[id].short || NPCS[id].name} would like ${pickQ.n} × ${ITEMS[pickQ.item].name}.`, ['I will bring it', 'Not this time']);
+  if (i === 0) { sim.setFlag(S, 'quest', { npc: id, id: pickQ.id, item: pickQ.item, n: pickQ.n, day: sim.absDay(S) }); ui.toast('Favour noted. Bring it when you can.', 3200); refreshHud(); }
 }
 // Love: at eight hearts a friendship can become more; the Earthlight pendant at ten asks the question.
 const LOVE = () => story.ROMANCE || { candidates: [], people: {} };
 async function maybeConfess(id) {
   const R = LOVE(), who = R.people[id];
   if (!who || !R.candidates.includes(id) || S.flags.sweet || S.flags.partner || S.flags['confess_' + id] || sim.hearts(S, id) < 8) return;
+  if (story.EVENTS.some((e) => e.npc === id && e.hearts < 8 && !S.flags['ev_' + e.id]) || (S.flags['favours_' + id] || 0) < 2) return;   // love needs their story and a couple of favours first
   sim.setFlag(S, 'confess_' + id); sim.setFlag(S, 'sweet', id); sfx('good');
   await ui.say(who.confess); floatText(me.x, me.y, '♥♥'); ui.toast(`${NPCS[id].short || NPCS[id].name} is your sweetheart now.`, 4200);
 }
