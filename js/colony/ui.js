@@ -658,7 +658,15 @@ export function createUI(root, api) {
   };
   const decksFor = (key) => { try { return api.decksFor?.(key) || BUILDING[key]?.decks || ['main']; } catch { return BUILDING[key]?.decks || ['main']; } };
   const onDeck = (o, d = D()) => deckOf(o) === d;
-  $('.cl-decks').addEventListener('click', (e) => { const b = e.target.closest('[data-deck]'); if (b && !b.disabled) api.setDeck?.(b.dataset.deck); });
+  $('.cl-decks').addEventListener('click', (e) => { const b = e.target.closest('[data-deck]'); if (b?.classList.contains('locked')) { toast(b.dataset.why || 'The Hope is locked.', 'bad'); return; } if (b && !b.disabled) api.setDeck?.(b.dataset.deck); });
+  // What still stands between Eden and the Hope: the Ark's stages, or the day it opens.
+  function hopeWhy(s) {
+    if (s.ark) return s.hope ? '' : 'The Ark is complete: the Hope opens after the next day (let the clock run).';
+    const ark = (s.buildings || []).find((b) => b.key === 'ark'), d = BUILDING.ark, n = d?.levels?.length || 5;
+    if (!ark) return 'Build the Ark (Wonders tab: needs 15,000 colonists, the Starport and the Generation Ships research), then finish all its stages.';
+    const lv = ark.build > 0 ? (ark.level || 1) - 1 : (ark.level || 1), next = d?.levels?.[lv]?.name;
+    return `The Ark: ${lv} of ${n} stages done${ark.build > 0 ? ' (one is being built)' : next ? `. Order the next stage (${next}) from the Ark's panel` : ''}. The Hope opens the day after the last stage.`;
+  }
   let deckSig = '';
   function renderDecks() {
     const s = S(), d = D();
@@ -675,7 +683,11 @@ export function createUI(root, api) {
     }
     // version 13: the Hope (Earth) and the Ark, once the Ark is complete
     const eb = $('.cl-decks [data-deck="earth"]'), ab = $('.cl-decks [data-hope-ark]'), hs = hasDeck(s, 'earth') && s.hope;
-    eb.hidden = ab.hidden = !hs;
+    // owner, 2026-11-16 ("I still cannot get to the Hope"): the Hope's button shows from the start, greyed
+    // until the Ark is complete, and says exactly what is still missing
+    eb.hidden = false; ab.hidden = !hs;
+    eb.classList.toggle('locked', !hs);
+    if (!hs) { eb.dataset.why = hopeWhy(s); eb.title = `The Hope (Earth): locked.\n${eb.dataset.why}`; eb.querySelector('[data-deckn]').textContent = '🔒'; }
     if (hs) {
       eb.setAttribute('aria-pressed', String(d === 'earth'));
       eb.querySelector('[data-deckn]').textContent = `${Math.round((s.hope.recovery || 0) * 100)}%`;
