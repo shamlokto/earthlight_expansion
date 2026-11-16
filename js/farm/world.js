@@ -306,7 +306,7 @@ export class World {
         const m = new THREE.Mesh(tiles(cells, -0.1), wm); m.receiveShadow = true; R.add(m); continue;
       }
       const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : GROUND_TEX[c] || 'soil_dry';
-      const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : 0), std({ map: art.tex(slot, { repeat: 1 }) })); m.receiveShadow = true; R.add(m);
+      const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : 0, false, c === 'c' ? 0.5 : c === 'k' || c === 'b' ? 0.5 : 0.25), std({ map: art.tex(slot, { repeat: 1 }), color: c === 'f' ? 0xb48a66 : c === 'c' ? 0xd8d2c8 : 0xffffff })); m.receiveShadow = true; R.add(m);
     }
     if (!map.indoor) {                                   // land beyond the map's edge
       const slot = map.ruins ? 'ash_ground' : 'grass_' + SEASON_KEY[this.season];
@@ -423,8 +423,8 @@ export class World {
 }
 
 // Flat tiles (or blocks when `block`) merged into one geometry; UVs follow world position so textures tile.
-function tiles(cells, y, block = false) {
-  const pos = [], uv = [], nor = [], idx = []; const S = 0.25;
+function tiles(cells, y, block = false, S = 0.25) {
+  const pos = [], uv = [], nor = [], idx = [];
   const quad = (a, b, c, d, n) => { const k = pos.length / 3; for (const p of [a, b, c, d]) { pos.push(...p); nor.push(...n); uv.push((n[1] ? p[0] : p[0] + p[2]) * S, (n[1] ? -p[2] : p[1]) * S); } idx.push(k, k + 1, k + 2, k, k + 2, k + 3); };
   const set = block ? new Set() : null; if (block) for (let i = 0; i < cells.length; i += 2) set.add(cells[i] + ',' + cells[i + 1]);
   for (let i = 0; i < cells.length; i += 2) {

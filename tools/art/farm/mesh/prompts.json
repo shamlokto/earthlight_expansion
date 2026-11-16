@@ -38,7 +38,7 @@
  },
  "boulder": {
   "tris": 5000,
-  "x": "big smooth grey boulder, one plain solid lump of stone, with green moss on its top",
+  "x": "big chunk of grey granite, a natural mineral rock formation with sharp flat facets and green moss on its top, geology specimen",
   "opts": "t512"
  },
  "tree": {
@@ -204,7 +204,7 @@
  "rock": {
   "tris": 3000,
   "kind": "obj",
-  "x": "small grey field stone, a plain natural angular rock with a crack",
+  "x": "small chunk of grey granite, a natural mineral rock with sharp flat facets, geology specimen",
   "opts": "t512"
  },
  "branch": {

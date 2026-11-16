@@ -1,6 +1,21 @@
 {
  "version": 1,
  "files": {
+  "icons/cucumber": {
+   "file": "icons/cucumber.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/strawberry": {
+   "file": "icons/strawberry.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/turnip": {
+   "file": "icons/turnip.webp",
+   "w": 256,
+   "h": 256
+  },
   "people/corran_front": {
    "file": "people/corran_front.webp",
    "w": 390,
@@ -106,6 +121,46 @@
     765
    ]
   },
+  "scenes/descent": {
+   "file": "scenes/descent.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/festival_lantern": {
+   "file": "scenes/festival_lantern.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/heart10": {
+   "file": "scenes/heart10.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/intro3": {
+   "file": "scenes/intro3.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/intro4": {
+   "file": "scenes/intro4.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/intro5": {
+   "file": "scenes/intro5.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/morning": {
+   "file": "scenes/morning.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/title": {
+   "file": "scenes/title.webp",
+   "w": 1344,
+   "h": 768
+  },
   "sky/sky_day": {
    "file": "sky/sky_day.webp",
    "w": 2048,
@@ -202,6 +257,12 @@
    "w": 1024,
    "h": 1024,
    "tile": "quilt"
+  },
+  "textures/wood_floor": {
+   "file": "textures/wood_floor.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "period"
   }
  }
 }

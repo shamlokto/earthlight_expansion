@@ -196,7 +196,7 @@ def g_i2v(prompt, image, w=832, h=480, length=81, seed=0, prefix="farm/vid", neg
 
 
 # ---------------------------------------------------------------- runner
-def run_jobs(c, jobs, work=WORK, seeds=1, force=False, base_seed=None, log=print, batch=0, gap=0.0, bump=75):
+def run_jobs(c, jobs, work=WORK, seeds=1, force=False, base_seed=None, log=print, batch=0, gap=0.0, bump=75, back=False):
     """jobs: dicts from prompts.jobs(): {group, slot, kind, prompt, w, h, refs?, length?, seed?}.
     refs are local file paths; they are uploaded under group-derived names.
     batch > 0: polite mode for a shared queue - queue `batch` jobs at the FRONT, wait for them,
@@ -229,7 +229,7 @@ def run_jobs(c, jobs, work=WORK, seeds=1, force=False, base_seed=None, log=print
 
     log("to do: %d" % len(todo))
     step = batch or len(todo) or 1
-    if batch:
+    if batch and not back:
         c.front = True
     for i in range(0, len(todo), step):
         t0 = time.time()
@@ -253,6 +253,7 @@ def main():
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--batch", type=int, default=0, help="polite mode: queue this many at the front, wait, pause")
+    ap.add_argument("--back", action="store_true", help="with --batch: queue at the back (never ahead of other people's jobs)")
     ap.add_argument("--gap", type=float, default=1.0, help="pause after a batch, as a multiple of the time it took")
     ap.add_argument("--url", default=None)
     ap.add_argument("--work", default=WORK)
@@ -267,7 +268,7 @@ def main():
         for j in jobs:
             print(j["slot"], "|", j["kind"], j["w"], j["h"], "|", j["prompt"][:160])
         return
-    run_jobs(Comfy(a.url), jobs, a.work, a.seeds, a.force, a.seed, batch=a.batch, gap=a.gap)
+    run_jobs(Comfy(a.url), jobs, a.work, a.seeds, a.force, a.seed, batch=a.batch, gap=a.gap, back=a.back)
 
 
 if __name__ == "__main__":

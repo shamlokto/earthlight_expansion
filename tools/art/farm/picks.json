@@ -10,5 +10,14 @@
  "sky/sky_ruins": 3001,
  "people/moraine_front": 2001,
  "textures/sand": 2000,
- "textures/grass_autumn": 2000
+ "textures/grass_autumn": 2000,
+ "scenes/title": 1000,
+ "scenes/intro3": 1000,
+ "scenes/intro4": 1000,
+ "scenes/intro5": 1000,
+ "scenes/festival_lantern": 1000,
+ "scenes/morning": 1000,
+ "scenes/descent": 1001,
+ "scenes/heart10": 1001,
+ "icons/potato": 2000
 }

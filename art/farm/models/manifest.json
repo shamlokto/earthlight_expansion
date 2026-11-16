@@ -150,5 +150,117 @@
    0.6707
   ],
   "note": "old spherical maintenance drone with small rotors; eye faces +Z"
+ },
+ "cottage_b": {
+  "file": "cottage_b.glb",
+  "tris": 16000,
+  "size": [
+   0.8885,
+   1.0,
+   0.8497
+  ],
+  "note": "blue clapboard cottage, red tile roof, door on +Z"
+ },
+ "general": {
+  "file": "general.glb",
+  "tris": 24000,
+  "size": [
+   0.6402,
+   1.0,
+   0.4345
+  ],
+  "note": "the General, chibi figurine, A-pose",
+  "unit": "height"
+ },
+ "ruess": {
+  "file": "ruess.glb",
+  "tris": 24000,
+  "size": [
+   0.6671,
+   1.0,
+   0.5001
+  ],
+  "note": "Prof. Ruess, chibi figurine, A-pose",
+  "unit": "height"
+ },
+ "weed": {
+  "file": "weed.glb",
+  "tris": 4000,
+  "size": [
+   0.9843,
+   0.9338,
+   1.0
+  ],
+  "note": "weed clump with a yellow flower"
+ },
+ "greenhouse": {
+  "file": "greenhouse.glb",
+  "tris": 16000,
+  "size": [
+   1.0,
+   0.9686,
+   0.8684
+  ],
+  "note": "repaired greenhouse, opaque mint panes, door on +Z"
+ },
+ "barge": {
+  "file": "barge.glb",
+  "tris": 12000,
+  "size": [
+   1.0,
+   0.7115,
+   0.9196
+  ],
+  "note": "Moraine's trader barge with purple canopy; bow on +Z"
+ },
+ "bridge": {
+  "file": "bridge.glb",
+  "tris": 10000,
+  "size": [
+   0.5976,
+   0.4508,
+   1.0
+  ],
+  "note": "arched wooden footbridge; you walk across along Z"
+ },
+ "hydra": {
+  "file": "hydra.glb",
+  "tris": 8000,
+  "size": [
+   0.6405,
+   1.0,
+   0.9375
+  ],
+  "note": "Hydra autoturret on a tripod, twin barrels towards +Z"
+ },
+ "boulder": {
+  "file": "boulder.glb",
+  "tris": 5000,
+  "size": [
+   0.9998,
+   0.9288,
+   1.0
+  ],
+  "note": "mossy boulder (field debris)"
+ },
+ "rubble": {
+  "file": "rubble.glb",
+  "tris": 6000,
+  "size": [
+   0.9989,
+   0.6134,
+   1.0
+  ],
+  "note": "searchable rubble heap with metal beams"
+ },
+ "crawler": {
+  "file": "crawler.glb",
+  "tris": 10000,
+  "size": [
+   0.8146,
+   0.7266,
+   1.0
+  ],
+  "note": "crawler, a round rust-orange beetle; head towards +Z"
  }
 }

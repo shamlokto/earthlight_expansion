@@ -1,4 +1,8 @@
 {
+"icons/cucumber": {},
+"icons/potato": {},
+"icons/strawberry": {},
+"icons/turnip": {},
 "people/corran_front": {
 "anchor": [
 168,
@@ -100,5 +104,8 @@
 },
 "textures/water": {
 "tile": "quilt"
+},
+"textures/wood_floor": {
+"tile": "period"
 }
 }
