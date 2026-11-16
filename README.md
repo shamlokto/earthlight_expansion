@@ -16,6 +16,11 @@ your own `Earth Light (Japan)` ROM and, optionally, Nezz's English patch; nothin
   river banks, mine asteroids and harvest magnetic fields in space. It needs no ROM. Import an expansion
   save for extra starting funds, or (beta) to bring the whole army as guardians. Design: `docs/COLONY.md`;
   version 1 contract: `docs/COLONY-V1.md`; tests: `node tests/colony-sim.mjs`, `node tests/colony-mapgen.mjs`.
+* **The farming game, *Sato's Harvest*** (`farm.html`, the **Sato's Harvest** button): after the war, Captain Mira
+  Sato hands in her bars and buys a neglected field in Eden's river chamber. A 3D farming and life game
+  (three.js): seasons, crops, animals, fishing, the village of Willowfall and its people, and trips down
+  to the ruins of the Old World in her custom Pallas. It needs no ROM. Design and module contract:
+  `docs/FARM.md`; tests: `node tests/farm-sim.mjs`, `node tests/farm-story.mjs`; art pipeline: `tools/art/farm/`.
 * Missions are built from text layouts: `node tools/build-missions.mjs --rom ROM` (`tools/missions/`).
 
 # Earth Light remake lab

@@ -124,7 +124,7 @@ function village() {
   m.spot('village.square', 22.5, 16).spot('village.memorial', 23, 14.8).spot('village.bridge', 23, 20.4).spot('village.dock', 38.5, 20.6)
     .spot('village.bench', 27, 20.2).spot('village.storefront', 12.4, 10).spot('village.cafefront', 34.2, 10).spot('village.hallfront', 34.2, 18.2)
     .spot('village.workshopfront', 12.4, 18.2).spot('village.ranchyard', 14, 32.4).spot('village.river', 16, 20.6);
-  m.water = 'village';
+  m.water = 'village'; m.start = [23, 1.6];
   m.border('tree', 21, (x, y) => (y === 0 && (x === 22 || x === 23)));
   m.scatter(8, 26, ['tree', 'tree', 'pine', 'bush', 'flowers', 'flowers']);
   for (const x of [4, 9, 31, 43]) m.prop('reeds', x, 21, { solid: false });
@@ -146,7 +146,7 @@ function hill() {
   m.prop('bench', 30, 21, { w: 2 });
   m.exit(0, 11, 0, 14, { map: 'farm', x: 42.2, y: 9, dir: 2 });
   m.spot('hill.wreck', 24.4, 9.4).spot('hill.lake', 11, 16.4).spot('hill.overlook', 31, 20.4);
-  m.water = 'hill';
+  m.water = 'hill'; m.start = [1.6, 13];
   m.forage = FORAGE_SPOTS;
   m.scatter(31, 30, ['tree', 'pine', 'pine', 'bush', 'rockdecor', 'flowers'], (x, y) => !FORAGE_SPOTS.some(([a, b]) => a === x && b === y));
   return m;

@@ -1,7 +1,7 @@
 # Earthlight: Sato's Harvest — farming game (design and module contract)
 
 Owner's request (2026-11-16): a farming and life game in the tradition of the classic 2003 handheld
-farm sims, set in the Earthlight universe, **in 3D with realistic graphics**. Captain Mira Sato, the
+farm sims, set in the Earthlight universe, **in 3D** (first asked for with realistic graphics; then, the same day: beautiful and cute, in a Japanese anime style). Captain Mira Sato, the
 General's second, always dreamed of farming once the war ended; she buys a neglected field and
 starts from there.
 
@@ -77,10 +77,18 @@ Do not use Lt. Arkin (he may have died in the player's campaign) or name the Gen
   (<34, <67, ≥67). Affection 0–100: +2 fed, +3 brushed (cows), +1 talked to; −5 unfed.
 * **Shipping bin**: put items in; Maris collects at 17:00 (flavour); paid at dawn. A ledger
   counts everything ever shipped.
-* **The Wreck (mine)**: floors of 12×10 with rocks; the hammer breaks them (2 stamina) for scrap
-  (sell 15), alloy (40; from floor 5), crystal (150; from floor 10), rare relics (`medal` 300,
-  `datachip` 500); one rock per floor hides the hatch down. Floors reset each visit.
-* **Fishing**: rod (600) at any water: small/medium/large fish (50/120/200), better at the hill lake.
+* **The Descent and the Old World** (owner, 2026-11-16: no mine; a peaceful search of the ruins).
+  On the hill, Vashti's cargo lift takes Sato, in her **custom Pallas** (guns swapped for a salvage
+  arm), down to the ruins of human civilisation on Earth's surface: sites of 14×12 with walls and
+  rubble piles. Searching a pile (1 stamina) may give scrap (15), alloy (40; from level 5), crystal
+  (150; from level 10) or a **relic** (photograph, porcelain cup, book, pocket watch, tin robot,
+  medal, seed tin, music box, data chip, gold ring; rarer ones lie deeper). One pile hides the way
+  down. Crawlers and stray drones live there; the Pallas and a **Hydra autoturret** she sets down
+  deal with them easily (a creature that reaches her costs 5 stamina, never more). Relics can be
+  sold, given, or donated to the **Memory Room** in the Village Hall (10 kinds to collect).
+* **Fishing**, her other great love: the rod (600; Ruess upgrades it) at any water. Cast, wait for
+  the float to dip, pull. Silverfin, river trout, chamber carp (50/120/200), a special fish for
+  each season, and the legendary **Old Hollin** in the hill lake. Rain and the lake are best.
 * **Forage** on the hill, new each day: herb (spring, summer; 40), berry (summer; 30, edible),
   mushroom (autumn; 70), frostcap (winter; 60).
 * **Upgrades**: Ruess upgrades a tool overnight (level 2: 800 + 5 scrap; level 3: 2500 + 5 alloy
@@ -105,7 +113,7 @@ export const DAYS_PER_SEASON = 30, DAY_START = 360, DAY_END = 1440;   // minutes
 export const ITEMS = { [id]: { id, name, kind, sell?, stamina?, crop?, desc } };
 //   kind: 'tool' | 'seed' | 'crop' | 'animal' (egg, milk_s, milk_m, milk_l) | 'fish' (fish_s, fish_m, fish_l)
 //       | 'forage' (herb, berry, mushroom, frostcap) | 'ore' (scrap, alloy, crystal) | 'relic' (medal, datachip) | 'food'
-//   tools: hoe, can, sickle, hammer, axe, rod, milker, brush.  seeds: 'seed_<crop>', 'seed_grass'.
+//   tools: hoe, can, sickle, hammer, axe, rod, milker, brush. (As built, sim.js also has the ruins, donate, monsters and the fish log; its header comment is the reference.)  seeds: 'seed_<crop>', 'seed_grass'.
 //   food: bread (+20), soup (+40), pie (+70), tea (+10), tonic (+100); berry is edible (+5).
 export const CROPS = { [id]: { id, name, seasons: [0..3], days, regrow, sell } };   // crop item id === crop id
 export const TOOL_LEVELS = ['', 'Field', 'Alloy', 'Starsteel'];
@@ -212,4 +220,13 @@ Festivals (all in the village square unless said): **Planting Day** (Spring 18),
 ### 3.3 The 3D game (`js/farm/world.js`, `models.js`, `maps.js`, `ui.js`, `main.js`)
 
 three.js (vendored). A third-person camera over tile maps (farm, village, hill, interiors, the
-wreck); realistic textures, shadows, a day and night sky, weather. Art slots in `js/farm/art.js`.
+Old World); shadows, a day and night sky, weather. Every visual is an art slot (`js/farm/art.js`):
+a 3D model from `art/farm/models/`, else a picture from `art/farm/manifest.json`, else a built
+stand-in, so the game runs with no art at all.
+
+## 4. Art (owner, 2026-11-16)
+
+**Beautiful and cute, in a Japanese anime style**; Sato's avatar is the most polished thing in the
+game. Made with Qwen-Image / Qwen-Image-Edit (pictures) and WAN 2.2 (film clips and walk cycles)
+on a rented GPU; scripts and every prompt are in `tools/art/farm/`. No ROM and nothing from any
+existing game is used.

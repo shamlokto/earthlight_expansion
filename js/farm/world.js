@@ -12,40 +12,52 @@ const CROP_COLOR = { turnip: '#f1ece0', potato: '#c9a56a', cucumber: '#3f8a3a', 
 const CROP_H = { corn: 1.7, tomato: 1.1, cucumber: 1.0, eggplant: 0.9, moonflower: 0.9, pumpkin: 0.7 };
 
 // kind → { model, sprite, h (height in tiles), face (turn to the camera), cross (two crossed planes) }
+const TREE_MODEL = ['tree_blossom', 'tree', 'tree_autumn', 'tree_winter'];
 const PROPS = {
-  tree: { model: 'tree', sprite: (w) => 'sprites/tree_' + SEASON_KEY[w.season], h: 4.6, cross: true, shadow: true },
-  pine: { sprite: () => 'sprites/pine', h: 5, cross: true, shadow: true },
-  bush: { sprite: () => 'sprites/bush', h: 1.1, cross: true },
-  flowers: { sprite: () => 'sprites/flowers', h: 0.5, cross: true },
-  reeds: { sprite: () => 'sprites/reeds', h: 1.3, cross: true },
+  tree: { model: (w) => (art.hasModel(TREE_MODEL[w.season]) ? TREE_MODEL[w.season] : 'tree'), sprite: (w) => 'sprites/tree_' + SEASON_KEY[w.season], h: 4.4, cross: true, shadow: true },
+  pine: { model: 'pine', sprite: () => 'sprites/pine', h: 5, cross: true, shadow: true },
+  bush: { model: 'bush', sprite: () => 'sprites/bush', h: 1.0, cross: true },
+  flowers: { model: 'flowers', sprite: () => 'sprites/flowers', h: 0.45, cross: true, soft: true },
+  reeds: { model: 'reeds', sprite: () => 'sprites/reeds', h: 1.2, cross: true, soft: true },
   rockdecor: { model: 'boulder', sprite: () => 'sprites/boulder', h: 0.9, face: true },
-  weed: { sprite: () => 'sprites/weed', h: 0.5, cross: true },
-  rock: { sprite: () => 'sprites/rock', h: 0.42, face: true },
-  branch: { sprite: () => 'sprites/branch', h: 0.34, face: true },
+  weed: { model: 'weed', sprite: () => 'sprites/weed', h: 0.5, cross: true, soft: true },
+  rock: { model: 'rock', sprite: () => 'sprites/rock', h: 0.42, face: true },
+  branch: { model: 'branch', sprite: () => 'sprites/branch', h: 0.3, face: true, fit: 'wide', soft: true },
   stump: { model: 'stump', sprite: () => 'sprites/stump', h: 0.6, face: true },
   boulder: { model: 'boulder', sprite: () => 'sprites/boulder', h: 0.95, face: true },
   bin: { model: 'bin', sprite: () => 'sprites/bin', h: 0.95, face: true },
-  well: { model: 'well', sprite: () => 'sprites/well', h: 1.5, face: true },
-  signpost: { sprite: () => 'sprites/signpost', h: 1.3, face: true },
+  well: { model: 'well', sprite: () => 'sprites/well', h: 1.6, face: true },
+  signpost: { model: 'signpost', sprite: () => 'sprites/signpost', h: 1.3, face: true },
   scarecrow: { model: 'scarecrow', sprite: () => 'sprites/scarecrow', h: 1.9, face: true },
-  memorial: { model: 'memorial', sprite: () => 'sprites/memorial', h: 1.7, face: true },
-  lantern: { sprite: () => 'sprites/lantern', h: 1.9, face: true },
-  barge: { model: 'barge', sprite: () => 'sprites/barge', h: 1.7, face: true, modelFit: 4 },
-  fence: { model: 'fence' },
-  bed: { sprite: () => 'sprites/bed', h: 1.1, face: true },
-  radio: { sprite: () => 'sprites/radio', h: 0.9, face: true },
-  table: { sprite: () => 'sprites/table', h: 0.85, face: true },
-  shelf: { sprite: () => 'sprites/shelf', h: 1.9, face: true },
-  trough: { sprite: () => 'sprites/trough', h: 0.6, face: true },
-  nestbox: { sprite: () => 'sprites/nestbox', h: 0.9, face: true },
+  memorial: { model: 'memorial', sprite: () => 'sprites/memorial', h: 1.8, face: true },
+  bench: { model: 'bench', h: 0.9, fit: 'stretch' },
+  lantern: { model: 'lantern', sprite: () => 'sprites/lantern', h: 2.2, face: true, lamp: 1.9 },
+  barge: { model: 'barge', sprite: () => 'sprites/barge', h: 1.7, face: true, fit: 'wide' },
+  fence: { model: 'fence', h: 0.85, fit: 'stretch' },
+  bed: { model: 'bed', sprite: () => 'sprites/bed', h: 1.0, face: true, fit: 'foot' },
+  radio: { model: 'radio', sprite: () => 'sprites/radio', h: 1.0, face: true },
+  table: { model: 'table', sprite: () => 'sprites/table', h: 0.85, face: true, fit: 'foot' },
+  shelf: { model: 'shelf', sprite: () => 'sprites/shelf', h: 1.9, face: true, fit: 'stretch' },
+  counter: { model: 'counter', h: 1.0, fit: 'stretch' },
+  desk: { model: 'counter', h: 1.0, fit: 'stretch' },
+  trough: { model: 'trough', sprite: () => 'sprites/trough', h: 0.55, face: true, fit: 'stretch' },
+  nestbox: { model: 'nestbox', sprite: () => 'sprites/nestbox', h: 0.9, face: true, fit: 'stretch' },
+  haybale: { model: 'haybale', h: 0.8, fit: 'foot' },
+  crate: { model: 'crate', h: 0.8, fit: 'foot' },
+  case: { model: 'display_case', h: 1.3, fit: 'foot' },
+  workbench: { model: 'workbench', h: 1.1, fit: 'foot' },
+  plantpot: { model: 'plantpot', h: 1.0 },
+  ruinwall: { model: 'ruin_wall', h: 1.9, fit: 'foot' },
   rubble: { model: 'rubble', sprite: () => 'sprites/rubble', h: 0.75, face: true },
-  rubble_done: { sprite: () => 'sprites/rubble_done', h: 0.25, face: true },
-  stairs: { sprite: () => 'sprites/stairs', h: 0.9, face: true },
+  rubble_done: { model: 'rubble_done', sprite: () => 'sprites/rubble_done', h: 0.22, face: true, soft: true },
+  stairs: { model: 'stairs', sprite: () => 'sprites/stairs', h: 0.7, face: true, fit: 'foot' },
   hydra: { model: 'hydra', sprite: () => 'sprites/hydra', h: 1.0, face: true },
-  crawler: { model: 'crawler', sprite: () => 'sprites/crawler', h: 0.7, face: true },
-  drone: { model: 'drone', sprite: () => 'sprites/drone', h: 0.7, face: true, hover: 0.9 },
-  chicken: { model: 'chicken', sprite: () => 'sprites/chicken_side', h: 0.55, face: true },
-  cow: { model: 'cow', sprite: () => 'sprites/cow_side', h: 1.45, face: true },
+  crawler: { model: 'crawler', sprite: () => 'sprites/crawler', h: 0.7, face: true, turn: true },
+  drone: { model: 'drone', sprite: () => 'sprites/drone', h: 0.7, face: true, hover: 0.9, turn: true },
+  chicken: { model: 'chicken', sprite: () => 'sprites/chicken_side', h: 0.5, face: true },
+  cow: { model: 'cow', sprite: () => 'sprites/cow_side', h: 1.3, face: true },
+  egg: { model: 'egg', h: 0.16, soft: true },
+  float: { model: 'fish_float', h: 0.22, soft: true },
 };
 const BUILDING = {
   house: { model: 'farmhouse', facade: 'buildings/house', wall: 'plank_wall', roof: 'roof_tin' },
@@ -74,11 +86,11 @@ export class World {
     const r = this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
-    r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05; r.outputColorSpace = THREE.SRGBColorSpace;
+    r.toneMapping = THREE.NoToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(38, 1, 0.3, 600);
-    this.yaw = 0; this.pitch = 0.86; this.dist = 13; this.focus = new THREE.Vector3();
-    this.hemi = new THREE.HemisphereLight(0xcfe4ff, 0x6b5a3a, 0.9); this.scene.add(this.hemi);
+    this.yaw = 0; this.pitch = 0.66; this.dist = 12; this.focus = new THREE.Vector3();
+    this.hemi = new THREE.HemisphereLight(0xdcecff, 0x8a7a55, 1.0); this.scene.add(this.hemi);
     const s = this.sun = new THREE.DirectionalLight(0xfff2d8, 2.2); s.castShadow = true; s.shadow.mapSize.set(2048, 2048);
     Object.assign(s.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 90 }); s.shadow.bias = -0.0006; s.shadow.normalBias = 0.03;
     this.scene.add(s, s.target);
@@ -123,8 +135,8 @@ export class World {
     this.sun.position.set(f.x + Math.cos(ang) * 30, 26 + Math.sin(ang) * 14, f.z + 16);
     this.sun.target.position.copy(f);
     const sunCol = col(0xfff2d8).lerp(col(0xff9a55), Math.min(1, dusk)).lerp(col(0x7f95c8), 1 - day);
-    this.sun.color.copy(sunCol); this.sun.intensity = indoor ? 0.5 : (0.25 + 2.1 * day) * (wet ? 0.45 : snow ? 0.75 : 1) * (ruins ? 0.7 : 1);
-    this.hemi.intensity = indoor ? 1.5 : (0.38 + 0.6 * day) * (wet ? 0.85 : 1);
+    this.sun.color.copy(sunCol); this.sun.intensity = indoor ? 0.45 : (0.2 + 1.55 * day) * (wet ? 0.45 : snow ? 0.75 : 1) * (ruins ? 0.7 : 1);
+    this.hemi.intensity = indoor ? 1.55 : (0.5 + 0.75 * day) * (wet ? 0.85 : 1);
     this.hemi.color.set(indoor ? 0xffe6c4 : ruins ? 0xd9b878 : 0xcfe4ff).lerp(col(0x38466e), indoor ? 0 : (1 - day) * 0.8);
     this.hemi.groundColor.set(ruins ? 0x5a4a30 : 0x6b5a3a);
     const sk = this.sky, set = (k, v) => { sk[k].material.opacity = v; sk[k].visible = v > 0.01; };
@@ -138,8 +150,8 @@ export class World {
     const fogC = indoor ? col(0x0b0907) : ruins ? col(0xb39a66) : col(0xbcd7ee).lerp(col(0xf1b98a), Math.min(1, dusk) * 0.6).lerp(col(0x101a36), 1 - day);
     if (wet) fogC.lerp(col(0x7f8a94), 0.6);
     this.scene.fog.color.copy(fogC); this.scene.fog.near = indoor ? 60 : wet ? 18 : ruins ? 14 : 40; this.scene.fog.far = indoor ? 200 : wet ? 80 : ruins ? 60 : 160;
-    const b = indoor ? 1 : 0.34 + 0.66 * day;
-    this.spriteTint.setRGB(b, b, b).multiply(indoor ? col(0xffffff) : col(0xffffff).lerp(sunCol, 0.35));
+    const b = indoor ? 1 : 0.42 + 0.58 * day;
+    this.spriteTint.setRGB(b, b, b).multiply(indoor ? col(0xffffff) : col(0xffffff).lerp(sunCol, 0.22));
     if (ruins) this.spriteTint.multiply(col(0xf0dcb0));
     for (const m of this.spriteMats) m.color.copy(this.spriteTint);
     this.weather.visible = !indoor && !ruins && (wet || snow);
@@ -215,24 +227,32 @@ export class World {
       case 'float': g.add(ball(0.07, std({ color: 0xe23a2a }), 0, 0.02, 0, 1), ball(0.05, std({ color: 0xffffff }), 0, 0.08, 0, 1)); break;
       default: g.add(box(0.6, 0.6, 0.6, std({ color: 0x999999 })));
     }
+    if (kind === 'memorial' || kind === 'bench') for (const c of g.children) c.position.x += 0.5;
     return g;
   }
   // Build a prop: 3D model if there is one, else its picture, else the stand-in.
   makeProp(kind, o = {}) {
     const def = PROPS[kind] || {}, holder = new THREE.Group();
-    const h = (def.h || 1) * (o.scale || 1);
+    const h = (def.h || 1) * (o.scale || 1), fw = o.w || 1, fd = o.d || 1;
     const slot = def.sprite ? def.sprite(this) : null, p = slot && art.pic(slot);
-    const fallback = () => { if (p) holder.add(this.billboard(p, h, def)); else { const m = this.proc(kind, o); if (o.scale) m.scale.setScalar(o.scale); holder.add(m); } };
-    if (def.model && art.hasModel(def.model)) {
-      art.model(def.model).then((m) => {
+    const mname = typeof def.model === 'function' ? def.model(this) : def.model;
+    holder.userData.is3d = !!(mname && art.hasModel(mname)) || !p;
+    const fallback = () => { if (p) holder.add(this.billboard(p, h, def)); else { const m = this.proc(kind, o); if (o.scale) m.scale.setScalar(o.scale); if (fw > 1 || fd > 1) m.position.set(-(fw - 1) / 2, 0, -(fd - 1) / 2); holder.add(m); } };
+    if (mname && art.hasModel(mname)) {
+      art.model(mname).then((m) => {
         if (!m) return fallback();
-        const s = art.modelInfo(def.model).size || [1, 1, 1];
-        m.scale.setScalar(def.modelFit ? def.modelFit / Math.max(s[0], s[2]) : h / (s[1] || 1));
+        const s = art.modelInfo(mname).size || [1, 1, 1];
+        if (def.fit === 'stretch') m.scale.set(fw * 0.98 / s[0], h / s[1], Math.min(h / s[1], fd * 0.9 / s[2]));
+        else if (def.fit === 'foot') m.scale.setScalar(Math.min(h / s[1], fw * 0.96 / s[0], fd * 0.96 / s[2]));
+        else if (def.fit === 'wide') m.scale.setScalar(Math.max(fw, 0.8) * 0.95 / Math.max(s[0], s[2]));
+        else m.scale.setScalar(h / (s[1] || 1));
         if (def.hover) m.position.y = def.hover * 0.5;
+        if (def.soft) m.traverse((q) => { if (q.isMesh) q.castShadow = false; });
         holder.add(m);
       });
+      if (def.lamp) { const pl = new THREE.PointLight(0xffc878, 0, 9, 1.6); pl.position.y = def.lamp; holder.add(pl); holder.userData.lamp = pl; }
     } else fallback();
-    if (def.hover && !art.hasModel(def.model || '')) holder.userData.hover = def.hover;
+    if (def.hover && !(mname && art.hasModel(mname))) holder.userData.hover = def.hover;
     return holder;
   }
 
@@ -271,7 +291,7 @@ export class World {
     this.map = map; this.state = state; this.season = state.cal.season; this.flags = state.flags || {};
     this.root.clear(); this.facers.length = 0; this.spriteMats.length = 0; this.anims.length = 0; this.tileObjs.clear();
     for (const a of this.actors.values()) a.dispose && a.dispose(); this.actors.clear();
-    this.lamps = []; this.waterMats = [];
+    this.lamps = []; this.waterMats = []; this.tallProps = [];
     const R = this.root, W = map.w, H = map.h;
     // ground, one merged mesh per kind
     const byKind = {};
@@ -304,11 +324,10 @@ export class World {
     for (const p of map.props) {
       const kind = p.kind === 'tree' && p.y >= H - 1 ? 'bush' : p.kind;
       const o = this.makeProp(kind, p);
-      const wide = (PROPS[kind] && PROPS[kind].sprite && art.has(PROPS[kind].sprite(this))) || (PROPS[kind] && PROPS[kind].model && art.hasModel(PROPS[kind].model));
-      o.position.set(p.x + (wide ? p.w / 2 : 0.5), p.onWater ? -0.1 : 0, p.y + (wide ? p.d / 2 : 0.5));
-      if (p.rot && (kind === 'fence' || !PROPS[kind] || !PROPS[kind].face)) o.rotation.y = p.rot;
-      R.add(o); p.obj = o;
-      const lampL = o.children[0] && o.children[0].userData.lamp; if (lampL) this.lamps.push(lampL);
+      o.position.set(p.x + p.w / 2, p.onWater ? -0.1 : 0, p.y + p.d / 2);
+      if (p.rot && (o.userData.is3d || kind === 'fence')) o.rotation.y = p.rot;
+      R.add(o); p.obj = o; if (kind === 'tree' || kind === 'pine') this.tallProps.push(o);
+      const lampL = o.userData.lamp || (o.children[0] && o.children[0].userData.lamp); if (lampL) this.lamps.push(lampL);
     }
     this.dyn = new THREE.Group(); R.add(this.dyn);
     if (map.field) this.buildField(map.field);
@@ -331,6 +350,12 @@ export class World {
     const st = crop.dead ? -1 : cropStage(crop), id = crop.id;
     const slot = st < 0 ? 'sprites/dead' : st === 0 ? 'sprites/sprout' : st === 3 ? `sprites/crop_${id}_2` : `sprites/crop_${id}_1`;
     const full = CROP_H[id] || 0.6, h = st < 0 ? 0.5 : st === 0 ? 0.22 : st === 1 ? full * 0.5 : st === 2 ? full * 0.8 : full;
+    const mname = st < 0 ? 'dead_plant' : st === 0 ? 'sprout' : st === 3 ? 'crop_' + id : 'young_plant';
+    if (art.hasModel(mname)) {
+      const holder = new THREE.Group(); holder.rotation.y = (i * 2.4) % 6.28;
+      art.model(mname).then((m) => { if (!m) return; const s = art.modelInfo(mname).size || [1, 1, 1]; m.scale.setScalar(Math.min(Math.max(0.2, h) / s[1], 0.95 / Math.max(s[0], s[2]))); if (st < 3) m.traverse((q) => { if (q.isMesh) q.castShadow = false; }); holder.add(m); });
+      return holder;
+    }
     const p = art.pic(slot);
     if (p) { const b = this.billboard(p, Math.max(0.2, h), { cross: true }); b.rotation.y = (i * 0.7) % 1.5; return b; }
     const g = new THREE.Group(), green = std({ color: st < 0 ? 0x7a6a4a : 0x4f9a3a });
@@ -343,8 +368,9 @@ export class World {
     const P = this.map.pasture; if (!P) return; const st = this.state.pasture.grass[i], key = 'p' + i;
     const old = this.tileObjs.get(key); if (old) { this.dyn.remove(old); this.unface(old); this.tileObjs.delete(key); }
     if (!st) return;
-    const p = art.pic('sprites/grass_' + st), g = p ? this.billboard(p, 0.25 + st * 0.22, { cross: true }) : this.proc('weed');
-    if (!p) g.scale.setScalar(0.6 + st * 0.35);
+    let g;
+    if (art.hasModel('grass_tuft')) { g = new THREE.Group(); art.model('grass_tuft').then((m) => { if (!m) return; const s = art.modelInfo('grass_tuft').size || [1, 1, 1]; m.scale.setScalar((0.25 + st * 0.22) / s[1]); m.traverse((q) => { if (q.isMesh) q.castShadow = false; }); g.add(m); }); }
+    else { const p = art.pic('sprites/grass_' + st); g = p ? this.billboard(p, 0.25 + st * 0.22, { cross: true }) : this.proc('weed'); if (!p) g.scale.setScalar(0.6 + st * 0.35); }
     g.position.set(P.x + (i % P.w) + 0.5, 0, P.y + Math.floor(i / P.w) + 0.5); g.rotation.y = i;
     this.tileObjs.set(key, g); this.dyn.add(g);
   }
@@ -382,6 +408,9 @@ export class World {
     for (const m of this.waterMats || []) m.map.offset.set(this.t * 0.015, this.t * 0.01);
     for (const l of this.lamps || []) l.intensity = (this.night || 0) * 14;
     for (const a of this.actors.values()) a.update(dt, this);
+    // trees standing between the camera and Sato step aside
+    const cx = Math.sin(this.yaw), cz = Math.cos(this.yaw);
+    for (const o of this.tallProps || []) { const rx = o.position.x - px, rz = o.position.z - py, along = rx * cx + rz * cz, lat = Math.abs(rx * cz - rz * cx); const hide = along > 0.4 && along < 9 && lat < 2.4; const k = o.userData.k = Math.max(0.02, Math.min(1, (o.userData.k ?? 1) + (hide ? -dt : dt) * 5)); o.scale.set(1, k, 1); }
     for (const [k, o] of this.tileObjs) if (o.userData.hover || (o.children[0] && o.children[0].userData.hover)) o.position.y = Math.sin(this.t * 2 + k.length) * 0.08;
     if (this.weather.visible) {
       const p = this.weather.geometry.attributes.position; this.weather.position.set(px, 0, py);

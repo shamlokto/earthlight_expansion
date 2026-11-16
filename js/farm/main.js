@@ -10,7 +10,7 @@ import { allMaps, ruinsMap, doorTarget, outsideOf, findSpot, FORAGE_SPOTS } from
 import { World } from './world.js';
 import { Actor, DIRV } from './actors.js';
 import * as ui from './ui.js';
-import { sfx } from './sfx.js';
+import { sfx, music, musicPlaying, setMood } from './sfx.js';
 
 const SAVE_KEY = 'earthlight-farm-save-v1';
 const $ = (id) => document.getElementById(id);
@@ -19,6 +19,9 @@ let S = null, W = null, map = null, me = null, mode = 'title', busy = false;
 let npcs = new Map(), beasts = [], monsters = [], hydra = null, fishing = null, labels = [];
 let clock = 0, lastPlaced = -1, zapT = 0, hydraT = 0, hurtT = 0, doorHold = 0;
 const keys = new Set(), stick = { x: 0, y: 0 };
+// Small touches to the built figures, on top of the colours in story.js.
+const LOOKS = { sato: { top: '#f4eddc', bottom: '#2f4488', eye: '#7a4a22', skin: '#f8dcc4', bib: true, hat: true }, seln: { apron: '#4f8a3a' }, corran: { moustache: '#f2f2f2', age: 'old', bib: true }, marrow: { age: 'old' }, ruess: { age: 'old', glasses: true }, oduya: { bib: true }, vashti: {}, maris: {}, general: {}, moraine: {} };
+const lookOf = (id) => ({ ...NPCS[id].look, ...(LOOKS[id] || {}) });
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 // ---------------------------------------------------------------- save
@@ -50,10 +53,10 @@ async function go(to, { quick = false } = {}) {
   fishing = null; hydra = null; monsters = []; beasts = []; npcs = new Map(); lastPlaced = -1;
   map = to.map === 'ruins' ? ruinsMap(S.mine) : allMaps()[to.map];
   W.setMap(map, S);
-  me = new Actor(W, 'sato', NPCS.sato.look, map.ruins ? { pallas: true, tall: 2.5 } : {});
+  me = new Actor(W, 'sato', lookOf('sato'), map.ruins ? { pallas: true, tall: 2.5 } : {});
   me.x = to.x ?? map.start[0]; me.y = to.y ?? map.start[1]; me.dir = to.dir ?? 0;
   W.actors.set('sato', me); W.focus.set(me.x, 0.8, me.y);
-  W.setTime(S.cal.minute, S.weather, map);
+  W.setTime(S.cal.minute, S.weather, map); setMood({ season: S.cal.season, night: S.cal.minute > 1170, ruins: !!map.ruins });
   if (map.id === 'barn' || map.id === 'coop') spawnBeasts();
   if (map.id === 'hill') drawForage();
   if (map.ruins) drawRuins();
@@ -80,7 +83,7 @@ function placeNpcs(force) {
     if (have && have.spot === w.spot) continue;
     if (have) { have.actor.dispose(); W.actors.delete(id); }
     if (Math.hypot(x - me.x, y - me.y) < 0.7) y += 0.9;
-    const a = new Actor(W, id, NPCS[id].look, { tall: id === 'corran' || id === 'general' ? 1.72 : 1.6 }); a.x = x; a.y = y; a.dir = 0;
+    const a = new Actor(W, id, lookOf(id), { tall: id === 'corran' || id === 'general' ? 1.62 : 1.5 }); a.x = x; a.y = y; a.dir = 0;
     W.actors.set(id, a); npcs.set(id, { actor: a, spot: w.spot });
   }
 }
@@ -275,14 +278,14 @@ function use() {                                     // Space: the held tool or 
     if (fa) refreshChanged(fa.f.id, r.changed); else for (const c of r.changed || []) W.refreshPasture(c.y * map.pasture.w + c.x);
     const colr = { till: 0x8a6a45, water: 0x7fc4ff, cut: 0x6fbf5a, smash: 0x9a958c, chop: 0xc9a877, sow: 0xe8dcae }[r.fx] || 0xc9a877;
     for (const c of (r.changed || []).slice(0, 9)) W.puff((fa ? fa.f.x : map.pasture.x) + c.x + 0.5, (fa ? fa.f.y : map.pasture.y) + c.y + 0.5, colr, 5);
-    sfx(r.fx || 'till'); ui.gainedToast(r.gained); goals();
+    sfx(r.fx || 'till'); ui.gainedToast(r.gained); goals(); me.play(r.fx === 'water' ? 'water' : 'hoe');
   } else if (r.msg) ui.toast(r.msg);
   refreshHud(); if (r.fainted) night(true);
 }
 
 // ---------------------------------------------------------------- fishing
-function cast(tx, ty) { fishing = { phase: 'wait', t: 1.6 + Math.random() * 4.5, x: tx + 0.5, y: ty + 0.5 }; fishing.o = W.place('float', null, fishing.x, fishing.y, { procKind: 'float', h0: -0.08 }); sfx('water'); ui.toast('Line out. Wait for the float to dip…', 1800); }
-function endFishing() { if (fishing) { W.unplace('float'); fishing = null; } }
+function cast(tx, ty) { fishing = { phase: 'wait', t: 1.6 + Math.random() * 4.5, x: tx + 0.5, y: ty + 0.5 }; fishing.o = W.place('float', null, fishing.x, fishing.y, { procKind: 'float', h0: -0.08 }); me.play('fish', 30); sfx('water'); ui.toast('Line out. Wait for the float to dip…', 1800); }
+function endFishing() { if (fishing) { W.unplace('float'); fishing = null; if (me) me.act = null; } }
 function pullLine() {
   if (fishing.phase !== 'bite') { endFishing(); return ui.toast('Too soon. The line comes back empty.'); }
   endFishing(); const r = sim.fish(S, map.water || 'farm');
@@ -341,13 +344,13 @@ function frame(now) {
       const tx = Math.floor(me.x), ty = Math.floor(me.y);
       const ex = map.exits.find((e) => tx >= e.x0 && tx <= e.x1 && ty >= e.y0 && ty <= e.y1);
       if (ex) { go(ex.to); return; }
-      if (map.indoor && tx === map.exitTile[0] && me.y > map.exitTile[1] + 0.45 && wy > 0.3) { sfx('door'); go(outsideOf(map.id)); return; }
+      if (map.indoor && Math.abs(tx - map.exitTile[0]) <= 1 && me.y > map.exitTile[1] + 0.45 && wy > 0.3) { sfx('door'); go(outsideOf(map.id)); return; }
       const d = map.doors.find((q) => q.x === tx && q.y === ty);
       if (d && wy < -0.5 && me.y < d.y + 0.45) { doorHold += dt; if (doorHold > 0.18) { doorHold = 0; enterDoor(d); return; } } else doorHold = 0;
     }
     // the clock
     clock += dt;
-    while (clock >= MIN_SECONDS) { clock -= MIN_SECONDS; const r = sim.tick(S, 1); if (S.cal.minute % 10 === 0) { refreshHud(); placeNpcs(); W.setTime(S.cal.minute, S.weather, map); checkEvents(); } if (r.collapsed) { night(true); break; } }
+    while (clock >= MIN_SECONDS) { clock -= MIN_SECONDS; const r = sim.tick(S, 1); if (S.cal.minute % 10 === 0) { refreshHud(); placeNpcs(); W.setTime(S.cal.minute, S.weather, map); setMood({ night: S.cal.minute > 1170 }); checkEvents(); } if (r.collapsed) { night(true); break; } }
     if (map.ruins) ruinsTick(dt);
     if (fishing) fishTick(dt);
     for (const b of beasts) { b.wait -= dt; if (b.wait <= 0) { const pen = map.pen; b.tx = pen[0] + 0.6 + Math.random() * (pen[2] - pen[0]); b.ty = pen[1] + 0.6 + Math.random() * (pen[3] - pen[1]); b.wait = 3 + Math.random() * 6; } const dx = b.tx - b.o.position.x, dy = b.ty - b.o.position.z, d = Math.hypot(dx, dy); if (d > 0.1) { b.o.position.x += dx / d * dt * 0.6; b.o.position.z += dy / d * dt * 0.6; if (!W.facers.includes(b.o.children[0])) b.o.rotation.y = Math.atan2(dx, dy); } }
@@ -368,7 +371,7 @@ function frame(now) {
 function selectSlot(i) { const n = S.player.slots; S.player.sel = ((i % n) + n) % n; refreshHud(); }
 function pressE() { if (ui.advance()) return; if (mode !== 'play' || busy || ui.windowOpen()) return; const p = probe(); if (p) p.run(); }
 function pressUse() { if (ui.advance()) return; if (mode !== 'play' || busy || ui.windowOpen()) return; use(); }
-function openMenu(tab) { if (mode !== 'play' || busy || ui.talking()) return; ui.menu(S, { change: refreshHud, save: () => { save(); ui.toast('Saved.'); }, export: exportSave, title: () => { save(); location.reload(); } }, tab); }
+function openMenu(tab) { if (mode !== 'play' || busy || ui.talking()) return; ui.menu(S, { change: refreshHud, save: () => { save(); ui.toast('Saved.'); }, export: exportSave, title: () => { save(); location.reload(); }, music: () => ui.toast(music(!musicPlaying()) ? 'Music on.' : 'Music off.') }, tab); }
 function exportSave() { save(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([sim.saveState(S)], { type: 'application/json' })); a.download = `satos-harvest-y${S.cal.year}-${['spring', 'summer', 'autumn', 'winter'][S.cal.season]}${S.cal.day}.json`; a.click(); }
 function bindInput() {
   addEventListener('keydown', (e) => {
@@ -383,6 +386,7 @@ function bindInput() {
     keys.add(e.code);
     if (/^Digit\d$/.test(e.code)) selectSlot(e.code === 'Digit0' ? 9 : +e.code.slice(5) - 1);
     if (e.code === 'KeyR') { const s = sim.selected(S); if (s && ITEMS[s.id].stamina) { const r = sim.eat(S, S.player.sel); ui.toast(r.msg || 'That was good.'); refreshHud(); } }
+    if (e.code === 'KeyM') ui.toast(music(!musicPlaying()) ? 'Music on.' : 'Music off.');
     if (e.code === 'KeyQ') W.yaw -= Math.PI / 4; if (e.code === 'KeyC') W.yaw += Math.PI / 4;
   });
   addEventListener('keyup', (e) => keys.delete(e.code)); addEventListener('blur', () => keys.clear());
@@ -407,7 +411,7 @@ function bindInput() {
 
 // ---------------------------------------------------------------- start
 async function begin(state, fresh) {
-  S = state; $('title').hidden = true; $('hud').hidden = false; mode = 'talk';
+  S = state; $('title').hidden = true; music(true); $('hud').hidden = false; mode = 'talk';
   if (fresh) { await ui.fade(true, 400); $('hud').hidden = true; ui.fade(false, 600); await ui.say(story.INTRO); $('hud').hidden = false; }
   mode = 'play';
   const p = S.player, m = allMaps()[p.map] ? p.map : 'farm';

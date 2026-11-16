@@ -22,3 +22,22 @@ const S = {
 export function sfx(name) {
   try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); (S[name] || S.pick)(); } catch { /* no audio: fine */ }
 }
+
+// A quiet generated tune: a pentatonic melody over two soft chords, a little different each season.
+let musicOn = false, musicTimer = null, step = 0, mood = { season: 0, night: false, ruins: false };
+const SCALES = [[0, 2, 4, 7, 9], [0, 2, 4, 7, 9], [0, 3, 5, 7, 10], [0, 2, 3, 7, 8]], ROOTS = [262, 294, 247, 220];
+let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+function beat() {
+  if (!musicOn || !ac) return;
+  const sc = mood.ruins ? [0, 3, 5, 6, 10] : SCALES[mood.season], root = (mood.ruins ? 196 : ROOTS[mood.season]) * (mood.night ? 0.5 : 1), v = mood.night ? 0.028 : 0.04;
+  const note = (deg, oct = 0) => root * Math.pow(2, (sc[((deg % 5) + 5) % 5] + 12 * (Math.floor(deg / 5) + oct)) / 12);
+  if (step % 8 === 0) { const ch = (step / 8) % 2 ? [0, 2, 4] : [-2, 0, 3]; for (const d of ch) tone(note(d, -1), note(d, -1), 2.6, 'sine', v * 0.6); }
+  if (rnd() < (mood.night ? 0.4 : 0.68)) { const d = Math.floor(rnd() * 8) - 1; tone(note(d), note(d), 0.7 + rnd() * 0.5, 'triangle', v); if (rnd() < 0.2) tone(note(d + 2), note(d + 2), 0.5, 'triangle', v * 0.7, 0.17); }
+  step++;
+}
+export function music(on) {
+  try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); } catch { return false; }
+  musicOn = on; clearInterval(musicTimer); if (on) musicTimer = setInterval(beat, 340); return on;
+}
+export const musicPlaying = () => musicOn;
+export function setMood(m) { Object.assign(mood, m); }

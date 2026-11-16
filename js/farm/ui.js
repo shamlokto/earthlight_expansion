@@ -22,6 +22,7 @@ export function icon(id) {
 }
 export function face(who) {
   const n = NPCS[who]; if (!n) return '';
+  const own = art.url(`people/${who}_portrait`); if (own) return `<div class="fm-face"><img src="${own}" alt=""></div>`;
   if (n.portrait && n.portrait.startsWith('svg:')) return `<div class="fm-face">${svgPortrait(n.portrait.slice(4))}</div>`;
   return `<div class="fm-face"><img src="${n.portrait}" alt=""></div>`;
 }
@@ -72,6 +73,7 @@ function showLine() {
   const l = dlgLines[dlgIndex], n = NPCS[l.who];
   if (l.art) scene(l.art);
   $('dFace').innerHTML = n ? face(l.who) : ''; $('dFace').hidden = !n;
+  const su = n && art.url(`people/${l.who}_front`), sd = $('dStand'); sd.hidden = !su; if (su && sd.dataset.who !== l.who) { sd.dataset.who = l.who; sd.innerHTML = `<img src="${su}" alt="">`; sd.className = l.who === 'sato' ? 'left' : 'right'; }
   $('dName').textContent = n ? n.name : ''; $('dName').hidden = !n;
   $('dialog').className = 'fm-dialog' + (n ? '' : ' narr');
   const t = $('dText'); t.textContent = ''; const t0 = performance.now(); clearInterval(typing);
@@ -81,7 +83,7 @@ function showLine() {
 export function say(lines, { keepScene = false } = {}) {
   lines = (Array.isArray(lines) ? lines : [lines]).map((l) => (typeof l === 'string' ? { who: 'narrator', text: l } : l)).filter((l) => l && l.text);
   if (!lines.length) return Promise.resolve();
-  return new Promise((res) => { dlgLines = lines; dlgIndex = 0; $('dialog').hidden = false; dlgResolve = () => { $('dialog').hidden = true; if (!keepScene) scene(null); res(); }; showLine(); });
+  return new Promise((res) => { dlgLines = lines; dlgIndex = 0; $('dialog').hidden = false; dlgResolve = () => { $('dialog').hidden = true; $('dStand').hidden = true; if (!keepScene) scene(null); res(); }; showLine(); });
 }
 export function advance() {
   if (!dlgResolve) return false;
@@ -152,7 +154,7 @@ export function menu(state, hooks, tab = 'bag') {
     } else if (tab === 'help') {
       h += HELP.map((x) => `<h3>${esc(x.title)}</h3><p>${esc(x.body).replace(/\n/g, '<br>')}</p>`).join('');
     } else {
-      h += `<div class="fm-sys"><button data-act="save">Save the game</button><button data-act="export">Export save to a file</button><button data-act="title">Back to the title</button></div><p class="fm-dim">The game also saves by itself every morning.</p>`;
+      h += `<div class="fm-sys"><button data-act="save">Save the game</button><button data-act="export">Export save to a file</button><button data-act="music">Music on / off (M)</button><button data-act="title">Back to the title</button></div><p class="fm-dim">The game also saves by itself every morning.</p>`;
     }
     const body = openWin('Sato’s Harvest', h, () => hooks.close && hooks.close(), 'menu');
     body.onclick = (e) => {
