@@ -66,7 +66,7 @@ async function go(to, { quick = false } = {}) {
   busy = false;
   await checkEvents();
 }
-function refreshHud() { ui.hud(S, { place: map ? map.name : '' }); }
+function refreshHud() { ui.hud(S, { place: map ? map.name : '' }); const s = sim.selected(S); if (me && !map.ruins) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
 // ---------------------------------------------------------------- people
@@ -188,7 +188,7 @@ function ruinsTick(dt) {
     let vx = Math.cos(mon.wob * 0.7) * 0.4, vy = Math.sin(mon.wob * 0.9) * 0.4;
     if (d < 6.5 && d > 0.1) { vx = (me.x - mon.x) / d * 1.25; vy = (me.y - mon.y) / d * 1.25; }
     const nx = mon.x + vx * dt, ny = mon.y + vy * dt; if (!blocked(nx, mon.y)) mon.x = nx; if (!blocked(mon.x, ny)) mon.y = ny;
-    mon.o.position.x = mon.x; mon.o.position.z = mon.y;
+    mon.o.position.x = mon.x; mon.o.position.z = mon.y; if (mon.o.userData.is3d) mon.o.rotation.y = Math.atan2(vx, vy);
     if (d < 2.1 && zapT <= 0) { zapT = 0.45; W.beam(me.x, me.y, 1.7, mon.x, mon.y, 0.4, 0x7dffb0); me.swing = 1; sfx('zap'); if (--mon.ref.hp <= 0) { popMonster(mon); continue; } }
     if (d < 0.75 && hurtT <= 0) { hurtT = 1.6; const r = sim.monsterHit(S); ui.toast(r.msg); mon.x -= vx * 0.8; mon.y -= vy * 0.8; refreshHud(); }
   }

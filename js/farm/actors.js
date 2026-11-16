@@ -125,6 +125,24 @@ export function rigFigurine(model) {
   return out;
 }
 
+// The tool she carries, as a little built model in her right hand.
+function toolMesh(id) {
+  const g = new THREE.Group(), wood = toon('#a9774a'), iron = toon('#9aa6b2'), m = (geo, mat, x, y, z, rx = 0, rz = 0) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.rotation.set(rx, 0, rz); o.castShadow = true; g.add(o); return o; };
+  const handle = (len = 0.62) => m(new THREE.CylinderGeometry(0.02, 0.022, len, 6), wood, 0, len / 2 - 0.12, 0);
+  switch (id) {
+    case 'hoe': handle(0.78); m(new THREE.BoxGeometry(0.17, 0.035, 0.1), iron, 0, 0.64, 0.05, 0.5); break;
+    case 'axe': handle(); m(new THREE.BoxGeometry(0.03, 0.15, 0.17), iron, 0, 0.44, 0.08); break;
+    case 'hammer': handle(); m(new THREE.BoxGeometry(0.1, 0.1, 0.22), toon('#6f7a86'), 0, 0.5, 0); break;
+    case 'sickle': handle(0.3); m(new THREE.TorusGeometry(0.11, 0.014, 5, 12, Math.PI * 1.1), iron, 0, 0.28, 0.1, 0, 0).rotation.y = Math.PI / 2; break;
+    case 'can': m(new THREE.CylinderGeometry(0.1, 0.11, 0.17, 12), toon('#5fa8d3'), 0, -0.02, 0.1); m(new THREE.CylinderGeometry(0.018, 0.026, 0.2, 6), toon('#5fa8d3'), 0, 0.03, 0.25, 1.0); m(new THREE.TorusGeometry(0.07, 0.012, 5, 10, Math.PI), toon('#4a8fb8'), 0, 0.08, 0.06).rotation.y = Math.PI / 2; break;
+    case 'rod': m(new THREE.CylinderGeometry(0.008, 0.02, 1.25, 5), toon('#c8a05a'), 0, 0.35, 0.3, 0.75); break;
+    case 'milker': m(new THREE.CylinderGeometry(0.07, 0.09, 0.15, 10), toon('#dfe6ea'), 0, -0.02, 0.08); break;
+    case 'brush': m(new THREE.BoxGeometry(0.08, 0.05, 0.17), wood, 0, -0.02, 0.08); break;
+    default: return null;
+  }
+  return g;
+}
+
 function robot() {                                  // Sato's Pallas, built: navy and rose
   const g = new THREE.Group(), navy = std({ color: '#1f3a78', metalness: 0.4, roughness: 0.55 }), rose = std({ color: '#d85a8c', metalness: 0.3, roughness: 0.5 }), grey = std({ color: '#59626e', metalness: 0.5 });
   const b = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
@@ -154,7 +172,7 @@ export class Actor {
       this.mode = 'model'; this.body = new THREE.Group(); this.inner = new THREE.Group(); this.body.add(this.inner); this.group.add(this.body);
       art.model(mname).then((m) => {
         if (!m) return; const s = art.modelInfo(mname).size || [1, 1, 1];
-        if (!o.pallas) { const r = rigFigurine(m); r.scale.setScalar(this.tall / r.userData.height); this.body.userData.limbs = r.userData.limbs; this.inner.add(r); this.rigged = true; }
+        if (!o.pallas) { const r = rigFigurine(m); r.scale.setScalar(this.tall / r.userData.height); this.body.userData.limbs = r.userData.limbs; this.inner.add(r); this.rigged = true; this.rigH = r.userData.height; this.applyTool(); }
         else { m.scale.setScalar(this.tall / (s[1] || 1)); this.inner.add(m); }
       });
     } else if (o.pallas && this.views.front) {
@@ -167,6 +185,18 @@ export class Actor {
   dispose() { this.world.dyn.remove(this.group); const k = this.world.facers.indexOf(this.body); if (k >= 0) this.world.facers.splice(k, 1); }
   // Play an action loop (hoe, water, fish) for `secs`, if there is art for it.
   play(action, secs = 0.9) { if (this.acts && this.acts[action]) { this.act = action; this.actT = secs; } }
+  // Show the held tool (or nothing) in her hand.
+  setTool(id) {
+    if (this.toolId === id) return; this.toolId = id; this.wantTool = id; this.applyTool();
+  }
+  applyTool() {
+    const l = this.body && this.body.userData.limbs; if (!l || !l.B) return;
+    if (this.tool) { this.tool.parent && this.tool.parent.remove(this.tool); this.tool = null; }
+    const t = this.wantTool && toolMesh(this.wantTool); if (!t) return;
+    if (this.rigged) { const H = this.rigH || 1; t.scale.setScalar(H / this.tall * 1.1); t.position.set(0.2 * H, -0.17 * H, 0.03 * H); t.rotation.z = 0.5; }
+    else { t.scale.setScalar(1.52 / this.tall); t.position.set(0, -0.31, 0.03); t.rotation.z = -0.22; }
+    l.B.add(t); this.tool = t;
+  }
   face(x, y) { const dx = x - this.x, dy = y - this.y; this.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 2 : 3) : (dy < 0 ? 1 : 0); }
   update(dt, world) {
     this.group.position.set(this.x, 0, this.y);
