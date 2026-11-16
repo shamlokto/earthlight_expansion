@@ -56,7 +56,7 @@ export { TOUR, tourismOf, tourismLimitText } from './tourism.js';
 import { ensureGardens } from './gardens.js';
 // version 12 (docs/COLONY-V12.md): story arc The Reckoning (js/colony/reckoning.js)
 import { answerReckoning } from './reckoning.js';
-export { RECKONING, CLUES, CONSPIRATORS, JUSTICE_TEXT, JUSTICE_ENDING, JUSTICE_MARROW, ensureReckoning, reckoningStatus, broadcast, canBroadcast, siegeWaiting, strikeReady, justiceDone, resolveReckoningBattle } from './reckoning.js';
+export { RECKONING, CLUES, CONSPIRATORS, JUSTICE_TEXT, JUSTICE_ENDING, JUSTICE_MARROW, ensureReckoning, reckoningStatus, broadcast, canBroadcast, siegeWaiting, strikeReady, strikePhase, generalReady, justiceDone, resolveReckoningBattle, RECKONING_BATTLES } from './reckoning.js';
 // version 13 (docs/COLONY-V13.md): story arc 2, The Hope (Earth, js/colony/hope.js)
 import { ensureHope, hopeCanBuild, hopeBuild, hopeDemolish, hopeTileInfo, hopeToggle } from './hope.js';
 export { HOPE, HOPE_BEATS, HOPE_ENDING, HOPE_ENDING_TEXT, HOPE_UNLOCK, generateHope, ensureHope, unlockHope, hopeOn, hopeMap, hopeStatus, hopeRecovery,

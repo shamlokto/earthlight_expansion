@@ -283,6 +283,8 @@ export function colonyResult(b, won = b.winner() === 0) {
     cortexLost: b.units.some((u) => u.eden && u.type === 56 && (u.hp <= 0 || u.army !== 0)), dockLost: b.units.some((u) => u.eden && u.type === 52 && (u.hp <= 0 || u.army !== 0)),
     gunsLost: b.units.filter((u) => u.army === 0 && u.gun && u.hp <= 0).length,
     flagshipSunk: !!(b.stakes?.[1]?.flagship && b.stakes[1].flagship.hp <= 0),
+    // the enemy machines still on the map at the end (the ambush's survivors follow the strike force)
+    survivors: b.units.filter((u) => u.army === 1 && u.hp > 0 && !u.carrier && u.x >= 0 && b.types[u.type].move > 0).map((u) => ({ type: u.type, level: u.level ?? 0, ...(u.name ? { name: u.name } : {}) })),
   } : {};
   return {
     ...reckoning, day: c.day ?? null, won: !!won, fled: !!(won && raiders.some((u) => u.fled && u.hp > 0)), turns: b.turn,

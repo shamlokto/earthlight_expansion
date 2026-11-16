@@ -1149,6 +1149,374 @@
   "y": 10
  },
  "generalAt": [30,14],
+ "counter": {
+  "title": "Hesk Strikes Eden",
+  "chapter": "The Reckoning · II",
+  "objective": {
+   "kind": "hold",
+   "turns": 14
+  },
+  "goal": "Hold Eden to the end of turn 14: the Command Centre must stand and the General must live. Destroying every wave also wins.",
+  "units": [
+   {
+    "type": 31,
+    "level": 6,
+    "core": 1,
+    "name": "Asura-II · the picket's second",
+    "x": 56,
+    "y": 14
+   },
+   {
+    "type": 60,
+    "level": 5,
+    "core": 1,
+    "x": 55,
+    "y": 13
+   },
+   {
+    "type": 80,
+    "level": 5,
+    "core": 1,
+    "x": 57,
+    "y": 13
+   },
+   {
+    "type": 68,
+    "level": 5,
+    "core": 1,
+    "x": 56,
+    "y": 12
+   },
+   {
+    "type": 66,
+    "level": 5,
+    "x": 54,
+    "y": 14
+   },
+   {
+    "type": 70,
+    "level": 5,
+    "x": 58,
+    "y": 14
+   },
+   {
+    "type": 73,
+    "level": 5,
+    "x": 55,
+    "y": 11
+   },
+   {
+    "type": 42,
+    "level": 5,
+    "x": 57,
+    "y": 11
+   },
+   {
+    "type": 60,
+    "level": 5,
+    "x": 54,
+    "y": 12
+   },
+   {
+    "type": 80,
+    "level": 5,
+    "x": 58,
+    "y": 12
+   },
+   {
+    "type": 69,
+    "level": 4,
+    "x": 53,
+    "y": 13
+   },
+   {
+    "type": 16,
+    "level": 4,
+    "x": 59,
+    "y": 13
+   },
+   {
+    "type": 9,
+    "level": 4,
+    "x": 53,
+    "y": 15
+   },
+   {
+    "type": 12,
+    "level": 4,
+    "x": 59,
+    "y": 15
+   }
+  ],
+  "arrivals": [
+   {
+    "turn": 3,
+    "army": 1,
+    "wave": "below",
+    "units": [
+     {
+      "type": 68,
+      "level": 5,
+      "core": 1,
+      "x": 52,
+      "y": 22
+     },
+     {
+      "type": 70,
+      "level": 5,
+      "core": 1,
+      "x": 8,
+      "y": 24
+     },
+     {
+      "type": 66,
+      "level": 5,
+      "x": 52,
+      "y": 24
+     },
+     {
+      "type": 80,
+      "level": 5,
+      "x": 53,
+      "y": 23
+     },
+     {
+      "type": 69,
+      "level": 5,
+      "x": 54,
+      "y": 22
+     },
+     {
+      "type": 15,
+      "level": 4,
+      "x": 6,
+      "y": 24
+     },
+     {
+      "type": 16,
+      "level": 4,
+      "x": 54,
+      "y": 24
+     },
+     {
+      "type": 73,
+      "level": 5,
+      "x": 5,
+      "y": 23
+     },
+     {
+      "type": 8,
+      "level": 4,
+      "x": 55,
+      "y": 23
+     },
+     {
+      "type": 3,
+      "level": 4,
+      "x": 4,
+      "y": 22
+     }
+    ]
+   },
+   {
+    "turn": 6,
+    "army": 1,
+    "wave": "west",
+    "units": [
+     {
+      "type": 58,
+      "level": 6,
+      "core": 1,
+      "name": "Selene Kai · Directorate escort",
+      "cargo": [9,9],
+      "x": 1,
+      "y": 11
+     },
+     {
+      "type": 60,
+      "level": 5,
+      "core": 1,
+      "x": 2,
+      "y": 12
+     },
+     {
+      "type": 70,
+      "level": 5,
+      "x": 1,
+      "y": 13
+     },
+     {
+      "type": 69,
+      "level": 5,
+      "x": 3,
+      "y": 11
+     },
+     {
+      "type": 12,
+      "level": 5,
+      "x": 3,
+      "y": 13
+     },
+     {
+      "type": 12,
+      "level": 5,
+      "x": 2,
+      "y": 14
+     },
+     {
+      "type": 51,
+      "level": 4,
+      "x": 1,
+      "y": 9
+     },
+     {
+      "type": 49,
+      "level": 4,
+      "x": 2,
+      "y": 10
+     },
+     {
+      "type": 15,
+      "level": 4,
+      "x": 4,
+      "y": 12
+     },
+     {
+      "type": 3,
+      "level": 4,
+      "x": 1,
+      "y": 15
+     }
+    ]
+   },
+   {
+    "turn": 9,
+    "army": 1,
+    "wave": "north",
+    "units": [
+     {
+      "type": 72,
+      "level": 7,
+      "core": 1,
+      "name": "Asura-II Kai · Directorate cruiser",
+      "x": 29,
+      "y": 1
+     },
+     {
+      "type": 72,
+      "level": 7,
+      "core": 1,
+      "name": "Asura-II Kai · Directorate cruiser",
+      "x": 31,
+      "y": 1
+     },
+     {
+      "type": 36,
+      "level": 6,
+      "core": 1,
+      "name": "Siren · Quill's paymaster",
+      "x": 30,
+      "y": 2
+     },
+     {
+      "type": 60,
+      "level": 6,
+      "core": 1,
+      "x": 28,
+      "y": 2
+     },
+     {
+      "type": 60,
+      "level": 6,
+      "x": 32,
+      "y": 2
+     },
+     {
+      "type": 73,
+      "level": 6,
+      "x": 27,
+      "y": 1
+     },
+     {
+      "type": 73,
+      "level": 6,
+      "x": 33,
+      "y": 1
+     },
+     {
+      "type": 66,
+      "level": 6,
+      "x": 26,
+      "y": 2
+     },
+     {
+      "type": 67,
+      "level": 6,
+      "x": 34,
+      "y": 2
+     },
+     {
+      "type": 68,
+      "level": 6,
+      "x": 27,
+      "y": 3
+     },
+     {
+      "type": 42,
+      "level": 5,
+      "x": 33,
+      "y": 3
+     },
+     {
+      "type": 41,
+      "level": 5,
+      "x": 25,
+      "y": 1
+     },
+     {
+      "type": 10,
+      "level": 5,
+      "x": 35,
+      "y": 1
+     },
+     {
+      "type": 4,
+      "level": 5,
+      "x": 25,
+      "y": 3
+     }
+    ]
+   }
+  ],
+  "follow": [
+   [58,8],
+   [57,7],
+   [59,7],
+   [58,6],
+   [57,9],
+   [59,9],
+   [58,10],
+   [57,5],
+   [59,5],
+   [56,6],
+   [56,10],
+   [58,4],
+   [55,5],
+   [54,6],
+   [54,10],
+   [59,11],
+   [57,3],
+   [59,3],
+   [56,4],
+   [53,5]
+  ],
+  "briefing": "The fleet came home from the ambush to mend. The picket came home with it, and brought friends.\n\nThey are already in the east, by the old breach. More will come up under the hull, round the west, and out of the north with Directorate cruisers.\n\nHold Eden. Then the way to the rock is open, and the picket that guarded it is spent.",
+  "strategy": [
+   "First from the east and the breach (the picket's survivors among them), under the hull on turn 4, round the west on turn 7, the north on turn 10.",
+   "Keep the Command Centre ringed; the bulkhead doors are at row 16."
+  ],
+  "transmission": "You ran home, General. Home is where I wanted you."
+ },
  "briefing": "Day one hundred. They did not wait for nightfall; there is none up here.\n\nHesk's fleet is at the gates: Directorate hulls, cartel guns bought with Ninefold money, and machines Eden sold to pay for its air. The north is already full of them. More will come round the west, through the old breach in the east, and from the dark.\n\nThe Command Centre is the heart of Eden. If it falls, so does the colony. The lift shafts are the way in for anything small; the hull guns stand in them.\n\nHold until they break. There is no paying these people off.",
  "strategy": [
   "Keep the Command Centre ringed: the bulkheads beside it have one door each, at row 16.",

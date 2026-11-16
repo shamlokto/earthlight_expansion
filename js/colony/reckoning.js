@@ -12,18 +12,37 @@
 //   siege       Hesk's fleet is at the gates: the Siege of Eden waits to be played (a blockade until then)
 //   regroup     the siege was lost: Eden is hurt; they come again on siegeDay (REGROUP days later)
 //   strike      the siege was won: the hiding place is known; the counterattack can be launched (again
-//               STRIKE_RETRY days after a failed one)
+//               STRIKE_RETRY days after a failed one). The strike has two phases (owner, 2026-11-16):
+//               the General's machine always flies (no strike without him fit); phase 1, the AMBUSH, on
+//               the way (Hesk's picket, ambushRatio x the strike force by number), then phase 2, HESK'S
+//               STRONGHOLD. Once the ambush is won (r.ambushDone) later strikes go straight to phase 2.
+//   crossroads  the ambush is won: the General chooses (an event): go home and regroup, or press on
+//   onward      pressing on: the strike force goes on as it is (no repairs, no new machines: r.fleet holds
+//               each machine's HP) straight into phase 2
+//   counter     going home: the fleet mends at Eden, but the picket's survivors and reinforcements follow;
+//               on siegeDay they strike Eden (stage siege, siegeKind 'counter': the siege map, new waves).
+//               Held: the strike again (phase 2 only), the rock reinforced (r.reinforce +1)
 //   done        Hesk's flagship is sunk: the ending "Justice for Eden" (once; remembered; blocks nothing)
-// state.reckoning = { stage, offered, broadcast, siegeDay, clues: [ids], fighting: null | 'siege' | 'stronghold',
-//                     sieges: [{ day, won, ... }], strikes: [...], nextStrike, justice: { day, ... } | null }
-import { addPending, log, maxHp, fitCommander, addGuardian, V3, RAID } from './rules.js';   // used inside functions only (rules.js imports this module back)
+// state.reckoning = { stage, offered, broadcast, siegeDay, siegeKind: 'siege' | 'counter', clues: [ids],
+//                     fighting: null | 'siege' | 'counter' | 'ambush' | 'stronghold', sieges: [{ day, won, ... }],
+//                     strikes: [{ phase, ... }], nextStrike, ambushDone, reinforce, fleet: [{ id, hp }] | null,
+//                     survivors: [{ type, level }], onward, justice: { day, ... } | null }
+import { addPending, log, maxHp, fitCommander, addGuardian, homeCrew, V3, RAID } from './rules.js';   // used inside functions only (rules.js imports this module back)
 import { shiftMood } from './neighbours.js';
+import { MACHINE } from './data/machines.js';
 
 export const RECKONING = {
   countdown: 100,          // days from the broadcast to the siege
   regroup: 60,             // days after a lost siege before they come again
   warnBefore: 10,          // a last warning this many days before a siege
   strikeRetry: 30,         // days after a failed counterattack before the next
+  ambushRatio: 2,          // phase 1: Hesk's picket is this many times the strike force, by number of machines
+  ambushFloor: 12,         // ... and never fewer than this (a tiny strike force still meets a real ambush)
+  survivorsCap: 20,        // the picket's survivors who follow the fleet home and strike Eden (a regroup)
+  counterDelay: 12,        // days after going home before the picket and its reinforcements strike Eden
+  afterCounter: 10,        // days after holding the counterstrike before the strike can go again
+  reinforceStep: 8,        // machines the rock gains each time Hesk has time (a regroup, a failed assault) ...
+  reinforceMax: 3,         // ... at most this many times (each also +1 level for every enemy)
   blockade: 1.2,           // market prices are held at least this high while the siege waits
   remind: 7,               // days between the blockade's reminders
   salvage: { credits: 40, parts: 4 },   // per enemy machine destroyed (a won battle)
@@ -83,16 +102,30 @@ function cheer(state, label, value) {
 }
 
 export function ensureReckoning(state) {
-  state.reckoning ??= { stage: 'locked', offered: false, broadcast: null, siegeDay: null, clues: [], fighting: null, sieges: [], strikes: [], nextStrike: null, justice: null, lastRemind: null };
+  state.reckoning ??= { stage: 'locked', offered: false, broadcast: null, siegeDay: null, siegeKind: 'siege', clues: [], fighting: null, sieges: [], strikes: [], nextStrike: null, ambushDone: false, reinforce: 0, fleet: null, survivors: [], onward: false, justice: null, lastRemind: null };
   const r = state.reckoning;
-  r.clues ??= []; r.sieges ??= []; r.strikes ??= []; r.justice ??= null;
+  r.clues ??= []; r.sieges ??= []; r.strikes ??= []; r.justice ??= null; r.siegeKind ??= 'siege'; r.reinforce ??= 0; r.survivors ??= []; r.ambushDone ??= false;
   if (r.stage === 'locked' && state.secrets?.finalOpened) r.stage = 'ready';
   return r;
 }
 
 export const canBroadcast = (state) => ensureReckoning(state).stage === 'ready';
 export const siegeWaiting = (state) => ensureReckoning(state).stage === 'siege';
-export const strikeReady = (state) => { const r = ensureReckoning(state); return r.stage === 'strike' && (r.nextStrike == null || state.day >= r.nextStrike); };
+export const strikeReady = (state) => { const r = ensureReckoning(state); return (r.stage === 'strike' && (r.nextStrike == null || state.day >= r.nextStrike)) || r.stage === 'onward'; };
+// The General must lead the strike: serving, fit, and his machine crewed at home and flying (not a rail gun).
+export function generalReady(state) {
+  if (!fitCommander(state, 'general')) return no((state.commanders || []).some((c) => c.key === 'general') ? 'The General is injured: the strike waits until he is fit.' : 'The General must lead the strike, and he does not serve.');
+  const g = (state.guardians || []).find((x) => x.commander === 'general');
+  if (!g) return no('The General has no machine: give him one (Commanders) before the strike.');
+  if (MACHINE[g.type]?.category === 14) return no('The General\'s machine is a rail gun: it cannot fly the strike.');
+  if (!(g.hp > 0) || g.away || !homeCrew(state).has(g.id)) return no('The General\'s machine must be crewed and at home.');
+  return ok('The General is ready.', { id: g.id });
+}
+// The strike's next phase: 'ambush' (phase 1) until it is won once, then 'stronghold'; null when no strike is on.
+export function strikePhase(state) {
+  const r = ensureReckoning(state);
+  return r.stage === 'onward' ? 'stronghold' : r.stage === 'strike' ? (r.ambushDone ? 'stronghold' : 'ambush') : null;
+}
 export const justiceDone = (state) => !!ensureReckoning(state).justice;
 
 // What the panels read.
@@ -101,7 +134,9 @@ export function reckoningStatus(state) {
   return {
     stage: r.stage, broadcast: r.broadcast, siegeDay: r.siegeDay, eta: r.siegeDay != null ? Math.max(0, r.siegeDay - state.day) : null,
     clues: r.clues.length, cluesTotal: CLUES.length, fighting: r.fighting, sieges: r.sieges.length, strikes: r.strikes.length,
-    canBroadcast: r.stage === 'ready', siege: r.stage === 'siege', strike: strikeReady(state), nextStrike: r.nextStrike, justice: r.justice,
+    canBroadcast: r.stage === 'ready', siege: r.stage === 'siege', siegeKind: r.siegeKind, strike: strikeReady(state), nextStrike: r.nextStrike, justice: r.justice,
+    phase: strikePhase(state), ambushDone: !!r.ambushDone, reinforce: r.reinforce || 0, onward: r.stage === 'onward', fleet: r.fleet ? r.fleet.length : 0,
+    fleetHp: r.fleet?.length ? Math.round((100 * r.fleet.reduce((t, f) => t + f.hp, 0)) / r.fleet.length) : null, survivors: (r.survivors || []).length,
   };
 }
 
@@ -135,6 +170,7 @@ export function answerReckoning(state, p, key) {
     state.pending = state.pending.filter((x) => x.id !== p.id);
     return ok('Not yet. The broadcast waits in the Defence panel (Raids) for whenever you are ready.');
   }
+  if (p.step === 'crossroads') return crossroads(state, r, p, key);
   if (p.step === 'clue' && p.clue === 'c4') {
     state.pending = state.pending.filter((x) => x.id !== p.id);
     if (key === 'seize') {
@@ -166,13 +202,28 @@ export function reckoningDay(state, { say, ask }) {
     const c = CLUES.find((x) => since >= x.at && !r.clues.includes(x.id));
     if (c) clue(state, r, c, ask);
   }
+  if (r.stage === 'counter' && r.siegeDay != null && state.day >= r.siegeDay) {
+    r.stage = 'siege'; r.siegeKind = 'counter'; r.lastRemind = state.day;
+    const n = (r.survivors || []).length;
+    const p = ask('reckoning', 'Hesk strikes Eden', `The picket followed the fleet home${n ? `: ${n} of the machines that ambushed it, ` : ', '}with reinforcements behind them. They are in the east, by the old breach, and more are coming. This battle is fought on the map, turn by turn.`);
+    p.speaker = 'sato'; p.step = 'siege'; p.tone = 'bad'; p.battle = 'counter';
+    p.quote = 'They want us to spend ourselves here, so the rock has time. Then we hold, and we go back.';
+    p.choices = [{ key: 'ok', label: 'Not yet: hold the gates' }];
+    return;
+  }
   if ((r.stage === 'gathering' || r.stage === 'regroup') && r.siegeDay != null) {
     if (r.stage === 'regroup' && state.day === r.siegeDay - RECKONING.warnBefore) {
       const p = ask('reckoning', 'They are coming back', `Hesk's fleet has rebuilt what Eden broke. They will be at the gates again in about ${RECKONING.warnBefore} days.`);
       p.speaker = 'sato'; p.step = 'warn'; p.tone = 'warn';
       p.quote = 'Same rock, same man, more guns. This time we know the way they come in.';
     }
-    if (state.day >= r.siegeDay) {
+    if (state.day >= r.siegeDay && r.siegeKind === 'counter') {   // they come back after a lost counterstrike
+      r.stage = 'siege'; r.lastRemind = state.day;
+      const p = ask('reckoning', 'Hesk strikes Eden again', 'The picket and its reinforcements are back at the gates, from the east first. This battle is fought on the map, turn by turn.');
+      p.speaker = 'sato'; p.step = 'siege'; p.tone = 'bad'; p.battle = 'counter';
+      p.quote = 'Same faces, more guns. We know their way in now.';
+      p.choices = [{ key: 'ok', label: 'Not yet: hold the gates' }];
+    } else if (state.day >= r.siegeDay) {
       r.stage = 'siege'; r.lastRemind = state.day;
       const p = ask('reckoning', 'The Siege of Eden', 'Hesk\'s fleet is at the gates: Directorate hulls, cartel guns and the machines Eden once sold, from the north first and more behind them. Nobody is trading with Eden until this is settled. This battle is fought on the map, turn by turn: there is no paying these people off.');
       p.speaker = 'sato'; p.step = 'siege'; p.tone = 'bad'; p.battle = 'siege';
@@ -205,13 +256,17 @@ function clue(state, r, c, ask) {
 
 // ---------------------------------------------------------------- the battles' results
 // result: js/expansion/battle.js colonyResult with the Reckoning's extras
-// { battle, won, reason, turns, enemies, enemiesDestroyed, cortexLost, dockLost, gunsLost, flagshipSunk, guardians: [{ id, hp, lost }] }
+// { battle, won, reason, turns, enemies, enemiesDestroyed, cortexLost, dockLost, gunsLost, flagshipSunk, survivors: [{ type, level }],
+//   guardians: [{ id, hp, lost }] }   battle: 'siege' | 'counter' | 'ambush' | 'stronghold'
+export const RECKONING_BATTLES = ['siege', 'counter', 'ambush', 'stronghold'];
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const tally = (types) => { const c = new Map(); for (const t of types) { const k = MACHINE[t]?.name || `machine ${t}`; c.set(k, (c.get(k) || 0) + 1); } return [...c].map(([k, v]) => (v > 1 ? `${v} ${k}` : k)).join(', '); };
 export function resolveReckoningBattle(state, res) {
   const r = ensureReckoning(state);
-  if (!res || (res.battle !== 'siege' && res.battle !== 'stronghold')) return no('That is not one of the Reckoning\'s battles.');
+  if (!res || !RECKONING_BATTLES.includes(res.battle)) return no('That is not one of the Reckoning\'s battles.');
   if (r.fighting !== res.battle) return no('No such battle is being fought.');
   r.fighting = null;
-  const rng = rngOf(state, res.battle), lost = [];
+  const rng = rngOf(state, res.battle), lost = [], kept = [];
   for (const x of res.guardians || []) {
     const g = state.guardians.find((v) => v.id === x.id);
     if (!g) continue;
@@ -224,38 +279,73 @@ export function resolveReckoningBattle(state, res) {
       const max = maxHp(state, g);
       g.hp = Math.round(Math.min(max, Math.max(0.1, x.hp * max)) * 10) / 10;
       g.level = Math.min(V3?.maxLevel ?? 9, (g.level || 0) + (fitCommander(state, g.commander) ? 2 : 1));
+      kept.push({ id: g.id, hp: Math.max(0, Math.min(1, x.hp)) });
     }
   }
   const won = !!res.won, killed = res.enemiesDestroyed || 0;
-  const entry = { day: state.day, won, reason: res.reason || null, turns: res.turns || null, killed, enemies: res.enemies || null, lost: lost.length };
+  const entry = { day: state.day, won, reason: res.reason || null, turns: res.turns || null, killed, enemies: res.enemies || null, lost: lost.length, phase: res.battle };
   const salvage = won ? { credits: killed * RECKONING.salvage.credits, parts: killed * RECKONING.salvage.parts } : { credits: 0, parts: 0 };
   state.stock.credits += salvage.credits; state.stock.parts += salvage.parts;
   let text;
-  if (res.battle === 'siege') {
-    r.sieges.push(entry);
-    if (won) {
+  if (res.battle === 'siege' || res.battle === 'counter') {
+    const counter = res.battle === 'counter';
+    r.sieges.push(counter ? { ...entry, counter: true } : entry);
+    if (won && counter) {
+      r.stage = 'strike'; r.siegeDay = null; r.siegeKind = 'siege'; r.survivors = []; r.ambushDone = true;
+      r.reinforce = Math.min(RECKONING.reinforceMax, (r.reinforce || 0) + 1); r.nextStrike = state.day + RECKONING.afterCounter;
+      cheer(state, 'Eden held again', RECKONING.won);
+      for (const g of Object.keys(state.market || {})) state.market[g] = Math.min(state.market[g], 1);
+      text = `Eden holds against the counterstrike: ${killed} of their machines destroyed, ${plural(lost.length, 'guardian')} lost. Salvage: ${salvage.credits} credits and ${salvage.parts} parts. The picket is spent: the way to the rock is open.`;
+      const p = addPending(state, 'reckoning', 'The way is open', `${text} The next strike goes straight to Hesk's stronghold, in about ${RECKONING.afterCounter} days. He has used the time too: the rock is stronger than it was.`, [{ key: 'ok', label: 'Mend, then go' }]);
+      p.speaker = 'sato'; p.step = 'counterwon'; p.tone = 'good'; p.entry = entry;
+      p.quote = 'Nobody is waiting on the road this time. Only at the end of it.';
+    } else if (won) {
       r.stage = 'strike'; r.siegeDay = null; r.nextStrike = state.day;
       cheer(state, 'Eden held', RECKONING.won);
       for (const g of Object.keys(state.market || {})) state.market[g] = Math.min(state.market[g], 1);
       text = `The Siege of Eden is broken: ${killed} of their machines destroyed, ${lost.length} guardian${lost.length === 1 ? '' : 's'} lost. Salvage: ${salvage.credits} credits and ${salvage.parts} parts. A captured pilot gives up the hiding place.`;
-      const p = addPending(state, 'reckoning', 'The hiding place', `${text} Hesk's fleet came from a nameless rock beyond the far belt, an old Directorate quarry dug into a fortress. That is where he is now, with everything he has left.`, [{ key: 'ok', label: 'We go to him' }]);
+      const p = addPending(state, 'reckoning', 'The hiding place', `${text} Hesk's fleet came from a nameless rock beyond the far belt, an old Directorate quarry dug into a fortress. That is where he is now, with everything he has left. The road there is long, and he will not leave it unguarded.`, [{ key: 'ok', label: 'We go to him' }]);
       p.speaker = 'sato'; p.step = 'hideout'; p.tone = 'good'; p.entry = entry;
-      p.quote = 'He will have turned that rock into a trap, and he will be waiting behind it. Forty machines, Governor, the best we have. The General picks them.';
+      p.quote = 'He will have turned that rock into a trap, and he will be waiting on the way to it too. Forty machines, Governor, the best we have, and the General leads them. No General, no strike.';
     } else {
       const loss = siegeLoss(state, rng, res);
       r.stage = 'regroup'; r.siegeDay = state.day + RECKONING.regroup;
       cheer(state, 'Eden overrun', RECKONING.siegeLoss.fear);
-      text = `Eden fell to the siege. ${Object.entries(loss.stolen).map(([g, n]) => `${n} ${g}`).join(', ') || 'Little'} carried off; ${loss.damaged} building${loss.damaged === 1 ? '' : 's'} knocked out; ${lost.length} guardian${lost.length === 1 ? '' : 's'} lost. Hesk's fleet withdraws to lick its wounds.`;
-      const p = addPending(state, 'reckoning', 'After the siege', `${text} They will be back in about ${RECKONING.regroup} days.`, [{ key: 'ok', label: 'Rebuild' }]);
+      text = `Eden fell to the ${counter ? 'counterstrike' : 'siege'}. ${Object.entries(loss.stolen).map(([g, n]) => `${n} ${g}`).join(', ') || 'Little'} carried off; ${loss.damaged} building${loss.damaged === 1 ? '' : 's'} knocked out; ${lost.length} guardian${lost.length === 1 ? '' : 's'} lost. Hesk's fleet withdraws to lick its wounds.`;
+      const p = addPending(state, 'reckoning', counter ? 'After the counterstrike' : 'After the siege', `${text} They will be back in about ${RECKONING.regroup} days.`, [{ key: 'ok', label: 'Rebuild' }]);
       p.speaker = 'ruess'; p.step = 'siegelost'; p.tone = 'bad'; p.entry = { ...entry, ...loss };
       p.quote = 'They took what they could carry and broke what they could not. They did not take the truth, Governor. That is still out there.';
     }
+  } else if (res.battle === 'ambush') {
+    r.strikes.push(entry);
+    if (won) {
+      r.stage = 'crossroads'; r.fleet = kept; r.onward = false;
+      r.survivors = (res.survivors || []).slice(0, RECKONING.survivorsCap).map((u) => ({ type: u.type, level: u.level || 0, ...(u.name ? { name: u.name } : {}) }));
+      const n = kept.length, hp = n ? Math.round((100 * kept.reduce((t, f) => t + f.hp, 0)) / n) : 0, left = (res.survivors || []).length;
+      text = `The ambush is broken: ${killed} of the picket destroyed${left ? `, ${left} still out there` : ''}. ${plural(lost.length, 'machine')} lost${lost.length ? ` (${tally(lost)})` : ''}; ${n} fly on, at ${hp}% of their strength.`;
+      const p = addPending(state, 'reckoning', 'The General decides', text, [{ key: 'regroup', label: 'Go home and regroup' }, { key: 'proceed', label: 'Press on to the stronghold' }]);
+      p.speaker = 'general'; p.step = 'crossroads'; p.tone = 'warn'; p.battle = 'stronghold';
+      p.quote = 'We can go home and mend, and let him come to us. Or we go now, while he still thinks his picket stopped us.';
+      p.summary = { fleet: n, hp, lost: lost.length, lostList: tally(lost), killed, survivors: left, reinforce: r.reinforce || 0 };
+      p.options = [
+        ['Go home and regroup', `The fleet flies home and mends at Eden as usual, and new machines can join. But the picket${left ? `'s ${left} survivors` : ''} and fresh reinforcements follow: in about ${RECKONING.counterDelay} days they strike Eden (a defence on the siege map). Hold, and the next strike goes straight to the rock, which by then will be stronger.`],
+        ['Press on to the stronghold', `Straight into the battle for the rock with the ${n} machine${n === 1 ? '' : 's'} left, at the HP they have now: no repairs, no new machines. The picket is scattered, and the rock has had no time to prepare.`],
+      ];
+    } else {
+      r.stage = 'strike'; r.nextStrike = state.day + RECKONING.strikeRetry; r.fleet = null;
+      text = `The strike force never reached the rock: the ambush ${res.reason === 'general' ? 'brought down the General\'s machine' : 'broke it'}. ${killed} of the picket destroyed, ${plural(lost.length, 'guardian')} lost. The fleet can try again in ${RECKONING.strikeRetry} days.`;
+      const p = addPending(state, 'reckoning', 'Back from the ambush', text, [{ key: 'ok', label: 'Again, when we are ready' }]);
+      p.speaker = 'sato'; p.step = 'strikelost'; p.tone = 'bad'; p.entry = entry;
+      p.quote = 'Now we know where they wait. Next time we fly in ready for it.';
+    }
   } else {
     r.strikes.push(entry);
+    const onward = r.onward;
+    r.onward = false; r.fleet = null; r.survivors = []; r.ambushDone = true;
     if (won) {
       r.stage = 'done';
       r.justice = {
-        day: state.day, pop: Math.floor(state.pop || 0), broadcast: r.broadcast, sieges: r.sieges.length, strikes: r.strikes.length,
+        day: state.day, pop: Math.floor(state.pop || 0), broadcast: r.broadcast, sieges: r.sieges.length, strikes: r.strikes.filter((x) => x.phase !== 'ambush').length,
         destroyed: [...r.sieges, ...r.strikes].reduce((t, s) => t + (s.killed || 0), 0), lost: [...r.sieges, ...r.strikes].reduce((t, s) => t + (s.lost || 0), 0),
         difficulty: state.difficulty === 'easy' ? 'easy' : 'normal',
       };
@@ -265,8 +355,9 @@ export function resolveReckoningBattle(state, res) {
       const p = addPending(state, 'justice', 'Justice for Eden', JUSTICE_TEXT, [{ key: 'keep', label: 'Keep building Eden' }]);
       p.speaker = 'general';
     } else {
-      r.nextStrike = state.day + RECKONING.strikeRetry;
-      text = `The strike on Hesk's stronghold failed: ${killed} of his machines destroyed, ${lost.length} guardian${lost.length === 1 ? '' : 's'} lost. The fleet can try again in ${RECKONING.strikeRetry} days.`;
+      r.stage = 'strike'; r.nextStrike = state.day + RECKONING.strikeRetry;
+      r.reinforce = Math.min(RECKONING.reinforceMax, (r.reinforce || 0) + 1);
+      text = `The strike on Hesk's stronghold failed${onward ? ': what was left of the strike force limps home' : ''}. ${killed} of his machines destroyed, ${lost.length} guardian${lost.length === 1 ? '' : 's'} lost. The rock will be stronger next time. The fleet can go straight back in ${RECKONING.strikeRetry} days.`;
       const p = addPending(state, 'reckoning', 'Back from the rock', text, [{ key: 'ok', label: 'Again, when we are ready' }]);
       p.speaker = 'sato'; p.step = 'strikelost'; p.tone = 'bad'; p.entry = entry;
       p.quote = 'We know the rock now: every gun, every ridge, every place they hid. Next time they are the ones who get surprised.';
@@ -274,6 +365,24 @@ export function resolveReckoningBattle(state, res) {
   }
   log(state, text);
   return ok(text, { entry, salvage });
+}
+
+// The General's choice after the ambush: home (the counterstrike follows) or on (phase 2 at once, as they are).
+function crossroads(state, r, p, key) {
+  if (r.stage !== 'crossroads') { state.pending = state.pending.filter((x) => x.id !== p.id); return no('That choice has passed.'); }
+  if (key !== 'regroup' && key !== 'proceed') return no('Go home, or press on.');
+  state.pending = state.pending.filter((x) => x.id !== p.id);
+  if (key === 'proceed') {
+    r.stage = 'onward'; r.onward = true;
+    log(state, 'The General presses on to Hesk\'s stronghold.');
+    return ok('The strike force presses on to the rock, as it is.');
+  }
+  r.stage = 'counter'; r.onward = false; r.fleet = null; r.siegeDay = state.day + RECKONING.counterDelay; r.siegeKind = 'counter';
+  log(state, 'The General brings the strike force home to regroup.');
+  const w = addPending(state, 'reckoning', 'They are following', `The strike force is coming home to mend. Behind it, the picket${r.survivors.length ? `'s ${r.survivors.length} survivors` : ''} and fresh Directorate machines: they will strike Eden in about ${RECKONING.counterDelay} days. Crew every machine and fill every emplacement.`, [{ key: 'ok', label: 'Ready the defences' }]);
+  w.speaker = 'sato'; w.step = 'warn'; w.tone = 'warn';
+  w.quote = 'Let them come to us. Our walls, our guns. Then we go to his.';
+  return ok(`Home to regroup: Hesk's picket will strike Eden in about ${RECKONING.counterDelay} days.`);
 }
 
 // A lost siege: stores carried off, buildings knocked out (the dock for certain if it fell).
