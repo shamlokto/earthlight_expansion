@@ -230,3 +230,22 @@ stand-in, so the game runs with no art at all.
 game. Made with Qwen-Image / Qwen-Image-Edit (pictures) and WAN 2.2 (film clips and walk cycles)
 on a rented GPU; scripts and every prompt are in `tools/art/farm/`. No ROM and nothing from any
 existing game is used.
+
+## 5. Upper deck, love and favours (owner, 2026-11-16, later the same day)
+
+* **Setting**: Eden's **Upper deck**, on the Lantern Ring, **after Major Hesk's defeat** (the colony
+  game's Reckoning). Willowfall, the Hollin field on its terrace, and Terrace Hill with the Descent.
+* **Three more villagers**: Commander Rell Kestrel (Guardians' wing), Dr. Haruto Mori (the
+  **clinic**: a check-up restores stamina for 150 cr) and Yui Hoshino (the **library**: the shelves
+  hold the how-to pages as books).
+* **Favours** (`story.QUESTS`, 66 of them): on some days the first talk with a villager ends in a
+  request ("four herbs for the clinic"). One favour at a time; bringing it gives +6 friendship and
+  pays one and a half times the goods' worth. The same favour is not asked again for 20 days.
+* **Love** (`story.ROMANCE`): six people — the General, Prof. Ruess, Commander Kestrel, Dr. Mori,
+  Oduya the canteen chef and Yui the librarian. As in the genre, it is built from friendship
+  (talk, gifts, favours) and **events**: the confession plays after a conversation once that
+  person's earlier heart events have been seen, **two favours** are done for them and they are at
+  **8 hearts**; one sweetheart at a time. At **10 hearts** the **Earthlight pendant** (3,000 cr on
+  Moraine's barge) asks the question; the wedding follows in the square. A partner is at the farm
+  at dawn and in the evening and waters up to 12 plants before Sato wakes.
+* State: `flags.sweet`, `flags.partner`, `flags.quest`, `flags.favours_<id>`, `flags.confess_<id>`.

@@ -91,3 +91,6 @@ It needs no ROM. Design and module contract: `docs/FARM.md`; genre research: `do
   Runpod GPU; `mesh/` for image-to-3D; `viewer.html` shows models). The pod is deleted after each run.
 * Instead of a mine: **the Descent**, a lift to the ruins of the Old World; Sato searches rubble in her
   custom Pallas with a Hydra autoturret; finds go to the Memory Room. Farming and fishing are the heart.
+* Later the same day: the setting moved to **Eden's Upper deck after Hesk**; three more villagers,
+  a clinic and a library; **favours** (requests) and **six love stories** with confession, the
+  Earthlight pendant, a wedding and a partner on the farm (`docs/FARM.md` §5).
