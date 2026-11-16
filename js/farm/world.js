@@ -20,11 +20,11 @@ const PROPS = {
   flowers: { model: 'flowers', sprite: () => 'sprites/flowers', h: 0.45, cross: true, soft: true },
   reeds: { model: 'reeds', sprite: () => 'sprites/reeds', h: 1.2, cross: true, soft: true },
   rockdecor: { model: 'boulder', sprite: () => 'sprites/boulder', h: 0.9, face: true },
-  weed: { model: 'weed', sprite: () => 'sprites/weed', h: 0.5, cross: true, soft: true },
-  rock: { model: 'rock', sprite: () => 'sprites/rock', h: 0.42, face: true },
+  weed: { model: 'weed', sprite: () => 'sprites/weed', h: 0.5, cross: true, soft: true, maxW: 0.7 },
+  rock: { model: 'rock', sprite: () => 'sprites/rock', h: 0.42, face: true, maxW: 0.55 },
   branch: { model: 'branch', sprite: () => 'sprites/branch', h: 0.3, face: true, fit: 'wide', soft: true },
-  stump: { model: 'stump', sprite: () => 'sprites/stump', h: 0.6, face: true },
-  boulder: { model: 'boulder', sprite: () => 'sprites/boulder', h: 0.95, face: true },
+  stump: { model: 'stump', sprite: () => 'sprites/stump', h: 0.6, face: true, maxW: 0.85 },
+  boulder: { model: 'boulder', sprite: () => 'sprites/boulder', h: 0.95, face: true, maxW: 0.98 },
   bin: { model: 'bin', sprite: () => 'sprites/bin', h: 0.95, face: true },
   well: { model: 'well', sprite: () => 'sprites/well', h: 1.6, face: true },
   signpost: { model: 'signpost', sprite: () => 'sprites/signpost', h: 1.3, face: true },
@@ -48,7 +48,7 @@ const PROPS = {
   workbench: { model: 'workbench', h: 1.1, fit: 'foot' },
   plantpot: { model: 'plantpot', h: 1.0 },
   ruinwall: { model: 'ruin_wall', h: 1.9, fit: 'foot' },
-  rubble: { model: 'rubble', sprite: () => 'sprites/rubble', h: 0.75, face: true },
+  rubble: { model: 'rubble', sprite: () => 'sprites/rubble', h: 0.75, face: true, maxW: 0.95 },
   rubble_done: { model: 'rubble_done', sprite: () => 'sprites/rubble_done', h: 0.22, face: true, soft: true },
   stairs: { model: 'stairs', sprite: () => 'sprites/stairs', h: 0.7, face: true, fit: 'foot' },
   hydra: { model: 'hydra', sprite: () => 'sprites/hydra', h: 1.0, face: true },
@@ -245,7 +245,7 @@ export class World {
         if (def.fit === 'stretch') m.scale.set(fw * 0.98 / s[0], h / s[1], Math.min(h / s[1], fd * 0.9 / s[2]));
         else if (def.fit === 'foot') m.scale.setScalar(Math.min(h / s[1], fw * 0.96 / s[0], fd * 0.96 / s[2]));
         else if (def.fit === 'wide') m.scale.setScalar(Math.max(fw, 0.8) * 0.95 / Math.max(s[0], s[2]));
-        else m.scale.setScalar(h / (s[1] || 1));
+        else m.scale.setScalar(Math.min(h / (s[1] || 1), (def.maxW || 99) * (o.scale || 1) / Math.max(s[0], s[2])));
         if (def.hover) m.position.y = def.hover * 0.5;
         if (def.soft) m.traverse((q) => { if (q.isMesh) q.castShadow = false; });
         holder.add(m);
@@ -306,7 +306,7 @@ export class World {
         const m = new THREE.Mesh(tiles(cells, -0.1), wm); m.receiveShadow = true; R.add(m); continue;
       }
       const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : GROUND_TEX[c] || 'soil_dry';
-      const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : 0, false, c === 'c' ? 0.5 : c === 'k' || c === 'b' ? 0.5 : 0.25), std({ map: art.tex(slot, { repeat: 1 }), color: c === 'f' ? 0xb48a66 : c === 'c' ? 0xd8d2c8 : 0xffffff })); m.receiveShadow = true; R.add(m);
+      const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : 0, false, c === 'c' ? 0.34 : c === 'k' || c === 'b' ? 0.5 : 0.25), std({ map: art.tex(slot, { repeat: 1 }), color: c === 'f' ? 0xb48a66 : c === 'c' ? 0xd8d2c8 : 0xffffff })); m.receiveShadow = true; R.add(m);
     }
     if (!map.indoor) {                                   // land beyond the map's edge
       const slot = map.ruins ? 'ash_ground' : 'grass_' + SEASON_KEY[this.season];

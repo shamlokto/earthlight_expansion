@@ -185,6 +185,8 @@ def run(spec):
     except Exception as e:
         import traceback; traceback.print_exc()
         print('FAIL', name, e, flush=True)
+    finally:
+        import gc; gc.collect(); torch.cuda.empty_cache()     # give cached VRAM back: the GPU is shared with ComfyUI
 
 
 if sys.argv[1:] == ['--watch']:
