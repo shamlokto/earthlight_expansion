@@ -21,5 +21,8 @@
  "scenes/heart10": 1001,
  "icons/potato": 2000,
  "scenes/intro1": 4001,
- "scenes/intro2": 4001
+ "scenes/intro2": 4001,
+ "icons/carrot": 2000,
+ "icons/sweetpotato": 2000,
+ "icons/egg": 2000
 }

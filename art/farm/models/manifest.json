@@ -322,5 +322,25 @@
    0.6066
   ],
   "note": "fallen branch (debris), lies along X"
+ },
+ "sprout": {
+  "file": "sprout.glb",
+  "tris": 3000,
+  "size": [
+   1.0,
+   1.0,
+   0.9921
+  ],
+  "note": "seedling in a soil mound (crop stage 1)"
+ },
+ "young_plant": {
+  "file": "young_plant.glb",
+  "tris": 5000,
+  "size": [
+   0.9102,
+   1.0,
+   0.8975
+  ],
+  "note": "generic half-grown leafy crop in a soil mound (crop stage 2)"
  }
 }

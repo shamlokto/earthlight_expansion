@@ -324,7 +324,7 @@ ICONS = {
     "tomato": "one ripe red tomato with its green stalk", "corn": "one golden corn cob with the green husk peeled half back", "onion": "one golden-brown onion", "pumpkin": "one round orange pumpkin",
     "carrot": "one orange carrot with its green leafy top", "eggplant": "one glossy dark purple eggplant", "sweetpotato": "one reddish-purple sweet potato", "spinach": "one bunch of fresh dark green spinach leaves tied with string",
     "moonflower": "one cut pale luminous blue-white star-shaped flower with a silvery stem, softly glowing",
-    "egg": "one white hen's egg", "milk_s": "one small glass bottle of fresh milk with a paper cap, plain, no label", "milk_m": "one medium tall glass bottle of fresh milk with a cork stopper, plain, no label",
+    "egg": "one single plain white egg, a smooth oval eggshell lying on its side", "milk_s": "one small glass bottle of fresh milk with a paper cap, plain, no label", "milk_m": "one medium tall glass bottle of fresh milk with a cork stopper, plain, no label",
     "milk_l": "one large wide glass jug bottle of fresh milk with a wire swing-top, plain, no label",
     "fish_s": "one small silver minnow fish, side view facing left", "fish_m": "one speckled brown trout fish, side view facing left", "fish_l": "one large olive-bronze carp fish, side view facing left",
     "fish_spring": "one slender river fish with pale green back and pink flanks, side view facing left", "fish_summer": "one deep-bodied river fish with bright blue and yellow scales, side view facing left",

@@ -1,13 +1,73 @@
 {
  "version": 1,
  "files": {
+  "icons/corn": {
+   "file": "icons/corn.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/cucumber": {
    "file": "icons/cucumber.webp",
    "w": 256,
    "h": 256
   },
+  "icons/eggplant": {
+   "file": "icons/eggplant.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_l": {
+   "file": "icons/fish_l.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_m": {
+   "file": "icons/fish_m.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_s": {
+   "file": "icons/fish_s.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/milk_l": {
+   "file": "icons/milk_l.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/milk_s": {
+   "file": "icons/milk_s.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/moonflower": {
+   "file": "icons/moonflower.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/onion": {
+   "file": "icons/onion.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/pumpkin": {
+   "file": "icons/pumpkin.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/spinach": {
+   "file": "icons/spinach.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/strawberry": {
    "file": "icons/strawberry.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/tomato": {
+   "file": "icons/tomato.webp",
    "w": 256,
    "h": 256
   },

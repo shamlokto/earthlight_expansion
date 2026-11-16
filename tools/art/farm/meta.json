@@ -1,7 +1,22 @@
 {
+"icons/carrot": {},
+"icons/corn": {},
 "icons/cucumber": {},
+"icons/egg": {},
+"icons/eggplant": {},
+"icons/fish_l": {},
+"icons/fish_m": {},
+"icons/fish_s": {},
+"icons/milk_l": {},
+"icons/milk_s": {},
+"icons/moonflower": {},
+"icons/onion": {},
 "icons/potato": {},
+"icons/pumpkin": {},
+"icons/spinach": {},
 "icons/strawberry": {},
+"icons/sweetpotato": {},
+"icons/tomato": {},
 "icons/turnip": {},
 "people/corran_front": {
 "anchor": [
