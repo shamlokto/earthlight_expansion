@@ -1362,3 +1362,4 @@ button.cl-jslot:hover { border-color: var(--gold); }
 .cl-hopehint { grid-column: 1 / -1; }
 .cl-decks [data-hope-ark] { border-color: rgba(200, 180, 106, .5); }
 @media (max-width: 760px) { .cl-hopewin { right: 16px; left: 16px; width: auto; top: 60px; } }
+.cl-decks [data-deck].locked { opacity: .55; filter: grayscale(.6); }
