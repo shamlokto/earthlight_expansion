@@ -379,7 +379,7 @@
  "rubble_done": {
   "tris": 4000,
   "kind": "obj",
-  "x": "very low flat pile of small broken grey concrete pieces and gravel, debris only",
+  "x": "very low flat layer of grey gravel and small broken grey concrete slabs, building material only",
   "opts": "t512"
  },
  "stairs": {
@@ -451,7 +451,7 @@
  "display_case": {
   "tris": 6000,
   "kind": "obj",
-  "x": "museum display case: a clear glass box on a sturdy wooden plinth, with one small golden medal on a cushion inside"
+  "x": "museum display case: a clear glass box on a sturdy wooden plinth, with one small blue crystal on a red cushion inside"
  },
  "workbench": {
   "tris": 8000,

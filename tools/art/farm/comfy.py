@@ -49,6 +49,8 @@ class Comfy:
 
     def upload(self, path, name=None):
         name = name or os.path.basename(path)
+        if os.environ.get("COMFY_NO_UPLOAD"):   # /upload/image broken on the server: the file was placed in input/ by hand
+            return name
         data = open(path, "rb").read()      # bytes, so a retry sends the whole file again
         r = self._req("POST", "/upload/image", files={"image": (name, data, "image/png")}, data={"overwrite": "true"})
         return r.json()["name"]

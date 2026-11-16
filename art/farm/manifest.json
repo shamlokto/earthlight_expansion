@@ -199,6 +199,15 @@
     766
    ]
   },
+  "people/kestrel_front": {
+   "file": "people/kestrel_front.webp",
+   "w": 260,
+   "h": 768,
+   "anchor": [
+    118,
+    765
+   ]
+  },
   "people/maris_front": {
    "file": "people/maris_front.webp",
    "w": 272,
@@ -223,6 +232,15 @@
    "h": 768,
    "anchor": [
     124,
+    765
+   ]
+  },
+  "people/mori_front": {
+   "file": "people/mori_front.webp",
+   "w": 245,
+   "h": 768,
+   "anchor": [
+    108,
     765
    ]
   },
@@ -284,6 +302,15 @@
    "anchor": [
     130,
     765
+   ]
+  },
+  "people/yui_front": {
+   "file": "people/yui_front.webp",
+   "w": 266,
+   "h": 768,
+   "anchor": [
+    124,
+    766
    ]
   },
   "scenes/descent": {
@@ -371,8 +398,28 @@
    "w": 1344,
    "h": 768
   },
+  "scenes/shop_clinic": {
+   "file": "scenes/shop_clinic.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/shop_library": {
+   "file": "scenes/shop_library.webp",
+   "w": 1344,
+   "h": 768
+  },
   "scenes/title": {
    "file": "scenes/title.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/upperdeck": {
+   "file": "scenes/upperdeck.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/wedding": {
+   "file": "scenes/wedding.webp",
    "w": 1344,
    "h": 768
   },
@@ -478,6 +525,14 @@
    "w": 1024,
    "h": 1024,
    "tile": "period"
+  },
+  "video/title": {
+   "file": "video/title.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
   }
  }
 }

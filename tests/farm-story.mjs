@@ -2,7 +2,7 @@
 // festivals, the opening, the radio, signs, the guide, the Memory Room, fishing and the Old World.
 //   node tests/farm-story.mjs
 import * as story from '../js/farm/story.js';
-const { NPCS, whereIs, talkLines, giftLine, giftTier, EVENTS, FESTIVALS, INTRO, DAY1, RADIO, SIGNS, HELP, MUSEUM, FISHING, RUINS } = story;
+const { NPCS, whereIs, talkLines, giftLine, giftTier, EVENTS, FESTIVALS, INTRO, DAY1, RADIO, SIGNS, HELP, MUSEUM, FISHING, RUINS, ROMANCE, QUESTS } = story;
 
 let failures = 0, checks = 0;
 const check = (cond, what) => { checks++; if (!cond) { failures++; if (failures <= 60) console.log('FAIL', what); } };
@@ -24,15 +24,22 @@ const CAST = {
   maris: { portrait: 'art/colony/portrait/w_maris.webp' },
   vashti: { portrait: 'art/colony/portrait/w_vashti.webp' },
   moraine: { portrait: 'svg:moraine', shop: 'barge' },
+  kestrel: { portrait: 'art/colony/portrait/w_kestrel.webp' },
+  mori: { portrait: 'art/farm/people/mori_front.webp', shop: 'clinic' },
+  yui: { portrait: 'art/farm/people/yui_front.webp' },
 };
+const NEWCOMERS = ['kestrel', 'mori', 'yui'];
+const LOVERS = ['general', 'ruess', 'kestrel', 'mori', 'oduya', 'yui'];
 const VILLAGERS = Object.keys(CAST).filter((id) => id !== 'sato');
 const MAIN = VILLAGERS.filter((id) => id !== 'moraine');
+const needTalk = (id) => (id === 'moraine' ? 12 : NEWCOMERS.includes(id) ? 22 : 25);
 const SPOTS = new Set(('farm.porch farm.bin farm.gate farm.pond farm.field village.square village.memorial village.bridge village.dock ' +
   'village.bench village.storefront village.cafefront village.hallfront village.workshopfront village.ranchyard village.river ' +
   'hill.wreck hill.lake hill.overlook store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
-  'cafe.counter cafe.table1 cafe.table2 cafe.table3 hall.desk hall.floor').split(' '));
+  'cafe.counter cafe.table1 cafe.table2 cafe.table3 hall.desk hall.floor ' +
+  'clinic.counter clinic.floor library.counter library.floor village.clinicfront village.libraryfront').split(' '));
 const STYLES = new Set(['bob', 'short', 'long', 'bald', 'bun', 'bandana', 'cap']);
-const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', 'cafe', 'hall']);
+const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', 'cafe', 'hall', 'clinic', 'library']);
 const TIERS = new Set(['loved', 'liked', 'neutral', 'disliked']);
 const WEATHERS = ['sun', 'rain', 'storm', 'snow'];
 const RELICS = ['photo', 'teacup', 'book', 'watch', 'toy', 'medal', 'seedtin', 'musicbox', 'datachip', 'ring'];
@@ -40,7 +47,7 @@ const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_
 const CROPS = ['turnip', 'potato', 'cucumber', 'strawberry', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach', 'moonflower'];
 const GIFTABLE = [...CROPS, 'egg', 'milk_s', 'milk_m', 'milk_l', ...FISH, 'herb', 'berry', 'mushroom', 'frostcap',
   'scrap', 'alloy', 'crystal', ...RELICS, 'bread', 'soup', 'pie', 'tea', 'tonic'];
-const NEUTRAL = ['weed', 'weeds', 'lumber', 'fodder', 'feed', 'seed_turnip', 'seed_grass', 'seed_moonflower', 'hoe', 'no_such_thing', '', 'toString', '__proto__', 'constructor'];
+const NEUTRAL = ['pendant', 'weed', 'weeds', 'lumber', 'fodder', 'feed', 'seed_turnip', 'seed_grass', 'seed_moonflower', 'hoe', 'no_such_thing', '', 'toString', '__proto__', 'constructor'];
 const FEST = {
   planting: { name: 'Planting Day', season: 0, day: 18, from: 600, to: 900, spot: 'village.square' },
   lantern: { name: 'Lantern Night', season: 1, day: 24, from: 1080, to: 1320, spot: 'village.bridge' },
@@ -62,7 +69,7 @@ const weekdayOf = (season, day, year = 1) => ((year - 1) * 120 + season * 30 + d
 
 // ---------------------------------------------------------------- exports
 
-for (const name of ['NPCS', 'whereIs', 'talkLines', 'giftLine', 'giftTier', 'EVENTS', 'FESTIVALS', 'INTRO', 'DAY1', 'RADIO', 'SIGNS', 'HELP', 'MUSEUM', 'FISHING', 'RUINS']) {
+for (const name of ['NPCS', 'whereIs', 'talkLines', 'giftLine', 'giftTier', 'EVENTS', 'FESTIVALS', 'INTRO', 'DAY1', 'RADIO', 'SIGNS', 'HELP', 'MUSEUM', 'FISHING', 'RUINS', 'ROMANCE', 'QUESTS']) {
   check(story[name] !== undefined, `export ${name} exists`);
 }
 for (const f of ['whereIs', 'talkLines', 'giftLine', 'giftTier']) check(typeof story[f] === 'function', `${f} is a function`);
@@ -161,7 +168,7 @@ for (const id of MAIN) check(seenBy[id].size >= 4, `${id} gets about (${seenBy[i
 
 // Shops: open on the counter at 11:00 and 15:00 on at least five days, shut on the stated day, never in a storm.
 const at = (id, weekday, minute, more = {}) => where(id, { season: 0, day: dayFor(0, weekday), weekday, minute, weather: 'sun', festival: null, year: 1, ...more });
-const CLOSED = { seln: 6, corran: 3, ruess: 2, oduya: -1 };
+const CLOSED = { seln: 6, corran: 3, ruess: 2, oduya: -1, mori: 6 };
 for (const id of Object.keys(CLOSED)) {
   const counter = NPCS[id].shop + '.counter';
   let open = 0;
@@ -197,8 +204,14 @@ for (let wd = 0; wd < 7; wd++) {
     if (wd === 2) check((g2 !== null) === (m >= 1080 && m < 1260) && (!g2 || g2.startsWith('cafe.')), `the General's Wednesday evening from year 2 (${m}: ${g2})`);
     else check(g2 === g, 'year 2 changes only his Wednesday');
   }
+  for (const m of [600, 720, 900, 1070]) check((at('yui', wd, m) === 'library.counter') === (wd !== 0), `Yui keeps the library 10:00-18:00, not Mondays (wd ${wd}, ${m})`);
+  check(at('yui', wd, 590) !== 'library.counter' && at('yui', wd, 1080) !== 'library.counter', 'the library is shut before ten and at six');
+  for (let m = 360; m <= 1440; m += 30) check(at('yui', wd, m, { weather: 'storm' }) === null || at('yui', wd, m, { weather: 'storm' }).startsWith('cafe.'), 'the library is shut in a storm');
+  for (const m of [570, 700]) check(['village.square', 'village.bridge'].includes(at('kestrel', wd, m)), `Kestrel is about the square and bridge (wd ${wd}, ${m})`);
   if (wd < 6) for (const m of [500, 700, 900]) check(at('vashti', wd, m) === 'hill.wreck', `Vashti keeps the lift (wd ${wd}, ${m})`);
 }
+check([0, 2, 4].every((wd) => at('kestrel', wd, 1140) === 'hill.overlook'), 'Kestrel is at the overlook some evenings');
+check(at('kestrel', 1, 800) === 'cafe.table3', 'Kestrel lunches at the canteen');
 check(at('vashti', 6, 780) === 'cafe.table3', 'Vashti comes down to the café on Sundays');
 check([1, 3, 5].every((wd) => at('vashti', wd, 1140) === 'hill.lake'), 'Vashti is at the lake some evenings');
 const satSpots = new Set(); for (let m = 600; m < 1080; m += 10) satSpots.add(at('general', 5, m));
@@ -261,7 +274,7 @@ for (const id of VILLAGERS) {
   check(JSON.stringify(talkLines(id, { ...base, met: false })) !== JSON.stringify(talkLines(id, base)), `${id}: the first meeting differs from small talk`);
   okConv(id, talkLines(id, {}), {});
   okConv(id, talkLines(id, undefined), undefined);
-  const need = id === 'moraine' ? 12 : 25;
+  const need = needTalk(id);
   check(convs[id].size >= need, `${id}: at least ${need} distinct conversations reachable (${convs[id].size})`);
   if (typeof story.conversationCount === 'function') check(convs[id].size === story.conversationCount(id), `${id}: every written conversation is reachable (${convs[id].size} of ${story.conversationCount(id)})`);
   for (const c of convs[id]) count(c.replace(/ \/ /g, ' '));
@@ -327,9 +340,10 @@ for (const e of EVENTS) {
   check(reachable, `${e.id}: ${e.npc} is on map '${e.map}' during the event's window`);
 }
 const byNpc = (id) => EVENTS.filter((e) => e.npc === id).map((e) => e.hearts).sort((a, b) => a - b).join(',');
+for (const id of LOVERS) check(EVENTS.some((e) => e.npc === id && e.hearts < 8), `${id}: a heart event before the confession`);
 check(byNpc('general') === '2,4,6,8,10', `the General's five events (${byNpc('general')})`);
 for (const id of VILLAGERS) if (id !== 'general') check(byNpc(id) === '3,7', `${id}: events at 3 and 7 hearts (${byNpc(id)})`);
-check(EVENTS.length === 5 + 2 * 8, `21 events (${EVENTS.length})`);
+check(EVENTS.length === 5 + 2 * 11, `27 events (${EVENTS.length})`);
 
 check(FESTIVALS.length === 4, 'four festivals');
 for (const f of FESTIVALS) {
@@ -374,7 +388,8 @@ for (const s of SIGN_SPOTS) { check(isText(SIGNS[s]), `SIGNS['${s}'] (${SIGNS[s]
 for (const s of Object.keys(SIGNS)) check(SPOTS.has(s), `sign spot ${s} is a known spot`);
 check(/descent/i.test(SIGNS['hill.wreck']) && !/wreck|mine\b/i.test(SIGNS['hill.wreck']), 'the hill sign is the lift pad of the Descent');
 
-check(Array.isArray(HELP) && HELP.length >= 7 && HELP.length <= 9, `HELP has 7-9 pages (${HELP.length})`);
+check(Array.isArray(HELP) && HELP.length >= 7 && HELP.length <= 11, `HELP has 7-11 pages (${HELP.length})`);
+check(HELP.some((p) => p.title === 'Love'), 'HELP has a Love page');
 for (const p of HELP) {
   check(isText(p.title, 50), `HELP title ${p.title}`);
   check(typeof p.body === 'string' && p.body.length > 150 && p.body.length <= 700, `HELP '${p.title}': body length ${p.body?.length}`);
@@ -384,7 +399,7 @@ for (const p of HELP) {
 const help = HELP.map((p) => p.title + '\n' + p.body).join('\n').toLowerCase();
 for (const w of ['w a s d', 'arrow', 'shift', 'space', 'left click', 'mouse wheel', 'tab', 'esc', 'touch', 'stamina', 'shipping bin', 'sickle', 'hoe',
   'starsteel', 'greenhouse', 'chicken', 'cow', 'birthday', 'descent', 'old world', 'hydra', 'memory room', 'float', 'hill lake', 'forage', 'planting day',
-  'lantern night', 'harvest fair', "year's end", 'moonflower']) check(help.includes(w), `HELP mentions '${w}'`);
+  'lantern night', 'harvest fair', "year's end", 'moonflower', 'favour', 'pendant', 'sweetheart', 'wedding', '8 hearts', '10 hearts', 'clinic', 'library', 'lantern ring']) check(help.includes(w), `HELP mentions '${w}'`);
 check(new Set(HELP.map((p) => p.title)).size === HELP.length, 'HELP titles are unique');
 
 // ---------------------------------------------------------------- the Memory Room, fishing, the Old World
@@ -411,6 +426,88 @@ for (const k of ['arrive', 'deeper', 'monster']) {
 check(Object.keys(RUINS.relic).sort().join() === [...RELICS].sort().join(), 'RUINS.relic covers exactly the ten relics');
 for (const r of RELICS) { check(isText(RUINS.relic[r], 140) && !/[.!?]\s+[A-Z]/.test(RUINS.relic[r]), `RUINS.relic.${r}: one sentence`); count(RUINS.relic[r]); }
 
+// ---------------------------------------------------------------- love stories
+
+check(JSON.stringify(ROMANCE.candidates) === JSON.stringify(LOVERS), 'ROMANCE.candidates are the six');
+check(isText(ROMANCE.pendant, 220) && /pendant/i.test(ROMANCE.pendant) && /hull-glass/i.test(ROMANCE.pendant), 'ROMANCE.pendant'); count(ROMANCE.pendant);
+check(Object.keys(ROMANCE.people).sort().join() === [...LOVERS].sort().join(), 'ROMANCE.people covers exactly the six');
+for (const id of LOVERS) {
+  const r = ROMANCE.people[id];
+  if (!r) continue;
+  checkLines(r.confess, `${id}.confess`, 8, 12);
+  checkLines(r.propose, `${id}.propose`, 8, 12);
+  checkLines(r.wedding, `${id}.wedding`, 6, 10);
+  for (const k of ['confess', 'propose', 'wedding']) check(r[k].some((l) => l.who === id) && r[k].some((l) => l.who === 'sato'), `${id}.${k}: both speak`);
+  check(r.confess[r.confess.length - 1].who === 'narrator', `${id}.confess ends on the two of them walking out`);
+  check(r.wedding.some((l) => l.who === 'marrow') && new Set(r.wedding.map((l) => l.who).filter((w) => !['sato', 'narrator', id].includes(w))).size >= 2, `${id}.wedding: several villagers speak`);
+  check(/pendant/i.test(JSON.stringify(r.propose)), `${id}.propose: the pendant`);
+  for (const [k, min] of [['partnerTalk', 10], ['morning', 4], ['sweetTalk', 4]]) {
+    check(Array.isArray(r[k]) && r[k].length >= min && new Set(r[k]).size === r[k].length, `${id}.${k}: at least ${min} different lines (${r[k]?.length})`);
+    for (const l of r[k] || []) { check(isText(l, 200), `${id}.${k}: ${l}`); count(l); }
+  }
+  check(isText(r.decline, 200), `${id}.decline`); count(r.decline);
+  if (id === 'general') check(!/\b(his name|called him)\b/i.test(JSON.stringify(r)), 'the General stays unnamed');
+
+  // The partner is on the porch at dawn and in the evening, and keeps the usual day otherwise.
+  for (let wd = 0; wd < 7; wd++) for (const weather of WEATHERS) for (let m = 360; m <= 1440; m += 10) {
+    const ctx = { season: 1, day: dayFor(1, wd), weekday: wd, minute: m, weather, festival: null, year: 1 };
+    const home = (m >= 360 && m < 480) || (m >= 1200 && m < 1320);
+    const mine = where(id, { ...ctx, partner: id }), usual = where(id, ctx), other = where(id, { ...ctx, partner: 'nobody' });
+    if (home) check(mine === 'farm.porch', `${id} as partner is on the porch at ${m}`);
+    else check(mine === usual, `${id} as partner keeps the usual day at ${m}`);
+    check(other === usual, `${id}: somebody else's partner changes nothing`);
+  }
+  for (const f of FESTIVALS) for (let m = f.from; m < f.to; m += 10) {
+    check(where(id, { season: f.season, day: f.day, weekday: weekdayOf(f.season, f.day), minute: m, weather: 'sun', festival: f.id, year: 1, partner: id }) !== 'farm.porch', `${id} as partner stays at the ${f.id} festival`);
+  }
+  // Partner talk and sweetheart talk.
+  const heardP = new Set(), heardM = new Set(), heardS = new Set();
+  for (let n = 0; n < 3000; n++) {
+    const base = { season: n % 4, day: 1 + (n * 7) % 30, weekday: n % 7, weather: WEATHERS[(n >> 2) % 4], festival: null, hearts: 10, met: true, year: 2, isBirthday: false, flags: {} };
+    const day = talkLines(id, { ...base, minute: 480 + (n * 20) % 900, partner: id });
+    const dawn = talkLines(id, { ...base, minute: 360 + (n * 20) % 120, partner: id });
+    const sweet = talkLines(id, { ...base, hearts: 8 + n % 3, minute: 480 + (n * 20) % 900, sweetheart: id });
+    for (const c of [day, dawn, sweet]) check(Array.isArray(c) && c.length >= 1 && c.length <= 3 && c.every((l) => isText(l, 200)), `${id}: love talk ${JSON.stringify(c)}`);
+    check(r.partnerTalk.includes(day[0]), `${id}: partner talk by day`); heardP.add(day[0]);
+    check(r.morning.includes(dawn[0]), `${id}: morning lines before eight`); heardM.add(dawn[0]);
+    if (r.sweetTalk.includes(sweet[0])) heardS.add(sweet[0]);
+    check(!r.sweetTalk.includes(talkLines(id, { ...base, minute: 700 })[0]), `${id}: no tender talk for mere friends`);
+  }
+  check(heardP.size === r.partnerTalk.length && heardM.size === r.morning.length, `${id}: every partner line is heard (${heardP.size}, ${heardM.size})`);
+  check(heardS.size >= 4, `${id}: at least four tender sweetheart lines are heard (${heardS.size})`);
+}
+for (const id of VILLAGERS) check(giftTier(id, 'pendant') === 'neutral', `${id}: the pendant is neutral as a gift`);
+
+// ---------------------------------------------------------------- requests
+
+const SEASON_OF = { turnip: [0], potato: [0], cucumber: [0], strawberry: [0], tomato: [1], corn: [1], onion: [1], pumpkin: [1],
+  carrot: [2], eggplant: [2], sweetpotato: [2], spinach: [2], herb: [0, 1], berry: [1], mushroom: [2], frostcap: [3],
+  fish_spring: [0], fish_summer: [1], fish_autumn: [2], fish_winter: [3] };
+const ANYTIME = ['egg', 'milk_s', 'milk_m', 'milk_l', 'fish_s', 'fish_m', 'fish_l', 'scrap', 'alloy', 'crystal', ...RELICS, 'bread', 'soup', 'pie', 'tea'];
+const NUMBER_WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six'];
+check(Object.keys(QUESTS).sort().join() === [...VILLAGERS].sort().join(), 'QUESTS covers exactly the twelve villagers');
+const questIds = new Set();
+let questCount = 0;
+for (const id of VILLAGERS) {
+  const list = QUESTS[id] || [];
+  questCount += list.length;
+  check(list.length >= 5 && list.length <= 7, `${id}: 5-7 requests (${list.length})`);
+  check(list.filter((q) => q.season === undefined).length >= 2, `${id}: at least two requests for any season`);
+  check(list.filter((q) => q.season === undefined && !q.minHearts).length >= 1, `${id}: a request a new acquaintance can do in winter`);
+  for (const q of list) {
+    check(isText(q.id, 40) && !questIds.has(q.id), `request id ${q.id} is unique`); questIds.add(q.id);
+    check(Number.isInteger(q.n) && q.n >= 1 && q.n <= 6, `${q.id}: n`);
+    check(isText(q.ask) && isText(q.thanks), `${q.id}: ask and thanks`); count(q.ask); count(q.thanks);
+    check(q.minHearts === undefined || (Number.isInteger(q.minHearts) && q.minHearts >= 1 && q.minHearts <= 9), `${q.id}: minHearts`);
+    check(Object.keys(q).every((k) => ['id', 'item', 'n', 'ask', 'thanks', 'season', 'minHearts'].includes(k)), `${q.id}: fields`);
+    if (SEASON_OF[q.item]) check(SEASON_OF[q.item].includes(q.season), `${q.id}: ${q.item} is asked for in its season (${q.season})`);
+    else check(ANYTIME.includes(q.item) && (q.season === undefined || (Number.isInteger(q.season) && q.season >= 0 && q.season <= 3)), `${q.id}: item ${q.item}`);
+    const ask = q.ask.toLowerCase();
+    check(ask.includes(NUMBER_WORDS[q.n]) || ask.includes(String(q.n)) || (q.n === 1 && /\b(a|an)\b/.test(ask)) || (q.n === 6 && ask.includes('half a dozen')), `${q.id}: the ask says how many (${q.n})`);
+  }
+  if (LOVERS.includes(id)) check(list.filter((q) => q.minHearts >= 5).length >= 2 && list.filter((q) => !q.minHearts).length >= 2, `${id}: two personal requests, and two for anyone`);
+}
+
 // ---------------------------------------------------------------- the whole text
 
 // No line anywhere is longer than 220 characters (HELP bodies excepted: they are pages), no emoji, no markup.
@@ -419,7 +516,7 @@ const texts = [];
   if (typeof v === 'string') texts.push([path, v]);
   else if (Array.isArray(v)) v.forEach((x, i) => walk(x, `${path}[${i}]`));
   else if (v && typeof v === 'object') for (const k of Object.keys(v)) walk(v[k], `${path}.${k}`);
-})({ EVENTS, FESTIVALS, INTRO, DAY1, RADIO, SIGNS, MUSEUM, FISHING, RUINS, TALK: story.TALK }, '');
+})({ EVENTS, FESTIVALS, INTRO, DAY1, RADIO, SIGNS, MUSEUM, FISHING, RUINS, ROMANCE, QUESTS, TALK: story.TALK }, '');
 for (const [path, t] of texts) {
   check(t.length <= 220, `${path}: ${t.length} characters`);
   check(!/[\u{1F000}-\u{1FAFF}☀-➿]/u.test(t), `${path}: no emoji`);
@@ -427,10 +524,12 @@ for (const [path, t] of texts) {
 }
 const everything = JSON.stringify(story).toLowerCase() + JSON.stringify(Object.keys(CAST).flatMap((id) => [...TIERS].map((t) => giftLine(id, t, true)))).toLowerCase();
 check(!/\brom\b/.test(everything), 'nothing refers to a ROM');
+check(!/river chamber/.test(everything) && /upper deck/.test(everything) && /lantern ring/.test(everything) && /hesk/.test(everything), 'the setting is the Upper deck, after Hesk');
 check(!/\bmine shaft\b|\bthe mine\b|\bminer\b/.test(everything), 'there is no mine');
 for (const id of VILLAGERS) check(!JSON.stringify(story.TALK?.[id] ?? '').includes('"sato"'), `${id}: talk data has no speaker tags`);
 
 console.log(`conversations: ${VILLAGERS.map((id) => `${id} ${convs[id].size}`).join(', ')}`);
+console.log(`requests: ${questCount}, love stories: ${LOVERS.length}`);
 console.log(`events: ${EVENTS.length}, festivals: ${FESTIVALS.length}, intro lines: ${INTRO.length}, help pages: ${HELP.length}, words: about ${totalWords}`);
 console.log(failures ? `${failures} of ${checks} checks FAILED` : `farm-story: all ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

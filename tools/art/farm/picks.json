@@ -13,7 +13,7 @@
  "textures/grass_autumn": 2000,
  "scenes/title": 4000,
  "scenes/intro3": 1000,
- "scenes/intro4": 5000,
+ "scenes/intro4": 5001,
  "scenes/intro5": 1000,
  "scenes/festival_lantern": 4000,
  "scenes/morning": 1000,
@@ -25,5 +25,9 @@
  "icons/carrot": 2000,
  "icons/sweetpotato": 2000,
  "icons/egg": 2000,
- "icons/medal": 2000
+ "icons/medal": 2000,
+ "scenes/wedding": 6002,
+ "people/kestrel_front": 1000,
+ "people/mori_front": 1001,
+ "people/yui_front": 1000
 }

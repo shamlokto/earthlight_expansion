@@ -789,5 +789,45 @@
    0.529
   ],
   "note": ""
+ },
+ "rubble_done": {
+  "file": "rubble_done.glb",
+  "tris": 4000,
+  "size": [
+   0.9776,
+   0.3892,
+   1.0
+  ],
+  "note": "low flat rubble patch (searched heap), with one orange scrap sticking up"
+ },
+ "haybale": {
+  "file": "haybale.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.9808,
+   0.9632
+  ],
+  "note": "round hay bale, axis along Z"
+ },
+ "crate": {
+  "file": "crate.glb",
+  "tris": 3000,
+  "size": [
+   1.0,
+   0.7785,
+   0.994
+  ],
+  "note": "closed wooden storage crate"
+ },
+ "workbench": {
+  "file": "workbench.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.8815,
+   0.5793
+  ],
+  "note": "workbench with vice, hammer and toolbox; length along X"
  }
 }

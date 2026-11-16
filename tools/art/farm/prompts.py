@@ -139,8 +139,8 @@ SCENES = {
     "shop_barge": "Anime illustration of the deck of a small flat river trading barge moored at a village dock: a striped dark red cloth awning, low tables with rare seeds in little tins, glass bottles of tonic, bolts of cloth, brass lamps, "
                   "rich dark red cushions, calm river and willows behind. Late afternoon light, beautiful anime film still, nobody present, no readable text.",
     "wedding": "Anime illustration of a small evening wedding in a village square, under many strings of glowing paper lanterns between weathered wooden houses. In the centre, seen from behind, the bride: "
-               "a young woman with a short navy-black bob haircut, in a simple white dress with a crown of small flowers in her hair, standing hand in hand with her partner beside her, "
-               "who is only a soft dark out-of-focus silhouette whose features cannot be made out. Smiling villagers stand around in a loose circle, flower petals in the air, warm golden lantern light, deep blue dusk. "
+               "a young woman with a short navy-black bob haircut, in a simple white dress with a crown of small flowers in her hair, standing alone in the middle of the picture, her right arm reaching out to the side, "
+               "holding the hand of her partner who stands outside the picture: only the partner's hand and forearm in a plain cream sleeve enter the frame from the right edge. Smiling villagers stand around in a loose circle, flower petals in the air, warm golden lantern light, deep blue dusk. "
                + NIGHTSKY + "Tender, joyful, quiet. " + PHOTO,
     "upperdeck": "Wide anime illustration of a beautiful hillside district in the late afternoon: terraced green hills with sky gardens, flower beds and little coffee terraces with parasols and tables, white and timber houses with tin and tile roofs, "
                  "a small village below with a stone bridge lined with paper lanterns over a stream, winding stone steps, people strolling. " + COLONY + PHOTO,
@@ -301,6 +301,8 @@ VIDEOS = {  # name: (scene slot, prompt)
     "season_summer": ("season_summer", "A warm summer day: the leaves of the tree and the tall crops sway gently in a light breeze, heat shimmer, small clouds move slowly." + VSTYLE),
     "season_autumn": ("season_autumn", "An autumn afternoon: orange leaves fall slowly from the tree and drift across the field, the dry grass sways gently." + VSTYLE),
     "season_winter": ("season_winter", "A quiet winter day: snowflakes fall slowly and softly, smoke rises gently from the farmhouse chimney, everything else is still." + VSTYLE),
+    "wedding": ("wedding", "An evening village wedding seen from behind the bride: paper lanterns sway gently on their strings and glow, flower petals drift slowly down through the air, the villagers smile and clap softly, the bride's dress and hair stir slightly." + VSTYLE),
+    "upperdeck": ("upperdeck", "A sunny hillside district: parasols and flowers sway in a light breeze, tiny people stroll, the stream sparkles, small clouds drift slowly." + VSTYLE),
     "heart10": ("heart10", "Two people sit quietly side by side on the porch steps at dusk, seen from behind; one leans very slightly toward the other; the crops sway gently in the evening breeze, the lantern flame flickers, steam rises from the mugs." + VSTYLE),
 }
 WALKSTYLE = (" She stays exactly in the centre of the frame, the whole body from head to boots always visible, steady even rhythm, natural arm swing. "

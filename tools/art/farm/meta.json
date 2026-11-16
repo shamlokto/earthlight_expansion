@@ -48,6 +48,12 @@
 766
 ]
 },
+"people/kestrel_front": {
+"anchor": [
+118,
+765
+]
+},
 "people/maris_front": {
 "anchor": [
 122,
@@ -63,6 +69,12 @@
 "people/moraine_front": {
 "anchor": [
 124,
+765
+]
+},
+"people/mori_front": {
+"anchor": [
+108,
 765
 ]
 },
@@ -94,6 +106,12 @@
 "anchor": [
 130,
 765
+]
+},
+"people/yui_front": {
+"anchor": [
+124,
+766
 ]
 },
 "textures/cliff_rock": {
@@ -140,5 +158,10 @@
 },
 "textures/wood_floor": {
 "tile": "period"
+},
+"video/title": {
+"fps": 16,
+"frames": 81,
+"loop": false
 }
 }
