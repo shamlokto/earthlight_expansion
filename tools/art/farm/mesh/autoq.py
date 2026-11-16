@@ -20,7 +20,8 @@ while True:
         if time.time() - os.path.getmtime(os.path.join(SRC, f)) < 1.5: continue
         seen.add(f); name, seed = m.group(1), m.group(2); stem = f'{name}_s{seed}'
         shutil.copyfile(os.path.join(SRC, f), os.path.join(IN, stem + '.png'))
-        spec = f"{stem}:{P[name]['tris']}:::{stem}:{P[name].get('opts', '')}"
+        yaw = 'none' if P[name].get('kind') == 'char' else ''      # figurines are drawn straight from the front
+        spec = f"{stem}:{P[name]['tris']}::{yaw}:{stem}:{P[name].get('opts', '')}"
         open(os.path.join(Q, f'{order.index(name):03d}_{stem}.job'), 'w').write(spec)
         print('queued', spec, flush=True)
     time.sleep(2)

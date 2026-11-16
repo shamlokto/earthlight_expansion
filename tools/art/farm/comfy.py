@@ -77,10 +77,13 @@ class Comfy:
     def fetch_file(self, filename, subfolder, dest):
         self.fetch({"filename": filename, "subfolder": subfolder, "type": "output"}, dest)
 
-    def collect(self, jobs, poll=3.0, log=print):
-        """jobs: list of (prompt_id, dest_without_ext). Blocks until all are downloaded."""
+    def collect(self, jobs, poll=3.0, log=print, graphs=None, bump=0):
+        """jobs: list of (prompt_id, dest_without_ext). Blocks until all are downloaded.
+        bump > 0 (with graphs: prompt_id -> graph): on a shared LIFO front queue our jobs can be buried by
+        newer ones; if nothing of ours finished for `bump` seconds, our still-pending jobs are deleted
+        and queued again at the front."""
         left = dict(jobs)
-        t0 = time.time()
+        t0 = last = time.time()
         while left:
             for pid in list(left):
                 h = self.history(pid)
@@ -100,7 +103,21 @@ class Comfy:
                 for n, it in enumerate(outs):
                     ext = os.path.splitext(it["filename"])[1]
                     self.fetch(it, dest + ("" if n == 0 else "_%d" % n) + ext)
+                last = time.time()
                 log("%5.0fs done %s (%d left)" % (time.time() - t0, os.path.basename(dest), len(left)))
+            if left and bump and graphs and time.time() - last > bump:
+                q = self._req("GET", "/queue").json()
+                pend = {r[1] for r in q["queue_pending"]}
+                mine = [p for p in left if p in pend]
+                if mine and len(mine) == len(left):      # none of ours is running
+                    self._req("POST", "/queue", json={"delete": mine})
+                    for p in mine:
+                        g = graphs.pop(p)
+                        n = self.queue(g)
+                        graphs[n] = g
+                        left[n] = left.pop(p)
+                    log("bumped %d to the front" % len(mine))
+                last = time.time()
             if left:
                 time.sleep(poll)
 
@@ -179,7 +196,7 @@ def g_i2v(prompt, image, w=832, h=480, length=81, seed=0, prefix="farm/vid", neg
 
 
 # ---------------------------------------------------------------- runner
-def run_jobs(c, jobs, work=WORK, seeds=1, force=False, base_seed=None, log=print, batch=0, gap=0.0):
+def run_jobs(c, jobs, work=WORK, seeds=1, force=False, base_seed=None, log=print, batch=0, gap=0.0, bump=75):
     """jobs: dicts from prompts.jobs(): {group, slot, kind, prompt, w, h, refs?, length?, seed?}.
     refs are local file paths; they are uploaded under group-derived names.
     batch > 0: polite mode for a shared queue - queue `batch` jobs at the FRONT, wait for them,
@@ -216,12 +233,13 @@ def run_jobs(c, jobs, work=WORK, seeds=1, force=False, base_seed=None, log=print
         c.front = True
     for i in range(0, len(todo), step):
         t0 = time.time()
-        queued = []
+        queued, graphs = [], {}
         for j, seed, dest in reversed(todo[i:i + step]) if c.front else todo[i:i + step]:
             g = graph(j, seed)
             if g:
-                queued.append((c.queue(g), dest))
-        c.collect(queued, log=log)
+                pid = c.queue(g)
+                queued.append((pid, dest)); graphs[pid] = g
+        c.collect(queued, log=log, graphs=graphs, bump=bump if c.front else 0)
         if batch and gap and i + step < len(todo):
             time.sleep(min(120, gap * (time.time() - t0)))
 

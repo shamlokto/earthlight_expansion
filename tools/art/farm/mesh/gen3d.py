@@ -3,7 +3,8 @@
 
   python gen3d.py NAME[:TRIS[:SEED[:YAW[:SRC[:OPTS]]]]] ...   (YAW: auto | none | degrees; SRC: input file stem, default NAME;
                                             OPTS: 'h' = normalise by height, 't2048' or 't512' = texture size (default 1024),
-                                            'v768' = paint views at 768 px (default 512))
+                                            'v768' = paint views at 768 px (default 512),
+                                            'p' = project the concept picture itself onto the front (sharp faces))
   python gen3d.py --watch                    worker: takes the same specs from $H3D_QUEUE/*.job
                                             reads  $H3D_IN/NAME.png   (one object on white)
                                             writes $H3D_OUT/NAME.glb  (+ NAME_cut.png, the cut-out fed to the model)
@@ -64,6 +65,41 @@ def cutout(img):
         fg &= ~((rgb.min(2) > 226) & ~a_rembg)                    # near-white bits rembg calls backdrop (gap between the legs)
     alpha = cv2.GaussianBlur(fg.astype(np.uint8) * 255, (3, 3), 0)
     return Image.fromarray(np.dstack([rgb, alpha]))
+
+
+REF = None   # RGBA cut-out to project onto the front of the mesh (opt 'p'), or None
+_bake = paint.bake_from_multiview
+
+
+def _bake_with_front(views, elevs, azims, weights, method='fast'):
+    """Opt 'p': replace the painted front view by the concept picture itself, fitted to the mesh silhouette.
+
+    The paint model works at 512-768 px per view, which smears small faces; the concept picture is sharper.
+    The picture's bounding box is stretched onto the bounding box of the mesh seen from the front (azimuth 0).
+    """
+    if REF is not None:
+        import cv2
+        r = paint.render
+        a = np.array(r.render_normal(0, 0, bg_color=[1, 1, 1], return_type='pl').convert('RGB')).astype(int)
+        b = np.array(r.render_normal(0, 0, bg_color=[0, 0, 0], return_type='pl').convert('RGB')).astype(int)
+        m = np.abs(a - b).sum(2) < 30
+        ys, xs = np.where(m); x0, x1, y0, y1 = xs.min(), xs.max(), ys.min(), ys.max()
+        ref = np.array(REF); ra = ref[:, :, 3] > 128
+        rys, rxs = np.where(ra)
+        crop = Image.fromarray(ref[rys.min():rys.max() + 1, rxs.min():rxs.max() + 1]).resize((x1 - x0 + 1, y1 - y0 + 1), Image.LANCZOS)
+        front = views[0].convert('RGB').resize((m.shape[1], m.shape[0]))
+        canvas = Image.new('RGBA', front.size, (0, 0, 0, 0)); canvas.paste(crop, (x0, y0))
+        ca = np.array(canvas)
+        ok = (ca[:, :, 3] > 250) & m
+        ok = cv2.erode(ok.astype(np.uint8), np.ones((9, 9), np.uint8)).astype(np.float32)
+        ok = cv2.GaussianBlur(ok, (15, 15), 0)[:, :, None]
+        out = np.array(front).astype(np.float32) * (1 - ok) + ca[:, :, :3].astype(np.float32) * ok
+        views = [Image.fromarray(out.astype(np.uint8))] + list(views[1:])
+        print('front projection: mesh box', (x0, y0, x1, y1), 'overlap %.2f' % (ok[:, :, 0] > 0.5).sum().__truediv__(max(m.sum(), 1)), flush=True)
+    return _bake(views, elevs, azims, weights, method=method)
+
+
+paint.bake_from_multiview = _bake_with_front
 
 
 def align_yaw(mesh):
@@ -135,6 +171,8 @@ def run(spec):
         mesh = FaceReducer()(mesh, max_facenum=tris)
         m = re.search(r'v(\d+)', opts)   # 'v768': paint views at 768 px instead of 512 (sharper faces, slower)
         paint.models['multiview_model'].view_size = int(m.group(1)) if m else 512
+        global REF
+        REF = img if 'p' in opts else None
         mesh = paint(mesh, image=img)
         t2 = time.time()
         info = finish(mesh, name, yaw, opts)

@@ -23,6 +23,12 @@
 765
 ]
 },
+"people/moraine_front": {
+"anchor": [
+126,
+765
+]
+},
 "people/oduya_front": {
 "anchor": [
 146,
@@ -44,6 +50,12 @@
 "people/seln_front": {
 "anchor": [
 129,
+765
+]
+},
+"people/vashti_front": {
+"anchor": [
+130,
 765
 ]
 }

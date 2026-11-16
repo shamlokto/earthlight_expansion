@@ -29,7 +29,7 @@
   "tris": 30000,
   "kind": "char",
   "x": "a young woman farmer: a layered navy-black bob haircut (very dark navy blue hair) with a soft fringe, ending at chin level, very big sparkling warm brown eyes, a wide-brimmed straw hat on her head, a cream work shirt with sleeves rolled up to the elbows, navy blue dungarees with brass buttons, sturdy brown lace-up boots",
-  "opts": "ht2048v768"
+  "opts": "ht2048v768p"
  },
  "stump": {
   "tris": 5000,
@@ -145,55 +145,55 @@
   "tris": 24000,
   "kind": "char",
   "x": "a kind tired man in his forties, the colony governor: short neat dark hair, kind dark eyes, a plain dark grey-blue uniform jacket ending at the hips with a high collar and simple silver buttons, dark trousers, black boots, no hat, no medals",
-  "opts": "hv768"
+  "opts": "hv768p"
  },
  "ruess": {
   "tris": 24000,
   "kind": "char",
   "x": "a gruff but fond old chief engineer: messy short grey hair, grey stubble, brass goggles pushed up on his forehead, a short brown leather work apron ending at the hips over a rolled-sleeve grey shirt, dark trousers, heavy boots",
-  "opts": "hv768"
+  "opts": "hv768p"
  },
  "marrow": {
   "tris": 24000,
   "kind": "char",
   "x": "a sharp kind elderly woman, the village warden: silver hair in a neat bun on top of her head, a dark green warden's jacket ending at the hips with a brass badge, a short cream neck scarf, dark trousers and boots",
-  "opts": "hv768"
+  "opts": "hv768p"
  },
  "seln": {
   "tris": 24000,
   "kind": "char",
   "x": "a warm friendly woman shopkeeper: brown skin, dark curly hair tied up under a headscarf, a short green apron ending at the hips over a cream blouse with short sleeves, brown trousers, shoes",
-  "opts": "hv768"
+  "opts": "hv768p"
  },
  "corran": {
   "tris": 24000,
   "kind": "char",
   "x": "a big loud soft-hearted old rancher, a retired gunner: bald head, a large white walrus moustache, rosy cheeks, a red checked shirt with braces, brown trousers, tall rubber boots, broad build",
-  "opts": "hv768"
+  "opts": "hv768p"
  },
  "oduya": {
   "tris": 24000,
   "kind": "char",
   "x": "a cheerful cook who used to be a dockyard engineer: dark brown skin, short black hair, a headlamp strapped on the forehead, bright orange overalls with a short white cook's apron tied at the waist, work boots",
-  "opts": "hv768"
+  "opts": "hv768p"
  },
  "maris": {
   "tris": 24000,
   "kind": "char",
   "x": "a cheerful young woman courier pilot: tanned skin, short tousled auburn hair with a bright orange headband, a short light flight jacket over a white top, grey cargo trousers, ankle boots",
-  "opts": "hv768"
+  "opts": "hv768p"
  },
  "vashti": {
   "tris": 24000,
   "kind": "char",
   "x": "a quiet tough woman salvage hunter: a red bandana on her head, dark hair in one braid hanging straight down behind her back, a sleeveless dusty olive vest over a dark top, fingerless gloves, patched cargo trousers, heavy boots",
-  "opts": "hv768"
+  "opts": "hv768p"
  },
  "moraine": {
   "tris": 24000,
   "kind": "char",
   "x": "a proud elegant trader queen: violet hair swept back and hanging behind her back, a small golden crown, teal eyes, a confident smile, a deep purple jacket ending at the hips with gold trim and a teal gem brooch, dark purple trousers, dark boots",
-  "opts": "hv768"
+  "opts": "hv768p"
  },
  "weed": {
   "tris": 4000,

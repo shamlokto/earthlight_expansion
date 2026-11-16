@@ -17,12 +17,12 @@ COLONY = ("The setting is the inside of a huge rotating cylindrical space colony
           "and arches overhead, with tiny patchwork fields, woods and silver rivers visible on the far side of the cylinder high above, "
           "and one long thin bright straight line of light, the sun-line, running along the axis of the sky instead of a sun. ")
 PHOTO = STYLE + " A calm pastoral world of ordinary earthy things: wood, soil, crops, tin roofs, with small traces of salvaged spacecraft parts."
-TEX = ("Hand-painted Japanese anime background art, an extreme close-up looking straight down at the ground from directly above (bird's-eye flat lay). "
-       "The entire image from edge to edge is evenly covered by one continuous surface, like an all-over pattern: the same size and density at the top, bottom, left and right, "
-       "flat, even soft light, bright clear colours, gentle painterly brushwork, smooth high-resolution painting. The surface is: ")
-WALL = ("Hand-painted Japanese anime background art, an extreme close-up looking flat-on at a surface, exactly square to it. "
-        "The entire image from edge to edge is evenly covered by one continuous surface, like an all-over pattern: the same size and density at the top, bottom, left and right, "
-        "flat, even soft light, bright clear colours, gentle painterly brushwork, smooth high-resolution painting. The surface is: ")
+# Textures are painted by Qwen-Edit over a flat procedural layout guide (texref.py): text alone always
+# came back with perspective. TEX/WALL are kept as (empty) prefixes of the surface descriptions.
+TEX = WALL = ""
+TEXE = ("Repaint this flat layout guide as a finished, beautiful hand-painted game texture in a pretty Japanese anime background-art style. It shows: {x} "
+        "Keep exactly the same flat straight-on view, the same layout and the same scale as the guide: the surface covers the entire image from edge to edge, "
+        "no perspective, no horizon, no objects, no border, no cast shadows, even soft light. Bright clear colours, gentle painterly brushwork, rich small natural detail, smooth high-resolution painting.")
 CUT = (" " + STYLE + " Isolated on a plain flat uniform light grey background, soft even light, no cast shadow, "
        "the entire subject fully inside the frame with a clear margin all round, centred, upright.")
 CROP = "Anime illustration, three-quarter view from slightly above, of a single {x}, growing out of one small round mound of dark brown garden soil. Plump, fresh and appealing."
@@ -61,24 +61,24 @@ TEXTURES = {
     "brick_ruin": (WALL + "an old ruined brick wall of dark red and brown bricks in regular horizontal courses, crumbling mortar, soot stains and a few chipped bricks.", "mirror"),
     "ash_ground": (TEX + "grey poisoned dead earth covered in ash and pale rubble dust, with small fragments of broken concrete and cinders.", "quilt"),
     "hay": (TEX + "a thick layer of loose golden hay and straw, tangled dry stalks.", "quilt"),
-    "water": (TEX + "the surface of a dark clear pond, deep green-blue water with subtle small ripples and soft faint sky reflections, nothing floating on it.", "quilt"),
+    "water": (TEX + "the surface of a clear pond seen from above, deep green-blue water with subtle small ripples and soft light glints, nothing floating on it.", "quilt"),
 }
 
 # ------------------------------------------------------------------ B. sky panoramas (2048x1024, wrapped in post)
-SKYP = ("Extremely wide 360 degree panoramic anime background painting of the sky only, looking out and up from the ground, no foreground objects, a low flat horizon line near the bottom of the frame, no text. ")
+# (No "space colony" wording here: it makes the model draw a giant ring structure. The sky is described as horizontal bands.)
+SKYP = ("A very wide panoramic sky background painting in a beautiful hand-painted Japanese anime background-art style, bright clear colours, soft light, smooth high-resolution painting. "
+        "Only sky, composed in soft horizontal bands that run evenly across the full width from the left edge to the right edge, with nothing in the centre, no buildings, no structures, no sun disc, no text. ")
+SKYLINE = "one thin, perfectly straight, perfectly horizontal glowing line of light stretching across the whole width of the picture from the left edge to the right edge, at one third from the top"
+FARSIDE = "Along the very top of the picture, seen faintly through the haze as if far overhead, a pale upside-down band of distant land: tiny patchwork fields, woods and thin silver rivers."
 SKIES = {
-    "sky_day": SKYP + ("Inside a huge rotating cylindrical space colony by day: soft blue atmospheric haze, a few thin white clouds, and high overhead across the top of the frame "
-                       "the far side of the cylinder seen faintly through the blue haze as a pale band of tiny patchwork fields, woods and thin silver rivers; "
-                       "one long thin straight brilliant white line of light, the sun-line, runs horizontally across the whole width of the sky. Bright, gentle, natural, beautiful hand-painted anime background art."),
-    "sky_dusk": SKYP + ("Inside a huge rotating cylindrical space colony at dusk: warm amber and rose light, the long thin straight sun-line glowing dim orange horizontally across the whole sky, "
-                        "and a vast band of window running across the upper sky through which the huge blue and white planet Earth is visible against black space; "
-                        "the far side of the cylinder is a faint dusky band of land. Beautiful anime film still, quiet, beautiful."),
-    "sky_night": SKYP + ("Inside a huge rotating cylindrical space colony at night: deep dark blue, the long thin straight sun-line reduced to a faint dim silver-blue thread horizontally across the whole sky, "
-                         "tiny warm clusters of village and city lights scattered on the far side of the cylinder overhead, and a wide band of window showing black space full of sharp stars. Beautiful anime film still, quiet."),
-    "sky_storm": SKYP + ("Inside a huge rotating cylindrical space colony in a rainstorm: heavy layered grey rain clouds and rain haze filling the whole sky, dim flat light, "
-                         "the long thin straight sun-line only a pale diffuse streak behind the cloud horizontally across the sky. Beautiful anime film still, moody, soft."),
-    "sky_ruins": SKYP + ("The poisoned surface of Earth: a sickly amber and ochre overcast sky, thick dust haze, a dim pale sun disc behind the murk, "
-                         "and along the low horizon the far-off dark silhouettes of a dead ruined city skyline with broken towers. Beautiful anime film still, desolate, still."),
+    "sky_day": SKYP + "Daytime: at the bottom a low line of distant hazy green hills; above it soft blue sky with small fluffy white clouds; " + SKYLINE + ", brilliant white with a soft glow. " + FARSIDE,
+    "sky_dusk": SKYP + "Dusk: at the bottom a low line of distant dark hills; above it a warm amber, peach and rose sky with a few glowing clouds; " + SKYLINE + ", dim orange. "
+                "Along the top of the picture a wide band of deep black starry space in which a large, beautiful blue-and-white planet Earth hangs, partly hidden by the top edge.",
+    "sky_night": SKYP + "Night: at the bottom a low line of distant dark hills; above it a deep dark blue night sky full of small sharp stars; " + SKYLINE + ", very faint dim silver-blue. "
+                 "Along the very top of the picture, far overhead, a dark band of distant land sprinkled with tiny warm clusters of village lights.",
+    "sky_storm": SKYP + "Rainstorm: the whole sky filled with heavy soft layered grey rain clouds and veils of falling rain, dim flat light; " + SKYLINE + ", only a pale diffuse streak behind the cloud. At the bottom a low line of distant grey hills.",
+    "sky_ruins": SKYP + "A poisoned world: a sickly amber and ochre overcast sky, thick dust haze in layered bands, a dim pale glow behind the murk; "
+                 "along the very bottom, small and far away, the dark silhouettes of a dead ruined city skyline with broken towers, evenly spread along the whole horizon.",
 }
 
 # ------------------------------------------------------------------ C. scenes (1344x768)
@@ -294,7 +294,8 @@ SATO_PORTRAITS = {  # slot: (ref, prompt)   ref "front" = picked people/sato_fro
     "sato_portrait": ("front", "A close-up bust portrait of " + SAME + ": head and shoulders down to the chest, facing the camera with her head tilted very slightly, "
                                "a warm small smile, big warm brown eyes with bright highlights. Soft plain pale warm cream background with a very gentle gradient, nothing else. Beautiful, cute, appealing."),
     "sato_portrait_happy": ("portrait", "Keep everything exactly the same (same character, same framing, same clothes, same background), change only her expression: a big bright delighted smile with her mouth open and her eyes happily closed in arcs, a light blush."),
-    "sato_portrait_tired": ("portrait", "Keep everything exactly the same (same character, same framing, same clothes, same background), change only her expression: tired and worn out, eyelids half closed, a small weary smile, a little sweat drop on her temple, slightly messy hair."),
+    "sato_portrait_tired": ("portrait", "Keep everything exactly the same (same character, same framing, same clothes, same background), change only her expression: sleepy and a little worn out after a long day of work, "
+                                        "drooping half-lidded eyes still looking at the camera, a small wry tired smile, one small sweat drop on her temple, a few loose strands of hair. No tears, no crying, no heavy blush, still gentle and cute."),
 }
 POSE_BG = " Full body from head to boots inside the frame with a clear margin, centred. Plain flat uniform light grey background, soft even light, no cast shadow, no text."
 SATO_POSES = {  # start frames for the action loops (Qwen-Edit from the picked front view)
@@ -343,7 +344,7 @@ def jobs(group, work="/tmp/farm-art"):
     add = lambda slot, kind, prompt, w, h, **kw: out.append(dict(group=group, slot=slot, kind=kind, prompt=prompt, w=w, h=h, **kw))
     if group == "textures":
         for k, (p, _mode) in TEXTURES.items():
-            add(k, "t2i", p, 1328, 1328)
+            add(k, "edit", TEXE.format(x=p), 1328, 1328, refs=[os.path.join(work, "texref", k + ".png")])
     elif group == "sky":
         for k, p in SKIES.items():
             add(k, "t2i", p, 2048, 1024)

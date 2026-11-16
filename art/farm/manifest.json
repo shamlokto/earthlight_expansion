@@ -37,6 +37,15 @@
     765
    ]
   },
+  "people/moraine_front": {
+   "file": "people/moraine_front.webp",
+   "w": 259,
+   "h": 768,
+   "anchor": [
+    126,
+    765
+   ]
+  },
   "people/oduya_front": {
    "file": "people/oduya_front.webp",
    "w": 340,
@@ -74,12 +83,26 @@
    "w": 512,
    "h": 640
   },
+  "people/sato_portrait_tired": {
+   "file": "people/sato_portrait_tired.webp",
+   "w": 512,
+   "h": 640
+  },
   "people/seln_front": {
    "file": "people/seln_front.webp",
    "w": 273,
    "h": 768,
    "anchor": [
     129,
+    765
+   ]
+  },
+  "people/vashti_front": {
+   "file": "people/vashti_front.webp",
+   "w": 284,
+   "h": 768,
+   "anchor": [
+    130,
     765
    ]
   }

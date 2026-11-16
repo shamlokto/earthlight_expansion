@@ -7,6 +7,9 @@ The list of finished models is read from output/mesh3d/done.txt (one stem per li
 import os, sys, subprocess, requests, shutil, time
 from PIL import Image, ImageDraw
 raw, shots = sys.argv[1:3]
+for s in sys.argv[3:]:            # extra args: stems to fetch again (regenerated on the pod)
+    for e in ('glb', 'json'):
+        if os.path.exists(os.path.join(raw, f'{s}.{e}')): os.remove(os.path.join(raw, f'{s}.{e}'))
 U = os.environ['COMFY_URL'].rstrip('/')
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.abspath(os.path.join(HERE, '../../../..'))
 tmp = os.path.join(ROOT, 'art/farm/models/_tmp'); os.makedirs(tmp, exist_ok=True)
@@ -27,7 +30,8 @@ if new:
     chars = [s for s in new if P.get(re.sub(r'e?_s\d+$', '', s), {}).get('kind') == 'char']; rest = [s for s in new if s not in chars]
     for group, extra in ((rest, {}), (chars, {'CHR': '1'})):   # characters get the face close-up framing
         if group: subprocess.run(['node', os.path.join(HERE, 'render.mjs'), shots] + group, env=dict(os.environ, DIR='/art/farm/models/_tmp', **extra), stdout=subprocess.DEVNULL)
-    for s in new: os.remove(os.path.join(tmp, s + '.glb'))
+    for s in new:
+        if os.path.exists(os.path.join(tmp, s + '.glb')): os.remove(os.path.join(tmp, s + '.glb'))
     t = int(time.time())
     for i in range(0, len(new), 8):
         part = new[i:i + 8]; sheet = Image.new('RGB', (1280, 220 * ((len(part) + 1) // 2)), 'white')
