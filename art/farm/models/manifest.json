@@ -829,5 +829,16 @@
    0.5793
   ],
   "note": "workbench with vice, hammer and toolbox; length along X"
+ },
+ "kestrel": {
+  "file": "kestrel.glb",
+  "tris": 24000,
+  "size": [
+   0.6884,
+   1.0,
+   0.4418
+  ],
+  "note": "Commander Kestrel, chibi figurine, arms out wide",
+  "unit": "height"
  }
 }
