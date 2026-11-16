@@ -342,5 +342,452 @@
    0.8975
   ],
   "note": "generic half-grown leafy crop in a soil mound (crop stage 2)"
+ },
+ "crop_turnip": {
+  "file": "crop_turnip.glb",
+  "tris": 5000,
+  "size": [
+   0.8116,
+   1.0,
+   0.8492
+  ],
+  "note": ""
+ },
+ "crop_potato": {
+  "file": "crop_potato.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.935,
+   0.9965
+  ],
+  "note": ""
+ },
+ "crop_cucumber": {
+  "file": "crop_cucumber.glb",
+  "tris": 5000,
+  "size": [
+   0.7715,
+   1.0,
+   0.7811
+  ],
+  "note": ""
+ },
+ "crop_strawberry": {
+  "file": "crop_strawberry.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.9782,
+   0.8872
+  ],
+  "note": ""
+ },
+ "crop_tomato": {
+  "file": "crop_tomato.glb",
+  "tris": 5000,
+  "size": [
+   0.7407,
+   1.0,
+   0.7885
+  ],
+  "note": ""
+ },
+ "crop_corn": {
+  "file": "crop_corn.glb",
+  "tris": 5000,
+  "size": [
+   0.6047,
+   1.0,
+   0.5208
+  ],
+  "note": ""
+ },
+ "crop_onion": {
+  "file": "crop_onion.glb",
+  "tris": 5000,
+  "size": [
+   0.7711,
+   1.0,
+   0.808
+  ],
+  "note": ""
+ },
+ "crop_pumpkin": {
+  "file": "crop_pumpkin.glb",
+  "tris": 5000,
+  "size": [
+   0.9281,
+   1.0,
+   0.8993
+  ],
+  "note": ""
+ },
+ "crop_carrot": {
+  "file": "crop_carrot.glb",
+  "tris": 5000,
+  "size": [
+   0.8475,
+   1.0,
+   0.8413
+  ],
+  "note": ""
+ },
+ "crop_eggplant": {
+  "file": "crop_eggplant.glb",
+  "tris": 5000,
+  "size": [
+   0.7647,
+   1.0,
+   0.7592
+  ],
+  "note": ""
+ },
+ "crop_sweetpotato": {
+  "file": "crop_sweetpotato.glb",
+  "tris": 5000,
+  "size": [
+   0.8132,
+   1.0,
+   0.8503
+  ],
+  "note": ""
+ },
+ "crop_spinach": {
+  "file": "crop_spinach.glb",
+  "tris": 5000,
+  "size": [
+   0.8734,
+   1.0,
+   0.9061
+  ],
+  "note": ""
+ },
+ "crop_moonflower": {
+  "file": "crop_moonflower.glb",
+  "tris": 5000,
+  "size": [
+   0.7383,
+   1.0,
+   0.7791
+  ],
+  "note": ""
+ },
+ "dead_plant": {
+  "file": "dead_plant.glb",
+  "tris": 5000,
+  "size": [
+   0.7998,
+   1.0,
+   0.8251
+  ],
+  "note": ""
+ },
+ "grass_tuft": {
+  "file": "grass_tuft.glb",
+  "tris": 4000,
+  "size": [
+   0.9966,
+   0.9671,
+   1.0
+  ],
+  "note": ""
+ },
+ "tree_autumn": {
+  "file": "tree_autumn.glb",
+  "tris": 12000,
+  "size": [
+   0.8714,
+   1.0,
+   0.8701
+  ],
+  "note": ""
+ },
+ "tree_blossom": {
+  "file": "tree_blossom.glb",
+  "tris": 12000,
+  "size": [
+   0.8768,
+   1.0,
+   0.8719
+  ],
+  "note": ""
+ },
+ "tree_winter": {
+  "file": "tree_winter.glb",
+  "tris": 12000,
+  "size": [
+   0.7566,
+   1.0,
+   0.3614
+  ],
+  "note": ""
+ },
+ "pine": {
+  "file": "pine.glb",
+  "tris": 7999,
+  "size": [
+   0.686,
+   1.0,
+   0.67
+  ],
+  "note": ""
+ },
+ "bush": {
+  "file": "bush.glb",
+  "tris": 5000,
+  "size": [
+   0.988,
+   0.9625,
+   1.0
+  ],
+  "note": ""
+ },
+ "flowers": {
+  "file": "flowers.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.968,
+   0.9808
+  ],
+  "note": ""
+ },
+ "cottage_a": {
+  "file": "cottage_a.glb",
+  "tris": 16000,
+  "size": [
+   0.9884,
+   1.0,
+   0.97
+  ],
+  "note": ""
+ },
+ "ranch": {
+  "file": "ranch.glb",
+  "tris": 20000,
+  "size": [
+   0.9606,
+   0.735,
+   1.0
+  ],
+  "note": ""
+ },
+ "signpost": {
+  "file": "signpost.glb",
+  "tris": 4000,
+  "size": [
+   0.6939,
+   1.0,
+   0.1969
+  ],
+  "note": ""
+ },
+ "lantern": {
+  "file": "lantern.glb",
+  "tris": 5000,
+  "size": [
+   0.2102,
+   1.0,
+   0.3706
+  ],
+  "note": ""
+ },
+ "stairs": {
+  "file": "stairs.glb",
+  "tris": 7999,
+  "size": [
+   0.966,
+   0.6939,
+   1.0
+  ],
+  "note": ""
+ },
+ "ruin_wall": {
+  "file": "ruin_wall.glb",
+  "tris": 8000,
+  "size": [
+   0.9132,
+   1.0,
+   0.303
+  ],
+  "note": ""
+ },
+ "bed": {
+  "file": "bed.glb",
+  "tris": 6000,
+  "size": [
+   0.6673,
+   0.5909,
+   1.0
+  ],
+  "note": ""
+ },
+ "counter": {
+  "file": "counter.glb",
+  "tris": 6000,
+  "size": [
+   0.2829,
+   0.4518,
+   1.0
+  ],
+  "note": ""
+ },
+ "shelf": {
+  "file": "shelf.glb",
+  "tris": 8000,
+  "size": [
+   0.8312,
+   1.0,
+   0.3711
+  ],
+  "note": ""
+ },
+ "radio": {
+  "file": "radio.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.989,
+   0.6323
+  ],
+  "note": ""
+ },
+ "nestbox": {
+  "file": "nestbox.glb",
+  "tris": 5000,
+  "size": [
+   0.8961,
+   1.0,
+   0.6973
+  ],
+  "note": ""
+ },
+ "moraine": {
+  "file": "moraine.glb",
+  "tris": 24000,
+  "size": [
+   0.6031,
+   1.0,
+   0.4519
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "vashti": {
+  "file": "vashti.glb",
+  "tris": 24000,
+  "size": [
+   0.6957,
+   1.0,
+   0.4639
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "corran": {
+  "file": "corran.glb",
+  "tris": 24000,
+  "size": [
+   0.8334,
+   1.0,
+   0.4576
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "maris": {
+  "file": "maris.glb",
+  "tris": 24000,
+  "size": [
+   0.595,
+   1.0,
+   0.4607
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "marrow": {
+  "file": "marrow.glb",
+  "tris": 24000,
+  "size": [
+   0.6174,
+   1.0,
+   0.425
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "oduya": {
+  "file": "oduya.glb",
+  "tris": 24000,
+  "size": [
+   0.6207,
+   1.0,
+   0.5562
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "seln": {
+  "file": "seln.glb",
+  "tris": 24000,
+  "size": [
+   0.5711,
+   1.0,
+   0.4528
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "bin": {
+  "file": "bin.glb",
+  "tris": 6000,
+  "size": [
+   0.737,
+   1.0,
+   0.6993
+  ],
+  "note": ""
+ },
+ "bench": {
+  "file": "bench.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.7394,
+   0.5281
+  ],
+  "note": ""
+ },
+ "table": {
+  "file": "table.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.5395,
+   0.9873
+  ],
+  "note": ""
+ },
+ "scarecrow": {
+  "file": "scarecrow.glb",
+  "tris": 8000,
+  "size": [
+   0.8996,
+   1.0,
+   0.5235
+  ],
+  "note": ""
+ },
+ "trough": {
+  "file": "trough.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.5844,
+   0.529
+  ],
+  "note": ""
  }
 }

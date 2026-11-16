@@ -37,11 +37,11 @@ const PROPS = {
   bed: { model: 'bed', sprite: () => 'sprites/bed', h: 1.0, face: true, fit: 'foot' },
   radio: { model: 'radio', sprite: () => 'sprites/radio', h: 1.0, face: true },
   table: { model: 'table', sprite: () => 'sprites/table', h: 0.85, face: true, fit: 'foot' },
-  shelf: { model: 'shelf', sprite: () => 'sprites/shelf', h: 1.9, face: true, fit: 'stretch' },
-  counter: { model: 'counter', h: 1.0, fit: 'stretch' },
-  desk: { model: 'counter', h: 1.0, fit: 'stretch' },
-  trough: { model: 'trough', sprite: () => 'sprites/trough', h: 0.55, face: true, fit: 'stretch' },
-  nestbox: { model: 'nestbox', sprite: () => 'sprites/nestbox', h: 0.9, face: true, fit: 'stretch' },
+  shelf: { model: 'shelf', sprite: () => 'sprites/shelf', h: 1.9, face: true, fit: 'repeat' },
+  counter: {},
+  desk: {},
+  trough: { model: 'trough', sprite: () => 'sprites/trough', h: 0.6, face: true, fit: 'repeat' },
+  nestbox: { model: 'nestbox', sprite: () => 'sprites/nestbox', h: 0.95, face: true, fit: 'repeat' },
   haybale: { model: 'haybale', h: 0.8, fit: 'foot' },
   crate: { model: 'crate', h: 0.8, fit: 'foot' },
   case: { model: 'display_case', h: 1.3, fit: 'foot' },
@@ -242,6 +242,11 @@ export class World {
       art.model(mname).then((m) => {
         if (!m) return fallback();
         const s = art.modelInfo(mname).size || [1, 1, 1];
+        if (def.fit === 'repeat') {                         // several copies side by side along a long footprint
+          const k = h / s[1], n = Math.max(1, Math.round(fw / (s[0] * k))), step = fw / n;
+          for (let i = 0; i < n; i++) { const c = i ? m.clone(true) : m; c.scale.setScalar(Math.min(k, step * 0.98 / s[0])); c.position.x = -fw / 2 + step * (i + 0.5); holder.add(c); }
+          return;
+        }
         if (def.fit === 'stretch') m.scale.set(fw * 0.98 / s[0], h / s[1], Math.min(h / s[1], fd * 0.9 / s[2]));
         else if (def.fit === 'foot') m.scale.setScalar(Math.min(h / s[1], fw * 0.96 / s[0], fd * 0.96 / s[2]));
         else if (def.fit === 'wide') m.scale.setScalar(Math.max(fw, 0.8) * 0.95 / Math.max(s[0], s[2]));
