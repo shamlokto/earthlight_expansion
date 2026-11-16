@@ -126,13 +126,38 @@
    "w": 1344,
    "h": 768
   },
+  "scenes/festival_harvest": {
+   "file": "scenes/festival_harvest.webp",
+   "w": 1344,
+   "h": 768
+  },
   "scenes/festival_lantern": {
    "file": "scenes/festival_lantern.webp",
    "w": 1344,
    "h": 768
   },
+  "scenes/festival_planting": {
+   "file": "scenes/festival_planting.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/festival_yearend": {
+   "file": "scenes/festival_yearend.webp",
+   "w": 1344,
+   "h": 768
+  },
   "scenes/heart10": {
    "file": "scenes/heart10.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/intro1": {
+   "file": "scenes/intro1.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/intro2": {
+   "file": "scenes/intro2.webp",
    "w": 1344,
    "h": 768
   },
@@ -153,6 +178,31 @@
   },
   "scenes/morning": {
    "file": "scenes/morning.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/ruins": {
+   "file": "scenes/ruins.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/season_autumn": {
+   "file": "scenes/season_autumn.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/season_spring": {
+   "file": "scenes/season_spring.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/season_summer": {
+   "file": "scenes/season_summer.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/season_winter": {
+   "file": "scenes/season_winter.webp",
    "w": 1344,
    "h": 768
   },

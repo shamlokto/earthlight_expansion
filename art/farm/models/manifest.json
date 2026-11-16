@@ -262,5 +262,65 @@
    1.0
   ],
   "note": "crawler, a round rust-orange beetle; head towards +Z"
+ },
+ "store": {
+  "file": "store.glb",
+  "tris": 20000,
+  "size": [
+   0.9321,
+   1.0,
+   0.8443
+  ],
+  "note": "Seln's Seed & Sundry, striped awning and door on +Z"
+ },
+ "cafe": {
+  "file": "cafe.glb",
+  "tris": 20000,
+  "size": [
+   0.9394,
+   1.0,
+   0.7299
+  ],
+  "note": "The Hangar cafe in a half-cylinder shuttle hangar, door on +Z"
+ },
+ "workshop": {
+  "file": "workshop.glb",
+  "tris": 20000,
+  "size": [
+   0.969,
+   0.8844,
+   1.0
+  ],
+  "note": "Ruess's workshop, roller door on +Z, crane on the roof"
+ },
+ "hall": {
+  "file": "hall.glb",
+  "tris": 20000,
+  "size": [
+   0.8821,
+   1.0,
+   0.9422
+  ],
+  "note": "village hall with bell tower, door on +Z"
+ },
+ "rock": {
+  "file": "rock.glb",
+  "tris": 3000,
+  "size": [
+   0.9504,
+   0.3413,
+   1.0
+  ],
+  "note": "small field stone (debris)"
+ },
+ "branch": {
+  "file": "branch.glb",
+  "tris": 3000,
+  "size": [
+   1.0,
+   0.5314,
+   0.6066
+  ],
+  "note": "fallen branch (debris), lies along X"
  }
 }
