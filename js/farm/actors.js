@@ -96,6 +96,35 @@ function figure(look, tall = 1.62) {
   g.userData.blink = (shut) => { fm.map = shut ? fShut : fOpen; };
   return g;
 }
+// A generated figurine has no skeleton. This gives it one: it is cut by position into legs, arms
+// (it stands with its arms out) and head, each bound to a bone with soft seams, so it can walk.
+export function rigFigurine(model) {
+  model.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(model), H = box.max.y - box.min.y, cx = (box.min.x + box.max.x) / 2, cz = (box.min.z + box.max.z) / 2, y0 = box.min.y;
+  const root = new THREE.Bone(), bone = (x, y) => { const b = new THREE.Bone(); b.position.set(cx + x * H, y0 + y * H, cz); root.add(b); return b; };
+  const HIP = 0.27, NECK = 0.55, L = bone(-0.06, HIP), R = bone(0.06, HIP), A = bone(-0.11, 0.5), B = bone(0.11, 0.5), head = bone(0, NECK);
+  const out = new THREE.Group(); out.add(root); out.updateMatrixWorld(true);
+  const skeleton = new THREE.Skeleton([root, L, R, A, B, head]);
+  const ss = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const meshes = []; model.traverse((o) => { if (o.isMesh) meshes.push(o); });
+  for (const o of meshes) {
+    const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld);
+    const pos = g.attributes.position, n = pos.count, idx = new Uint16Array(n * 4), wt = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) {
+      const x = (pos.getX(i) - cx) / H, y = (pos.getY(i) - y0) / H, ax = Math.abs(x);
+      const arm = ss(0.1, 0.15, ax) * (1 - ss(NECK - 0.03, NECK + 0.005, y)) * ss(HIP - 0.02, HIP + 0.04, y), leg = 1 - ss(HIP - 0.05, HIP + 0.03, y), hd = ss(NECK - 0.02, NECK + 0.04, y);
+      let b = 0, w = 0;
+      if (arm > 0.01) { b = x < 0 ? 3 : 4; w = arm; } else if (leg > 0.01) { b = x < 0 ? 1 : 2; w = leg; } else if (hd > 0.01) { b = 5; w = hd; }
+      idx[i * 4] = b; wt[i * 4] = w; idx[i * 4 + 1] = 0; wt[i * 4 + 1] = 1 - w;
+    }
+    g.setAttribute('skinIndex', new THREE.BufferAttribute(idx, 4)); g.setAttribute('skinWeight', new THREE.BufferAttribute(wt, 4));
+    const sm = new THREE.SkinnedMesh(g, o.material); sm.castShadow = true; sm.receiveShadow = false; sm.frustumCulled = false; out.add(sm); sm.bind(skeleton, new THREE.Matrix4());
+  }
+  A.rotation.z = 0.5; B.rotation.z = -0.5;                    // arms down from the modelling pose
+  out.userData.limbs = { L, R, A, B, head }; out.userData.height = H;
+  return out;
+}
+
 function robot() {                                  // Sato's Pallas, built: navy and rose
   const g = new THREE.Group(), navy = std({ color: '#1f3a78', metalness: 0.4, roughness: 0.55 }), rose = std({ color: '#d85a8c', metalness: 0.3, roughness: 0.5 }), grey = std({ color: '#59626e', metalness: 0.5 });
   const b = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
@@ -123,7 +152,11 @@ export class Actor {
     const mname = o.pallas ? 'pallas' : id;
     if (mname && art.hasModel(mname)) {
       this.mode = 'model'; this.body = new THREE.Group(); this.inner = new THREE.Group(); this.body.add(this.inner); this.group.add(this.body);
-      art.model(mname).then((m) => { if (!m) return; const s = art.modelInfo(mname).size || [1, 1, 1]; m.scale.setScalar(this.tall / (s[1] || 1)); this.inner.add(m); });
+      art.model(mname).then((m) => {
+        if (!m) return; const s = art.modelInfo(mname).size || [1, 1, 1];
+        if (!o.pallas) { const r = rigFigurine(m); r.scale.setScalar(this.tall / r.userData.height); this.body.userData.limbs = r.userData.limbs; this.inner.add(r); this.rigged = true; }
+        else { m.scale.setScalar(this.tall / (s[1] || 1)); this.inner.add(m); }
+      });
     } else if (o.pallas && this.views.front) {
       this.mode = 'pic'; this.mat = world.spriteMat(this.views.front.tex);
       this.plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.mat); this.plane.geometry.translate(0, 0.5, 0);
@@ -145,7 +178,7 @@ export class Actor {
       if (l) { l.L.rotation.x = s; l.R.rotation.x = -s; l.A.rotation.x = -s * 0.8; l.B.rotation.x = s * 0.8 - (this.swing || 0) * 2.2; if (l.head) { l.head.rotation.z = this.moving ? Math.sin(this.phase) * 0.05 : Math.sin(this.phase * 0.6) * 0.025; l.head.rotation.x = this.swing ? this.swing * 0.25 : 0; } }
       if (this.body.userData.blink) this.body.userData.blink((this.phase * 0.37) % 4.2 > 4.05 || (this.world.t * 0.9 + this.tall * 7) % 3.7 > 3.58);
       this.body.position.y = this.moving ? Math.abs(Math.sin(this.phase)) * 0.05 : Math.sin(this.phase * 0.6) * 0.008;
-      if (this.inner) {                                  // a model with no joints moves like a little toy: hop, waddle, lean
+      if (this.inner && !this.rigged) {                  // a model with no joints moves like a little toy: hop, waddle, lean
         const k = this.moving ? 1 : 0, w = Math.sin(this.phase);
         this.inner.position.y = k * Math.abs(w) * 0.07; this.inner.rotation.z = k * w * 0.075; this.inner.rotation.x = k * 0.07 + (this.swing || 0) * 0.3;
         const sq = 1 + (k ? Math.cos(this.phase * 2) * 0.03 : Math.sin(this.phase) * 0.012); this.inner.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
