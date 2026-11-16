@@ -20,7 +20,7 @@ let npcs = new Map(), beasts = [], monsters = [], hydra = null, fishing = null, 
 let clock = 0, lastPlaced = -1, zapT = 0, hydraT = 0, hurtT = 0, doorHold = 0;
 const keys = new Set(), stick = { x: 0, y: 0 };
 // Small touches to the built figures, on top of the colours in story.js.
-const LOOKS = { sato: { top: '#f4eddc', bottom: '#2f4488', eye: '#7a4a22', skin: '#f8dcc4', bib: true, hat: true }, seln: { apron: '#4f8a3a' }, corran: { moustache: '#f2f2f2', age: 'old', bib: true }, marrow: { age: 'old' }, ruess: { age: 'old', glasses: true }, oduya: { bib: true }, vashti: {}, maris: {}, general: {}, moraine: {} };
+const LOOKS = { sato: { top: '#f4eddc', bottom: '#2f4488', eye: '#7a4a22', skin: '#f8dcc4', bib: true, hat: true }, seln: { apron: '#4f8a3a' }, mori: { glasses: true, top: '#f4f6f8' }, yui: { glasses: true }, kestrel: {}, corran: { moustache: '#f2f2f2', age: 'old', bib: true }, marrow: { age: 'old' }, ruess: { age: 'old', glasses: true }, oduya: { bib: true }, vashti: {}, maris: {}, general: {}, moraine: {} };
 const lookOf = (id) => ({ ...NPCS[id].look, ...(LOOKS[id] || {}) });
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
@@ -30,7 +30,7 @@ function loadSaved() { try { const t = localStorage.getItem(SAVE_KEY); return t 
 
 // ---------------------------------------------------------------- context
 const festivalToday = () => story.FESTIVALS.find((f) => f.season === S.cal.season && f.day === S.cal.day) || null;
-function ctx(extra = {}) { const f = festivalToday(); return { season: S.cal.season, day: S.cal.day, weekday: sim.weekday(S), minute: S.cal.minute, weather: S.weather, festival: f ? f.id : null, year: S.cal.year, flags: S.flags, ...extra }; }
+function ctx(extra = {}) { const f = festivalToday(); return { season: S.cal.season, day: S.cal.day, weekday: sim.weekday(S), minute: S.cal.minute, weather: S.weather, festival: f ? f.id : null, year: S.cal.year, flags: S.flags, partner: S.flags.partner || undefined, sweetheart: S.flags.sweet || undefined, ...extra }; }
 const isBirthday = (id) => { const b = NPCS[id].birthday; return !!b && b.season === S.cal.season && b.day === S.cal.day; };
 
 // ---------------------------------------------------------------- maps and movement
@@ -101,9 +101,28 @@ async function talkTo(id) {
     const r = sim.talk(S, id); if (S.npc[id]) S.npc[id].met = true;
     await ui.say(lines.map((t) => ({ who: id, text: t })));
     if (r.first) floatText(n.actor.x, n.actor.y, '♥');
+    await maybeConfess(id);
   } else if (what === 1) { await ui.shop(S, sh, id, refreshHud); }
   else if (what === 2) await donate();
   mode = 'play'; goals(); refreshHud();
+}
+// Love: at eight hearts a friendship can become more; the Earthlight pendant at ten asks the question.
+const LOVE = () => story.ROMANCE || { candidates: [], people: {} };
+async function maybeConfess(id) {
+  const R = LOVE(), who = R.people[id];
+  if (!who || !R.candidates.includes(id) || S.flags.sweet || S.flags.partner || S.flags['confess_' + id] || sim.hearts(S, id) < 8) return;
+  sim.setFlag(S, 'confess_' + id); sim.setFlag(S, 'sweet', id); sfx('good');
+  await ui.say(who.confess); floatText(me.x, me.y, '♥♥'); ui.toast(`${NPCS[id].short || NPCS[id].name} is your sweetheart now.`, 4200);
+}
+async function offerPendant(id) {
+  const R = LOVE(), who = R.people[id], n = npcs.get(id); n.actor.face(me.x, me.y); mode = 'talk';
+  if (!who || S.flags.sweet !== id || sim.hearts(S, id) < 10) { await ui.say([{ who: id, text: (who && who.decline) || 'That is a beautiful thing. Keep it for the right day.' }]); mode = 'play'; return; }
+  sim.removeItem(S, 'pendant', 1); sim.setFlag(S, 'partner', id); sfx('good');
+  await ui.say(who.propose);
+  await ui.fade(true, 500); ui.scene('wedding'); await ui.fade(false, 500);
+  await ui.say(who.wedding); for (const k of Object.keys(NPCS)) if (k !== 'sato') sim.addLove(S, k, 2);
+  ui.toast(`${NPCS[id].short || NPCS[id].name} shares the farm with you now.`, 5200);
+  mode = 'play'; placeNpcs(true); refreshHud(); save();
 }
 async function donate() {
   const s = sim.selected(S);
@@ -115,6 +134,7 @@ async function donate() {
   if (sim.museumCount(S) >= RELICS.length && !S.flags.museumDone) { sim.setFlag(S, 'museumDone'); ui.scene('hall_memory'); await ui.say(story.MUSEUM.complete); for (const k of Object.keys(NPCS)) if (k !== 'sato') sim.addLove(S, k, 3); }
 }
 async function giveTo(id) {
+  if (sim.selected(S).id === 'pendant') return offerPendant(id);
   const s = sim.selected(S), tier = story.giftTier(id, s.id), bd = isBirthday(id), n = npcs.get(id);
   const r = sim.gift(S, id, S.player.sel, tier, bd);
   if (!r.ok) return ui.toast(r.msg);
@@ -217,8 +237,8 @@ function probe() {                                   // → { label, run } for E
   if (near) return { label: `Talk to ${S.npc[near] && S.npc[near].met ? NPCS[near].short || NPCS[near].name : 'the stranger'}`, run: () => talkTo(near) };
   const p = propAt(tx, ty);
   if (p) {
-    if (p.act === 'counter') { const k = nearestNpc(3.2); if (k && (shopOf(k) || k === 'marrow')) return { label: `Talk to ${NPCS[k].short || NPCS[k].name}`, run: () => talkTo(k) }; if (map.id === 'hall') return { label: 'Nobody is at the desk', run: () => ui.toast('Nobody is at the desk just now.') }; return { label: 'Nobody is at the counter', run: () => ui.toast('Nobody is here to serve just now.') }; }
-    const L = { bin: 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Listen to the forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', lift: 'Ride the Descent', museum: 'Look at the Memory Room' }[p.act];
+    if (p.act === 'counter') { const k = nearestNpc(3.2); if (k) return { label: `Talk to ${NPCS[k].short || NPCS[k].name}`, run: () => talkTo(k) }; if (map.id === 'hall') return { label: 'Nobody is at the desk', run: () => ui.toast('Nobody is at the desk just now.') }; return { label: 'Nobody is at the counter', run: () => ui.toast('Nobody is here to serve just now.') }; }
+    const L = { bin: 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Listen to the forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', lift: 'Ride the Descent', museum: 'Look at the Memory Room', books: 'Read a book' }[p.act];
     return { label: L, run: () => act(p) };
   }
   const fa = fieldAt(tx, ty) || fieldAt(Math.floor(me.x), Math.floor(me.y));
@@ -242,6 +262,7 @@ async function act(p) {
     case 'bed': { mode = 'talk'; const i = await ui.choose('The bed', ['Sleep until morning', 'Save the game', 'Not yet']); mode = 'play'; if (i === 0) await night(false); else if (i === 1) { save(); ui.toast('Saved.'); } break; }
     case 'feedcow': case 'feedhen': { const r = sim.feedAll(S, p.act === 'feedcow' ? 'cow' : 'chicken'); ui.toast(r.msg || (r.ok ? 'Fed.' : 'Nothing to feed.')); if (r.ok) sfx('drop'); break; }
     case 'eggs': { const r = sim.collectEggs(S); if (r.ok) { sfx('pick'); ui.gainedToast(r.gained); } else ui.toast(r.msg || 'No eggs today.'); drawEggs(); break; }
+    case 'books': { const h = pick(story.HELP); ui.say([{ who: 'narrator', text: `Sato takes down a book: “${h.title}”.` }, { who: 'narrator', text: h.body.split('\n').slice(0, 3).join(' ') }]); break; }
     case 'museum': ui.museum(S, RELICS.map((r) => ({ id: r.id, text: story.RUINS.relic[r.id] }))); break;
     case 'lift': {
       const deep = (S.stats && S.stats.deepest) || 0, opts = ['Level 1'], lv = [1]; for (let d = 5; d <= deep; d += 5) { opts.push('Level ' + d); lv.push(d); } opts.push('Stay up here');
@@ -306,6 +327,10 @@ async function night(collapsed) {
   await ui.fade(true, 700);
   if (S.mine) sim.leaveMine(S);
   const rep = sim.sleep(S, { collapsed }); sim.claimGoals(S);
+  if (S.flags.partner && NPCS[S.flags.partner]) {            // a partner waters some of the field before she wakes
+    let k = 0; for (const t of S.fields.farm.tiles) { if (k >= 12) break; if (t.till && t.crop && !t.crop.dead && !t.wet) { t.wet = true; k++; } }
+    if (k) (rep.notes ||= []).push(`${NPCS[S.flags.partner].short || NPCS[S.flags.partner].name} watered ${k} plants before you woke.`);
+  }
   busy = false; await go({ map: 'house', x: 2.6, y: 2.6, dir: 0 }, { quick: true }); busy = true;
   save(); sfx('morning');
   const f = festivalToday(), SK = ['spring', 'summer', 'autumn', 'winter'];

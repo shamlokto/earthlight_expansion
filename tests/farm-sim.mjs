@@ -62,7 +62,7 @@ const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
   check(s.pasture.w === 12 && s.pasture.h === 7 && s.pasture.grass.length === 84 && s.pasture.grass.every((v) => v === 0), 'pasture empty');
   check(s.animals.length === 0 && s.eggs === 0 && s.bin.length === 0 && s.mine === null && s.pending.upgrade === null && s.pending.animals.length === 0, 'nothing else yet');
   check(s.forage.length >= 2 && s.forage.length <= 4 && s.forage.every((x) => x.id === 'herb' && x.spot >= 0 && x.spot < 8), 'spring forage');
-  check(Object.keys(s.npc).length === 9 && s.npc.ruess.love === 0 && sim.hearts(s, 'ruess') === 0, 'npc records');
+  check(Object.keys(s.npc).length === 12 && s.npc.ruess.love === 0 && sim.hearts(s, 'ruess') === 0, 'npc records');
   check(sim.weekday(s) === 0 && sim.absDay(s) === 0 && sim.dateLabel(s) === 'Spring 1 (Mon), Year 1' && sim.timeLabel(s) === '6:00 AM', 'calendar labels');
   s.cal.day = 3; s.cal.minute = 580;
   check(sim.dateLabel(s) === 'Spring 3 (Wed), Year 1' && sim.timeLabel(s) === '9:40 AM', 'labels from the contract');
@@ -345,16 +345,16 @@ function script(s, days = 12) {
   const seenKeys = new Set();
   for (let season = 0; season < 4; season++) {
     for (const shop of SHOP_IDS) {
-      const base = rich(); setDate(base, season, 2);
+      const base = rich(); setDate(base, season, 2); base.player.stamina = 40;      // tired, so the clinic's check-up is on offer
       const stock = shopStock(base, shop);
       check(stock.length > 0, `${shop} sells something in ${SEASONS[season]}`);
       for (const e of stock) {
         seenKeys.add(e.key);
         check(typeof e.key === 'string' && e.label && e.desc && e.price > 0 && e.can === true && e.why === undefined, `${shop}/${e.key} is a full entry a rich player can buy`);
-        const s = rich(); setDate(s, season, 2);
+        const s = rich(); setDate(s, season, 2); s.player.stamina = 40;
         const r = buy(s, shop, e.key);
         check(r.ok && r.msg && s.player.money === 1e6 - e.price, `${shop}/${e.key} bought for its price`);
-        const p = rich(); setDate(p, season, 2); p.player.money = e.price - 1;
+        const p = rich(); setDate(p, season, 2); p.player.money = e.price - 1; p.player.stamina = 40;
         const pe = shopStock(p, shop).find((x) => x.key === e.key), before = saveState(p), pr = act(buy(p, shop, e.key));
         check(pe.can === false && typeof pe.why === 'string' && pe.why && !pr.ok && pr.msg === pe.why && saveState(p) === before, `${shop}/${e.key} refused when poor, nothing changed`);
       }

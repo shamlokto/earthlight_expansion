@@ -62,7 +62,7 @@ class MapDef {
 // ---------------------------------------------------------------- outdoors
 
 function farm() {
-  const m = new MapDef('farm', 44, 34, 'g', { name: 'The Hollin field' });
+  const m = new MapDef('farm', 44, 34, 'g', { name: 'The Hollin field · Upper deck' });
   const [fw, fh] = FIELD_SIZES.farm, [pw, ph] = PASTURE_SIZE;
   m.field = { id: 'farm', x: 3, y: 11, w: fw, h: fh };
   m.pasture = { x: 26, y: 12, w: pw, h: ph };
@@ -94,7 +94,7 @@ function farm() {
 }
 
 function village() {
-  const m = new MapDef('village', 46, 36, 'g', { name: 'Willowfall' });
+  const m = new MapDef('village', 46, 36, 'g', { name: 'Willowfall · the Lantern Ring' });
   m.fill(0, 22, 45, 24, 'w').fill(0, 21, 45, 21, 's').fill(0, 25, 45, 25, 's');
   m.fill(22, 0, 23, 35, 'p').fill(22, 21, 23, 25, 'k');                              // main road and the bridge
   m.fill(17, 9, 28, 18, 'c');                                                         // the square
@@ -106,8 +106,10 @@ function village() {
   m.building('workshop', 8, 13, 7, 4, { height: 3.4, to: { map: 'workshop' }, label: 'Workshop' });
   m.building('hall', 31, 12, 8, 5, { height: 4, to: { map: 'hall' }, label: 'Village Hall' });
   m.building('ranch', 8, 27, 7, 4, { height: 3.4, to: { map: 'ranch' }, label: "Corran's Ranch" });
-  m.building('cottage_a', 28, 27, 5, 4, { label: 'Cottage' });
-  m.building('cottage_b', 36, 27, 5, 4, { label: 'Cottage' });
+  m.building('clinic', 28, 27, 5, 4, { to: { map: 'clinic' }, label: 'Clinic' });
+  m.building('library', 36, 27, 6, 4, { height: 3.6, to: { map: 'library' }, label: 'Library' });
+  m.building('cottage_a', 40, 12, 5, 4, { label: 'Cottage' });
+  m.building('cottage_b', 2, 13, 5, 4, { label: 'Cottage' });
   m.prop('memorial', 22, 13, { w: 2, act: 'sign', sign: 'village.memorial' });
   m.prop('signpost', 24, 8, { act: 'sign', sign: 'village.square' });
   m.prop('signpost', 16, 10, { act: 'sign', sign: 'village.storefront' });
@@ -123,7 +125,7 @@ function village() {
   m.exit(22, 0, 23, 0, { map: 'farm', x: 22, y: 32.2, dir: 1 });
   m.spot('village.square', 22.5, 16).spot('village.memorial', 23, 14.8).spot('village.bridge', 23, 20.4).spot('village.dock', 38.5, 20.6)
     .spot('village.bench', 27, 20.2).spot('village.storefront', 12.4, 10).spot('village.cafefront', 34.2, 10).spot('village.hallfront', 34.2, 18.2)
-    .spot('village.workshopfront', 12.4, 18.2).spot('village.ranchyard', 14, 32.4).spot('village.river', 16, 20.6);
+    .spot('village.clinicfront', 31.6, 32.3).spot('village.libraryfront', 40.4, 32.3).spot('village.workshopfront', 12.4, 18.2).spot('village.ranchyard', 14, 32.4).spot('village.river', 16, 20.6);
   m.water = 'village'; m.start = [23, 1.6];
   m.border('tree', 21, (x, y) => (y === 0 && (x === 22 || x === 23)));
   m.scatter(8, 26, ['tree', 'tree', 'pine', 'bush', 'flowers', 'flowers']);
@@ -134,7 +136,7 @@ function village() {
 export const FORAGE_SPOTS = [[5, 6], [12, 4], [20, 10], [30, 13], [8, 13], [18, 21], [26, 19], [32, 22]];
 
 function hill() {
-  const m = new MapDef('hill', 36, 26, 'g', { name: 'Lift Hill' });
+  const m = new MapDef('hill', 36, 26, 'g', { name: 'Terrace Hill' });
   m.fill(0, 0, 35, 1, 'r').fill(0, 24, 35, 25, 'r').fill(34, 0, 35, 25, 'r').fill(0, 0, 0, 10, 'r').fill(0, 15, 0, 25, 'r');
   m.fill(0, 12, 20, 13, 'p').fill(20, 9, 21, 13, 'p').fill(20, 9, 28, 10, 'p').fill(24, 8, 30, 9, 'c');
   m.fill(5, 17, 16, 23, 's').fill(6, 18, 15, 22, 'w');
@@ -203,6 +205,14 @@ function interiors() {
   m.spot('cafe.table1', 3.6, 5.5).spot('cafe.table2', 8.4, 5.5).spot('cafe.table3', 8.4, 7.5);
   m.prop('shelf', 0, 0, { w: 2 }); m.prop('shelf', 10, 0, { w: 2 });
   out.cafe = m;
+  m = shop('clinic', 'Willowfall Clinic', 10, 8, 5); m.spot('clinic.floor', 7.5, 5.5);
+  m.prop('bed', 0, 3, { d: 2, model: 'clinic_bed' }); m.prop('bed', 0, 5, { d: 2, model: 'clinic_bed' }); m.prop('shelf', 8, 0, { w: 2 }); m.prop('plantpot', 9, 6, {});
+  out.clinic = m;
+  m = room('library', 12, 9, 'Lantern Ring Library');
+  m.prop('desk', 5, 2, { w: 3, act: 'counter' }); m.spot('library.counter', 6.5, 1.5).spot('library.floor', 3.5, 5.5);
+  for (const x of [0, 2, 8, 10]) m.prop('shelf', x, 0, { w: 2, model: 'bookshelf', act: 'books' });
+  m.prop('shelf', 0, 4, { w: 2, model: 'bookshelf', act: 'books' }); m.prop('shelf', 10, 4, { w: 2, model: 'bookshelf', act: 'books' }); m.prop('table', 8, 6, { w: 2 }); m.prop('rug', 4, 5, { solid: false, w: 2, d: 2 });
+  out.library = m;
   m = room('hall', 12, 9, 'Village Hall');
   m.prop('desk', 5, 2, { w: 3, act: 'counter' }); m.spot('hall.desk', 6.5, 1.5).spot('hall.floor', 3.5, 5.5);
   for (let y = 2; y <= 6; y += 2) m.prop('case', 11, y, { act: 'museum' });

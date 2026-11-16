@@ -49,8 +49,8 @@ class Comfy:
 
     def upload(self, path, name=None):
         name = name or os.path.basename(path)
-        with open(path, "rb") as f:
-            r = self._req("POST", "/upload/image", files={"image": (name, f, "image/png")}, data={"overwrite": "true"})
+        data = open(path, "rb").read()      # bytes, so a retry sends the whole file again
+        r = self._req("POST", "/upload/image", files={"image": (name, data, "image/png")}, data={"overwrite": "true"})
         return r.json()["name"]
 
     def queue(self, graph):

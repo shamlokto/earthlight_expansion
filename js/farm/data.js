@@ -89,6 +89,7 @@ item('soup', 'Soup', 'food', 'Restores 40 stamina.', { stamina: 40 });
 item('pie', 'Pie', 'food', 'Restores 70 stamina.', { stamina: 70 });
 item('tea', 'Tea', 'food', 'Restores 10 stamina.', { stamina: 10 });
 item('tonic', 'Tonic', 'food', "Moraine's tonic. Restores 100 stamina.", { stamina: 100 });
+item('pendant', 'Earthlight pendant', 'keepsake', "A drop of fused hull-glass that holds Earth's light. On Eden you give it to the one you want to share your table with.");
 
 // Extras beyond the contract: things kept in state.stock, never in the rucksack. They are listed
 // here so that a `gained` entry always has a name; addItem() sends them straight to the stock.

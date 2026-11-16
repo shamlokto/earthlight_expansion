@@ -16,6 +16,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/carrot": {
+   "file": "icons/carrot.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/corn": {
    "file": "icons/corn.webp",
    "w": 256,
@@ -121,6 +126,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/potato": {
+   "file": "icons/potato.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/pumpkin": {
    "file": "icons/pumpkin.webp",
    "w": 256,
@@ -138,6 +148,11 @@
   },
   "icons/strawberry": {
    "file": "icons/strawberry.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/sweetpotato": {
+   "file": "icons/sweetpotato.webp",
    "w": 256,
    "h": 256
   },
@@ -463,26 +478,6 @@
    "w": 1024,
    "h": 1024,
    "tile": "period"
-  },
-  "icons/carrot": {
-   "file": "icons/carrot.webp",
-   "w": 256,
-   "h": 256
-  },
-  "icons/medal": {
-   "file": "icons/medal.webp",
-   "w": 256,
-   "h": 256
-  },
-  "icons/potato": {
-   "file": "icons/potato.webp",
-   "w": 256,
-   "h": 256
-  },
-  "icons/sweetpotato": {
-   "file": "icons/sweetpotato.webp",
-   "w": 256,
-   "h": 256
   }
  }
 }

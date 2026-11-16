@@ -30,7 +30,7 @@ CUT = (" " + STYLE + " Isolated on a plain flat uniform light grey background, s
        "the entire subject fully inside the frame with a clear margin all round, centred, upright.")
 CROP = "Anime illustration, three-quarter view from slightly above, of a single {x}, growing out of one small round mound of dark brown garden soil. Plump, fresh and appealing."
 ICON = ("Game item icon illustration of {x}. One single object, centred, seen from a slight three-quarter angle, a simple inanimate object, appealing, with a soft highlight. " + STYLE +
-        " Isolated on a plain flat uniform light grey background, no cast shadow, the whole object inside the frame with a margin.")
+        " Isolated on a plain flat uniform mid-grey background, no cast shadow, the whole object inside the frame with a margin.")
 BLDG = ("Straight-on orthographic front elevation illustration of {x}. Flat frontal view exactly facing the front wall, no perspective, no side walls visible, "
         "the whole building inside the frame from the ground line to the roof top with a small margin, the door at ground level in the centre of the facade, "
         "even soft light, no cast shadows, standing on a thin strip of bare ground, isolated against a plain flat uniform light grey background, no people, no signs with lettering. Cosy and charming. " + STYLE)
@@ -102,8 +102,8 @@ SCENES = {
     "intro3": "Wide cinematic anime film still of the inside of a vast empty carrier hangar deck, bare steel floor with faded painted lines, tall ribbed walls, cold light falling from high panels, empty docking cradles. "
               "Two small figures stand facing each other far away in the middle of the huge space: a woman officer in a navy blue uniform with a short dark bob haircut, and an older man with short dark hair, an officer in a dark greatcoat. "
               "Quiet, still, a farewell. Beautiful anime film still, muted colours, no text.",
-    "intro4": "Wide cinematic aerial anime film still of a river valley. " + COLONY + "A calm river winds through green meadows and small fields to a little village of weathered wooden houses with tin and red tile roofs, "
-              "a stone bridge, a village hall with a small bell tower, willows along the banks, orchards, a few roofs patched with spacecraft hull plates. Late morning light. " + PHOTO,
+    "intro4": "Very wide cinematic anime film still on a bright clear morning, an establishing view from a hilltop over a beautiful hillside district: terraced green hills with sky gardens, flower beds and little coffee terraces, "
+              "white and timber houses with tin and tile roofs, and in the valley a small village with a stone bridge lined with paper lanterns over a stream, a village hall with a small bell tower, willows, orchards, morning mist. " + COLONY + PHOTO,
     "intro5": "Anime illustration of an abandoned overgrown farm field, tall weeds, brambles, field stones and fallen branches, a small weathered wooden farmhouse with a tin roof and one broken shutter hanging askew, "
               "and in the grass in the foreground a worn dark blue military kit bag set down beside a rusty gate. " + COLONY + "Soft afternoon light. " + PHOTO,
     "festival_planting": "Anime illustration of a small village square on a spring morning, a planting festival: villagers in simple work clothes carrying trays of green seedlings, long tables with seed baskets and bread, "
@@ -138,6 +138,16 @@ SCENES = {
                  "hanging warm lamps, a steaming pot on a stove, pies on the counter, a big hangar door window with green hills outside. Beautiful anime film still, inviting, nobody present, no readable text.",
     "shop_barge": "Anime illustration of the deck of a small flat river trading barge moored at a village dock: a striped dark red cloth awning, low tables with rare seeds in little tins, glass bottles of tonic, bolts of cloth, brass lamps, "
                   "rich dark red cushions, calm river and willows behind. Late afternoon light, beautiful anime film still, nobody present, no readable text.",
+    "wedding": "Anime illustration of a small evening wedding in a village square, under many strings of glowing paper lanterns between weathered wooden houses. In the centre, seen from behind, the bride: "
+               "a young woman with a short navy-black bob haircut, in a simple white dress with a crown of small flowers in her hair, standing hand in hand with her partner beside her, "
+               "who is only a soft dark out-of-focus silhouette whose features cannot be made out. Smiling villagers stand around in a loose circle, flower petals in the air, warm golden lantern light, deep blue dusk. "
+               + NIGHTSKY + "Tender, joyful, quiet. " + PHOTO,
+    "upperdeck": "Wide anime illustration of a beautiful hillside district in the late afternoon: terraced green hills with sky gardens, flower beds and little coffee terraces with parasols and tables, white and timber houses with tin and tile roofs, "
+                 "a small village below with a stone bridge lined with paper lanterns over a stream, winding stone steps, people strolling. " + COLONY + PHOTO,
+    "shop_clinic": "Anime illustration of the interior of a cosy small village clinic: an examination couch with a folded blanket, a wooden desk with a lamp and a stethoscope, glass-fronted cabinets of bottles and bandages, "
+                   "a privacy screen, potted plants on the windowsill, a weighing scale, warm daylight through a window. Clean, kind, homely, nobody present, no readable text. " + STYLE,
+    "shop_library": "Anime illustration of the interior of a warm little village library: tall wooden shelves packed with old books, a rolling ladder, a reading table with a green lamp and an open book, a worn armchair, "
+                    "a small counter with a card box, a cat asleep on a cushion, dust motes in the golden light from a tall window. Quiet, inviting, nobody present, no readable text. " + STYLE,
     "hall_memory": "Anime illustration of a quiet room in a village hall: rows of simple glass display cases on wooden tables, each holding one small old-world object: a pocket watch, a teacup, a tin toy robot, a medal, a worn book, a music box, a photograph in a frame. "
                    "Soft daylight from a tall window, pale plaster walls, wooden floor, still and respectful. Beautiful anime film still, nobody present, no readable text.",
 }
@@ -260,6 +270,12 @@ PEOPLE = {  # id: (portrait file or None, description)
                               "She wears a short tan and orange flight jacket over a teal neckerchief, khaki cargo trousers, brown boots, a canvas courier satchel across her body."),
     "vashti": ("w_vashti.webp", "The woman from the reference picture as a cute anime character: a lean salvage hunter in her thirties, tanned, a red bandana over black hair in a long braid over one shoulder, a serious quiet face, a smudge of dirt on her cheek. "
                                 "She wears a worn brown leather jacket with one scuffed metal shoulder plate, goggles hanging at her neck, dark canvas trousers, heavy boots, fingerless gloves."),
+    "kestrel": ("w_kestrel.webp", "The man from the reference picture as a cute anime character: Commander Rell Kestrel, a young man in his late twenties with short blond hair and a cocky half-smile. "
+                                  "He wears a navy blue flight jacket with a white collar, grey trousers and dark boots."),
+    "mori": (None, "Dr. Haruto Mori, a Japanese man in his early thirties with soft black hair, round glasses and a gentle smile. "
+                   "He wears a white doctor's coat, open over a pale blue shirt, dark trousers and brown shoes."),
+    "yui": (None, "Yui Hoshino, a librarian, a Japanese woman in her late twenties with a long dark-brown braid over one shoulder, round glasses and a shy warm smile. "
+                  "She wears a mustard yellow cardigan over a cream blouse, dark trousers and flat brown shoes; her hands are empty."),
     "moraine": (None, "A regal woman in her fifties: sharp elegant face, a knowing half-smile, sleek black hair in an asymmetric bob with one bold red streak, dark red lipstick. "
                       "She wears a long tailored dark red coat with a high collar, black gloves, black trousers and polished black boots; the bearing of a queen who is now a trader."),
 }
@@ -334,12 +350,14 @@ ICONS = {
     "frostcap": "one pale icy-blue winter mushroom with a frosted cap", "scrap": "one small pile of rusty scrap metal pieces, gears and bent plate", "alloy": "one bright polished silver metal ingot bar",
     "crystal": "one clear pale violet natural crystal cluster", "photo": "one old faded photograph of a seaside landscape in a small worn wooden frame", "teacup": "one old porcelain teacup with a faded blue rim and a small chip",
     "book": "one old worn cloth-bound book with a blank faded green cover", "watch": "one old brass pocket watch with a chain, cracked glass", "toy": "one old tin wind-up toy robot, red and silver, scratched",
-    "medal": "one old bronze military medal on a faded blue ribbon, plain star shape", "seedtin": "one small old round metal tin of seeds, dented, lid slightly open showing seeds, no label",
+    "medal": "one old bronze medal, a plain five-pointed star hanging from a short faded blue ribbon", "seedtin": "one small old round metal tin of seeds, dented, lid slightly open showing seeds, no label",
     "musicbox": "one small old wooden music box with a brass crank and open lid", "datachip": "one small translucent blue data chip with gold contacts", "ring": "one plain old gold ring",
     "bread": "one round crusty loaf of country bread", "soup": "one earthenware bowl of vegetable soup with a wooden spoon", "pie": "one golden baked fruit pie in a tin dish", "tea": "one steaming mug of tea, plain enamel mug",
     "tonic": "one small corked glass bottle of amber tonic, plain, no label", "hoe": "one garden hoe with a wooden handle and steel blade, lying diagonally", "can": "one galvanised metal watering can with a long spout",
     "sickle": "one hand sickle with a curved steel blade and wooden handle", "hammer": "one heavy sledgehammer with a wooden handle, lying diagonally", "axe": "one wood axe with a wooden handle and steel head, lying diagonally",
     "rod": "one simple bamboo fishing rod with a reel and line, lying diagonally", "milker": "one small hand milking pail of stainless steel with a lid and a short rubber tube", "brush": "one wooden animal grooming brush with stiff bristles and a leather strap",
+    "lumber": "one neat small stack of three sawn wooden planks tied with rope", "feed": "one small burlap sack of hen feed, tied at the top, a few grains spilling out, no printing",
+    "fodder": "one bundle of golden hay tied with twine", "pendant": "one pendant, a teardrop of clear blue glass on a thin leather cord, the glass glowing faintly from within",
     "seedbag": "one small plain cloth seed pouch of undyed burlap tied at the neck with twine, no printing",
 }
 

@@ -70,6 +70,8 @@ const BUILDING = {
   workshop: { model: 'workshop', facade: 'buildings/workshop', wall: 'plank_wall', roof: 'roof_tin' },
   hall: { model: 'hall', facade: 'buildings/hall', wall: 'plaster_wall', roof: 'roof_shingle' },
   ranch: { model: 'ranch', facade: 'buildings/ranch', wall: 'barn_red', roof: 'roof_shingle' },
+  clinic: { model: 'clinic', facade: 'buildings/clinic', wall: 'plaster_wall', roof: 'roof_red' },
+  library: { model: 'library', facade: 'buildings/library', wall: 'plank_wall', roof: 'roof_shingle' },
   cottage_a: { model: 'cottage_a', facade: 'buildings/cottage_a', wall: 'plaster_wall', roof: 'roof_red' },
   cottage_b: { model: 'cottage_b', facade: 'buildings/cottage_b', wall: 'plank_wall', roof: 'roof_shingle' },
   lift: { model: 'lift', facade: 'buildings/lift_tower', wall: 'metal_hull', roof: 'roof_tin', frame: true },
@@ -235,7 +237,7 @@ export class World {
     const def = PROPS[kind] || {}, holder = new THREE.Group();
     const h = (def.h || 1) * (o.scale || 1), fw = o.w || 1, fd = o.d || 1;
     const slot = def.sprite ? def.sprite(this) : null, p = slot && art.pic(slot);
-    const mname = typeof def.model === 'function' ? def.model(this) : def.model;
+    const mname = o.model && art.hasModel(o.model) ? o.model : typeof def.model === 'function' ? def.model(this) : def.model;
     holder.userData.is3d = !!(mname && art.hasModel(mname)) || !p;
     const fallback = () => { if (p) holder.add(this.billboard(p, h, def)); else { const m = this.proc(kind, o); if (o.scale) m.scale.setScalar(o.scale); if (fw > 1 || fd > 1) m.position.set(-(fw - 1) / 2, 0, -(fd - 1) / 2); holder.add(m); } };
     if (mname && art.hasModel(mname)) {

@@ -24,7 +24,7 @@
 //    Finds that do not fit in a full rucksack are left behind (the result says so).
 import { SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, ITEMS, CROPS, TOOL_LEVELS, FIELD_SIZES, PASTURE_SIZE, RELICS, FESTIVAL_DAYS } from './data.js';
 
-export const NPC_IDS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine'];
+export const NPC_IDS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui'];
 export const CAN_CAPACITY = [0, 20, 40, 80];
 export const UPGRADABLE = ['hoe', 'can', 'sickle', 'hammer', 'axe', 'rod'];
 export const SHOPS = {
@@ -33,6 +33,7 @@ export const SHOPS = {
   workshop: { id: 'workshop', name: 'The Workshop', keeper: 'ruess' },
   cafe: { id: 'cafe', name: 'The Hangar', keeper: 'oduya' },
   barge: { id: 'barge', name: "Moraine's Barge", keeper: 'moraine' },
+  clinic: { id: 'clinic', name: 'Willowfall Clinic', keeper: 'mori' },
 };
 export const GOALS = [
   { id: 'clear', title: 'Clear some ground', hint: 'Cut a weed with the sickle, or break a rock with the hammer.', reward: 50 },
@@ -481,6 +482,12 @@ function shelves(state, shopId) {
     sell('tea', 30); sell('soup', 80); sell('pie', 150);
   } else if (shopId === 'barge') {
     sell('seed_moonflower', 1000); sell('tonic', 500);
+    if (!countItem(state, 'pendant') && !state.flags.partner) sell('pendant', 3000, { once: true });
+  } else if (shopId === 'clinic') {
+    out.push({ key: 'checkup', label: 'Check-up and a rest', desc: 'Dr. Mori looks you over. Restores all stamina.', price: 150, once: true,
+      stop: () => (p.stamina >= p.maxStamina ? 'You are in fine shape. Doctor\'s orders: go outside.' : null),
+      apply: () => { p.stamina = p.maxStamina; return 'You feel rested and well.'; } });
+    sell('tonic', 500);
   }
   return out;
 }
