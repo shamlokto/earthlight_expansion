@@ -6,6 +6,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/axe": {
+   "file": "icons/axe.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/berry": {
    "file": "icons/berry.webp",
    "w": 256,
@@ -13,6 +18,16 @@
   },
   "icons/book": {
    "file": "icons/book.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/bread": {
+   "file": "icons/bread.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/can": {
+   "file": "icons/can.webp",
    "w": 256,
    "h": 256
   },
@@ -36,8 +51,18 @@
    "w": 256,
    "h": 256
   },
+  "icons/datachip": {
+   "file": "icons/datachip.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/eggplant": {
    "file": "icons/eggplant.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/feed": {
+   "file": "icons/feed.webp",
    "w": 256,
    "h": 256
   },
@@ -81,13 +106,28 @@
    "w": 256,
    "h": 256
   },
-  "icons/frostcap": {
-   "file": "icons/frostcap.webp",
+  "icons/fodder": {
+   "file": "icons/fodder.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/hammer": {
+   "file": "icons/hammer.webp",
    "w": 256,
    "h": 256
   },
   "icons/herb": {
    "file": "icons/herb.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/lumber": {
+   "file": "icons/lumber.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/medal": {
+   "file": "icons/medal.webp",
    "w": 256,
    "h": 256
   },
@@ -116,8 +156,18 @@
    "w": 256,
    "h": 256
   },
+  "icons/musicbox": {
+   "file": "icons/musicbox.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/onion": {
    "file": "icons/onion.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/pendant": {
+   "file": "icons/pendant.webp",
    "w": 256,
    "h": 256
   },
@@ -136,8 +186,28 @@
    "w": 256,
    "h": 256
   },
+  "icons/ring": {
+   "file": "icons/ring.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/rod": {
+   "file": "icons/rod.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/scrap": {
    "file": "icons/scrap.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/seedtin": {
+   "file": "icons/seedtin.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/soup": {
+   "file": "icons/soup.webp",
    "w": 256,
    "h": 256
   },
@@ -163,6 +233,11 @@
   },
   "icons/tomato": {
    "file": "icons/tomato.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/tonic": {
+   "file": "icons/tonic.webp",
    "w": 256,
    "h": 256
   },

@@ -21,6 +21,7 @@ Models (ComfyUI `models/`): `diffusion_models/qwen_image_fp8_e4m3fn.safetensors`
 `vae/qwen_image_vae.safetensors`, `loras/Qwen-Image-Lightning-8steps-V2.0.safetensors`,
 `loras/Qwen-Image-Edit-2509-Lightning-8steps-V1.0-bf16.safetensors`, the two `wan2.2_i2v_*_14B_fp8_scaled` models with
 their `lightx2v_4steps` LoRAs, `text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors`, `vae/wan_2.1_vae.safetensors`.
+(Download with plain `curl -L -C -` from the Hugging Face `resolve/main` URLs; the xet-based `hf download` stalled.)
 
 ```sh
 export COMFY_URL=https://<pod>-8188.proxy.runpod.net     # temporary; never commit it
@@ -31,19 +32,32 @@ python3 comfy.py run people --only sato_front --seeds 6    # 1. Sato first; look
 python3 post.py sel people                                 #    picked raws become references
 python3 comfy.py run sato_portraits --only sato_portrait --seeds 3 ; python3 post.py sel sato_portraits
 python3 comfy.py run sato_portraits                        #    happy / tired from the picked portrait
-python3 comfy.py run people --seeds 2                      # 2. villagers (Qwen-Edit from art/colony/portrait)
-python3 comfy.py run textures ; python3 comfy.py run sky   # 3.
+python3 comfy.py run people --seeds 2                      # 2. villagers (Qwen-Edit from art/colony/portrait;
+python3 post.py sel people                                 #    the ones with no portrait use vashti_front as style reference)
+python3 texref.py ; python3 comfy.py run textures          # 3. textures: Qwen-Edit over flat procedural layout guides
+python3 comfy.py run sky --seeds 2
 python3 comfy.py run scenes --seeds 2                      # 4.
 python3 comfy.py run icons                                 # 5.
-#    on the pod:  /workspace/rb/bin/python pod_cut.py people icons     (venv with `pip install "rembg[cpu]"`)
-python3 post.py masks people ; python3 post.py cut people  #    same for icons
+python3 local_cut.py people birefnet-general               #    mattes on this machine (people: BiRefNet; isnet loses white clothes)
+python3 local_cut.py icons                                 #    icons: isnet-general-use is fine and fast
+#    or on the GPU machine, ONE niced process:  nice -n 19 python pod_cut.py people icons ; then  post.py masks <group>
+python3 post.py cut people ; python3 post.py cut icons
 python3 post.py textures ; python3 post.py sky ; python3 post.py scenes ; python3 post.py portraits
-python3 post.py sel scenes ; python3 comfy.py run video ; python3 post.py video   # 6. WAN clips from the stills
+python3 post.py sel scenes ; python3 comfy.py run video ; python3 post.py video   # 6. WAN clips from the stills (~1 min each on an L40S)
 python3 post.py manifest
 ```
 
 `post.py sheet <group>` writes contact sheets to `$FARM_ART_WORK/review/` - look at them before picking.
-On a shared queue use `--batch 4 --gap 1` (queues four jobs at the front, waits, then pauses).
+On a shared queue use `--back --batch 6` (never more than six of ours pending, behind everyone else).
+If `/upload/image` fails on the server, put the reference files into ComfyUI's `input/` by hand under the
+name `farm_<group>_<basename>` and set `COMFY_NO_UPLOAD=1`.
+
+What we learned about prompting Qwen-Image (all reflected in `prompts.py`):
+* negations backfire ("not pixel art" gave pixel art, "no naval guns" gave battleships): describe only what you want;
+* it will not paint a flat top-down surface from text: textures go through Qwen-Edit over `texref.py` guides;
+* "space colony" draws a metal ring: the colony sky is described as an upside-down far land plus a horizontal line of light;
+* "ship / warship / tug" in space draws sea ships: describe modules, tanks and truss girders instead;
+* "game item icon" can give app-style tiles, hands or kawaii faces: say "illustration of an object", then reject the odd ones.
 
 Groups that exist in `prompts.py` but are not used by the current game (the world became 3D models):
 `sprites`, `pallas`, `buildings`, `people_views`, `walk`, `action`, `sato_poses`.

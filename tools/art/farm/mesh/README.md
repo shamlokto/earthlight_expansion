@@ -4,7 +4,13 @@ The models in `art/farm/models/` were made in two steps on a rented GPU pod (one
 
 1. **Concept picture** — Qwen-Image (8-step Lightning LoRA) through the pod's ComfyUI queue:
    one object, whole, front-right 3/4 view from slightly above, white background.
-   Style: cute Japanese-anime figurine look (see `_style` in `prompts.json`; one entry per object).
+   Style: cute Japanese-anime figurine look. `prompts.json` has four templates, chosen by each entry's `kind`:
+   `_style` (creatures and mecha), `_style_char` (chibi people: straight front view, A-pose, for the game's rig),
+   `_style_obj` (buildings and props) and `_style_plant`. Lessons learnt with Qwen-Image + Lightning (cfg 1, so the
+   negative prompt does nothing): words like "cute / adorable / figurine", and any sentence that mentions a face
+   ("it has no face"), put kawaii faces, mascots or little hands on props; "blank background / product shot"
+   gave checkerboards and lettering. The `_style_obj` wording in the file is the one that stayed clean.
+   Rocks still tend to get faces: look at the picture before spending GPU time on it.
 2. **Image → 3D** — Tencent **Hunyuan3D-2** (shape: `hunyuan3d-dit-v2-0-turbo` + FlashVDM, 8 steps,
    octree 380; texture: `hunyuan3d-delight-v2-0` + `hunyuan3d-paint-v2-0`), run as a standalone
    script beside ComfyUI (about 15.5 GB VRAM peak, 35–60 s per object).
@@ -23,15 +29,19 @@ before selling anything that ships these meshes.
 | `gen3d.py` | pod | image → cut-out (rembg) → shape → clean → decimate → paint → normalised GLB |
 | `fetch.sh` | this machine | downloads finished GLBs from ComfyUI's `output/mesh3d/` |
 | `view.html`, `render.mjs` | this machine | four-view check render with the game's own three.js + GLTFLoader (Playwright) |
-| `accept.py` | this machine | validates a GLB, copies it to `art/farm/models/`, updates `manifest.json` |
+| `accept.py` | this machine | validates a GLB, copies it to `art/farm/models/`, updates `manifest.json` (`name:stem=note`) |
+| `autoq.py` | pod | turns every new concept picture into a job for `gen3d.py --watch` |
+| `harvest.py` | this machine | fetches all newly finished GLBs, renders them, stacks contact sheets to look at |
+| `rotate_glb.py` | this machine | quarter turn about Y for a model that came out lengthwise along Z |
 
 ## Output contract (`art/farm/models/<name>.glb`)
 
 * glTF 2.0 binary, **no extensions** (no Draco / KTX2 / meshopt), one mesh, one material.
 * Y up, standing on `y = 0`, centred on x/z, **front faces +Z**, longest side = 1 unit
   (`manifest.json` gives the bounding box `size`; the game scales by the real-world size it wants).
-* ≤ 20 000 triangles (props 4–12 k), smooth vertex normals included.
-* One 1024² base-colour JPEG. Material: metallic 0, roughness 0.9. The texture already holds soft
+* ≤ 20 000 triangles (props 1.5–12 k; `sato` 30 k), smooth vertex normals included.
+* Characters (`"unit": "height"` in the manifest) are normalised so that **height = 1**; everything else so that the longest side = 1.
+* One base-colour JPEG: 1024² (small props 512², `sato` 2048²). Material: metallic 0, roughness 0.9. The texture already holds soft
   painted shading, so light it gently (hemisphere + one sun) or it will look double-shaded.
 
 ## Reproduce
@@ -83,3 +93,17 @@ python3 accept.py /tmp/raw "farmhouse=porch on +Z" cow          # into art/farm/
 A spec is `NAME[:TRIS[:SEED[:YAW[:SRC]]]]`. Hunyuan3D returns the object upright and axis-aligned
 with its front on +Z even from a 3/4 picture; `YAW=auto` only removes a small residual twist
 (±12°), `none` leaves it, a number rotates by that many degrees (use 180 if a model comes out backwards).
+
+## Things that went wrong (so you do not repeat them)
+
+* **rembg drops pale parts** (a straw hat on white). `gen3d.py` now unions rembg with a flood fill of the backdrop.
+* **Hunyuan3D leaves a temp `.ply` in `/tmp` for every mesh** (14 GB after ~100 models, which filled the pod's
+  root disk and failed every job with "No space left on device"). Delete `/tmp/tmp????????.ply` now and then,
+  or point `TMPDIR` at a scratch folder and empty it.
+* **VRAM**: the worker idles at 12 GB and peaks at 15.6 GB (19.6 GB with `v768`). Beside a ComfyUI that holds
+  20–28 GB of Qwen on a 46 GB card it starts to thrash (3–4 minutes per model instead of 35–60 s), and a second
+  worker dies with out-of-memory. Run concept pictures and 3D in separate phases if you can.
+* **Opt `p`** (project the concept picture onto the front of the mesh) is in `gen3d.py` but was rejected: the
+  picture never lines up exactly with the mesh, and the fringe was painted twice across the forehead.
+  `v768` (paint views at 768 px) was what made the faces clean.
+* Rendering faces: `CHR=1 node render.mjs …` adds a face close-up; `harvest.py` does that for `kind: char` entries.

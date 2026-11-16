@@ -281,6 +281,7 @@ def anchor_of(im):
     return [int(round((xs.min() + xs.max()) / 2)), y]
 
 
+CENTRE_ONLY = {"crystal", "milk_m"}
 CUT_SPEC = {"sprites": ("sprites", 512), "pallas": ("sprites", 512), "buildings": ("buildings", 1024), "people": ("people", 768), "people_views": ("people", 768), "icons": ("icons", 256)}
 
 
@@ -294,6 +295,14 @@ def cut(group, only=None):
         if not os.path.exists(m):
             print("no matte yet:", slot); continue
         im = cutout(Image.open(f), Image.open(m))
+        if group == "icons" and slot in CENTRE_ONLY:   # the model drew a rounded frame round the object: keep the middle piece
+            from scipy import ndimage
+            a = np.asarray(im).copy()
+            lab, n = ndimage.label(a[..., 3] > 40)
+            h, w = lab.shape
+            keep = set(np.unique(lab[h * 3 // 8: h * 5 // 8, w * 3 // 8: w * 5 // 8])) - {0}
+            a[..., 3][~np.isin(lab, list(keep))] = 0
+            im = Image.fromarray(a, "RGBA")
         if group == "icons":
             im, touch = crop_fit(im, 236)
             if im is None:

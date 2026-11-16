@@ -29,8 +29,9 @@ TEXE = ("Repaint this flat layout guide as a finished, beautiful hand-painted ga
 CUT = (" " + STYLE + " Isolated on a plain flat uniform light grey background, soft even light, no cast shadow, "
        "the entire subject fully inside the frame with a clear margin all round, centred, upright.")
 CROP = "Anime illustration, three-quarter view from slightly above, of a single {x}, growing out of one small round mound of dark brown garden soil. Plump, fresh and appealing."
-ICON = ("Game item icon illustration of {x}. One single object, centred, seen from a slight three-quarter angle, a simple inanimate object, appealing, with a soft highlight. " + STYLE +
-        " Isolated on a plain flat uniform mid-grey background, no cast shadow, the whole object inside the frame with a margin.")
+# ("game item icon" and a mid-grey ground sometimes gave app-style rounded tiles, hands or faces: say "illustration of an object".)
+ICON = ("Anime illustration of an object: {x}. Only the object itself, nobody holding it, One single object, centred, seen from a slight three-quarter angle, a simple inanimate object, appealing, with a soft highlight. " + STYLE +
+        " Isolated on a plain flat uniform light grey background that fills the whole picture, no frame, no cast shadow, the whole object inside the frame with a margin.")
 BLDG = ("Straight-on orthographic front elevation illustration of {x}. Flat frontal view exactly facing the front wall, no perspective, no side walls visible, "
         "the whole building inside the frame from the ground line to the roof top with a small margin, the door at ground level in the centre of the facade, "
         "even soft light, no cast shadows, standing on a thin strip of bare ground, isolated against a plain flat uniform light grey background, no people, no signs with lettering. Cosy and charming. " + STYLE)
