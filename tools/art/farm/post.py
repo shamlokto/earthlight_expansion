@@ -101,7 +101,9 @@ def _seam_blend(a, b, feather=10):
     left edge and a at its right edge, switching along a minimum-error vertical seam."""
     H, O, _ = a.shape
     cost = ((a - b) ** 2).sum(2)
-    cost = np.asarray(Image.fromarray(cost.astype(np.float32)).filter(ImageFilter.GaussianBlur(2)))
+    k = np.ones(5) / 5
+    cost = np.apply_along_axis(lambda r: np.convolve(r, k, 'same'), 1, cost)
+    cost = np.apply_along_axis(lambda r: np.convolve(r, k, 'same'), 0, cost)
     acc = cost.copy()
     for y in range(1, H):
         p = acc[y - 1]

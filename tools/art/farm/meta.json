@@ -58,5 +58,23 @@
 130,
 765
 ]
+},
+"textures/cobble": {
+"tile": "period"
+},
+"textures/grass_spring": {
+"tile": "quilt"
+},
+"textures/plank_wall": {
+"tile": "period"
+},
+"textures/roof_red": {
+"tile": "period"
+},
+"textures/soil_tilled": {
+"tile": "period"
+},
+"textures/water": {
+"tile": "quilt"
 }
 }

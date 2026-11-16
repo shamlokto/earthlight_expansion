@@ -52,6 +52,14 @@ export CPATH=$(ls -d /workspace/h3d/venv/lib/python3.12/site-packages/nvidia/*/i
 (cd hy3dgen/texgen/differentiable_renderer && python setup.py install)
 ```
 
+Two one-line patches make the paint step counts adjustable (gen3d.py uses 20/16 steps for props, 50/30 for characters):
+
+```sh
+cd hy3dgen/texgen/utils
+sed -i 's/num_inference_steps=50,/num_inference_steps=int(__import__("os").environ.get("H3D_DELIGHT_STEPS", 50)),/' dehighlight_utils.py
+sed -i 's/num_inference_steps=30, \*\*kwargs/num_inference_steps=int(__import__("os").environ.get("H3D_MV_STEPS", 30)), **kwargs/' multiview_utils.py
+```
+
 Weights (about 18 GB) go to `$HY3DGEN_MODELS/tencent/Hunyuan3D-2/<subfolder>/` — from
 `huggingface.co/tencent/Hunyuan3D-2`: `hunyuan3d-dit-v2-0-turbo/{config.yaml,model.fp16.safetensors}`,
 `hunyuan3d-vae-v2-0-turbo/*`, `hunyuan3d-delight-v2-0/*`, `hunyuan3d-paint-v2-0/*`

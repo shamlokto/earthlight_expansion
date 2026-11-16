@@ -13,9 +13,12 @@ STYLE = ("Beautiful hand-painted Japanese anime background art style: lush and p
          "rounded friendly forms, lovingly detailed and full of charm, smooth high-resolution painting. No text, no lettering, no logos.")
 CHARA = ("Cute appealing Japanese anime character art: clean line work, soft cel shading with gentle gradients, large expressive eyes, slightly youthful proportions about five and a half heads tall, "
          "charming but not super-deformed, warm friendly expression.")
-COLONY = ("The setting is the inside of a huge rotating cylindrical space colony: the green land curves upward in the hazy far distance on both sides "
-          "and arches overhead, with tiny patchwork fields, woods and silver rivers visible on the far side of the cylinder high above, "
-          "and one long thin bright straight line of light, the sun-line, running along the axis of the sky instead of a sun. ")
+# The colony sky, worded to match the sky panoramas (and without "space colony", which makes the model draw a metal ring).
+COLONY = ("The sky is unusual and beautiful: high overhead, where the top of the sky should be, a faint pale upside-down landscape is seen through soft blue haze, "
+          "tiny patchwork fields, woods and thin silver rivers hanging far above like a second land; and one thin straight horizontal line of bright light crosses the whole sky "
+          "from left to right instead of a sun. Open air, no metal structures, no domes, no rings and no sun disc in the sky. ")
+NIGHTSKY = ("Overhead, a deep blue night sky in which, far above, a faint dark upside-down landscape sprinkled with tiny warm village lights hangs like a second land, "
+            "crossed by one thin dim straight horizontal line of silver light; no moon, no structures in the sky. ")
 PHOTO = STYLE + " A calm pastoral world of ordinary earthy things: wood, soil, crops, tin roofs, with small traces of salvaged spacecraft parts."
 # Textures are painted by Qwen-Edit over a flat procedural layout guide (texref.py): text alone always
 # came back with perspective. TEX/WALL are kept as (empty) prefixes of the surface descriptions.
@@ -87,13 +90,17 @@ FARMVIEW = ("A wide view of a small farm: a tilled field with crop rows in the f
             "a small red barn to the right, one big broadleaf tree beside the house, a wooden fence, a dirt path. ")
 SCENES = {
     "title": "Wide cinematic anime film still at dawn. " + COLONY + "In the foreground, seen from behind, " + SATO + " stands at the edge of her field holding a hoe upright at her side, looking out over the land. "
-             "A tilled field with young green rows, a small weathered wooden farmhouse with a tin roof, morning mist, golden pink dawn light along the sun-line. Empty calm sky area in the upper part of the frame. " + PHOTO,
-    "intro1": "Wide cinematic anime film still in deep space. The enormous wrecked hull of a giant dark grey warship drifts dead and silent, torn open, scorched, with slow clouds of debris around it; "
-              "far behind it, lines of small silent warships hang motionless; the blue curve of Earth at one edge of the frame, cold sunlight, black space, stars. Original spacecraft design, beautiful anime film still, sombre, no text.",
-    "intro2": "Wide cinematic anime film still in orbit. Decommissioned grey warships held in scaffold frames are being cut apart for salvage, tiny sparks of welding torches, hull plates floating free, small tugs carrying parts "
-              "toward a huge damaged cylindrical space colony in the background with a broken end and repair gantries; Earth below, warm sunlight. Original spacecraft design, beautiful anime film still, hopeful, no text.",
+             "A tilled field with young green rows, a small weathered wooden farmhouse with a tin roof, morning mist, a soft golden pink dawn glow low on the horizon. Empty calm sky area in the upper part of the frame. " + PHOTO,
+    # (No "ship", "warship", "tug" or naval words: the model then paints sea battleships in space.)
+    "intro1": "Wide cinematic anime film still in deep space. An enormous derelict space vessel drifts dead and silent: a very long dark grey structure made of cylindrical modules, spherical tanks, truss girders, "
+              "radiator panels and a cluster of big engine bells at one end, broken open in the middle with torn plating and scorch marks, small pieces of debris floating slowly around it. "
+              "Far behind it, a scattered line of tiny capsule-shaped spacecraft hangs motionless. The blue curve of Earth at one edge of the frame, cold sunlight, black space, stars. "
+              "Original hard-science-fiction design, sombre and quiet, no text. " + STYLE,
+    "intro2": "Wide cinematic anime film still in orbit. A salvage yard in space: old grey space vessels made of cylindrical modules, tanks and truss girders are held inside scaffold frames and taken apart, "
+              "tiny sparks of welding torches, curved hull panels floating free, small boxy robotic pods with manipulator arms carrying panels toward a huge damaged cylindrical space habitat in the background "
+              "that has one broken end covered in repair gantries. Earth below, warm sunlight. Original hard-science-fiction design, hopeful, no text. " + STYLE,
     "intro3": "Wide cinematic anime film still of the inside of a vast empty carrier hangar deck, bare steel floor with faded painted lines, tall ribbed walls, cold light falling from high panels, empty docking cradles. "
-              "Two small figures stand facing each other far away in the middle of the huge space: a woman officer in a navy blue uniform with a short dark bob haircut, and an older man, an officer in a dark greatcoat with dark hair. "
+              "Two small figures stand facing each other far away in the middle of the huge space: a woman officer in a navy blue uniform with a short dark bob haircut, and an older man with short dark hair, an officer in a dark greatcoat. "
               "Quiet, still, a farewell. Beautiful anime film still, muted colours, no text.",
     "intro4": "Wide cinematic aerial anime film still of a river valley. " + COLONY + "A calm river winds through green meadows and small fields to a little village of weathered wooden houses with tin and red tile roofs, "
               "a stone bridge, a village hall with a small bell tower, willows along the banks, orchards, a few roofs patched with spacecraft hull plates. Late morning light. " + PHOTO,
@@ -103,11 +110,11 @@ SCENES = {
                          "plain coloured cloth bunting without lettering strung between weathered wooden houses, blossom on the trees, children running. " + COLONY + PHOTO,
     "festival_lantern": "Anime illustration at night of a calm river under an old stone bridge, dozens of small glowing warm paper lanterns floating on the dark water, their reflections trembling, "
                         "villagers standing quietly on the banks and the bridge as dark silhouettes holding lanterns, willows, " 
-                        "and overhead the dim sky of a huge cylindrical space colony with tiny lights on its far side and a faint thin sun-line. Still, tender, remembrance. Beautiful anime film still, no text.",
+                        + NIGHTSKY + "Still, tender, remembrance. Beautiful anime film still, no text.",
     "festival_harvest": "Anime illustration of a small village square on a bright autumn day, a harvest fair: wooden stalls piled with pumpkins, corn, carrots, eggplants and bread, hay bales, villagers in work clothes laughing, "
                         "trees in gold and red leaf, plain coloured cloth bunting without lettering. " + COLONY + PHOTO,
     "festival_yearend": "Anime illustration of a small village square on a winter evening with snow on the ground and roofs, a year's end gathering: a bonfire in an iron brazier, strings of small warm lights between the houses, "
-                        "villagers in coats holding steaming mugs, gentle snowfall, " "overhead the dim evening sky of a huge cylindrical space colony with tiny lights on its far side and a faint thin sun-line. Warm, quiet, beautiful anime film still, no text.",
+                        "villagers in coats holding steaming mugs, gentle snowfall, " + NIGHTSKY + "Warm, quiet, beautiful anime film still, no text.",
     "season_spring": "Anime illustration in spring. " + FARMVIEW + "Fresh bright green grass, the tree in pale pink-white blossom, young seedlings in the field, soft clear morning light. " + COLONY + PHOTO,
     "season_summer": "Anime illustration in high summer. " + FARMVIEW + "Deep green grass, the tree in full dark green leaf, tall tomato plants and corn in the field, strong warm light, a few white clouds. " + COLONY + PHOTO,
     "season_autumn": "Anime illustration in autumn. " + FARMVIEW + "Gold-green dry grass, the tree in orange and red leaf with leaves on the ground, pumpkins in the field, low amber light. " + COLONY + PHOTO,
@@ -120,7 +127,7 @@ SCENES = {
     "ruins": "Anime illustration at street level of an overgrown ruined city street on a dead Earth: cracked asphalt, collapsed concrete buildings, rusted vehicle shells, pale dry vines and grey ash drifts, "
              "broken towers fading into thick haze, a sickly amber overcast sky, dim flat light. Silent, desolate, beautiful anime film still, no people, no text, no signs.",
     "heart10": "Anime illustration at dusk from behind of two people sitting close side by side on the wooden steps of a farmhouse porch, seen from behind: " + SATO + ", and beside her another person in a plain dark coat. "
-               "Beyond them a field of crops and a fence in warm amber dusk light, two mugs on the step, a lantern glowing. " + COLONY + "Earth is visible through a vast window band in the dusk sky. Tender, quiet. " + PHOTO,
+               "Beyond them a field of crops and a fence in warm amber dusk light, two mugs on the step, a lantern glowing. " + COLONY + "In the dusk sky above, the large blue-and-white planet Earth is visible. Tender, quiet. " + PHOTO,
     "shop_store": "Anime illustration of the interior of a small village seed and general store: a worn wooden counter, shelves of plain seed tins, cloth seed bags, jars, loaves of bread, trays of green seedlings by the window, "
                   "coiled rope, rucksacks hanging, a fishing rod on the wall, warm daylight through the window. Tidy, homely, beautiful anime film still, nobody present, no readable text, no labels with lettering.",
     "shop_ranch": "Anime illustration of the interior of a ranch barn office: a rough wooden counter, sacks of feed, hay bales, milk churns, a brush and a hand milker on hooks, a stable half-door open onto a sunny paddock with a black-and-white cow and white hens. "
@@ -367,7 +374,9 @@ def jobs(group, work="/tmp/farm-art"):
             if ref:
                 add(k + "_front", "edit", p, 896, 1344, refs=[os.path.join(PORTRAITS, ref)])
             else:
-                add(k + "_front", "t2i", p, 896, 1344)
+                # no portrait (Moraine): a villager's picked front view is the style and proportion reference
+                add(k + "_front", "edit", "A completely different person drawn in exactly the same art style, line work, shading and slightly chibi body proportions (large head, short body) as the reference character. "
+                    "Replace the character with: " + p, 896, 1344, refs=[sel("people", "vashti_front")])
     elif group == "people_views":
         for k in PEOPLE:
             for v, p in PEOPLE_VIEWS.items():

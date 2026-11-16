@@ -50,14 +50,14 @@
   "note": "head towards +Z"
  },
  "sato": {
-  "file": "_tmp/sato_s3.glb",
-  "tris": 0,
+  "file": "sato.glb",
+  "tris": 30000,
   "size": [
-   0.6,
-   1,
-   0.6
+   0.6634,
+   1.0,
+   0.652
   ],
-  "unit": "height",
-  "note": "TEST ENTRY by lead, replace"
+  "note": "Mira Sato, chibi figurine in a relaxed A-pose, straw hat on her head; faces +Z; 2048 px texture",
+  "unit": "height"
  }
 }

@@ -171,6 +171,8 @@ def run(spec):
         mesh = FaceReducer()(mesh, max_facenum=tris)
         m = re.search(r'v(\d+)', opts)   # 'v768': paint views at 768 px instead of 512 (sharper faces, slower)
         paint.models['multiview_model'].view_size = int(m.group(1)) if m else 512
+        # fewer diffusion steps for props (see README: two one-line patches in hy3dgen/texgen/utils); characters keep the defaults
+        os.environ['H3D_DELIGHT_STEPS'], os.environ['H3D_MV_STEPS'] = ('50', '30') if 'v' in opts else ('20', '16')
         global REF
         REF = img if 'p' in opts else None
         mesh = paint(mesh, image=img)
