@@ -170,7 +170,7 @@ async function expansionBriefing() {
   soundHint($('briefBody').querySelector('.bHead'));
   $('bBriefGo').onclick = () => { fx.stop(); silence(); startMission(-1); };
   $('bBriefBack').onclick = () => { fx.stop(); silence(); if (custom.colony) location.href = 'colony.html'; else if (custom.campaign) location.href = interUrl(); else location.search = ''; };
-  if (custom.colony) { $('bBriefBack').textContent = 'Back to Eden'; $('bBriefGo').textContent = custom.mission.colony?.battle === 'stronghold' ? 'Attack' : 'Defend Eden'; }
+  if (custom.colony) { $('bBriefBack').textContent = 'Back to Eden'; $('bBriefGo').textContent = { stronghold: 'Attack', ambush: 'Break out' }[custom.mission.colony?.battle] || 'Defend Eden'; }
 }
 
 // First run (and ☰ → ROM & patch): pick the ROM and, optionally, the English patch; both are
@@ -931,7 +931,7 @@ function expansionResult(w) {
 function colonyEnd(w) {
   const r = battle.result.reason, res = custom.result(battle, w === 0), c = custom.mission.colony || {};
   const stored = custom.store(res);
-  if (c.battle === 'siege' || c.battle === 'stronghold') { reckoningEnd(w, r, res, c, stored); return; }
+  if (['siege', 'counter', 'ambush', 'stronghold'].includes(c.battle)) { reckoningEnd(w, r, res, c, stored); return; }
   $('resKicker').textContent = w === 0 ? 'Eden holds' : 'Eden is raided';
   $('resTitle').textContent = w === 0 ? (r === 'fled' ? 'The raiders break off and run' : 'The raiders are destroyed') : 'The raiders got through';
   $('resText').textContent = (w === 0
@@ -951,16 +951,25 @@ function colonyEnd(w) {
 
 // The Reckoning's battles (js/colony/reckoning.js): the Siege of Eden and Hesk's stronghold.
 function reckoningEnd(w, r, res, c, stored) {
-  const siege = c.battle === 'siege', lost = res.guardians.filter((g) => g.lost).length;
-  $('resKicker').textContent = siege ? (w === 0 ? 'Eden holds' : 'Eden has fallen') : (w === 0 ? 'Justice for Eden' : 'The General withdraws');
-  $('resTitle').textContent = siege
-    ? (w === 0 ? (r === 'held' ? 'The siege is broken' : 'Hesk\'s fleet is destroyed') : r === 'tower' ? 'The Command Centre is lost' : 'They are inside the hull')
-    : (w === 0 ? 'The Verdict is sinking' : 'The stronghold holds');
-  $('resText').textContent = (siege
-    ? (w === 0 ? `Eden held to the end of turn ${battle.turn - 1}. What is left of Hesk's fleet runs for the dark, and one of its pilots talks.` : r === 'tower' ? 'The Command Centre went dark. Hesk\'s people are through the dock.' : r === 'general' ? 'The General\'s machine is down. The guard breaks.' : r === 'retreat' ? 'You pulled the guard back off the hull.' : 'The guard is gone.')
-    : (w === 0 ? `Major Hesk's flagship went down on turn ${battle.turn}.` : r === 'timeup' ? 'Thirty turns, and the Verdict still afloat. The General pulls out.' : r === 'general' ? 'The General\'s machine is down. The strike is over.' : r === 'retreat' ? 'You pulled the strike force out.' : 'The strike force is gone.'))
-    + `\n\n${res.enemiesDestroyed} of ${res.enemies} enemy machines destroyed · ${lost} guardian${lost === 1 ? '' : 's'} lost.`
-    + (stored ? '' : '\n\nThe result could not be stored (browser storage unavailable).');
+  const siege = c.battle === 'siege' || c.battle === 'counter', lost = res.guardians.filter((g) => g.lost).length;
+  if (c.battle === 'ambush') {   // phase 1 of the strike: the General chooses at Eden (regroup or press on)
+    const left = res.guardians.length - lost;
+    $('resKicker').textContent = w === 0 ? 'The ambush is broken' : 'The strike is turned back';
+    $('resTitle').textContent = w === 0 ? (r === 'held' ? 'The jump drives are charged' : 'The picket is destroyed') : r === 'general' ? 'The General\'s machine is down' : 'The strike force is broken';
+    $('resText').textContent = (w === 0 ? `${left} machine${left === 1 ? '' : 's'} came through. Back at Eden the General decides: go home and regroup, or press on to the rock as you are.` : r === 'retreat' ? 'You pulled the strike force out.' : 'The fleet turns for home.')
+      + `\n\n${res.enemiesDestroyed} of ${res.enemies} picket machines destroyed · ${lost} guardian${lost === 1 ? '' : 's'} lost.`
+      + (stored ? '' : '\n\nThe result could not be stored (browser storage unavailable).');
+  } else {
+    $('resKicker').textContent = siege ? (w === 0 ? 'Eden holds' : 'Eden has fallen') : (w === 0 ? 'Justice for Eden' : 'The General withdraws');
+    $('resTitle').textContent = siege
+      ? (w === 0 ? (r === 'held' ? (c.battle === 'counter' ? 'The counterstrike is broken' : 'The siege is broken') : 'Hesk\'s fleet is destroyed') : r === 'tower' ? 'The Command Centre is lost' : 'They are inside the hull')
+      : (w === 0 ? 'The Verdict is sinking' : 'The stronghold holds');
+    $('resText').textContent = (siege
+      ? (w === 0 ? (c.battle === 'counter' ? `Eden held to the end of turn ${battle.turn - 1}. The picket is spent: the road to the rock is open.` : `Eden held to the end of turn ${battle.turn - 1}. What is left of Hesk's fleet runs for the dark, and one of its pilots talks.`) : r === 'tower' ? 'The Command Centre went dark. Hesk\'s people are through the dock.' : r === 'general' ? 'The General\'s machine is down. The guard breaks.' : r === 'retreat' ? 'You pulled the guard back off the hull.' : 'The guard is gone.')
+      : (w === 0 ? `Major Hesk's flagship went down on turn ${battle.turn}.` : r === 'timeup' ? 'Thirty turns, and the Verdict still afloat. The General pulls out.' : r === 'general' ? 'The General\'s machine is down. The strike is over.' : r === 'retreat' ? 'You pulled the strike force out.' : 'The strike force is gone.'))
+      + `\n\n${res.enemiesDestroyed} of ${res.enemies} enemy machines destroyed · ${lost} guardian${lost === 1 ? '' : 's'} lost.`
+      + (stored ? '' : '\n\nThe result could not be stored (browser storage unavailable).');
+  }
   const supply = $('resStats').querySelector('[data-k=supply]');
   if (supply) supply.closest('div').hidden = true;
   $('bResNext').textContent = 'Back to Eden';

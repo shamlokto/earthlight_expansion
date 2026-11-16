@@ -9,7 +9,8 @@ import { newGame } from '../js/colony/state.js';
 import * as R from '../js/colony/rules.js';
 import { dayTick } from '../js/colony/sim.js';
 import { CLUES, RECKONING, reckoningDay, ensureReckoning } from '../js/colony/reckoning.js';
-import { siegeMission, strongholdMission, reckoningCrew, siegeShare, RECKONING_CAP } from '../js/colony/battle.js';
+import { siegeMission, strongholdMission, counterMission, ambushMission, ambushCount, ambushTier, commandReckoning, reckoningCrew, siegeShare, hexDistance, RECKONING_CAP } from '../js/colony/battle.js';
+import { MACHINE } from '../js/colony/data/machines.js';
 import { buildMap, isFrame, SCREEN_COLS, SCREEN_ROWS } from '../js/expansion/mission.js';
 import { ExpansionBattle, colonyResult } from '../js/expansion/battle.js';
 import { loadExpansionData } from '../js/expansion/data.js';
@@ -22,7 +23,7 @@ const GAMES = +(process.argv[2] || 3);
 const { types, tables } = await loadExpansionData();
 const noRom = new Proxy({}, { get(_, k) { return () => { throw new Error(`ROM read: ${String(k)}`); }; } });
 const base = (f) => JSON.parse(readFileSync(new URL(`../missions/colony/${f}.json`, import.meta.url), 'utf8'));
-const SIEGE = base('siege'), HOLD = base('stronghold');
+const SIEGE = base('siege'), HOLD = base('stronghold'), AMB = base('ambush');
 let seed = 11;
 Math.random = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x80000000;
 
@@ -61,14 +62,14 @@ function legal(mission, what) {
 }
 const count = (list) => list.reduce((t, u) => t + 1 + (u.cargo || []).length, 0);
 {
-  for (const [m, w, h] of [[SIEGE, 4, 3], [HOLD, 4, 4]]) {
+  for (const [m, w, h] of [[SIEGE, 4, 3], [HOLD, 4, 4], [AMB, 4, 3]]) {
     check(m.screensW === w && m.screensH === h && m.grid.length === h * 10 + 2 && m.grid.every((r) => r.length === w * 15 + 2), `${m.title}: a ${w} x ${h} screen grid`);
     check(m.pairs.length <= 80 && m.grid.flat().every((v) => v >= 0 && v < m.pairs.length), `${m.title}: cells index the pairs`);
     const T = legal(m, m.title);
     check(m.home.length >= RECKONING_CAP && m.home.every(([x, y, ships]) => T.can(ships ? 30 : 0, x, y)), `${m.title}: ${m.home.length} start hexes for Eden, ships only where ships stand`);
     // every enemy can be reached by a craft from Eden's start (for an attack from beside it)
     const craft = T.reach(types[4].category, m.home[0].slice(0, 2));
-    const all = [...m.units, ...m.arrivals.flatMap((a) => a.units)].filter((u) => u.army !== 0);
+    const all = [...m.units, ...m.arrivals.flatMap((a) => a.units), ...(m.slots || [])].filter((u) => u.army !== 0);
     check(all.every((u) => [[u.x, u.y], ...neighbours(u.x, u.y)].some(([a, b]) => craft.has(`${a},${b}`))), `${m.title}: every enemy hex is reachable for Eden's craft`);
     check(m.flee && m.noFlee && m.awaitArrivals, `${m.title}: physical retreat, no breaking off, waves awaited`);
   }
@@ -100,6 +101,22 @@ const count = (list) => list.reduce((t, u) => t + 1 + (u.cargo || []).length, 0)
   check(sleepers.length >= 15 && sleepers.every((u) => [3, 4].includes(H.cls(u.x, u.y))), `stronghold: ${sleepers.length} ambushers asleep on the ridges and in the plasma`);
   const behind = HOLD.arrivals.filter((a) => a.wave === 'trap' || a.wave === 'trap2');
   check(behind.length === 2 && behind.every((a) => a.units.every((u) => u.x <= 3 || u.y >= 39)), 'stronghold: two waves arrive behind the General (west and south edges)');
+  // phase 2's capital ships: besides the Verdict, named capitals in the garrison and the waves
+  const capitals = [...HOLD.units, ...HOLD.arrivals.flatMap((a) => a.units)].filter((u) => [30, 32, 34, 61].includes(u.type) && u.name);
+  check(capitals.length >= 3 && capitals.some((u) => /Quill/.test(u.name)) && capitals.some((u) => /Varr/.test(u.name)) && capitals.some((u) => /Osk/.test(u.name)), `stronghold: ${capitals.length} named capital ships besides the Verdict (${capitals.map((u) => u.name.split(' · ')[0]).join(', ')})`);
+  check(HOLD.reinforcements.length >= 3 * RECKONING.reinforceStep && HOLD.reinforcements.every((u) => H.can(u.type, u.x, u.y)) && HOLD.reinforcements.some((u) => u.type === 72), `stronghold: ${HOLD.reinforcements.length} reinforcements on legal hexes, cruisers among them`);
+  // the ambush (phase 1): open space, slots on void for any machine, four directions, hold 12
+  const A = terrain(AMB);
+  check(AMB.slots.length >= RECKONING.ambushRatio * RECKONING_CAP && AMB.slots.every((sl) => A.can(30, sl.x, sl.y) && A.can(0, sl.x, sl.y) && A.cls(sl.x, sl.y) === 0), `ambush: ${AMB.slots.length} picket slots, every one on open void (any machine)`);
+  check(new Set(AMB.slots.map((sl) => `${sl.x},${sl.y}`)).size === AMB.slots.length && !AMB.slots.some((sl) => AMB.home.slice(0, 48).some(([x, y]) => x === sl.x && y === sl.y)), 'ambush: slots distinct and off the strike force\'s hexes');
+  check(['front', 'flanks', 'hammer', 'behind'].every((k) => AMB.slots.slice(0, 20).some((sl) => sl.wave === k)), 'ambush: even a small picket comes from every side');
+  check(AMB.objective.kind === 'hold' && AMB.objective.turns === 12 && AMB.waves.filter((w) => w.turn > 0).length === 3, 'ambush: hold 12 turns; waves on the map and on turns 4, 7 and 9');
+  const rocks = AMB.grid.slice(1, 31).flat().filter((v) => v === 9).length;
+  check(rocks >= 20 && rocks < 120, `ambush: deep space with a few asteroid clusters (${rocks} rock hexes)`);
+  check(AMB.home.length >= RECKONING_CAP && hexDistance({ x: AMB.generalAt[0], y: AMB.generalAt[1] }, { x: AMB.home[0][0], y: AMB.home[0][1] }) === 0, 'ambush: the strike force in a column round the General');
+  // the counterstrike (after a regroup): the siege map, other waves
+  const C = SIEGE.counter;
+  check(C && C.objective.kind === 'hold' && C.arrivals.length === 3 && C.arrivals.map((a) => a.turn).join() !== SIEGE.arrivals.map((a) => a.turn).join() && C.follow.length >= 20, 'counterstrike: its own waves on the siege map, room for the picket\'s survivors');
 }
 
 // ---------------------------------------------------------------- the arc's state
@@ -190,6 +207,91 @@ function siegeState(n, guns = 6, opts = {}) {
   check(h.colony.battle === 'stronghold' && h.colony.count >= 100, `stronghold mission: ${h.colony.count} enemies`);
 }
 
+// ---------------------------------------------------------------- the two-phase strike (owner, 2026-11-16)
+const store = new Map();
+globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
+const loader = async (f) => ({ 'missions/colony/siege.json': SIEGE, 'missions/colony/ambush.json': AMB, 'missions/colony/stronghold.json': HOLD })[f];
+function strikeState(n, opts = {}) { const s = siegeState(n, 0, opts); s.reckoning.stage = 'strike'; s.reckoning.nextStrike = s.day; return s; }
+const army = (m, a) => m.units.filter((u) => u.army === a);
+const foesOf = (m) => count(army(m, 1)) + m.arrivals.reduce((t, a) => t + count(a.units), 0);
+{
+  // the picket: ambushRatio x the strike force by number, a floor for a tiny one; the strike force's own tier and level
+  for (const [n, kinds, level] of [[40, [72, 73, 30, 69, 2, 31, 70, 9, 39, 66], 6], [15, [30, 8, 9, 0, 2, 39], 4], [8, [73, 66, 31], 7], [3, [0, 8], 2]]) {
+    const s = strikeState(n, { kinds, level }), m = ambushMission(s, AMB);
+    legal(m, `ambush mission (${n})`);
+    const mine = army(m, 0).filter((u) => u.rosterId !== undefined), want = Math.max(RECKONING.ambushFloor, RECKONING.ambushRatio * mine.length);
+    check(foesOf(m) === want && m.colony.count === want, `ambush mission: ${mine.length} machines meet ${foesOf(m)} (${RECKONING.ambushRatio}x by number${want === RECKONING.ambushFloor ? ', the floor' : ''})`);
+    const picket = [...army(m, 1), ...m.arrivals.flatMap((a) => a.units)], price = (t) => MACHINE[t]?.price || types[t].value * types[t].hp;
+    const ep = mine.reduce((t, u) => t + price(u.type), 0) / mine.length, pp = picket.reduce((t, u) => t + price(u.type), 0) / picket.length;
+    const lv = Math.round(s.guardians.slice(0, mine.length).reduce((t, g) => t + g.level, 0) / mine.length);
+    check(pp <= Math.max(1.6 * ep, 20) && pp >= 0.3 * ep && picket.filter((u) => !u.name).every((u) => u.level === Math.max(1, Math.min(8, lv))), `ambush mission: comparable machines (mean price ${pp.toFixed(0)} vs ${ep.toFixed(0)}, level ${picket[1]?.level} vs ${lv})`);
+    check(m.general && mine.some((u) => u.rosterId === s.guardians[0].id && u.x === m.general.x && u.y === m.general.y), `ambush mission (${n}): the General's machine flies`);
+  }
+  check(ambushCount(1) === RECKONING.ambushFloor && ambushCount(40) === 80 && ambushTier([{ type: 0 }]) === 0 && ambushTier([{ type: 72 }]) === 2, 'ambush: count and tier helpers');
+  // the General's machine is always in the strike force, however weak, among 44 stronger ones
+  const w = strikeState(45, { kinds: [0, 72, 73, 30, 31, 70], level: 6 });
+  const crew = reckoningCrew(w, false);
+  check(crew.length === RECKONING_CAP && crew[0].id === w.guardians[0].id && w.guardians[0].type === 0, 'strike: the General\'s Mars leads, ahead of 44 stronger machines');
+  // no strike without the General fit, with his machine crewed at home
+  const noGen = strikeState(6); noGen.guardians[0].commander = null;
+  check((await commandReckoning(noGen, 'strike', () => {}, loader)).ok === false && R.generalReady(noGen).ok === false, 'strike: refused without the General\'s machine');
+  const hurt = strikeState(6); hurt.commanders.find((c) => c.key === 'general').injured = 10;
+  check(/injured/.test((await commandReckoning(hurt, 'strike', () => {}, loader)).msg), 'strike: refused while the General is injured');
+  const away = strikeState(6); away.guardians[0].away = true;
+  check((await commandReckoning(away, 'strike', () => {}, loader)).ok === false, 'strike: refused while the General\'s machine is away');
+  // phase 1 -> the General's choice -> press on: phase 2 at once, HP carried over, no new machines
+  const s = strikeState(12, { kinds: [72, 73, 30, 69], level: 6 }), c = ctx(s);
+  check(R.strikePhase(s) === 'ambush', 'flow: the first strike starts with the ambush');
+  const go = await commandReckoning(s, 'strike', () => {}, loader);
+  check(go.ok && s.reckoning.fighting === 'ambush' && JSON.parse(store.get('el-colony-raid')).colony.battle === 'ambush', 'flow: launching the strike opens the ambush');
+  const ids = s.guardians.map((g) => g.id);
+  const hp = [0.4, 0.55, 0.7, 1];
+  R.resolveReckoningBattle(s, { battle: 'ambush', won: true, reason: 'held', turns: 13, enemies: 24, enemiesDestroyed: 15, survivors: Array.from({ length: 9 }, (_, k) => ({ type: [73, 60, 30][k % 3], level: 6 })),
+    guardians: ids.map((id, i) => ({ id, hp: i === 11 ? 0 : hp[i % 4], lost: i === 11 })) });
+  const cross = s.pending.find((p) => p.step === 'crossroads');
+  check(s.reckoning.stage === 'crossroads' && cross && cross.choices.map((x) => x.key).join() === 'regroup,proceed' && cross.summary.fleet === 11 && cross.summary.lost === 1 && cross.summary.survivors === 9 && cross.options.length === 2, 'flow: a won ambush: the General chooses (regroup / press on), with a summary of the losses');
+  check(R.strikePhase(s) === null && (await commandReckoning(s, 'stronghold', () => {}, loader)).ok === false, 'flow: nothing launches until the General has chosen');
+  const branch = JSON.parse(JSON.stringify(s));   // the other road, from the same moment
+  check(R.answer(s, cross.id, 'proceed').ok && s.reckoning.stage === 'onward' && R.strikePhase(s) === 'stronghold', 'flow: pressing on: phase 2 next');
+  for (const g of s.guardians) g.hp = R.maxHp(s, g);   // whatever mends at home does not count
+  R.addGuardian(s, 72, { level: 9 });                  // nor does a machine built since
+  const m2 = strongholdMission(s, HOLD), mine2 = army(m2, 0);
+  const carried = mine2.every((u) => { const f = s.reckoning.fleet.find((x) => x.id === u.rosterId); return f && u.hp === Math.max(1, Math.round(types[u.type].hp * f.hp)); });
+  check(mine2.length === 11 && carried && !mine2.some((u) => u.rosterId === s.guardians.at(-1).id) && m2.colony.onward && m2.colony.reinforce === 0, `flow: pressing on: the ${mine2.length} survivors at the HP they came out with, nothing new`);
+  check(m2.general && mine2.some((u) => u.rosterId === s.guardians[0].id), 'flow: the General flies on');
+  const go2 = await commandReckoning(s, 'stronghold', () => {}, loader);
+  check(go2.ok && s.reckoning.fighting === 'stronghold', 'flow: the stronghold launches straight from the choice');
+  R.resolveReckoningBattle(s, { battle: 'stronghold', won: false, reason: 'general', enemies: 110, enemiesDestroyed: 30, guardians: [] });
+  check(s.reckoning.stage === 'strike' && s.reckoning.reinforce === 1 && !R.strikeReady(s) && (s.day = s.reckoning.nextStrike, R.strikePhase(s) === 'stronghold'), 'flow: a lost assault: home, the rock reinforces, the next strike goes straight to phase 2');
+  const m3 = strongholdMission(s, HOLD);
+  check(foesOf(m3) >= foesOf(strongholdMission(s, HOLD, { reinforce: 0 })) + RECKONING.reinforceStep && army(m3, 1).find((u) => u.name === 'Tiamat · Commodore Varr').level === 8, 'flow: the reinforced rock: more machines, every one a level higher');
+  // ... or go home: the picket follows and strikes Eden; held, the strike goes straight to the rock, stronger
+  const t = branch, tc = ctx(t), cr = t.pending.find((p) => p.step === 'crossroads');
+  check(R.answer(t, cr.id, 'regroup').ok && t.reckoning.stage === 'counter' && t.reckoning.siegeDay === t.day + RECKONING.counterDelay && t.pending.some((p) => p.step === 'warn'), 'flow: going home: they follow, Eden is warned');
+  t.pending.length = 0;
+  for (let d = 0; d < RECKONING.counterDelay; d++) { t.day++; reckoningDay(t, tc); }
+  const strikeEv = t.pending.find((p) => p.step === 'siege');
+  check(t.reckoning.stage === 'siege' && t.reckoning.siegeKind === 'counter' && strikeEv?.battle === 'counter', 'flow: the counterstrike comes to Eden');
+  check((await commandReckoning(t, 'siege', () => {}, loader)).ok === false, 'flow: it is the counterstrike, not the first siege');
+  const cm = counterMission(t, SIEGE);
+  legal(cm, 'counterstrike mission');
+  check(cm.colony.battle === 'counter' && cm.colony.survivors === 9 && cm.title !== SIEGE.title && cm.units.some((u) => u.army === 0 && u.type === 56) && cm.objective.turns === 14, 'flow: the counterstrike: the siege map, new waves, the picket\'s survivors in front');
+  check((await commandReckoning(t, 'counter', () => {}, loader)).ok && t.reckoning.fighting === 'counter', 'flow: the counterstrike launches');
+  R.resolveReckoningBattle(t, { battle: 'counter', won: true, reason: 'held', enemies: 40, enemiesDestroyed: 30, guardians: [] });
+  check(t.reckoning.stage === 'strike' && t.reckoning.ambushDone && t.reckoning.reinforce === 1 && t.reckoning.nextStrike === t.day + RECKONING.afterCounter && t.pending.some((p) => p.step === 'counterwon'), 'flow: Eden holds: the picket is spent, the rock reinforced');
+  t.day = t.reckoning.nextStrike;
+  check(R.strikePhase(t) === 'stronghold' && !strongholdMission(t, HOLD).colony.onward && (await commandReckoning(t, 'ambush', () => {}, loader)).ok === false, 'flow: the next strike goes straight to phase 2 with a full fleet');
+  // a lost ambush: home, try again later, the ambush again
+  const u = strikeState(6); u.reckoning.fighting = 'ambush';
+  R.resolveReckoningBattle(u, { battle: 'ambush', won: false, reason: 'general', enemies: 12, enemiesDestroyed: 3, guardians: [] });
+  check(u.reckoning.stage === 'strike' && !R.strikeReady(u) && (u.day = u.reckoning.nextStrike, R.strikePhase(u) === 'ambush'), 'flow: a lost ambush: the next strike meets the ambush again');
+  // a lost counterstrike: they plunder and come again (still the counterstrike)
+  const v = JSON.parse(JSON.stringify(branch)); v.reckoning.stage = 'siege'; v.reckoning.siegeKind = 'counter'; v.reckoning.fighting = 'counter'; v.pending.length = 0;
+  R.resolveReckoningBattle(v, { battle: 'counter', won: false, reason: 'tower', cortexLost: true, enemies: 40, enemiesDestroyed: 5, guardians: [] });
+  for (let d = 0; d < RECKONING.regroup; d++) { v.day++; reckoningDay(v, ctx(v)); }
+  check(v.reckoning.stage === 'siege' && v.reckoning.siegeKind === 'counter' && v.pending.some((p) => p.battle === 'counter'), 'flow: a lost counterstrike: they come again');
+}
+
 // ---------------------------------------------------------------- the engine's new rules
 {
   const s = siegeState(10, 2), m = siegeMission(s, SIEGE), b = new ExpansionBattle(noRom, m, types, { tables });
@@ -213,12 +315,19 @@ function siegeState(n, guns = 6, opts = {}) {
 // ---------------------------------------------------------------- AI against AI
 // Both sides played by the Union AI (test mode for Eden: it advances on the nearest enemy). `careful`:
 // the General's machine holds its post and only fires, as a player would keep it out of harm's way.
+// `careful` 'leash' (the ambush): the General's machine stays put (dormant: only fires), and the rest
+// keep within reach of him, fighting what comes within 6 hexes of him, as a player would ring him.
 function play(m, careful, maxTurns = 40) {
   const b = new ExpansionBattle(noRom, m, types, { tables });
   if (careful && b.general) b.general.hold = 99;
+  if (careful === 'leash' && b.general) b.general.wakes = true;
   const seenTurn = {};
   let guard = 0;
   while (b.winner() === null && guard++ < 2 * maxTurns) {
+    if (careful === 'leash' && b.general && b.army === 0) {
+      const near = b.alive(1).some((e) => e.x >= 0 && hexDistance(e, b.general) <= 6);
+      for (const u of b.units) if (u.army === 0 && u.hp > 0) { u.hold = 99; u.wakes = true; u.engaged = u !== b.general && near && hexDistance(u, b.general) <= 8; }
+    }
     for (const _ of aiTurn(b)) if (b.winner() !== null) break;
     if (b.winner() !== null) break;
     b.endTurn();
@@ -233,6 +342,8 @@ for (const [label, careful, mk] of [
   ['siege weak', false, (i) => siegeMission(siegeState(5, 0, { level: 1, seed: 50 + i, kinds: [0, 1, 3, 8] }), SIEGE)],
   ['stronghold strong', true, (i) => strongholdMission(siegeState(40, 0, { level: 9, seed: 60 + i, kinds: [78, 72, 73, 61, 32, 58, 70, 66, 71, 69] }), HOLD)],
   ['stronghold weak', false, (i) => strongholdMission(siegeState(8, 0, { level: 2, seed: 70 + i, kinds: [0, 1, 8, 9] }), HOLD)],
+  ['ambush strong', 'leash', (i) => ambushMission(strikeState(40, { level: 8, seed: 80 + i, kinds: [78, 72, 73, 61, 32, 58, 70, 66, 71, 69] }), AMB)],
+  ['ambush weak', 'leash', (i) => ambushMission(strikeState(5, { level: 2, seed: 85 + i, kinds: [39, 8, 9, 0] }), AMB)],
 ]) {
   const t0 = Date.now();
   for (let i = 0; i < GAMES; i++) {
@@ -245,12 +356,14 @@ for (const [label, careful, mk] of [
     if (m.colony.battle === 'stronghold' && b.turn >= 4) check((seenTurn[4]?.trap || 0) > 0 || b.units.some((u) => u.army === 1 && u.hp <= 0 && b.arrivals[0].done), `${label} #${i}: the trap closes behind the General (turn 4)`);
     if (m.colony.battle === 'stronghold' && b.turn >= 8) check((seenTurn[8]?.awake || 0) > 0 || b.units.filter((u) => u.wakes).every((u) => u.hp <= 0 || u.engaged), `${label} #${i}: the ambush wakes`);
     if (w === 0 && m.colony.battle === 'stronghold') check(res.flagshipSunk, `${label} #${i}: a won strike sank the Verdict`);
+    if (m.colony.battle === 'ambush') check(Array.isArray(res.survivors) && (w !== 0 || b.result.reason === 'held' || !res.survivors.length), `${label} #${i}: the picket's survivors reported (${res.survivors.length})`);
   }
   console.log(`  ${label}: ${GAMES} games in ${Date.now() - t0} ms`);
 }
 console.log('  AI against AI:', tally);
 check(Object.keys(tally).some((k) => k.startsWith('siege') && / 0:/.test(k)) && Object.keys(tally).some((k) => k.startsWith('siege') && / 1:/.test(k)), 'AI: the siege can be won and lost');
-check(Object.keys(tally).some((k) => k.startsWith('stronghold') && / 1:/.test(k)) && Object.keys(tally).some((k) => k.startsWith('stronghold') && / 0:/.test(k)), 'AI: the stronghold can be lost, and won (every win sank the Verdict)');
+check(Object.keys(tally).some((k) => k.startsWith('stronghold') && / 1:/.test(k)), 'AI: the stronghold can be lost');
+check(Object.keys(tally).some((k) => k.startsWith('ambush strong') && / 0:held/.test(k)) && Object.keys(tally).some((k) => k.startsWith('ambush weak') && / 1:/.test(k)), 'AI: the ambush can be won by holding round the General, and a weak strike force loses it');
 
 // ---------------------------------------------------------------- the results back in the colony
 {

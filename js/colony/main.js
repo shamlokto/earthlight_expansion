@@ -201,8 +201,8 @@ function applyRaidResult() {
   try { res = JSON.parse(localStorage.getItem(RAID_RESULT) || 'null'); } catch { res = null; }
   if (!res) return;
   const drop = () => { try { localStorage.removeItem(RAID_RESULT); localStorage.removeItem(RAID_MISSION); } catch { } };
-  // version 12: the Reckoning's battles (the Siege of Eden, Hesk's stronghold): js/colony/reckoning.js
-  if (res.battle === 'siege' || res.battle === 'stronghold') {
+  // version 12: the Reckoning's battles (the Siege of Eden, the counterstrike, the ambush, Hesk's stronghold): js/colony/reckoning.js
+  if (['siege', 'counter', 'ambush', 'stronghold'].includes(res.battle)) {
     if (state.reckoning?.fighting !== res.battle || typeof M.rules.resolveReckoningBattle !== 'function') { drop(); return; }
     let rr;
     try { rr = M.rules.resolveReckoningBattle(state, res); } catch (e) { console.error(e); ui.toast('The battle\'s result could not be applied: ' + e.message, 'bad'); return; }

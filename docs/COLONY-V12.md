@@ -9,12 +9,13 @@ to broadcast the truth**:
   over the next 100 days clues arrive and the player prepares;
 - day 100 after the broadcast: **the Siege of Eden**, a hand-designed battle played on the map (no auto-resolve, no tribute);
 - won: the hiding place is revealed; lost: heavy damage, and they come again after a recovery period;
-- **the counterattack**: Hesk's asteroid stronghold, up to 40 of Eden's machines against 100+ in waves, Hesk's capital ship last;
+- **the counterattack**: Hesk's asteroid stronghold, up to 40 of Eden's machines against 100+ in waves, Hesk's capital ship last
+  (redesigned 2026-11-16 as **two phases**, the ambush on the way and then the rock: §2c);
 - winning it: the ending **Justice for Eden** (victory style, the registry read aloud, remembered in the save, blocks nothing).
 
 ## 1. The arc (`js/colony/reckoning.js`, pure; `sim.js` calls `reckoningDay` each day)
 
-`state.reckoning = { stage, offered, broadcast, siegeDay, clues, fighting, sieges, strikes, nextStrike, justice, lastRemind }`
+`state.reckoning = { stage, offered, broadcast, siegeDay, siegeKind, clues, fighting, sieges, strikes, nextStrike, ambushDone, reinforce, fleet, survivors, onward, justice, lastRemind }`
 
 | Stage | When | What happens |
 |---|---|---|
@@ -23,7 +24,10 @@ to broadcast the truth**:
 | `gathering` | the broadcast, day B | the four are named, arrest ordered (Galt +15, Union +5, happiness +8 for a while). 8 clues (below). Siege on B + 100. |
 | `siege` | day B + 100 | the *Siege of Eden* event (Sato): **Command the siege** (the hex map) or *Not yet: hold the gates*. Until it is fought, a blockade holds every Market price at ≥ ×1.2, with a reminder every 7 days. No auto-resolve, no tribute. |
 | `regroup` | a lost siege | stores carried off (30–45% of food, parts, alloy, credits), 4–7 buildings knocked out for 10–20 days (the dock for certain if it was taken), happiness −15 for a while. A warning 10 days before the next siege, 60 days later. |
-| `strike` | a won siege | the hiding place (event, Sato): **Strike the stronghold** is available (Defence › Raids, and on the event). A failed strike can be tried again 30 days later. |
+| `strike` | a won siege | the hiding place (event, Sato): **Launch the strike** is available (Defence › Raids, and on the event). It needs the General (§2c). The first strike starts with phase 1, **the ambush**; once that is won (`ambushDone`), every later strike goes straight to phase 2, **the stronghold**. A failed strike can be tried again 30 days later. |
+| `crossroads` | a won ambush | *The General decides* (event): a summary (machines left, their HP, what was lost, the picket destroyed / still out there) and the two ways: **Go home and regroup** or **Press on to the stronghold** (which launches phase 2 at once). |
+| `onward` | pressed on | phase 2 waits to be launched (Raids card: *Strike the stronghold*) with the fleet as it came out of the ambush (`fleet: [{ id, hp }]`). |
+| `counter` | went home | the fleet mends at Eden as usual; 12 days later the picket's survivors and reinforcements **strike Eden** (`siege` with `siegeKind: 'counter'`, the siege map, new waves). Lost: as a lost siege, and they come again 60 days later. Held: `strike` again, 10 days later, straight to phase 2, the rock reinforced. |
 | `done` | the Verdict sunk | **Justice for Eden** |
 
 Salvage for a won battle: 40 credits and 4 parts per enemy machine destroyed. Guardians come back as from a raid: HP kept, levels +1 (+2 led by a fit commander), lost ones removed (their commander injured 20–40 days).
@@ -246,3 +250,190 @@ sets nothing that other endings read: Eden Restored, Beyond Eden, the Garden and
 `js/colony/ui.js` (events, the Raids card, the ending, How to play), `js/colony/art.js` (scene/justice slot),
 `js/expansion/battle.js`, `js/expansion/mission.js`, `js/game/rules.js` (names on arrivals), `js/gameapp.js`,
 `missions/colony/*.json`, `tools/colony-reckoning-maps.mjs`, `tests/colony-reckoning.mjs`.
+
+
+## 7. The two-phase strike (owner, 2026-11-16)
+
+The counterattack is two battles. The General **must** fly it: his machine is always in the strike force (`reckoningCrew`
+puts it first, whatever it is), the strike cannot launch without him serving, fit and his machine crewed at home and not a
+rail gun (`generalReady`, the button says why), and losing his machine loses the battle as before. Up to 40 machines.
+
+```
+  Launch the strike ──► PHASE 1: THE AMBUSH ──lost──► home; again in 30 days (the ambush again)
+                              │ won (held 12 turns, or the picket destroyed)
+                              ▼
+                     The General decides (crossroads)
+             ┌────────────────┴─────────────────┐
+     Go home and regroup                  Press on (onward)
+     (mend at Eden, build)                (same machines, same HP, nothing new)
+             │ 12 days                            │ at once
+     HESK STRIKES EDEN (counter)                  ▼
+     lost: plunder, again in 60 days      PHASE 2: HESK'S STRONGHOLD (reinforce 0)
+     held: ambush spent, rock +1 ──► 10 days ──► PHASE 2 (reinforce n)
+                                                  │ won: Justice for Eden
+                                                  │ lost: survivors limp home, rock +1, again in 30 days (phase 2)
+```
+
+`resolveReckoningBattle` takes four kinds (`RECKONING_BATTLES`: `siege`, `counter`, `ambush`, `stronghold`);
+`main.js` and the battle page (`gameapp.js reckoningEnd`: *The ambush is broken* / *The strike is turned back*, *Eden
+holds* for the counterstrike) route them; `colonyResult` adds `survivors` (the enemy machines still on the map).
+
+### 7a. Phase 1: The Ambush (`missions/colony/ambush.json`, 4 × 3 screens, 59 × 30 playable)
+
+Deep space halfway to the far belt: debris (meteoroid patches), five small asteroid clusters for cover (48 rock hexes),
+one plasma cloud, two flux points, nothing else. The strike force flies east in a column round the General (`@`, 14,15).
+Hesk's picket waits ahead and closes from every side in waves. **Objective: hold to the end of turn 12** (the jump drives
+charge) or destroy the whole picket (`awaitArrivals`); no flee for Hesk's side (`noFlee`), no auto-resolve.
+
+Legend: `A` asteroid, `M` meteoroids, `P` plasma, `G` gravity flux, `o` the strike force's first 40 hexes,
+`@` the General, `H` the picket's leader (*Hound*, always slot 1), `1` the picket on the map at turn 1 (holding
+behind the rocks for two turns), `4` both flanks on turn 4, `7` the far corners on turn 7, `9` behind (the west
+edge: the way home) on turn 9.
+
+```
+ 1 ....................................4.4.4.4...........7.7.7
+ 2 ...................................4.4.4.4.4.........7.7.7.
+ 3 ..........................M.........4.4.4.4...........7.7.7
+ 4 .......G.................MMM.......................M...7.7.
+ 5 ............AAAA.........MMM...............................
+ 6 ............AAA............................................
+ 7 ...........A.A..........................A..................
+ 8 ................................M......AAA.................
+ 9 .......................................AAAA...........M....
+10 .......................................A.............MMM...
+11 9.9.........ooo.............................1.1......MMM...
+12 .9..........ooo........A...................1.1.1...........
+13 9.9.....M.ooooooo.....A...........MMM.....1.1.1.1..........
+14 .9........ooooooo....A............MMM....1.1.H.1.1.........
+15 9.9.......ooo@ooo..................M......1.1.1.1.....G....
+16 .9........ooooooo........................1.1M1.1.1.........
+17 9.9........ooooo............................1.1............
+18 .9.........M.o...............................1.............
+19 9.9......................M......................AAA........
+20 ................................................AAA........
+21 ....MMM.......................A..................A.........
+22 ....MMM.....................AAAAA..........................
+23 .....M......................AAAAA.........PPP..............
+24 ............................AAAAA.........PPP...........M..
+25 ................MMM.........AAAA...........P...............
+26 ................MMM...........................M..........7.
+27 .................M...........................MMM......7.7.7
+28 ...................................4.M.4.4.4.MMM.......7.7.
+29 ....................................4.4.4.4...........7.7.7
+30 ...................................4.4.4.4.4...........7.7.
+```
+
+**Scaling (by number, owner's follow-up: "twice in number first because it may get too hard")**: the picket is
+`RECKONING.ambushRatio` (**2**) × the strike force's machines, at least `ambushFloor` (**12**), capped by the 88 slots.
+The slots are stored in an order that takes 3 : 3 : 2.5 : 1.5 from front, flanks, hammer and behind in every 10, so any
+count keeps all four directions (80 slots for 40: 24 / 24 / 20 / 12; 24 for 12: 9 / 7 / 5 / 3). Each slot has a role
+(craft, mecha, armour, ship) and the colony picks its machine **by the strike force's own tier** (its mean price: under 14
+light, under 30 middle, else heavy; every third slot one tier lower) and **level** (its mean pilot level, 1–8; the leader +1;
+Easy −2). Types per role and tier (`AMBUSH_TYPES`): craft Lobster/Crane · Horus/Athena/Brontes · Athena Kai/Lobster
+Kai/Crane Kai; mecha Mars/Medusa/Titan · Talos/Directorate Talos · Directorate Talos/Directorate Medusa/Mars Kai/Titan Kai;
+armour Cyclops/Phoibos · Cyclops Kai/Cyclops · Cyclops Kai; ships Fenrir/Hannibal/Cerberus · Corvus/Asura-II/Selene ·
+Tiamat/Asura-II Kai/Asura-II/Hastur. No Leviathan, no unique machines.
+
+**AI against AI** (`tests/colony-reckoning.mjs`, both sides the Union AI; Eden on a "leash": the General's machine holds
+its hex and only fires, the rest stay within 8 hexes of him and fight whatever comes within 6, as a player would ring him):
+40 strong machines (level 8) won 3 of 3 and 4 of 4 in the tuning runs, losing 17–29 machines and leaving 15–21 of the
+80 alive; 40 middling ones (level 6) 3 of 4 (26–37 lost); 20 (level 5) 2 of 4; 5–6 weak ones always lose. Without the
+leash (the AI's own play: it chases east and leaves the General alone) every game was lost on turns 7–10, the wave behind
+finishing the General: the leash is what "good play" means here. Tuning history: the General first stood on the west
+edge of the column (the turn-5 wave behind killed him); the waves came on turns 1/3/5/7 (too dense); now 1 (holding
+to turn 3) / 4 / 7 / 9.
+
+### 7b. The choice
+
+*The General decides* (event, the General's face; the clock waits as for any event). The summary: machines left and their
+mean HP, the machines lost by name, the picket destroyed and still out there. The two ways (also on the event):
+
+- **Go home and regroup**: the fleet mends at Eden as usual and new machines can join. The picket's survivors (at most 20)
+  and reinforcements follow and **strike Eden 12 days later** (`counterMission`, below). Hold it, and the next strike (10
+  days later) goes straight to phase 2 with a full fleet, but the rock has had time: `reinforce` +1.
+- **Press on to the stronghold**: phase 2 at once with the machines left, **at the HP they have now** (`fleet` keeps
+  each one's HP fraction: whatever mends at Eden meanwhile does not count, `strongholdMission` uses the lower), no new
+  machines, the rock not reinforced (`reinforce` as it was: 0 on a first strike). The picket is scattered.
+
+Losing phase 2 either way: the survivors limp home, `reinforce` +1, the next strike 30 days later, straight to phase 2.
+
+### 7c. Hesk strikes Eden (the counterstrike: `siege.json` `counter`)
+
+The siege map, other waves: **hold to the end of turn 14**. In from the east and the breach first (14 machines, an
+Asura-II *the picket's second*; the ambush's survivors, always all of them, on the `f` hexes in front), **under the hull**
+from both ends on turn 4 (10), **round the west** on turn 7 (10, a Selene Kai), **the north** on turn 10 (14: two Asura-II
+Kai *Directorate cruisers*, a Siren *Quill's paymaster*). 50 machines (cargo counted) plus the survivors against a full guard; scaled
+like the siege (`siegeShare`; `core` units always), hull guns as in the siege. Legend: `e` turn 1, `4` `7` `X`
+turns 4, 7, 10, `f` the survivors' hexes, others as the siege.
+
+```
+ 1 ........................X.X.X.X.X.X........................
+ 2 .........................X.X.X.X.X.........................
+ 3 ........................X.X.PPP.X.......................f.f
+ 4 ..........AAA...............PPP...............AAA......f.f.
+ 5 ..........AAA................P................AAA...f.f.f.f
+ 6 ...........A...................................A.....f.f.f.
+ 7 ......................................................M.f.f
+ 8 ............................ooo......................MMM.f.
+ 9 7........HHgHHgHHgHHHHgHDDoDoooDDDDHgHHHHgHHgHHgHH...MMMf.f
+10 .7.......HHHHHHHHHHHHHRHDDoooKoooDDHRHHHHHHHHHHHHH...f.f.f.
+11 7.7......HHHHHHHHHHHHHgHDDoooooooDDHgHHHHHHHHHHHHH....e.e.f
+12 .7.7M....HHHDDDDDDDDDHRHDDoooooooDDHRHDDDDDDDDDHHH...e.e.e.
+13 7.7MMM...HHHDDDDDDDDDHRWDDoooooooDDWRHDDDDDDDDDHHH..e.e.e.e
+14 .7.MMM...HHHDDDDDDDDDHRWDDDoooooDDDWRHDDDDDDDDDHH....e.e.e.
+15 7........HHHDDDDDDDDDHRWDDDDDoDDDDDWRHDDDDDDDDDHH...e.PPP.e
+16 .........HHHDDDDDDDDDHRHDDDDDCDDDDDHRHDDDDDDDDDHH.....PPP..
+17 .........HHHDDDDDDDDDHRWDDDDDDDDDDDWRHDDDDDDBM.BM......P...
+18 .........HHHHHHHHHHHHHRWDDDDDDDDDDDWRHHHHHHHM.BM...........
+19 .........HHHHHHHHHHHHHRWDDDDDDDDDDDWRHHHHHHH.BM............
+20 .........HHHHHHHHHHHHHgHHHHHHHHHHHHHgHHHHHHHBM.B...........
+21 ......G..HHHHHHHHHHHHHRHHHHHHHHHHHHHRHHHHHHHM.BM...........
+22 ...4.GGG...........................................4.4.....
+23 ....4GGG............................................4.4....
+24 .....4.4...........................................4.4.....
+25 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+26 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+27 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+28 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+29 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+30 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+```
+
+AI against AI: a strong guard (40, level 8) held 4 of 4 (8–17 lost) with no survivors, 2 of 4 with 20 survivors; 15
+middling ones lost.
+
+### 7d. Phase 2: Hesk's stronghold, changed
+
+Same map and objective (**sink the Verdict**, 30 turns). Decision: the objective stays the Verdict alone, not "every
+capital ship and the Verdict": on a 59 × 40 map with 30 turns, a damaged pressing-on fleet hunting five capitals across the
+belt would turn the finale into a chase; the capitals instead stand between the General and Hesk. Capital ships besides the
+Verdict: **Tiamat *Commodore Varr*** (the court, garrison), **Nodens *Captain Osk*** (east, turn 9), **Artemis *the Ledger
+(Deputy Director Quill)*** (new: with the trap behind on turn 12), **Azoras** (with the Verdict, turn 15), and when the rock
+has had time, **Asura-II Kai *Directorate cruisers*** among the reinforcements. 109 machines at `reinforce` 0 (two Directorate
+cruisers in the court were tried and dropped: the AI's strong strike went from 2 wins in 6 to 0 in 10).
+
+**Reinforcement** (`reinforce` n, at most 3): the first 8 × n of the 24 `reinforcements` (the court and the harbour,
+`r` on the map; three of them cruisers) join the garrison and every enemy but the Verdict is n levels higher (at most 9):
+117 / 125 / 133 machines.
+
+AI against AI (the test's careful General): a strong full strike 1 of 3 (as before the change); reinforced once, and
+pressing on with 30 machines at 70% HP, 0 of 6 each in the tuning runs: pressing on is the gamble, regrouping the safer road.
+
+### 7e. Numbers (`RECKONING`)
+
+`ambushRatio` 2, `ambushFloor` 12, `survivorsCap` 20, `counterDelay` 12 days, `afterCounter` 10 days,
+`reinforceStep` 8, `reinforceMax` 3, `strikeRetry` 30 days (unchanged).
+
+### 7f. Interface
+
+The Raids card: *Launch the strike* (phase 1, "two battles: the road there, twice your number, then the rock; the General
+must lead it"), *Strike the stronghold* (phase 2, the reinforcement shown), the counterstrike countdown, *Defend Eden*, the
+pressing-on fleet (machines, HP). Strike buttons are disabled with the reason when the General cannot fly. The crossroads
+event shows the summary and what each way means; *Press on* launches phase 2 directly. The battle page: *Break out* on the
+ambush's briefing. How to play: a paragraph on the strike (spoiler-light).
+
+Files: `js/colony/reckoning.js` (stages, `generalReady`, `strikePhase`, the choice, the results), `js/colony/battle.js`
+(`ambushMission`, `counterMission`, `strongholdMission` options, `commandReckoning` 'strike'), `js/colony/rules.js`,
+`js/colony/main.js`, `js/colony/ui.js`, `js/expansion/battle.js` (`survivors`), `js/gameapp.js`,
+`missions/colony/ambush.json` (new), `siege.json` (`counter`), `stronghold.json` (Quill's Artemis, `reinforcements`),
+`tools/colony-reckoning-maps.mjs`, `tests/colony-reckoning.mjs`.

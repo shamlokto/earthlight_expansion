@@ -691,6 +691,13 @@
    "wave": "trap2",
    "units": [
     {
+     "type": 34,
+     "x": 1,
+     "y": 21,
+     "level": 7,
+     "name": "Artemis · the Ledger (Deputy Director Quill)"
+    },
+    {
      "type": 35,
      "x": 1,
      "y": 16,
@@ -1021,11 +1028,185 @@
   [15,29,1]
  ],
  "generalAt": [7,35],
+ "reinforcements": [
+  {
+   "type": 72,
+   "x": 49,
+   "y": 10,
+   "level": 7,
+   "hold": 12,
+   "name": "Asura-II Kai · Directorate cruiser"
+  },
+  {
+   "type": 60,
+   "x": 48,
+   "y": 10,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 80,
+   "x": 49,
+   "y": 11,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 73,
+   "x": 50,
+   "y": 11,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 70,
+   "x": 49,
+   "y": 8,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 68,
+   "x": 48,
+   "y": 9,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 60,
+   "x": 50,
+   "y": 9,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 80,
+   "x": 51,
+   "y": 9,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 72,
+   "x": 47,
+   "y": 10,
+   "level": 7,
+   "hold": 12,
+   "name": "Asura-II Kai · Directorate cruiser"
+  },
+  {
+   "type": 66,
+   "x": 51,
+   "y": 10,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 69,
+   "x": 47,
+   "y": 11,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 71,
+   "x": 51,
+   "y": 11,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 31,
+   "x": 48,
+   "y": 12,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 60,
+   "x": 48,
+   "y": 8,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 80,
+   "x": 51,
+   "y": 8,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 73,
+   "x": 46,
+   "y": 9,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 72,
+   "x": 46,
+   "y": 10,
+   "level": 7,
+   "hold": 12,
+   "name": "Asura-II Kai · Directorate cruiser"
+  },
+  {
+   "type": 70,
+   "x": 52,
+   "y": 10,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 42,
+   "x": 46,
+   "y": 11,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 68,
+   "x": 46,
+   "y": 12,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 60,
+   "x": 47,
+   "y": 12,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 80,
+   "x": 49,
+   "y": 6,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 73,
+   "x": 47,
+   "y": 7,
+   "level": 6,
+   "hold": 8
+  },
+  {
+   "type": 67,
+   "x": 48,
+   "y": 7,
+   "level": 6,
+   "hold": 8
+  }
+ ],
  "briefing": "The rock has no name on any chart. Hesk bought that too.\n\nInside it sits everything his circle could buy: Directorate hulls, cartel crews, turrets on every mount, and the last of the machines the General sold to keep Eden breathing.\n\nThere is one way to end this: the Verdict, Hesk's flagship. She is not in the harbour yet. When she comes, sink her.\n\nThey know we are coming. Expect them behind us as well as in front.",
  "strategy": [
   "Three ways in: the meteoroid belt in the north (craft only, slow), the Gullet between the two ridges (fast, and too quiet), and the open south lane under the fortress cannon.",
   "The cannon fires straight down column 54 at every phase change while its tower stands. Cross it; never end a move in it.",
-  "Waves: behind you on turn 3, out of the north on turn 6, from the east on turn 9, behind you again on turn 12, and the Verdict herself on turn 15."
+  "Waves: behind you on turn 3, out of the north on turn 6, from the east on turn 9, behind you again on turn 12, and the Verdict herself on turn 15.",
+  "Capital ships: Varr's Tiamat in the court, Osk's Nodens from the east, Quill's Artemis behind you on turn 12, the Azoras with the Verdict (and Directorate cruisers if Hesk has had time to reinforce). Only the Verdict has to sink."
  ],
  "transmission": "I gave the order once to save the Union from a scandal. I will give it again to save myself, General. Come in."
 }

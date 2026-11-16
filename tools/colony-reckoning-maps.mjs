@@ -76,6 +76,15 @@ function homeSlots(cv, area, from, taken) {
   return out.sort((a, b) => dist({ x: a[0], y: a[1] }, from) - dist({ x: b[0], y: b[1] }, from) || a[1] - b[1] || a[0] - b[0]);
 }
 const grid = (cv) => cv.g.map((r) => [...r]);
+// n open-void hexes (any machine may stand) in `test`, a hex apart, nearest `centre` first, not in `used`
+function pick(cv, test, centre, n, used) {
+  const c = [];
+  for (let y = 1; y <= cv.rows; y++) for (let x = 1; x <= cv.cols - 1; x++) if (test(x, y) && cv.ok(x, y) && cv.get(x, y) <= 3 && (x + y) % 2 === 0 && !used.has(`${x},${y}`)) c.push({ x, y });
+  c.sort((a, b) => dist(a, centre) - dist(b, centre) || a.y - b.y || a.x - b.x);
+  const out = c.slice(0, n);
+  for (const h of out) used.add(`${h.x},${h.y}`);
+  return out;
+}
 
 // ====================================================================== The Siege of Eden (4 x 3)
 function siege() {
@@ -130,6 +139,40 @@ function siege() {
     L(30, 6, 1, 5), L(40, 4, 6, 5), L(40, 57, 6, 5), L(67, 2, 23, 5), L(67, 58, 24, 5), L(60, 50, 2, 6),
     L(35, 54, 1, 5, { cargo: [12, 12] }), L(12, 1, 3, 5), L(12, 59, 3, 5),
   ];
+  // The counterstrike (owner, 2026-11-16): the General went home after the ambush; the picket's survivors
+  // and fresh reinforcements follow and strike Eden. Same station, other waves: in from the east and
+  // the breach first (where the survivors come from), under the hull on turn 4, round the west on turn 7,
+  // the north on turn 10 with two Directorate cruisers. `follow`: where the picket's survivors start.
+  const cu = new Set([`${cortex.x},${cortex.y}`, `${dock.x},${dock.y}`, ...home.slice(0, 48).map(([x, y]) => `${x},${y}`)]);
+  const at = (hexes, specs) => specs.map((sp, i) => ({ ...sp, x: hexes[i].x, y: hexes[i].y }));
+  const T = (type, level, extra = {}) => ({ type, level, ...extra });
+  const cStart = at(pick(cv, (x, y) => x >= 51 && y >= 4 && y <= 24, { x: 56, y: 14 }, 14, cu), [
+    T(31, 6, { core: 1, name: 'Asura-II · the picket\'s second' }), T(60, 5, { core: 1 }), T(80, 5, { core: 1 }), T(68, 5, { core: 1 }),
+    T(66, 5), T(70, 5), T(73, 5), T(42, 5), T(60, 5), T(80, 5), T(69, 4), T(16, 4), T(9, 4), T(12, 4)]);
+  const cBelow = at(pick(cv, (x, y) => y >= 22 && (x <= 8 || x >= 52), { x: 30, y: 24 }, 10, cu), [
+    T(68, 5, { core: 1 }), T(70, 5, { core: 1 }), T(66, 5), T(80, 5), T(69, 5), T(15, 4), T(16, 4), T(73, 5), T(8, 4), T(3, 4)]);
+  const cWest = at(pick(cv, (x, y) => x <= 4 && y <= 22, { x: 1, y: 12 }, 10, cu), [
+    T(58, 6, { core: 1, name: 'Selene Kai · Directorate escort', cargo: [9, 9] }), T(60, 5, { core: 1 }), T(70, 5), T(69, 5), T(12, 5), T(12, 5), T(51, 4), T(49, 4), T(15, 4), T(3, 4)]);
+  const cNorth = at(pick(cv, (x, y) => y <= 3, { x: 30, y: 1 }, 14, cu), [
+    T(72, 7, { core: 1, name: 'Asura-II Kai · Directorate cruiser' }), T(72, 7, { core: 1, name: 'Asura-II Kai · Directorate cruiser' }), T(36, 6, { core: 1, name: 'Siren · Quill\'s paymaster' }), T(60, 6, { core: 1 }),
+    T(60, 6), T(73, 6), T(73, 6), T(66, 6), T(67, 6), T(68, 6), T(42, 5), T(41, 5), T(10, 5), T(4, 5)]);
+  const follow = pick(cv, (x, y) => x >= 51 && y >= 2 && y <= 24, { x: 58, y: 8 }, 20, cu).map((h) => [h.x, h.y]);
+  const counter = {
+    title: 'Hesk Strikes Eden', chapter: 'The Reckoning · II', objective: { kind: 'hold', turns: 14 },
+    goal: 'Hold Eden to the end of turn 14: the Command Centre must stand and the General must live. Destroying every wave also wins.',
+    units: cStart, arrivals: [{ turn: 3, army: 1, wave: 'below', units: cBelow }, { turn: 6, army: 1, wave: 'west', units: cWest }, { turn: 9, army: 1, wave: 'north', units: cNorth }],
+    follow,
+    briefing: [
+      'The fleet came home from the ambush to mend. The picket came home with it, and brought friends.',
+      'They are already in the east, by the old breach. More will come up under the hull, round the west, and out of the north with Directorate cruisers.',
+      'Hold Eden. Then the way to the rock is open, and the picket that guarded it is spent.',
+    ].join('\n\n'),
+    strategy: [
+      'First from the east and the breach (the picket\'s survivors among them), under the hull on turn 4, round the west on turn 7, the north on turn 10.',
+      'Keep the Command Centre ringed; the bulkhead doors are at row 16.',
+    ],
+    transmission: 'You ran home, General. Home is where I wanted you.',
+  };
   const units = [
     { type: 56, army: 0, x: cortex.x, y: cortex.y, name: 'Command Centre · Eden', eden: 'cortex' },
     { type: 52, army: 0, x: dock.x, y: dock.y, name: 'Eden\'s dock', eden: 'dock' },
@@ -145,6 +188,7 @@ function siege() {
     objective: { kind: 'hold', turns: 15 }, flee: true, noFlee: true, awaitArrivals: true, music: 0,
     goal: 'Hold Eden to the end of turn 15: the Command Centre must stand and the General must live. Destroying every wave also wins.',
     home, rails, cortex, dock, generalAt: [30, 14],   // the General's machine starts beside the Command Centre
+    counter,   // the counterstrike's waves (js/colony/battle.js counterMission)
     briefing: [
       'Day one hundred. They did not wait for nightfall; there is none up here.',
       'Hesk\'s fleet is at the gates: Directorate hulls, cartel guns bought with Ninefold money, and machines Eden sold to pay for its air. The north is already full of them. More will come round the west, through the old breach in the east, and from the dark.',
@@ -161,6 +205,84 @@ function siege() {
   const marks = [...units.map((u) => ({ x: u.x, y: u.y, mark: u.army === 0 ? (u.type === 56 ? 'C' : 'K') : 'e' })),
     ...west.map((u) => ({ ...u, mark: '3' })), ...east.map((u) => ({ ...u, mark: '5' })), ...old.map((u) => ({ ...u, mark: '7' })), ...last.map((u) => ({ ...u, mark: 'X' })),
     ...rails.map(([x, y]) => ({ x, y, mark: 'g' })), ...home.slice(0, 40).map(([x, y]) => ({ x, y, mark: 'o' }))];
+  const cmarks = [...units.filter((u) => u.army === 0).map((u) => ({ x: u.x, y: u.y, mark: u.type === 56 ? 'C' : 'K' })), ...rails.map(([x, y]) => ({ x, y, mark: 'g' })),
+    ...home.slice(0, 40).map(([x, y]) => ({ x, y, mark: 'o' })), ...follow.map(([x, y]) => ({ x, y, mark: 'f' })),
+    ...cStart.map((u) => ({ ...u, mark: 'e' })), ...cBelow.map((u) => ({ ...u, mark: '4' })), ...cWest.map((u) => ({ ...u, mark: '7' })), ...cNorth.map((u) => ({ ...u, mark: 'X' }))];
+  return { mission, ascii: cv.ascii(marks), counterAscii: cv.ascii(cmarks) };
+}
+
+// ====================================================================== The Ambush (4 x 3), phase 1 of the strike
+// Deep space on the way to the far belt: debris, a few asteroid clusters for cover, nothing else.
+// The strike force flies east in a column (the General in the middle); Hesk's picket waits ahead
+// and closes in from every side in waves. The ambushers are SLOTS: hand-placed hexes in an order
+// (the colony takes the first ambushRatio x n of them, js/colony/battle.js ambushMission) with a
+// role (craft | mecha | armour | ship); the colony picks each slot's machine by the strike force's
+// own tier and level. Every slot is on open void, so any machine may stand there.
+function ambush() {
+  const cv = new Canvas(4, 3, 0xa3b05);
+  // the asteroid clusters (cover)
+  cv.blob(14, 6, 1, 'A'); cv.set(16, 5, 'A'); cv.set(12, 7, 'A');               // NW
+  cv.blob(31, 23, 2, 'A'); cv.set(34, 21, 0); cv.set(29, 25, 'A');              // the big rock, south-centre
+  cv.blob(41, 8, 1, 'A'); cv.set(43, 9, 'A'); cv.set(40, 10, 'A');              // NE
+  cv.blob(23, 13, 0, 'A'); cv.set(24, 12, 'A'); cv.set(22, 14, 'A');            // a small one beside the column
+  cv.blob(50, 20, 1, 'A');                                                       // SE
+  // debris fields (meteoroids: slow, but cover)
+  for (const [x, y, r] of [[6, 22, 1], [27, 4, 1], [36, 14, 1], [47, 27, 1], [55, 10, 1], [18, 26, 1]]) cv.blob(x, y, r, 'M');
+  for (const [x, y] of [[9, 13], [33, 8], [45, 16], [26, 19], [52, 4], [38, 28], [12, 18], [57, 24]]) cv.set(x, y, 'M');
+  cv.blob(44, 24, 1, 'P'); cv.blob(8, 4, 0, 'G'); cv.blob(55, 15, 0, 'G');
+  const open = (x, y) => cv.ok(x, y) && cv.get(x, y) <= 3;
+  const generalAt = [14, 15];   // the General in the middle of the column, the fleet all round him
+  const home = homeSlots(cv, (x, y) => x >= 6 && x <= 24 && y >= 9 && y <= 21, { x: 14, y: 15 }, new Set());
+  const homeSet = new Set(home.slice(0, 48).map(([x, y]) => `${x},${y}`));
+  // the slots of each wave: open hexes in its area, a hex apart, nearest its centre first
+  const used = new Set(homeSet);
+  const area = (test, centre, n) => pick(cv, test, centre, n, used);
+  const ROLES = ['craft', 'mecha', 'ship', 'craft', 'armour', 'mecha', 'craft', 'ship'];
+  const waves = [
+    // turn 1, on the map: the picket ahead, east, waiting behind the NE and SE rocks
+    { key: 'front', turn: 0, hold: 3, share: 3, hexes: area((x, y) => x >= 38 && x <= 57 && y >= 5 && y <= 26, { x: 46, y: 15 }, 26) },
+    // turn 4: both flanks close in ahead of the fleet, from the north and south edges
+    { key: 'flanks', turn: 3, share: 3, hexes: [...area((x, y) => y <= 3 && x >= 26 && x <= 54, { x: 40, y: 1 }, 13), ...area((x, y) => y >= 28 && x >= 26 && x <= 54, { x: 40, y: 30 }, 13)] },
+    // turn 7: the hammer, out of the far corners
+    { key: 'hammer', turn: 7, share: 2.5, hexes: [...area((x, y) => x >= 48 && y <= 9, { x: 58, y: 1 }, 11), ...area((x, y) => x >= 48 && y >= 22, { x: 58, y: 30 }, 11)] },
+    // turn 9: behind, the west edge: the way home is shut
+    { key: 'behind', turn: 5, share: 1.5, hexes: area((x, y) => x <= 3 && y >= 2 && y <= 29, { x: 1, y: 15 }, 14) },
+  ];
+  // the slot order: take each wave's share in turn, so any count keeps all four directions
+  const slots = [];
+  const per = waves.map((w) => ({ w, i: 0 }));
+  for (let k = 0; slots.length < waves.reduce((t, w) => t + w.hexes.length, 0); k++) {
+    for (const p of per) {
+      const want = Math.floor((k + 1) * p.w.share) - Math.floor(k * p.w.share);   // 3, 3, 2.5, 1.5 per round of 10
+      for (let j = 0; j < want && p.i < p.w.hexes.length; j++, p.i++) {
+        const h = p.w.hexes[p.i];
+        slots.push({ wave: p.w.key, x: h.x, y: h.y, role: ROLES[slots.length % ROLES.length] });
+      }
+    }
+  }
+  slots[0].name = 'Hound · Hesk\'s picket leader'; slots[0].role = 'ship';   // the picket's flagship, always first
+  const mission = {
+    version: 1, name: 'AMBUSH', title: 'The Ambush', chapter: 'The Reckoning · II',
+    screensW: 4, screensH: 3, pairs: PAIRS.map((p) => [...p]), grid: grid(cv), units: [], arrivals: [],
+    waves: waves.map((w) => ({ key: w.key, turn: w.turn, ...(w.hold ? { hold: w.hold } : {}) })), slots,
+    objective: { kind: 'hold', turns: 12 }, flee: true, noFlee: true, awaitArrivals: true, music: 29, cap: 40,
+    goal: 'Break out: keep the strike force together to the end of turn 12, when the jump drives are charged. Destroying the whole picket also wins. If the General falls, it is over.',
+    home, generalAt,
+    briefing: [
+      'Halfway to the far belt, in the dark between nowhere and nothing, the scopes light up.',
+      'Hesk knew the way we would come. His picket was waiting: twice our number, and more of them coming from every side.',
+      'The jump drives need twelve turns to charge for the last leg. Until then the fleet has to stay alive, and so does the General.',
+    ].join('\n\n'),
+    strategy: [
+      'They come in waves: ahead of you at once (waiting behind the rocks for two turns), both flanks on turn 4, the far corners on turn 7, behind you on turn 9.',
+      'The rocks are the only cover out here. A tight ring around the General beats a charge.',
+      'Whatever you lose here, you will not have at the rock.',
+    ],
+    transmission: 'You did not think I would let you knock on my door, General?',
+  };
+  const marks = [...slots.map((s) => ({ x: s.x, y: s.y, mark: { front: '1', flanks: '4', hammer: '7', behind: '9' }[s.wave] })),
+    ...home.slice(0, 40).map(([x, y]) => ({ x, y, mark: 'o' })), { x: generalAt[0], y: generalAt[1], mark: '@' }];
+  marks[0].mark = 'H';
   return { mission, ascii: cv.ascii(marks) };
 }
 
@@ -229,6 +351,22 @@ function stronghold() {
     L(61, 49, 9, 8, { name: 'Azoras · the General\'s old flagship' }), L(58, 53, 9, 8, { name: 'Selene Kai · Sato\'s old command', cargo: [74, 74] }),
     L(72, 48, 6, 7), L(72, 54, 7, 7), L(71, 47, 8, 7), L(71, 52, 9, 7), L(73, 50, 10, 7), L(73, 52, 5, 7),
   ];
+  // Capital ships (owner, 2026-11-16): Varr's Tiamat in the court, Osk's Nodens from the east (turn 9),
+  // Quill's Artemis closing the trap on turn 12, the Azoras with the Verdict (turn 15); Directorate
+  // cruisers (Asura-II Kai) lead the reinforcements when the rock has had time.
+  const su = new Set([...garrison, ...ambush, ...trap1, ...north, ...east, ...trap2, ...hesk].map((u) => `${u.x},${u.y}`));
+  const pickAny = (test, centre, n) => {   // deck or void, nearest `centre` first
+    const c = [];
+    for (let y = 1; y <= cv.rows; y++) for (let x = 1; x <= cv.cols - 1; x++) if (test(x, y) && cv.ok(x, y) && cv.get(x, y) <= 4 && !su.has(`${x},${y}`)) c.push({ x, y });
+    c.sort((a, b) => dist(a, centre) - dist(b, centre) || a.y - b.y || a.x - b.x);
+    const out = c.slice(0, n); for (const h of out) su.add(`${h.x},${h.y}`); return out;
+  };
+  const q = pickAny((x, y) => x <= 2 && y >= 10 && y <= 30, { x: 1, y: 22 }, 1)[0];
+  trap2.unshift(L(34, q.x, q.y, 7, { name: 'Artemis · the Ledger (Deputy Director Quill)' }));
+  // The base reinforces (a regroup, a failed assault): js/colony/battle.js strongholdMission takes the
+  // first RECKONING.reinforceStep x n of these into the garrison (and every enemy +n levels, at most 9).
+  const rTypes = [72, 60, 80, 73, 70, 68, 60, 80, 72, 66, 69, 71, 31, 60, 80, 73, 72, 70, 42, 68, 60, 80, 73, 67];
+  const reinforcements = pickAny((x, y) => x >= 38 && y <= 22, { x: 49, y: 10 }, rTypes.length).map((h, i) => L(rTypes[i], h.x, h.y, rTypes[i] === 72 ? 7 : 6, { hold: rTypes[i] === 72 ? 12 : 8, ...(rTypes[i] === 72 ? { name: 'Asura-II Kai · Directorate cruiser' } : {}) }));
   const units = [...garrison, ...ambush].map((u) => ({ ...u, army: 1 }));
   const arrivals = [
     { turn: 2, army: 1, wave: 'trap', units: trap1 }, { turn: 5, army: 1, wave: 'north', units: north },
@@ -240,7 +378,7 @@ function stronghold() {
     screensW: 4, screensH: 4, pairs: PAIRS.map((p) => [...p]), grid: grid(cv), units, arrivals, cannons: [cannon],
     objective: { kind: 'flagship', type: 59 }, turnLimit: 30, flee: true, noFlee: true, awaitArrivals: true, music: 29, cap: 40,
     goal: 'Sink Major Hesk\'s flagship, the Verdict, within 30 turns. She comes out on turn 15. If the General falls, it is over.',
-    home, generalAt: [7, 35],
+    home, generalAt: [7, 35], reinforcements,
     briefing: [
       'The rock has no name on any chart. Hesk bought that too.',
       'Inside it sits everything his circle could buy: Directorate hulls, cartel crews, turrets on every mount, and the last of the machines the General sold to keep Eden breathing.',
@@ -251,22 +389,23 @@ function stronghold() {
       'Three ways in: the meteoroid belt in the north (craft only, slow), the Gullet between the two ridges (fast, and too quiet), and the open south lane under the fortress cannon.',
       'The cannon fires straight down column 54 at every phase change while its tower stands. Cross it; never end a move in it.',
       'Waves: behind you on turn 3, out of the north on turn 6, from the east on turn 9, behind you again on turn 12, and the Verdict herself on turn 15.',
+    'Capital ships: Varr\'s Tiamat in the court, Osk\'s Nodens from the east, Quill\'s Artemis behind you on turn 12, the Azoras with the Verdict (and Directorate cruisers if Hesk has had time to reinforce). Only the Verdict has to sink.',
     ],
     transmission: 'I gave the order once to save the Union from a scandal. I will give it again to save myself, General. Come in.',
   };
   const marks = [...units.map((u) => ({ x: u.x, y: u.y, mark: u.wakes ? 'z' : [23, 24].includes(u.type) ? 'g' : [17, 18].includes(u.type) ? 'm' : u.type === 57 ? 'T' : 'e' })),
     ...trap1.map((u) => ({ ...u, mark: '3' })), ...north.map((u) => ({ ...u, mark: '6' })), ...east.map((u) => ({ ...u, mark: '9' })),
-    ...trap2.map((u) => ({ ...u, mark: 'c' })), ...hesk.map((u) => ({ ...u, mark: u.type === 59 ? 'V' : 'f' })), ...home.slice(0, 40).map(([x, y]) => ({ x, y, mark: 'o' }))];
+    ...trap2.map((u) => ({ ...u, mark: 'c' })), ...reinforcements.map((u) => ({ ...u, mark: 'r' })), ...hesk.map((u) => ({ ...u, mark: u.type === 59 ? 'V' : 'f' })), ...home.slice(0, 40).map(([x, y]) => ({ x, y, mark: 'o' }))];
   return { mission, ascii: cv.ascii(marks) };
 }
 
 const out = new URL('../missions/colony/', import.meta.url);
 mkdirSync(out, { recursive: true });
-for (const [file, make] of [['siege.json', siege], ['stronghold.json', stronghold]]) {
-  const { mission, ascii } = make();
+for (const [file, make] of [['siege.json', siege], ['ambush.json', ambush], ['stronghold.json', stronghold]]) {
+  const { mission, ascii, counterAscii } = make();
   // grid rows on one line each keeps the file readable
   const json = JSON.stringify(mission, null, 1).replace(/\[\s+([\d,\s-]+?)\s+\]/g, (m, inner) => `[${inner.replace(/\s+/g, '')}]`);
   writeFileSync(new URL(file, out), json + '\n');
-  if (process.argv.includes('--ascii')) console.log(`\n${mission.title}\n${ascii}`);
+  if (process.argv.includes('--ascii')) console.log(`\n${mission.title}\n${ascii}${counterAscii ? `\n\n${mission.counter.title}\n${counterAscii}` : ''}`);
 }
-console.log('wrote missions/colony/siege.json, missions/colony/stronghold.json');
+console.log('wrote missions/colony/siege.json, ambush.json, stronghold.json');

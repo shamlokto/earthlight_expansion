@@ -432,6 +432,7 @@ export function helpHtml(art, diff) {
       <li><b>After the broadcast</b> the people it names will not go quietly. Watch for signs over the following months (the Market, the traders, the neighbours), and use the time: machines, crews, Battery Emplacements.</li>
       <li><b>Its battles are fought on the Earth Light hex map</b> (they need the Earth Light pack), turn by turn: no auto-fight and no tribute. Until a battle is fought, it waits.</li>
       <li>Eden fields up to 40 crewed guardians at home, the General leading, and every working emplacement as a hull gun. Keep the General's machine safe: if it falls, the battle is lost.</li>
+      <li><b>The strike</b> on Hesk's hiding place cannot go without the General: his machine always flies, and if it falls the battle is lost. On the way there, expect to be met by twice your number. Win through, and you choose: <b>go home and regroup</b> (repairs and new machines, but they follow you home, and the rock gets time to prepare), or <b>press on</b> as you are (no repairs, no new machines, but he has no time).</li>
       <li>A battle lost is not the end of the story. Eden recovers, and so do they.</li>
     </ul>`)}
   ${sec('expeditions', 'Expeditions', `<figure class="cl-hfig cl-hbook"><span style="font-size:42px;color:#7affd8">✦</span><figcaption>Star chart</figcaption></figure>`, `
@@ -3043,7 +3044,7 @@ export function createUI(root, api) {
     const tone = p.tone ? (p.tone === 'good' ? ' cl-evwon' : p.tone === 'bad' ? ' cl-evraid' : ' cl-evwarn') : p.kind === 'landmark' || p.kind === 'wonder' ? ' cl-evwon' : '';   // version 8 (version 9: wonders)
     evBox.className = 'cl-win cl-event' + (tone ? tone : expd ? (p.report.recalled ? ' cl-evwarn' : p.report.won ? ' cl-evwon' : ' cl-evraid') : raid || coreBad ? ' cl-evraid' : coreSafe ? ' cl-evwon' : warn || core ? ' cl-evwarn' : disc || p.kind === 'survivors' ? ' cl-evdisc' : drone ? (droneWon ? ' cl-evwon' : ' cl-evraid') : '');
     const jtab = disc ? 'logs' : (core && !coreSafe) || drone ? 'dangers' : p.kind === 'survivors' ? 'survivors' : null;
-    const choices = p.choices?.length ? p.choices : [{ key: 'ok', label: 'Understood' }];
+    const choices = (p.choices?.length ? p.choices : [{ key: 'ok', label: 'Understood' }]).filter((c) => !(p.kind === 'reckoning' && p.step === 'crossroads' && c.key === 'proceed'));   // pressing on launches the battle (reckonButton)
     const tab = warn ? 'raids' : wkey ? 'commanders' : p.kind === 'neighbour' ? 'neighbours' : null;
     evBox.innerHTML = `<div class="cl-evkind">${esc(KIND_LABEL[p.kind] || p.kind || 'Event')} · Day ${s.day}${s.pending.length > 1 ? ` · ${s.pending.length - 1} more waiting` : ''}</div>
       <div class="cl-evbody">${pic}
@@ -3052,7 +3053,7 @@ export function createUI(root, api) {
       ${raid ? raidBody(s, p) : warn ? warnBody(s) : disc ? discoveryBody(s, p) : core ? reactorBody(s, p) : drone ? droneEvBody(s, p) : p.kind === 'survivors' ? survivorsEvBody(s, p) : /report|result/.test(p.kind || '') && s.raid?.last ? reportHtml(s, s.raid.last) : wkey ? wandererBody(s, wkey) : ''}
       <div class="cl-evchoices">${choices.map((c, i) => { const cant = raid && c.key === 'tribute' && (rule('raidPreview', s) || p.preview)?.canPay === false;
         return `<button type="button" class="cl-btn${i === 0 ? ' primary' : ''}${raid && c.key === 'fight' ? ' fight' : ''}" data-choice="${esc(c.key)}" ${cant ? 'disabled title="Eden cannot pay what they ask"' : ''}>${choiceLabel(s, p, c)}</button>${raid && c.key === 'fight' ? commandButton() : ''}`; }).join('')}
-        ${p.kind === 'reckoning' && (p.step === 'siege' || p.step === 'hideout') ? reckonButton(p.step === 'siege' ? 'siege' : 'stronghold') : ''}
+        ${p.kind === 'reckoning' && (p.step === 'siege' || p.step === 'hideout' || p.step === 'counterwon') ? reckonButton(p.step === 'siege' ? (p.battle === 'counter' ? 'counter' : 'siege') : 'strike') : p.kind === 'reckoning' && p.step === 'crossroads' ? reckonButton('stronghold', 'proceed') : ''}
         ${p.show && choices.length === 1 ? `<button type="button" class="cl-btn" data-evshow title="Answer and show me">${p.kind === 'landmark' || p.kind === 'wonder' || p.kind === 'petition' || p.kind === 'wildlife' ? 'Show me' : 'Show me what helps'}</button>` : ''}
         ${tab && choices.length === 1 ? `<button type="button" class="cl-btn" data-evdef="${tab}" title="Answer and open the Defence panel">${tab === 'raids' ? 'Check the defences' : tab === 'neighbours' ? 'Neighbours' : 'Meet them'}</button>` : ''}
         ${(() => { const d = core && !coreBad && !coreSafe ? reactorOf(s) : null, pv = d && dangerWork(d) == null ? srule('dangerPreview', s, d.chamber) : null;
@@ -3067,13 +3068,24 @@ export function createUI(root, api) {
   // version 12: the Reckoning's events (js/colony/reckoning.js): the speaker's line, and the names
   function reckoningBody(s, p) {
     const names = p.conspirators ? `<ul class="cl-dim" style="margin:8px 0 0;padding-left:18px">${p.conspirators.map((c) => `<li><b>${esc(c.name)}</b>: ${esc(c.role)}</li>`).join('')}</ul>` : '';
-    const pack = p.step === 'offer' ? '<p class="cl-dim">After the broadcast, the arc\'s two battles are fought on the Earth Light hex map (they need the Earth Light pack).</p>' : '';
-    return landmarkBody(s, p) + names + pack;
+    const pack = p.step === 'offer' ? '<p class="cl-dim">After the broadcast, the arc\'s battles are fought on the Earth Light hex map (they need the Earth Light pack).</p>' : '';
+    // the General's choice after the ambush: what was lost, and what each way means
+    const m = p.step === 'crossroads' && p.summary;
+    const cross = m ? `<div class="cl-rnote cl-dnote"><p><b>The strike force:</b> ${m.fleet} machine${m.fleet === 1 ? '' : 's'} left, at ${m.hp}% of their HP. <b>Lost:</b> ${m.lost ? esc(m.lostList) : 'none'}. <b>The picket:</b> ${m.killed} destroyed${m.survivors ? `, ${m.survivors} still out there` : ''}.</p>
+      <ul class="cl-dim" style="margin:6px 0 0;padding-left:18px">${(p.options || []).map(([a, b]) => `<li><b>${esc(a)}</b>: ${esc(b)}</li>`).join('')}</ul></div>` : '';
+    return landmarkBody(s, p) + names + pack + cross;
   }
   // "Command the siege" / "Strike the stronghold": off to the hex map (js/colony/battle.js commandReckoning)
-  function reckonButton(which) {
-    const label = which === 'siege' ? 'Command the siege' : 'Strike the stronghold';
-    return `<button type="button" class="cl-btn fight" data-command data-reckon="${which}" ${packReady ? '' : `disabled title="${esc(COMMAND_WHY[packReady])}"`}>${label}</button>`;
+  // which: 'siege' | 'counter' | 'strike' (its next phase: the ambush on the way, or the rock) | 'stronghold';
+  // key: the event's choice it answers (pressing on after the ambush)
+  function reckonButton(which, key = '') {
+    const s = S(), phase = which === 'strike' ? (rule('strikePhase', s) || 'ambush') : which;
+    const label = which === 'siege' ? 'Command the siege' : which === 'counter' ? 'Defend Eden' : key === 'proceed' ? 'Press on to the stronghold'
+      : phase === 'ambush' ? 'Launch the strike' : 'Strike the stronghold';
+    const gen = which === 'siege' || which === 'counter' ? null : rule('generalReady', s);
+    const why = !packReady ? COMMAND_WHY[packReady] : gen && gen.ok === false ? gen.msg : '';
+    const tip = phase === 'ambush' ? 'Two battles: Hesk\'s picket on the way (twice your number), then the rock. The General must fly.' : 'The General leads the strike force into Hesk\'s stronghold.';
+    return `<button type="button" class="cl-btn fight" data-command data-reckon="${which}"${key ? ` data-rkey="${key}"` : ''} ${why ? `disabled title="${esc(why)}"` : `title="${esc(which === 'siege' || which === 'counter' ? 'Fight it yourself, turn by turn, on the Earth Light hex map' : tip)}"`}>${label}</button>`;
   }
   function reckonGo(which) {
     const go = () => battleMod.commandReckoning(S(), which, () => api.save()).then((r) => { if (r?.ok === false) toast(r.msg, 'bad'); });
@@ -3083,16 +3095,22 @@ export function createUI(root, api) {
   function reckoningCard(s) {
     const st = rule('reckoningStatus', s);
     if (!st || st.stage === 'locked') return '';
-    if (packReady === null && (st.stage === 'siege' || st.stage === 'strike')) {   // is the Earth Light pack here? then redraw
+    if (packReady === null && ['siege', 'strike', 'crossroads', 'onward'].includes(st.stage)) {   // is the Earth Light pack here? then redraw
       const ask = battleMod?.canCommand ? battleMod.canCommand() : import('./battle.js').then((m) => { battleMod = m; return m.canCommand(); });
       ask.catch(() => false).then((ok) => { if (packReady === null) { packReady = !!ok; renderDefence(true); } });
     }
     const n = st.stage === 'gathering' ? `${st.clues} of ${st.cluesTotal} signs so far.` : '';
     const body = st.stage === 'ready' ? `<p>The Ninefold vault is open. Ruess can broadcast the truth and name the people behind Protocol Ash. Once it is sent, it cannot be taken back.</p><button type="button" class="cl-btn sm primary" data-rbroadcast>Broadcast the truth</button>`
       : st.stage === 'gathering' ? `<p>The truth is out; Hesk and his circle are gathering a fleet somewhere. Build machines, crews and emplacements. ${n}</p><p class="cl-dim">Expected in about ${st.eta} day${st.eta === 1 ? '' : 's'}.</p>`
-      : st.stage === 'siege' ? `<p><b>Hesk's fleet is at the gates.</b> Eden is blockaded until the siege is fought.</p>${reckonButton('siege')}`
-      : st.stage === 'regroup' ? `<p>The siege was lost. Hesk's fleet will be back in about ${st.eta} day${st.eta === 1 ? '' : 's'}.</p>`
-      : st.stage === 'strike' ? (st.strike ? `<p>Hesk's stronghold is found. The General takes Eden's best (up to 40 crewed machines at home).</p>${reckonButton('stronghold')}` : `<p>The fleet is recovering: the next strike in ${Math.max(0, (st.nextStrike || 0) - s.day)} days.</p>`)
+      : st.stage === 'siege' ? (st.siegeKind === 'counter' ? `<p><b>Hesk's picket is at the gates</b>, with reinforcements. Eden is blockaded until the battle is fought.</p>${reckonButton('counter')}` : `<p><b>Hesk's fleet is at the gates.</b> Eden is blockaded until the siege is fought.</p>${reckonButton('siege')}`)
+      : st.stage === 'regroup' ? `<p>${st.siegeKind === 'counter' ? 'The counterstrike' : 'The siege'} was lost. Hesk's fleet will be back in about ${st.eta} day${st.eta === 1 ? '' : 's'}.</p>`
+      : st.stage === 'counter' ? `<p>The strike force came home to regroup. Hesk's picket and its reinforcements follow: they strike Eden in about ${st.eta} day${st.eta === 1 ? '' : 's'}. Mend the machines, crew them, fill the emplacements.</p>`
+      : st.stage === 'crossroads' ? '<p>The ambush is broken. The General has to decide: go home and regroup, or press on to the rock (the event).</p>'
+      : st.stage === 'onward' ? `<p><b>Pressing on.</b> ${st.fleet} machine${st.fleet === 1 ? '' : 's'} left${st.fleetHp != null ? `, at ${st.fleetHp}% HP` : ''}: no repairs, no new machines.</p>${reckonButton('stronghold')}`
+      : st.stage === 'strike' ? (st.strike ? (st.phase === 'ambush'
+        ? `<p>Hesk's stronghold is found. The strike has two battles: the road there (Hesk will not leave it unguarded: expect twice your number), then the rock itself. The General must lead it: up to 40 crewed machines at home, his first.</p>${reckonButton('strike')}`
+        : `<p>The road is clear: the strike goes straight to the rock. The General leads up to 40 crewed machines at home.${st.reinforce ? ` Hesk has had time: the rock is stronger (×${st.reinforce}).` : ''}</p>${reckonButton('strike')}`)
+        : `<p>The fleet is recovering: the next strike in ${Math.max(0, (st.nextStrike || 0) - s.day)} days.</p>`)
       : `<p>Justice for Eden, day ${st.justice?.day}. Major Hesk's flagship is sunk.</p>`;
     return `<div class="cl-rnote cl-dnote${st.stage === 'siege' ? ' warn' : ''}"><b>The Reckoning</b>${body}</div>`;
   }
@@ -3112,7 +3130,8 @@ export function createUI(root, api) {
     ask.catch(() => false).then((ok) => {
       packReady = !!ok;
       const b = evBox.querySelector('[data-command]');
-      if (b) { b.disabled = !ok; b.title = ok ? 'Fight them yourself, turn by turn, on the Earth Light hex map' : COMMAND_WHY.false; }
+      if (b?.dataset.reckon) b.outerHTML = reckonButton(b.dataset.reckon, b.dataset.rkey || '');   // the Reckoning's: also needs the General (the strike)
+      else if (b) { b.disabled = !ok; b.title = ok ? 'Fight them yourself, turn by turn, on the Earth Light hex map' : COMMAND_WHY.false; }
     });
   }
   function showReport(s, rs) {
@@ -3169,7 +3188,7 @@ export function createUI(root, api) {
     if (rk) {   // version 12: the Reckoning's battle; the event is answered first (it stays in the Raids tab)
       if (rk.disabled) return;
       const p = S().pending?.[0];
-      if (p?.kind === 'reckoning') { evId = null; modal.hidden = true; R.answer(S(), p.id, p.choices?.[0]?.key || 'ok'); }
+      if (p?.kind === 'reckoning') { evId = null; modal.hidden = true; R.answer(S(), p.id, rk.dataset.rkey || p.choices?.[0]?.key || 'ok'); }
       reckonGo(rk.dataset.reckon);
       return;
     }
