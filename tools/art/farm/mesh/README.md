@@ -107,3 +107,11 @@ with its front on +Z even from a 3/4 picture; `YAW=auto` only removes a small re
   picture never lines up exactly with the mesh, and the fringe was painted twice across the forehead.
   `v768` (paint views at 768 px) was what made the faces clean.
 * Rendering faces: `CHR=1 node render.mjs …` adds a face close-up; `harvest.py` does that for `kind: char` entries.
+
+## Paused run (2026-11-17)
+
+The second pod run was paused by the owner a few minutes in, before any mesh was made. Ready for the
+next run: `pod-setup.sh` (the pod set-up used), `concepts-pending/` (approved concept pictures for
+mori, clinic, library, bookshelf, display_case, plantpot, fish_float, cow_brown, reeds,
+greenhouse_ruin and ruin_tower) and updated prompts for yui, clinic_bed, egg, pendant and a
+navy-haired sato in `prompts.json`. Start pods with `../sandbox/sandbox.sh` running.
