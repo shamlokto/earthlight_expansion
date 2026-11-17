@@ -1,0 +1,16 @@
+<!doctype html><meta charset="utf-8"><title>Farm model viewer</title>
+<!-- Shows GLB models side by side, front and back: viewer.html?m=art/farm/models/sato.glb,art/farm/models/cow.glb -->
+<style>html,body{margin:0;background:#cfe3f0}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"../../../js/vendor/three/three.module.min.js"}}</script>
+<canvas id="c"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from '../../../js/vendor/three/addons/GLTFLoader.js';
+const names = (new URLSearchParams(location.search).get('m') || '').split(',').filter(Boolean), yaws = (new URLSearchParams(location.search).get('yaw') || '0.5,3.6').split(',').map(Number);
+const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true }); r.setSize(innerWidth, innerHeight); r.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xcfe3f0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a7a55, 1.25)); const d = new THREE.DirectionalLight(0xffffff, 1.4); d.position.set(3, 6, 5); scene.add(d);
+const n = names.length * yaws.length, hw = n * 0.6, hh = hw * innerHeight / innerWidth, cam = new THREE.OrthographicCamera(-hw, hw, hh, -hh, 0.1, 50); cam.position.set(0, 0.9, 8); cam.lookAt(0, 0.5, 0);
+let left = names.length;
+names.forEach((u, i) => new GLTFLoader().load('../../../' + u, (g) => { yaws.forEach((yaw, k) => { const m = g.scene.clone(true); const b = new THREE.Box3().setFromObject(m), sz = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3()), k2 = 1 / Math.max(sz.x, sz.y, sz.z); const h = new THREE.Group(); m.position.set(-c.x, -b.min.y, -c.z); h.add(m); h.scale.setScalar(k2); h.rotation.y = yaw; h.position.x = (i * yaws.length + k - (n - 1) / 2) * 1.15; scene.add(h); }); if (!--left) { r.render(scene, cam); document.title = 'ready'; } }, undefined, () => { if (!--left) { r.render(scene, cam); document.title = 'ready'; } }));
+</script>

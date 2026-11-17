@@ -70,3 +70,27 @@ November 2, 2026**. From then on, requests to it are served by `grok-imagine-ima
   (tools/art/*/prompts*) before relying on it for art that must match existing sets.
 * It is cheaper: each image costs $0.01 less.
 * For another quality tier, call `grok-imagine-image-2.0` directly and set `quality` (default `auto`).
+
+## The farming game, *Sato's Harvest* (owner, 2026-11-16)
+
+A fourth mode, `farm.html`: after the war, Captain Mira Sato buys a neglected field in Eden's river
+chamber. A 3D farming and life game in the classic farm-sim tradition (mechanics only; nothing copied).
+It needs no ROM. Design and module contract: `docs/FARM.md`; genre research: `docs/notes/farm-genre-research.md`.
+
+* Code: `js/farm/` — `data.js`, `sim.js` (pure rules, 2,141 checks in `tests/farm-sim.mjs`), `story.js`
+  (every word: cast, schedules, about 250 conversations, 21 heart events, 4 festivals;
+  `tests/farm-story.mjs`), `maps.js` (`tests/farm-maps.mjs`), `world.js` and `actors.js` (three.js),
+  `ui.js`, `main.js`, `art.js` (art slots), `sfx.js` (generated sounds and music).
+* Owner's art direction: **beautiful and cute, Japanese anime style**; Sato's avatar is the most
+  polished thing in the game, in 2D and in 3D. The world is built from **generated 3D models**
+  (`art/farm/models/*.glb`, image-to-3D from anime concept art); character figurines have no skeleton
+  and are **rigged automatically** in `actors.js` (`rigFigurine`), so they must stand in an A-pose.
+  2D art (`art/farm/`): standing pictures and portraits for dialogue, scenes, textures, icons, films.
+  Every slot has a built stand-in, so missing art never breaks the game.
+* Art pipeline: `tools/art/farm/` (Qwen-Image, Qwen-Image-Edit, WAN 2.2 through ComfyUI on a rented
+  Runpod GPU; `mesh/` for image-to-3D; `viewer.html` shows models). The pod is deleted after each run.
+* Instead of a mine: **the Descent**, a lift to the ruins of the Old World; Sato searches rubble in her
+  custom Pallas with a Hydra autoturret; finds go to the Memory Room. Farming and fishing are the heart.
+* Later the same day: the setting moved to **Eden's Upper deck after Hesk**; three more villagers,
+  a clinic and a library; **favours** (requests) and **six love stories** with confession, the
+  Earthlight pendant, a wedding and a partner on the farm (`docs/FARM.md` §5).

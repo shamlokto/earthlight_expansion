@@ -9,3 +9,7 @@ __pycache__/
 .DS_Store
 transcripts/
 _site/
+
+# farm art work in progress
+art/farm/models/_tmp/
+__pycache__/

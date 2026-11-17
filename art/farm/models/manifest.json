@@ -1,0 +1,844 @@
+{
+ "farmhouse": {
+  "file": "farmhouse.glb",
+  "tris": 20000,
+  "size": [
+   0.8064,
+   1.0,
+   0.9048
+  ],
+  "note": "Sato's house; porch and door on +Z"
+ },
+ "barn": {
+  "file": "barn.glb",
+  "tris": 20000,
+  "size": [
+   0.955,
+   1.0,
+   0.8975
+  ],
+  "note": "double doors on +Z"
+ },
+ "coop": {
+  "file": "coop.glb",
+  "tris": 12000,
+  "size": [
+   0.7935,
+   1.0,
+   0.9786
+  ],
+  "note": "ramp and door on +Z; a hen sits on the roof"
+ },
+ "cow": {
+  "file": "cow.glb",
+  "tris": 12000,
+  "size": [
+   0.5657,
+   0.7848,
+   1.0
+  ],
+  "note": "head towards +Z"
+ },
+ "chicken": {
+  "file": "chicken.glb",
+  "tris": 8000,
+  "size": [
+   0.7968,
+   1.0,
+   0.9778
+  ],
+  "note": "head towards +Z"
+ },
+ "sato": {
+  "file": "sato.glb",
+  "tris": 30000,
+  "size": [
+   0.6634,
+   1.0,
+   0.652
+  ],
+  "note": "Mira Sato, chibi figurine in a relaxed A-pose, straw hat on her head; faces +Z; 2048 px texture",
+  "unit": "height"
+ },
+ "stump": {
+  "file": "stump.glb",
+  "tris": 5000,
+  "size": [
+   0.9925,
+   0.7398,
+   1.0
+  ],
+  "note": "tree stump (field debris)"
+ },
+ "tree": {
+  "file": "tree.glb",
+  "tris": 12000,
+  "size": [
+   0.8775,
+   1.0,
+   0.8617
+  ],
+  "note": "broadleaf tree, summer green"
+ },
+ "well": {
+  "file": "well.glb",
+  "tris": 8000,
+  "size": [
+   0.9591,
+   0.9347,
+   1.0
+  ],
+  "note": "stone well with red roof, on a small grass patch"
+ },
+ "fence": {
+  "file": "fence.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.5285,
+   0.1682
+  ],
+  "note": "one straight section, length along X"
+ },
+ "silo": {
+  "file": "silo.glb",
+  "tris": 12000,
+  "size": [
+   0.8256,
+   1.0,
+   0.9391
+  ],
+  "note": "feed silo, hatch on +Z, small grass patch"
+ },
+ "memorial": {
+  "file": "memorial.glb",
+  "tris": 6000,
+  "size": [
+   0.9162,
+   1.0,
+   0.9594
+  ],
+  "note": "stone memorial with wreath and plaque (provisional: a tiny face sits inside the wreath)"
+ },
+ "lift": {
+  "file": "lift.glb",
+  "tris": 12000,
+  "size": [
+   0.5083,
+   1.0,
+   0.6035
+  ],
+  "note": "cargo lift head-frame on a small stone base"
+ },
+ "pallas": {
+  "file": "pallas.glb",
+  "tris": 20000,
+  "size": [
+   0.781,
+   1.0,
+   0.5882
+  ],
+  "note": "Sato's Pallas: navy with rose trim, claw on its left side as seen from the front, cargo basket on the back; faces +Z",
+  "unit": "height"
+ },
+ "drone": {
+  "file": "drone.glb",
+  "tris": 8000,
+  "size": [
+   0.9849,
+   1.0,
+   0.6707
+  ],
+  "note": "old spherical maintenance drone with small rotors; eye faces +Z"
+ },
+ "cottage_b": {
+  "file": "cottage_b.glb",
+  "tris": 16000,
+  "size": [
+   0.8885,
+   1.0,
+   0.8497
+  ],
+  "note": "blue clapboard cottage, red tile roof, door on +Z"
+ },
+ "general": {
+  "file": "general.glb",
+  "tris": 24000,
+  "size": [
+   0.6402,
+   1.0,
+   0.4345
+  ],
+  "note": "the General, chibi figurine, A-pose",
+  "unit": "height"
+ },
+ "ruess": {
+  "file": "ruess.glb",
+  "tris": 24000,
+  "size": [
+   0.6671,
+   1.0,
+   0.5001
+  ],
+  "note": "Prof. Ruess, chibi figurine, A-pose",
+  "unit": "height"
+ },
+ "weed": {
+  "file": "weed.glb",
+  "tris": 4000,
+  "size": [
+   0.9843,
+   0.9338,
+   1.0
+  ],
+  "note": "weed clump with a yellow flower"
+ },
+ "greenhouse": {
+  "file": "greenhouse.glb",
+  "tris": 16000,
+  "size": [
+   1.0,
+   0.9686,
+   0.8684
+  ],
+  "note": "repaired greenhouse, opaque mint panes, door on +Z"
+ },
+ "barge": {
+  "file": "barge.glb",
+  "tris": 12000,
+  "size": [
+   1.0,
+   0.7115,
+   0.9196
+  ],
+  "note": "Moraine's trader barge with purple canopy; bow on +Z"
+ },
+ "bridge": {
+  "file": "bridge.glb",
+  "tris": 10000,
+  "size": [
+   0.5976,
+   0.4508,
+   1.0
+  ],
+  "note": "arched wooden footbridge; you walk across along Z"
+ },
+ "hydra": {
+  "file": "hydra.glb",
+  "tris": 8000,
+  "size": [
+   0.6405,
+   1.0,
+   0.9375
+  ],
+  "note": "Hydra autoturret on a tripod, twin barrels towards +Z"
+ },
+ "boulder": {
+  "file": "boulder.glb",
+  "tris": 5000,
+  "size": [
+   0.9998,
+   0.9288,
+   1.0
+  ],
+  "note": "mossy boulder (field debris)"
+ },
+ "rubble": {
+  "file": "rubble.glb",
+  "tris": 6000,
+  "size": [
+   0.9989,
+   0.6134,
+   1.0
+  ],
+  "note": "searchable rubble heap with metal beams"
+ },
+ "crawler": {
+  "file": "crawler.glb",
+  "tris": 10000,
+  "size": [
+   0.8146,
+   0.7266,
+   1.0
+  ],
+  "note": "crawler, a round rust-orange beetle; head towards +Z"
+ },
+ "store": {
+  "file": "store.glb",
+  "tris": 20000,
+  "size": [
+   0.9321,
+   1.0,
+   0.8443
+  ],
+  "note": "Seln's Seed & Sundry, striped awning and door on +Z"
+ },
+ "cafe": {
+  "file": "cafe.glb",
+  "tris": 20000,
+  "size": [
+   0.9394,
+   1.0,
+   0.7299
+  ],
+  "note": "The Hangar cafe in a half-cylinder shuttle hangar, door on +Z"
+ },
+ "workshop": {
+  "file": "workshop.glb",
+  "tris": 20000,
+  "size": [
+   0.969,
+   0.8844,
+   1.0
+  ],
+  "note": "Ruess's workshop, roller door on +Z, crane on the roof"
+ },
+ "hall": {
+  "file": "hall.glb",
+  "tris": 20000,
+  "size": [
+   0.8821,
+   1.0,
+   0.9422
+  ],
+  "note": "village hall with bell tower, door on +Z"
+ },
+ "rock": {
+  "file": "rock.glb",
+  "tris": 3000,
+  "size": [
+   0.9504,
+   0.3413,
+   1.0
+  ],
+  "note": "small field stone (debris)"
+ },
+ "branch": {
+  "file": "branch.glb",
+  "tris": 3000,
+  "size": [
+   1.0,
+   0.5314,
+   0.6066
+  ],
+  "note": "fallen branch (debris), lies along X"
+ },
+ "sprout": {
+  "file": "sprout.glb",
+  "tris": 3000,
+  "size": [
+   1.0,
+   1.0,
+   0.9921
+  ],
+  "note": "seedling in a soil mound (crop stage 1)"
+ },
+ "young_plant": {
+  "file": "young_plant.glb",
+  "tris": 5000,
+  "size": [
+   0.9102,
+   1.0,
+   0.8975
+  ],
+  "note": "generic half-grown leafy crop in a soil mound (crop stage 2)"
+ },
+ "crop_turnip": {
+  "file": "crop_turnip.glb",
+  "tris": 5000,
+  "size": [
+   0.8116,
+   1.0,
+   0.8492
+  ],
+  "note": ""
+ },
+ "crop_potato": {
+  "file": "crop_potato.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.935,
+   0.9965
+  ],
+  "note": ""
+ },
+ "crop_cucumber": {
+  "file": "crop_cucumber.glb",
+  "tris": 5000,
+  "size": [
+   0.7715,
+   1.0,
+   0.7811
+  ],
+  "note": ""
+ },
+ "crop_strawberry": {
+  "file": "crop_strawberry.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.9782,
+   0.8872
+  ],
+  "note": ""
+ },
+ "crop_tomato": {
+  "file": "crop_tomato.glb",
+  "tris": 5000,
+  "size": [
+   0.7407,
+   1.0,
+   0.7885
+  ],
+  "note": ""
+ },
+ "crop_corn": {
+  "file": "crop_corn.glb",
+  "tris": 5000,
+  "size": [
+   0.6047,
+   1.0,
+   0.5208
+  ],
+  "note": ""
+ },
+ "crop_onion": {
+  "file": "crop_onion.glb",
+  "tris": 5000,
+  "size": [
+   0.7711,
+   1.0,
+   0.808
+  ],
+  "note": ""
+ },
+ "crop_pumpkin": {
+  "file": "crop_pumpkin.glb",
+  "tris": 5000,
+  "size": [
+   0.9281,
+   1.0,
+   0.8993
+  ],
+  "note": ""
+ },
+ "crop_carrot": {
+  "file": "crop_carrot.glb",
+  "tris": 5000,
+  "size": [
+   0.8475,
+   1.0,
+   0.8413
+  ],
+  "note": ""
+ },
+ "crop_eggplant": {
+  "file": "crop_eggplant.glb",
+  "tris": 5000,
+  "size": [
+   0.7647,
+   1.0,
+   0.7592
+  ],
+  "note": ""
+ },
+ "crop_sweetpotato": {
+  "file": "crop_sweetpotato.glb",
+  "tris": 5000,
+  "size": [
+   0.8132,
+   1.0,
+   0.8503
+  ],
+  "note": ""
+ },
+ "crop_spinach": {
+  "file": "crop_spinach.glb",
+  "tris": 5000,
+  "size": [
+   0.8734,
+   1.0,
+   0.9061
+  ],
+  "note": ""
+ },
+ "crop_moonflower": {
+  "file": "crop_moonflower.glb",
+  "tris": 5000,
+  "size": [
+   0.7383,
+   1.0,
+   0.7791
+  ],
+  "note": ""
+ },
+ "dead_plant": {
+  "file": "dead_plant.glb",
+  "tris": 5000,
+  "size": [
+   0.7998,
+   1.0,
+   0.8251
+  ],
+  "note": ""
+ },
+ "grass_tuft": {
+  "file": "grass_tuft.glb",
+  "tris": 4000,
+  "size": [
+   0.9966,
+   0.9671,
+   1.0
+  ],
+  "note": ""
+ },
+ "tree_autumn": {
+  "file": "tree_autumn.glb",
+  "tris": 12000,
+  "size": [
+   0.8714,
+   1.0,
+   0.8701
+  ],
+  "note": ""
+ },
+ "tree_blossom": {
+  "file": "tree_blossom.glb",
+  "tris": 12000,
+  "size": [
+   0.8768,
+   1.0,
+   0.8719
+  ],
+  "note": ""
+ },
+ "tree_winter": {
+  "file": "tree_winter.glb",
+  "tris": 12000,
+  "size": [
+   0.7566,
+   1.0,
+   0.3614
+  ],
+  "note": ""
+ },
+ "pine": {
+  "file": "pine.glb",
+  "tris": 7999,
+  "size": [
+   0.686,
+   1.0,
+   0.67
+  ],
+  "note": ""
+ },
+ "bush": {
+  "file": "bush.glb",
+  "tris": 5000,
+  "size": [
+   0.988,
+   0.9625,
+   1.0
+  ],
+  "note": ""
+ },
+ "flowers": {
+  "file": "flowers.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.968,
+   0.9808
+  ],
+  "note": ""
+ },
+ "cottage_a": {
+  "file": "cottage_a.glb",
+  "tris": 16000,
+  "size": [
+   0.9884,
+   1.0,
+   0.97
+  ],
+  "note": ""
+ },
+ "ranch": {
+  "file": "ranch.glb",
+  "tris": 20000,
+  "size": [
+   0.9606,
+   0.735,
+   1.0
+  ],
+  "note": ""
+ },
+ "signpost": {
+  "file": "signpost.glb",
+  "tris": 4000,
+  "size": [
+   0.6939,
+   1.0,
+   0.1969
+  ],
+  "note": ""
+ },
+ "lantern": {
+  "file": "lantern.glb",
+  "tris": 5000,
+  "size": [
+   0.2102,
+   1.0,
+   0.3706
+  ],
+  "note": ""
+ },
+ "stairs": {
+  "file": "stairs.glb",
+  "tris": 7999,
+  "size": [
+   0.966,
+   0.6939,
+   1.0
+  ],
+  "note": ""
+ },
+ "ruin_wall": {
+  "file": "ruin_wall.glb",
+  "tris": 8000,
+  "size": [
+   0.9132,
+   1.0,
+   0.303
+  ],
+  "note": ""
+ },
+ "bed": {
+  "file": "bed.glb",
+  "tris": 6000,
+  "size": [
+   0.6673,
+   0.5909,
+   1.0
+  ],
+  "note": ""
+ },
+ "counter": {
+  "file": "counter.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.2571,
+   0.2236
+  ],
+  "note": "plain long shop counter, empty top, length along X"
+ },
+ "shelf": {
+  "file": "shelf.glb",
+  "tris": 8000,
+  "size": [
+   0.8312,
+   1.0,
+   0.3711
+  ],
+  "note": ""
+ },
+ "radio": {
+  "file": "radio.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.989,
+   0.6323
+  ],
+  "note": ""
+ },
+ "nestbox": {
+  "file": "nestbox.glb",
+  "tris": 5000,
+  "size": [
+   0.8961,
+   1.0,
+   0.6973
+  ],
+  "note": ""
+ },
+ "moraine": {
+  "file": "moraine.glb",
+  "tris": 24000,
+  "size": [
+   0.6031,
+   1.0,
+   0.4519
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "vashti": {
+  "file": "vashti.glb",
+  "tris": 24000,
+  "size": [
+   0.6957,
+   1.0,
+   0.4639
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "corran": {
+  "file": "corran.glb",
+  "tris": 24000,
+  "size": [
+   0.8334,
+   1.0,
+   0.4576
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "maris": {
+  "file": "maris.glb",
+  "tris": 24000,
+  "size": [
+   0.595,
+   1.0,
+   0.4607
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "marrow": {
+  "file": "marrow.glb",
+  "tris": 24000,
+  "size": [
+   0.6174,
+   1.0,
+   0.425
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "oduya": {
+  "file": "oduya.glb",
+  "tris": 24000,
+  "size": [
+   0.6207,
+   1.0,
+   0.5562
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "seln": {
+  "file": "seln.glb",
+  "tris": 24000,
+  "size": [
+   0.5711,
+   1.0,
+   0.4528
+  ],
+  "note": "",
+  "unit": "height"
+ },
+ "bin": {
+  "file": "bin.glb",
+  "tris": 6000,
+  "size": [
+   0.737,
+   1.0,
+   0.6993
+  ],
+  "note": ""
+ },
+ "bench": {
+  "file": "bench.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.7394,
+   0.5281
+  ],
+  "note": ""
+ },
+ "table": {
+  "file": "table.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.5395,
+   0.9873
+  ],
+  "note": ""
+ },
+ "scarecrow": {
+  "file": "scarecrow.glb",
+  "tris": 8000,
+  "size": [
+   0.8996,
+   1.0,
+   0.5235
+  ],
+  "note": ""
+ },
+ "trough": {
+  "file": "trough.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.5844,
+   0.529
+  ],
+  "note": ""
+ },
+ "rubble_done": {
+  "file": "rubble_done.glb",
+  "tris": 4000,
+  "size": [
+   0.9776,
+   0.3892,
+   1.0
+  ],
+  "note": "low flat rubble patch (searched heap), with one orange scrap sticking up"
+ },
+ "haybale": {
+  "file": "haybale.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.9808,
+   0.9632
+  ],
+  "note": "round hay bale, axis along Z"
+ },
+ "crate": {
+  "file": "crate.glb",
+  "tris": 3000,
+  "size": [
+   1.0,
+   0.7785,
+   0.994
+  ],
+  "note": "closed wooden storage crate"
+ },
+ "workbench": {
+  "file": "workbench.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.8815,
+   0.5793
+  ],
+  "note": "workbench with vice, hammer and toolbox; length along X"
+ },
+ "kestrel": {
+  "file": "kestrel.glb",
+  "tris": 24000,
+  "size": [
+   0.6884,
+   1.0,
+   0.4418
+  ],
+  "note": "Commander Kestrel, chibi figurine, arms out wide",
+  "unit": "height"
+ }
+}

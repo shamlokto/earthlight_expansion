@@ -1,0 +1,34 @@
+<!doctype html><meta charset="utf-8"><title>GLB check</title>
+<style>body{margin:0;background:#fff}canvas{display:block}</style>
+<canvas id="c" width="1280" height="640"></canvas>
+<script type="importmap">{"imports":{"three":"/js/vendor/three/three.module.min.js"}}</script>
+<script type="module">
+// view.html?f=/art/farm/models/barn.glb : four views (front from +Z, 3/4, side from +X, back 3/4).
+// The red arrow on the ground points to +Z (the model's front).
+import * as THREE from 'three';
+import { GLTFLoader } from '/js/vendor/three/addons/GLTFLoader.js';
+const f = new URLSearchParams(location.search).get('f');
+const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, preserveDrawingBuffer: true });
+r.setScissorTest(true); r.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x8fa3b0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x556655, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 2.0); sun.position.set(2, 3, 2.5); scene.add(sun);
+scene.add(new THREE.GridHelper(2, 8, 0x333333, 0x666666));
+scene.add(new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0.01, 0.5), 0.5, 0xff0000));
+new GLTFLoader().load(f, (gl) => {
+  scene.add(gl.scene);
+  let tris = 0; gl.scene.traverse(o => { if (o.isMesh) tris += o.geometry.index.count / 3; });
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 20);
+  const views = [[0, 0.25, 1], [0.8, 0.5, 0.8], [1, 0.25, 0], [-0.7, 0.6, -0.8]];
+  const chr = new URLSearchParams(location.search).get('c');   // c=1: character framing with a face close-up
+  if (chr) { views[0] = [0, 0.05, 1]; views[2] = [0.25, 0.05, 1, 0.9, 0.72]; }
+  views.forEach((v, i) => {
+    const d = new THREE.Vector3(v[0], v[1], v[2]).normalize().multiplyScalar(v[3] || (chr ? 2.2 : 2.6));
+    const ty = v[4] || (chr ? 0.5 : 0.4);
+    cam.position.set(d.x, d.y + ty, d.z); cam.lookAt(0, ty, 0);
+    r.setViewport(i * 320, 160, 320, 320); r.setScissor(i * 320, 0, 320, 640); r.render(scene, cam);
+  });
+  const b = new THREE.Box3().setFromObject(gl.scene);
+  window.__done = { tris, min: b.min.toArray(), max: b.max.toArray() };
+}, undefined, (e) => { window.__done = { error: String(e) }; });
+</script>
