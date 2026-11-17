@@ -601,6 +601,22 @@
    "h": 1024,
    "tile": "period"
   },
+  "video/intro1": {
+   "file": "video/intro1.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/intro2": {
+   "file": "video/intro2.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
   "video/title": {
    "file": "video/title.mp4",
    "w": 832,

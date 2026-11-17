@@ -181,6 +181,16 @@
 "textures/wood_floor": {
 "tile": "period"
 },
+"video/intro1": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/intro2": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
 "video/title": {
 "fps": 16,
 "frames": 81,
