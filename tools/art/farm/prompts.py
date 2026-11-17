@@ -304,6 +304,10 @@ VIDEOS = {  # name: (scene slot, prompt)
     "season_winter": ("season_winter", "A quiet winter day: snowflakes fall slowly and softly, smoke rises gently from the farmhouse chimney, everything else is still." + VSTYLE),
     "wedding": ("wedding", "An evening village wedding seen from behind the bride: paper lanterns sway gently on their strings and glow, flower petals drift slowly down through the air, the villagers smile and clap softly, the bride's dress and hair stir slightly." + VSTYLE),
     "upperdeck": ("upperdeck", "A sunny hillside district: parasols and flowers sway in a light breeze, tiny people stroll, the stream sparkles, small clouds drift slowly." + VSTYLE),
+    "festival_planting": ("festival_planting", "A spring planting festival in a village square: blossom petals drift down, the cloth bunting flutters, villagers carry trays of seedlings and walk slowly, children run past in the background." + VSTYLE),
+    "festival_harvest": ("festival_harvest", "An autumn harvest fair: coloured leaves drift down from the trees, the bunting flutters gently, villagers at the stalls chat and laugh with small natural movements." + VSTYLE),
+    "festival_yearend": ("festival_yearend", "A winter evening gathering: snow falls softly, the bonfire in the brazier flickers and sends up sparks, the strings of lights twinkle, steam rises from the mugs, people shift gently." + VSTYLE),
+    "ruins": ("ruins", "A dead ruined city street: dust and ash drift slowly along the ground, haze moves between the broken towers, dry vines stir slightly; nothing else moves." + VSTYLE),
     "heart10": ("heart10", "Two people sit quietly side by side on the porch steps at dusk, seen from behind; one leans very slightly toward the other; the crops sway gently in the evening breeze, the lantern flame flickers, steam rises from the mugs." + VSTYLE),
 }
 WALKSTYLE = (" She stays exactly in the centre of the frame, the whole body from head to boots always visible, steady even rhythm, natural arm swing. "
