@@ -39,8 +39,8 @@ for (const id of Object.keys(story.NPCS)) if (id !== 'sato') for (let season = 0
 for (const e of story.EVENTS) check(!!maps[e.map], `event ${e.id}: map ${e.map} exists`);
 for (const f of story.FESTIVALS) check(!!findSpot(f.spot), `festival ${f.id}: spot exists`);
 // the Old World: sites build, the lift pad is reachable, every pile can be reached or is beside open ground
-for (let depth = 1; depth <= 12; depth++) for (let seed = 1; seed <= 6; seed++) {
-  const S = newGame({ seed: seed * 97 + depth }); enterMine(S, depth); const m = ruinsMap(S.mine);
+for (const mode of ['earth', 'belt']) for (let depth = 1; depth <= 12; depth++) for (let seed = 1; seed <= 6; seed++) {
+  const S = newGame({ seed: seed * 97 + depth }); enterMine(S, depth, mode); const m = ruinsMap(S.mine);
   check(!m.solid(m.start[0], m.start[1]), `ruins ${depth}/${seed}: the lift pad is free`);
   const piles = new Set(); S.mine.cells.forEach((c, i) => { if (c === 1) piles.add((i % S.mine.w + 1) + ',' + (Math.floor(i / S.mine.w) + 1)); });
   // rubble blocks walking until searched; search outward from the pad

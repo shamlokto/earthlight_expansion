@@ -19,6 +19,7 @@ const S = {
   dig: () => noise(0.22, 700, 0.16), pick: () => tone(520, 880, 0.09, 'triangle'), drop: () => tone(240, 130, 0.12, 'triangle'), door: () => { tone(180, 120, 0.12, 'square', 0.05); noise(0.1, 400, 0.08); },
   good: () => { tone(523, 523, 0.12, 'triangle'); tone(659, 659, 0.12, 'triangle', 0.12, 0.1); tone(784, 784, 0.22, 'triangle', 0.12, 0.2); }, bad: () => tone(220, 150, 0.3, 'sawtooth', 0.06),
   zap: () => tone(1400, 300, 0.1, 'sawtooth', 0.05), pop: () => { noise(0.2, 1500, 0.14); tone(300, 80, 0.2, 'square', 0.05); }, bite: () => { tone(900, 900, 0.06, 'square', 0.08); tone(900, 900, 0.06, 'square', 0.08, 0.1); },
+  geiger: () => { for (let i = 0; i < 5; i++) tone(2200 + Math.random() * 800, 1800, 0.012, 'square', 0.05, i * 0.05 + Math.random() * 0.04); },
   morning: () => { [392, 494, 587, 784].forEach((f, i) => tone(f, f, 0.5, 'sine', 0.08, i * 0.16)); },
 };
 export function sfx(name) {
@@ -43,6 +44,7 @@ export function trackFor(m) {
   if (m.festival === 'wedding') return 'wedding';
   if (m.festival === 'lantern') return 'lantern';
   if (m.festival) return 'festival';
+  if (m.belt || m.map === 'belt') return art.has('music/belt') ? 'belt' : 'night';   // calm, for the asteroid belt
   if (m.ruins || m.map === 'ruins') return 'ruins';
   if (m.night) return 'night';
   if (m.map === 'village') return 'village';

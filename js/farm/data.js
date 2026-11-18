@@ -114,8 +114,10 @@ item('battery', 'Battery (empty)', 'part', 'A flat robot battery. Put it in a so
 item('battery_full', 'Battery (charged)', 'part', 'A charged robot battery. Give it to a Field-unit with E (+60 charge).', { sell: 90 });
 
 item('scrap', 'Scrap', 'ore', 'Scrap metal from the ruins.', { sell: 15 });
-item('alloy', 'Alloy', 'ore', 'Good alloy, found from depth 5 down.', { sell: 40 });
-item('crystal', 'Crystal', 'ore', 'A drive crystal, found from depth 10 down.', { sell: 150 });
+item('comet_ice', 'Comet ice', 'ore', 'Dirty ice from the belt, full of useful volatiles. Ruess always wants some.', { sell: 60, detail: 'Drilled out of belt rocks in Vashti\'s sector runs, at every depth. It sells, the Workshop uses it for coolant, and Ruess is fond of a gift of it.' });
+item('star_metal', 'Star-metal', 'ore', 'A rare nickel-iron from deep in the belt, bright as a mirror.', { sell: 500, detail: 'Found only in the asteroid belt, from sector 3 down, and not often. Ruess needs one to fit the Pallas with air filters for the Old World.' });
+item('alloy', 'Alloy', 'ore', 'Good alloy, drilled from belt rocks from sector 5 out.', { sell: 40 });
+item('crystal', 'Crystal', 'ore', 'A drive crystal, drilled from belt rocks from sector 10 out.', { sell: 150 });
 
 // Old-world artefacts from the ruins, cheapest first. `depth` is the shallowest site they turn up in.
 export const RELICS = [
@@ -236,9 +238,9 @@ const DETAIL = {
   solar_panel: 'A small solar charger from Ruess\'s workshop. Set it on the farm, put empty robot batteries in with E, and they are charged by morning: two on a bright day, one in rain or snow, none in a storm.',
   battery: 'A flat Field-unit battery. Charge it overnight in a solar charger. Ruess sells them, and they turn up in the ruins.',
   battery_full: 'A charged Field-unit battery. Give it to one of your robots with E for 60 charge; you get the empty one back.',
-  scrap: 'Twisted metal from the Old World ruins. Ruess wants five for every Alloy upgrade, and he never says no to more.',
-  alloy: 'Good structural alloy, found from level 5 of the Descent. Five go into a Starsteel upgrade.',
-  crystal: 'A drive crystal from before the fall, found from level 10 down. Starsteel tools need one.',
+  scrap: 'Twisted metal from the Old World ruins and the belt rocks. Ruess wants five for every Alloy upgrade, and he never says no to more.',
+  alloy: 'Good structural alloy, drilled from asteroid rocks from belt sector 5 out. Five go into a Starsteel upgrade; three into the Pallas filters.',
+  crystal: 'A drive crystal, drilled from the belt from sector 10 out. Starsteel tools need one.',
   photo: 'Strangers smiling under a blue sky, faded to sepia. Found in the shallowest ruins; the Memory Room keeps one.',
   teacup: 'A porcelain cup without a chip on it, somehow. Found in the shallow ruins.',
   book: 'An old-world book whose pages still turn. Found from level 2 of the ruins.',

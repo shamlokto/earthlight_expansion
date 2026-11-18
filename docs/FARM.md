@@ -343,3 +343,81 @@ Art slots (all optional): models `onsen_pool`, `onsen_house`, `field_chest`, `fa
 `solar_charger` (falls back to `solar_panel`), `sapling`, `fruit_tree_apple`, `fruit_tree_peach`,
 `fruit_tree_cherry`, `fruit_tree_persimmon`; facade `buildings/onsen_house`; icons `icons/<id>` for
 every new item id.
+
+## 8. Star-plums, Eden Central, the silo and the village gardens (owner, 2026-11-18, later)
+
+* **Star-plums** (`star_plum`, kind fruit, cannot be shipped): eating one raises `player.maxStamina` by
+  10, to `MAX_STAMINA_CAP` 200 (`stats.starPlums` counts them). Ten one-time sources, each a flag
+  `plum_<id>` (`STAR_PLUM_SOURCES`, `grantPlum(state, src, { storage })`, `starPlumsFound`):
+  `hill` (a glowing spot at `maps.STAR_SPOT_XY` shows on one day a season, `starPlumDay`, until found;
+  forage spot id `STAR_SPOT` 99), `ruins10` and `ruins20` (the Old World pile farthest from the landing
+  at depth 10 and 20, `mine.star`), `harvest` and `lantern` (festival prizes), `seln7` and `marrow7`
+  (their 7-heart events), `moraine` (her barge/Exchange sells one a year, 8,000 cr, flag
+  `plum_moraine_y<year>`), `mori` (after 5 favours: doctor's orders) and `collector` (shipping
+  `COLLECTOR_KINDS` = 75 different kinds; there are only about 85 shippable kinds, so 100 could never
+  be reached). Two dishes add 5 max stamina the first time each is eaten (`flags.ate_<id>`):
+  `colony_feast` (fish + fruit + vegetable + egg) and `founders_cake` (honeycomb + chestnut + milk +
+  egg). `eat()` returns `celebrate: true, maxUp` for a celebration toast. The journal's Today tab shows
+  max stamina and star-plums found x/10.
+* **Eden Central** (map `central`, 70×56, `covered`: no rain under the glass roof): the Main deck city,
+  reached by the **lift** in Willowfall's lift plaza (act `liftdown`, 20 minutes; back up with
+  `liftup` at the avenue's south end). The avenue runs north to the **viewing gallery** at the great
+  hull window (benches, act `gallery`: after 19:00, +20 stamina once a day, `gallerySit`); the plaza
+  holds the **Governor's office** (interior `office`, spot `central.office`: the General, weekdays
+  9–17) and **the Ashfall Exchange** (interior `exchange`, spot `central.exchange`: Moraine, 10–18 every
+  day but Saturday; `central.plaza` 9–10). The **space dock** (north-west): a docking bay at the hull
+  with a pressure window (`bay_window`), landing pads, Moraine's cartel trader (`trader_ship`, her
+  Saturday shop at `central.dock`), Maris's courier shuttle and its gate (act `shuttle`), cranes, crates,
+  fuel lines and hazard paint. The **Arrivals hall** (spot `central.arrivals`: Maris on Tuesday and
+  Friday mornings), the **Grand Market** (vending terminals, act `counter` with `shop: 'grandmarket'`,
+  no keeper: imported seeds of the season at +25%, every sapling in any season, batteries, honeycomb,
+  chestnut, tonic; `marketPrice`/`sellToMarket`: it buys cooked food and produce worth 300+ at +20%),
+  side streets of flats and townhouses, a canal with bridges, lamps, planters and maintenance-bot
+  traffic (`map.bots`). **Sato's Watch** (building `observatory`, model slot `observatory`: a split dome
+  with a telescope, a watch tower with a turning radar dish and a blinking beacon): E at its door after
+  19:00 (`stargaze`): a narrator scene by season (`story.WATCH`), +20 stamina once a night, the plaque
+  on the first visit, and one visit from the General once he is her sweetheart or partner.
+  Willowfall has no dock any more: the old basin is the riverside walk (`village.riverside`).
+* **Empty houses** in Eden Central (locked; E reads a line, `maps.CENTRAL_HOUSES`): `central.house_1`
+  … `central.house_6`. Future: what these houses could become —
+  1. a new villager's home (a newcomer who moves down from the Middle deck);
+  2. Sato's town flat (a second bed and a storage box near the market, bought from the Housing Office);
+  3. a shop (a tea house, a tailor, a seed library);
+  4. a Memory Room annex for the larger Old World finds;
+  5. a festival hall for a new Main deck festival.
+* **Silo and feed mill** (farm): E at the silo's hatch (`feed_sacks`, act `silo`) opens a window:
+  vegetables in for fodder (`siloAdd`: 1 crop = 2 fodder). Ruess builds the **feed mill** (`feed_mill`,
+  1,500 cr + 40 lumber, once, `flags.feed_mill`; drawn beside the silo at `farm.millAt`, model slot
+  `feed_mill`): up to 20 crops a day in the hopper (`millAdd`, `state.mill`), ground overnight into hen
+  feed (corn 1 → 5; any other vegetable, chestnut or pine nut 2 → 3).
+* **Solar yard** (village, act `solaryard`): leave empty batteries, 30 cr each, up to 6
+  (`state.solarYard.slots`, `yardDeposit`/`yardCollect`); by morning: sun all, rain or snow half, storm
+  none.
+* **Hydroponic towers** (village garden, act `hydro`, `tower` 0–7): Seln rents them (`hydro_tower`,
+  600 cr, up to 4, `state.hydro = [{ tower, crop, planted, season }]`); E with a seed bag plants any
+  crop in any season (`hydroPlant`), it grows a day each night without watering, E harvests
+  (`hydroHarvest`, regrowing crops regrow). Rentals end at the change of season.
+
+## 9. The belt and the Old World (owner, 2026-11-18, later)
+
+* **The Descent** on Terrace Hill is now the hull lift up to **Vashti's hangar** (interior `hangar`,
+  spot `hangar.floor`: Vashti by day). E at the **launch cradle** flies the Pallas to a **belt sector**:
+  `enterBelt(state, depth)` = `enterMine(state, depth, 'belt')` (`state.mine.mode`), drawn by
+  `ruinsMap` with `map.belt` (ground `v`, the dust lane; `asteroid` rocks, `asteroid_big` walls, a
+  `buoy`; a space backdrop: stars, the Earth, Eden's hull drum). E drills a rock (1 stamina): scrap,
+  comet ice (`comet_ice`, 60 cr), alloy from sector 5, crystal from 10, rare `star_metal` from 3. One rock
+  hides the jump buoy. No creatures; drifting debris only nudges the Pallas. `stats.deepestBelt`.
+  Music track `belt` (else `night`).
+* **The Old World** on Earth: Maris's courier shuttle from the space dock in Eden Central (act
+  `shuttle`, `takeShuttle(state, depth)`: 200 cr, free once Maris is at 5 hearts). Rubble, relics,
+  creatures and the way down as before; Earth rubble now gives scrap only (ore comes from the belt).
+  **Haze**: patches of toxic (1, green) or, from depth 4, radioactive (2, yellow) air in `mine.haz`;
+  `hazardTick(state, x, y)` costs 1 stamina (the UI ticks every 3 s with a geiger click) unless Ruess
+  has fitted the Pallas **air filters** (`up_filters`: 2,000 cr + 3 alloy + 1 star-metal,
+  `flags.filters`). A saved site is not resumed: `loadState` clears `state.mine`.
+
+Art slots added: models `observatory`, `gov_office`, `exchange`, `arrivals`, `apartment`, `townhouse`,
+`vending`, `feed_sacks`, `feed_mill`, `charge_terminal`, `dock_crane`, `cartel_ship`, `shuttle`,
+`shuttle_gate`, `launch_cradle`, `asteroid`, `asteroid_big`, `jump_buoy`; facades `buildings/<kind>`
+for those buildings; icons `icons/star_plum`, `icons/colony_feast`, `icons/founders_cake`,
+`icons/comet_ice`, `icons/star_metal`; music `music/belt`.

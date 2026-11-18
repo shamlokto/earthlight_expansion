@@ -18,6 +18,7 @@ function wildFruit(m, every, kinds = WILD_KINDS, limit = 99) {
     p.fruit = kinds[k++ % kinds.length]; n++;
   }
 }
+// v: the belt's dust lane (a dark floor between drifting rocks)
 export const SOLID_GROUND = new Set(['w', 'r', 'x']);
 // Thin or round things collide as a small circle around their middle instead of a whole tile, so
 // lawns with trees and lamps stay walkable (radius in tiles).
@@ -246,8 +247,8 @@ function hill() {
   m.fill(0, 0, 35, 1, 'r').fill(0, 24, 35, 25, 'r').fill(34, 0, 35, 25, 'r').fill(0, 0, 0, 10, 'r').fill(0, 15, 0, 25, 'r');
   m.fill(0, 12, 20, 13, 'p').fill(20, 9, 21, 13, 'p').fill(20, 9, 28, 10, 'p').fill(24, 8, 30, 9, 'c');
   m.fill(5, 17, 16, 23, 's').fill(6, 18, 15, 22, 'w');
-  m.building('lift', 25, 4, 4, 4, { height: 6, label: 'The Descent' });
-  m.prop('liftpad', 27, 8, { solid: false, act: 'lift' });
+  m.building('lift', 25, 4, 4, 4, { height: 6, label: 'The Descent', to: { map: 'hangar' } });   // the hull lift up to Vashti's hangar
+  m.prop('liftpad', 27, 8, { solid: false });
   m.prop('signpost', 23, 8, { act: 'sign', sign: 'hill.wreck' });
   m.prop('signpost', 9, 16, { act: 'sign', sign: 'hill.lake' });
   m.prop('signpost', 31, 19, { act: 'sign', sign: 'hill.overlook' });
@@ -333,6 +334,7 @@ function central() {
   m.prop('cargo_crate', 10, 11); m.prop('cargo_crate', 10, 12, { scale: 0.8 }); m.prop('cargo_crate', 14, 16, { scale: 0.9 }); m.prop('cargo_crate', 15, 6);
   m.prop('pipe_run', 7, 6, { d: 12 }); m.prop('hazard_stripes', 1, 12, { w: 6, solid: false }); m.prop('hazard_stripes', 7, 18, { w: 7, solid: false });
   m.prop('signpost', 12, 18, { act: 'sign', sign: 'central.dock' });
+  m.prop('shuttle_gate', 6, 15, { act: 'shuttle', label: 'Shuttle gate' });   // Maris's courier shuttle to the Old World
   m.spot('central.dock', 8.6, 9.5);
   for (const x of [16, 18]) m.prop('hydro_tower', x, 10); for (const x of [16, 18]) m.prop('hydro_tower', x, 13);
   // the north-east cargo yard
@@ -373,10 +375,16 @@ function central() {
   o.prop('desk', 5, 2, { w: 3 }); o.spot('central.office', 6.5, 1.5);
   o.prop('shelf', 0, 0, { w: 2, model: 'bookshelf' }); o.prop('shelf', 10, 0, { w: 2, model: 'bookshelf' }); o.prop('plantpot', 3, 0); o.prop('plantpot', 9, 0);
   o.prop('table', 9, 5, { w: 2 }); o.prop('chair', 8, 5, { solid: false }); o.prop('rug', 5, 4, { solid: false, w: 2, d: 2 });
+  const hg = room('hangar', 16, 12, "Vashti's hangar", 'd');
+  hg.prop('hangar_mouth', 2, 0, { w: 12, tileSolid: true, label: 'Hangar mouth' });
+  hg.prop('launch_cradle', 6, 2, { w: 4, d: 4, act: 'launch', label: 'Launch cradle' });
+  hg.prop('workbench', 0, 5, { d: 2 }); hg.prop('crate', 15, 8); hg.prop('crate', 15, 9); hg.prop('cargo_crate', 14, 2); hg.prop('cargo_crate', 1, 2, { scale: 0.8 });
+  hg.prop('pipe_run', 0, 9, { w: 5 }); hg.prop('noticeboard', 12, 7, { act: 'sign', sign: 'hill.wreck' });
+  hg.spot('hangar.floor', 11.5, 6.5);
   const x = room('exchange', 12, 9, 'The Ashfall Exchange');
   x.prop('counter', 4, 2, { w: 5, act: 'counter' }); x.spot('central.exchange', 6.5, 1.5);
   x.prop('crate', 0, 4); x.prop('crate', 0, 5); x.prop('crate', 11, 6); x.prop('shelf', 0, 0, { w: 2 }); x.prop('shelf', 10, 0, { w: 2 }); x.prop('rug', 5, 5, { solid: false, w: 2, d: 2 }); x.prop('plantpot', 11, 3);
-  return { central: m, office: o, exchange: x };
+  return { central: m, office: o, exchange: x, hangar: hg };
 }
 
 // ---------------------------------------------------------------- indoors
@@ -450,15 +458,18 @@ function interiors() {
 }
 
 // The Old World site, built from the sim's grid (state.mine): 0 empty, 1 rubble, 2 way down, 3 wall.
+// A site from the sim's grid (state.mine): the Old World (mode 'earth': rubble, walls of ruin, haze) or a
+// belt sector (mode 'belt': asteroid rocks to drill, great unbreakable rocks, a dark dust lane).
 export function ruinsMap(mine) {
-  const m = new MapDef('ruins', mine.w + 2, mine.h + 3, 'a', { name: `The Old World, level ${mine.depth || mine.floor || 1}`, ruins: true });
+  const belt = mine.mode === 'belt';
+  const m = new MapDef('ruins', mine.w + 2, mine.h + 3, belt ? 'v' : 'a', { name: belt ? `The belt, sector ${mine.depth || 1}` : `The Old World, level ${mine.depth || mine.floor || 1}`, ruins: true, belt, earth: !belt });
   m.fill(0, 0, m.w - 1, 0, 'x'); m.fill(0, 0, 0, m.h - 1, 'x'); m.fill(m.w - 1, 0, m.w - 1, m.h - 1, 'x'); m.fill(0, m.h - 1, m.w - 1, m.h - 1, 'x');
   m.origin = [1, 1];
   for (let y = 0; y < mine.h; y++) for (let x = 0; x < mine.w; x++) {
     const c = mine.cells[y * mine.w + x];
-    if (c === 3) m.prop('ruinwall', x + 1, y + 1, { cell: [x, y] });
+    if (c === 3) m.prop(belt ? 'asteroid_big' : 'ruinwall', x + 1, y + 1, { cell: [x, y] });
   }
-  m.prop('liftpad', 8, mine.h + 1, { solid: false, act: 'liftup' });
+  m.prop(belt ? 'launch_pad' : 'shuttle_pad', 8, mine.h + 1, { solid: false, act: 'liftup' });
   m.start = [8.5, mine.h + 1.5];
   return m;
 }

@@ -33,7 +33,7 @@ export const NPCS = {
     look: { skin: '#e0b896', hair: '#9a9da3', top: '#6b5a48', bottom: '#3a3632', style: 'short' },
     birthday: { season: 2, day: 21 },
     loves: ['scrap', 'alloy', 'crystal', 'datachip', 'watch'],
-    likes: ['tea', 'bread', 'corn', 'potato', 'egg', 'musicbox', 'toy'],
+    likes: ['tea', 'bread', 'corn', 'potato', 'egg', 'musicbox', 'toy', 'comet_ice'],
     dislikes: ['moonflower', 'berry', 'spinach'],
     shop: 'workshop',
   },
@@ -81,7 +81,7 @@ export const NPCS = {
     dislikes: ['scrap', 'onion', 'frostcap'],
   },
   vashti: {
-    id: 'vashti', name: 'Nell Vashti', short: 'Vashti', title: 'Salvage hunter; keeper of the Descent', portrait: P + 'w_vashti.webp',
+    id: 'vashti', name: 'Nell Vashti', short: 'Vashti', title: 'Salvage pilot; keeper of the hangar and the Descent', portrait: P + 'w_vashti.webp',
     look: { skin: '#b98a66', hair: '#3b2a20', top: '#55604a', bottom: '#2f2c28', style: 'bandana' },
     birthday: { season: 1, day: 17 },
     loves: ['crystal', 'photo', 'watch', 'datachip', 'medal'],
@@ -133,7 +133,7 @@ export const SPOTS = [
   'farm.porch', 'farm.bin', 'farm.gate', 'farm.pond', 'farm.field',
   'village.square', 'village.memorial', 'village.bridge', 'village.riverside', 'village.bench', 'village.storefront',
   'village.cafefront', 'village.hallfront', 'village.workshopfront', 'village.ranchyard', 'village.river',
-  'hill.wreck', 'hill.lake', 'hill.overlook', 'hill.onsen', 'central.office', 'central.arrivals', 'central.exchange', 'central.plaza', 'central.dock',
+  'hill.wreck', 'hill.lake', 'hill.overlook', 'hill.onsen', 'central.office', 'central.arrivals', 'central.exchange', 'central.plaza', 'central.dock', 'hangar.floor',
   'store.counter', 'store.floor', 'ranch.counter', 'workshop.counter', 'workshop.bench',
   'cafe.counter', 'cafe.table1', 'cafe.table2', 'cafe.table3', 'hall.desk', 'hall.floor',
   'clinic.counter', 'clinic.floor', 'library.counter', 'library.floor', 'village.clinicfront', 'village.libraryfront',
@@ -283,12 +283,12 @@ const SCHEDULE = {
       [H(16, 20), H(17), 'farm.gate'], [H(17), H(17, 40), 'farm.bin'], [H(17, 40), H(18, 10), 'farm.gate'],
       [H(18, 30), H(20, 30), wd === 1 || wd === 6 ? 'cafe.table2' : 'village.cafefront']);
   },
-  // The Descent: the lift pad on the hill.
+  // The hangar at the top of the hull lift (the Descent), where the Pallas launches for the belt.
   vashti(wd, m) {
-    if (wd === 6) return pick(m, [H(9), H(11), 'hill.lake'], [H(11, 30), H(15), 'cafe.table3'], [H(15), H(18), 'hill.wreck']);
+    if (wd === 6) return pick(m, [H(9), H(11), 'hill.lake'], [H(11, 30), H(15), 'cafe.table3'], [H(15), H(18), 'hangar.floor']);
     if (wd === 4 && m >= H(15, 30) && m < H(17)) return 'workshop.bench';
     const lake = wd === 1 || wd === 3 || wd === 5;
-    return pick(m, [H(8), H(18), 'hill.wreck'], [H(18), H(20, 30), lake ? 'hill.lake' : 'hill.overlook']);
+    return pick(m, [H(8), H(18), 'hangar.floor'], [H(18), H(20, 30), lake ? 'hill.lake' : 'hill.overlook']);
   },
   // Saturdays at the dock (her barge is her counter); other days her trading house in Eden Central.
   moraine(wd, m) {
@@ -360,7 +360,7 @@ export function whereIs(npcId, ctx) {
   if (fest) {
     // Shops are shut all day; the village gathers from an hour before until the end.
     if (m >= fest.from - 60 && m < fest.to) spot = (FESTIVAL_SPOTS[fest.spot] || FESTIVAL_SPOTS['village.square'])[npcId] || fest.spot;
-    else if (npcId === 'vashti' && m >= H(8) && m < Math.min(H(18), fest.from - 60)) spot = 'hill.wreck';
+    else if (npcId === 'vashti' && m >= H(8) && m < Math.min(H(18), fest.from - 60)) spot = 'hangar.floor';
     if (storm) spot = null;
   } else {
     spot = plan(wd, m, ctx);
@@ -1363,7 +1363,7 @@ export const EVENTS = [
 
   // ---- Vashti: what she looks for in the Old World.
   {
-    id: 'vashti3', npc: 'vashti', hearts: 3, map: 'hill', from: H(8), to: H(18),
+    id: 'vashti3', npc: 'vashti', hearts: 3, map: 'hangar', from: H(8), to: H(18),
     lines: [
       L('narrator', 'Vashti is greasing the cable drum of the Descent. A square of card is tucked into her bandana, the way other people keep a pencil.'),
       L('sato', 'You have a photograph in your hat.'),
@@ -1379,7 +1379,7 @@ export const EVENTS = [
     reward: { love: 3, item: ['crystal', 1] },
   },
   {
-    id: 'vashti7', npc: 'vashti', hearts: 7, map: 'hill', from: H(8), to: H(18),
+    id: 'vashti7', npc: 'vashti', hearts: 7, map: 'hangar', from: H(8), to: H(18),
     lines: [
       L('narrator', 'The lift is up and locked, in the middle of the day. Vashti sits on the edge of the pad with her boots hanging over the shaft.'),
       L('vashti', 'I found it. Willow Lane. The door is grey now. It was blue under the ash. I scratched it to be sure.'),
@@ -1599,7 +1599,7 @@ export const SIGNS = {
   'village.hallfront': 'VILLAGE HALL. Warden E. Marrow. Desk hours 9 to 4, Monday to Friday. The Memory Room is open to all: things from the Old World, kept so we know what was good.',
   'village.workshopfront': 'RUESS: WORKSHOP. Tools upgraded overnight. Greenhouses mended. Clocks, prams and rods considered. Open 9 to 5. Closed Wednesdays. Do not touch the carousel.',
   'village.ranchyard': "CORRAN'S RANCH. Chickens, cows, feed and fodder, milkers and brushes. Open 9 to 5. Closed Thursdays (gone fishing). The shouting is normal.",
-  'hill.wreck': 'THE DESCENT. Cargo lift to the Old World. Runs 8 to 6; N. Vashti, keeper. Walk your machine on. Set your turret down before you dig. The crawlers are pests, not monsters.',
+  'hill.wreck': 'THE DESCENT. Hull lift up to the hangar; Pallas runs to the asteroid belt, 8 to 6. N. Vashti, keeper. The Old World is reached by shuttle from the Eden Central space dock.',
   'hill.lake': 'HILL LAKE. Best fishing on the Upper deck. Home of "Old Hollin", a carp of great age and poor manners. Rods lost to him so far: 14.',
   'hill.overlook': 'THE OVERLOOK. From here the whole Lantern Ring curves up and over. At dusk the great window opens, and you can see the Earth. Give it time. So are we.',
 };
@@ -1643,7 +1643,7 @@ export const HELP = [
   },
   {
     title: 'The Old World, fishing and forage',
-    body: 'On the hill, Vashti\'s cargo lift, the Descent, carries Sato and her Pallas down to the ruins of the Old World. Search rubble with E for scrap, alloy, crystal and relics. Set the Hydra turret down with Space: it sees off the crawlers and stray drones, which are pests and no real threat. Deeper levels hold rarer things. Give one of each relic to Marrow\'s Memory Room in the hall, or sell or gift the rest.\n\nFishing: hold the rod, face water and press Space to cast. When the float dips, press Space again. Rain and the hill lake are best, each season has its own fish, and Ruess can improve the rod.\n\nForage grows on the hill each day: herbs, berries, mushrooms, frostcaps.',
+    body: 'On the hill, the Descent (Vashti\'s hull lift) climbs to her hangar; from there the Pallas flies sector runs into the asteroid belt. Drill rocks with E for ore, comet ice and rare star-metal; one hides the jump buoy deeper. The Old World is a shuttle trip from Eden Central with Maris: search rubble for relics, set the Hydra down with F, and keep out of the haze until Ruess fits filters. Relics go to the Memory Room.\n\nFishing: hold the rod, face water and press Space to cast. When the float dips, press Space again. Rain and the hill lake are best, each season has its own fish, and Ruess can improve the rod.\n\nForage grows on the hill each day: herbs, berries, mushrooms, frostcaps.',
   },
   {
     title: 'Seasons and festivals',
@@ -1699,9 +1699,9 @@ export const FISHING = {
 
 export const RUINS = {
   arrive: [
-    'The lift settles. Grey light, still air, and the long quiet of streets nobody has walked in a lifetime.',
-    'The Pallas steps off the platform into ash and ivy. Somewhere, a shop sign is still creaking.',
-    'The Old World. Roofless houses, a rusted tram, and a sky the colour of old pewter.',
+    'The shuttle settles on its skids. Grey light, still air, and the long quiet of streets nobody has walked in a lifetime.',
+    'The Pallas steps off the shuttle ramp into ash and ivy. Somewhere, a shop sign is still creaking. Green haze pools in the low streets.',
+    'The Old World. Roofless houses, a rusted tram, and a sky the colour of old pewter. The air meter on the Pallas ticks.',
   ],
   deeper: [
     'Further in. The buildings are taller here, and the dust has kept things better.',
@@ -2245,4 +2245,20 @@ export const WATCH = {
     { who: 'general', text: 'Then I will read it for you, Mira, as often as you need. You kept watch. Let someone else do it for a while.' },
   ],
   again: 'You sit a while longer under the open dome. (Stargazing restores your strength once a night.)',
+};
+
+// The asteroid belt (from Vashti's hangar) and Maris's shuttle to Earth.
+export const BELT = {
+  arrive: ['The cradle flings the Pallas out of the hangar mouth. Eden turns behind you, a great slow drum; ahead, the belt glitters.', 'Sector run. Rocks drift in the dust lane, slow as thought. The Earth hangs enormous over your shoulder.', 'The belt. No air, no wind, no sound but your own breathing and the drill.'],
+  deeper: ['The jump buoy flashes you through to the next sector. The rocks here are darker, and richer.', 'Further out. The colony is a bright coin behind you now.'],
+  drill: ['The drill bites. Dust sparkles away into the dark.', 'A clean core. Vashti will be pleased.'],
+  debris: 'A tumbling scrap of old hull bumps the Pallas aside. No harm done.',
+  hangar: 'Vashti\'s hangar: the launch cradle, the Pallas on its gantry, and through the hangar mouth, the stars.',
+};
+export const SHUTTLE = {
+  board: [{ who: 'maris', text: 'Strap in, Captain. Down through the soup and out the other side. Keep your lunch where it is.' }],
+  boardAlt: [{ who: 'maris', text: 'Earth run! I love this one. Well. I love the coming back.' }],
+  descent: 'The shuttle drops out of the dock and down the long fall to Earth. The windows go orange, then grey, then the poisoned clouds close round you, thick as wool. Then, below: the old world.',
+  home: 'The shuttle climbs out of the grey into black, and there is Eden, turning, every window lit.',
+  haze: 'The Pallas\'s air meter chatters: the haze here is not good to breathe. (It drains stamina until Ruess fits air filters.)',
 };

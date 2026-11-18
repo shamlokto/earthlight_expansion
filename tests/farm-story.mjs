@@ -35,17 +35,17 @@ const MAIN = VILLAGERS.filter((id) => id !== 'moraine');
 const needTalk = (id) => (id === 'moraine' ? 12 : NEWCOMERS.includes(id) ? 22 : 25);
 const SPOTS = new Set(('farm.porch farm.bin farm.gate farm.pond farm.field village.square village.memorial village.bridge village.riverside ' +
   'village.bench village.storefront village.cafefront village.hallfront village.workshopfront village.ranchyard village.river ' +
-  'hill.wreck hill.lake hill.overlook hill.onsen central.office central.arrivals central.exchange central.plaza central.dock store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
+  'hill.wreck hill.lake hill.overlook hill.onsen central.office central.arrivals central.exchange central.plaza central.dock hangar.floor store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
   'cafe.counter cafe.table1 cafe.table2 cafe.table3 hall.desk hall.floor ' +
   'clinic.counter clinic.floor library.counter library.floor village.clinicfront village.libraryfront').split(' '));
 const STYLES = new Set(['bob', 'short', 'long', 'bald', 'bun', 'bandana', 'cap']);
-const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', 'cafe', 'hall', 'clinic', 'library', 'central']);
+const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', 'cafe', 'hall', 'clinic', 'library', 'central', 'hangar']);
 const TIERS = new Set(['loved', 'liked', 'neutral', 'disliked']);
 const WEATHERS = ['sun', 'rain', 'storm', 'snow'];
 const RELICS = ['photo', 'teacup', 'book', 'watch', 'toy', 'medal', 'seedtin', 'musicbox', 'datachip', 'ring'];
 const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king'];
 const CROPS = ['turnip', 'potato', 'cucumber', 'strawberry', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach', 'moonflower'];
-const GIFTABLE = [...CROPS, 'egg', 'milk_s', 'milk_m', 'milk_l', ...FISH, 'herb', 'berry', 'mushroom', 'frostcap',
+const GIFTABLE = [...CROPS, 'egg', 'milk_s', 'milk_m', 'milk_l', ...FISH, 'herb', 'berry', 'mushroom', 'frostcap', 'comet_ice',
   'scrap', 'alloy', 'crystal', ...RELICS, 'bread', 'soup', 'pie', 'tea', 'tonic'];
 const NEUTRAL = ['pendant', 'weed', 'weeds', 'lumber', 'fodder', 'feed', 'seed_turnip', 'seed_grass', 'seed_moonflower', 'hoe', 'no_such_thing', '', 'toString', '__proto__', 'constructor'];
 const FEST = {
@@ -209,7 +209,7 @@ for (let wd = 0; wd < 7; wd++) {
   check(at('yui', wd, 590) !== 'library.counter' && at('yui', wd, 1080) !== 'library.counter', 'the library is shut before ten and at six');
   for (let m = 360; m <= 1440; m += 30) check(at('yui', wd, m, { weather: 'storm' }) === null || at('yui', wd, m, { weather: 'storm' }).startsWith('cafe.'), 'the library is shut in a storm');
   for (const m of [570, 700]) check(['village.square', 'village.bridge'].includes(at('kestrel', wd, m)), `Kestrel is about the square and bridge (wd ${wd}, ${m})`);
-  if (wd < 6) for (const m of [500, 700, 900]) check(at('vashti', wd, m) === 'hill.wreck', `Vashti keeps the lift (wd ${wd}, ${m})`);
+  if (wd < 6) for (const m of [500, 700, 900]) check(at('vashti', wd, m) === 'hangar.floor', `Vashti keeps the hangar (wd ${wd}, ${m})`);
 }
 check([0, 2, 4].every((wd) => at('kestrel', wd, 1140) === 'hill.overlook'), 'Kestrel is at the overlook some evenings');
 check(at('kestrel', 1, 800) === 'cafe.table3', 'Kestrel lunches at the canteen');

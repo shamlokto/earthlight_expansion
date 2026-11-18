@@ -25,7 +25,7 @@ const select = (s, id) => { s.player.sel = s.player.inv.findIndex((i) => i && i.
 const slotOf = (s, id) => s.player.inv.findIndex((i) => i && i.id === id);
 const wipe = (s, f = 'farm') => { for (const t of s.fields[f].tiles) Object.assign(t, { till: false, wet: false, crop: null, obj: null, hp: 0 }); };
 const setObj = (s, x, y, obj) => Object.assign(tile(s, x, y), { obj, hp: obj === 'stump' || obj === 'boulder' ? 3 : 1 });
-const rich = (seed = 5) => { const s = newGame({ seed }); s.player.money = 1e6; s.stock.lumber = 500; while (s.player.inv.length < 15) s.player.inv.push(null); s.player.slots = 15; addItem(s, 'scrap', 20); addItem(s, 'alloy', 20); addItem(s, 'crystal', 5); return s; };
+const rich = (seed = 5) => { const s = newGame({ seed }); s.player.money = 1e6; s.stock.lumber = 500; while (s.player.inv.length < 16) s.player.inv.push(null); s.player.slots = 16; addItem(s, 'scrap', 20); addItem(s, 'alloy', 20); addItem(s, 'crystal', 5); addItem(s, 'star_metal', 2); return s; };
 const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
 
 // ---------------------------------------------------------------- data
@@ -558,8 +558,7 @@ function script(s, days = 12) {
   const relicIds = RELICS.map((r) => r.id), relics = (t) => relicIds.reduce((n, id) => n + (t.got[id] || 0), 0);
   const t1 = tally(1), t5 = tally(5), t12 = tally(12);
   check(!t1.got.alloy && !t1.got.crystal && t1.got.scrap > 0, 'depth 1: scrap only');
-  check(t5.got.alloy > 0 && !t5.got.crystal, 'depth 5: alloy, no crystal');
-  check(t12.got.alloy > 0 && t12.got.crystal > 0, 'depth 12: crystal too');
+  check(!t5.got.alloy && !t5.got.crystal && !t12.got.alloy && !t12.got.crystal && !t12.got.comet_ice, 'Earth rubble: scrap only, no ore (that is the belt\'s)');
   for (const t of [t1, t5, t12]) { const per = t.piles / relics(t); check(per > 6.5 && per < 12, `about one relic in 8–10 piles (${per.toFixed(1)})`); }
   check(Object.keys(t1.got).filter((id) => relicIds.includes(id)).sort().join() === 'photo,teacup', 'depth 1 relics: the common two');
   check(t5.got.medal > 0 && !t5.got.seedtin && !t5.got.ring && !t5.got.datachip, 'depth 5 relics stop at the medal');
@@ -579,7 +578,7 @@ function script(s, days = 12) {
     while (q.mine.monsters.length) { fights++; for (const f of sim.defeatMonster(q, 0).gained) { drops++; kinds[`${depth}${f.id}`] = 1; } }
     removeItem(q, 'scrap', countItem(q, 'scrap')); removeItem(q, 'alloy', countItem(q, 'alloy'));
   }
-  check(Math.abs(drops / fights - 0.35) < 0.06 && kinds['1scrap'] && !kinds['1alloy'] && kinds['6alloy'] && kinds['6scrap'], `monster drops ${(drops / fights).toFixed(2)}: scrap, alloy from depth 5`);
+  check(Math.abs(drops / fights - 0.35) < 0.06 && kinds['1scrap'] && !kinds['1alloy'] && !kinds['6alloy'] && kinds['6scrap'], `monster drops ${(drops / fights).toFixed(2)}: scrap`);
   q.player.stamina = 20; r = sim.monsterHit(q);
   check(r.ok && r.msg && q.player.stamina === 15, 'a hit costs five stamina');
   q.player.stamina = 3; sim.monsterHit(q); check(q.player.stamina === 1, 'never below one');
@@ -766,7 +765,8 @@ function script(s, days = 12) {
       () => sim.gift(s, any(npcs[r(npcs.length)]), any(r(s.player.slots)), any(tiers[r(4)]), r(10) === 0),
       () => sim.addLove(s, any(npcs[r(npcs.length)]), any(r(9) - 4)),
       () => sim.setFlag(s, any(`ev_${r(5)}`)),
-      () => { sim.enterMine(s, any(1 + r(15))); return { ok: true }; },
+      () => { sim.enterMine(s, any(1 + r(15)), any(['earth', 'belt'][r(2)])); return { ok: true }; },
+      () => [() => sim.takeShuttle(s, any(1 + r(5))), () => sim.hazardTick(s, any(r(14)), any(r(12))), () => { sim.enterBelt(s, any(1 + r(12))); return { ok: true }; }][r(3)](),
       () => sim.hitRock(s, any(r(14)), any(r(12))), () => sim.hitRock(s, r(14), r(12)),
       () => sim.defeatMonster(s, any(r(4))), () => sim.monsterHit(s), () => sim.leaveMine(s),
       () => sim.donate(s, any(r(s.player.slots))),
@@ -1098,6 +1098,38 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   // old saves
   const old = JSON.parse(saveState(newGame({ seed: 210 }))); for (const kk of ['mill', 'hydro', 'solarYard']) delete old[kk];
   const O = loadState(JSON.stringify(old)); check(O && Array.isArray(O.mill) && Array.isArray(O.hydro) && Array.isArray(O.solarYard.slots) && sleep(O).ok, 'an old save gains the mill, the towers and the yard');
+}
+
+// ---------------------------------------------------------------- the asteroid belt, the shuttle, the haze (2026-11-18)
+{
+  const a = newGame({ seed: 301 }), b = newGame({ seed: 301 });
+  const s1 = sim.enterBelt(a, 4), s2 = sim.enterBelt(b, 4);
+  check(s1.mode === 'belt' && JSON.stringify(s1) === JSON.stringify(s2) && !s1.monsters.length && s1.haz.every((x) => !x), 'belt sectors: from the seed, no creatures, no haze');
+  check(s1.cells[s1.hatch] === 1 && a.stats.deepestBelt === 4 && a.stats.deepest === 0, 'one rock hides the jump buoy; the belt keeps its own depth record');
+  const beltTally = (depth) => { const g = rich(310 + depth), got = {}; let n = 0; while (n < 2500) { sim.enterBelt(g, depth); g.mine.cells.forEach((v, i) => { if (v !== 1) return; g.player.stamina = 100; n++; for (const f of sim.hitRock(g, i % 14, Math.floor(i / 14)).gained) got[f.id] = (got[f.id] || 0) + f.n; }); for (let i = 0; i < 15; i++) if (g.player.inv[i] && !['hoe', 'can', 'sickle', 'hammer', 'axe'].includes(g.player.inv[i].id)) g.player.inv[i] = null; } return got; };
+  const b1 = beltTally(1), b5 = beltTally(5), b12 = beltTally(12);
+  check(b1.scrap > 0 && b1.comet_ice > 0 && !b1.alloy && !b1.crystal && !b1.star_metal, 'sector 1: scrap and comet ice');
+  check(b5.alloy > 0 && !b5.crystal && b5.star_metal > 0 && b12.crystal > 0 && b12.alloy > 0, 'alloy from sector 5, crystal from 10, star-metal from 3');
+  check(!Object.keys(b12).some((id) => ITEMS[id].kind === 'relic') && b12.star_metal < b12.comet_ice / 3, 'no relics in space; star-metal is rare');
+  const h = sim.hitRock(a, s1.hatch % 14, Math.floor(s1.hatch / 14)); check(h.ok && h.hatch && /buoy/.test(h.msg), 'drilling the right rock shows the jump buoy');
+  // the shuttle
+  const t = newGame({ seed: 302 }); t.player.money = 500;
+  check(sim.shuttleFare(t) === 200 && sim.takeShuttle(t, 1).ok && t.player.money === 300 && t.mine.mode === 'earth', 'the shuttle costs 200 cr');
+  t.player.money = 100; check(!act(sim.takeShuttle(t, 1)).ok, 'not without the fare');
+  sim.addLove(t, 'maris', 50); check(sim.shuttleFare(t) === 0 && sim.takeShuttle(t, 2).ok && t.player.money === 100, 'free once Maris is at 5 hearts');
+  // the haze
+  let cell = -1; for (let k = 0; k < 20 && cell < 0; k++) { sim.enterMine(t, 6); cell = t.mine.haz.findIndex((x) => x > 0); }
+  check(cell >= 0 && t.mine.haz.some((x) => x === 2) === t.mine.haz.some((x) => x === 2), 'Earth sites have haze patches');
+  const hx = cell % 14, hy = Math.floor(cell / 14); t.player.stamina = 50;
+  let r = sim.hazardTick(t, hx, hy); check(r.ok && r.drained === 1 && t.player.stamina === 49 && sim.hazardAt(t, hx, hy) > 0, 'haze drains a stamina a tick');
+  r = sim.hazardTick(t, 7, 11); check(r.ok && !r.drained, 'the landing is clear');
+  const u = rich(303); check(shopStock(u, 'workshop').find((e) => e.key === 'up_filters').needs === '3 alloy, 1 star-metal', 'the filters need alloy and star-metal');
+  check(buy(u, 'workshop', 'up_filters').ok && u.flags.filters && countItem(u, 'star_metal') === 1, 'Ruess fits the filters');
+  sim.enterMine(u, 6); const c2 = u.mine.haz.findIndex((x) => x > 0); u.player.stamina = 50;
+  if (c2 >= 0) { r = sim.hazardTick(u, c2 % 14, Math.floor(c2 / 14)); check(r.ok && r.filtered && u.player.stamina === 50, 'with filters the haze costs nothing'); }
+  // old saves: a saved site is cleared on load
+  const old = JSON.parse(saveState(newGame({ seed: 304 }))); old.mine = { floor: 3, w: 14, h: 12, cells: [] };
+  check(loadState(JSON.stringify(old)).mine === null, 'an old site is cleared on load');
 }
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

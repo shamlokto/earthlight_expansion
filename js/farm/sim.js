@@ -193,6 +193,7 @@ export function loadState(text) {
   try {
     const s = JSON.parse(text);
     const good = s && s.v === 1 && s.cal && s.player && Array.isArray(s.player.inv) && s.fields && s.fields.farm && Array.isArray(s.fields.farm.tiles) && s.fields.greenhouse && s.pasture && s.stats;
+    if (good) s.mine = null;   // a saved site (or an old-style one) is not resumed: the trip starts again
     return good ? ensure(s) : null;
   } catch { return null; }
 }
@@ -680,6 +681,8 @@ function shelves(state, shopId) {
       stop: () => (robots >= MAX_ROBOTS ? 'Ruess has no more Field-units to spare. Seven is a whole crew, he says.' : null),
       apply: () => { const name = ROBOT_NAMES.find((n) => !state.robots.some((r) => r.name === n)) || `Unit ${state.robots.length + 1}`; state.robots.push({ name, job: 'water', days: 0, charge: 100, mood: 'happy', done: 0 }); return `${name} rolls out of the workshop, fully charged, and follows you home.`; } });
     sell('solar_panel', 1500, { lumber: 10, needs: '10 lumber' });
+    if (!state.flags.filters) out.push({ key: 'up_filters', label: 'Pallas air filters', desc: 'Ruess fits the Pallas with scrubbers: toxic and radioactive haze on Earth costs you nothing.', price: 2000, req: [['alloy', 3], ['star_metal', 1]], needs: '3 alloy, 1 star-metal', once: true,
+      apply: () => { state.flags.filters = true; return 'Ruess bolts the new filters into the Pallas. "Breathe easy down there. That is an order."'; } });
     if (!state.flags.feed_mill) out.push({ key: 'feed_mill', label: 'Feed mill', desc: 'A little mill beside your silo. Put crops in by day; by morning they are hen feed.', price: 1500, lumber: 40, needs: '40 lumber', once: true,
       apply: () => { state.flags.feed_mill = true; ensure(state); return 'Ruess will have the feed mill standing beside your silo by tonight. "It grinds. It does not judge."'; } });
     sell('battery', 200);
@@ -788,8 +791,12 @@ export function setFlag(state, key, value = true) {
 // ---------------------------------------------------------------- the ruins (state.mine)
 
 // A site on Earth's surface: 0 open, 1 rubble pile, 2 the way down (found), 3 wall. One pile hides the way down.
-export function enterMine(state, depth = 1) {
+// Two kinds of site share this machinery: mode 'earth' (the Old World, reached by Maris's shuttle: rubble,
+// relics, creatures, hazard haze) and mode 'belt' (the asteroid belt, flown from Vashti's hangar: rocks to
+// drill for ore, a jump buoy to go deeper, no creatures, no haze).
+export function enterMine(state, depth = 1, mode = 'earth') {
   depth = int(depth) && depth > 0 ? Math.min(depth, 999) : 1;
+  const belt = mode === 'belt';
   const w = MINE_W, h = MINE_H, at = (x, y) => y * w + x, entry = at(...ENTRY);
   const cells = Array.from({ length: w * h }, () => { const r = rnd(state); return r < 0.12 ? 3 : r < 0.40 ? 1 : 0; });
   cells[entry] = 0;
@@ -808,29 +815,42 @@ export function enterMine(state, depth = 1) {
   const open = cells.flatMap((c, i) => (c === 0 && i !== entry ? [i] : []));
   if (!piles.length) { const i = open.length ? open.splice(rint(state, open.length), 1)[0] : entry - 1; cells[i] = 1; piles = [i]; }
   const hatch = piles[rint(state, piles.length)];
-  const monsters = [];
-  for (let n = Math.min(depth === 1 ? 1 + rint(state, 3) : 2 + rint(state, 3) + Math.floor(depth / 4), 6, open.length); n > 0; n--) {
-    const i = open.splice(rint(state, open.length), 1)[0];
-    monsters.push({ x: i % w, y: (i - (i % w)) / w, kind: rnd(state) < 0.6 ? 'crawler' : 'drone', hp: 1 + rint(state, 2) });
+  const monsters = [], haz = new Array(w * h).fill(0);
+  if (!belt) {
+    for (let n = Math.min(depth === 1 ? 1 + rint(state, 3) : 2 + rint(state, 3) + Math.floor(depth / 4), 6, open.length); n > 0; n--) {
+      const i = open.splice(rint(state, open.length), 1)[0];
+      monsters.push({ x: i % w, y: (i - (i % w)) / w, kind: rnd(state) < 0.6 ? 'crawler' : 'drone', hp: 1 + rint(state, 2) });
+    }
+    // Haze: patches of toxic (1) or, from depth 4, radioactive (2) air on open ground, never on the landing pad.
+    for (let n = Math.min(2 + Math.floor(depth / 3), 6); n > 0 && open.length; n--) {
+      const c = open[rint(state, open.length)], kind = depth >= 4 && rnd(state) < 0.45 ? 2 : 1, cx = c % w, cy = (c - cx) / w;
+      for (let y = cy - 1; y <= cy + 1; y++) for (let x = cx - 1; x <= cx + 1; x++) if (x >= 0 && y >= 0 && x < w && y < h && cells[at(x, y)] === 0 && Math.abs(x - ENTRY[0]) + Math.abs(y - ENTRY[1]) > 2) haz[at(x, y)] = kind;
+    }
   }
-  state.stats.deepest = Math.max(state.stats.deepest, depth);
-  // Depth 10 and 20 each hide a star-plum in the pile farthest from the lift (once ever).
+  if (belt) state.stats.deepestBelt = Math.max(state.stats.deepestBelt || 0, depth); else state.stats.deepest = Math.max(state.stats.deepest, depth);
+  // Depth 10 and 20 of the Old World each hide a star-plum in the pile farthest from the landing (once ever).
   let star = -1;
-  if ((depth === 10 || depth === 20) && !state.flags['plum_ruins' + depth]) {
+  if (!belt && (depth === 10 || depth === 20) && !state.flags['plum_ruins' + depth]) {
     let bd = -1; for (const i of piles) { const d = Math.abs((i % w) - ENTRY[0]) + Math.abs(Math.floor(i / w) - ENTRY[1]); if (d > bd) { bd = d; star = i; } }
   }
-  state.mine = { depth, floor: depth, w, h, cells, monsters, hatch, star };
+  state.mine = { mode: belt ? 'belt' : 'earth', depth, floor: depth, w, h, cells, monsters, hatch, star, haz };
   return state.mine;
 }
 // What a pile or a monster gives up at this depth.
-function find(state, depth) {
+function find(state, depth, mode = 'earth') {
   const r = rnd(state);
+  if (mode === 'belt') {                             // ore by sector depth, comet ice, and now and then star-metal
+    if (r < 0.04 && depth >= 3) return 'star_metal';
+    if (r < 0.14) return depth >= 10 ? 'crystal' : depth >= 5 ? 'alloy' : 'scrap';
+    if (r < 0.30) return depth >= 5 ? 'alloy' : 'scrap';
+    if (r < 0.48) return 'comet_ice';
+    return r < 0.75 ? 'scrap' : null;
+  }
   if (r < 0.11) {
     const pool = RELICS.filter((x) => x.depth <= depth);
     return pool[pick(state, pool.map((_, i) => 1 / (i + 1)))].id;   // cheaper ones more often
   }
-  if (r < 0.16) return depth >= 10 ? 'crystal' : 'scrap';
-  if (r < 0.28) return depth >= 5 ? 'alloy' : 'scrap';
+  if (r < 0.28) return 'scrap';                     // Earth rubble gives scrap; good ore comes from the belt
   return r < 0.50 ? 'scrap' : r < 0.56 ? 'battery' : null;
 }
 // Search a rubble pile (the name is from the first design, when this was a mine).
@@ -840,13 +860,13 @@ export function hitRock(state, x, y) {
   const c = int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? m.cells[y * m.w + x] : -1;
   if (c === 2) return no('The way down is open.');
   if (c !== 1) return no('There is nothing to search here.');
-  const i = y * m.w + x, hatch = i === m.hatch, id = find(state, m.depth);
+  const i = y * m.w + x, hatch = i === m.hatch, id = find(state, m.depth, m.mode);
   m.cells[i] = hatch ? 2 : 0;
   state.stats.searched++;
   const starHere = i === m.star && !state.flags['plum_ruins' + m.depth];
   const res = take(state, [...(id ? [[id, 1]] : []), ...(starHere ? [['star_plum', 1]] : [])], { ok: true, broke: true, gained: [], hatch });
   if (starHere && res.gained.some((g) => g.id === 'star_plum')) { state.flags['plum_ruins' + m.depth] = true; m.star = -1; res.star = true; res.msg = 'Under the rubble, in a sealed seed tin, a small fruit glowing violet: a star-plum.'; }
-  if (hatch) res.msg = res.gained.length ? `You found ${lower(id)}, and a way down.` : 'Under the rubble is a way down.';
+  if (hatch) res.msg = m.mode === 'belt' ? (res.gained.length ? `You drilled out ${lower(id)}, and behind the rock a jump buoy blinks.` : 'Behind the rock, a jump buoy blinks: the way to the next sector.') : res.gained.length ? `You found ${lower(id)}, and a way down.` : 'Under the rubble is a way down.';
   return spend(state, 1, res);
 }
 export function defeatMonster(state, index) {
@@ -854,14 +874,33 @@ export function defeatMonster(state, index) {
   if (!m || !int(index) || !m.monsters[index]) return fail('There is nothing to fight here.', { gained: [] });
   m.monsters.splice(index, 1);
   state.stats.monsters++;
-  const drop = rnd(state) < 0.35, alloy = rnd(state) < 0.5 && m.depth >= 5;
-  return take(state, drop ? [[alloy ? 'alloy' : 'scrap', 1]] : [], { ok: true, gained: [] });
+  const drop = rnd(state) < 0.35; rnd(state);
+  return take(state, drop ? [['scrap', 1]] : [], { ok: true, gained: [] });
 }
 export function monsterHit(state) {
   state.player.stamina = Math.max(Math.min(1, state.player.stamina), state.player.stamina - 5);
   return { ok: true, msg: 'Something clipped the Pallas. You lost a little stamina.' };
 }
 export function leaveMine(state) { state.mine = null; return { ok: true }; }
+export const enterBelt = (state, depth = 1) => enterMine(state, depth, 'belt');
+// Juno Maris's courier shuttle to the Old World: 200 cr a trip, free once she is a good friend (5 hearts).
+export const SHUTTLE_FARE = 200;
+export const shuttleFare = (state) => (hearts(state, 'maris') >= 5 ? 0 : SHUTTLE_FARE);
+export function takeShuttle(state, depth = 1) {
+  const fare = shuttleFare(state);
+  if (state.player.money < fare) return fail(`The shuttle costs ${fare} cr a trip.`);
+  state.player.money -= fare; enterMine(state, depth, 'earth');
+  return { ok: true, fare, msg: fare ? `You paid Maris ${fare} cr. Strap in.` : 'Maris waves away your money. "Friends fly free."' };
+}
+// Haze on the Old World: standing in it costs 1 stamina a tick (the UI ticks every few seconds), unless the Pallas has filters.
+export function hazardAt(state, x, y) { const m = state.mine; return m && m.mode !== 'belt' && Array.isArray(m.haz) && int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? m.haz[y * m.w + x] || 0 : 0; }
+export function hazardTick(state, x, y) {
+  const h = hazardAt(state, x, y);
+  if (!h) return { ok: true, drained: 0, hazard: 0 };
+  if (state.flags.filters) return { ok: true, drained: 0, hazard: h, filtered: true };
+  state.player.stamina = Math.max(0, state.player.stamina - 1);
+  return { ok: true, drained: 1, hazard: h, fainted: state.player.stamina <= 0 };
+}
 
 // The Memory Room in the village hall.
 export function donate(state, slot) {

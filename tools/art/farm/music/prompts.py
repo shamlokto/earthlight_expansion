@@ -20,16 +20,16 @@ TRACKS = {
     "night":    ("soft solo piano, sleepy night, slow, 60 bpm, quiet, peaceful, sparse, warm reverb, lullaby"),
     "village":  ("lively village market, accordion melody, ukulele, acoustic guitar, light hand percussion, tambourine, "
                  "112 bpm, major key, cheerful, bustling, folk"),
-    "central":  ("airy city concourse, soft synth pads, gentle electric piano and piano, light arpeggiator, spacious, "
-                 "ambient, calm, futuristic, 90 bpm, hopeful"),
-    "ruins":    ("mysterious ambient, sparse, low strings drone, soft analog synth, gentle steady pulse, minor key, "
-                 "exploration, curious, calm, not scary, 80 bpm"),
+    "central":  ("airy bright concourse, warm soft synth pads, gentle piano melody, light sparkling arpeggio, spacious, "
+                 "major key, uplifting, peaceful, a hint of outer space, 90 bpm, hopeful, lounge"),
+    "ruins":    ("mysterious gentle ambient, sparse, soft low strings, warm analog synth, gentle steady pulse, "
+                 "exploration, curious, wonder, calm, dreamy, 80 bpm"),
     "festival": ("cheerful japanese festival, taiko drums, bamboo flutes, shamisen, hand claps, 116 bpm, festive, joyful, "
                  "traditional folk"),
-    "lantern":  ("tender remembrance, slow, bamboo flute melody, soft koto, gentle piano, light strings, 66 bpm, "
-                 "bittersweet, peaceful, evening lanterns"),
-    "wedding":  ("warm celebratory, simple, acoustic guitar, piano, light strings, glockenspiel, 92 bpm, major key, "
-                 "happy, heartfelt, gentle waltz"),
+    "lantern":  ("tender slow ballad, soft bamboo flute melody, koto, gentle piano, warm light strings, 66 bpm, "
+                 "bittersweet, peaceful, major key, remembrance"),
+    "wedding":  ("warm celebratory, simple, piano melody, acoustic guitar, light strings, glockenspiel, 92 bpm, major key, "
+                 "happy, heartfelt, gentle waltz, instrumental only"),
 }
 
 SECONDS = {"night": 80, "ruins": 90, "lantern": 80, "wedding": 70, "festival": 80}
