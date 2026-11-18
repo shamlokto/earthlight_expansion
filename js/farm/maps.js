@@ -7,6 +7,17 @@ import { SIGNS } from './story.js';
 // Ground codes: g grass · f field soil · p dirt path · c cobble · s sand · w water · k planks
 // r cliff rock (solid) · a ash (the Old World) · o stone floor · h hay · b boards (indoor floor)
 // d deck plating (the colony's own metal paving) · x nothing
+// Some trees bear fruit anyone may pick (data.js WILD_TREES). Chosen by position so saves stay valid.
+const WILD_KINDS = ['plum', 'loquat', 'mulberry', 'wild_apple', 'chestnut', 'yuzu'];
+function wildFruit(m, every, kinds = WILD_KINDS, limit = 99) {
+  let k = 0, n = 0, k2 = 0;
+  for (const p of m.props) {
+    if (p.kind !== 'tree' || n >= limit) continue;
+    if (p.x <= 0 || p.y <= 0 || p.x >= m.w - 1 || p.y >= m.h - 1) continue;       // not the border wall of trees
+    if (k2++ % every !== 0) continue;
+    p.fruit = kinds[k++ % kinds.length]; n++;
+  }
+}
 export const SOLID_GROUND = new Set(['w', 'r', 'x']);
 // Thin or round things collide as a small circle around their middle instead of a whole tile, so
 // lawns with trees and lamps stay walkable (radius in tiles).
@@ -102,6 +113,7 @@ function farm() {
   // the colony's share of the farm: a panel by the barn, a rain tank, the irrigation main along the field
   m.prop('solar_panel', 31, 6, { w: 2 }); m.prop('water_tank', 40, 3, { w: 2, d: 2 }); m.prop('pipe_run', 2, 11, { d: fh });
   m.prop('colony_lamp', 19, 7); m.prop('vent', 33, 10);
+  wildFruit(m, 3); m.wildShared = false;
   return m;
 }
 
@@ -205,6 +217,7 @@ function village() {
   m.border('tree', 21, (x, y) => (y === 0 && (x === 31 || x === 32)));
   const park = (x, y) => x >= 34 && y >= 41;
   m.scatter(8, 44, ['tree', 'tree', 'pine', 'bush', 'flowers', 'flowers'], (x, y) => !park(x, y) && !(x >= 50 && y <= 18) && !(y >= 48));
+  wildFruit(m, 4, ['plum', 'loquat', 'yuzu', 'mulberry'], 5); m.wildShared = true;
   return m;
 }
 // The lift kiosk's notice lives here with the map that has the kiosk (story.js owns the other signs).
@@ -244,6 +257,7 @@ function hill() {
   m.water = 'hill'; m.start = [1.6, 13];
   m.forage = FORAGE_SPOTS;
   m.scatter(31, 30, ['tree', 'pine', 'pine', 'bush', 'rockdecor', 'flowers'], (x, y) => !FORAGE_SPOTS.some(([a, b]) => a === x && b === y) && !(x <= 12 && y <= 10));   // keep the onsen's view open
+  wildFruit(m, 2, ['wild_apple', 'chestnut', 'yuzu', 'plum']); m.wildShared = false;
   return m;
 }
 

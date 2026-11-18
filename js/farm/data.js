@@ -90,6 +90,20 @@ export const FRUIT_TREES = {
   persimmon: { id: 'persimmon', name: 'Persimmon tree', fruit: 'persimmon', season: 2 },
 };
 export const TREE_DAYS = 28;
+// Wild fruit trees: some of the trees already growing on the Upper deck bear fruit anyone may pick.
+// season: when it fruits; most: fruit per picking; every: days between pickings.
+export const WILD_TREES = {
+  plum: { fruit: 'plum', season: 0, most: 3, every: 3 },
+  loquat: { fruit: 'loquat', season: 1, most: 3, every: 3 },
+  mulberry: { fruit: 'mulberry', season: 1, most: 4, every: 2 },
+  wild_apple: { fruit: 'wild_apple', season: 2, most: 3, every: 3 },
+  chestnut: { fruit: 'chestnut', season: 2, most: 4, every: 3 },
+  yuzu: { fruit: 'yuzu', season: 3, most: 2, every: 3 },
+};
+item('plum', 'Wild plum', 'fruit', 'A small tart plum from the old orchard rows nobody owns any more. Spring.', { sell: 60, stamina: 6, detail: 'Wild plum trees flower white along the hill paths and fruit in spring. Anyone may pick them; they come back every few days. Good in a fruit tart.' });
+item('loquat', 'Loquat', 'fruit', 'A golden early-summer fruit, sweet and a little floral.', { sell: 70, stamina: 8, detail: 'Loquats came up to the Upper deck in a seed vault and went wild. Summer, every few days, from trees on the hill and in the village.' });
+item('mulberry', 'Mulberry', 'fruit', 'Dark summer mulberries that stain everything they touch.', { sell: 35, stamina: 5, detail: 'Mulberry trees grow along the colony irrigation lines. Summer; a handful every couple of days. Children of Willowfall come home purple.' });
+item('yuzu', 'Yuzu', 'fruit', 'A fragrant winter citrus, too sour to eat, wonderful to cook with.', { sell: 120, stamina: 4, detail: 'The only tree on the Upper deck that fruits in winter, under the cool sun-line. The canteen pays well for them.' });
 for (const t of Object.values(FRUIT_TREES)) item(`sapling_${t.id}`, `${t.name} sapling`, 'sapling', `Plant on farm grass (not the field). Grows for ${TREE_DAYS} days, then gives a ${t.fruit} a day in ${SEASONS[t.season].toLowerCase()}.`, { tree: t.id });
 
 // Gear for the bigger farm: carried and placed things, and the field robots' batteries.

@@ -22,7 +22,7 @@
 //  * Stamina at 0: the action still happens and the result carries fainted: true.
 //  * Ruins: cells (7,11) (the lift) is always open; walls never cut an open cell off from it.
 //    Finds that do not fit in a full rucksack are left behind (the result says so).
-import { SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, ITEMS, CROPS, TOOL_LEVELS, FIELD_SIZES, PASTURE_SIZE, RELICS, FESTIVAL_DAYS, FRUIT_TREES, TREE_DAYS, SATO_BIRTHDAY, ROBOT_NAMES, ROBOT_JOBS, ROBOT_MOODS } from './data.js';
+import { SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, ITEMS, CROPS, TOOL_LEVELS, FIELD_SIZES, PASTURE_SIZE, RELICS, FESTIVAL_DAYS, FRUIT_TREES, TREE_DAYS, WILD_TREES, SATO_BIRTHDAY, ROBOT_NAMES, ROBOT_JOBS, ROBOT_MOODS } from './data.js';
 
 export const NPC_IDS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui'];
 export const CAN_CAPACITY = [0, 20, 40, 80];
@@ -33,7 +33,7 @@ const FRIDGE_KINDS = new Set(['crop', 'animal', 'fish', 'forage', 'food', 'fruit
 const PRODUCE = new Set(['crop', 'forage', 'fruit', 'animal']);
 export const BASKET_CAP = 30, CHEST_SIZE = 20, MAX_ROBOTS = 3, FORAGE_SPOT_COUNT = 14, ONSEN_PRICE = 100;
 export const RUCKSACK_TIERS = [[15, 1500], [20, 4000], [25, 8000], [30, 15000]];
-const FRUITS = ['cherry', 'peach', 'apple', 'persimmon', 'wild_apple', 'wild_grape', 'berry'];
+const FRUITS = ['cherry', 'peach', 'apple', 'persimmon', 'wild_apple', 'wild_grape', 'berry', 'plum', 'loquat', 'mulberry', 'yuzu'];
 const MUSHROOMS = ['mushroom', 'frostcap'];
 const VEG = ['turnip', 'potato', 'cucumber', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach'];
 const FISH_IDS = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'];
@@ -996,6 +996,22 @@ export function pickFruit(state, index) {
   const put = stash(state, def.fruit, 1); if (!put.ok) return fail(FULL, { gained: [] });
   t.picked = absDay(state);
   return { ok: true, msg: `You picked a ${lower(def.fruit)}${put.basket ? ' into the basket' : ''}.`, gained: [{ id: def.fruit, n: 1 }], basket: put.basket };
+}
+// Wild fruit trees on the maps (maps.js marks them; key 'map:propIndex'). Village trees give one fruit
+// and need longer between pickings: they are everyone's.
+export function wildReady(state, key, kind, shared = false) {
+  const d = WILD_TREES[kind]; if (!d || d.season !== state.cal.season) return false;
+  const last = (state.wildPicked || {})[key]; return last == null || absDay(state) - last >= d.every + (shared ? 2 : 0);
+}
+export function pickWild(state, key, kind, shared = false) {
+  if (typeof key !== 'string' || !key || !own(WILD_TREES, kind)) return fail('There is nothing to pick there.', { gained: [] });
+  const d = WILD_TREES[kind];
+  if (d.season !== state.cal.season) return fail(`This tree fruits in ${SEASONS[d.season].toLowerCase()}.`, { gained: [] });
+  if (!wildReady(state, key, kind, shared)) return fail('Someone has picked it clean. Come back in a few days.', { gained: [] });
+  const n = shared ? 1 : 1 + Math.floor(rnd(state) * d.most);
+  const put = stash(state, d.fruit, n); if (!put.ok) return fail(FULL, { gained: [] });
+  (state.wildPicked ||= {})[key] = absDay(state);
+  return { ok: true, msg: `You picked ${n} ${n > 1 ? lower(d.fruit) + 's' : lower(d.fruit)}${put.basket ? ' into the basket' : ''}.`, gained: [{ id: d.fruit, n }], basket: put.basket };
 }
 // The axe takes out a sapling or a young tree (nothing is refunded); a grown tree stays.
 export function removeTree(state, index) {
