@@ -26,6 +26,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/brush": {
+   "file": "icons/brush.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/can": {
    "file": "icons/can.webp",
    "w": 256,
@@ -33,6 +38,11 @@
   },
   "icons/carrot": {
    "file": "icons/carrot.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/cooked_meal": {
+   "file": "icons/cooked_meal.webp",
    "w": 256,
    "h": 256
   },
@@ -56,6 +66,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/egg": {
+   "file": "icons/egg.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/eggplant": {
    "file": "icons/eggplant.webp",
    "w": 256,
@@ -68,6 +83,11 @@
   },
   "icons/fish_autumn": {
    "file": "icons/fish_autumn.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_grill": {
+   "file": "icons/fish_grill.webp",
    "w": 256,
    "h": 256
   },
@@ -111,6 +131,16 @@
    "w": 256,
    "h": 256
   },
+  "icons/fridge": {
+   "file": "icons/fridge.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/frostcap": {
+   "file": "icons/frostcap.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/hammer": {
    "file": "icons/hammer.webp",
    "w": 256,
@@ -118,6 +148,11 @@
   },
   "icons/herb": {
    "file": "icons/herb.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/hoe": {
+   "file": "icons/hoe.webp",
    "w": 256,
    "h": 256
   },
@@ -146,6 +181,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/milker": {
+   "file": "icons/milker.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/moonflower": {
    "file": "icons/moonflower.webp",
    "w": 256,
@@ -161,6 +201,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/omelette": {
+   "file": "icons/omelette.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/onion": {
    "file": "icons/onion.webp",
    "w": 256,
@@ -173,6 +218,11 @@
   },
   "icons/photo": {
    "file": "icons/photo.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/pie": {
+   "file": "icons/pie.webp",
    "w": 256,
    "h": 256
   },
@@ -196,13 +246,28 @@
    "w": 256,
    "h": 256
   },
+  "icons/salad": {
+   "file": "icons/salad.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/scrap": {
    "file": "icons/scrap.webp",
    "w": 256,
    "h": 256
   },
+  "icons/seedbag": {
+   "file": "icons/seedbag.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/seedtin": {
    "file": "icons/seedtin.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/sickle": {
+   "file": "icons/sickle.webp",
    "w": 256,
    "h": 256
   },
@@ -216,6 +281,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/storage_box": {
+   "file": "icons/storage_box.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/strawberry": {
    "file": "icons/strawberry.webp",
    "w": 256,
@@ -223,6 +293,11 @@
   },
   "icons/sweetpotato": {
    "file": "icons/sweetpotato.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/tea": {
+   "file": "icons/tea.webp",
    "w": 256,
    "h": 256
   },
@@ -248,6 +323,11 @@
   },
   "icons/turnip": {
    "file": "icons/turnip.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/veg_soup": {
+   "file": "icons/veg_soup.webp",
    "w": 256,
    "h": 256
   },
@@ -453,6 +533,11 @@
    "w": 1344,
    "h": 768
   },
+  "scenes/ruins_fight": {
+   "file": "scenes/ruins_fight.webp",
+   "w": 1344,
+   "h": 768
+  },
   "scenes/season_autumn": {
    "file": "scenes/season_autumn.webp",
    "w": 1344,
@@ -488,6 +573,11 @@
    "w": 1344,
    "h": 768
   },
+  "scenes/townmap": {
+   "file": "scenes/townmap.webp",
+   "w": 1344,
+   "h": 768
+  },
   "scenes/upperdeck": {
    "file": "scenes/upperdeck.webp",
    "w": 1344,
@@ -497,6 +587,27 @@
    "file": "scenes/wedding.webp",
    "w": 1344,
    "h": 768
+  },
+  "sky/sky_colony_day": {
+   "file": "sky/sky_colony_day.webp",
+   "w": 2048,
+   "h": 1024,
+   "note": "axis view forward and backward",
+   "wrap": "mirror"
+  },
+  "sky/sky_colony_dusk": {
+   "file": "sky/sky_colony_dusk.webp",
+   "w": 2048,
+   "h": 1024,
+   "note": "axis view forward and backward",
+   "wrap": "mirror"
+  },
+  "sky/sky_colony_night": {
+   "file": "sky/sky_colony_night.webp",
+   "w": 2048,
+   "h": 1024,
+   "note": "axis view forward and backward",
+   "wrap": "mirror"
   },
   "sky/sky_day": {
    "file": "sky/sky_day.webp",
@@ -535,6 +646,30 @@
    "h": 1024,
    "tile": "period"
   },
+  "textures/colony_path": {
+   "file": "textures/colony_path.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "edge"
+  },
+  "textures/deck_floor": {
+   "file": "textures/deck_floor.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "edge"
+  },
+  "textures/glass_window": {
+   "file": "textures/glass_window.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "edge"
+  },
+  "textures/grass_colony": {
+   "file": "textures/grass_colony.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "quilt"
+  },
   "textures/grass_spring": {
    "file": "textures/grass_spring.webp",
    "w": 1024,
@@ -552,6 +687,12 @@
    "w": 1024,
    "h": 1024,
    "tile": "quilt"
+  },
+  "textures/hull_plate": {
+   "file": "textures/hull_plate.webp",
+   "w": 1024,
+   "h": 1024,
+   "tile": "edge"
   },
   "textures/path_dirt": {
    "file": "textures/path_dirt.webp",
@@ -601,6 +742,54 @@
    "h": 1024,
    "tile": "period"
   },
+  "video/descent": {
+   "file": "video/descent.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/festival_harvest": {
+   "file": "video/festival_harvest.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/festival_lantern": {
+   "file": "video/festival_lantern.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/festival_planting": {
+   "file": "video/festival_planting.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/festival_yearend": {
+   "file": "video/festival_yearend.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/heart10": {
+   "file": "video/heart10.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
   "video/intro1": {
    "file": "video/intro1.mp4",
    "w": 832,
@@ -641,6 +830,54 @@
    "frames": 81,
    "loop": false
   },
+  "video/morning": {
+   "file": "video/morning.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/ruins": {
+   "file": "video/ruins.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/season_autumn": {
+   "file": "video/season_autumn.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/season_spring": {
+   "file": "video/season_spring.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/season_summer": {
+   "file": "video/season_summer.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/season_winter": {
+   "file": "video/season_winter.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
   "video/title": {
    "file": "video/title.mp4",
    "w": 832,
@@ -649,8 +886,8 @@
    "frames": 81,
    "loop": false
   },
-  "video/wedding": {
-   "file": "video/wedding.mp4",
+  "video/upperdeck": {
+   "file": "video/upperdeck.mp4",
    "w": 832,
    "h": 480,
    "fps": 16,

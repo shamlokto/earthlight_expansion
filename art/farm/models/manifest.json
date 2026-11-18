@@ -850,5 +850,247 @@
    0.7672
   ],
   "note": "pond reeds with cattails"
+ },
+ "greenhouse_ruin": {
+  "file": "greenhouse_ruin.glb",
+  "tris": 16000,
+  "size": [
+   1.0,
+   0.8243,
+   0.8923
+  ],
+  "note": "broken greenhouse before repair, door on +Z"
+ },
+ "ruin_tower": {
+  "file": "ruin_tower.glb",
+  "tris": 14000,
+  "size": [
+   0.8424,
+   1.0,
+   0.8493
+  ],
+  "note": "ruined two-storey stump on a tree-trunk base"
+ },
+ "yui": {
+  "file": "yui.glb",
+  "tris": 24000,
+  "size": [
+   0.4915,
+   1.0,
+   0.3987
+  ],
+  "note": "Yui Hoshino, chibi figurine, A-pose; hair in a bun (the braid always came forward over her shoulder, which the rig cannot take)",
+  "unit": "height"
+ },
+ "plantpot": {
+  "file": "plantpot.glb",
+  "tris": 3999,
+  "size": [
+   0.8558,
+   1.0,
+   0.849
+  ],
+  "note": "terracotta pot with a fern"
+ },
+ "fish_float": {
+  "file": "fish_float.glb",
+  "tris": 2000,
+  "size": [
+   0.8224,
+   1.0,
+   0.8443
+  ],
+  "note": "red and white fishing float"
+ },
+ "mori": {
+  "file": "mori.glb",
+  "tris": 24000,
+  "size": [
+   0.6058,
+   1.0,
+   0.4812
+  ],
+  "note": "Dr. Haruto Mori, chibi figurine, A-pose, doctor's coat with stethoscope",
+  "unit": "height"
+ },
+ "bookshelf": {
+  "file": "bookshelf.glb",
+  "tris": 8000,
+  "size": [
+   0.5303,
+   1.0,
+   0.2552
+  ],
+  "note": "tall library bookshelf, books face +Z (back is plain, put it against a wall)"
+ },
+ "clinic_bed": {
+  "file": "clinic_bed.glb",
+  "tris": 6000,
+  "size": [
+   0.5843,
+   0.7508,
+   1.0
+  ],
+  "note": "clinic bed with IV pole, length along X"
+ },
+ "pendant": {
+  "file": "pendant.glb",
+  "tris": 3000,
+  "size": [
+   0.5424,
+   1.0,
+   0.3917
+  ],
+  "note": "blue glass teardrop on a cord (close-up prop; cord ends are cut)"
+ },
+ "airlock_door": {
+  "file": "airlock_door.glb",
+  "tris": 7999,
+  "size": [
+   0.7494,
+   1.0,
+   0.4243
+  ],
+  "note": "round-topped airlock hatch in a frame (village gate), faces +Z"
+ },
+ "clinic": {
+  "file": "clinic.glb",
+  "tris": 20000,
+  "size": [
+   1.0,
+   0.8311,
+   0.96
+  ],
+  "note": "colony clinic: hull-plate roof, portholes, green cross, door on +Z; a round pod annex on the +X side"
+ },
+ "display_case": {
+  "file": "display_case.glb",
+  "tris": 6000,
+  "size": [
+   0.6026,
+   1.0,
+   0.5933
+  ],
+  "note": "museum display stand: crystal on a cushion inside an open brass frame (no glass; add a transparent box in code if wanted)"
+ },
+ "egg": {
+  "file": "egg.glb",
+  "tris": 1500,
+  "size": [
+   0.9998,
+   0.8082,
+   1.0
+  ],
+  "note": "single brown egg, lies along X"
+ },
+ "rug_round": {
+  "file": "rug_round.glb",
+  "tris": 1500,
+  "size": [
+   1.0,
+   0.067,
+   0.9932
+  ],
+  "note": "flat round rug, navy and cream"
+ },
+ "library": {
+  "file": "library.glb",
+  "tris": 20000,
+  "size": [
+   0.9117,
+   1.0,
+   0.9188
+  ],
+  "note": "colony library: hull-plate roof, porthole, door on +Z, book window on the +X side"
+ },
+ "maint_bot": {
+  "file": "maint_bot.glb",
+  "tris": 6000,
+  "size": [
+   0.8099,
+   1.0,
+   0.7721
+  ],
+  "note": "small wheeled maintenance robot, lens faces +Z"
+ },
+ "fridge": {
+  "file": "fridge.glb",
+  "tris": 5000,
+  "size": [
+   0.7586,
+   1.0,
+   0.7485
+  ],
+  "note": "retro cold-locker fridge with porthole, door on +Z"
+ },
+ "scrap_heap": {
+  "file": "scrap_heap.glb",
+  "tris": 6000,
+  "size": [
+   0.9629,
+   0.6111,
+   1.0
+  ],
+  "note": "heap of scrap: gears, pipes, a wheel"
+ },
+ "kitchen": {
+  "file": "kitchen.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.7547,
+   0.6437
+  ],
+  "note": "kitchen counter with stove and sink, front +Z, length along X"
+ },
+ "storage_box": {
+  "file": "storage_box.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.9671,
+   0.9904
+  ],
+  "note": "wooden storage chest with metal corners and a cyan status light, front +Z"
+ },
+ "wardrobe": {
+  "file": "wardrobe.glb",
+  "tris": 6000,
+  "size": [
+   0.5933,
+   1.0,
+   0.4333
+  ],
+  "note": "two-door wooden wardrobe, doors on +Z"
+ },
+ "bookcase_small": {
+  "file": "bookcase_small.glb",
+  "tris": 5000,
+  "size": [
+   0.659,
+   1.0,
+   0.4205
+  ],
+  "note": "low bookcase with a pot plant on top, books on +Z"
+ },
+ "tv": {
+  "file": "tv.glb",
+  "tris": 4000,
+  "size": [
+   0.9815,
+   0.9872,
+   1.0
+  ],
+  "note": "chunky retro TV showing the weather, screen on +Z (deep grey tube box at the back)"
+ },
+ "lamp": {
+  "file": "lamp.glb",
+  "tris": 3000,
+  "size": [
+   0.6242,
+   1.0,
+   0.6239
+  ],
+  "note": "table lamp with cream shade"
  }
 }

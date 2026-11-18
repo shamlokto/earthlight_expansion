@@ -153,7 +153,9 @@ def make_tile(im, mode="quilt", size=1024, flatten=0.85):
         return Image.fromarray(c.astype(np.uint8)).resize((size, size), Image.LANCZOS)
     n = a.shape[1]
     lo, hi = int(n * 0.70), int(n * 0.86)
-    if mode == "quilt":
+    if mode == "edge":   # painted over a guide that already repeats at the full image size: only blend the borders
+        tx = ty = n - max(24, n // 28)
+    elif mode == "quilt":
         tx = ty = int(n * 0.78)
     else:  # "period": search the repeat distance of a regular pattern
         tx = _best_period(a, lo, hi)
@@ -189,6 +191,16 @@ def sky():
             from PIL import ImageEnhance
             im = ImageEnhance.Brightness(ImageEnhance.Color(im).enhance(0.22)).enhance(0.74)
             im = Image.blend(im, Image.new("RGB", im.size, (96, 104, 116)), 0.18)
+        if slot.startswith("sky_colony"):
+            # painted as one look along the cylinder: use the central part and its mirror image, i.e. the view
+            # along the axis forward and backward; both joints are mirror joints, so the 360 wraps seamlessly
+            c = im.crop((im.width // 2 - 640, 0, im.width // 2 + 640, im.height)).resize((1024, 1024), Image.LANCZOS)
+            out = Image.new("RGB", (2048, 1024)); out.paste(c, (0, 0)); out.paste(c.transpose(Image.FLIP_LEFT_RIGHT), (1024, 0))
+            save_webp(out, "sky/%s.webp" % slot, 84)
+            meta_set("sky/" + slot, wrap="mirror", note="axis view forward and backward")
+            r = Image.new("RGB", (2048, 1024)); r.paste(out, (-1024, 0)); r.paste(out, (1024, 0))
+            prev.append((slot + " (seam centred)", r.resize((960, 480))))
+            continue
         a = np.asarray(im, float)
         O = im.width // 8
         T = im.width - O
@@ -281,7 +293,7 @@ def anchor_of(im):
     return [int(round((xs.min() + xs.max()) / 2)), y]
 
 
-CENTRE_ONLY = {"crystal", "milk_m"}
+CENTRE_ONLY = {"crystal", "milk_m", "hoe", "frostcap", "pie", "seedbag"}
 CUT_SPEC = {"sprites": ("sprites", 512), "pallas": ("sprites", 512), "buildings": ("buildings", 1024), "people": ("people", 768), "people_views": ("people", 768), "icons": ("icons", 256)}
 
 

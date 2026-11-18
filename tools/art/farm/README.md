@@ -34,7 +34,8 @@ python3 comfy.py run sato_portraits --only sato_portrait --seeds 3 ; python3 pos
 python3 comfy.py run sato_portraits                        #    happy / tired from the picked portrait
 python3 comfy.py run people --seeds 2                      # 2. villagers (Qwen-Edit from art/colony/portrait;
 python3 post.py sel people                                 #    the ones with no portrait use vashti_front as style reference)
-python3 texref.py ; python3 comfy.py run textures          # 3. textures: Qwen-Edit over flat procedural layout guides
+python3 texref.py ; TEX_DENOISE=0.6 python3 comfy.py run textures   # 3. textures: Qwen-Image img2img over flat procedural layout guides
+#    (0.5 keeps the layout but looks flat, 0.78 brings perspective back; regular grids tile with mode "edge")
 python3 comfy.py run sky --seeds 2
 python3 comfy.py run scenes --seeds 2                      # 4.
 python3 comfy.py run icons                                 # 5.
@@ -54,7 +55,8 @@ name `farm_<group>_<basename>` and set `COMFY_NO_UPLOAD=1`.
 
 What we learned about prompting Qwen-Image (all reflected in `prompts.py`):
 * negations backfire ("not pixel art" gave pixel art, "no naval guns" gave battleships): describe only what you want;
-* it will not paint a flat top-down surface from text: textures go through Qwen-Edit over `texref.py` guides;
+* it will not paint a flat top-down surface from text: textures are repainted (img2img, denoise ~0.6) over `texref.py` guides;
+* the `sky_colony_*` panoramas are one look along the cylinder axis; post.py mirrors the centre part (forward + backward view) so the 360 wraps;
 * "space colony" draws a metal ring: the colony sky is described as an upside-down far land plus a horizontal line of light;
 * "ship / warship / tug" in space draws sea ships: describe modules, tanks and truss girders instead;
 * "game item icon" can give app-style tiles, hands or kawaii faces: say "illustration of an object", then reject the odd ones.

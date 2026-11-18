@@ -65,7 +65,7 @@ TEXTURES = {
     "brick_ruin": (WALL + "an old ruined brick wall of dark red and brown bricks in regular horizontal courses, crumbling mortar, soot stains and a few chipped bricks.", "mirror"),
     "ash_ground": (TEX + "grey poisoned dead earth covered in ash and pale rubble dust, with small fragments of broken concrete and cinders.", "quilt"),
     "hay": (TEX + "a thick layer of loose golden hay and straw, tangled dry stalks.", "quilt"),
-    "hull_plate": (WALL + "the inside wall of a space colony: large riveted pastel pale-grey metal hull panels with neat seams and rows of small round rivets, soft clean paint, a few gentle scuffs.", "period"),
+    "hull_plate": (WALL + "large riveted pastel pale-grey metal hull panels with neat seams and rows of small round rivets, soft clean paint, a few gentle scuffs.", "period"),
     "deck_floor": (TEX + "non-slip metal deck plating of a space colony: square grey steel floor plates with a fine raised diamond tread pattern, neat seams, and two thin softly glowing cyan guide lines running straight along it.", "period"),
     "glass_window": (WALL + "a band of big space-colony window panels between slim pale-grey metal mullions, looking out at deep blue-black space full of small bright stars, with the edge of the blue-and-white Earth glowing at the lower right.", "period"),
     "colony_path": (TEX + "pale cream composite paving slabs of a space colony walkway, clean square slabs with fine joints, and thin inset strips of soft glowing light running straight across.", "period"),
@@ -323,12 +323,12 @@ VIDEOS = {  # name: (scene slot, prompt)
     "season_summer": ("season_summer", "A warm summer day: the leaves of the tree and the tall crops sway gently in a light breeze, heat shimmer, small clouds move slowly." + VSTYLE),
     "season_autumn": ("season_autumn", "An autumn afternoon: orange leaves fall slowly from the tree and drift across the field, the dry grass sways gently." + VSTYLE),
     "season_winter": ("season_winter", "A quiet winter day: snowflakes fall slowly and softly, smoke rises gently from the farmhouse chimney, everything else is still." + VSTYLE),
-    "wedding": ("wedding", "An evening village wedding seen from behind the bride: paper lanterns sway gently on their strings and glow, flower petals drift slowly down through the air, the villagers smile and clap softly, the bride's dress and hair stir slightly." + VSTYLE),
+    "wedding": ("wedding", "The camera stays exactly where it is and does not move or zoom. The bride in the white dress stands still in the centre, seen from behind, holding a hand that reaches in from the right edge of the frame; the partner stays outside the frame, only the hand and cream sleeve are ever visible. Paper lanterns sway gently and glow, flower petals drift slowly down, the villagers in the distance smile and clap softly." + VSTYLE),
     "upperdeck": ("upperdeck", "A sunny hillside district: parasols and flowers sway in a light breeze, tiny people stroll, the stream sparkles, small clouds drift slowly." + VSTYLE),
     "festival_planting": ("festival_planting", "A spring planting festival in a village square: blossom petals drift down, the cloth bunting flutters, villagers carry trays of seedlings and walk slowly, children run past in the background." + VSTYLE),
     "festival_harvest": ("festival_harvest", "An autumn harvest fair: coloured leaves drift down from the trees, the bunting flutters gently, villagers at the stalls chat and laugh with small natural movements." + VSTYLE),
     "festival_yearend": ("festival_yearend", "A winter evening gathering: snow falls softly, the bonfire in the brazier flickers and sends up sparks, the strings of lights twinkle, steam rises from the mugs, people shift gently." + VSTYLE),
-    "ruins": ("ruins", "A dead ruined city street: dust and ash drift slowly along the ground, haze moves between the broken towers, dry vines stir slightly; nothing else moves." + VSTYLE),
+    "ruins": ("ruins", "A silent, abandoned ruined city street where every car is a rusted wreck that stays parked: only fine dust and ash drift slowly along the ground and thin haze moves between the broken towers; the dry vines stir slightly." + VSTYLE),
     "heart10": ("heart10", "Two people sit quietly side by side on the porch steps at dusk, seen from behind; one leans very slightly toward the other; the crops sway gently in the evening breeze, the lantern flame flickers, steam rises from the mugs." + VSTYLE),
 }
 WALKSTYLE = (" She stays exactly in the centre of the frame, the whole body from head to boots always visible, steady even rhythm, natural arm swing. "
@@ -381,8 +381,8 @@ ICONS = {
     "medal": "one old bronze medal, a plain five-pointed star hanging from a short faded blue ribbon", "seedtin": "one small old round metal tin of seeds, dented, lid slightly open showing seeds, no label",
     "musicbox": "one small old wooden music box with a brass crank and open lid", "datachip": "one small translucent blue data chip with gold contacts", "ring": "one plain old gold ring",
     "bread": "one round crusty loaf of country bread", "soup": "one earthenware bowl of vegetable soup with a wooden spoon", "pie": "one golden baked apple pie with a lattice crust in a round tin dish, drawn as a simple still life", "tea": "one white enamel mug of hot tea with a thin wisp of steam, standing on its own",
-    "tonic": "one small corked glass bottle of amber tonic, plain, no label", "hoe": "one long-handled garden hoe, a straight wooden pole with a flat rectangular steel blade fixed at a right angle at one end, lying diagonally on its own", "can": "one galvanised metal watering can with a long spout",
-    "sickle": "one hand sickle, a crescent-shaped curved steel blade on a short wooden handle, lying diagonally on its own", "hammer": "one heavy sledgehammer with a wooden handle, lying diagonally", "axe": "one wood axe with a wooden handle and steel head, lying diagonally",
+    "tonic": "one small corked glass bottle of amber tonic, plain, no label", "hoe": "one garden hoe lying flat on a plain grey table, seen from above: a long straight wooden handle and a flat rectangular steel blade fixed at a right angle at one end, drawn as a simple still life", "can": "one galvanised metal watering can with a long spout",
+    "sickle": "one classic farm sickle shown alone as a clean product shot, floating in empty space: a crescent-shaped curved steel blade on a short round wooden handle, the whole tool visible", "hammer": "one heavy sledgehammer with a wooden handle, lying diagonally", "axe": "one wood axe with a wooden handle and steel head, lying diagonally",
     "rod": "one simple bamboo fishing rod with a reel and line, lying diagonally", "milker": "one shiny stainless steel milking pail with a wire handle, half full of milk, standing on its own", "brush": "one oval wooden grooming brush for a cow, seen from the side, with stiff natural bristles underneath and a leather hand strap on top, drawn as a simple still life",
     "lumber": "one neat small stack of three sawn wooden planks tied with rope", "feed": "one small burlap sack of hen feed, tied at the top, a few grains spilling out, no printing",
     "fodder": "one bundle of golden hay tied with twine", "pendant": "one pendant, a teardrop of clear blue glass on a thin leather cord, the glass glowing faintly from within",
@@ -404,7 +404,7 @@ def jobs(group, work="/tmp/farm-art"):
     add = lambda slot, kind, prompt, w, h, **kw: out.append(dict(group=group, slot=slot, kind=kind, prompt=prompt, w=w, h=h, **kw))
     if group == "textures":
         for k, (p, _mode) in TEXTURES.items():
-            add(k, "i2i", TEXE.format(x=p), 1328, 1328, refs=[os.path.join(work, "texref", k + ".png")], denoise=0.78)
+            add(k, "i2i", TEXE.format(x=p), 1328, 1328, refs=[os.path.join(work, "texref", k + ".png")], denoise=float(os.environ.get("TEX_DENOISE", "0.6")))
     elif group == "sky":
         for k, p in SKIES.items():
             add(k, "t2i", p, 2048, 1024)
