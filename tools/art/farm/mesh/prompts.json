@@ -734,5 +734,47 @@
   "tris": 12000,
   "kind": "obj",
   "x": "small guard post booth: a compact white and navy metal building with a flat roof, a big window, a rounded door, a navy-and-white banner hanging on a pole beside it, a small cyan light on the roof"
+ },
+ "farm_bot": {
+  "tris": 8000,
+  "kind": "creature",
+  "x": "small farm robot, a round pastel orange and white body on two stubby legs, two little arms, a watering-can spout on one side and a tiny woven basket on its back, one big friendly round lens"
+ },
+ "field_chest": {
+  "tris": 5000,
+  "kind": "obj",
+  "x": "wooden outdoor storage chest with a closed lid, riveted pale metal hull-plate corners and a latch, sturdy and rounded",
+  "opts": "t512"
+ },
+ "onsen_pool": {
+  "tris": 8000,
+  "kind": "obj",
+  "x": "small natural hot-spring pool, wider than deep, a low ring of rounded grey stones around a flat calm turquoise water surface, a little wooden bucket on the stones, very low and flat"
+ },
+ "sapling": {
+  "tris": 4000,
+  "kind": "plant",
+  "x": "young tree sapling: a thin trunk with a few small branches of fresh green leaves, tied to a wooden stake, in a small mound of soil",
+  "opts": "t512"
+ },
+ "fruit_tree_apple": {
+  "tris": 12000,
+  "kind": "plant",
+  "x": "small round fruit tree with a short thick brown trunk and a round puffy green leafy crown made of a few large soft clumps, whole tree from roots to top, with many shiny red apples among the leaves"
+ },
+ "fruit_tree_peach": {
+  "tris": 12000,
+  "kind": "plant",
+  "x": "small round fruit tree with a short thick brown trunk and a round puffy green leafy crown made of a few large soft clumps, whole tree from roots to top, with many round pink-orange peaches among the leaves"
+ },
+ "fruit_tree_cherry": {
+  "tris": 12000,
+  "kind": "plant",
+  "x": "small round fruit tree with a short thick brown trunk and a round puffy green leafy crown made of a few large soft clumps, whole tree from roots to top, with pink blossoms and many small red cherries among the leaves"
+ },
+ "fruit_tree_persimmon": {
+  "tris": 12000,
+  "kind": "plant",
+  "x": "small round fruit tree with a short thick brown trunk and a round puffy green leafy crown made of a few large soft clumps, whole tree from roots to top, with many round orange persimmons among the leaves"
  }
 }
