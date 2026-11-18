@@ -793,5 +793,17 @@
  "_edit_pallasU": "Turn this pixel-art robot into a smooth high-quality 3D anime collectible figurine render (not pixel art, no pixels), chibi proportions about three heads tall with a big head, still clearly a mecha. Keep exactly the same design and colours: the rounded helmet with one swept crest and the glowing visor band, the canopy chest, the round shoulder thruster binders, the armour shapes. Pose: standing straight and symmetrical, straight front view at eye level, feet apart, both arms hanging straight down a little away from the body. Both hands are empty and open, no weapons at all. Soft studio lighting, plain pure white background, no shadow, the whole figure visible.",
  "_edit_pallasX": "Repaint this low-resolution pixel-art robot as a high-resolution smooth digital anime mecha illustration with clean anti-aliased line art and soft cel shading, like a professional mecha design sheet. Absolutely no pixel art, no visible pixels, no jagged edges. Exactly the same design, proportions and colours. Full body, front three-quarter view, standing, holding the rifle and the beam sabre, plain pure white background, no text.",
  "_edit_pallasY": "Repaint this low-resolution pixel-art jet fighter as a high-resolution smooth digital anime mecha illustration with clean anti-aliased line art and soft cel shading, like a professional design sheet. Absolutely no pixel art, no visible pixels, no jagged edges. Exactly the same design and colours. Side three-quarter view, the whole aircraft visible, plain pure white background, no text.",
- "_edit_pallasV": "The same mecha figurine, identical design, colours, pose and camera, but with both hands empty and open: remove the rifle and the beam sabre completely. Plain pure white background, no shadow."
+ "_edit_pallasV": "The same mecha figurine, identical design, colours, pose and camera, but with both hands empty and open: remove the rifle and the beam sabre completely. Plain pure white background, no shadow.",
+ "pallasFe": {
+  "tris": 24000,
+  "x": "compact stocky humanoid work mecha robot, original design, toy-like but cool, standing straight and still like a figurine in a symmetrical neutral A-pose with both feet flat on the floor and both arms hanging down at its sides, glossy navy blue armour with rose-pink trim lines, a small rounded head with one glowing cyan visor, its right forearm is a big chunky three-pronged salvage claw gripper instead of a hand, its left arm has a normal mechanical hand, a wire cargo basket mounted on its back visible behind the shoulders, broad shoulders, big sturdy legs and feet, full body, front view",
+  "kind": "creature",
+  "opts": "hv768"
+ },
+ "pallasVe": {
+  "tris": 24000,
+  "x": "compact stocky humanoid work mecha robot, original design, toy-like but cool, standing straight and still like a figurine in a symmetrical neutral A-pose with both feet flat on the floor and both arms hanging down at its sides, glossy navy blue armour with rose-pink trim lines, a small rounded head with one glowing cyan visor, its right forearm is a big chunky three-pronged salvage claw gripper instead of a hand, its left arm has a normal mechanical hand, a wire cargo basket mounted on its back visible behind the shoulders, broad shoulders, big sturdy legs and feet, full body, front view",
+  "kind": "creature",
+  "opts": "hv768"
+ }
 }

@@ -15,3 +15,9 @@ blade crest, amber accents. A good alternative if the owner wants a clean break 
 Rejected: `pallasAe_82`, `pallasDe_82` (V-shaped horns came back), `pallasAe_81`, `pallasDe_81`, `pallasCe_82`,
 `pallasBe_81` (weaker heads / busier silhouettes). Jets: `pallasJAe_81` (pearl, teal, coral) and `pallasJCe_81`
 (white, crimson) both keep the twin tail fins and canopy; JC matches pick 1.
+
+Files for the expansion: `tools/art/pallas/redesign/` - `pallas_robot_front34.png` (clean robot, 3/4 front, rifle and sabre;
+`_alt` is a second seed), `pallas_jet_34.png` (jet form, 3/4 side), the pixel-art picks they came from, the figurine
+concept used for the farm model, and the contact sheet. Qwen-Image-Edit only dropped the pixel look when the
+reference picture was first softened (downscale, bicubic upscale, blur); the robot still has a few hard edges on
+the shoulder binders.
