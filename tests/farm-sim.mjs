@@ -76,7 +76,7 @@ const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
 
 function script(s, days = 12) {
   let k = 7;
-  const r = (n) => (k = (k * 1103515245 + 12345) & 0x7fffffff) % n;
+  const r = (n) => ((k = (k * 1103515245 + 12345) & 0x7fffffff) >>> 8) % n;   // high bits: the low ones cycle
   for (let d = 0; d < days; d++) {
     for (let i = 0; i < 30; i++) {
       s.player.sel = r(8);
@@ -744,7 +744,7 @@ function script(s, days = 12) {
   for (const seed of [1001, 1002, 1003]) {
     const s = newGame({ seed });
     let k = seed, threw = null, minMoney = s.player.money, actions = 0, good = 0;
-    const r = (n) => (k = (k * 1103515245 + 12345) & 0x7fffffff) % n;
+    const r = (n) => ((k = (k * 1103515245 + 12345) & 0x7fffffff) >>> 8) % n;   // high bits: the low ones cycle
     const junk = [undefined, null, -1, 999, 1.5, NaN, 'x', '__proto__', 'constructor', {}, [], true, Infinity];
     const any = (v) => (r(12) === 0 ? junk[r(junk.length)] : v);
     const itemIds = Object.keys(ITEMS), shops = [...Object.keys(sim.SHOPS), 'nowhere'], npcs = [...sim.NPC_IDS, 'nobody'];
@@ -783,7 +783,10 @@ function script(s, days = 12) {
       () => sim.pickFruit(s, any(r(4))), () => sim.removeTree(s, any(r(4))),
       () => sim.storeItem(s, any(`chest:${r(3)}`), any(r(s.player.slots))), () => sim.takeItem(s, any(`chest:${r(3)}`), any(r(20))),
       () => sim.useCharger(s, any(r(3))), () => sim.chargeRobot(s, any(r(4))), () => sim.setRobotJob(s, any(r(4)), any(['water', 'harvest', 'animals', 'rest'][r(4)])),
-      () => sim.renameRobot(s, any(r(4)), any('Bean')), () => sim.soak(s), () => sim.shipBasket(s), () => sim.basketTake(s, any(r(3))),
+      () => sim.renameRobot(s, any(r(4)), any('Bean')),
+      () => [() => sim.grantPlum(s, any(sim.STAR_PLUM_SOURCES[r(10)])), () => sim.sellToMarket(s, any(r(s.player.slots))), () => sim.gallerySit(s),
+        () => sim.siloAdd(s, any(r(s.player.slots))), () => sim.millAdd(s, any(r(s.player.slots))), () => sim.yardDeposit(s), () => sim.yardCollect(s),
+        () => sim.hydroPlant(s, any(r(8))), () => sim.hydroHarvest(s, any(r(8)))][r(9)](), () => sim.soak(s), () => sim.shipBasket(s), () => sim.basketTake(s, any(r(3))),
     ];
     try {
       for (let day = 0; day < 120; day++) {
@@ -1021,6 +1024,74 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   const v = newGame({ seed: 4 }); r = sim.pickWild(v, 'village:9', 'plum', true); check(r.ok && sim.countItem(v, 'plum') === 1, 'a village tree gives one fruit');
   v.cal.day += 3; check(!sim.pickWild(v, 'village:9', 'plum', true).ok, 'village trees take longer to come back'); v.cal.day += 2; check(sim.pickWild(v, 'village:9', 'plum', true).ok, 'and then fruit again');
   check(!sim.pickWild(v, 'x', 'banana').ok, 'unknown fruit refused');
+}
+
+// ---------------------------------------------------------------- star-plums, the Main deck, silo, mill, solar yard, hydroponics
+{
+  check(sim.STAR_PLUM_SOURCES.length === 10 && ITEMS.star_plum && ITEMS.star_plum.maxUp === 10 && !ITEMS.star_plum.sell, 'ten star-plum sources; it cannot be shipped');
+  const s = rich(201); s.player.stamina = 50;
+  check(sim.grantPlum(s, 'harvest').ok && countItem(s, 'star_plum') === 1 && !act(sim.grantPlum(s, 'harvest')).ok && !act(sim.grantPlum(s, 'nowhere')).ok, 'each source gives once');
+  let r = sim.eat(s, slotOf(s, 'star_plum')); check(r.ok && r.celebrate && s.player.maxStamina === 110 && s.player.stamina === 60 && s.stats.starPlums === 1, 'a star-plum: max stamina 110');
+  s.player.maxStamina = 195; addItem(s, 'star_plum', 2); r = sim.eat(s, slotOf(s, 'star_plum')); check(r.ok && s.player.maxStamina === 200, 'capped at 200');
+  check(!act(sim.eat(s, slotOf(s, 'star_plum'))).ok && countItem(s, 'star_plum') === 1, 'at the cap it is kept');
+  const k = rich(202); k.flags.kitchen = true; while (k.player.inv.length < 25) k.player.inv.push(null); k.player.slots = 25; for (const id of ['fish_s', 'apple', 'carrot', 'egg', 'honeycomb', 'chestnut', 'milk_s', 'egg']) addItem(k, id, 1);
+  check(sim.cook(k, 'colony_feast').ok && sim.cook(k, 'founders_cake').ok, 'colony feast and founders\' cake');
+  k.player.stamina = 100; r = sim.eat(k, slotOf(k, 'colony_feast')); check(r.ok && r.celebrate && k.player.maxStamina === 105, 'the first colony feast: +5 max even when full');
+  addItem(k, 'colony_feast', 1); k.player.stamina = 10; r = sim.eat(k, slotOf(k, 'colony_feast')); check(r.ok && !r.celebrate && k.player.maxStamina === 105, 'the second: just food');
+  r = sim.eat(k, slotOf(k, 'founders_cake')); check(r.ok && k.player.maxStamina === 110, 'the first founders\' cake: +5');
+  // the ruins at depth 10
+  const d = newGame({ seed: 203 }); sim.enterMine(d, 10); const star = d.mine.star; check(star >= 0 && d.mine.cells[star] === 1, 'depth 10 has a star pile');
+  r = sim.hitRock(d, star % d.mine.w, Math.floor(star / d.mine.w)); check(r.ok && r.star && countItem(d, 'star_plum') === 1 && d.flags.plum_ruins10, 'searching it finds the star-plum');
+  sim.enterMine(d, 10); check(d.mine.star === -1, 'only once'); sim.enterMine(d, 9); check(d.mine.star === -1, 'not at depth 9');
+  // Moraine: one a year
+  const m = rich(204); setDate(m, 0, 6);
+  check(shopStock(m, 'barge').find((e) => e.key === 'star_plum').price === 8000 && buy(m, 'barge', 'star_plum').ok && !shopStock(m, 'barge').some((e) => e.key === 'star_plum') && m.flags.plum_moraine, 'Moraine sells one star-plum a year');
+  m.cal.year = 2; check(shopStock(m, 'barge').some((e) => e.key === 'star_plum'), 'and another next year');
+  // the collector
+  const c = newGame({ seed: 205 }); for (const id of Object.keys(ITEMS).filter((x) => ITEMS[x].sell).slice(0, sim.COLLECTOR_KINDS)) c.ledger.shipped[id] = 1;
+  for (let i = 0; i < 10; i++) if (!c.player.inv[i]) c.player.inv[i] = { id: 'bread', n: 99 };
+  let rep = sleep(c); check(c.flags.plum_collector && c.storage.some((b) => b && b.id === 'star_plum') && rep.notes.some((n) => /star-plum/.test(n)), 'the collector\'s star-plum (into the storage box when the rucksack is full)');
+  check(sim.starPlumsFound(c) === 1, 'found: 1 of 10');
+  // the Grand Market
+  const g = rich(206);
+  const gs = shopStock(g, 'grandmarket'); check(gs.find((e) => e.key === 'gm_seed_turnip').price === 150 && gs.find((e) => e.key === 'gm_sapling_apple').price === 2800 && gs.some((e) => e.key === 'gm_battery'), 'the market sells imports at a premium');
+  setDate(g, 3, 4); check(shopStock(g, 'grandmarket').some((e) => e.key === 'gm_sapling_cherry'), 'saplings even in winter');
+  check(buy(g, 'grandmarket', 'gm_battery').ok && countItem(g, 'battery') === 1, 'buy a battery');
+  check(sim.marketPrice('fruit_tart') === 456 && sim.marketPrice('matsutake') === 480 && sim.marketPrice('turnip') === 0 && sim.marketPrice('ring') === 0, 'it buys fine food at +20%');
+  addItem(g, 'fruit_tart', 2); const before = g.player.money; r = sim.sellToMarket(g, slotOf(g, 'fruit_tart')); check(r.ok && g.player.money === before + 912 && !countItem(g, 'fruit_tart') && g.ledger.shipped.fruit_tart === 2, 'sell two fruit tarts');
+  addItem(g, 'turnip', 1); check(!act(sim.sellToMarket(g, slotOf(g, 'turnip'))).ok, 'not turnips');
+  g.cal.minute = 700; r = sim.gallerySit(g); check(r.ok && !r.restored && !r.night, 'the gallery by day: just the view');
+  g.cal.minute = 1200; g.player.stamina = 50; r = sim.gallerySit(g); check(r.ok && r.restored === 20 && g.player.stamina === 70, 'after dark: +20');
+  r = sim.gallerySit(g); check(r.ok && !r.restored && r.again, 'once a day');
+  // the silo and the feed mill
+  const f = rich(207); addItem(f, 'carrot', 5); f.stock.fodder = 0;
+  r = sim.siloAdd(f, slotOf(f, 'carrot'), 3); check(r.ok && f.stock.fodder === 6 && countItem(f, 'carrot') === 2, 'silo: 1 crop = 2 fodder');
+  addItem(f, 'egg', 1); check(!act(sim.siloAdd(f, slotOf(f, 'egg'))).ok, 'no eggs in the silo');
+  check(!act(sim.millAdd(f, slotOf(f, 'carrot'))).ok, 'no mill yet');
+  check(buy(f, 'workshop', 'feed_mill').ok && f.flags.feed_mill && !shopStock(f, 'workshop').some((e) => e.key === 'feed_mill'), 'Ruess builds the feed mill, once');
+  addItem(f, 'corn', 2); addItem(f, 'chestnut', 3); f.stock.feed = 0;
+  check(sim.millAdd(f, slotOf(f, 'corn')).ok && sim.millAdd(f, slotOf(f, 'carrot')).ok && sim.millAdd(f, slotOf(f, 'chestnut')).ok && sim.millCount(f) === 7, 'seven crops in the hopper');
+  addItem(f, 'potato', 30); r = sim.millAdd(f, slotOf(f, 'potato')); check(r.ok && sim.millCount(f) === 20 && countItem(f, 'potato') === 17, 'twenty a day');
+  rep = sleep(f); check(f.stock.feed === 10 + Math.floor(18 / 2) * 3 && sim.millCount(f) === 0 && rep.notes.some((n) => /feed mill ground/.test(n)), `milled overnight: ${f.stock.feed} feed`);
+  // the solar yard
+  const y = rich(208); addItem(y, 'battery', 8); const m0 = y.player.money;
+  r = sim.yardDeposit(y); check(r.ok && y.solarYard.slots.length === 6 && y.player.money === m0 - 180 && countItem(y, 'battery') === 2, 'six batteries racked for 30 cr each');
+  y.weather = 'rain'; sleep(y); check(y.solarYard.slots.filter((b) => b === 'battery_full').length === 3, 'rain: half charged');
+  r = sim.yardDeposit(y); check(r.ok && countItem(y, 'battery_full') === 3 && y.solarYard.slots.length === 3, 'collect the charged ones');
+  y.weather = 'storm'; sleep(y); check(!y.solarYard.slots.includes('battery_full'), 'a storm: none'); y.weather = 'sun'; sleep(y); check(y.solarYard.slots.every((b) => b === 'battery_full'), 'sun: all');
+  // the hydroponics garden
+  const h = rich(209); setDate(h, 3, 2);
+  check(!act(sim.hydroPlant(h, 0)).ok, 'an unrented tower');
+  for (let i = 0; i < 4; i++) check(buy(h, 'store', 'hydro_tower').ok, `rent tower ${i + 1}`);
+  check(!act(buy(h, 'store', 'hydro_tower')).ok && h.hydro.length === 4, 'four at most');
+  addItem(h, 'seed_strawberry', 1); select(h, 'seed_strawberry'); r = sim.hydroPlant(h, 0); check(r.ok && h.hydro[0].crop.id === 'strawberry', 'strawberries in winter, in a tower');
+  check(!act(sim.hydroHarvest(h, 0)).ok, 'not ripe yet');
+  for (let i = 0; i < 8; i++) sleep(h);
+  r = sim.hydroHarvest(h, 0); check(r.ok && countItem(h, 'strawberry') === 1 && h.hydro[0].crop.age === 6, 'ripe in 8 days without watering, and it regrows');
+  setDate(h, 3, 30); rep = sleep(h); check(!h.hydro.length && rep.notes.some((n) => /rentals ended/.test(n)), 'rentals end at the season change');
+  // old saves
+  const old = JSON.parse(saveState(newGame({ seed: 210 }))); for (const kk of ['mill', 'hydro', 'solarYard']) delete old[kk];
+  const O = loadState(JSON.stringify(old)); check(O && Array.isArray(O.mill) && Array.isArray(O.hydro) && Array.isArray(O.solarYard.slots) && sleep(O).ok, 'an old save gains the mill, the towers and the yard');
 }
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

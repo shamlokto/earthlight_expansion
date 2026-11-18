@@ -133,7 +133,7 @@ export const SPOTS = [
   'farm.porch', 'farm.bin', 'farm.gate', 'farm.pond', 'farm.field',
   'village.square', 'village.memorial', 'village.bridge', 'village.dock', 'village.bench', 'village.storefront',
   'village.cafefront', 'village.hallfront', 'village.workshopfront', 'village.ranchyard', 'village.river',
-  'hill.wreck', 'hill.lake', 'hill.overlook', 'hill.onsen',
+  'hill.wreck', 'hill.lake', 'hill.overlook', 'hill.onsen', 'central.office', 'central.arrivals',
   'store.counter', 'store.floor', 'ranch.counter', 'workshop.counter', 'workshop.bench',
   'cafe.counter', 'cafe.table1', 'cafe.table2', 'cafe.table3', 'hall.desk', 'hall.floor',
   'clinic.counter', 'clinic.floor', 'library.counter', 'library.floor', 'village.clinicfront', 'village.libraryfront',
@@ -277,7 +277,7 @@ const SCHEDULE = {
   // The courier: the farm's bin at five, the village otherwise.
   maris(wd, m) {
     const round = ['village.ranchyard', 'village.workshopfront', 'village.bridge', 'village.square', 'village.ranchyard', 'village.memorial', 'village.river'][wd];
-    return pick(m, [H(8), H(9, 30), wd === 5 ? 'village.square' : 'village.dock'],
+    return pick(m, [H(8), H(9, 30), wd === 5 ? 'village.square' : wd === 1 || wd === 4 ? 'central.arrivals' : 'village.dock'],   // Tue and Fri: her run lands at Eden Central
       [H(9, 30), H(10, 30), wd < 5 ? 'hall.floor' : 'village.hallfront'],
       [H(10, 30), H(12), 'village.storefront'], [H(12), H(13, 30), 'cafe.table2'], [H(13, 30), H(16, 20), round],
       [H(16, 20), H(17), 'farm.gate'], [H(17), H(17, 40), 'farm.bin'], [H(17, 40), H(18, 10), 'farm.gate'],
@@ -302,8 +302,8 @@ const SCHEDULE = {
       if (c.weather === 'rain' || c.weather === 'snow') return 'farm.porch';
       return pick(m, [H(11), H(12, 30), 'farm.porch'], [H(12, 30), H(14, 30), 'farm.field'], [H(14, 30), H(16), 'farm.pond']);
     }
-    if (wd === 2 && (c.year || 1) >= 2) return pick(m, [H(18), H(21), 'cafe.table1']);
-    return null;
+    if (wd === 2 && (c.year || 1) >= 2 && m >= H(18)) return pick(m, [H(18), H(21), 'cafe.table1']);
+    return wd < 5 ? pick(m, [H(9), H(17), 'central.office']) : null;   // weekdays: the Governor's office on the Main deck
   },
 };
 
@@ -2206,4 +2206,21 @@ export const QUESTS = {
     Q('yui_fish', 'fish_m', 1, 'One river trout? I should like a quiet fish supper. For two, if... if you are not busy. You need not talk.', 'Thank you. Come at seven. I have laid the table already. Twice.', { minHearts: 5 }),
     Q('yui_musicbox', 'musicbox', 1, 'There is a thing I would like, if you ever find one. A music box. The library is very silent after six, and I have begun to mind.', 'It plays. Listen. ...Stay till it winds down? It is a short tune. I should like it to be longer.', { minHearts: 6 }),
   ],
+};
+
+// ------------------------------------------------------------------ star-plums and the Main deck (2026-11-18)
+export const STAR_PLUM = {
+  found: 'A star-plum! Eat it and your strength grows for good.',
+  seln7: [{ who: 'seln', text: 'Oh, and Mira. There was a second paper in that drawer, and this came up from it in my window box overnight. Star-plum. The founders brought six seeds. I think you should have it.' }],
+  marrow7: [{ who: 'marrow', text: 'One more thing. The hall\'s little tree fruited this year, for the first time since the sealing. Star-plum, the founders called it. Eat it, Captain. Grow strong; the village leans on you now.' }],
+  harvest: [{ who: 'marrow', text: 'And the fair\'s first prize, by vote of the judges and much argument: a star-plum from the hall tree. Well grown, Mira.' }],
+  lantern: [{ who: 'general', text: 'Someone left this on the bridge rail with your name on it. A star-plum. I suspect the whole village, frankly.' }],
+  mori: [{ who: 'mori', text: 'Five favours. You have kept half my clinic stocked. Doctor\'s orders: eat this. A star-plum. I was saving it for a patient who needed it, and you are the one who never stops.' }],
+  hill: 'Under a fern in a quiet corner, something glows violet: a star-plum.',
+};
+export const CENTRAL = {
+  down: 'The car drops through the spoke. You get heavier as you go; at the bottom, the Main deck.',
+  up: 'The car climbs back to the Lantern Ring. Your feet remember the lighter pull.',
+  gallery: ['Through the great window the Earth turns, blue and white and patient. From up here, you cannot see the ash at all.', 'The window frames half the Earth and a slice of the Moon. Somebody on the bench beside you is asleep, smiling.', 'The night shift sun-line dims, and the stars come out on the far side of the glass. Somewhere down there, the old world is waiting for spring.'],
+  galleryDay: 'In daylight the window shows mostly glare and the hull\'s own shadow. The view is better after dark.',
 };

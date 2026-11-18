@@ -35,7 +35,7 @@ const MAIN = VILLAGERS.filter((id) => id !== 'moraine');
 const needTalk = (id) => (id === 'moraine' ? 12 : NEWCOMERS.includes(id) ? 22 : 25);
 const SPOTS = new Set(('farm.porch farm.bin farm.gate farm.pond farm.field village.square village.memorial village.bridge village.dock ' +
   'village.bench village.storefront village.cafefront village.hallfront village.workshopfront village.ranchyard village.river ' +
-  'hill.wreck hill.lake hill.overlook hill.onsen store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
+  'hill.wreck hill.lake hill.overlook hill.onsen central.office central.arrivals store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
   'cafe.counter cafe.table1 cafe.table2 cafe.table3 hall.desk hall.floor ' +
   'clinic.counter clinic.floor library.counter library.floor village.clinicfront village.libraryfront').split(' '));
 const STYLES = new Set(['bob', 'short', 'long', 'bald', 'bun', 'bandana', 'cap']);
@@ -200,8 +200,8 @@ for (let wd = 0; wd < 7; wd++) {
     const g = at('general', wd, m), g2 = at('general', wd, m, { year: 2 });
     if (wd === 5) check((g !== null) === (m >= 600 && m < 1080) && (!g || g.startsWith('village.') || g.startsWith('cafe.')), `the General's Saturday (${m}: ${g})`);
     else if (wd === 6) check((g !== null) === (m >= 660 && m < 960) && (!g || g.startsWith('farm.')), `the General's Sunday (${m}: ${g})`);
-    else check(g === null, `the General is in Eden on weekday ${wd} (${m}: ${g})`);
-    if (wd === 2) check((g2 !== null) === (m >= 1080 && m < 1260) && (!g2 || g2.startsWith('cafe.')), `the General's Wednesday evening from year 2 (${m}: ${g2})`);
+    else check(g === (m >= 540 && m < 1020 ? 'central.office' : null), `the General is at his office on the Main deck on weekday ${wd}, 9 to 5 (${m}: ${g})`);
+    if (wd === 2) check((m >= 1080 && m < 1260 ? g2 && g2.startsWith('cafe.') : g2 === g), `the General's Wednesday evening from year 2 (${m}: ${g2})`);
     else check(g2 === g, 'year 2 changes only his Wednesday');
   }
   for (const m of [600, 720, 900, 1070]) check((at('yui', wd, m) === 'library.counter') === (wd !== 0), `Yui keeps the library 10:00-18:00, not Mondays (wd ${wd}, ${m})`);
