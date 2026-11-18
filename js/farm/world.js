@@ -358,7 +358,7 @@ export class World {
         const m = new THREE.Mesh(tiles(cells, -0.1), wm); m.receiveShadow = true; R.add(m); continue;
       }
       const cp = c === 'c' && !map.indoor && art.has('textures/colony_path');   // colony art, when the pack has it
-      const slot = c === 'g' ? (this.season !== 3 && !map.indoor && art.has('textures/grass_colony') ? 'grass_colony' : 'grass_' + SEASON_KEY[this.season]) : cp ? 'colony_path' : GROUND_TEX[c] || 'soil_dry';
+      const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : cp ? 'colony_path' : GROUND_TEX[c] || 'soil_dry';
       const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : c === 'd' ? 0.015 : 0, false, c === 'c' ? 0.34 : c === 'k' || c === 'b' || c === 'd' ? 0.5 : 0.25), std({ map: art.tex(slot, { repeat: 1 }), color: c === 'f' ? 0xb48a66 : c === 'c' ? 0xd8d2c8 : 0xffffff })); m.receiveShadow = true; R.add(m);
     }
     this.colony.setCentre(H / 2); this.spinners = []; this.bots = null; this.pools = null;

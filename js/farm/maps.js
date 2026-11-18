@@ -149,7 +149,7 @@ function village() {
   // Market Street: stalls, crates and lamps
   for (const x of [23, 26, 35, 38]) m.prop('market_stall', x, 6, { w: 2, rot: 0, tint: x });
   m.prop('cargo_crate', 22, 5); m.prop('cargo_crate', 40, 5); m.prop('cargo_crate', 29, 6); m.prop('cargo_crate', 34, 6, { scale: 0.8 });
-  m.building('water_tower', 9, 3, 2, 2, { height: 4.5, label: 'Water tank', tank: true });
+  m.prop('water_tank', 9, 3, { w: 2, d: 2, scale: 1.15 });
   for (const [x, y] of [[6, 10], [13, 10], [50, 10], [24, 7], [37, 7], [8, 19], [23, 19], [40, 19], [55, 19], [15, 41], [28, 41], [36, 41], [44, 41], [54, 41], [9, 48], [16, 48], [23, 48], [38, 48], [56, 48], [30, 25], [34, 31]]) m.prop('colony_lamp', x, y);
   // the hydroponics garden: towers in rows, fed from the tank by a pipe
   for (const y of [12, 14]) for (const x of [3, 5, 7, 9]) m.prop('hydro_tower', x, y);
@@ -157,8 +157,8 @@ function village() {
   m.prop('pipe_run', 3, 11, { w: 9 });
   m.prop('wind_turbine_small', 3, 20);
   // the lift kiosk plaza: the lift between the decks, the air-circulation tower, an access hatch
-  m.prop('lift_kiosk', 55, 11, { w: 3, d: 2, act: 'sign', sign: 'village.lift', label: 'Lift to the decks' });
-  m.prop('fan_tower', 59, 11, { w: 2, d: 2, label: 'Air tower' });
+  m.prop('lift_kiosk', 55, 11, { w: 3, d: 2, act: 'sign', sign: 'village.lift', label: 'Lift' });
+  m.prop('fan_tower', 59, 11, { w: 2, d: 2 });
   m.prop('airlock_door', 51, 10, { w: 2 });
   m.prop('noticeboard', 53, 15, { act: 'sign', sign: 'village.square' });
   m.prop('cargo_crate', 61, 15); m.prop('cargo_crate', 60, 15, { scale: 0.75 });

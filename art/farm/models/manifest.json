@@ -1132,5 +1132,85 @@
    0.3961
   ],
   "note": "vertical hydroponic garden tower (grow lights faint in the texture; add an emissive glow in code if wanted)"
+ },
+ "colony_lamp": {
+  "file": "colony_lamp.glb",
+  "tris": 4000,
+  "size": [
+   0.4944,
+   1.0,
+   0.5988
+  ],
+  "note": "street lamp shaped like a spacecraft running light"
+ },
+ "pipe_run": {
+  "file": "pipe_run.glb",
+  "tris": 3999,
+  "size": [
+   1.0,
+   0.5815,
+   0.3801
+  ],
+  "note": "pipe section with a valve wheel, length along X (two tiny loose flecks)"
+ },
+ "vent": {
+  "file": "vent.glb",
+  "tris": 3000,
+  "size": [
+   1.0,
+   0.7206,
+   0.9986
+  ],
+  "note": "floor vent / cooling unit with a fan grille on top"
+ },
+ "cargo_crate": {
+  "file": "cargo_crate.glb",
+  "tris": 3000,
+  "size": [
+   1.0,
+   0.991,
+   0.9929
+  ],
+  "note": "stackable colony cargo container"
+ },
+ "lift_kiosk": {
+  "file": "lift_kiosk.glb",
+  "tris": 8000,
+  "size": [
+   0.8173,
+   1.0,
+   0.7282
+  ],
+  "note": "deck lift kiosk, sliding door on +Z"
+ },
+ "water_tank": {
+  "file": "water_tank.glb",
+  "tris": 6000,
+  "size": [
+   0.5791,
+   1.0,
+   0.6253
+  ],
+  "note": "tall water tank on legs with gauges and a ladder"
+ },
+ "wind_turbine_small": {
+  "file": "wind_turbine_small.glb",
+  "tris": 5000,
+  "size": [
+   0.4654,
+   1.0,
+   0.2885
+  ],
+  "note": "air-circulation fan tower, fan faces +Z"
+ },
+ "noticeboard": {
+  "file": "noticeboard.glb",
+  "tris": 4000,
+  "size": [
+   0.6906,
+   1.0,
+   0.5723
+  ],
+  "note": "village noticeboard with a little roof, faces +Z (a small loose fleck at its foot)"
  }
 }

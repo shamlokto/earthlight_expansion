@@ -249,3 +249,22 @@ existing game is used.
   Moraine's barge) asks the question; the wedding follows in the square. A partner is at the farm
   at dawn and in the evening and waters up to 12 plants before Sato wakes.
 * State: `flags.sweet`, `flags.partner`, `flags.quest`, `flags.favours_<id>`, `flags.confess_<id>`.
+
+## 6. The colony look, the bigger town and the map (owner, 2026-11-18)
+
+* **Willowfall** (`maps.js`, 64×52): Market Street with stalls, Lantern Square, the hydroponics
+  garden, the lift kiosk plaza (sign `village.lift`, kept in `maps.js`), the river with the road
+  bridge, a footbridge and the dock, the ranch/clinic/library lane, Willow Lane's cottages, Fountain
+  Park and a solar yard. Ground code `d` is deck plating. `map.areas` names districts for the map;
+  `map.bots` are the maintenance bots' routes (cosmetic).
+* **The cylinder** (`colony.js`): the land curves up and over (procedural patchwork, haze shared
+  with the fog), the sun-line on the axis, hull ribs, ring walls at the end of the terraces, and a
+  window band (stars and the Earth after dusk). The colony schedules its light: up from 6:00, down
+  from 18:30. The axis paintings `sky/sky_colony_*` close the far ends of the tunnel.
+* **Colony props** (built stand-ins until models arrive under the same names): `airlock_door`,
+  `solar_panel`, `hydro_tower`, `colony_lamp`, `pipe_run`, `vent`, `maint_bot`, `cargo_crate`,
+  `lift_kiosk`, `water_tank`, `wind_turbine_small`, `noticeboard`, `fountain`, `fan_tower`,
+  `market_stall`; buildings `cottage_c`, `cottage_d`, `pumphouse`, `post_office` (kind `post`),
+  `guard_post` (kind `guard`).
+* **Map** (`minimap.js`): M or the map button opens the town map (tabs for the three outdoor
+  maps); a north-up minimap with a view cone sits under the clock outdoors. Music is in the menu.

@@ -114,7 +114,7 @@ export class ColonySky {
     const seg = (t0, tl, mat, r = R, n = 96) => { const geo = new THREE.CylinderGeometry(r, r, len, n, 1, true, t0, tl); geo.rotateZ(Math.PI / 2); const m = new THREE.Mesh(geo, mat); m.position.y = yC; m.frustumCulled = false; m.renderOrder = -5; g.add(m); return m; };
     // theta: world y = r sin θ, z = r cos θ (after the turn onto the x axis); the floor is at θ = 3π/2.
     const B = 1.5 * Math.PI, south = B + theta0, nw1 = B - win[1] + 2 * Math.PI, nw0 = B - win[0] + 2 * Math.PI, north = B - theta0 + 2 * Math.PI;
-    const day = picTex('sky/sky_colony_day'), dusk = picTex('sky/sky_colony_dusk'), nightP = picTex('sky/sky_colony_night');
+    const day = null, dusk = null, nightP = null;                // the colony paintings are axis views: see the far ends below
     const landFS = `uniform sampler2D map, lights, duskMap, nightMap; uniform vec2 rep;
 void main() { vec2 uv = vec2(vUv.x * rep.x, vW.x / rep.y); vec3 c = texture2D(map, uv).rgb * tint;
   #ifdef HAS_DUSK
@@ -139,23 +139,39 @@ void main() {
   float star = step(0.93, h) * smoothstep(0.3, 0.0, length(f)) * (0.45 + 0.55 * hash(cell + 7.0));
   vec3 space = vec3(0.012, 0.02, 0.05) + vec3(star) * vec3(0.9, 0.95, 1.0);
   #ifdef HAS_MAP
-  space = texture2D(map, vec2(vW.x / 160.0, vUv.x)).rgb;
-  #else
-  vec2 e = vec2(along + 60.0, across + arcW * 0.5 + 34.0) / 72.0; float r = length(e);
+  space = texture2D(map, vec2(vW.x / 90.0, 1.0 - 0.68 * vUv.x)).rgb;
+  #endif
+  {
+  vec2 e = vec2(along + 60.0, across - arcW * 0.5 - 30.0) / 78.0; float r = length(e);
   if (r < 1.0) { vec3 n = vec3(e, sqrt(1.0 - r * r)); float lit = clamp(dot(n, normalize(vec3(-0.75, 0.55, 0.35))), 0.0, 1.0);
     float landN = step(0.58, hash(floor(e * 7.0 + 3.0)) * 0.6 + hash(floor(e * 15.0)) * 0.4);
     vec3 surf = mix(vec3(0.10, 0.32, 0.62), vec3(0.55, 0.47, 0.30), landN * 0.8); surf = mix(surf, vec3(0.95), step(0.82, hash(floor(e * 11.0 + 9.0))) * 0.6);
     space = mix(space, surf * (0.05 + 1.1 * lit), 1.0); }
   float rim = smoothstep(1.09, 1.0, r) * smoothstep(0.93, 1.0, r); space += vec3(0.35, 0.6, 1.0) * rim * 0.8;
-  #endif
-  vec3 glass = mix(vec3(0.80, 0.90, 1.0), vec3(0.98, 0.78, 0.62), dusk);
+  }
+  vec3 glass = mix(vec3(0.62, 0.78, 0.95), vec3(0.98, 0.70, 0.55), dusk);
   float show = clamp(night + dusk * 0.55, 0.0, 1.0);
-  vec3 c = mix(glass * (0.55 + 0.5 * day) + vec3(0.12, 0.16, 0.2) * day, space, show);
+  vec3 c = mix(glass * (0.5 + 0.45 * day), space, show);
   float frame = max(step(arcW * 0.5 - 2.2, abs(across)), step(fract(vW.x / 48.0), 0.035)); frame = max(frame, step(abs(across), 0.6));
   c = mix(c, mix(vec3(0.42, 0.48, 0.55) * (0.25 + 0.75 * day), vec3(0.35, 0.75, 0.85), night * 0.5), frame);
   gl_FragColor = vec4(mix(c, finish(c), 0.55), 1.0);
   ${FS_TAIL} }`;
     this.window = seg(nw1, nw0 - nw1, hazeMat(winFS, { map: { value: gw }, arcW: { value: arcW } }, { defines: gw ? { HAS_MAP: 1 } : {} }), R, 16);
+    // the far ends of the tunnel (art: sky/sky_colony_day, _dusk, _night: an axis view mirrored into a
+    // panorama; each half is cropped round its vanishing point and set far down the axis, so the mirror
+    // joints never show). Without the art the haze simply closes the tunnel.
+    const pd = picTex('sky/sky_colony_day');
+    if (pd) {
+      const pk = picTex('sky/sky_colony_dusk') || pd, pn = picTex('sky/sky_colony_night') || pd;
+      const capFS = `uniform sampler2D pDay, pDusk, pNight; uniform float side;
+void main() { vec2 q = vUv - vec2(0.5, 0.36); vec2 uv = vec2(0.32 + side * 0.36 + q.x * 0.36 * (side > 0.5 ? -1.0 : 1.0), max(0.01, 0.234 + q.y * 0.6));
+  vec3 c = texture2D(pDay, uv).rgb * (1.0 - dusk) * day + texture2D(pDusk, uv).rgb * dusk + texture2D(pNight, uv).rgb * night;
+  float a = 1.0 - smoothstep(0.22, 0.5, length(q * vec2(1.0, 1.15)));
+  gl_FragColor = vec4(mix(c, haze, 0.35 + 0.25 * night), a);
+  ${FS_TAIL} }`;
+      this.caps = [0, 1].map((side) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1300, 1180), hazeMat(capFS, { pDay: { value: pd }, pDusk: { value: pk }, pNight: { value: pn }, side: { value: side } }, { side: THREE.DoubleSide, transparent: true, depthWrite: false }));
+        m.rotation.y = side ? -Math.PI / 2 : Math.PI / 2; m.renderOrder = -3; m.frustumCulled = false; m.userData.dir = side ? 1 : -1; g.add(m); return m; });
+    }
     // the sun-line along the axis, and its glow
     this.sunMat = new THREE.MeshBasicMaterial({ color: 0xfff6dc, fog: false, toneMapped: false });
     this.glowMat = new THREE.MeshBasicMaterial({ color: 0xfff1c8, fog: false, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
@@ -189,7 +205,8 @@ void main() { vec3 c = texture2D(map, vec2(vW.x, vW.y) / 9.0).rgb * (0.5 + 0.5 *
     this.sunMat.color.setRGB(1, 0.97, 0.86).lerp(new THREE.Color(1.0, 0.62, 0.32), dusk * 0.8).lerp(new THREE.Color(0.32, 0.46, 0.85), night);
     this.glowMat.color.copy(this.sunMat.color); this.glowMat.opacity = 0.05 + 0.13 * day + 0.06 * dusk;
   }
-  update(camera) { this.group.position.x = 0; for (const k of ['window']) this[k].position.x = camera.position.x; for (const w of this.walls) w.position.x = camera.position.x; for (const c of this.group.children) if (c.geometry && c.geometry.type === 'CylinderGeometry') c.position.x = camera.position.x; }
+  update(camera) {
+    for (const c of this.caps || []) c.position.set(camera.position.x + c.userData.dir * 1500, camera.position.y + 1180 * 0.14, camera.position.z - this.group.position.z); this.group.position.x = 0; for (const k of ['window']) this[k].position.x = camera.position.x; for (const w of this.walls) w.position.x = camera.position.x; for (const c of this.group.children) if (c.geometry && c.geometry.type === 'CylinderGeometry') c.position.x = camera.position.x; }
 }
 
 // ---------------------------------------------------------------- the land beyond a map's edge

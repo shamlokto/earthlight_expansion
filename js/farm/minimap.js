@@ -78,8 +78,8 @@ function drawScreen(t) {
   if (!open) return;
   if (!open.cv.isConnected) { open = null; return; }                 // another window took its place
   const cv = open.cv, m = allMaps()[open.tab], season = hooks.get().S ? hooks.get().S.cal.season : 0;
-  const dpr = Math.min(2, window.devicePixelRatio || 1), cw = cv.clientWidth || 640, s = cw / m.w, ch = Math.round(m.h * s);
-  if (cv.width !== Math.round(cw * dpr)) { cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); cv.style.height = ch + 'px'; }
+  const dpr = Math.min(2, window.devicePixelRatio || 1), cw = Math.round(Math.min(cv.parentElement.clientWidth || 640, Math.max(260, window.innerHeight * 0.9 - (art.url('scenes/townmap') ? 250 : 170)) * m.w / m.h)), s = cw / m.w, ch = Math.round(m.h * s);
+  if (cv.width !== Math.round(cw * dpr)) { cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); cv.style.width = cw + 'px'; cv.style.height = ch + 'px'; }
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, cw, ch);
   g.imageSmoothingEnabled = true; g.drawImage(baseOf(m, season), 0, 0, cw, ch);
   const label = (txt, x, y, font, fill = '#2b2118', halo = 'rgba(255,250,235,.9)') => { g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3.5; g.strokeStyle = halo; g.strokeText(txt, x, y); g.fillStyle = fill; g.fillText(txt, x, y); };
