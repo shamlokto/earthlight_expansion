@@ -54,7 +54,7 @@ def main():
         if edit:
             r = requests.post(URL + '/prompt', json={"prompt": edit_graph(P['_edit_' + name], seed, f"mesh3d_in/{name}e_{seed}", up), **({"front": True} if os.environ.get('COMFY_FRONT') else {})})
             r.raise_for_status(); jobs[r.json()['prompt_id']] = name + 'e'; continue
-        text = P[{'creature': '_style', 'char': '_style_char', 'plant': '_style_plant'}.get(P[name].get('kind'), '_style_obj')].replace('{x}', P[name]['x'])
+        text = P[{'creature': '_style', 'char': '_style_char', 'plant': '_style_plant', 'plain': '_style_plain'}.get(P[name].get('kind'), '_style_obj')].replace('{x}', P[name]['x'])
         r = requests.post(URL + '/prompt', json={"prompt": graph(text, seed, f"mesh3d_in/{name}_{seed}"), **({"front": True} if os.environ.get('COMFY_FRONT') else {})})
         r.raise_for_status(); jobs[r.json()['prompt_id']] = name
     while jobs:

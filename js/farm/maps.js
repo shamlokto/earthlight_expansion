@@ -2,9 +2,11 @@
 // props, exits and the named spots that story.js places people on. x runs east, y runs south;
 // a tile is one unit, positions are in tiles (a tile's centre is x + 0.5, y + 0.5).
 import { FIELD_SIZES, PASTURE_SIZE } from './data.js';
+import { SIGNS } from './story.js';
 
 // Ground codes: g grass · f field soil · p dirt path · c cobble · s sand · w water · k planks
-// r cliff rock (solid) · a ash (the Old World) · o stone floor · h hay · b boards (indoor floor) · x nothing
+// r cliff rock (solid) · a ash (the Old World) · o stone floor · h hay · b boards (indoor floor)
+// d deck plating (the colony's own metal paving) · x nothing
 export const SOLID_GROUND = new Set(['w', 'r', 'x']);
 
 function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -83,55 +85,124 @@ function farm() {
   const P = m.pasture;
   for (let x = P.x - 1; x <= P.x + P.w; x++) { if (x !== P.x + 5 && x !== P.x + 6) m.prop('fence', x, P.y - 1, { rot: 0 }); m.prop('fence', x, P.y + P.h, { rot: 0 }); }
   for (let y = P.y; y < P.y + P.h; y++) { m.prop('fence', P.x - 1, y, { rot: Math.PI / 2 }); m.prop('fence', P.x + P.w, y, { rot: Math.PI / 2 }); }
-  m.exit(21, 33, 22, 33, { map: 'village', x: 23, y: 1.6, dir: 0 });
+  m.exit(21, 33, 22, 33, { map: 'village', x: 31.5, y: 1.6, dir: 0 });
   m.exit(43, 8, 43, 9, { map: 'hill', x: 1.6, y: 13, dir: 3 });
   m.spot('farm.porch', 7.5, 8.4).spot('farm.bin', 11.4, 7.5).spot('farm.gate', 20.3, 31).spot('farm.pond', 26.4, 25.5).spot('farm.field', 19.6, 15);
   m.start = [6.5, 8.5];
   m.border('tree', 11, (x, y) => (y === 33 && (x === 21 || x === 22)) || (x === 43 && (y === 8 || y === 9)));
   m.scatter(5, 16, ['tree', 'tree', 'bush', 'flowers'], (x, y) => !(x >= P.x - 2 && x <= P.x + P.w + 1 && y >= P.y - 2 && y <= P.y + P.h + 1) && y > 9);
   m.prop('reeds', 27, 26, { solid: false }); m.prop('reeds', 35, 24, { solid: false });
+  // the colony's share of the farm: a panel by the barn, a rain tank, the irrigation main along the field
+  m.prop('solar_panel', 31, 6, { w: 2 }); m.prop('water_tank', 40, 3, { w: 2, d: 2 }); m.prop('pipe_run', 2, 11, { d: fh });
+  m.prop('colony_lamp', 19, 7); m.prop('vent', 33, 10, { solid: false });
   return m;
 }
 
+// Willowfall: a small colony town on the Lantern Ring. North of the river: Market Street, Lantern
+// Square, the hydroponics garden and the lift kiosk plaza; south of it: the ranch, clinic and
+// library lane, Willow Lane's cottages and Fountain Park. Door positions only matter to this file.
 function village() {
-  const m = new MapDef('village', 46, 36, 'g', { name: 'Willowfall · the Lantern Ring' });
-  m.fill(0, 22, 45, 24, 'w').fill(0, 21, 45, 21, 's').fill(0, 25, 45, 25, 's');
-  m.fill(22, 0, 23, 35, 'p').fill(22, 21, 23, 25, 'k');                              // main road and the bridge
-  m.fill(17, 9, 28, 18, 'c');                                                         // the square
-  m.fill(11, 9, 34, 10, 'p').fill(11, 17, 34, 18, 'p').fill(17, 9, 28, 18, 'c');
-  m.fill(11, 31, 41, 32, 'p').fill(36, 20, 40, 21, 'k').fill(38, 11, 38, 20, 'p');   // south lane, dock
-  m.fill(34, 10, 38, 10, 'p');
-  m.building('store', 8, 5, 7, 4, { to: { map: 'store' }, label: "Seln's Seed & Sundry" });
-  m.building('cafe', 31, 5, 8, 4, { height: 3.6, to: { map: 'cafe' }, label: 'The Hangar' });
-  m.building('workshop', 8, 13, 7, 4, { height: 3.4, to: { map: 'workshop' }, label: 'Workshop' });
-  m.building('hall', 31, 12, 8, 5, { height: 4, to: { map: 'hall' }, label: 'Village Hall' });
-  m.building('ranch', 8, 27, 7, 4, { height: 3.4, to: { map: 'ranch' }, label: "Corran's Ranch" });
-  m.building('clinic', 28, 27, 5, 4, { to: { map: 'clinic' }, label: 'Clinic' });
-  m.building('library', 36, 27, 6, 4, { height: 3.6, to: { map: 'library' }, label: 'Library' });
-  m.building('cottage_a', 40, 12, 5, 4, { label: 'Cottage' });
-  m.building('cottage_b', 2, 13, 5, 4, { label: 'Cottage' });
-  m.prop('memorial', 22, 13, { w: 2, act: 'sign', sign: 'village.memorial' });
-  m.prop('signpost', 24, 8, { act: 'sign', sign: 'village.square' });
-  m.prop('signpost', 16, 10, { act: 'sign', sign: 'village.storefront' });
-  m.prop('signpost', 30, 10, { act: 'sign', sign: 'village.cafefront' });
-  m.prop('signpost', 16, 18, { act: 'sign', sign: 'village.workshopfront' });
-  m.prop('signpost', 30, 18, { act: 'sign', sign: 'village.hallfront' });
-  m.prop('signpost', 16, 32, { act: 'sign', sign: 'village.ranchyard' });
-  m.prop('signpost', 35, 20, { act: 'sign', sign: 'village.dock' });
-  m.prop('bench', 26, 19, { w: 2 });
-  m.prop('lantern', 17, 9); m.prop('lantern', 28, 9); m.prop('lantern', 17, 18); m.prop('lantern', 28, 18);
-  m.prop('barge', 37, 22, { w: 4, d: 2, solid: false, onWater: true });
-  for (let x = 3; x <= 6; x++) m.prop('fence', x, 33, {});
-  m.exit(22, 0, 23, 0, { map: 'farm', x: 22, y: 32.2, dir: 1 });
-  m.spot('village.square', 22.5, 16).spot('village.memorial', 23, 14.8).spot('village.bridge', 23, 20.4).spot('village.dock', 38.5, 20.6)
-    .spot('village.bench', 27, 20.2).spot('village.storefront', 12.4, 10).spot('village.cafefront', 34.2, 10).spot('village.hallfront', 34.2, 18.2)
-    .spot('village.clinicfront', 31.6, 32.3).spot('village.libraryfront', 40.4, 32.3).spot('village.workshopfront', 12.4, 18.2).spot('village.ranchyard', 14, 32.4).spot('village.river', 16, 20.6);
-  m.water = 'village'; m.start = [23, 1.6];
-  m.border('tree', 21, (x, y) => (y === 0 && (x === 22 || x === 23)));
-  m.scatter(8, 26, ['tree', 'tree', 'pine', 'bush', 'flowers', 'flowers']);
-  for (const x of [4, 9, 31, 43]) m.prop('reeds', x, 21, { solid: false });
+  const m = new MapDef('village', 64, 52, 'g', { name: 'Willowfall · the Lantern Ring' });
+  m.fill(0, 27, 63, 29, 'w').fill(0, 26, 63, 26, 's').fill(0, 30, 63, 30, 's');      // the river and its banks
+  m.fill(31, 0, 32, 47, 'p');                                                          // the main road, north to south
+  m.fill(3, 8, 60, 9, 'c').fill(17, 7, 17, 7, 'c').fill(45, 7, 45, 7, 'c');           // Market Street (and door steps)
+  m.fill(6, 17, 60, 18, 'p').fill(18, 16, 18, 16, 'p');                               // the cross street
+  m.fill(25, 11, 38, 21, 'c');                                                         // Lantern Square
+  m.fill(31, 26, 32, 30, 'k').fill(12, 26, 13, 30, 'k');                              // the road bridge and the west footbridge
+  m.fill(12, 19, 13, 25, 'p').fill(12, 31, 13, 38, 'p');                              // footbridge path
+  m.fill(48, 19, 49, 24, 'p').fill(47, 25, 53, 26, 'k');                              // to the dock, and the dock
+  m.fill(3, 39, 60, 40, 'p');                                                          // the south lane
+  m.fill(4, 46, 60, 47, 'p');                                                          // Willow Lane, on into the park
+  m.fill(2, 11, 11, 15, 'd');                                                          // the hydroponics garden
+  m.fill(51, 10, 61, 16, 'd');                                                         // the lift kiosk plaza
+  m.fill(44, 42, 49, 45, 'c');                                                         // the fountain's paving
+  // the buildings people go into
+  m.building('store', 14, 3, 7, 4, { to: { map: 'store' }, label: "Seln's Seed & Sundry" });
+  m.building('cafe', 41, 3, 8, 4, { height: 3.6, to: { map: 'cafe' }, label: 'The Hangar' });
+  m.building('workshop', 15, 12, 7, 4, { height: 3.4, to: { map: 'workshop' }, label: 'Workshop' });
+  m.building('hall', 42, 12, 8, 5, { height: 4, to: { map: 'hall' }, label: 'Village Hall' });
+  m.building('ranch', 4, 35, 7, 4, { height: 3.4, to: { map: 'ranch' }, label: "Corran's Ranch" });
+  m.building('clinic', 38, 35, 5, 4, { to: { map: 'clinic' }, label: 'Clinic' });
+  m.building('library', 46, 35, 6, 4, { height: 3.6, to: { map: 'library' }, label: 'Library' });
+  // and the ones that are simply there: homes, the pump house, the post, the Guardians' wing
+  m.building('cottage_a', 4, 42, 5, 4, { label: 'Cottage' });
+  m.building('cottage_b', 11, 42, 5, 4, { label: 'Cottage' });
+  m.building('cottage_c', 18, 42, 5, 4, { label: 'Cottage' });
+  m.building('cottage_d', 25, 42, 5, 4, { label: 'Cottage' });
+  m.building('pumphouse', 3, 2, 5, 4, { height: 3.2, label: 'Pump House' });
+  m.building('post', 20, 35, 6, 4, { height: 3.3, label: 'Courier Post' });
+  m.building('guard', 51, 2, 7, 4, { height: 3.6, label: "Guardians' Post" });
+  // Lantern Square
+  m.prop('memorial', 31, 15, { w: 2, act: 'sign', sign: 'village.memorial', label: 'Memorial' });
+  m.prop('noticeboard', 27, 11, { w: 2, act: 'sign', sign: 'village.square' });
+  m.prop('lantern', 25, 11); m.prop('lantern', 38, 11); m.prop('lantern', 25, 21); m.prop('lantern', 38, 21);
+  m.prop('bench', 34, 23, { w: 2 });
+  m.prop('vent', 27, 23, { solid: false }); m.prop('vent', 38, 23, { solid: false });
+  // signs
+  m.prop('signpost', 29, 10, { act: 'sign', sign: 'village.square' });
+  m.prop('signpost', 21, 7, { act: 'sign', sign: 'village.storefront' });
+  m.prop('signpost', 40, 7, { act: 'sign', sign: 'village.cafefront' });
+  m.prop('signpost', 22, 16, { act: 'sign', sign: 'village.workshopfront' });
+  m.prop('signpost', 41, 19, { act: 'sign', sign: 'village.hallfront' });
+  m.prop('signpost', 11, 38, { act: 'sign', sign: 'village.ranchyard' });
+  m.prop('signpost', 46, 24, { act: 'sign', sign: 'village.dock' });
+  // Market Street: stalls, crates and lamps
+  for (const x of [23, 26, 35, 38]) m.prop('market_stall', x, 6, { w: 2, rot: 0, tint: x });
+  m.prop('cargo_crate', 22, 5); m.prop('cargo_crate', 40, 5); m.prop('cargo_crate', 29, 6); m.prop('cargo_crate', 34, 6, { scale: 0.8 });
+  m.building('water_tower', 9, 3, 2, 2, { height: 4.5, label: 'Water tank', tank: true });
+  for (const [x, y] of [[6, 10], [13, 10], [50, 10], [24, 7], [37, 7], [8, 19], [23, 19], [40, 19], [55, 19], [15, 41], [28, 41], [36, 41], [44, 41], [54, 41], [9, 48], [16, 48], [23, 48], [38, 48], [56, 48], [30, 25], [34, 31]]) m.prop('colony_lamp', x, y);
+  // the hydroponics garden: towers in rows, fed from the tank by a pipe
+  for (const y of [12, 14]) for (const x of [3, 5, 7, 9]) m.prop('hydro_tower', x, y);
+  m.prop('water_tank', 12, 11, { w: 2, d: 2 });
+  m.prop('pipe_run', 3, 11, { w: 9 });
+  m.prop('wind_turbine_small', 3, 20);
+  // the lift kiosk plaza: the lift between the decks, the air-circulation tower, an access hatch
+  m.prop('lift_kiosk', 55, 11, { w: 3, d: 2, act: 'sign', sign: 'village.lift', label: 'Lift to the decks' });
+  m.prop('fan_tower', 59, 11, { w: 2, d: 2, label: 'Air tower' });
+  m.prop('airlock_door', 51, 10, { w: 2 });
+  m.prop('noticeboard', 53, 15, { act: 'sign', sign: 'village.square' });
+  m.prop('cargo_crate', 61, 15); m.prop('cargo_crate', 60, 15, { scale: 0.75 });
+  m.prop('maint_bot', 58, 14, { solid: false, rot: 2.4 });
+  m.prop('vent', 52, 13, { solid: false }); m.prop('vent', 57, 15, { solid: false });
+  m.spot('village.lift', 56.5, 13.7);
+  // the river: dock, barge, pipes along the bank, reeds
+  m.prop('barge', 48, 27, { w: 4, d: 2, solid: false, onWater: true, label: 'Dock' });
+  m.prop('cargo_crate', 53, 25); m.prop('cargo_crate', 47, 25, { scale: 0.8 });
+  m.prop('pipe_run', 36, 25, { w: 8 });
+  m.prop('pipe_run', 36, 31, { w: 9 });
+  for (const x of [4, 9, 21, 40, 58]) m.prop('reeds', x, 26, { solid: false });
+  for (const x of [17, 26, 44]) m.prop('reeds', x, 30, { solid: false });
+  // south of the river: the ranch fence, the solar yard
+  for (let x = 3; x <= 9; x++) m.prop('fence', x, 33, {});
+  for (const [x, y] of [[55, 33], [58, 33], [55, 35], [58, 35]]) m.prop('solar_panel', x, y, { w: 2 });
+  m.prop('wind_turbine_small', 61, 37);
+  m.prop('vent', 33, 37, { solid: false });
+  // Willow Lane: gardens in front of the cottages
+  for (const x of [5, 12, 19, 26]) { m.prop('solar_panel', x + 2, 49, { w: 2, scale: 0.8 }); m.prop('flowers', x, 49, { solid: false }); m.prop('fence', x - 1, 48, {}); m.prop('fence', x + 4, 48, {}); }
+  m.prop('water_tank', 30, 49, { w: 1, d: 1, scale: 0.7 });
+  // Fountain Park
+  m.prop('fountain', 46, 43, { w: 2, d: 2, label: 'Fountain' });
+  m.prop('bench', 41, 43, { w: 2 }); m.prop('bench', 51, 43, { w: 2 });
+  for (const [x, y, k] of [[37, 43, 'tree'], [39, 50, 'tree'], [55, 43, 'tree'], [58, 50, 'pine'], [61, 44, 'tree'], [43, 49, 'bush'], [50, 49, 'bush'], [35, 49, 'pine']]) m.prop(k, x, y, { scale: 1.05, rot: x });
+  for (const [x, y] of [[42, 41], [52, 41], [45, 49], [48, 49], [40, 45], [53, 45], [57, 44], [36, 45]]) m.prop('flowers', x, y, { solid: false });
+  m.exit(31, 0, 32, 0, { map: 'farm', x: 22, y: 32.2, dir: 1 });
+  m.spot('village.square', 31.5, 19.6).spot('village.memorial', 32, 16.8).spot('village.bridge', 30.2, 26.5).spot('village.dock', 50.5, 25.6)
+    .spot('village.bench', 35, 24.4).spot('village.storefront', 18.6, 8.6).spot('village.cafefront', 46.4, 8.6).spot('village.hallfront', 47.4, 18.4)
+    .spot('village.clinicfront', 41.6, 40.4).spot('village.libraryfront', 50.4, 40.4).spot('village.workshopfront', 19.6, 17.6).spot('village.ranchyard', 9, 40.4).spot('village.river', 20, 26.5);
+  m.water = 'village'; m.start = [31.5, 1.6];
+  // district names and the maintenance bots' rounds (both only for the map screen and the look)
+  m.areas = [['Market Street', 31.5, 10.3], ['Lantern Square', 31.5, 13], ['Hydroponics', 6.5, 16.5], ['Lift Plaza', 56, 17.6], ['River Dock', 50.5, 24], ['Willow Lane', 17, 50.3], ['Fountain Park', 47, 48.6], ['Solar Yard', 58, 32.3], ['Lantern River', 22, 28.5]];
+  m.bots = [[[4, 8.5], [59.5, 8.5]], [[7, 17.5], [59.5, 17.5]], [[4, 39.5], [59.5, 39.5]], [[31.5, 2], [31.5, 46.5], [58, 46.5]]];
+  m.border('tree', 21, (x, y) => (y === 0 && (x === 31 || x === 32)));
+  const park = (x, y) => x >= 34 && y >= 41;
+  m.scatter(8, 44, ['tree', 'tree', 'pine', 'bush', 'flowers', 'flowers'], (x, y) => !park(x, y) && !(x >= 50 && y <= 18) && !(y >= 48));
   return m;
 }
+// The lift kiosk's notice lives here with the map that has the kiosk (story.js owns the other signs).
+const MAP_SIGNS = {
+  'village.lift': 'LANTERN RING LIFT. Spoke cars to the Middle deck and the hub, every twenty minutes. The climb takes nine; you get lighter as you go, so hold the rail near the top. Hesk\'s barricade stood here. The scorch marks are being kept, on purpose.',
+};
+for (const [k, v] of Object.entries(MAP_SIGNS)) if (!(k in SIGNS)) SIGNS[k] = v;
 
 export const FORAGE_SPOTS = [[5, 6], [12, 4], [20, 10], [30, 13], [8, 13], [18, 21], [26, 19], [32, 22]];
 
@@ -146,6 +217,10 @@ function hill() {
   m.prop('signpost', 9, 16, { act: 'sign', sign: 'hill.lake' });
   m.prop('signpost', 31, 19, { act: 'sign', sign: 'hill.overlook' });
   m.prop('bench', 30, 21, { w: 2 });
+  // the colony at work up here: panels, a turbine, crates waiting for the lift, a bot on its break
+  m.prop('solar_panel', 30, 4, { w: 2 }); m.prop('wind_turbine_small', 32, 16); m.prop('colony_lamp', 22, 11); m.prop('colony_lamp', 29, 10);
+  m.prop('cargo_crate', 23, 5); m.prop('cargo_crate', 23, 6, { scale: 0.8 }); m.prop('maint_bot', 29, 7, { solid: false, rot: 3.6 }); m.prop('vent', 18, 9, { solid: false });
+  m.prop('pipe_run', 25, 3, { w: 4 });
   m.exit(0, 11, 0, 14, { map: 'farm', x: 42.2, y: 9, dir: 2 });
   m.spot('hill.wreck', 24.4, 9.4).spot('hill.lake', 11, 16.4).spot('hill.overlook', 31, 20.4);
   m.water = 'hill'; m.start = [1.6, 13];
@@ -164,9 +239,11 @@ function room(id, w, h, name, floor = 'b') {
 
 function interiors() {
   const out = {};
-  let m = room('house', 9, 7, 'Farmhouse');
-  m.prop('bed', 1, 0, { d: 2, act: 'bed' }); m.prop('radio', 4, 0, { act: 'radio' }); m.prop('shelf', 6, 0, { w: 2 });
-  m.prop('table', 6, 3, { w: 2 }); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 });
+  let m = room('house', 12, 8, 'Farmhouse');
+  m.prop('bed', 1, 0, { d: 2, act: 'bed' }); m.prop('tv', 3, 0, { act: 'radio' }); m.prop('wardrobe', 4, 0, {});
+  m.prop('storage_box', 0, 4, { act: 'storage' }); m.prop('calendar_board', 5, 0, { act: 'calendar' });
+  m.prop('kitchen', 8, 0, { w: 2, act: 'kitchen' }); m.prop('fridge', 10, 0, { act: 'fridge' }); m.prop('shelf', 11, 2, { d: 1 });
+  m.prop('table', 8, 4, { w: 2 }); m.prop('chair', 8, 5, { solid: false }); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 }); m.prop('lamp', 6, 0, {});
   out.house = m;
 
   m = room('barn', 12, 9, 'Barn', 'h');

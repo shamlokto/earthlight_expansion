@@ -617,8 +617,40 @@
    "frames": 81,
    "loop": false
   },
+  "video/intro3": {
+   "file": "video/intro3.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/intro4": {
+   "file": "video/intro4.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/intro5": {
+   "file": "video/intro5.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
   "video/title": {
    "file": "video/title.mp4",
+   "w": 832,
+   "h": 480,
+   "fps": 16,
+   "frames": 81,
+   "loop": false
+  },
+  "video/wedding": {
+   "file": "video/wedding.mp4",
    "w": 832,
    "h": 480,
    "fps": 16,

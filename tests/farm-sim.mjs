@@ -808,5 +808,26 @@ function script(s, days = 12) {
 const bad = refusals.filter((m) => typeof m !== 'string' || m.length < 8 || !/[.!?]$/.test(m) || /undefined|NaN|null|\[object/.test(m));
 check(!bad.length, `refusal messages readable: ${JSON.stringify([...new Set(bad)].slice(0, 5))}`);
 console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} different, e.g.:`, [...new Set(refusals)].slice(0, 6).join(' | '));
+// ---------------------------------------------------------------- storage box, fridge, kitchen (2026-11-18)
+{
+  const s = newGame({ seed: 77 });
+  check(Array.isArray(s.storage) && s.storage.length === sim.STORAGE_SIZE && Array.isArray(s.fridge), 'new game has a storage box and a fridge');
+  sim.addItem(s, 'turnip', 5); const slot = s.player.inv.findIndex((x) => x && x.id === 'turnip');
+  let r = sim.storeItem(s, 'storage', slot, 3); check(r.ok && sim.countItem(s, 'turnip') === 2 && s.storage.some((b) => b && b.id === 'turnip' && b.n === 3), 'store 3 turnips in the storage box');
+  r = sim.storeItem(s, 'fridge', slot); check(!r.ok && r.msg, 'fridge refused before the kitchen refit');
+  r = sim.cook(s, 'salad'); check(!r.ok && r.msg, 'no cooking before the kitchen refit');
+  s.player.money = 1e5; s.stock.lumber = 100;
+  r = sim.buy(s, 'workshop', 'kitchen'); check(r.ok && s.flags.kitchen && s.player.money === 1e5 - 2500 && s.stock.lumber === 40, 'kitchen refit bought from Ruess');
+  r = sim.storeItem(s, 'fridge', slot); check(r.ok && !sim.countItem(s, 'turnip'), 'turnips go in the fridge after the refit');
+  const hoe = s.player.inv.findIndex((x) => x && x.id === 'hoe'); r = sim.storeItem(s, 'fridge', hoe); check(!r.ok, 'a hoe does not go in the fridge');
+  r = sim.cook(s, 'salad'); check(!r.ok, 'a salad needs two different vegetables');
+  sim.addItem(s, 'potato', 1); r = sim.cook(s, 'salad'); check(r.ok && sim.countItem(s, 'salad') === 1 && !sim.countItem(s, 'potato'), 'salad from a rucksack potato and a fridge turnip');
+  check(s.fridge.reduce((a, b) => a + (b && b.id === 'turnip' ? b.n : 0), 0) === 1, 'the fridge turnip was used');
+  sim.addItem(s, 'egg', 1); sim.addItem(s, 'milk_m', 1); r = sim.cook(s, 'omelette'); check(r.ok && sim.countItem(s, 'omelette') === 1 && !sim.countItem(s, 'egg'), 'omelette');
+  const k = s.storage.findIndex((b) => b && b.id === 'turnip'); r = sim.takeItem(s, 'storage', k, 2); check(r.ok && sim.countItem(s, 'turnip') === 2 && s.storage[k].n === 1, 'take 2 turnips back out');
+  check(sim.recipeBook(s).length === sim.RECIPES.length, 'recipe book lists every recipe');
+  const old = JSON.parse(saveState(newGame({ seed: 3 }))); delete old.storage; delete old.fridge; const o = loadState(JSON.stringify(old));
+  sim.addItem(o, 'egg', 1); r = sim.storeItem(o, 'storage', o.player.inv.findIndex((x) => x && x.id === 'egg')); check(r.ok && o.storage.length === sim.STORAGE_SIZE, 'an old save gains a storage box');
+}
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

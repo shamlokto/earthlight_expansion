@@ -472,8 +472,8 @@
  },
  "egg": {
   "tris": 1500,
-  "kind": "obj",
-  "x": "raw egg, a plain smooth cream-coloured oval eggshell, cooking ingredient",
+  "kind": "plain",
+  "x": "one plain brown hen's egg, an ordinary egg",
   "opts": "t512"
  },
  "_edit_sato": "Turn this character into a cute chibi anime collectible figurine, about two and a half heads tall with a very big head and a small body: the same girl with the same layered navy-black bob haircut with a soft fringe, very big sparkling warm brown anime eyes with bright white highlights, soft pink blush, a small smile, cream shirt with rolled sleeves, navy dungarees with brass buttons, brown lace-up boots, and now wearing a wide-brimmed straw hat on her head (nothing on her back). Straight front view at eye level, perfectly symmetrical, standing straight, feet apart with a clear gap between the legs up to the hips, both arms straight and held clearly away from the body at 45 degrees in an A-pose with open empty hands. Soft cel shading, smooth matte hand-painted figurine, full body, plain pure white background, no shadow, no base.",
@@ -492,18 +492,18 @@
  "yui": {
   "tris": 24000,
   "kind": "char",
-  "x": "a Japanese woman in her late twenties, a librarian: long dark-brown hair pulled back from her face into one braid that hangs behind her back and is hidden from the front, round glasses, a mustard yellow cardigan over a cream blouse, dark trousers, brown flat shoes",
+  "x": "a Japanese woman in her late twenties, a librarian: long dark-brown hair combed straight back and tied in a long braid that falls straight down the middle of her back (only her fringe and the top of her head show from the front, nothing hangs over her shoulders), round glasses, a mustard yellow cardigan over a cream blouse, dark trousers, brown flat shoes",
   "opts": "hv768"
  },
  "clinic": {
   "tris": 20000,
   "kind": "obj",
-  "x": "small cosy village clinic building: white walls, a teal pitched roof, a round sign with a green cross above the door, a wooden front door, two windows with flower boxes"
+  "x": "small cosy space-colony clinic building: white walls of riveted hull plating, a teal curved roof made of overlapping hull plates, round porthole windows with flower boxes under them, a rounded airlock-style front door, a glowing green cross sign above the door, a small cyan indicator light"
  },
  "library": {
   "tris": 20000,
   "kind": "obj",
-  "x": "small village library building of warm wood: a big rounded bay reading-room window with rows of books visible behind the glass, a wooden door with a lantern hanging over it, a shingle pitched roof"
+  "x": "small space-colony library building: warm wood walls on a riveted metal base, a roof of curved hull plates, a big round porthole reading-room window with shelves of colourful books visible behind the glass, a rounded hatch-style wooden door with a lantern over it"
  },
  "bookshelf": {
   "tris": 8000,
@@ -525,5 +525,175 @@
   "tris": 12000,
   "x": "plump chestnut brown and white dairy cow standing still on four short sturdy legs, big gentle dark eyes, pink nose, small horns, a little bell on a collar, full body",
   "kind": "creature"
+ },
+ "storage_box": {
+  "tris": 4000,
+  "kind": "obj",
+  "x": "sturdy closed wooden storage chest with a flat lid, riveted metal corner plates, a metal latch and one small glowing cyan status light on the front",
+  "opts": "t512"
+ },
+ "fridge": {
+  "tris": 5000,
+  "kind": "obj",
+  "x": "rounded retro refrigerator made from a spacecraft cold-locker, pastel cream with a small round porthole window in the door, a chrome handle and a tiny cyan light",
+  "opts": "t512"
+ },
+ "kitchen": {
+  "tris": 8000,
+  "kind": "obj",
+  "x": "small kitchen counter unit with a two-ring stove and a sink with a tap, wooden cupboard doors and riveted metal panels from salvaged spacecraft parts, a short pipe on the side"
+ },
+ "wardrobe": {
+  "tris": 6000,
+  "kind": "obj",
+  "x": "tall wooden wardrobe with two doors, rounded top corners, small metal rivet strips and round brass knobs",
+  "opts": "t512"
+ },
+ "bookcase_small": {
+  "tris": 5000,
+  "kind": "obj",
+  "x": "small low wooden bookcase with two shelves of colourful books and a small potted plant on top",
+  "opts": "t512"
+ },
+ "tv": {
+  "tris": 4000,
+  "kind": "obj",
+  "x": "chunky retro television set with a rounded body, two small antennae, the screen shows a simple weather picture of a sun and a cloud",
+  "opts": "t512"
+ },
+ "lamp": {
+  "tris": 3000,
+  "kind": "obj",
+  "x": "table lamp with a round pale cream lampshade glowing warmly on a short brass stand",
+  "opts": "t512"
+ },
+ "chair": {
+  "tris": 3000,
+  "kind": "obj",
+  "x": "simple wooden chair with a rounded backrest and a small cushion",
+  "opts": "t512"
+ },
+ "rug_round": {
+  "tris": 1500,
+  "kind": "plain",
+  "x": "a flat round woven rug in navy blue and cream rings",
+  "opts": "t512"
+ },
+ "calendar_board": {
+  "tris": 4000,
+  "kind": "obj",
+  "x": "wooden noticeboard on a standing easel with a paper calendar grid and a few pinned notes, no readable text",
+  "opts": "t512"
+ },
+ "airlock_door": {
+  "tris": 8000,
+  "kind": "obj",
+  "x": "a single heavy round-topped metal hatch door standing upright in a thick riveted metal door frame, flat like a gate, with a round porthole window in the door, a thin yellow-and-black hazard stripe on the threshold and a small cyan lamp on top of the frame, seen from the front"
+ },
+ "solar_panel": {
+  "tris": 3000,
+  "kind": "obj",
+  "x": "single blue solar panel tilted on a short metal post with a small base",
+  "opts": "t512"
+ },
+ "hydro_tower": {
+  "tris": 8000,
+  "kind": "obj",
+  "x": "vertical hydroponic garden tower: a tall white cylinder with rows of small pockets full of green leafy plants and softly glowing pink-purple grow lights"
+ },
+ "colony_lamp": {
+  "tris": 4000,
+  "kind": "obj",
+  "x": "street lamp post shaped like a spacecraft running light: a slim white metal post with a rounded glowing cyan light pod on top and a small fin",
+  "opts": "t512"
+ },
+ "pipe_run": {
+  "tris": 4000,
+  "kind": "obj",
+  "x": "short straight section of three thick parallel metal pipes resting on two metal brackets, with a valve wheel and a small gauge, seen from the front",
+  "opts": "t512"
+ },
+ "vent": {
+  "tris": 3000,
+  "kind": "obj",
+  "x": "square floor air vent cooling unit: a low metal box with a round fan grille on top and riveted corners",
+  "opts": "t512"
+ },
+ "maint_bot": {
+  "tris": 6000,
+  "kind": "creature",
+  "x": "small maintenance robot on three wheels, a rounded pastel white body with one big round camera lens, a tiny folded arm and an antenna with a cyan tip",
+  "opts": "t512"
+ },
+ "cargo_crate": {
+  "tris": 3000,
+  "kind": "obj",
+  "x": "stackable space-colony cargo container box, ribbed metal sides in pale orange with darker corner frames and a small stencil stripe",
+  "opts": "t512"
+ },
+ "lift_kiosk": {
+  "tris": 8000,
+  "kind": "obj",
+  "x": "small elevator kiosk for a space colony: a rounded white booth with a closed sliding metal door, a cyan light strip around the door and a small hull-plate roof"
+ },
+ "water_tank": {
+  "tris": 6000,
+  "kind": "obj",
+  "x": "tall cylindrical water tank of pale riveted metal on short legs, with two round gauges, a ladder and a pipe at the bottom"
+ },
+ "wind_turbine_small": {
+  "tris": 5000,
+  "kind": "obj",
+  "x": "air-circulation fan tower: a slim metal mast with a big round fan with three blades in a ring guard on top"
+ },
+ "noticeboard": {
+  "tris": 4000,
+  "kind": "obj",
+  "x": "wooden village noticeboard on two posts with a small roof, a few pinned paper notes and pictures, no readable text",
+  "opts": "t512"
+ },
+ "crawler_big": {
+  "tris": 10000,
+  "kind": "creature",
+  "x": "large odd but endearing rust-orange alien beetle creature, original design, a big rounded segmented carapace with a few patches of moss, six thick stubby legs, small mandibles and two round shiny black eyes, standing on all six legs"
+ },
+ "drone_swarm": {
+  "tris": 8000,
+  "kind": "creature",
+  "x": "three small round spherical maintenance drones flying in a tight group, joined to each other by short thin metal rods into one object, each with one blue camera eye, off-white and rusty"
+ },
+ "sentry": {
+  "tris": 6000,
+  "kind": "obj",
+  "x": "old abandoned automated sentry turret, low and squat, a rusty grey dome on a short heavy base with one stubby barrel, moss growing on it"
+ },
+ "scrap_heap": {
+  "tris": 6000,
+  "kind": "obj",
+  "x": "pile of scrap metal junk: dented metal plates, bent pipes, a broken wheel and some gears heaped together"
+ },
+ "ruin_car": {
+  "tris": 10000,
+  "kind": "obj",
+  "x": "old abandoned rusty compact car overgrown with grass and vines, flat tyres"
+ },
+ "ruin_sign": {
+  "tris": 3000,
+  "kind": "obj",
+  "x": "fallen rusty street sign: a bent metal pole lying on its side with a blank faded rectangular sign plate, no text",
+  "opts": "t512"
+ },
+ "ruin_lamp": {
+  "tris": 4000,
+  "kind": "obj",
+  "x": "bent old street lamp post, rusty metal, leaning crooked with a broken lamp head, a little ivy at the base",
+  "opts": "t512"
+ },
+ "_style_plain": "Simple smooth 3D render of {x}, soft pastel colours, stylised, lying on nothing, isolated on a plain pure white background, soft studio light, centred, the whole thing visible.",
+ "yui_bun": {
+  "tris": 24000,
+  "kind": "char",
+  "x": "a Japanese woman in her late twenties, a librarian: dark-brown hair tied up in a neat round bun at the back of her head with a short fringe, round glasses, a mustard yellow cardigan over a cream blouse, dark trousers, brown flat shoes",
+  "opts": "hv768"
  }
 }

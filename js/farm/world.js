@@ -57,6 +57,14 @@ const PROPS = {
   chicken: { model: 'chicken', sprite: () => 'sprites/chicken_side', h: 0.5, face: true },
   cow: { model: 'cow', sprite: () => 'sprites/cow_side', h: 1.3, face: true },
   egg: { model: 'egg', h: 0.16, soft: true },
+  storage_box: { model: 'storage_box', h: 0.8, fit: 'foot' },
+  fridge: { model: 'fridge', h: 1.8, fit: 'foot' },
+  kitchen: { model: 'kitchen', h: 1.0, fit: 'stretch' },
+  wardrobe: { model: 'wardrobe', h: 1.9, fit: 'foot' },
+  tv: { model: 'tv', h: 1.0, fit: 'foot' },
+  lamp: { model: 'lamp', h: 1.5, fit: 'foot' },
+  chair: { model: 'chair', h: 0.9, fit: 'foot' },
+  calendar_board: { model: 'calendar_board', h: 1.6, fit: 'foot' },
   float: { model: 'fish_float', h: 0.22, soft: true },
 };
 const BUILDING = {
@@ -227,6 +235,14 @@ export class World {
       case 'egg': g.add(ball(0.08, std({ color: 0xf5ecd9 }), 0, 0.08, 0, 1)); break;
       case 'forage': g.add(ball(0.12, std({ color: o.color || 0x7fbf5a }), 0, 0.14, 0, 0), ball(0.09, std({ color: o.color || 0x7fbf5a }), 0.14, 0.1, 0.05, 0)); break;
       case 'float': g.add(ball(0.07, std({ color: 0xe23a2a }), 0, 0.02, 0, 1), ball(0.05, std({ color: 0xffffff }), 0, 0.08, 0, 1)); break;
+      case 'storage_box': g.add(box(0.9, 0.55, 0.6, wood), box(0.94, 0.12, 0.64, dark, 0, 0.55), box(0.12, 0.08, 0.04, new THREE.MeshBasicMaterial({ color: 0x6fd3ff }), 0, 0.4, 0.31)); break;
+      case 'fridge': g.add(box(0.8, 1.75, 0.7, std({ color: 0xf1e8d4, roughness: 0.5 })), box(0.06, 0.5, 0.06, metal, 0.3, 1.0, 0.36), new THREE.Mesh(new THREE.CircleGeometry(0.13, 16), new THREE.MeshBasicMaterial({ color: 0x9fd8ee }))); g.children[2].position.set(0, 1.35, 0.36); break;
+      case 'kitchen': { const w = o.w || 2; g.add(box(w, 0.9, 0.65, std({ color: 0xe8e2d2 }), (w - 1) / 2), box(w + 0.02, 0.06, 0.7, dark, (w - 1) / 2, 0.9), cyl(0.12, 0.12, 0.03, std({ color: 0x333333 }), 0.1, 0.93, 0, 12), cyl(0.12, 0.12, 0.03, std({ color: 0x333333 }), 0.45, 0.93, 0, 12), box(0.4, 0.05, 0.35, metal, w - 1.1, 0.92)); break; }
+      case 'wardrobe': g.add(box(0.9, 1.9, 0.6, wood), box(0.02, 1.7, 0.02, dark, 0, 0.1, 0.31)); break;
+      case 'tv': g.add(box(0.7, 0.45, 0.3, wood), box(0.75, 0.5, 0.4, std({ color: 0x5a4a3a }), 0, 0.45), box(0.55, 0.36, 0.02, new THREE.MeshBasicMaterial({ color: 0x7fc8e8 }), 0, 0.52, 0.21)); break;
+      case 'lamp': { g.add(cyl(0.03, 0.05, 1.3, dark), cyl(0.12, 0.2, 0.25, std({ color: 0xf3dfa8, emissive: 0x6a5020 }), 0, 1.25, 0, 12)); const pl = new THREE.PointLight(0xffd7a0, 6, 6, 1.6); pl.position.y = 1.3; g.add(pl); break; }
+      case 'chair': g.add(box(0.45, 0.06, 0.45, wood, 0, 0.45), box(0.45, 0.5, 0.06, wood, 0, 0.5, -0.2), box(0.05, 0.45, 0.05, dark, -0.18, 0, 0.18), box(0.05, 0.45, 0.05, dark, 0.18, 0, 0.18)); break;
+      case 'calendar_board': g.add(box(0.06, 1.0, 0.06, dark, 0, 0), box(0.8, 0.6, 0.05, std({ color: 0xc9a877 }), 0, 0.95), box(0.25, 0.3, 0.01, std({ color: 0xffffff }), -0.15, 1.1, 0.03), box(0.2, 0.15, 0.01, std({ color: 0xffe08a }), 0.2, 1.0, 0.03)); break;
       default: g.add(box(0.6, 0.6, 0.6, std({ color: 0x999999 })));
     }
     if (kind === 'memorial' || kind === 'bench') for (const c of g.children) c.position.x += 0.5;
@@ -409,6 +425,7 @@ export class World {
     this.focus.lerp(new THREE.Vector3(px, 0.8, py), Math.min(1, dt * 7));
     const cp = Math.cos(this.pitch), c = this.camera;
     c.position.set(this.focus.x + Math.sin(this.yaw) * cp * d, this.focus.y + Math.sin(this.pitch) * d, this.focus.z + Math.cos(this.yaw) * cp * d);
+    if (this.shake > 0.002) { c.position.x += (Math.random() - 0.5) * this.shake; c.position.y += (Math.random() - 0.5) * this.shake; this.shake *= Math.pow(0.02, dt); } else this.shake = 0;
     c.lookAt(this.focus);
     for (const k in this.sky) this.sky[k].position.copy(c.position);
     for (const f of this.facers) f.rotation.y = this.yaw;

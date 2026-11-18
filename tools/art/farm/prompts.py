@@ -23,8 +23,8 @@ PHOTO = STYLE + " A calm pastoral world of ordinary earthy things: wood, soil, c
 # Textures are painted by Qwen-Edit over a flat procedural layout guide (texref.py): text alone always
 # came back with perspective. TEX/WALL are kept as (empty) prefixes of the surface descriptions.
 TEX = WALL = ""
-TEXE = ("Repaint this flat layout guide as a finished, beautiful hand-painted game texture in a pretty Japanese anime background-art style. It shows: {x} "
-        "Keep exactly the same flat straight-on view, the same layout and the same scale as the guide: the surface covers the entire image from edge to edge, "
+TEXE = ("A finished, beautiful hand-painted game texture in a pretty Japanese anime background-art style. It shows: {x} "
+        "A flat straight-on view: the surface covers the entire image from edge to edge, "
         "no perspective, no horizon, no objects, no border, no cast shadows, even soft light. Bright clear colours, gentle painterly brushwork, rich small natural detail, smooth high-resolution painting.")
 CUT = (" " + STYLE + " Isolated on a plain flat uniform light grey background, soft even light, no cast shadow, "
        "the entire subject fully inside the frame with a clear margin all round, centred, upright.")
@@ -65,6 +65,11 @@ TEXTURES = {
     "brick_ruin": (WALL + "an old ruined brick wall of dark red and brown bricks in regular horizontal courses, crumbling mortar, soot stains and a few chipped bricks.", "mirror"),
     "ash_ground": (TEX + "grey poisoned dead earth covered in ash and pale rubble dust, with small fragments of broken concrete and cinders.", "quilt"),
     "hay": (TEX + "a thick layer of loose golden hay and straw, tangled dry stalks.", "quilt"),
+    "hull_plate": (WALL + "the inside wall of a space colony: large riveted pastel pale-grey metal hull panels with neat seams and rows of small round rivets, soft clean paint, a few gentle scuffs.", "period"),
+    "deck_floor": (TEX + "non-slip metal deck plating of a space colony: square grey steel floor plates with a fine raised diamond tread pattern, neat seams, and two thin softly glowing cyan guide lines running straight along it.", "period"),
+    "glass_window": (WALL + "a band of big space-colony window panels between slim pale-grey metal mullions, looking out at deep blue-black space full of small bright stars, with the edge of the blue-and-white Earth glowing at the lower right.", "period"),
+    "colony_path": (TEX + "pale cream composite paving slabs of a space colony walkway, clean square slabs with fine joints, and thin inset strips of soft glowing light running straight across.", "period"),
+    "grass_colony": (TEX + "a neatly kept short lawn of fresh green turf, evenly mown, with a few tiny round metal irrigation nozzles set flush in the grass at regular spacing.", "quilt"),
     "water": (TEX + "the surface of a clear pond seen from above, deep green-blue water with subtle small ripples and soft light glints, nothing floating on it.", "quilt"),
 }
 
@@ -84,6 +89,16 @@ SKIES = {
     "sky_ruins": SKYP + "A poisoned world: a sickly amber and ochre overcast sky, thick dust haze in layered bands, a dim pale glow behind the murk; "
                  "along the very bottom, small and far away, the dark silhouettes of a dead ruined city skyline with broken towers, evenly spread along the whole horizon.",
 }
+
+# Inside the colony cylinder, as asked by the owner (Eden's Upper deck).
+CYL = ("A very wide 360 degree panoramic background painting in a beautiful hand-painted Japanese anime style, bright clear colours, soft light, smooth high-resolution painting, no text. "
+       "The view from the ground inside a gigantic rotating cylinder world: green land with fields, woods and rivers stretches away; on the left and on the right the land rises and curves upward "
+       "like the inside of an enormous tube, and continues up across the top of the picture, where far-away fields, winding silver rivers, lakes and tiny towns are seen upside down through soft blue haze. ")
+SKIES.update({
+    "sky_colony_day": CYL + "Daytime: one long, thin, brilliant white line of light, the sun-line, runs along the middle of the sky across the whole width of the picture; soft white clouds float in the haze; bright, peaceful.",
+    "sky_colony_dusk": CYL + "Dusk: the long sun-line across the middle of the sky has dimmed to a warm amber glow, the haze is peach and rose, and through a vast long window strip in the curving land the blue-and-white Earth hangs in black space.",
+    "sky_colony_night": CYL + "Night: the long sun-line is only a faint dim blue thread across the middle of the sky; the far side of the cylinder overhead is dark and sprinkled with thousands of tiny warm town lights like stars.",
+})
 
 # ------------------------------------------------------------------ C. scenes (1344x768)
 SATO = "a slim woman in her early thirties with a short navy-black bob haircut, in a pale work shirt with rolled sleeves and navy dungarees"
@@ -149,6 +164,12 @@ SCENES = {
                    "a privacy screen, potted plants on the windowsill, a weighing scale, warm daylight through a window. Clean, kind, homely, nobody present, no readable text. " + STYLE,
     "shop_library": "Anime illustration of the interior of a warm little village library: tall wooden shelves packed with old books, a rolling ladder, a reading table with a green lamp and an open book, a worn armchair, "
                     "a small counter with a card box, a cat asleep on a cushion, dust motes in the golden light from a tall window. Quiet, inviting, nobody present, no readable text. " + STYLE,
+    "townmap": "A cute illustrated top-down map of a small village, drawn in soft pastel colours on warm parchment paper, a charming hand-painted fantasy-map look: a winding blue river through the middle with a stone bridge, "
+               "a round village square with a fountain, little shop buildings with coloured roofs around it, a clinic with a green cross, a library, a ranch with a paddock and tiny cows, a small lift kiosk with a tall steel frame, "
+               "a dirt farm road leading off to the top edge of the map, a green hill to the right, trees, fields and a neat compass rose in one corner; small pictures instead of words, no readable text, no labels. " + STYLE,
+    "ruins_fight": "Dynamic cinematic anime film still in an overgrown ruined city street under a hazy amber sky: a compact four metre tall humanoid utility robot painted navy blue with rose-pink trim, with a salvage claw arm and a cargo basket on its back, "
+                   "stands its ground beside a small knee-high grey tripod turret with twin short barrels that fires bright little bursts of light; facing them, several round rust-coloured dog-sized beetle-like crawlers with domed shells and comical feelers "
+                   "scuttle out of the rubble. Dust kicks up, sparks fly, action lines, exciting but not violent, no gore, no people. " + STYLE,
     "hall_memory": "Anime illustration of a quiet room in a village hall: rows of simple glass display cases on wooden tables, each holding one small old-world object: a pocket watch, a teacup, a tin toy robot, a medal, a worn book, a music box, a photograph in a frame. "
                    "Soft daylight from a tall window, pale plaster walls, wooden floor, still and respectful. Beautiful anime film still, nobody present, no readable text.",
 }
@@ -347,25 +368,32 @@ ICONS = {
     "tomato": "one ripe red tomato with its green stalk", "corn": "one golden corn cob with the green husk peeled half back", "onion": "one golden-brown onion", "pumpkin": "one round orange pumpkin",
     "carrot": "one orange carrot with its green leafy top", "eggplant": "one glossy dark purple eggplant", "sweetpotato": "one reddish-purple sweet potato", "spinach": "one bunch of fresh dark green spinach leaves tied with string",
     "moonflower": "one cut pale luminous blue-white star-shaped flower with a silvery stem, softly glowing",
-    "egg": "one single plain white egg, a smooth oval eggshell lying on its side", "milk_s": "one small glass bottle of fresh milk with a paper cap, plain, no label", "milk_m": "one medium tall glass bottle of fresh milk with a cork stopper, plain, no label",
+    "egg": "one single smooth white chicken egg, a plain oval eggshell lying on its side, drawn as a simple still life", "milk_s": "one small glass bottle of fresh milk with a paper cap, plain, no label", "milk_m": "one medium tall glass bottle of fresh milk with a cork stopper, plain, no label",
     "milk_l": "one large wide glass jug bottle of fresh milk with a wire swing-top, plain, no label",
     "fish_s": "one small silver minnow fish, side view facing left", "fish_m": "one speckled brown trout fish, side view facing left", "fish_l": "one large olive-bronze carp fish, side view facing left",
     "fish_spring": "one slender river fish with pale green back and pink flanks, side view facing left", "fish_summer": "one deep-bodied river fish with bright blue and yellow scales, side view facing left",
     "fish_autumn": "one river fish with deep red and orange flanks and a hooked jaw, side view facing left", "fish_winter": "one long pale silver-white river fish with icy blue fins, side view facing left",
     "fish_king": "one huge old golden carp fish with large shining gold scales and long whiskers, side view facing left",
     "herb": "one small bunch of fresh green wild herbs tied with twine", "berry": "one small cluster of dark blue-purple wild berries on a twig with two leaves", "mushroom": "one brown forest mushroom with a round cap",
-    "frostcap": "one pale icy-blue winter mushroom with a frosted cap", "scrap": "one small pile of rusty scrap metal pieces, gears and bent plate", "alloy": "one bright polished silver metal ingot bar",
+    "frostcap": "one pale icy-blue winter mushroom with a frosted cap and a white stem, drawn as a simple still life", "scrap": "one small pile of rusty scrap metal pieces, gears and bent plate", "alloy": "one bright polished silver metal ingot bar",
     "crystal": "one clear pale violet natural crystal cluster", "photo": "one old faded photograph of a seaside landscape in a small worn wooden frame", "teacup": "one old porcelain teacup with a faded blue rim and a small chip",
     "book": "one old worn cloth-bound book with a blank faded green cover", "watch": "one old brass pocket watch with a chain, cracked glass", "toy": "one old tin wind-up toy robot, red and silver, scratched",
     "medal": "one old bronze medal, a plain five-pointed star hanging from a short faded blue ribbon", "seedtin": "one small old round metal tin of seeds, dented, lid slightly open showing seeds, no label",
     "musicbox": "one small old wooden music box with a brass crank and open lid", "datachip": "one small translucent blue data chip with gold contacts", "ring": "one plain old gold ring",
-    "bread": "one round crusty loaf of country bread", "soup": "one earthenware bowl of vegetable soup with a wooden spoon", "pie": "one golden baked fruit pie in a tin dish", "tea": "one steaming mug of tea, plain enamel mug",
-    "tonic": "one small corked glass bottle of amber tonic, plain, no label", "hoe": "one garden hoe with a wooden handle and steel blade, lying diagonally", "can": "one galvanised metal watering can with a long spout",
-    "sickle": "one hand sickle with a curved steel blade and wooden handle", "hammer": "one heavy sledgehammer with a wooden handle, lying diagonally", "axe": "one wood axe with a wooden handle and steel head, lying diagonally",
-    "rod": "one simple bamboo fishing rod with a reel and line, lying diagonally", "milker": "one small hand milking pail of stainless steel with a lid and a short rubber tube", "brush": "one wooden animal grooming brush with stiff bristles and a leather strap",
+    "bread": "one round crusty loaf of country bread", "soup": "one earthenware bowl of vegetable soup with a wooden spoon", "pie": "one golden baked apple pie with a lattice crust in a round tin dish, drawn as a simple still life", "tea": "one white enamel mug of hot tea with a thin wisp of steam, standing on its own",
+    "tonic": "one small corked glass bottle of amber tonic, plain, no label", "hoe": "one long-handled garden hoe, a straight wooden pole with a flat rectangular steel blade fixed at a right angle at one end, lying diagonally on its own", "can": "one galvanised metal watering can with a long spout",
+    "sickle": "one hand sickle, a crescent-shaped curved steel blade on a short wooden handle, lying diagonally on its own", "hammer": "one heavy sledgehammer with a wooden handle, lying diagonally", "axe": "one wood axe with a wooden handle and steel head, lying diagonally",
+    "rod": "one simple bamboo fishing rod with a reel and line, lying diagonally", "milker": "one shiny stainless steel milking pail with a wire handle, half full of milk, standing on its own", "brush": "one oval wooden grooming brush for a cow, seen from the side, with stiff natural bristles underneath and a leather hand strap on top, drawn as a simple still life",
     "lumber": "one neat small stack of three sawn wooden planks tied with rope", "feed": "one small burlap sack of hen feed, tied at the top, a few grains spilling out, no printing",
     "fodder": "one bundle of golden hay tied with twine", "pendant": "one pendant, a teardrop of clear blue glass on a thin leather cord, the glass glowing faintly from within",
-    "seedbag": "one small plain cloth seed pouch of undyed burlap tied at the neck with twine, no printing",
+    "storage_box": "one sturdy wooden storage chest with rounded corners, pale wood planks, brass corner fittings and a hinged lid, closed",
+    "fridge": "one small rounded retro-futuristic refrigerator in soft mint green, two doors, chrome handles and a small glowing blue status light, standing upright",
+    "cooked_meal": "one open lacquered bento box seen from slightly above, with rice, a rolled omelette, grilled fish, broccoli, cherry tomatoes and pickles neatly arranged in compartments",
+    "omelette": "one fluffy golden omelette on a small white plate with a sprig of parsley",
+    "salad": "one wooden bowl of fresh green salad with lettuce, cherry tomatoes, cucumber slices and carrot ribbons",
+    "fish_grill": "one grilled river fish on a skewer, golden-brown crispy skin, on a small rectangular plate with a lemon wedge",
+    "veg_soup": "one steaming earthenware bowl of vegetable soup with chunks of carrot, potato and green beans",
+    "seedbag": "one small plain cloth seed pouch of undyed burlap, tied at the neck with twine, a few seeds beside it",
 }
 
 
@@ -376,7 +404,7 @@ def jobs(group, work="/tmp/farm-art"):
     add = lambda slot, kind, prompt, w, h, **kw: out.append(dict(group=group, slot=slot, kind=kind, prompt=prompt, w=w, h=h, **kw))
     if group == "textures":
         for k, (p, _mode) in TEXTURES.items():
-            add(k, "edit", TEXE.format(x=p), 1328, 1328, refs=[os.path.join(work, "texref", k + ".png")])
+            add(k, "i2i", TEXE.format(x=p), 1328, 1328, refs=[os.path.join(work, "texref", k + ".png")], denoise=0.78)
     elif group == "sky":
         for k, p in SKIES.items():
             add(k, "t2i", p, 2048, 1024)

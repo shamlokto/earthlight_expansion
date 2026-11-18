@@ -191,7 +191,27 @@
 "frames": 81,
 "loop": false
 },
+"video/intro3": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/intro4": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/intro5": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
 "video/title": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/wedding": {
 "fps": 16,
 "frames": 81,
 "loop": false
