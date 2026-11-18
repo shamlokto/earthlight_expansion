@@ -33,13 +33,13 @@ const LOVERS = ['general', 'ruess', 'kestrel', 'mori', 'oduya', 'yui'];
 const VILLAGERS = Object.keys(CAST).filter((id) => id !== 'sato');
 const MAIN = VILLAGERS.filter((id) => id !== 'moraine');
 const needTalk = (id) => (id === 'moraine' ? 12 : NEWCOMERS.includes(id) ? 22 : 25);
-const SPOTS = new Set(('farm.porch farm.bin farm.gate farm.pond farm.field village.square village.memorial village.bridge village.dock ' +
+const SPOTS = new Set(('farm.porch farm.bin farm.gate farm.pond farm.field village.square village.memorial village.bridge village.riverside ' +
   'village.bench village.storefront village.cafefront village.hallfront village.workshopfront village.ranchyard village.river ' +
-  'hill.wreck hill.lake hill.overlook hill.onsen central.office central.arrivals central.exchange central.plaza store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
+  'hill.wreck hill.lake hill.overlook hill.onsen central.office central.arrivals central.exchange central.plaza central.dock store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
   'cafe.counter cafe.table1 cafe.table2 cafe.table3 hall.desk hall.floor ' +
   'clinic.counter clinic.floor library.counter library.floor village.clinicfront village.libraryfront').split(' '));
 const STYLES = new Set(['bob', 'short', 'long', 'bald', 'bun', 'bandana', 'cap']);
-const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', 'cafe', 'hall', 'clinic', 'library']);
+const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', 'cafe', 'hall', 'clinic', 'library', 'central']);
 const TIERS = new Set(['loved', 'liked', 'neutral', 'disliked']);
 const WEATHERS = ['sun', 'rain', 'storm', 'snow'];
 const RELICS = ['photo', 'teacup', 'book', 'watch', 'toy', 'medal', 'seedtin', 'musicbox', 'datachip', 'ring'];
@@ -191,7 +191,7 @@ for (let wd = 0; wd < 7; wd++) {
   check(at('oduya', wd, 720, { weather: 'storm', season: 1 }) === 'cafe.counter', 'Oduya keeps the café open through a storm');
   for (const m of [540, 700, 950]) check((at('marrow', wd, m) === 'hall.desk') === (wd < 5), `Marrow's desk hours (wd ${wd}, ${m})`);
   check(at('marrow', wd, 960) !== 'hall.desk', 'Marrow leaves the desk at four');
-  for (const m of [540, 720, 1010]) check((at('moraine', wd, m) === 'village.dock') === (wd === 5), `Moraine's barge is in on Saturdays only (wd ${wd}, ${m})`);
+  for (const m of [540, 720, 1010]) check((at('moraine', wd, m) === 'central.dock') === (wd === 5), `Moraine's ship is at the Central dock on Saturdays only (wd ${wd}, ${m})`);
   for (const m of [480, 1020]) check(wd === 5 ? at('moraine', wd, m) === null : at('moraine', wd, m) === (m < 1080 && m >= 600 ? 'central.exchange' : null), `Moraine: the dock 9-17 on Saturdays, the Exchange 10-18 other days (wd ${wd}, ${m})`);
   if (wd !== 5) check(at('moraine', wd, 700) === 'central.exchange' && at('moraine', wd, 550) === 'central.plaza' && at('moraine', wd, 1090) === null, `Moraine keeps the Ashfall Exchange in Eden Central (wd ${wd})`);
   for (const m of [1020, 1040, 1055]) check(at('maris', wd, m) === 'farm.bin', `Maris is at the bin at five (wd ${wd}, ${m})`);
@@ -222,7 +222,7 @@ check(['farm.porch', 'farm.pond', 'farm.field'].every((s) => sunSpots.has(s)), "
 
 // Festival days: everyone near the festival during its hours, no counters all day, Maris not at the bin.
 for (const f of FESTIVALS) {
-  const near = f.spot === 'village.bridge' ? ['village.bridge', 'village.river', 'village.dock', 'village.bench']
+  const near = f.spot === 'village.bridge' ? ['village.bridge', 'village.river', 'village.riverside', 'village.bench']
     : ['village.square', 'village.bench', 'village.memorial', 'village.storefront', 'village.cafefront', 'village.hallfront'];
   for (const weather of WEATHERS) for (let minute = 360; minute <= 1440; minute += 10) {
     const ctx = { season: f.season, day: f.day, weekday: weekdayOf(f.season, f.day), minute, weather, festival: f.id, year: 1 };
@@ -383,7 +383,7 @@ for (const w of WEATHERS) {
   check(Array.isArray(RADIO[w]) && RADIO[w].length === 3 && new Set(RADIO[w]).size === 3, `RADIO.${w}: three different forecasts`);
   for (const s of RADIO[w] || []) { check(isText(s), `RADIO.${w}: ${s}`); count(s); }
 }
-const SIGN_SPOTS = ['farm.gate', 'farm.bin', 'village.square', 'village.memorial', 'village.dock', 'village.storefront', 'village.cafefront',
+const SIGN_SPOTS = ['farm.gate', 'farm.bin', 'village.square', 'village.memorial', 'village.riverside', 'village.storefront', 'village.cafefront',
   'village.hallfront', 'village.workshopfront', 'village.ranchyard', 'hill.wreck', 'hill.lake', 'hill.overlook'];
 for (const s of SIGN_SPOTS) { check(isText(SIGNS[s]), `SIGNS['${s}'] (${SIGNS[s]?.length})`); count(SIGNS[s]); }
 for (const s of Object.keys(SIGNS)) check(SPOTS.has(s), `sign spot ${s} is a known spot`);

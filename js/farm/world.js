@@ -89,6 +89,7 @@ const PROPS = {
   charger: { model: () => (art.hasModel('solar_charger') ? 'solar_charger' : 'solar_panel'), h: 1.2, fit: 'foot' },
   farm_bot: { model: 'farm_bot', h: 0.8, fit: 'foot', turn: true },
   hull_window: { h: 12 }, hull_wall: { h: 10 }, glass_roof: { h: 16 }, vending: { model: 'vending', h: 1.9, fit: 'foot' }, feed_sacks: { model: 'feed_sacks', h: 0.8, fit: 'foot' },
+  crane: { model: 'dock_crane', h: 5.5, fit: 'foot' },
   feed_mill: { model: 'feed_mill', h: 2.6, fit: 'foot' }, charge_terminal: { model: 'charge_terminal', h: 1.6, fit: 'foot' }, house_door: { h: 1 }, starglow: { h: 0.5 },
   fruit_tree: { h: 3.4 }, fruit_tree_young: { h: 2.1 }, sapling: { model: 'sapling', h: 1.0 },
 };
@@ -322,6 +323,15 @@ export class World {
         const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ color: 0xcfeaf0, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide, roughness: 0.05 }));
         glass.rotation.x = -Math.PI / 2; glass.position.set(w / 2 - 0.5, Y + 0.2, d / 2 - 0.5); glass.castShadow = false; glass.receiveShadow = false; g.add(glass);
         g.traverse((q) => { if (q.isMesh && q !== glass) q.castShadow = true; });
+        break;
+      }
+      case 'crane': {                                    // a dock crane: a yellow lattice tower, a jib over the water, a hook
+        const y = std({ color: 0xe8b830, metalness: 0.3 }), dk = std({ color: 0x3c4650 });
+        g.add(box(0.9, 0.3, 0.9, dk, 0, 0, 0));
+        for (const [x, z] of [[-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3]]) g.add(box(0.1, 4.6, 0.1, y, x, 0.3, z));
+        for (let h = 0.8; h < 4.8; h += 0.9) g.add(box(0.7, 0.07, 0.7, y, 0, h, 0));
+        g.add(box(0.8, 0.6, 0.8, std({ color: 0xd9dee3 }), 0, 4.9, 0), box(4.4, 0.18, 0.25, y, -1.8, 5.2, 0), box(1.0, 0.5, 0.5, dk, 0.9, 5.0, 0));
+        g.add(box(0.03, 2.2, 0.03, dk, -3.6, 3.0, 0), box(0.3, 0.12, 0.3, dk, -3.6, 2.9, 0));
         break;
       }
       case 'vending': g.add(box(0.85, 1.85, 0.6, std({ color: 0x3f8a8c, roughness: 0.4, metalness: 0.3 })), box(0.6, 0.55, 0.03, new THREE.MeshBasicMaterial({ color: 0x9ff4ff }), 0, 1.05, 0.31), box(0.6, 0.25, 0.03, new THREE.MeshBasicMaterial({ color: 0xffd36a }), 0, 0.55, 0.31), box(0.95, 0.12, 0.7, std({ color: 0x2b3a44 }), 0, 1.85)); break;

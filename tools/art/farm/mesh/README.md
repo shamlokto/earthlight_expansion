@@ -34,6 +34,7 @@ before selling anything that ships these meshes.
 | `harvest.py` | this machine | fetches all newly finished GLBs, renders them, stacks contact sheets to look at |
 | `rotate_glb.py` | this machine | quarter turn about Y for a model that came out lengthwise along Z |
 | `drop_floor.py` | this machine | deletes a flat "shadow sheet" baked under a model, then re-normalises |
+| `items.py` | this machine | concept pictures for small item models, made with Qwen-Image-Edit from the item's own icon |
 | `pod-setup.sh` | pod | the whole Hunyuan3D-2 install (about 4 minutes on a fresh L40S pod) |
 
 ## Output contract (`art/farm/models/<name>.glb`)

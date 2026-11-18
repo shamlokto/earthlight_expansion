@@ -131,9 +131,9 @@ export const VILLAGERS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya
 
 export const SPOTS = [
   'farm.porch', 'farm.bin', 'farm.gate', 'farm.pond', 'farm.field',
-  'village.square', 'village.memorial', 'village.bridge', 'village.dock', 'village.bench', 'village.storefront',
+  'village.square', 'village.memorial', 'village.bridge', 'village.riverside', 'village.bench', 'village.storefront',
   'village.cafefront', 'village.hallfront', 'village.workshopfront', 'village.ranchyard', 'village.river',
-  'hill.wreck', 'hill.lake', 'hill.overlook', 'hill.onsen', 'central.office', 'central.arrivals', 'central.exchange', 'central.plaza',
+  'hill.wreck', 'hill.lake', 'hill.overlook', 'hill.onsen', 'central.office', 'central.arrivals', 'central.exchange', 'central.plaza', 'central.dock',
   'store.counter', 'store.floor', 'ranch.counter', 'workshop.counter', 'workshop.bench',
   'cafe.counter', 'cafe.table1', 'cafe.table2', 'cafe.table3', 'hall.desk', 'hall.floor',
   'clinic.counter', 'clinic.floor', 'library.counter', 'library.floor', 'village.clinicfront', 'village.libraryfront',
@@ -248,7 +248,7 @@ const SCHEDULE = {
   },
   // Ranch: closed Thursday.
   corran(wd, m) {
-    if (wd === 3) return pick(m, [H(9), H(11), 'village.memorial'], [H(11), H(13), 'workshop.bench'], [H(13), H(16), 'village.dock'], [H(16), H(20), 'cafe.table2']);
+    if (wd === 3) return pick(m, [H(9), H(11), 'village.memorial'], [H(11), H(13), 'workshop.bench'], [H(13), H(16), 'village.riverside'], [H(16), H(20), 'cafe.table2']);
     const pint = wd === 0 || wd === 2 || wd === 4 || wd === 5;
     return pick(m, [H(7), H(9), 'village.ranchyard'], [H(9), H(17), 'ranch.counter'], [H(17), H(18), 'village.ranchyard'],
       [H(18), H(21), pint ? 'cafe.table2' : (wd === 6 ? 'hill.onsen' : 'village.bridge')]);   // Sunday evenings: a soak at the Terrace Onsen
@@ -263,7 +263,7 @@ const SCHEDULE = {
   // The Hangar: every day, ten till ten.
   oduya(wd, m) {
     const market = wd === 0 || wd === 3;
-    return pick(m, [H(8), H(9, 30), market ? 'village.dock' : 'village.river'], [H(9, 30), H(10), 'village.cafefront'], [H(10), H(22), 'cafe.counter']);
+    return pick(m, [H(8), H(9, 30), market ? 'village.riverside' : 'village.river'], [H(9, 30), H(10), 'village.cafefront'], [H(10), H(22), 'cafe.counter']);
   },
   // The Hall: desk hours Monday to Friday.
   marrow(wd, m) {
@@ -277,7 +277,7 @@ const SCHEDULE = {
   // The courier: the farm's bin at five, the village otherwise.
   maris(wd, m) {
     const round = ['village.ranchyard', 'village.workshopfront', 'village.bridge', 'village.square', 'village.ranchyard', 'village.memorial', 'village.river'][wd];
-    return pick(m, [H(8), H(9, 30), wd === 5 ? 'village.square' : wd === 1 || wd === 4 ? 'central.arrivals' : 'village.dock'],   // Tue and Fri: her run lands at Eden Central
+    return pick(m, [H(8), H(9, 30), wd === 5 ? 'village.square' : wd === 1 || wd === 4 ? 'central.arrivals' : 'village.riverside'],   // Tue and Fri: her run lands at Eden Central
       [H(9, 30), H(10, 30), wd < 5 ? 'hall.floor' : 'village.hallfront'],
       [H(10, 30), H(12), 'village.storefront'], [H(12), H(13, 30), 'cafe.table2'], [H(13, 30), H(16, 20), round],
       [H(16, 20), H(17), 'farm.gate'], [H(17), H(17, 40), 'farm.bin'], [H(17, 40), H(18, 10), 'farm.gate'],
@@ -292,7 +292,7 @@ const SCHEDULE = {
   },
   // Saturdays at the dock (her barge is her counter); other days her trading house in Eden Central.
   moraine(wd, m) {
-    if (wd === 5) return pick(m, [H(9), H(17), 'village.dock']);
+    if (wd === 5) return pick(m, [H(9), H(17), 'central.dock']);   // Saturdays: trading from her ship at the Central dock
     return pick(m, [H(9), H(10), 'central.plaza'], [H(10), H(18), 'central.exchange']);   // the Ashfall Exchange on the Main deck
   },
   // Saturdays in the village, Sundays at the farm; from year 2, Wednesday evenings at the Hangar.
@@ -311,7 +311,7 @@ const SCHEDULE = {
 Object.assign(SCHEDULE, {
   // The Guardians' commander: about the village by day, the overlook some evenings.
   kestrel(wd, m) {
-    const after = ['village.clinicfront', 'village.square', 'village.libraryfront', 'village.ranchyard', 'village.square', 'village.dock', 'village.bench'][wd];
+    const after = ['village.clinicfront', 'village.square', 'village.libraryfront', 'village.ranchyard', 'village.square', 'village.riverside', 'village.bench'][wd];
     const sky = wd === 0 || wd === 2 || wd === 4;
     return pick(m, [H(9), H(11), 'village.square'], [H(11), H(13), 'village.bridge'],
       [H(13), H(14, 30), wd === 6 ? 'village.cafefront' : 'cafe.table3'], [H(14, 30), H(17, 30), after],
@@ -341,7 +341,7 @@ const FESTIVAL_SPOTS = {
   },
   'village.bridge': {
     general: 'village.bridge', marrow: 'village.bridge', seln: 'village.river', corran: 'village.river', ruess: 'village.bench',
-    oduya: 'village.bench', maris: 'village.bridge', vashti: 'village.dock', moraine: 'village.dock',
+    oduya: 'village.bench', maris: 'village.bridge', vashti: 'village.riverside', moraine: 'village.river',
     kestrel: 'village.bridge', mori: 'village.river', yui: 'village.bench',
   },
 };
@@ -1399,7 +1399,7 @@ export const EVENTS = [
 
   // ---- Moraine: the price of peace.
   {
-    id: 'moraine3', npc: 'moraine', hearts: 3, map: 'village', weekday: 5, from: H(9), to: H(17),
+    id: 'moraine3', npc: 'moraine', hearts: 3, map: 'central', weekday: 5, from: H(9), to: H(17),
     lines: [
       L('narrator', 'Moraine is on the foredeck of her barge under a striped awning, with a ledger open on her knee and a pen she is not using.'),
       L('moraine', 'Captain. Come aboard. I am doing my accounts and I require a witness of good character. You will have to serve.'),
@@ -1414,7 +1414,7 @@ export const EVENTS = [
     reward: { love: 3, item: ['tonic', 1] },
   },
   {
-    id: 'moraine7', npc: 'moraine', hearts: 7, map: 'village', weekday: 5, from: H(9), to: H(17),
+    id: 'moraine7', npc: 'moraine', hearts: 7, map: 'central', weekday: 5, from: H(9), to: H(17),
     lines: [
       L('narrator', 'There is a crate on the dock beside the barge, nailed shut, with the Ashfall crest burned into the lid. Moraine is looking at it and not at Sato.'),
       L('moraine', 'My crown is in there. The real one. Hull plate from the first carrier I ever stole, beaten into a circle. Ugly. I adored it.'),
@@ -1593,7 +1593,7 @@ export const SIGNS = {
   'farm.bin': 'SHIPPING BIN. Collection daily at five (J. Maris, courier). Payment at dawn. No tools, no livestock, no notes saying "sorry about the eggs".',
   'village.square': 'WILLOWFALL, on the Lantern Ring. Population 94 (the 4 is freshly painted). Notices: Planting Day, Spring 18. Lantern Night, Summer 24. Harvest Fair, Autumn 9. Year\'s End, Winter 30.',
   'village.memorial': 'Ships on the left. People on the right. They kept the dark out, in two wars and a siege. The strawberries are for everyone; take one and remember somebody.',
-  'village.dock': 'RIVER DOCK. Courier boats daily. The Ashfall trading barge calls on Saturdays, nine till five. Her Majesty asks that you do not lean on the awning.',
+  'village.riverside': 'THE RIVERSIDE WALK. Willows, benches and the best bank for fishing in Willowfall. The old dock was taken down after the siege; boats moor on the Main deck now.',
   'village.storefront': "SELN'S SEED & SUNDRY. Seeds in season, fresh bread, rucksacks, fishing rods. Open 9 to 5. Closed Sundays, when the steward is out counting seedlings.",
   'village.cafefront': "THE HANGAR. The Upper deck's canteen. Hot food, ten till ten, every day of the year. Storms included. If you are hungry and cannot pay, come in anyway. T. Oduya, chef.",
   'village.hallfront': 'VILLAGE HALL. Warden E. Marrow. Desk hours 9 to 4, Monday to Friday. The Memory Room is open to all: things from the Old World, kept so we know what was good.',

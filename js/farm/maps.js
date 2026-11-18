@@ -131,9 +131,8 @@ function village() {
   m.fill(25, 11, 38, 21, 'c');                                                         // Lantern Square
   m.fill(31, 26, 32, 30, 'k').fill(12, 26, 13, 30, 'k');                              // the road bridge and the west footbridge
   m.fill(12, 19, 13, 25, 'p').fill(12, 31, 13, 38, 'p');                              // footbridge path
-  // the harbour: the river widens into a basin at the dock, with a sandy rim and a pier out to the barge
-  m.fill(44, 25, 58, 32, 's').fill(45, 26, 57, 31, 'w');
-  m.fill(48, 19, 49, 24, 'p').fill(46, 25, 54, 25, 'k').fill(49, 26, 50, 28, 'k');      // to the dock, the quay and the pier
+  // the riverside walk (the old dock is gone: the real one is on the Main deck)
+  m.fill(48, 19, 49, 24, 'p').fill(43, 25, 57, 25, 'p');
   m.fill(3, 39, 60, 40, 'p');                                                          // the south lane
   m.fill(4, 46, 60, 47, 'p');                                                          // Willow Lane, on into the park
   m.fill(2, 11, 11, 15, 'd');                                                          // the hydroponics garden
@@ -168,7 +167,7 @@ function village() {
   m.prop('signpost', 22, 16, { act: 'sign', sign: 'village.workshopfront' });
   m.prop('signpost', 41, 19, { act: 'sign', sign: 'village.hallfront' });
   m.prop('signpost', 11, 38, { act: 'sign', sign: 'village.ranchyard' });
-  m.prop('signpost', 46, 24, { act: 'sign', sign: 'village.dock' });
+  m.prop('signpost', 47, 24, { act: 'sign', sign: 'village.riverside' });
   // Market Street: stalls, crates and lamps
   for (const x of [23, 26, 35, 38]) m.prop('market_stall', x, 6, { w: 2, rot: 0, tint: x });
   m.prop('cargo_crate', 22, 5); m.prop('cargo_crate', 40, 5); m.prop('cargo_crate', 29, 6); m.prop('cargo_crate', 34, 6, { scale: 0.8 });
@@ -188,9 +187,10 @@ function village() {
   m.prop('maint_bot', 58, 14, { solid: false, rot: 2.4 });
   m.prop('vent', 52, 13); m.prop('vent', 57, 15);
   m.spot('village.lift', 56.5, 13.7);
-  // the river: dock, barge, pipes along the bank, reeds
-  m.prop('barge', 50, 27, { w: 5, d: 3, solid: false, onWater: true, rot: Math.PI / 2, turned: true, label: 'Dock' });   // moored along the pier, bow downstream
-  m.prop('cargo_crate', 54, 25); m.prop('cargo_crate', 46, 25, { scale: 0.8 });
+  // the river: the riverside walk with willows, benches and a fishing spot; pipes along the bank, reeds
+  for (const x of [44, 52]) m.prop('bench', x, 23, { w: 2 });
+  for (const [x, y] of [[43, 23], [47, 22], [51, 22], [56, 23]]) m.prop('tree', x, y, { scale: 1.1, rot: x, model: 'willow' });
+  m.prop('reeds', 50, 26, { solid: false }); m.prop('reeds', 55, 26, { solid: false }); m.prop('flowers', 49, 23, { solid: false });
   m.prop('pipe_run', 36, 25, { w: 8 });
   m.prop('pipe_run', 36, 31, { w: 9 });
   for (const x of [4, 9, 21, 40, 58]) m.prop('reeds', x, 26, { solid: false });
@@ -210,12 +210,12 @@ function village() {
   for (const [x, y, k] of [[37, 43, 'tree'], [39, 50, 'tree'], [55, 43, 'tree'], [58, 50, 'pine'], [61, 44, 'tree'], [43, 49, 'bush'], [50, 49, 'bush'], [35, 49, 'pine']]) m.prop(k, x, y, { scale: 1.05, rot: x });
   for (const [x, y] of [[42, 41], [52, 41], [45, 49], [48, 49], [40, 45], [53, 45], [57, 44], [36, 45]]) m.prop('flowers', x, y, { solid: false });
   m.exit(31, 0, 32, 0, { map: 'farm', x: 22, y: 32.2, dir: 1 });
-  m.spot('village.square', 31.5, 19.6).spot('village.memorial', 32, 16.8).spot('village.bridge', 30.2, 26.5).spot('village.dock', 50.5, 25.6)
+  m.spot('village.square', 31.5, 19.6).spot('village.memorial', 32, 16.8).spot('village.bridge', 30.2, 26.5).spot('village.riverside', 50.5, 25.6)
     .spot('village.bench', 35, 24.4).spot('village.storefront', 18.6, 8.6).spot('village.cafefront', 46.4, 8.6).spot('village.hallfront', 47.4, 18.4)
     .spot('village.clinicfront', 41.6, 40.4).spot('village.libraryfront', 50.4, 40.4).spot('village.workshopfront', 19.6, 17.6).spot('village.ranchyard', 9, 40.4).spot('village.river', 20, 26.5);
   m.water = 'village'; m.start = [31.5, 1.6];
   // district names and the maintenance bots' rounds (both only for the map screen and the look)
-  m.areas = [['Market Street', 31.5, 10.3], ['Lantern Square', 31.5, 13], ['Hydroponics', 6.5, 16.5], ['Lift Plaza', 56, 17.6], ['River Dock', 50.5, 24], ['Willow Lane', 17, 50.3], ['Fountain Park', 47, 48.6], ['Solar Yard', 58, 32.3], ['Lantern River', 22, 28.5]];
+  m.areas = [['Market Street', 31.5, 10.3], ['Lantern Square', 31.5, 13], ['Hydroponics', 6.5, 16.5], ['Lift Plaza', 56, 17.6], ['Riverside', 50.5, 24], ['Willow Lane', 17, 50.3], ['Fountain Park', 47, 48.6], ['Solar Yard', 58, 32.3], ['Lantern River', 22, 28.5]];
   m.bots = [[[4, 8.5], [59.5, 8.5]], [[7, 17.5], [59.5, 17.5]], [[4, 39.5], [59.5, 39.5]], [[31.5, 2], [31.5, 46.5], [58, 46.5]]];
   m.border('tree', 21, (x, y) => (y === 0 && (x === 31 || x === 32)));
   const park = (x, y) => x >= 34 && y >= 41;
@@ -226,6 +226,7 @@ function village() {
 // The lift kiosk's notice lives here with the map that has the kiosk (story.js owns the other signs).
 const MAP_SIGNS = {
   'central.board': 'EDEN CENTRAL, Main deck. Governor\'s office: weekdays 9 to 5 (the General). The Ashfall Exchange: Her Majesty receives traders daily but Saturdays. Arrivals: courier runs Tuesdays and Fridays. Viewing gallery open all night; please do not tap the glass.',
+  'central.dock': 'CENTRAL DOCK. Canal craft, lighters and the Ashfall trading ship. Her Majesty trades from the ship on Saturdays and from the Exchange on the plaza the rest of the week. Mind the crane.',
   'central.watch': 'SATO\'S WATCH. Observatory and beacon of the Main deck, named by the Colony Council for Captain M. Sato, who kept watch. Dome open to the public from 7 in the evening. (The Captain has asked twice for the name to be changed. The Council has declined twice.)',
   'central.plaza': 'THE PLAZA. Laid out by the founders, rebuilt after the siege. Avenue north to the great window; south to the lift terminal. Canal walks east and west.',
   'central.arrivals': 'ARRIVALS. Courier and supply runs from the Middle and Lower decks. J. Maris lands at 8 on Tuesdays and Fridays and asks that nobody wave at her during docking.',
@@ -321,8 +322,16 @@ function central() {
   for (const [x, y] of [[5, 22], [9, 22], [13, 22], [5, 28], [9, 28], [13, 28]]) m.prop('market_stall', x, y, { w: 2, tint: x + y });
   m.prop('vending', 17, 24, { act: 'counter', shop: 'grandmarket', label: 'Grand Market' }); m.prop('vending', 17, 27, { act: 'counter', shop: 'grandmarket', label: 'Grand Market' });
   m.prop('signpost', 20, 25, { act: 'sign', sign: 'central.market' });
-  // the north-west garden and the north-east cargo yard
-  for (const y of [7, 10, 13, 16]) for (const x of [4, 7, 10, 13]) m.prop('hydro_tower', x, y);
+  // the Central dock (north-west): a hull-side basin with a quay, cranes and moored craft; Moraine's ship lies here
+  m.fill(1, 6, 11, 18, 'w').fill(12, 6, 14, 18, 'k').fill(12, 19, 14, 20, 'c');
+  m.prop('barge', 7, 9, { w: 4, d: 5, solid: false, onWater: true, label: "Moraine's ship" });
+  m.prop('barge', 2, 14, { w: 2, d: 2, solid: false, onWater: true, rot: 0.4 }); m.prop('barge', 4, 7, { w: 2, d: 2, solid: false, onWater: true, rot: -0.3 });
+  m.prop('crane', 14, 7, { label: 'Dock crane' }); m.prop('crane', 14, 15, { label: 'Dock crane' });
+  m.prop('cargo_crate', 12, 17); m.prop('cargo_crate', 13, 17, { scale: 0.8 }); m.prop('cargo_crate', 14, 12, { scale: 0.9 });
+  m.prop('signpost', 12, 6, { act: 'sign', sign: 'central.dock' });
+  m.spot('central.dock', 12.6, 10.5);
+  for (const x of [16, 18]) m.prop('hydro_tower', x, 10); for (const x of [16, 18]) m.prop('hydro_tower', x, 13);
+  // the north-east cargo yard
   for (const [x, y] of [[17, 8], [17, 15], [51, 9], [61, 16]]) m.prop('tree', x, y, { rot: y });
   for (const [x, y] of [[49, 6], [50, 6], [49, 7], [63, 6], [64, 7]]) m.prop('cargo_crate', x, y, { scale: 0.85 + (x % 3) * 0.1 });
   m.prop('water_tank', 64, 10, { w: 2, d: 2 }); m.prop('fan_tower', 64, 15, { w: 2, d: 2 });
@@ -331,7 +340,7 @@ function central() {
   m.building('observatory', 53, 6, 8, 7, { height: 9, label: "Sato's Watch" });
   m.prop('house_door', 57, 12, { act: 'stargaze', solid: false, label: "Sato's Watch" });
   m.prop('signpost', 59, 14, { act: 'sign', sign: 'central.watch' });
-  m.prop('pipe_run', 1, 6, { d: 26 }); m.prop('pipe_run', 68, 6, { d: 26 });
+  m.prop('pipe_run', 1, 20, { d: 12 }); m.prop('pipe_run', 68, 6, { d: 26 });
   // homes: flats and townhouses on the side streets; the empty ones keep their doors shut (act 'house')
   const homes = [
     ['apartment', 4, 39, 6], ['townhouse', 11, 39, 5], ['house', 17, 39, 5, 'central.house_1'], ['apartment', 23, 39, 6],
