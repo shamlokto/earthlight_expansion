@@ -306,6 +306,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/mulberry": {
+   "file": "icons/mulberry.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/mushroom": {
    "file": "icons/mushroom.webp",
    "w": 256,
@@ -511,6 +516,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/wild_apple": {
+   "file": "icons/wild_apple.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/wild_grape": {
    "file": "icons/wild_grape.webp",
    "w": 256,
@@ -530,6 +540,66 @@
    "file": "icons/yuzu.webp",
    "w": 256,
    "h": 256
+  },
+  "music/autumn": {
+   "file": "music/autumn.mp3",
+   "ogg": "music/autumn.ogg",
+   "seconds": 93.84
+  },
+  "music/central": {
+   "file": "music/central.mp3",
+   "ogg": "music/central.ogg",
+   "seconds": 93.98
+  },
+  "music/festival": {
+   "file": "music/festival.mp3",
+   "ogg": "music/festival.ogg",
+   "seconds": 79.07
+  },
+  "music/lantern": {
+   "file": "music/lantern.mp3",
+   "ogg": "music/lantern.ogg",
+   "seconds": 79.87
+  },
+  "music/night": {
+   "file": "music/night.mp3",
+   "ogg": "music/night.ogg",
+   "seconds": 78.94
+  },
+  "music/ruins": {
+   "file": "music/ruins.mp3",
+   "ogg": "music/ruins.ogg",
+   "seconds": 89.91
+  },
+  "music/spring": {
+   "file": "music/spring.mp3",
+   "ogg": "music/spring.ogg",
+   "seconds": 94.82
+  },
+  "music/summer": {
+   "file": "music/summer.mp3",
+   "ogg": "music/summer.ogg",
+   "seconds": 93.99
+  },
+  "music/title": {
+   "file": "music/title.mp3",
+   "ogg": "music/title.ogg",
+   "seconds": 93.78
+  },
+  "music/village": {
+   "file": "music/village.mp3",
+   "ogg": "music/village.ogg",
+   "seconds": 93.66
+  },
+  "music/wedding": {
+   "file": "music/wedding.mp3",
+   "ogg": "music/wedding.ogg",
+   "seconds": 67.71
+  },
+  "music/winter": {
+   "file": "music/winter.mp3",
+   "ogg": "music/winter.ogg",
+   "seconds": 93.97
   },
   "people/corran_front": {
    "file": "people/corran_front.webp",
