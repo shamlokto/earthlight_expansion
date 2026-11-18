@@ -250,7 +250,7 @@ export function kitchenWindow(state, onChange) {
   const draw = (msg = '') => {
     const book = sim.recipeBook(state), ready = book.filter((r) => r.can).length;
     const groups = [...new Set(book.map((r) => r.group))];
-    const row = (r) => `<div class="fm-row${r.can ? ' can' : ' no'}"><div><b>${icon(r.id)} ${esc(r.name)}${r.can ? ' <em class="fm-ok">can make now</em>' : ''}${r.cooked ? ` <small class="fm-dim">cooked ${r.cooked}×</small>` : ''}</b><span>${r.uses ? 'Uses ' + esc(r.uses.join(', ')) : 'Needs ' + esc(r.needs.join(' + '))} · +${ITEMS[r.id].stamina} stamina · sells ${ITEMS[r.id].sell} cr</span></div><button data-r="${r.id}" ${r.can ? '' : 'disabled'}>Cook</button></div>`;
+    const row = (r) => `<div class="fm-row${r.can ? ' can' : ' no'}"><div><b>${icon(r.id)} ${esc(r.name)}${r.can ? ' <span class="fm-ok">can make now</span>' : ''}${r.cooked ? ` <small class="fm-dim">cooked ${r.cooked}×</small>` : ''}</b><span>${r.uses ? 'Uses ' + esc(r.uses.join(', ')) : 'Needs ' + esc(r.needs.join(' + '))} · +${ITEMS[r.id].stamina} stamina · sells ${ITEMS[r.id].sell} cr</span></div><button data-r="${r.id}" ${r.can ? '' : 'disabled'}>Cook</button></div>`;
     const body = openWin('Kitchen', `<p class="fm-lead">The stove is a salvaged ship's galley ring. It still smells faintly of coolant and toast.</p>
       <p class="fm-kready">${ready ? `<b>${ready}</b> dish${ready > 1 ? 'es' : ''} you can make right now.` : 'Nothing you can make right now: the recipes below say what each needs.'}</p>` +
       groups.map((g) => { const rs = book.filter((r) => r.group === g).sort((a, b) => b.can - a.can); return `<h3>${esc(g)} <small class="fm-dim">${rs.filter((r) => r.can).length}/${rs.length} ready</small></h3>${rs.map(row).join('')}`; }).join('') +
@@ -266,7 +266,7 @@ export function kitchenWindow(state, onChange) {
 let journalIsOpen = false;
 export const journalOpen = () => journalIsOpen && windowOpen();
 const hearts = (love) => { const h = Math.floor((love || 0) / 20); return `<span class="fm-hearts">${'♥'.repeat(h)}<s>${'♥'.repeat(5 - h)}</s></span>`; };
-const yes = (b) => (b ? '<b class="fm-ok">✓</b>' : '<b class="fm-no">✗</b>');
+const yes = (b) => (b ? '<span class="fm-ok">✓</span>' : '<span class="fm-no">✗</span>');
 function fieldSummary(state, id) {
   const f = state.fields[id], by = {}; let till = 0, planted = 0, wet = 0, ripe = 0, dead = 0, debris = 0;
   for (const t of f.tiles) {
@@ -274,7 +274,7 @@ function fieldSummary(state, id) {
     if (!t.crop) continue; if (t.crop.dead) { dead++; continue; }
     planted++; const st = sim.cropStage(t.crop), e = by[t.crop.id] ||= { n: 0, ripe: 0 }; e.n++; if (st === 3) { e.ripe++; ripe++; }
   }
-  const crops = Object.entries(by).map(([c, e]) => `${icon(c)} ${esc(CROPS[c].name)} × ${e.n}${e.ripe ? ` <em class="fm-ok">(${e.ripe} ripe)</em>` : ''}`).join(' &nbsp; ');
+  const crops = Object.entries(by).map(([c, e]) => `${icon(c)} ${esc(CROPS[c].name)} × ${e.n}${e.ripe ? ` <span class="fm-ok">(${e.ripe} ripe)</span>` : ''}`).join(' &nbsp; ');
   return `<div class="fm-stats"><span><b>${till}</b> tilled</span><span><b>${planted}</b> planted</span><span><b>${wet}</b> watered</span><span><b>${ripe}</b> ripe</span><span><b>${dead}</b> dead</span>${id === 'farm' ? `<span><b>${debris}</b> debris</span>` : ''}</div>${crops ? `<p>${crops}</p>` : '<p class="fm-dim">Nothing growing.</p>'}`;
 }
 function todayTab(state, extra) {
@@ -282,7 +282,7 @@ function todayTab(state, extra) {
   const radio = RADIO[state.weatherTomorrow]; const fc = Array.isArray(radio) ? radio[0] : radio;
   let h = `<div class="fm-jtop"><div><b class="fm-big">${esc(sim.dateLabel(state))}</b><span>${esc(sim.timeLabel(state))} · ${esc(extra.place || '')}</span></div>
     <div><span>${WEATHER_ICON[state.weather]} Today: ${state.weather}</span><span>${WEATHER_ICON[state.weatherTomorrow]} Tomorrow: ${state.weatherTomorrow}</span></div>
-    <div><b class="fm-big">${p.money.toLocaleString()} cr</b><span>Stamina ${p.stamina}/${p.maxStamina}${buff ? ' · <em class="fm-ok">♨ onsen glow: tools cost 1 less today</em>' : ''}</span></div></div>`;
+    <div><b class="fm-big">${p.money.toLocaleString()} cr</b><span>Stamina ${p.stamina}/${p.maxStamina}${buff ? ' · <span class="fm-ok">♨ onsen glow: tools cost 1 less today</span>' : ''}</span></div></div>`;
   if (fc) h += `<p class="fm-dim">Forecast: ${esc(fc)}</p>`;
   h += `<h3>The Hollin field</h3>${fieldSummary(state, 'farm')}`;
   h += `<h3>Greenhouse</h3>${state.flags.greenhouse ? fieldSummary(state, 'greenhouse') : '<p class="fm-dim">Still a wreck. Ruess can repair it (4,000 cr and 120 lumber).</p>'}`;
@@ -290,11 +290,11 @@ function todayTab(state, extra) {
   h += `<h3>Pasture</h3><p>${sown ? `${sown} patches of grass, <b>${rg}</b> ripe to cut for fodder.` : 'No grass sown yet.'} Stores: ${state.stock.fodder} fodder · ${state.stock.feed} hen feed · ${state.stock.lumber} lumber.</p>`;
   h += `<h3>Animals</h3>` + (state.animals.length ? state.animals.map((a) => `<div class="fm-row"><div><b>${a.kind === 'cow' ? '🐄' : '🐔'} ${esc(a.name)}</b><span>fed ${yes(a.fed)} · ${a.kind === 'cow' ? `milked ${yes(a.milked)} · brushed ${yes(a.brushed)}` : 'lays an egg tomorrow if fed'} · said hello ${yes(a.talked)}</span></div>${hearts(a.love)}</div>`).join('') + (state.eggs ? `<p>${state.eggs} egg${state.eggs > 1 ? 's' : ''} waiting in the coop.</p>` : '') : '<p class="fm-dim">No animals yet. Corran sells chickens and cows.</p>');
   const R = state.robots || [];
-  h += `<h3>Field-units</h3>` + (R.length ? R.map((r, i) => `<div class="fm-row"><div><b>🤖 ${esc(r.name)} · ${esc(ROBOT_JOBS[r.job] || r.job)}</b><span>skill ${sim.robotLevel(r)} (reaches ${sim.robotReach(r) || '—'}) · “${esc(sim.robotMood(state, i))}”${r.done ? ` · did ${r.done} this morning` : ''}</span></div><span class="fm-batt"><i style="width:${r.charge}%" class="${r.charge < 30 ? 'low' : ''}"></i><u>${r.charge}%</u></span></div>`).join('') : '<p class="fm-dim">None yet. Ruess leases them at the Workshop (300 cr).</p>');
+  h += `<h3>Field-units</h3>` + (R.length ? R.map((r, i) => `<div class="fm-row"><div><b>🤖 ${esc(r.name)} · ${esc(ROBOT_JOBS[r.job] || r.job)}</b><span>skill ${sim.robotLevel(r)} (${r.job === 'animals' ? 'tends every animal' : r.job === 'rest' ? 'resting' : 'reaches ' + sim.robotReach(r) + ' tiles'}) · “${esc(sim.robotMood(state, i))}”${r.done ? ` · did ${r.done} this morning` : ''}</span></div><span class="fm-batt"><i style="width:${r.charge}%" class="${r.charge < 30 ? 'low' : ''}"></i><u>${r.charge}%</u></span></div>`).join('') : '<p class="fm-dim">None yet. Ruess leases them at the Workshop (300 cr).</p>');
   const P = state.panels || [];
   if (P.length) h += `<p>Solar chargers: ${P.map((x) => `[${x.slots.map((b) => (b === 'battery_full' ? '🔋' : b ? '▫ charging' : '·')).join(' ')}]`).join(' ')} · batteries in your rucksack: ${sim.countItem(state, 'battery_full')} charged, ${sim.countItem(state, 'battery')} empty.</p>`;
   const T = state.fruitTrees || [];
-  h += `<h3>Fruit trees</h3>` + (T.length ? T.map((t) => { const d = FRUIT_TREES[t.kind], st = sim.treeStage(state, t), left = TREE_DAYS - sim.treeAge(state, t); return `<div class="fm-row"><div><b>${icon(d.fruit)} ${esc(d.name)}</b><span>${st < 2 ? `${st ? 'young tree' : 'sapling'}, ${left} day${left > 1 ? 's' : ''} to go` : sim.fruitReady(state, t) ? '<em class="fm-ok">a fruit is ready to pick</em>' : state.cal.season === d.season ? 'picked today' : `fruits in ${SEASONS[d.season].toLowerCase()}`}</span></div></div>`; }).join('') : '<p class="fm-dim">None yet. Seln sells saplings (2,500 cr), any season but winter.</p>');
+  h += `<h3>Fruit trees</h3>` + (T.length ? T.map((t) => { const d = FRUIT_TREES[t.kind], st = sim.treeStage(state, t), left = TREE_DAYS - sim.treeAge(state, t); return `<div class="fm-row"><div><b>${icon(d.fruit)} ${esc(d.name)}</b><span>${st < 2 ? `${st ? 'young tree' : 'sapling'}, ${left} day${left > 1 ? 's' : ''} to go` : sim.fruitReady(state, t) ? '<span class="fm-ok">a fruit is ready to pick</span>' : state.cal.season === d.season ? 'picked today' : `fruits in ${SEASONS[d.season].toLowerCase()}`}</span></div></div>`; }).join('') : '<p class="fm-dim">None yet. Seln sells saplings (2,500 cr), any season but winter.</p>');
   const up = state.pending.upgrade, q = state.flags.quest;
   h += `<h3>Errands</h3><p>${up ? `Ruess is working on your ${esc(TOOL_LEVELS[up.level])} ${esc(ITEMS[up.tool].name.toLowerCase())}; ready tomorrow.` : 'No tool at the Workshop.'}</p>`;
   h += `<p>${q && NPCS[q.npc] && ITEMS[q.item] ? `Favour for ${esc(NPCS[q.npc].short || NPCS[q.npc].name)}: ${q.n} × ${esc(ITEMS[q.item].name)} (you have ${sim.countItem(state, q.item)}).` : 'No favour asked of you just now.'}</p>`;
@@ -403,7 +403,7 @@ function iconCard(id) {
   img.onload = () => paint(img);
   if (m) img.src = m[1]; else if (svg) img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg[0].replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" '));
   else { ctx.font = 'bold 90px sans-serif'; ctx.fillStyle = '#7a5410'; ctx.textAlign = 'center'; ctx.fillText(ITEMS[id].name.slice(0, 2), 128, 160); tex.needsUpdate = true; }
-  const card = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 0.06), [0, 1, 2, 3].map(() => new THREE.MeshStandardMaterial({ color: 0xd9c49a })).concat([new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 })]));
+  const card = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 0.06), [0, 1, 2, 3].map(() => new THREE.MeshStandardMaterial({ color: 0xd9c49a })).concat([new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, transparent: true, alphaTest: 0.4 }), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, transparent: true, alphaTest: 0.4 })]));
   g.add(card); return g;
 }
 // Which model shows an item: its own id, crops as crop_<id>, saplings, and a few by sense.

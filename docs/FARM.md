@@ -268,3 +268,78 @@ existing game is used.
   `guard_post` (kind `guard`).
 * **Map** (`minimap.js`): M or the map button opens the town map (tabs for the three outdoor
   maps); a north-up minimap with a view cone sits under the clock outdoors. Music is in the menu.
+
+## 7. More things to own and do (owner, 2026-11-18: "more items are needed in the end to make the game fun")
+
+All rules are in `sim.js` (pure, deterministic, every action returns `{ ok, msg?, … }`); the words for
+the robots' moods and every item's long text are in `data.js`. Old saves load: `sim.ensure(state)`
+(called by `loadState`) adds every new field empty.
+
+* **Bigger rucksack**: Seln's tiers are now 15 (1,500) → 20 (4,000) → 25 (8,000) → 30 (15,000)
+  (`sim.RUCKSACK_TIERS`). The HUD bar becomes a grid: two even rows on a wide screen, rows of ten on a
+  phone, the slots shrinking to fit; the prompt and held-item label sit above it (`--barH`).
+* **Basket** (`basket`, Seln, 800, once; kind `tool`): while it is the selected slot, `harvest`,
+  `pickForage`, `pickBush` and `pickFruit` put produce (kinds crop, forage, fruit, animal) in
+  `state.player.basket = [ { id, n } ]` (30 in all, one line a kind; when full, the rucksack takes it).
+  `shipBasket(state)` (E at the bin with the basket held) ships it all; `basketTake(state, i, n?)`
+  (the rucksack menu) takes a line out. `basketTotal`, `basketHeld`, `BASKET_CAP`.
+* **Field chests** (`field_chest`, Ruess, 1,200 + 20 lumber, any number; kind `placeable`): Space
+  with it held on free ground on the farm or the hill (`placeItem(state, map, x, y)`; the UI checks the
+  ground: not the field, pasture, a doorway, a prop or a forage spot). `state.chests = [ { map, x, y,
+  items: [ {id,n}|null × 20 ] } ]`. E opens `ui.boxWindow(state, 'chest:<i>', onChange, title)` (the
+  storage box window, generalised; `sim.boxOf(state, where)` resolves 'storage', 'fridge', 'chest:i';
+  `storeItem`/`takeItem` accept all three). The axe on an empty chest picks it up (`pickUpPlaced`).
+  Drawn with model `field_chest` (built stand-in: a hull-plate chest).
+* **Field-units** (Ruess leases up to 3, 300 cr each; `state.robots = [ { name, job, days, charge,
+  mood, done } ]`): jobs `water` (24 dry crop tiles), `harvest` (12 ripe crops into the bin; regrowing
+  plants stay), `animals` (feeds every animal from the stock, eggs into the bin), `rest`. Skill level
+  `robotLevel(r) = min(5, 1 + days worked / 5)`; each level adds 4 tiles (`robotReach`). The work runs
+  in `sleep()` after the rain and the deliveries; `sleep()` returns `robots: [ { name, job, done, used,
+  charge, short, levelUp } ]` and a note for each. **Batteries**: charge 0–100; a full day costs
+  25–40 (`robotCost`: water 25, harvest/animals 30, +2 a level), less when there is less to do; with
+  too little charge the robot does part of the job and the note says so; at 0 it does nothing.
+  Items `battery` (empty; Ruess 200 cr; also a ruins find) and `battery_full`. `chargeRobot(state, i)`
+  (E with a charged battery): +60, the empty one comes back. **Solar chargers** (`solar_panel`, Ruess,
+  1,500 + 10 lumber; placed on the farm like chests): `state.panels = [ { map, x, y, slots: [ 'battery'
+  | 'battery_full' | null × 2 ] } ]`; `useCharger(state, i)` takes charged ones out or puts empty ones
+  in; overnight a sunny day charges 2, rain or snow 1, a storm 0. Talking to a robot (E) shows its
+  skill, charge and mood line (`robotMood`) in a speech bubble and lets you set the job, give a battery
+  or rename it (`setRobotJob`, `renameRobot`). In the world they are cosmetic movers (model `farm_bot`,
+  built stand-in: a round robot with a face screen).
+* **The Terrace Onsen** (Terrace Hill, north-west: prop `onsen_pool` 4×3 with act `onsen`, steam, a
+  stone deck, the bathhouse building `onsen_house` (no interior), sign `hill.onsen`). Open 06:00–23:00
+  for a soak (`soak(state)`): 100 cr (free on Sato's birthday, `SATO_BIRTHDAY`), +1 hour, stamina
+  full, and `state.flags.onsenDay = absDay`: until the day ends every tool costs 1 stamina less, never
+  below 1 (`onsenBuff`, `toolCost`). Spot `hill.onsen`: Corran soaks on Sunday evenings, Marrow on
+  Sunday evenings after the square.
+* **Mountain food**: 14 forage spots on the hill (`maps.FORAGE_SPOTS`, `sim.FORAGE_SPOT_COUNT`), 3–6
+  things a day, weighted (`sim.FORAGE`): spring herb, bamboo_shoot, wild_mint, fiddlehead; summer herb,
+  berry, wild_grape, honeycomb; autumn mushroom, chestnut, wild_apple, matsutake (rare, 400 cr); winter
+  frostcap, pine_nut, winter_root. `state.foraged` counts finds. Drawn as `icons/<id>` billboards, else
+  coloured shapes.
+* **Fruit trees**: saplings `sapling_apple|peach|cherry|persimmon` (Seln, 2,500, not in winter; kind
+  `sapling`). Space on free farm grass: `plantTree(state, map, x, y)`; `state.fruitTrees = [ { map, x,
+  y, kind, planted, picked } ]`. Stage (`treeStage`): sapling < 10 days, young < 28, grown from 28
+  (`TREE_DAYS`); then one fruit a day in its season (`pickFruit`; apple and persimmon autumn, peach
+  summer, cherry spring). The axe digs out a sapling or young tree (`removeTree`, no refund). Models
+  `sapling`, `fruit_tree_<kind>` (built stand-in: a ball tree with blossom or fruit).
+* **Cooking**: 14 new recipes (mint tea, grape juice, bamboo stir-fry, honey toast, fiddlehead tempura,
+  fruit tart, fruit salad, persimmon jam, roast chestnuts, mushroom soup, root stew, honeyed nuts,
+  grilled matsutake, forest bento), each worth more than its dearest ingredients. `RECIPE_GROUPS`
+  groups the kitchen window; `recipeBook` adds `group`, `needs` and `cooked`; `state.cooked = { id: n }`.
+* **Farm journal** (P or the ⏸ button; the clock stops while it is open; P or Esc closes it):
+  **Today** (date, weather and forecast, money, stamina, the onsen glow, field and greenhouse summary,
+  pasture, animals, robots with their charge, chargers, fruit trees, the tool at Ruess's, the favour,
+  festivals and birthdays this season), **Items** (everything Sato owns, wherever it is; clicking one
+  shows it turning in a small separate three.js viewer, draggable, using its model by id, `crop_<id>`,
+  a few sensible mappings, a built shape for tools, else its icon on a card, with the item's `detail`
+  text and facts: price, stamina, season, recipes, who loves it) and **Collections** (shipped, fish,
+  Memory Room, recipes cooked, forage found). Every item in `data.js` has a `detail` text.
+* **Willowfall harbour**: the river widens into a basin at the dock (x 45–57, y 26–31) with a quay and
+  a pier; Moraine's barge (prop `barge`, `turned: true`) is moored along it, turned to the river and
+  scaled to its 5×3 berth.
+
+Art slots (all optional): models `onsen_pool`, `onsen_house`, `field_chest`, `farm_bot`,
+`solar_charger` (falls back to `solar_panel`), `sapling`, `fruit_tree_apple`, `fruit_tree_peach`,
+`fruit_tree_cherry`, `fruit_tree_persimmon`; facade `buildings/onsen_house`; icons `icons/<id>` for
+every new item id.

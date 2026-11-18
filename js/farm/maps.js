@@ -117,7 +117,9 @@ function village() {
   m.fill(25, 11, 38, 21, 'c');                                                         // Lantern Square
   m.fill(31, 26, 32, 30, 'k').fill(12, 26, 13, 30, 'k');                              // the road bridge and the west footbridge
   m.fill(12, 19, 13, 25, 'p').fill(12, 31, 13, 38, 'p');                              // footbridge path
-  m.fill(48, 19, 49, 24, 'p').fill(47, 25, 53, 26, 'k');                              // to the dock, and the dock
+  // the harbour: the river widens into a basin at the dock, with a sandy rim and a pier out to the barge
+  m.fill(44, 25, 58, 32, 's').fill(45, 26, 57, 31, 'w');
+  m.fill(48, 19, 49, 24, 'p').fill(46, 25, 54, 25, 'k').fill(49, 26, 50, 28, 'k');      // to the dock, the quay and the pier
   m.fill(3, 39, 60, 40, 'p');                                                          // the south lane
   m.fill(4, 46, 60, 47, 'p');                                                          // Willow Lane, on into the park
   m.fill(2, 11, 11, 15, 'd');                                                          // the hydroponics garden
@@ -173,8 +175,8 @@ function village() {
   m.prop('vent', 52, 13); m.prop('vent', 57, 15);
   m.spot('village.lift', 56.5, 13.7);
   // the river: dock, barge, pipes along the bank, reeds
-  m.prop('barge', 48, 27, { w: 4, d: 2, solid: false, onWater: true, label: 'Dock' });
-  m.prop('cargo_crate', 53, 25); m.prop('cargo_crate', 47, 25, { scale: 0.8 });
+  m.prop('barge', 50, 27, { w: 5, d: 3, solid: false, onWater: true, rot: Math.PI / 2, turned: true, label: 'Dock' });   // moored along the pier, bow downstream
+  m.prop('cargo_crate', 54, 25); m.prop('cargo_crate', 46, 25, { scale: 0.8 });
   m.prop('pipe_run', 36, 25, { w: 8 });
   m.prop('pipe_run', 36, 31, { w: 9 });
   for (const x of [4, 9, 21, 40, 58]) m.prop('reeds', x, 26, { solid: false });

@@ -337,7 +337,7 @@ export class World {
         }
         if (def.fit === 'stretch') m.scale.set(fw * 0.98 / s[0], h / s[1], Math.min(h / s[1], fd * 0.9 / s[2]));
         else if (def.fit === 'foot') m.scale.setScalar(Math.min(h / s[1], fw * 0.96 / s[0], fd * 0.96 / s[2]));
-        else if (def.fit === 'wide') m.scale.setScalar(Math.max(fw, 0.8) * 0.95 / Math.max(s[0], s[2]));
+        else if (def.fit === 'wide') { const [ex, ez] = o.turned ? [fd, fw] : [Math.max(fw, 0.8), Math.max(fw, 0.8)]; m.scale.setScalar(Math.min(ex * 0.95 / s[0], ez * 0.95 / s[2])); }   // a turned prop (the barge) fits its footprint across
         else m.scale.setScalar(Math.min(h / (s[1] || 1), (def.maxW || 99) * (o.scale || 1) / Math.max(s[0], s[2])));
         if (def.hover) m.position.y = def.hover * 0.5;
         if (def.soft) m.traverse((q) => { if (q.isMesh) q.castShadow = false; });
@@ -351,8 +351,9 @@ export class World {
   }
   // Wisps of steam that rise and fade over hot water (animated in update()).
   steamCloud(w, d) {
-    const g = new THREE.Group(), mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25, depthWrite: false, fog: true });
-    for (let i = 0; i < 14; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), mat.clone()); m.userData.seed = i * 1.37; m.userData.x = (((i * 0.618) % 1) - 0.5) * (w - 0.8); m.userData.z = (((i * 0.383) % 1) - 0.5) * (d - 0.8); g.add(m); }
+    if (!World.steamTex) { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 2, 32, 32, 31); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.5, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); World.steamTex = new THREE.CanvasTexture(c); }
+    const g = new THREE.Group();
+    for (let i = 0; i < 16; i++) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: World.steamTex, transparent: true, opacity: 0.3, depthWrite: false })); m.userData.seed = i * 1.37; m.userData.x = (((i * 0.618) % 1) - 0.5) * (w - 0.8); m.userData.z = (((i * 0.383) % 1) - 0.5) * (d - 0.8); g.add(m); }
     (this.steam ||= []).push(g); return g;
   }
 
@@ -404,9 +405,10 @@ export class World {
       if (c === 'r') { const m = new THREE.Mesh(tiles(cells, 1.7, true), std({ map: art.tex('cliff_rock', { repeat: 1 }) })); m.castShadow = m.receiveShadow = true; R.add(m); continue; }
       if (c === 'w') {
         const bed = new THREE.Mesh(tiles(cells, -0.5), std({ color: 0x2a3a34 })); R.add(bed);
-        const wm = new THREE.MeshStandardMaterial({ map: art.tex('water', { repeat: 1 }).clone(), color: 0x9fc4d0, transparent: true, opacity: 0.82, roughness: 0.12, metalness: 0.1 });
+        // the surface sits just above the colony's surrounding ground sheet (y -0.07), which runs under the whole map
+        const wm = new THREE.MeshStandardMaterial({ map: art.tex('water', { repeat: 1 }).clone(), color: 0xb8dce6, transparent: true, opacity: 0.94, roughness: 0.12, metalness: 0.1 });
         wm.map.wrapS = wm.map.wrapT = THREE.RepeatWrapping; wm.map.needsUpdate = true; this.waterMats.push(wm);
-        const m = new THREE.Mesh(tiles(cells, -0.1), wm); m.receiveShadow = true; R.add(m); continue;
+        const m = new THREE.Mesh(tiles(cells, -0.04), wm); m.receiveShadow = true; R.add(m); continue;
       }
       const cp = c === 'c' && !map.indoor && art.has('textures/colony_path');   // colony art, when the pack has it
       const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : cp ? 'colony_path' : GROUND_TEX[c] || 'soil_dry';
@@ -440,7 +442,7 @@ export class World {
       const rr = p.rot && o.userData.is3d ? p.rot : 0;
       for (const q of this.colonyFx.glow) pools.push({ x: p.x + p.w / 2 + q.x * Math.cos(rr) + q.z * Math.sin(rr), z: p.y + p.d / 2 - q.x * Math.sin(rr) + q.z * Math.cos(rr), warm: q.warm });
       if (kind === 'lantern') pools.push({ x: p.x + 0.5, z: p.y + 0.5, warm: true, r: 2.2 });
-      o.position.set(p.x + p.w / 2, p.onWater ? -0.1 : 0, p.y + p.d / 2);
+      o.position.set(p.x + p.w / 2, p.onWater ? -0.18 : 0, p.y + p.d / 2);
       if (p.rot && (o.userData.is3d || kind === 'fence')) o.rotation.y = p.rot;
       if (o.userData.turn) o.rotation.y = Math.PI / 2;
       R.add(o); p.obj = o; if (kind === 'tree' || kind === 'pine' || kind === 'bush') this.tallProps.push(o);
@@ -530,7 +532,7 @@ export class World {
     for (const k in this.sky) this.sky[k].position.copy(c.position);
     this.colony.update(c);
     for (const s of this.spinners || []) s.o.rotation[s.axis] += s.speed * dt;
-    for (const g of this.steam || []) for (const m of g.children) { const k = ((this.t * 0.25 + m.userData.seed) % 1); m.position.set(m.userData.x + Math.sin(this.t + m.userData.seed) * 0.15, 0.35 + k * 1.6, m.userData.z); m.scale.setScalar(0.6 + k * 1.4); m.material.opacity = 0.32 * Math.sin(k * Math.PI); }
+    for (const g of this.steam || []) for (const m of g.children) { const k = ((this.t * 0.25 + m.userData.seed) % 1); m.position.set(m.userData.x + Math.sin(this.t + m.userData.seed) * 0.15, 0.3 + k * 1.7, m.userData.z); m.scale.setScalar(0.7 + k * 1.6); m.material.opacity = 0.42 * Math.sin(k * Math.PI); }
     if (this.bots) this.bots.update(dt, this.t);
     for (const f of this.facers) f.rotation.y = this.yaw;
     for (const m of this.waterMats || []) m.map.offset.set(this.t * 0.015, this.t * 0.01);

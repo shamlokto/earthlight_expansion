@@ -301,7 +301,7 @@ async function soakOnsen() {
   busy = true; await ui.fade(true, 600); W.setTime(S.cal.minute, S.weather, map); placeNpcs(true); await new Promise((q) => setTimeout(q, 350)); await ui.fade(false, 600); busy = false;
   sfx('good'); floatText(me.x, me.y, '♨'); ui.toast(r.msg, 4200); refreshHud();
 }
-function drawForage() { for (let i = 0; i < FORAGE_SPOTS.length; i++) W.unplace('forage' + i); for (const f of S.forage || []) { const [x, y] = FORAGE_SPOTS[f.spot]; const p = art.pic('icons/' + f.id); if (p) { const g = W.place('forage' + f.spot, null, x + 0.5, y + 0.5); g.add(W.billboard(p, 0.42, {})); } else W.place('forage' + f.spot, null, x + 0.5, y + 0.5, { procKind: 'forage', color: FORAGE_COLOR[f.id] }); } }
+function drawForage() { for (let i = 0; i < FORAGE_SPOTS.length; i++) W.unplace('forage' + i); for (const f of S.forage || []) { const [x, y] = FORAGE_SPOTS[f.spot]; const p = art.pic('icons/' + f.id); if (p) { const g = W.place('forage' + f.spot, null, x + 0.5, y + 0.5); g.add(W.billboard(p, ITEMS[f.id].sell >= 300 ? 0.7 : 0.58, {})); } else W.place('forage' + f.spot, null, x + 0.5, y + 0.5, { procKind: 'forage', color: FORAGE_COLOR[f.id] }); } }
 
 // ---------------------------------------------------------------- the Old World
 // The fight below is pest control, not war: creatures telegraph every attack, the Pallas aims for you,

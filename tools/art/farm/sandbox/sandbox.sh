@@ -9,7 +9,7 @@
 # Idle time is not counted until /workspace/sandbox/ready exists (models still downloading),
 # or GRACE_MINUTES (default 40) have passed.
 #   nohup bash sandbox.sh > /workspace/sandbox/sandbox.log 2>&1 &
-IDLE_MINUTES=${IDLE_MINUTES:-15}; MAX_HOURS=${MAX_HOURS:-3}; SYNC_MINUTES=${SYNC_MINUTES:-5}; GRACE_MINUTES=${GRACE_MINUTES:-40}
+IDLE_MINUTES=${IDLE_MINUTES:-15}; MAX_HOURS=${MAX_HOURS:-3}; MAX_MINUTES=${MAX_MINUTES:-$((MAX_HOURS * 60))}; SYNC_MINUTES=${SYNC_MINUTES:-5}; GRACE_MINUTES=${GRACE_MINUTES:-40}
 OUT=${SANDBOX_OUT:-/workspace/runpod-slim/ComfyUI/output}
 REMOTE=${SANDBOX_REMOTE:-sandbox:sandbox-output}
 DIR=/workspace/sandbox; mkdir -p "$DIR"
@@ -38,7 +38,7 @@ finish() {
 }
 
 start=$(date +%s); idle=0; since_sync=0
-log "sandbox watchdog started: idle limit ${IDLE_MINUTES} min, hard limit ${MAX_HOURS} h, Drive remote: $(have_drive && echo yes || echo NO)"
+log "sandbox watchdog started: idle limit ${IDLE_MINUTES} min, hard limit ${MAX_MINUTES} min, Drive remote: $(have_drive && echo yes || echo NO)"
 while true; do
   sleep 60
   now=$(date +%s); up=$(( (now - start) / 60 ))
@@ -50,6 +50,6 @@ while true; do
   echo "$idle" > "$DIR/idle_minutes"
   since_sync=$((since_sync + 1))
   if [ "$since_sync" -ge "$SYNC_MINUTES" ]; then since_sync=0; upload; log "up ${up} min, gpu ${util}%, queue ${q}, idle ${idle} min"; fi
-  [ "$up" -ge $((MAX_HOURS * 60)) ] && finish "hard limit of ${MAX_HOURS} hours reached"
+  [ "$up" -ge "$MAX_MINUTES" ] && finish "hard limit of ${MAX_MINUTES} minutes reached"
   [ "$idle" -ge "$IDLE_MINUTES" ] && finish "idle for ${IDLE_MINUTES} minutes"
 done

@@ -1097,7 +1097,7 @@ function robotsWork(state, notes) {
     }
     const used = !done ? 0 : cap < full && done >= cap ? r.charge : Math.min(r.charge, done >= full ? cost : Math.max(4, Math.round(cost * done / Math.max(1, full))));
     r.charge -= used; rec.done = r.done = done; rec.used = used; rec.charge = r.charge;
-    rec.short = cap < full;
+    rec.short = cap < full && done >= cap;
     if (done) { const before = robotLevel(r); r.days = (r.days || 0) + 1; rec.levelUp = robotLevel(r) > before; }
     r.mood = rec.levelUp ? 'proud' : rec.short ? 'tired' : done ? 'happy' : 'idle';
     notes.push(`${r.name} ${extra}${rec.short ? ', then its battery ran out' : ''}. Battery ${r.charge}%.`);
