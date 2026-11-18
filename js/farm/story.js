@@ -133,7 +133,7 @@ export const SPOTS = [
   'farm.porch', 'farm.bin', 'farm.gate', 'farm.pond', 'farm.field',
   'village.square', 'village.memorial', 'village.bridge', 'village.dock', 'village.bench', 'village.storefront',
   'village.cafefront', 'village.hallfront', 'village.workshopfront', 'village.ranchyard', 'village.river',
-  'hill.wreck', 'hill.lake', 'hill.overlook',
+  'hill.wreck', 'hill.lake', 'hill.overlook', 'hill.onsen',
   'store.counter', 'store.floor', 'ranch.counter', 'workshop.counter', 'workshop.bench',
   'cafe.counter', 'cafe.table1', 'cafe.table2', 'cafe.table3', 'hall.desk', 'hall.floor',
   'clinic.counter', 'clinic.floor', 'library.counter', 'library.floor', 'village.clinicfront', 'village.libraryfront',
@@ -251,7 +251,7 @@ const SCHEDULE = {
     if (wd === 3) return pick(m, [H(9), H(11), 'village.memorial'], [H(11), H(13), 'workshop.bench'], [H(13), H(16), 'village.dock'], [H(16), H(20), 'cafe.table2']);
     const pint = wd === 0 || wd === 2 || wd === 4 || wd === 5;
     return pick(m, [H(7), H(9), 'village.ranchyard'], [H(9), H(17), 'ranch.counter'], [H(17), H(18), 'village.ranchyard'],
-      [H(18), H(21), pint ? 'cafe.table2' : (wd === 6 ? 'village.river' : 'village.bridge')]);
+      [H(18), H(21), pint ? 'cafe.table2' : (wd === 6 ? 'hill.onsen' : 'village.bridge')]);   // Sunday evenings: a soak at the Terrace Onsen
   },
   // Workshop: closed Wednesday.
   ruess(wd, m) {
@@ -268,7 +268,7 @@ const SCHEDULE = {
   // The Hall: desk hours Monday to Friday.
   marrow(wd, m) {
     if (wd === 5) return pick(m, [H(9), H(10), 'village.hallfront'], [H(10), H(11, 30), 'store.floor'], [H(11, 30), H(14), 'village.square'], [H(14), H(18), 'village.bench']);
-    if (wd === 6) return pick(m, [H(10), H(12), 'village.memorial'], [H(12), H(15), 'village.bridge'], [H(15), H(18), 'village.square']);
+    if (wd === 6) return pick(m, [H(10), H(12), 'village.memorial'], [H(12), H(15), 'village.bridge'], [H(15), H(18), 'village.square'], [H(18, 30), H(20, 30), 'hill.onsen']);
     const supper = wd === 1 || wd === 4;
     return pick(m, [H(8), H(9), 'village.hallfront'], [H(9), H(16), 'hall.desk'], [H(16), H(17, 30), 'village.square'],
       [H(17, 30), H(19), wd === 0 || wd === 3 ? 'village.memorial' : 'village.bench'],
@@ -1604,6 +1604,10 @@ export const SIGNS = {
 };
 
 export const HELP = [
+  {
+    title: 'Helpers and gear',
+    body: 'Seln sells a harvest basket: hold it while you pick and the crops and forage go in it (30 in all); E at the bin ships the lot. Ruess builds field chests to set down on the farm or the hill, and leases Field-units: little robots that water, harvest or feed the animals each morning. They run on batteries; charge empty ones overnight in a solar charger. The Terrace Onsen on the hill restores you and lightens your tools for the day. P opens the Farm journal.',
+  },
   {
     title: 'Controls',
     body: 'Move: W A S D or the arrow keys. Hold Shift to run.\nUse the held tool or item: Space or left click.\nTalk, interact, harvest, enter a door: E.\nChoose a rucksack slot: keys 1 to 0, or the mouse wheel.\nEat the food you are holding: R.\nOpen the rucksack: Tab.\nThe town map: M (or the map button; click the little map in the corner too).\nMenu (save, settings, music, this guide): Esc.\nDrag with the mouse to turn the camera.\n\nOn a touch screen there is a stick on the left to move, and buttons on the right for Use, Interact, Eat and the rucksack. Drag anywhere else to turn the camera.',

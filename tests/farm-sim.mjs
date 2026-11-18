@@ -61,7 +61,7 @@ const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
   check(g.w === 10 && g.h === 6 && g.tiles.every((t) => !t.obj && !t.till) && s.flags.greenhouse === false, 'greenhouse empty and locked');
   check(s.pasture.w === 12 && s.pasture.h === 7 && s.pasture.grass.length === 84 && s.pasture.grass.every((v) => v === 0), 'pasture empty');
   check(s.animals.length === 0 && s.eggs === 0 && s.bin.length === 0 && s.mine === null && s.pending.upgrade === null && s.pending.animals.length === 0, 'nothing else yet');
-  check(s.forage.length >= 2 && s.forage.length <= 4 && s.forage.every((x) => x.id === 'herb' && x.spot >= 0 && x.spot < 8), 'spring forage');
+  check(s.forage.length >= 3 && s.forage.length <= 6 && s.forage.every((x) => ['herb', 'bamboo_shoot', 'wild_mint', 'fiddlehead'].includes(x.id) && x.spot >= 0 && x.spot < sim.FORAGE_SPOT_COUNT), 'spring forage');
   check(Object.keys(s.npc).length === 12 && s.npc.ruess.love === 0 && sim.hearts(s, 'ruess') === 0, 'npc records');
   check(sim.weekday(s) === 0 && sim.absDay(s) === 0 && sim.dateLabel(s) === 'Spring 1 (Mon), Year 1' && sim.timeLabel(s) === '6:00 AM', 'calendar labels');
   s.cal.day = 3; s.cal.minute = 580;
@@ -378,7 +378,9 @@ function script(s, days = 12) {
     const t = newGame({ seed: 2 }); t.player.money = 1e5;
   check(shopStock(t, 'store').find((e) => e.key === 'rucksack').price === 1500, 'the 15-slot rucksack costs 1500');
   check(buy(t, 'store', 'rucksack').ok && t.player.slots === 15 && t.player.inv.length === 15 && shopStock(t, 'store').find((e) => e.key === 'rucksack').price === 4000, 'then the 20-slot one at 4000');
-  check(buy(t, 'store', 'rucksack').ok && t.player.slots === 20 && t.player.inv.length === 20 && !shopStock(t, 'store').some((e) => e.key === 'rucksack'), 'and no more after that');
+  check(buy(t, 'store', 'rucksack').ok && t.player.slots === 20 && t.player.inv.length === 20 && shopStock(t, 'store').find((e) => e.key === 'rucksack').price === 8000, 'then the 25-slot one at 8000');
+  check(buy(t, 'store', 'rucksack').ok && t.player.slots === 25 && t.player.inv.length === 25 && shopStock(t, 'store').find((e) => e.key === 'rucksack').price === 15000, 'then the 30-slot one at 15000');
+  t.player.money = 1e5; check(buy(t, 'store', 'rucksack').ok && t.player.slots === 30 && t.player.inv.length === 30 && !shopStock(t, 'store').some((e) => e.key === 'rucksack'), 'and no more after 30');
   for (const args of [['nowhere', 'tea'], ['cafe', 'gold'], ['cafe', undefined], [null, null], ['__proto__', 'tea'], ['cafe', 'toString']]) check(!act(buy(t, ...args)).ok, `bad purchase refused: ${args}`);
   check(shopStock(t, 'nowhere').length === 0 && shopStock(t).length === 0, 'an unknown shop has nothing');
   check(buy(t, 'cafe', 'pie', -3).ok && countItem(t, 'pie') === 1, 'a silly count buys one');
@@ -653,12 +655,12 @@ function script(s, days = 12) {
   const s = newGame({ seed: 80 }), kinds = [{}, {}, {}, {}], counts = {};
   for (let d = 0; d < 480; d++) {
     sleep(s);
-    check(s.forage.length >= 2 && s.forage.length <= 4 && new Set(s.forage.map((f) => f.spot)).size === s.forage.length && s.forage.every((f) => f.spot >= 0 && f.spot <= 7), `forage day ${d}`);
+    check(s.forage.length >= 3 && s.forage.length <= 6 && new Set(s.forage.map((f) => f.spot)).size === s.forage.length && s.forage.every((f) => f.spot >= 0 && f.spot < 14), `forage day ${d}`);
     counts[s.forage.length] = 1;
     for (const f of s.forage) kinds[s.cal.season][f.id] = 1;
   }
-  check(Object.keys(counts).sort().join() === '2,3,4', 'two to four spots');
-  check(Object.keys(kinds[0]).join() === 'herb' && Object.keys(kinds[1]).sort().join() === 'berry,herb' && Object.keys(kinds[2]).join() === 'mushroom' && Object.keys(kinds[3]).join() === 'frostcap', 'forage by season');
+  check(Object.keys(counts).sort().join() === '3,4,5,6', 'three to six spots');
+  check(Object.keys(kinds[0]).sort().join() === 'bamboo_shoot,fiddlehead,herb,wild_mint' && Object.keys(kinds[1]).sort().join() === 'berry,herb,honeycomb,wild_grape' && Object.keys(kinds[2]).sort().join() === 'chestnut,matsutake,mushroom,wild_apple' && Object.keys(kinds[3]).sort().join() === 'frostcap,pine_nut,winter_root', `forage by season: ${kinds.map((k) => Object.keys(k).sort().join('/')).join(' | ')}`);
   const f = s.forage[0], n = s.forage.length;
   const r = sim.pickForage(s, f.spot);
   check(r.ok && r.gained[0].id === f.id && countItem(s, f.id) === 1 && s.forage.length === n - 1 && !act(sim.pickForage(s, f.spot)).ok, 'pick it once');
@@ -766,12 +768,19 @@ function script(s, days = 12) {
       () => sim.defeatMonster(s, any(r(4))), () => sim.monsterHit(s), () => sim.leaveMine(s),
       () => sim.donate(s, any(r(s.player.slots))),
       () => sim.fish(s, any(['farm', 'village', 'hill'][r(3)])),
-      () => sim.pickForage(s, any(r(8))),
+      () => sim.pickForage(s, any(r(14))),
       () => addItem(s, any(itemIds[r(itemIds.length)]), any(1 + r(3))),
       () => { removeItem(s, any(itemIds[r(itemIds.length)]), any(1 + r(3))); },
       () => { sim.claimGoals(s); sim.goalState(s); sim.dateLabel(s); sim.timeLabel(s); sim.weekday(s); sim.hearts(s, any('seln')); sim.cropStage(any(null)); sim.stageOf(any(s.fields.farm.tiles[r(288)])); sim.museumCount(s); },
       () => sim.tick(s, any(r(90))),
       () => { s.player.money += r(5) === 0 ? 3000 : 0; },   // a windfall now and then, so the shops get used
+      () => sim.placeItem(s, any(['farm', 'hill', 'village'][r(3)]), any(r(44)), any(r(34))),
+      () => sim.pickUpPlaced(s, any(['farm', 'hill'][r(2)]), any(r(44)), any(r(34))),
+      () => sim.plantTree(s, any('farm'), any(r(44)), any(r(34))),
+      () => sim.pickFruit(s, any(r(4))), () => sim.removeTree(s, any(r(4))),
+      () => sim.storeItem(s, any(`chest:${r(3)}`), any(r(s.player.slots))), () => sim.takeItem(s, any(`chest:${r(3)}`), any(r(20))),
+      () => sim.useCharger(s, any(r(3))), () => sim.chargeRobot(s, any(r(4))), () => sim.setRobotJob(s, any(r(4)), any(['water', 'harvest', 'animals', 'rest'][r(4)])),
+      () => sim.renameRobot(s, any(r(4)), any('Bean')), () => sim.soak(s), () => sim.shipBasket(s), () => sim.basketTake(s, any(r(3))),
     ];
     try {
       for (let day = 0; day < 120; day++) {
@@ -841,6 +850,162 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   r = sim.pickBush(t, 'hill:3'); check(!r.ok && r.msg, 'a picked bush needs a few days');
   t.cal.day += 3; check(sim.pickBush(t, 'hill:3').ok, 'berries again after three days');
   t.cal.season = 3; check(!sim.pickBush(t, 'hill:4').ok, 'no berries in winter');
+}
+
+// ---------------------------------------------------------------- 2026-11-18: more things to own and do
+{
+  // data: every item has a long description; the new forage, fruit, gear and dishes exist
+  for (const [id, it] of Object.entries(ITEMS)) check(typeof it.detail === 'string' && it.detail.length > 30 && it.detail !== it.desc, `item ${id} has a detail text`);
+  const NEW = { bamboo_shoot: 'forage', wild_mint: 'forage', fiddlehead: 'forage', wild_grape: 'forage', honeycomb: 'forage', chestnut: 'forage', wild_apple: 'forage', matsutake: 'forage', pine_nut: 'forage', winter_root: 'forage',
+    apple: 'fruit', peach: 'fruit', cherry: 'fruit', persimmon: 'fruit', sapling_apple: 'sapling', sapling_peach: 'sapling', sapling_cherry: 'sapling', sapling_persimmon: 'sapling',
+    basket: 'tool', field_chest: 'placeable', solar_panel: 'placeable', battery: 'part', battery_full: 'part' };
+  for (const [id, kind] of Object.entries(NEW)) check(ITEMS[id] && ITEMS[id].kind === kind, `${id} is a ${kind}`);
+  for (const id of Object.keys(NEW)) if (['forage', 'fruit'].includes(ITEMS[id].kind)) check(ITEMS[id].sell > 0, `${id} sells`);
+  check(ITEMS.matsutake.sell >= 300 && ITEMS.matsutake.sell > 4 * ITEMS.mushroom.sell, 'matsutake is valuable');
+  check(ITEMS.wild_grape.stamina > 0 && ITEMS.peach.stamina > 0 && !ITEMS.matsutake.stamina, 'edible where sensible');
+  // recipes: at least 18, each sells for more than its dearest ingredients and restores stamina
+  check(sim.RECIPES.length >= 18, `${sim.RECIPES.length} recipes`);
+  const grouped = new Set(sim.RECIPE_GROUPS.flatMap(([, ids]) => ids));
+  for (const r of sim.RECIPES) {
+    const out = ITEMS[r.id], worst = r.needs.reduce((a, slot) => a + Math.max(...slot.map((x) => ITEMS[x].sell || (x === 'bread' ? 60 : 0))), 0);
+    check(out && out.kind === 'food' && out.stamina > 0 && out.sell > 0 && r.needs.every((slot) => slot.every((x) => ITEMS[x])), `recipe ${r.id} is complete`);
+    if (!['salad', 'veg_soup', 'cooked_meal', 'omelette', 'fish_grill'].includes(r.id)) check(out.sell > worst, `${r.id} (${out.sell}) is worth more than its ingredients (${worst})`);
+    check(grouped.has(r.id), `${r.id} is in a kitchen group`);
+  }
+  const k = newGame({ seed: 12 }); k.flags.kitchen = true; while (k.player.inv.length < 20) k.player.inv.push(null); k.player.slots = 20;
+  for (const id of ['wild_grape', 'wild_grape', 'wild_grape']) addItem(k, id, 1);
+  let r = sim.cook(k, 'grape_juice'); check(r.ok && countItem(k, 'grape_juice') === 1 && k.cooked.grape_juice === 1, 'grape juice, and the cookbook remembers');
+  addItem(k, 'peach', 1); addItem(k, 'egg', 1); addItem(k, 'bread', 1); r = sim.cook(k, 'fruit_tart'); check(r.ok && !countItem(k, 'peach') && !countItem(k, 'bread'), 'fruit tart from a peach, an egg and bread');
+  addItem(k, 'apple', 2); r = sim.cook(k, 'fruit_salad'); check(!r.ok, 'a fruit salad needs two different fruits');
+  addItem(k, 'cherry', 1); r = sim.cook(k, 'fruit_salad'); check(r.ok && countItem(k, 'apple') === 1, 'apple and cherry make a fruit salad');
+  addItem(k, 'fish_s', 1); addItem(k, 'mushroom', 1); addItem(k, 'pumpkin', 1); r = sim.cook(k, 'forest_bento'); check(r.ok && countItem(k, 'forest_bento') === 1, 'forest bento');
+  const book = sim.recipeBook(k); check(book.every((b) => b.group && Array.isArray(b.needs) && b.needs.length) && book.find((b) => b.id === 'forest_bento').cooked === 1, 'the recipe book has groups and what each needs');
+
+  // the bigger rucksack: 25 then 30 slots
+  const big = newGame({ seed: 3 }); big.player.money = 1e6;
+  for (let i = 0; i < 4; i++) buy(big, 'store', 'rucksack');
+  check(big.player.slots === 30 && big.player.inv.length === 30 && big.player.money === 1e6 - 1500 - 4000 - 8000 - 15000, 'four rucksack tiers to 30 slots');
+
+  // the basket
+  const b = newGame({ seed: 21 }); b.player.money = 5000; wipe(b);
+  check(shopStock(b, 'store').find((e) => e.key === 'basket').price === 800 && buy(b, 'store', 'basket').ok && countItem(b, 'basket') === 1 && !shopStock(b, 'store').some((e) => e.key === 'basket'), 'the basket costs 800, once');
+  const t1 = tile(b, 2, 2); Object.assign(t1, { till: true, crop: { id: 'turnip', age: 4, dead: false } });
+  const t2 = tile(b, 3, 2); Object.assign(t2, { till: true, crop: { id: 'strawberry', age: 8, dead: false } });
+  select(b, 'basket');
+  r = harvest(b, 'farm', 2, 2); check(r.ok && r.basket && !countItem(b, 'turnip') && b.player.basket[0].id === 'turnip' && b.player.basket[0].n === 1, 'with the basket in hand the turnip goes in the basket');
+  r = harvest(b, 'farm', 3, 2); check(r.ok && sim.basketTotal(b) === 2 && tile(b, 3, 2).crop && tile(b, 3, 2).crop.age === 6, 'a regrowing crop stays on the plant');
+  addItem(b, 'egg', 1); b.player.basket.push({ id: 'herb', n: 28 });
+  Object.assign(t1, { crop: { id: 'turnip', age: 4, dead: false } }); r = harvest(b, 'farm', 2, 2); check(r.ok && !r.basket && countItem(b, 'turnip') === 1 && /basket is full/.test(r.msg), 'a full basket (30) sends it to the rucksack');
+  r = sim.basketTake(b, 0, 1); check(r.ok && countItem(b, 'turnip') === 2 && !b.player.basket.some((x) => x.id === 'turnip'), 'take a turnip out of the basket');
+  r = sim.shipBasket(b); check(r.ok && !b.player.basket.length && b.bin.find((x) => x.id === 'herb').n === 28 && b.bin.find((x) => x.id === 'strawberry').n === 1, 'ship the whole basket');
+  check(!act(sim.shipBasket(b)).ok && !act(sim.basketTake(b, 5)).ok && !act(sim.basketTake(b, 'x')).ok, 'an empty basket ships nothing');
+  b.player.sel = 0; b.forage = [{ spot: 3, id: 'wild_mint' }]; select(b, 'basket'); r = sim.pickForage(b, 3); check(r.ok && r.basket && b.player.basket[0].id === 'wild_mint' && b.foraged.wild_mint === 1, 'forage into the basket, and the forage log counts it');
+
+  // field chests
+  const c = rich(31);
+  check(shopStock(c, 'workshop').find((e) => e.key === 'field_chest').price === 1200, 'a field chest costs 1200');
+  const lumber = c.stock.lumber; check(buy(c, 'workshop', 'field_chest').ok && buy(c, 'workshop', 'field_chest').ok && countItem(c, 'field_chest') === 2 && c.stock.lumber === lumber - 40, 'two chests, 20 lumber each');
+  select(c, 'field_chest');
+  r = sim.placeItem(c, 'village', 4, 4); check(!r.ok && /farm or the hill/.test(r.msg), 'no chests in the village');
+  r = sim.placeItem(c, 'farm', 30, 20); check(r.ok && c.chests.length === 1 && c.chests[0].items.length === 20 && countItem(c, 'field_chest') === 1 && sim.chestAt(c, 'farm', 30, 20) === 0, 'set a chest down on the farm');
+  select(c, 'field_chest'); check(!act(sim.placeItem(c, 'farm', 30, 20)).ok, 'not on top of another');
+  r = sim.placeItem(c, 'hill', 3, 3); check(r.ok && c.chests.length === 2 && !countItem(c, 'field_chest'), 'and one on the hill');
+  addItem(c, 'potato', 7); r = sim.storeItem(c, 'chest:0', slotOf(c, 'potato')); check(r.ok && c.chests[0].items[0].id === 'potato' && /field chest/.test(r.msg), 'put potatoes in the field chest');
+  select(c, 'axe'); r = sim.pickUpPlaced(c, 'farm', 30, 20); check(!r.ok && /Empty/.test(r.msg), 'a full chest stays put');
+  r = sim.takeItem(c, 'chest:0', 0); check(r.ok && countItem(c, 'potato') === 7, 'take them back');
+  select(c, 'axe'); r = sim.pickUpPlaced(c, 'farm', 30, 20); check(r.ok && c.chests.length === 1 && countItem(c, 'field_chest') === 1 && c.chests[0].map === 'hill', 'the axe picks up the empty chest');
+  check(!act(sim.storeItem(c, 'chest:9', 0)).ok && !act(sim.takeItem(c, 'chest:x', 0)).ok && sim.boxOf(c, 'chest:__proto__') === null, 'no such chest');
+
+  // fruit trees
+  const f = rich(41); setDate(f, 0, 2);
+  check(['sapling_apple', 'sapling_peach', 'sapling_cherry', 'sapling_persimmon'].every((id) => shopStock(f, 'store').find((e) => e.key === id)?.price === 2500), 'four saplings at 2500');
+  setDate(f, 3, 2); check(!shopStock(f, 'store').some((e) => /^sapling_/.test(e.key)), 'no saplings in winter'); setDate(f, 0, 2);
+  buy(f, 'store', 'sapling_cherry'); buy(f, 'store', 'sapling_apple'); select(f, 'sapling_cherry');
+  r = sim.plantTree(f, 'hill', 5, 5); check(!r.ok, 'fruit trees only on the farm');
+  r = sim.plantTree(f, 'farm', 25, 30); check(r.ok && f.fruitTrees.length === 1 && f.fruitTrees[0].kind === 'cherry' && !countItem(f, 'sapling_cherry') && sim.treeStage(f, f.fruitTrees[0]) === 0, 'plant a cherry sapling');
+  select(f, 'sapling_apple'); check(!act(sim.plantTree(f, 'farm', 25, 30)).ok, 'one tree a tile');
+  check(sim.plantTree(f, 'farm', 27, 30).ok && f.fruitTrees.length === 2, 'and an apple tree beside it');
+  check(!act(sim.pickFruit(f, 0)).ok, 'a sapling has no fruit');
+  for (let d = 0; d < 28; d++) sleep(f);
+  check(f.cal.season === 0 && f.cal.day === 30 && sim.treeStage(f, f.fruitTrees[0]) === 2, 'grown after 28 days');
+  r = sim.pickFruit(f, 0); check(r.ok && countItem(f, 'cherry') === 1, 'a cherry in spring');
+  check(!act(sim.pickFruit(f, 0)).ok, 'one a day'); check(!act(sim.pickFruit(f, 1)).ok, 'the apple tree waits for autumn');
+  sleep(f); check(!sim.fruitReady(f, f.fruitTrees[0]) && f.cal.season === 1, 'no cherries in summer');
+  setDate(f, 2, 3); check(sim.fruitReady(f, f.fruitTrees[1]) && sim.pickFruit(f, 1).ok && countItem(f, 'apple') === 1, 'apples in autumn');
+  select(f, 'axe'); check(!act(sim.removeTree(f, 0)).ok && f.fruitTrees.length === 2, 'a grown tree stays');
+  addItem(f, 'sapling_peach', 1); select(f, 'sapling_peach'); sim.plantTree(f, 'farm', 29, 30); select(f, 'axe');
+  r = sim.removeTree(f, 2); check(r.ok && f.fruitTrees.length === 2 && !countItem(f, 'sapling_peach'), 'the axe removes a sapling (no refund)');
+
+  // the onsen
+  const o = newGame({ seed: 51 }); o.player.money = 1000; o.player.stamina = 20; o.cal.minute = 600;
+  r = sim.soak(o); check(r.ok && o.player.money === 900 && o.player.stamina === 100 && o.cal.minute === 660 && o.flags.onsenDay === sim.absDay(o) && sim.onsenBuff(o), 'a soak: 100 cr, an hour, full stamina, the buff');
+  wipe(o); select(o, 'hoe'); r = useTool(o, 'farm', 4, 4, 0); check(r.ok && r.cost === 1 && o.player.stamina === 99, 'tools cost one less after a soak');
+  sleep(o); check(!sim.onsenBuff(o), 'the buff lasts the day'); select(o, 'hoe'); r = useTool(o, 'farm', 6, 4, 0); check(r.ok && r.cost === 2, 'and is gone tomorrow');
+  o.cal.minute = 1390; check(!act(sim.soak(o)).ok, 'closed after eleven');
+  o.cal.minute = 700; o.player.money = 50; check(!act(sim.soak(o)).ok && o.player.money === 50, 'no money, no soak');
+  setDate(o, 1, 2); r = sim.soak(o); check(r.ok && r.free && o.player.money === 50, 'free on Sato\'s birthday');
+
+  // robots
+  const R = rich(61); wipe(R);
+  check(shopStock(R, 'workshop').find((e) => e.key === 'robot').price === 300, 'a Field-unit lease costs 300');
+  for (let i = 0; i < 3; i++) check(buy(R, 'workshop', 'robot').ok, `lease robot ${i + 1}`);
+  check(R.robots.length === 3 && new Set(R.robots.map((x) => x.name)).size === 3 && R.robots.every((x) => x.charge === 100 && x.job === 'water'), 'three robots, named, charged');
+  check(!shopStock(R, 'workshop').find((e) => e.key === 'robot').can && !act(buy(R, 'workshop', 'robot')).ok, 'no more than three');
+  for (let i = 0; i < 40; i++) { const t = R.fields.farm.tiles[i]; Object.assign(t, { till: true, crop: { id: 'turnip', age: i < 20 ? 4 : 1, dead: false } }); }
+  check(sim.setRobotJob(R, 0, 'harvest').ok && sim.setRobotJob(R, 1, 'water').ok && sim.setRobotJob(R, 2, 'animals').ok && !act(sim.setRobotJob(R, 0, 'dance')).ok, 'set jobs');
+  check(sim.renameRobot(R, 0, 'Tanuki <b>').ok && R.robots[0].name === 'Tanuki b' && !act(sim.renameRobot(R, 0, '<<>>')).ok, 'rename (cleaned)');
+  R.animals.push({ kind: 'chicken', name: 'Pip', love: 0, fed: false, milked: false, brushed: false, talked: false }, { kind: 'cow', name: 'Hazel', love: 0, fed: false, milked: false, brushed: false, talked: false });
+  R.stock.feed = 5; R.stock.fodder = 5; R.weather = 'sun'; R.weatherTomorrow = 'sun';
+  let rep = sleep(R);
+  check(Array.isArray(rep.robots) && rep.robots.length === 3, 'the morning report lists the robots');
+  check(rep.robots[0].done === 12 && R.bin.find((x) => x.id === 'turnip').n === 12 && R.fields.farm.tiles.filter((t) => t.crop && t.crop.id === 'turnip').length === 28, 'harvest: 12 ripe turnips into the bin');
+  check(rep.robots[1].done === 24 && R.fields.farm.tiles.filter((t) => t.wet).length === 24, 'water: 24 plants');
+  check(rep.robots[2].done >= 2 && R.animals.every((a) => a.fed) && R.stock.feed === 4 && R.stock.fodder === 4, 'animals: fed from the stock');
+  check(rep.notes.some((n) => /Tanuki b harvested 12 turnips/.test(n)) && rep.robots.every((x) => x.charge < 100 && x.charge >= 60), `robot notes and battery use (${rep.robots.map((x) => x.used)})`);
+  check(rep.robots.every((x) => x.used >= 25 && x.used <= 40) || rep.robots[2].used < 25, 'a full day uses 25 to 40 charge');
+  rep = sleep(R); check(R.bin.some((x) => x.id === 'egg'), 'animals: yesterday\'s egg collected into the bin');
+  // skill: level 2 after 5 days, reaches 28 tiles
+  const lv = R.robots[1]; lv.days = 5; check(sim.robotLevel(lv) === 2 && sim.robotReach(lv) === 28, 'level 2 reaches 4 more tiles');
+  lv.days = 99; check(sim.robotLevel(lv) === 5 && sim.robotReach(lv) === 40 && sim.robotCost(lv) <= 40, 'level 5 at most');
+  // a flat battery: no work, and a note
+  for (const x of R.robots) x.charge = 0;
+  rep = sleep(R); check(rep.robots.every((x) => x.done === 0) && rep.notes.filter((n) => /flat battery/.test(n)).length === 3, 'flat batteries: no work, a note each');
+  // a little charge: part of the job
+  R.robots[1].charge = 10; R.robots[1].days = 0; for (const t of R.fields.farm.tiles) t.wet = false;
+  for (let i = 40; i < 80; i++) Object.assign(R.fields.farm.tiles[i], { till: true, crop: { id: 'potato', age: 1, dead: false } });
+  rep = sleep(R); check(rep.robots[1].done > 0 && rep.robots[1].done < 24 && rep.robots[1].short && R.robots[1].charge === 0 && rep.notes.some((n) => /battery ran out/.test(n)), `low charge: part of the job (${rep.robots[1].done})`);
+  check(typeof sim.robotMood(R, 1) === 'string' && sim.robotMood(R, 1).length > 5 && sim.robotMood(R, 9) === '', 'a mood line');
+  // batteries and the solar charger
+  check(shopStock(R, 'workshop').find((e) => e.key === 'solar_panel').price === 1500 && shopStock(R, 'workshop').find((e) => e.key === 'battery').price === 200, 'charger 1500, battery 200');
+  buy(R, 'workshop', 'solar_panel'); buy(R, 'workshop', 'battery', 3); select(R, 'solar_panel');
+  check(!act(sim.placeItem(R, 'hill', 4, 4)).ok, 'chargers only on the farm');
+  r = sim.placeItem(R, 'farm', 33, 20); check(r.ok && R.panels.length === 1 && sim.panelAt(R, 'farm', 33, 20) === 0, 'set a charger down');
+  r = sim.useCharger(R, 0); check(r.ok && countItem(R, 'battery') === 1 && R.panels[0].slots.join() === 'battery,battery', 'two empty batteries go in');
+  check(!act(sim.useCharger(R, 0)).ok, 'the charger is full');
+  R.weather = 'rain'; rep = sleep(R); check(R.panels[0].slots.filter((x) => x === 'battery_full').length === 1 && rep.notes.some((n) => /charged 1 battery/.test(n)), 'a rainy day charges one');
+  R.weather = 'storm'; sleep(R); check(R.panels[0].slots.filter((x) => x === 'battery_full').length === 1, 'a storm charges none');
+  R.weather = 'sun'; sleep(R); check(R.panels[0].slots.every((x) => x === 'battery_full'), 'the sun charges the other');
+  r = sim.useCharger(R, 0); check(r.ok && countItem(R, 'battery_full') === 2 && R.panels[0].slots.every((x) => !x), 'take the charged batteries');
+  R.robots[0].charge = 30; r = sim.chargeRobot(R, 0); check(r.ok && R.robots[0].charge === 90 && countItem(R, 'battery_full') === 1 && countItem(R, 'battery') === 2, 'a charged battery: +60, the empty one comes back');
+  R.robots[0].charge = 100; check(!act(sim.chargeRobot(R, 0)).ok, 'a full robot needs no battery');
+  removeItem(R, 'battery_full', 1); check(!act(sim.chargeRobot(R, 1)).ok, 'no charged battery, no charge');
+  select(R, 'axe'); check(sim.pickUpPlaced(R, 'farm', 33, 20).ok && !R.panels.length && countItem(R, 'solar_panel') === 1, 'the axe picks up an empty charger');
+  // batteries turn up in the ruins
+  const ru = newGame({ seed: 71 }); let found = 0;
+  for (let i = 0; i < 40; i++) { sim.enterMine(ru, 3); ru.mine.cells.forEach((cc, j) => { if (cc === 1) { const g = sim.hitRock(ru, j % ru.mine.w, Math.floor(j / ru.mine.w)); if (g.gained.some((x) => x.id === 'battery')) found++; } }); for (let q = 0; q < ru.player.inv.length; q++) if (ru.player.inv[q] && !['hoe', 'can', 'sickle', 'hammer', 'axe'].includes(ru.player.inv[q].id)) ru.player.inv[q] = null; ru.player.stamina = 100; }
+  check(found > 3, `batteries in the ruins (${found})`);
+
+  // save and load the new state; load an OLD save without the new fields
+  const back = loadState(saveState(R)); check(back && saveState(back) === saveState(R) && back.robots.length === 3 && back.chests !== undefined && Array.isArray(back.player.basket), 'the new state round-trips');
+  const old = JSON.parse(saveState(newGame({ seed: 81 })));
+  for (const k of ['chests', 'panels', 'robots', 'fruitTrees', 'cooked', 'foraged']) delete old[k]; delete old.player.basket; old.forage = [{ spot: 7, id: 'herb' }];
+  const O = loadState(JSON.stringify(old));
+  check(O && Array.isArray(O.chests) && Array.isArray(O.panels) && Array.isArray(O.robots) && Array.isArray(O.fruitTrees) && Array.isArray(O.player.basket) && O.cooked && O.foraged, 'an old save gains the new fields');
+  check(sim.pickForage(O, 7).ok && sleep(O).ok && O.forage.length >= 3, 'and plays on');
+  const O2 = JSON.parse(JSON.stringify(old)); const s2 = loadState(JSON.stringify(O2)); O2.player.basket = 5;
+  check(sim.shopStock(s2, 'store').some((e) => e.key === 'basket') && sim.shopStock(s2, 'workshop').some((e) => e.key === 'robot'), 'old saves can shop for the new things');
+  // the forage spots match the hill
+  check(sim.FORAGE_SPOT_COUNT === 14, '14 forage spots');
 }
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

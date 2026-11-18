@@ -207,11 +207,13 @@ function village() {
 }
 // The lift kiosk's notice lives here with the map that has the kiosk (story.js owns the other signs).
 const MAP_SIGNS = {
+  'hill.onsen': 'THE TERRACE ONSEN. Hot spring, warmed by the colony\'s heat exchangers (Ruess says the pipes were "spare"). Open 6 till midnight. 100 cr a soak; free on your birthday. Please rinse before you get in. No towels in the water.',
   'village.lift': 'LANTERN RING LIFT. Spoke cars to the Middle deck and the hub, every twenty minutes. The climb takes nine; you get lighter as you go, so hold the rail near the top. Hesk\'s barricade stood here. The scorch marks are being kept, on purpose.',
 };
 for (const [k, v] of Object.entries(MAP_SIGNS)) if (!(k in SIGNS)) SIGNS[k] = v;
 
-export const FORAGE_SPOTS = [[5, 6], [12, 4], [20, 10], [30, 13], [8, 13], [18, 21], [26, 19], [32, 22]];
+// Fourteen places where something grows each day (sim.FORAGE_SPOT_COUNT); a few hide in the corners.
+export const FORAGE_SPOTS = [[3, 8], [14, 5], [18, 3], [20, 6], [30, 12], [8, 15], [18, 21], [26, 19], [32, 22], [1, 23], [33, 2], [16, 10], [24, 14], [12, 8]];
 
 function hill() {
   const m = new MapDef('hill', 36, 26, 'g', { name: 'Terrace Hill' });
@@ -228,11 +230,18 @@ function hill() {
   m.prop('solar_panel', 30, 4, { w: 2 }); m.prop('wind_turbine_small', 32, 16); m.prop('colony_lamp', 22, 11); m.prop('colony_lamp', 29, 10);
   m.prop('cargo_crate', 23, 5); m.prop('cargo_crate', 23, 6, { scale: 0.8 }); m.prop('maint_bot', 29, 7, { solid: false, rot: 3.6 }); m.prop('vent', 18, 9);
   m.prop('pipe_run', 25, 3, { w: 4 });
+  // the Terrace Onsen: a hot spring warmed by the colony's heat exchangers, a stone deck, a little bathhouse
+  m.fill(3, 2, 10, 6, 'o').fill(7, 7, 7, 11, 'p');
+  m.prop('onsen_pool', 4, 3, { w: 4, d: 3, act: 'onsen', label: 'Terrace Onsen' });
+  m.building('onsen_house', 8, 2, 3, 2, { height: 2.6, label: 'Bathhouse' });
+  m.prop('pipe_run', 2, 3, { d: 3 }); m.prop('vent', 2, 6);
+  m.prop('lantern', 3, 6); m.prop('lantern', 9, 6);
+  m.prop('signpost', 8, 7, { act: 'sign', sign: 'hill.onsen' });
   m.exit(0, 11, 0, 14, { map: 'farm', x: 42.2, y: 9, dir: 2 });
-  m.spot('hill.wreck', 24.4, 9.4).spot('hill.lake', 11, 16.4).spot('hill.overlook', 31, 20.4);
+  m.spot('hill.wreck', 24.4, 9.4).spot('hill.lake', 11, 16.4).spot('hill.overlook', 31, 20.4).spot('hill.onsen', 6, 6.5);
   m.water = 'hill'; m.start = [1.6, 13];
   m.forage = FORAGE_SPOTS;
-  m.scatter(31, 30, ['tree', 'pine', 'pine', 'bush', 'rockdecor', 'flowers'], (x, y) => !FORAGE_SPOTS.some(([a, b]) => a === x && b === y));
+  m.scatter(31, 30, ['tree', 'pine', 'pine', 'bush', 'rockdecor', 'flowers'], (x, y) => !FORAGE_SPOTS.some(([a, b]) => a === x && b === y) && !(x <= 12 && y <= 10));   // keep the onsen's view open
   return m;
 }
 

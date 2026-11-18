@@ -3,7 +3,7 @@ import * as THREE from 'three';
 // the maps, the 3D world and the interface: movement, tools, people, shops, sleep, fishing and
 // the trips down to the Old World. Needs no ROM.
 import * as sim from './sim.js';
-import { ITEMS, CROPS, RELICS } from './data.js';
+import { ITEMS, CROPS, RELICS, FRUIT_TREES, ROBOT_JOBS, TREE_DAYS } from './data.js';
 import * as story from './story.js';
 import { NPCS } from './story.js';
 import * as art from './art.js';
@@ -18,7 +18,7 @@ const SAVE_KEY = 'earthlight-farm-save-v1';
 const $ = (id) => document.getElementById(id);
 const MIN_SECONDS = 0.6;                 // one game minute
 let S = null, W = null, map = null, me = null, mode = 'title', busy = false;
-let npcs = new Map(), beasts = [], monsters = [], hydra = null, fishing = null, labels = [];
+let npcs = new Map(), beasts = [], bots = [], monsters = [], hydra = null, fishing = null, labels = [];
 let clock = 0, lastPlaced = -1, hurtT = 0, doorHold = 0;
 const keys = new Set(), stick = { x: 0, y: 0 };
 // Small touches to the built figures, on top of the colours in story.js.
@@ -47,8 +47,11 @@ function canStand(x, y) {
   if (blocked(x - r, y - r) || blocked(x + r, y - r) || blocked(x - r, y + r) || blocked(x + r, y + r)) return false;
   for (const n of npcs.values()) if (Math.hypot(n.actor.x - x, n.actor.y - y) < 0.55) return false;
   for (const [px, py, pr, pi] of map.posts || []) if (Math.hypot(px - x, py - y) < pr + 0.22 && !felledAt(pi)) return false;
+  for (const o of placedHere()) if (Math.hypot(o.x + 0.5 - x, o.y + 0.5 - y) < 0.62) return false;
   return true;
 }
+// Chests, chargers and fruit trees Sato has set down on this map.
+const placedHere = () => (S && map && !map.indoor && !map.ruins ? [...(S.chests || []), ...(S.panels || []), ...(S.fruitTrees || [])].filter((o) => o.map === map.id) : []);
 // Trees on the farm and the hill can be felled (they come back as stumps first); village trees are the village's.
 const felledAt = (pi) => { const p = map.props[pi]; return !!p && (p.kind === 'tree' || p.kind === 'pine') && sim.treeFelled(S, map.id + ':' + pi); };
 function plantAhead(kinds) {
@@ -71,6 +74,7 @@ async function go(to, { quick = false } = {}) {
   if (map.id === 'hill') drawForage();
   if (map.ruins) drawRuins();
   if (map.id === 'coop') drawEggs();
+  drawPlaced(); spawnBots();
   placeNpcs(true); refreshHud();
   if (!quick) await ui.fade(false, 220);
   busy = false;
@@ -212,7 +216,91 @@ function spawnBeasts() {
 }
 function nearestBeast(maxD) { let best = null, bd = maxD; for (const b of beasts) { const d = Math.hypot(b.o.position.x - me.x, b.o.position.z - me.y); if (d < bd) { bd = d; best = b; } } return best; }
 function drawEggs() { for (let i = 0; i < 6; i++) W.unplace('egg' + i); for (let i = 0; i < Math.min(6, S.eggs || 0); i++) W.place('egg' + i, null, 1.3 + (i % 3) * 0.9, 0.5 + Math.floor(i / 3) * 0.3, { procKind: 'egg', h0: 0.55 }); }
-const FORAGE_COLOR = { herb: 0x6fbf5a, berry: 0xc23a6a, mushroom: 0xb0825a, frostcap: 0xbfe0f5 };
+const FORAGE_COLOR = { herb: 0x6fbf5a, berry: 0xc23a6a, mushroom: 0xb0825a, frostcap: 0xbfe0f5, bamboo_shoot: 0xc9d27a, wild_mint: 0x58c08a, fiddlehead: 0x7a9a3a, wild_grape: 0x5a2f7a, honeycomb: 0xf0b32a, chestnut: 0x7a4a2a, wild_apple: 0xd8a03a, matsutake: 0xe8d8b8, pine_nut: 0xa07a4a, winter_root: 0xefe2c8 };
+
+// ---------------------------------------------------------------- chests, chargers, fruit trees, robots (2026-11-18)
+function drawPlaced() {
+  if (!map || !W) return;
+  for (const k of [...W.tileObjs.keys()]) if (/^(chest|charger|ftree)\d/.test(k)) W.unplace(k);
+  if (map.indoor || map.ruins) return;
+  S.chests.forEach((c, i) => { if (c.map === map.id) W.place('chest' + i, 'field_chest', c.x + 0.5, c.y + 0.5); });
+  S.panels.forEach((p, i) => { if (p.map === map.id) W.place('charger' + i, 'charger', p.x + 0.5, p.y + 0.5, { procKind: 'charge_lights', slots: p.slots }); });
+  S.fruitTrees.forEach((t, i) => {
+    if (t.map !== map.id) return; const st = sim.treeStage(S, t);
+    W.place('ftree' + i, st === 0 ? 'sapling' : st === 1 ? 'fruit_tree_young' : 'fruit_tree', t.x + 0.5, t.y + 0.5, { model: st === 0 ? 'sapling' : 'fruit_tree_' + t.kind, stage: st, tree: t.kind, fruit: sim.fruitReady(S, t), rot: i * 1.3 });
+  });
+}
+const BOT_LOOK = [{ color: 0xf2efe6, trim: 0x5fb3b0 }, { color: 0xfde6c8, trim: 0xe07a5f }, { color: 0xe3ecf7, trim: 0x7a8fd8 }];
+const botHome = (r, i) => (r.job === 'rest' || r.charge <= 0 ? [10.5 + i * 1.2, 7.4] : r.job === 'animals' ? [16 + i, 7.6] : [5 + i * 5 + Math.random() * 3, 12 + Math.random() * 14]);
+function spawnBots() {
+  bots = []; if (!map || map.id !== 'farm') return;
+  (S.robots || []).forEach((r, i) => { const [x, y] = botHome(r, i), o = W.place('bot' + i, 'farm_bot', x, y, BOT_LOOK[i % 3]); bots.push({ i, o, tx: x, ty: y, wait: Math.random() * 2, talk: 0 }); });
+}
+function botsTick(dt) {
+  for (const b of bots) {
+    const r = S.robots[b.i]; if (!r) continue; b.wait -= dt;
+    if (b.talk > 0) { b.talk -= dt; continue; }
+    if (b.wait <= 0) { const [x, y] = botHome(r, b.i); b.tx = x + (Math.random() - 0.5) * 3; b.ty = y + (Math.random() - 0.5) * 2; b.wait = 2.5 + Math.random() * 5; }
+    const dx = b.tx - b.o.position.x, dy = b.ty - b.o.position.z, d = Math.hypot(dx, dy), sp = r.charge > 0 ? 0.9 : 0;
+    if (d > 0.1 && sp) { b.o.position.x += dx / d * dt * sp; b.o.position.z += dy / d * dt * sp; b.o.rotation.y = Math.atan2(dx, dy); }
+    b.o.position.y = sp && d > 0.1 ? Math.abs(Math.sin(performance.now() / 120 + b.i)) * 0.04 : 0;
+  }
+}
+function nearestBot(maxD) { let best = null, bd = maxD; for (const b of bots) { const d = Math.hypot(b.o.position.x - me.x, b.o.position.z - me.y); if (d < bd) { bd = d; best = b; } } return best; }
+async function talkBot(b) {
+  const r = S.robots[b.i]; if (!r) return; mode = 'talk'; b.talk = 6;
+  b.o.rotation.y = Math.atan2(me.x - b.o.position.x, me.y - b.o.position.z); me.face(b.o.position.x, b.o.position.z);
+  const mood = sim.robotMood(S, b.i); bubble(b.o, mood); sfx('pick');
+  const jobs = Object.keys(ROBOT_JOBS), opts = jobs.map((j) => `${r.job === j ? '✓ ' : ''}Job: ${ROBOT_JOBS[j]}`);
+  if (sim.countItem(S, 'battery_full')) opts.push('Give a charged battery'); opts.push('Rename', 'Leave');
+  const i = await ui.choose(`${r.name} · Field-unit, skill ${sim.robotLevel(r)} · battery ${r.charge}% · “${mood}”`, opts);
+  if (i < jobs.length) { const q = sim.setRobotJob(S, b.i, jobs[i]); ui.toast(q.msg); bubble(b.o, jobs[i] === 'rest' ? 'Zzz… thank you!' : `${ROBOT_JOBS[jobs[i]]}! Beep beep!`); b.wait = 0; }
+  else if (opts[i] === 'Give a charged battery') { const q = sim.chargeRobot(S, b.i); ui.toast(q.msg); if (q.ok) { sfx('good'); bubble(b.o, 'Bzzt! ♥'); } }
+  else if (opts[i] === 'Rename') { const n = prompt(`A new name for ${r.name}:`, r.name); if (n != null) { const q = sim.renameRobot(S, b.i, n); ui.toast(q.msg); if (q.ok) bubble(b.o, `I am ${S.robots[b.i].name}!`); } }
+  mode = 'play'; refreshHud();
+}
+// What grows, stands or waits on the tile Sato faces (outdoors): chest, charger, fruit tree.
+function placedProbe(tx, ty) {
+  if (map.indoor || map.ruins) return null;
+  const ci = sim.chestAt(S, map.id, tx, ty); if (ci >= 0) return { label: 'Open the field chest', run: () => ui.boxWindow(S, 'chest:' + ci, refreshHud, 'Field chest') };
+  const pi = sim.panelAt(S, map.id, tx, ty);
+  if (pi >= 0) { const sl = S.panels[pi].slots, full = sl.filter((x) => x === 'battery_full').length, emp = sl.filter((x) => x === 'battery').length; return { label: full ? 'Take the charged batteries' : sim.countItem(S, 'battery') && emp + full < 2 ? 'Put an empty battery in the charger' : `Solar charger (${emp ? emp + ' charging' : 'empty'})`, run: () => { const r = sim.useCharger(S, pi); ui.toast(r.msg); if (r.ok) sfx('drop'); drawPlaced(); refreshHud(); } }; }
+  const fi = sim.fruitTreeAt(S, map.id, tx, ty);
+  if (fi >= 0) {
+    const t = S.fruitTrees[fi], def = FRUIT_TREES[t.kind], st = sim.treeStage(S, t);
+    if (sim.fruitReady(S, t)) return { label: `Pick the ${ITEMS[def.fruit].name.toLowerCase()}`, run: () => { const r = sim.pickFruit(S, fi); if (r.ok) { sfx('pick'); pickedToast(r); drawPlaced(); } else ui.toast(r.msg); refreshHud(); } };
+    return { label: `Look at the ${st === 2 ? def.name.toLowerCase() : 'young ' + def.name.toLowerCase()}`, run: () => ui.toast(st < 2 ? `A young ${def.name.toLowerCase()}, ${TREE_DAYS - sim.treeAge(S, t)} days from bearing fruit.` : sim.pickFruit(S, fi).msg || 'A fine tree.') };
+  }
+  return null;
+}
+function pickedToast(r) { for (const g of r.gained || []) ui.toast(`+${g.n} ${ITEMS[g.id].name}${r.basket ? `  → basket (${sim.basketTotal(S)}/${sim.BASKET_CAP})` : ''}`); if (r.msg && !r.basket && /basket/.test(r.msg)) ui.toast(r.msg); }
+// Free ground to set something down on: outdoors, not the field, not a doorway, nothing there.
+function groundWhy(tx, ty, kinds) {
+  if (map.indoor || map.ruins) return 'Set it down outdoors.';
+  if (fieldAt(tx, ty) || pastureAt(tx, ty)) return 'Not on the field. Find a patch of grass.';
+  if (!kinds.includes(map.at(tx, ty))) return kinds.length === 1 ? 'Saplings need open grass.' : 'There is no room there.';
+  if (map.solid(tx, ty) || dynSolid(tx, ty) || propAt(tx, ty) || map.postNear(tx + 0.5, ty + 0.5, 0.45) || placedHere().some((o) => Math.hypot(o.x - tx, o.y - ty) < 1)) return 'Something is in the way.';
+  if (map.doors.some((d) => Math.abs(d.x - tx) <= 1 && Math.abs(d.y - ty) <= 1) || map.exits.some((e) => tx >= e.x0 - 1 && tx <= e.x1 + 1 && ty >= e.y0 - 1 && ty <= e.y1 + 1)) return 'Keep the way clear.';
+  if (map.id === 'hill' && FORAGE_SPOTS.some(([x, y]) => x === tx && y === ty)) return 'Something wild grows there.';
+  if (Math.floor(me.x) === tx && Math.floor(me.y) === ty) return 'Step back a little first.';
+  return null;
+}
+function setDown(it, tx, ty) {
+  const sap = it.kind === 'sapling', why = groundWhy(tx, ty, sap ? ['g'] : ['g', 'p', 's', 'd', 'o']);
+  if (why) return ui.toast(why);
+  const r = sap ? sim.plantTree(S, map.id, tx, ty) : sim.placeItem(S, map.id, tx, ty);
+  ui.toast(r.msg); if (r.ok) { sfx('drop'); W.puff(tx + 0.5, ty + 0.5, sap ? 0x8a6a45 : 0xc9c2b0, 8, 0.2); drawPlaced(); }
+  refreshHud();
+}
+async function soakOnsen() {
+  if (!sim.onsenOpen(S)) return ui.toast('The onsen takes its last bathers at eleven.');
+  const free = sim.satoBirthday(S);
+  mode = 'talk'; const i = await ui.choose(`The Terrace Onsen · ${free ? 'free today (happy birthday!)' : sim.ONSEN_PRICE + ' cr'}`, ['Soak for an hour', 'Not now']); mode = 'play';
+  if (i !== 0) return;
+  const r = sim.soak(S); if (!r.ok) return ui.toast(r.msg);
+  busy = true; await ui.fade(true, 600); W.setTime(S.cal.minute, S.weather, map); placeNpcs(true); await new Promise((q) => setTimeout(q, 350)); await ui.fade(false, 600); busy = false;
+  sfx('good'); floatText(me.x, me.y, '♨'); ui.toast(r.msg, 4200); refreshHud();
+}
 function drawForage() { for (let i = 0; i < FORAGE_SPOTS.length; i++) W.unplace('forage' + i); for (const f of S.forage || []) { const [x, y] = FORAGE_SPOTS[f.spot]; const p = art.pic('icons/' + f.id); if (p) { const g = W.place('forage' + f.spot, null, x + 0.5, y + 0.5); g.add(W.billboard(p, 0.42, {})); } else W.place('forage' + f.spot, null, x + 0.5, y + 0.5, { procKind: 'forage', color: FORAGE_COLOR[f.id] }); } }
 
 // ---------------------------------------------------------------- the Old World
@@ -353,17 +441,20 @@ function probe() {                                   // → { label, run } for E
   }
   const near = nearestNpc(1.5);
   if (near) return { label: `Talk to ${S.npc[near] && S.npc[near].met ? NPCS[near].short || NPCS[near].name : 'the stranger'}`, run: () => talkTo(near) };
+  const nb = nearestBot(1.4);
+  if (nb && S.robots[nb.i]) { const r = S.robots[nb.i], held = sim.selected(S); if (held && held.id === 'battery_full') return { label: `Give ${r.name} a charged battery`, run: () => { const q = sim.chargeRobot(S, nb.i); ui.toast(q.msg); if (q.ok) { sfx('good'); bubble(nb.o, 'Bzzt! ♥'); } refreshHud(); } }; return { label: `Talk to ${r.name} (battery ${r.charge}%)`, run: () => talkBot(nb) }; }
+  const pl = placedProbe(tx, ty); if (pl) return pl;
   const p = propAt(tx, ty);
   if (p) {
     if (p.act === 'counter') { const k = nearestNpc(3.2); if (k) return { label: `Talk to ${NPCS[k].short || NPCS[k].name}`, run: () => talkTo(k) }; if (map.id === 'hall') return { label: 'Nobody is at the desk', run: () => ui.toast('Nobody is at the desk just now.') }; return { label: 'Nobody is at the counter', run: () => ui.toast('Nobody is here to serve just now.') }; }
-    const L = { bin: 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Watch the colony forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', lift: 'Ride the Descent', museum: 'Look at the Memory Room', books: 'Read a book', storage: 'Open the storage box', fridge: 'Open the fridge', kitchen: 'Cook something', calendar: 'Read the noticeboard' }[p.act];
+    const L = { onsen: 'Soak in the onsen', bin: sim.basketHeld(S) ? `Tip the basket into the bin (${sim.basketTotal(S)})` : 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Watch the colony forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', lift: 'Ride the Descent', museum: 'Look at the Memory Room', books: 'Read a book', storage: 'Open the storage box', fridge: 'Open the fridge', kitchen: 'Cook something', calendar: 'Read the noticeboard' }[p.act];
     return { label: L, run: () => act(p) };
   }
   const fa = fieldAt(tx, ty) || fieldAt(Math.floor(me.x), Math.floor(me.y));
-  if (fa && fa.tile.crop && !fa.tile.crop.dead && sim.cropStage(fa.tile.crop) === 3) return { label: `Harvest the ${CROPS[fa.tile.crop.id].name.toLowerCase()}`, run: () => { const r = sim.harvest(S, fa.f.id, fa.x, fa.y); if (r.ok) { sfx('pick'); ui.gainedToast(r.gained); refreshChanged(fa.f.id, [{ x: fa.x, y: fa.y }]); goals(); } else ui.toast(r.msg); refreshHud(); } };
-  const bush = !map.indoor && plantAhead(['bush']); if (bush && sim.bushReady(S, bush.key)) return { label: 'Pick berries', run: () => { const r = sim.pickBush(S, bush.key); if (r.ok) { sfx('pick'); ui.gainedToast(r.gained); } else ui.toast(r.msg); refreshHud(); } };
+  if (fa && fa.tile.crop && !fa.tile.crop.dead && sim.cropStage(fa.tile.crop) === 3) return { label: `Harvest the ${CROPS[fa.tile.crop.id].name.toLowerCase()}${sim.basketHeld(S) ? ' into the basket' : ''}`, run: () => { const r = sim.harvest(S, fa.f.id, fa.x, fa.y); if (r.ok) { sfx('pick'); pickedToast(r); refreshChanged(fa.f.id, [{ x: fa.x, y: fa.y }]); goals(); } else ui.toast(r.msg); refreshHud(); } };
+  const bush = !map.indoor && plantAhead(['bush']); if (bush && sim.bushReady(S, bush.key)) return { label: 'Pick berries', run: () => { const r = sim.pickBush(S, bush.key); if (r.ok) { sfx('pick'); pickedToast(r); } else ui.toast(r.msg); refreshHud(); } };
   const b = nearestBeast(1.4); if (b) return { label: `Pet ${S.animals[b.i].name}`, run: () => { const r = sim.petAnimal(S, b.i); ui.toast(r.msg || `${S.animals[b.i].name} seems pleased.`); floatText(b.o.position.x, b.o.position.z, '♥'); } };
-  if (map.id === 'hill') for (const f of S.forage || []) { const [x, y] = FORAGE_SPOTS[f.spot]; if (Math.hypot(x + 0.5 - me.x, y + 0.5 - me.y) < 1.2) return { label: `Pick the ${ITEMS[f.id].name.toLowerCase()}`, run: () => { const r = sim.pickForage(S, f.spot); if (r.ok) { sfx('pick'); ui.gainedToast(r.gained); drawForage(); } else ui.toast(r.msg); refreshHud(); } }; }
+  if (map.id === 'hill') for (const f of S.forage || []) { const [x, y] = FORAGE_SPOTS[f.spot]; if (Math.hypot(x + 0.5 - me.x, y + 0.5 - me.y) < 1.2) return { label: `Pick the ${ITEMS[f.id].name.toLowerCase()}`, run: () => { const r = sim.pickForage(S, f.spot); if (r.ok) { sfx('pick'); pickedToast(r); drawForage(); } else ui.toast(r.msg); refreshHud(); } }; }
   const d = map.doors.find((q) => q.x === Math.floor(me.x) && q.y === Math.floor(me.y)); if (d) return { label: 'Go in', run: () => enterDoor(d) };
   return null;
 }
@@ -374,11 +465,12 @@ function enterDoor(d) {
 async function act(p) {
   const s = sim.selected(S);
   switch (p.act) {
-    case 'bin': { if (!s) return ui.toast('Hold something to ship it. Maris collects at five.'); const r = sim.ship(S, S.player.sel); ui.toast(r.msg || (r.ok ? 'In the bin.' : 'That cannot be shipped.')); if (r.ok) sfx('drop'); goals(); break; }
+    case 'onsen': await soakOnsen(); break;
+    case 'bin': { if (s && s.id === 'basket') { const r = sim.shipBasket(S); ui.toast(r.msg); if (r.ok) sfx('drop'); goals(); break; } if (!s) return ui.toast('Hold something to ship it. Maris collects at five.'); const r = sim.ship(S, S.player.sel); ui.toast(r.msg || (r.ok ? 'In the bin.' : 'That cannot be shipped.')); if (r.ok) sfx('drop'); goals(); break; }
     case 'well': { const r = sim.refillCan(S); ui.toast(r.msg || 'The watering can is full.'); if (r.ok) sfx('water'); break; }
     case 'sign': ui.say([{ who: 'narrator', text: story.SIGNS[p.sign] || '…' }]); break;
-    case 'storage': ui.boxWindow(S, 'storage', refreshHud); break;
-    case 'fridge': if (!S.flags.kitchen) ui.say([{ who: 'narrator', text: 'An old cold-locker from a ship, standing in the corner unplugged. Prof. Ruess could connect it with a kitchen refit.' }]); else ui.boxWindow(S, 'fridge', refreshHud); break;
+    case 'storage': ui.boxWindow(S, 'storage', refreshHud, 'Storage box'); break;
+    case 'fridge': if (!S.flags.kitchen) ui.say([{ who: 'narrator', text: 'An old cold-locker from a ship, standing in the corner unplugged. Prof. Ruess could connect it with a kitchen refit.' }]); else ui.boxWindow(S, 'fridge', refreshHud, 'The fridge'); break;
     case 'kitchen': if (!S.flags.kitchen) ui.say([{ who: 'narrator', text: 'A cold stove and a dry sink. Prof. Ruess at the Workshop can refit the kitchen.' }]); else ui.kitchenWindow(S, (r) => { if (r && r.ok) sfx('good'); refreshHud(); }); break;
     case 'calendar': { const f = story.FESTIVALS.filter((x) => x.season === S.cal.season && x.day >= S.cal.day); const bd = Object.values(NPCS).filter((n) => n.id !== 'sato' && n.birthday && n.birthday.season === S.cal.season && n.birthday.day >= S.cal.day && S.npc[n.id] && S.npc[n.id].met); ui.say([{ who: 'narrator', text: `The noticeboard. ${f.length ? 'Coming up: ' + f.map((x) => `${x.name} on day ${x.day}`).join(', ') + '.' : 'No more festivals this season.'} ${bd.length ? 'Birthdays: ' + bd.map((n) => `${n.short || n.name} on day ${n.birthday.day}`).join(', ') + '.' : ''}` }]); break; }
     case 'radio': { const l = story.RADIO[S.weatherTomorrow] || story.RADIO.sun; ui.say([{ who: 'narrator', text: 'The radio crackles. ' + (Array.isArray(l) ? l[(S.cal.day + S.cal.season) % l.length] : l) }]); break; }
@@ -409,6 +501,11 @@ function use() {                                     // Space: the held tool or 
   if (map.ruins) return pallasFire();
   const s = sim.selected(S); if (!s) return; const it = ITEMS[s.id], [tx, ty] = target();
   const near = nearestNpc(1.5); if (near && it.kind !== 'tool' && it.kind !== 'seed') return giveTo(near);
+  if (it.kind === 'placeable' || it.kind === 'sapling') return setDown(it, tx, ty);
+  if (s.id === 'axe' && !map.indoor && !map.ruins) {
+    if (sim.chestAt(S, map.id, tx, ty) >= 0 || sim.panelAt(S, map.id, tx, ty) >= 0) { me.swing = 1; const r = sim.pickUpPlaced(S, map.id, tx, ty); ui.toast(r.msg); if (r.ok) { sfx('chop'); drawPlaced(); } return refreshHud(); }
+    const fi = sim.fruitTreeAt(S, map.id, tx, ty); if (fi >= 0) { me.swing = 1; const r = sim.removeTree(S, fi); ui.toast(r.msg); if (r.ok) { sfx('chop'); W.puff(tx + 0.5, ty + 0.5, 0x6fbf5a, 10, 0.6); drawPlaced(); } return refreshHud(); }
+  }
   if (it.kind === 'food' || (it.stamina && it.kind !== 'tool')) { if (it.kind === 'food') { const r = sim.eat(S, S.player.sel); ui.toast(r.msg || 'That was good.'); if (r.ok) sfx('pick'); refreshHud(); } return; }
   if (it.kind !== 'tool' && it.kind !== 'seed') return;
   me.swing = 1;
@@ -474,6 +571,8 @@ function goals() { for (const g of sim.claimGoals(S)) { ui.toast(`Done: ${g.titl
 
 // ---------------------------------------------------------------- floating labels
 function floatText(x, y, text) { const e = document.createElement('span'); e.textContent = text; $('labels').appendChild(e); labels.push({ e, x, y, h: 2, life: 1.2 }); }
+// A speech bubble that follows a 3D object (a robot) for a few seconds.
+function bubble(o, text, life = 3.6) { for (const l of labels) if (l.follow === o) l.life = 0; const e = document.createElement('span'); e.className = 'bubble'; e.textContent = text; $('labels').appendChild(e); labels.push({ e, follow: o, x: o.position.x, y: o.position.z, h: 1.25, life, still: true }); }
 
 // ---------------------------------------------------------------- the frame
 let last = 0, promptT = 0, current = null;
@@ -507,6 +606,7 @@ function frame(now) {
     while (clock >= MIN_SECONDS) { clock -= MIN_SECONDS; const r = sim.tick(S, 1); if (S.cal.minute % 10 === 0) { refreshHud(); placeNpcs(); W.setTime(S.cal.minute, S.weather, map); setMood({ night: S.cal.minute > 1170 }); checkEvents(); } if (r.collapsed) { night(true); break; } }
     if (map.ruins) ruinsTick(dt);
     if (fishing) fishTick(dt);
+    botsTick(dt);
     for (const b of beasts) { b.wait -= dt; if (b.wait <= 0) { const pen = map.pen; b.tx = pen[0] + 0.6 + Math.random() * (pen[2] - pen[0]); b.ty = pen[1] + 0.6 + Math.random() * (pen[3] - pen[1]); b.wait = 3 + Math.random() * 6; } const dx = b.tx - b.o.position.x, dy = b.ty - b.o.position.z, d = Math.hypot(dx, dy); if (d > 0.1) { b.o.position.x += dx / d * dt * 0.6; b.o.position.z += dy / d * dt * 0.6; if (!W.facers.includes(b.o.children[0])) b.o.rotation.y = Math.atan2(dx, dy); } }
     // prompt and cursor
     if ((promptT -= dt) <= 0) {
@@ -517,7 +617,7 @@ function frame(now) {
       ui.prompt(current && current.label ? `<kbd>E</kbd>${current.label}` : '');
     }
   } else { me.moving = false; W.setCursor(0, 0, false); if (mode !== 'play') ui.prompt(''); }
-  for (let i = labels.length - 1; i >= 0; i--) { const l = labels[i]; l.life -= dt; l.h += dt * 0.8; const p = W.project(l.x, l.y, l.h); l.e.style.left = p.x + 'px'; l.e.style.top = p.y + 'px'; l.e.style.opacity = Math.min(1, l.life * 2); if (l.life <= 0) { l.e.remove(); labels.splice(i, 1); } }
+  for (let i = labels.length - 1; i >= 0; i--) { const l = labels[i]; l.life -= dt; if (l.follow) { l.x = l.follow.position.x; l.y = l.follow.position.z; } if (!l.still) l.h += dt * 0.8; const p = W.project(l.x, l.y, l.h); l.e.style.left = p.x + 'px'; l.e.style.top = p.y + 'px'; l.e.style.opacity = Math.min(1, l.life * 2); if (l.life <= 0) { l.e.remove(); labels.splice(i, 1); } }
   W.update(dt, me.x, me.y);
 }
 
@@ -526,6 +626,8 @@ function selectSlot(i) { const n = S.player.slots; S.player.sel = ((i % n) + n) 
 function pressE() { if (ui.advance()) return; if (mode !== 'play' || busy || ui.windowOpen()) return; const p = probe(); if (p) p.run(); }
 function pressUse() { if (ui.advance()) return; if (mode !== 'play' || busy || ui.windowOpen()) return; use(); }
 function openMenu(tab) { if (mode !== 'play' || busy || ui.talking()) return; ui.menu(S, { change: refreshHud, save: () => { save(); ui.toast('Saved.'); }, export: exportSave, title: () => { save(); location.reload(); }, music: () => ui.toast(music(!musicPlaying()) ? 'Music on.' : 'Music off.') }, tab); }
+// P or the pause button: the Farm journal (the clock stops while any window is open).
+function toggleJournal(tab) { if (ui.journalOpen()) return ui.closeWin(); if (mode !== 'play' || busy || ui.talking() || ui.windowOpen()) return; ui.journal(S, { tab, place: map ? map.name : '', change: refreshHud }); }
 function exportSave() { save(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([sim.saveState(S)], { type: 'application/json' })); a.download = `satos-harvest-y${S.cal.year}-${['spring', 'summer', 'autumn', 'winter'][S.cal.season]}${S.cal.day}.json`; a.click(); }
 function bindInput() {
   addEventListener('keydown', (e) => {
@@ -534,7 +636,8 @@ function bindInput() {
     if (e.code === 'Tab') { e.preventDefault(); if (ui.windowOpen()) ui.closeWin(); else openMenu('bag'); return; }
     if (e.code === 'F1') { e.preventDefault(); return openMenu('help'); }
     if (e.repeat) return;
-    if (e.code === 'KeyM') { if (mapOpen()) ui.closeWin(); else toggleMap(); return; }   // the town map (music: the menu's button)
+    if (e.code === 'KeyM') { if (mapOpen()) ui.closeWin(); else toggleMap(); return; }
+    if (e.code === 'KeyP') return toggleJournal();   // the town map (music: the menu's button)
     if (e.code === 'KeyE' || e.code === 'Enter') return pressE();
     if (e.code === 'Space') { e.preventDefault(); return pressUse(); }
     if (ui.windowOpen() || ui.talking()) return;
@@ -554,6 +657,7 @@ function bindInput() {
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
   $('bar').addEventListener('click', (e) => { const b = e.target.closest('[data-slot]'); if (b) selectSlot(+b.dataset.slot); });
   $('bMenu').onclick = () => (ui.windowOpen() ? ui.closeWin() : openMenu('bag')); $('winX').onclick = ui.closeWin;
+  $('bPause').onclick = () => toggleJournal(); addEventListener('resize', () => { if (S && mode !== 'title') refreshHud(); });
   $('dialog').addEventListener('click', () => ui.advance()); $('scene').addEventListener('click', () => ui.advance());
   // touch: a stick and two buttons
   if (matchMedia('(pointer: coarse)').matches) {
@@ -588,6 +692,6 @@ async function boot() {
   $('bHelp').onclick = () => { S = S || sim.newGame(); mode = 'play'; ui.menu(S, { close: () => { if ($('title').hidden === false) { mode = 'title'; } } }, 'help'); };
   $('fImport').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; const st = sim.loadState(await f.text()); if (!st) return ($('loadInfo').textContent = 'That file is not a Sato’s Harvest save.'); begin(st, false); };
   requestAnimationFrame(frame);
-  window.__farm = { get S() { return S; }, get W() { return W; }, get me() { return me; }, get map() { return map; }, go, sim, night, get mode() { return mode; } };
+  window.__farm = { get S() { return S; }, get W() { return W; }, get me() { return me; }, get map() { return map; }, go, sim, night, get mode() { return mode; }, ui, drawPlaced, get bots() { return bots; }, probe: () => probe(), use: () => use(), toggleJournal, talkBot };
 }
 boot();

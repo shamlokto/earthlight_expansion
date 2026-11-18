@@ -22,13 +22,19 @@
 //  * Stamina at 0: the action still happens and the result carries fainted: true.
 //  * Ruins: cells (7,11) (the lift) is always open; walls never cut an open cell off from it.
 //    Finds that do not fit in a full rucksack are left behind (the result says so).
-import { SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, ITEMS, CROPS, TOOL_LEVELS, FIELD_SIZES, PASTURE_SIZE, RELICS, FESTIVAL_DAYS } from './data.js';
+import { SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, ITEMS, CROPS, TOOL_LEVELS, FIELD_SIZES, PASTURE_SIZE, RELICS, FESTIVAL_DAYS, FRUIT_TREES, TREE_DAYS, SATO_BIRTHDAY, ROBOT_NAMES, ROBOT_JOBS, ROBOT_MOODS } from './data.js';
 
 export const NPC_IDS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui'];
 export const CAN_CAPACITY = [0, 20, 40, 80];
 export const STORAGE_SIZE = 40, FRIDGE_SIZE = 30;
 // What goes in the fridge: anything you can eat or cook with.
-const FRIDGE_KINDS = new Set(['crop', 'animal', 'fish', 'forage', 'food']);
+const FRIDGE_KINDS = new Set(['crop', 'animal', 'fish', 'forage', 'food', 'fruit']);
+// The basket takes farm produce: crops, forage, fruit, eggs and milk.
+const PRODUCE = new Set(['crop', 'forage', 'fruit', 'animal']);
+export const BASKET_CAP = 30, CHEST_SIZE = 20, MAX_ROBOTS = 3, FORAGE_SPOT_COUNT = 14, ONSEN_PRICE = 100;
+export const RUCKSACK_TIERS = [[15, 1500], [20, 4000], [25, 8000], [30, 15000]];
+const FRUITS = ['cherry', 'peach', 'apple', 'persimmon', 'wild_apple', 'wild_grape', 'berry'];
+const MUSHROOMS = ['mushroom', 'frostcap'];
 const VEG = ['turnip', 'potato', 'cucumber', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach'];
 const FISH_IDS = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'];
 const MILK = ['milk_s', 'milk_m', 'milk_l'];
@@ -41,6 +47,28 @@ export const RECIPES = [
   { id: 'fish_grill', name: 'Grilled fish', needs: [FISH_IDS] },
   { id: 'berry_jam', name: 'Berry jam', needs: [['berry'], ['berry'], ['berry']], same: true },
   { id: 'cooked_meal', name: 'Colony bento', needs: [FISH_IDS, ['egg'], VEG] },
+  // 2026-11-18: mountain food and fruit
+  { id: 'mint_tea', name: 'Mint tea', needs: [['wild_mint'], ['herb']] },
+  { id: 'grape_juice', name: 'Grape juice', needs: [['wild_grape'], ['wild_grape'], ['wild_grape']], same: true },
+  { id: 'bamboo_stirfry', name: 'Bamboo stir-fry', needs: [['bamboo_shoot'], ['onion', 'carrot', 'spinach', 'turnip', 'cucumber']] },
+  { id: 'honey_toast', name: 'Honey toast', needs: [['honeycomb'], ['bread']] },
+  { id: 'fiddlehead_tempura', name: 'Fiddlehead tempura', needs: [['fiddlehead'], ['egg']] },
+  { id: 'fruit_tart', name: 'Fruit tart', needs: [FRUITS, ['egg'], ['bread']] },
+  { id: 'fruit_salad', name: 'Fruit salad', needs: [FRUITS, FRUITS] },
+  { id: 'persimmon_jam', name: 'Persimmon jam', needs: [['persimmon'], ['persimmon']], same: true },
+  { id: 'chestnut_roast', name: 'Roast chestnuts', needs: [['chestnut'], ['chestnut'], ['chestnut']], same: true },
+  { id: 'mushroom_soup', name: 'Mushroom soup', needs: [MUSHROOMS, MILK] },
+  { id: 'root_stew', name: 'Root stew', needs: [['winter_root'], ['potato', 'carrot', 'sweetpotato', 'turnip'], ['pine_nut', 'chestnut']] },
+  { id: 'honeyed_nuts', name: 'Honeyed nuts', needs: [['pine_nut'], ['honeycomb']] },
+  { id: 'matsutake_grill', name: 'Grilled matsutake', needs: [['matsutake'], ['herb', 'wild_mint']] },
+  { id: 'forest_bento', name: 'Forest bento', needs: [FISH_IDS, MUSHROOMS, VEG] },
+];
+// The kitchen window's groups.
+export const RECIPE_GROUPS = [
+  ['Everyday', ['omelette', 'salad', 'veg_soup', 'fish_grill', 'mint_tea', 'fiddlehead_tempura', 'bamboo_stirfry']],
+  ['Sweet things', ['berry_jam', 'grape_juice', 'honey_toast', 'fruit_salad', 'fruit_tart', 'persimmon_jam', 'honeyed_nuts', 'chestnut_roast']],
+  ['From the hill', ['mushroom_soup', 'root_stew', 'matsutake_grill']],
+  ['Feasts', ['cooked_meal', 'forest_bento']],
 ];
 export const UPGRADABLE = ['hoe', 'can', 'sickle', 'hammer', 'axe', 'rod'];
 export const SHOPS = {
@@ -71,7 +99,13 @@ const NAMES = {
   chicken: ['Pip', 'Dot', 'Biscuit', 'Clover', 'Nutmeg', 'Pepper', 'Button', 'Sorrel', 'Wren', 'Tansy'],
   cow: ['Juniper', 'Bramble', 'Hazel', 'Marigold', 'Tilly', 'Rowan', 'Dumpling', 'Mabel'],
 };
-const FORAGE = [['herb'], ['herb', 'berry'], ['mushroom'], ['frostcap']];
+// Forage by season: [id, weight]; rarer things have smaller weights.
+export const FORAGE = [
+  [['herb', 3], ['bamboo_shoot', 3], ['wild_mint', 3], ['fiddlehead', 2]],
+  [['herb', 3], ['berry', 3], ['wild_grape', 2.5], ['honeycomb', 1]],
+  [['mushroom', 4], ['chestnut', 3], ['wild_apple', 3], ['matsutake', 0.5]],
+  [['frostcap', 4], ['pine_nut', 3], ['winter_root', 3]],
+];
 const FISH_ODDS = { farm: [70, 25, 5], village: [55, 35, 10], hill: [35, 40, 25] };   // small, medium, large
 const SEASON_FISH = ['fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'];
 const GIFT = { loved: 8, liked: 4, neutral: 1, disliked: -4 };
@@ -120,7 +154,7 @@ export function newGame({ seed } = {}) {
     player: {
       stamina: 100, maxStamina: 100, money: 500, slots: 10,
       inv: [{ id: 'hoe', n: 1 }, { id: 'can', n: 1 }, { id: 'sickle', n: 1 }, { id: 'hammer', n: 1 }, { id: 'axe', n: 1 }, { id: 'seed_turnip', n: 1 }, null, null, null, null],
-      sel: 0, toolLevel: { hoe: 1, can: 1, sickle: 1, hammer: 1, axe: 1, rod: 1 }, water: CAN_CAPACITY[1], map: 'farm', x: 0, y: 0, dir: 0,
+      sel: 0, toolLevel: { hoe: 1, can: 1, sickle: 1, hammer: 1, axe: 1, rod: 1 }, water: CAN_CAPACITY[1], map: 'farm', x: 0, y: 0, dir: 0, basket: [],
     },
     fields: { farm: field(FIELD_SIZES.farm), greenhouse: field(FIELD_SIZES.greenhouse) },
     pasture: { w: PASTURE_SIZE[0], h: PASTURE_SIZE[1], grass: Array(PASTURE_SIZE[0] * PASTURE_SIZE[1]).fill(0), age: Array(PASTURE_SIZE[0] * PASTURE_SIZE[1]).fill(0) },
@@ -131,6 +165,7 @@ export function newGame({ seed } = {}) {
     npc: {}, flags: { greenhouse: false },
     pending: { upgrade: null, animals: [] },
     mine: null, forage: [], museum: {}, fishLog: {},
+    chests: [], panels: [], robots: [], fruitTrees: [], cooked: {}, foraged: {},
     stats: { tilesCleared: 0, tilled: 0, sown: 0, watered: 0, harvested: 0, shippedItems: 0, fishCaught: 0, searched: 0, monsters: 0, gifts: 0, deepest: 0, days: 0 },
     goals: {},
   };
@@ -152,8 +187,19 @@ export function loadState(text) {
   try {
     const s = JSON.parse(text);
     const good = s && s.v === 1 && s.cal && s.player && Array.isArray(s.player.inv) && s.fields && s.fields.farm && Array.isArray(s.fields.farm.tiles) && s.fields.greenhouse && s.pasture && s.stats;
-    return good ? s : null;
+    return good ? ensure(s) : null;
   } catch { return null; }
+}
+
+// Older saves lack the later fields: give them empty ones (called on load and by the new actions).
+export function ensure(s) {
+  const arr = (o, k) => { if (!Array.isArray(o[k])) o[k] = []; };
+  const obj = (o, k) => { if (!o[k] || typeof o[k] !== 'object' || Array.isArray(o[k])) o[k] = {}; };
+  arr(s.player, 'basket'); arr(s, 'chests'); arr(s, 'panels'); arr(s, 'robots'); arr(s, 'fruitTrees');
+  obj(s, 'cooked'); obj(s, 'foraged'); obj(s, 'flags'); obj(s, 'museum'); obj(s, 'fishLog');
+  if (!Array.isArray(s.storage)) s.storage = new Array(STORAGE_SIZE).fill(null);
+  if (!Array.isArray(s.fridge)) s.fridge = new Array(FRIDGE_SIZE).fill(null);
+  return s;
 }
 
 // ---------------------------------------------------------------- calendar
@@ -216,6 +262,9 @@ function takeFromSlot(state, slot, n) {
   s.n -= n;
   if (s.n <= 0) state.player.inv[slot] = null;
 }
+// A soak at the onsen makes every tool cost one stamina less (never below 1) for the rest of that day.
+export const onsenBuff = (state) => !!state.flags && state.flags.onsenDay === absDay(state);
+export const toolCost = (state, n) => (onsenBuff(state) ? Math.max(1, n - 1) : n);
 // Stamina never goes below 0; at 0 Sato faints (the UI then puts her to bed).
 function spend(state, n, res) {
   state.player.stamina = Math.max(0, state.player.stamina - n);
@@ -301,13 +350,13 @@ export function useTool(state, fieldId, x, y, dir) {
   if (def.kind === 'seed') return sow(state, fieldId, f, it.id, x, y);
   if (!TOOL_FX[it.id]) return nothing(def.kind === 'tool' ? `The ${def.name.toLowerCase()} is no use on the field.` : 'You cannot use that on the field.');
   const level = state.player.toolLevel[it.id], ctx = { lumber: 0, hint: null };
-  const res = { ok: true, cost: 2, changed: [], gained: [], fx: TOOL_FX[it.id] };
+  const res = { ok: true, cost: toolCost(state, 2), changed: [], gained: [], fx: TOOL_FX[it.id] };
   for (const [tx, ty] of reach(x, y, dir, level, WIDE[it.id])) {
     if (inside(f, tx, ty) && work(state, it.id, level, f.tiles[ty * f.w + tx], ctx)) res.changed.push({ x: tx, y: ty });
   }
   if (!res.changed.length) return nothing(ctx.hint || IDLE[it.id]);
   if (ctx.lumber) { state.stock.lumber += ctx.lumber; res.gained.push({ id: 'lumber', n: ctx.lumber }); }
-  return spend(state, 2, res);
+  return spend(state, res.cost, res);
 }
 
 function sow(state, fieldId, f, seedId, x, y) {
@@ -338,10 +387,10 @@ export function harvest(state, fieldId, x, y) {
   if (t.crop.dead) return no('This crop is dead. Cut it with the sickle.');
   const c = CROPS[t.crop.id];
   if (t.crop.age < c.days) return no(`The ${c.plural} are not ripe yet.`);
-  if (!addItem(state, c.id, 1).ok) return no(FULL);
+  const put = stash(state, c.id, 1); if (!put.ok) return no(FULL);
   if (c.regrow) t.crop.age = c.days - c.regrow; else t.crop = null;
   state.stats.harvested++;
-  return { ok: true, gained: [{ id: c.id, n: 1 }] };
+  return { ok: true, gained: [{ id: c.id, n: 1 }], basket: put.basket, msg: put.msg };
 }
 
 export function refillCan(state) {
@@ -368,7 +417,7 @@ export function usePasture(state, x, y, dir) {
     return res;
   }
   if (it.id !== 'sickle') return nothing('Only the sickle and grass seed are any use in the pasture.');
-  const res = { ok: true, cost: 2, changed: [], gained: [], fx: 'cut' };
+  const res = { ok: true, cost: toolCost(state, 2), changed: [], gained: [], fx: 'cut' };
   for (const [tx, ty] of reach(x, y, dir, state.player.toolLevel.sickle, true)) {
     if (!inside(p, tx, ty) || p.grass[ty * p.w + tx] !== 3) continue;
     p.grass[ty * p.w + tx] = 1; p.age[ty * p.w + tx] = 0;
@@ -377,7 +426,7 @@ export function usePasture(state, x, y, dir) {
   if (!res.changed.length) return nothing('There is no ripe grass to cut here.');
   state.stock.fodder += res.changed.length;
   res.gained.push({ id: 'fodder', n: res.changed.length });
-  return spend(state, 2, res);
+  return spend(state, res.cost, res);
 }
 
 // ---------------------------------------------------------------- animals
@@ -466,13 +515,21 @@ function boxes(state) {
   if (!Array.isArray(state.fridge)) state.fridge = new Array(FRIDGE_SIZE).fill(null);
   return { storage: state.storage, fridge: state.fridge };
 }
-const boxOf = (state, where) => (where === 'storage' || where === 'fridge' ? boxes(state)[where] : null);
+// A box: 'storage', 'fridge' or 'chest:<index>' (a field chest).
+export function boxOf(state, where) {
+  if (where === 'storage' || where === 'fridge') return boxes(state)[where];
+  const m = typeof where === 'string' && /^chest:(\d{1,3})$/.exec(where);
+  const c = m && Array.isArray(state.chests) ? state.chests[+m[1]] : null;
+  return c && Array.isArray(c.items) ? c.items : null;
+}
+const boxName = (where) => (where === 'fridge' ? 'the fridge' : where === 'storage' ? 'the storage box' : 'the field chest');
 // Put a rucksack stack (or n of it) into the storage box or the fridge.
 export function storeItem(state, where, slot, n) {
   const box = boxOf(state, where); if (!box) return fail('There is nowhere like that to put things.');
   const s = slotItem(state, slot); if (!s) return fail('That slot is empty.');
   const def = ITEMS[s.id];
   if (def.kind === 'tool' && where === 'fridge') return fail('Tools do not go in the fridge.');
+  if (s.id === 'field_chest' && where.startsWith('chest:')) return fail('A chest does not fit inside a chest.');
   if (where === 'fridge' && !FRIDGE_KINDS.has(def.kind)) return fail('Only food goes in the fridge.');
   if (where === 'fridge' && !state.flags.kitchen) return fail('The fridge is not connected yet. Ruess can refit the kitchen.');
   if (n === undefined || n === null) n = s.n;
@@ -482,9 +539,9 @@ export function storeItem(state, where, slot, n) {
   for (const b of box) if (b && b.id === s.id && left) { const k = Math.min(left, STACK - b.n); b.n += k; left -= k; }
   for (let i = 0; i < box.length && left; i++) if (!box[i]) { const k = Math.min(left, STACK); box[i] = { id: s.id, n: k }; left -= k; }
   const put = n - left;
-  if (!put) return fail(where === 'fridge' ? 'The fridge is full.' : 'The storage box is full.');
+  if (!put) return fail(where === 'fridge' ? 'The fridge is full.' : where === 'storage' ? 'The storage box is full.' : 'The field chest is full.');
   takeFromSlot(state, slot, put);
-  return { ok: true, msg: `${put} × ${def.name} ${where === 'fridge' ? 'in the fridge' : 'in the storage box'}.` };
+  return { ok: true, msg: `${put} × ${def.name} in ${boxName(where)}.` };
 }
 // Take a stack (or n of it) out of the box into the rucksack.
 export function takeItem(state, where, index, n) {
@@ -513,17 +570,20 @@ function planRecipe(state, r) {
   return picks;
 }
 export function recipeBook(state) {
-  return RECIPES.map((r) => { const p = state.flags.kitchen ? planRecipe(state, r) : null; return { id: r.id, name: r.name, desc: ITEMS[r.id].desc, can: !!p, uses: p ? p.map((x) => ITEMS[x].name) : null }; });
+  const groupOf = (id) => (RECIPE_GROUPS.find(([, ids]) => ids.includes(id)) || ['Other'])[0];
+  return RECIPES.map((r) => { const p = state.flags.kitchen ? planRecipe(state, r) : null; return { id: r.id, name: r.name, desc: ITEMS[r.id].desc, group: groupOf(r.id), can: !!p, uses: p ? p.map((x) => ITEMS[x].name) : null, cooked: (state.cooked && state.cooked[r.id]) || 0, needs: r.needs.map((slot) => (slot.length === 1 ? ITEMS[slot[0]].name : slot === VEG ? 'any vegetable' : slot === FISH_IDS ? 'any fish' : slot === MILK ? 'any milk' : slot === FRUITS ? 'any fruit' : slot.map((x) => ITEMS[x].name).join(' or '))) }; });
 }
 export function cook(state, recipeId) {
   if (!state.flags.kitchen) return fail('The kitchen needs a refit first. Ruess can do it.');
   const r = RECIPES.find((x) => x.id === recipeId); if (!r) return fail('There is no such recipe.');
   const picks = planRecipe(state, r); if (!picks) return fail(`You do not have the ingredients for ${r.name.toLowerCase()}.`);
-  if (!room(state, r.id)) return fail(FULL);
+  const keep = JSON.stringify([state.player.inv, boxes(state).fridge]);   // the dish may need a slot an ingredient frees
   for (const id of picks) {
     if (!removeItem(state, id, 1)) { const f = boxes(state).fridge, k = f.findIndex((b) => b && b.id === id); if (k >= 0) { f[k].n -= 1; if (!f[k].n) f[k] = null; } }
   }
+  if (!room(state, r.id)) { const [inv, fridge] = JSON.parse(keep); state.player.inv = inv; state.fridge = fridge; return fail(FULL); }
   addItem(state, r.id, 1); state.stats.cooked = (state.stats.cooked || 0) + 1;
+  ensure(state).cooked[r.id] = (state.cooked[r.id] || 0) + 1;
   return { ok: true, msg: `You made ${ITEMS[r.id].name.toLowerCase()}.`, gained: [{ id: r.id, n: 1 }] };
 }
 
@@ -540,11 +600,11 @@ export function chopTree(state, key) {
   if (treeFelled(state, key)) return fail('Only a stump is left. It will grow back.');
   const p = state.player; if (p.stamina <= 0) return fail('You are too tired to swing the axe.');
   const t = state.trees[key] = state.trees[key] && state.trees[key].felled == null ? state.trees[key] : { hits: 0, felled: null };
-  t.hits += 1; p.stamina = Math.max(0, p.stamina - 3);
+  const cost = toolCost(state, 3); t.hits += 1; p.stamina = Math.max(0, p.stamina - cost);
   const need = TREE_HITS[p.toolLevel.axe || 1] || 5;
-  if (t.hits < need) return { ok: true, msg: null, felled: false, cost: 3, left: need - t.hits, gained: [], fainted: p.stamina <= 0 };
+  if (t.hits < need) return { ok: true, msg: null, felled: false, cost, left: need - t.hits, gained: [], fainted: p.stamina <= 0 };
   t.felled = absDay(state); t.hits = 0; state.stock.lumber += 8; state.stats.treesFelled = (state.stats.treesFelled || 0) + 1;
-  return { ok: true, msg: 'Timber! +8 lumber. The stump will grow back in two weeks.', felled: true, cost: 3, gained: [{ id: 'lumber', n: 8 }], fainted: p.stamina <= 0 };
+  return { ok: true, msg: 'Timber! +8 lumber. The stump will grow back in two weeks.', felled: true, cost, gained: [{ id: 'lumber', n: 8 }], fainted: p.stamina <= 0 };
 }
 export function bushReady(state, key) { const d = (state.bushes || {})[key]; return state.cal.season < 3 && (d == null || absDay(state) - d >= BUSH_DAYS); }
 export function pickBush(state, key) {
@@ -552,9 +612,10 @@ export function pickBush(state, key) {
   if (state.cal.season === 3) return fail('The bush is bare for the winter.');
   if (!bushReady(state, key)) return fail('No ripe berries yet. Come back in a few days.');
   const n = state.cal.season === 1 ? 2 + Math.floor(rnd(state) * 2) : 1 + Math.floor(rnd(state) * 2);
-  if (!canAdd(state, 'berry', n)) return fail(FULL);
-  (state.bushes ||= {})[key] = absDay(state); addItem(state, 'berry', n);
-  return { ok: true, msg: `You picked ${n} berr${n > 1 ? 'ies' : 'y'}.`, gained: [{ id: 'berry', n }] };
+  const inBasket = basketHeld(state) && basketRoom(state, 'berry') >= n;
+  if (!inBasket && !canAdd(state, 'berry', n)) return fail(FULL);
+  (state.bushes ||= {})[key] = absDay(state); stash(state, 'berry', n);
+  return { ok: true, msg: `You picked ${n} berr${n > 1 ? 'ies' : 'y'}${inBasket ? ' into the basket' : ''}.`, gained: [{ id: 'berry', n }], basket: inBasket };
 }
 
 // What a shop sells today. Private fields: give (item id), once, req [[id, n]], lumber, stop(n) -> why, apply(n).
@@ -565,11 +626,14 @@ function shelves(state, shopId) {
   if (shopId === 'store') {
     for (const c of Object.values(CROPS)) if (c.seasons.length === 1 && c.seasons[0] === state.cal.season) sell(`seed_${c.id}`, c.bag);
     sell('seed_grass', 500); sell('bread', 60); once('rod', 600);
-    if (p.slots < 20) {
-      const to = p.slots < 15 ? 15 : 20;
-      out.push({ key: 'rucksack', label: `${to}-slot rucksack`, desc: `A bigger rucksack: ${to} slots.`, price: to === 15 ? 1500 : 4000, once: true,
+    const tier = RUCKSACK_TIERS.find(([n]) => n > p.slots);
+    if (tier) {
+      const [to, price] = tier;
+      out.push({ key: 'rucksack', label: `${to}-slot rucksack`, desc: `A bigger rucksack: ${to} slots.`, price, once: true,
         apply: () => { while (p.inv.length < to) p.inv.push(null); p.slots = to; return `Your rucksack now has ${to} slots.`; } });
     }
+    if (!state.flags.basket) sell('basket', 800, { once: true, apply: () => { addItem(state, 'basket', 1); state.flags.basket = true; ensure(state); return 'A harvest basket. Hold it while you pick, and the crops go in the basket.'; } });
+    if (state.cal.season < 3) for (const k of Object.keys(FRUIT_TREES)) sell(`sapling_${k}`, 2500);
   } else if (shopId === 'ranch') {
     for (const [kind, price, desc] of [['chicken', 1500, 'Lays an egg each morning when fed.'], ['cow', 5000, 'Gives milk each day when fed.']]) {
       const h = HOUSING[kind], have = state.animals.filter((a) => a.kind === kind).length + state.pending.animals.filter((k) => k === kind).length;
@@ -588,6 +652,13 @@ function shelves(state, shopId) {
         stop: () => (state.pending.upgrade ? 'Ruess is already working on one of your tools.' : null),
         apply: () => { removeItem(state, tool, 1); state.pending.upgrade = { tool, level }; return `Ruess will have your ${name} ready in the morning.`; } });
     }
+    sell('field_chest', 1200, { lumber: 20, needs: '20 lumber' });
+    const robots = ensure(state).robots.length;
+    out.push({ key: 'robot', label: 'Lease a Field-unit', desc: `A little farm robot (${robots}/${MAX_ROBOTS}). It waters, harvests or tends animals each morning on a battery. Talk to it on the farm to give it a job.`, price: 300, once: true,
+      stop: () => (robots >= MAX_ROBOTS ? 'Ruess has no more Field-units to spare. Three is plenty, he says.' : null),
+      apply: () => { const name = ROBOT_NAMES.find((n) => !state.robots.some((r) => r.name === n)) || `Unit ${state.robots.length + 1}`; state.robots.push({ name, job: 'water', days: 0, charge: 100, mood: 'happy', done: 0 }); return `${name} rolls out of the workshop, fully charged, and follows you home.`; } });
+    sell('solar_panel', 1500, { lumber: 10, needs: '10 lumber' });
+    sell('battery', 200);
     if (!state.flags.kitchen) {
       out.push({ key: 'kitchen', label: 'Kitchen refit', desc: 'A stove, a sink and a cold-locker fridge for the farmhouse. Cook meals from your own harvest.', price: 2500, lumber: 60, needs: '60 lumber', once: true,
         apply: () => { state.flags.kitchen = true; boxes(state); return 'Ruess refitted your kitchen. The fridge hums like a small engine.'; } });
@@ -615,7 +686,7 @@ function refusal(state, d, n) {
   if (why) return why;
   if (state.player.money < d.price * n) return `You need ${d.price * n} cr.`;
   for (const [id, k] of d.req || []) if (countItem(state, id) < k) return `You need ${k} ${lower(id)} in your rucksack.`;
-  if (d.lumber && state.stock.lumber < d.lumber) return `You need ${d.lumber} lumber.`;
+  if (d.lumber && state.stock.lumber < d.lumber * n) return `You need ${d.lumber * n} lumber.`;
   if (d.give && !canAdd(state, d.give, n)) return FULL;
   return null;
 }
@@ -638,7 +709,7 @@ export function buy(state, shopId, key, n = 1) {
   if (why) return fail(why);
   state.player.money -= d.price * n;
   for (const [id, k] of d.req || []) removeItem(state, id, k);
-  if (d.lumber) state.stock.lumber -= d.lumber;
+  if (d.lumber) state.stock.lumber -= d.lumber * n;
   if (d.apply) return { ok: true, msg: d.apply(n) };
   addItem(state, d.give, n);
   return { ok: true, msg: `Bought ${n > 1 ? `${n} × ` : ''}${d.label}.` };
@@ -725,7 +796,7 @@ function find(state, depth) {
   }
   if (r < 0.16) return depth >= 10 ? 'crystal' : 'scrap';
   if (r < 0.28) return depth >= 5 ? 'alloy' : 'scrap';
-  return r < 0.50 ? 'scrap' : null;
+  return r < 0.50 ? 'scrap' : r < 0.56 ? 'battery' : null;
 }
 // Search a rubble pile (the name is from the first design, when this was a mine).
 export function hitRock(state, x, y) {
@@ -785,22 +856,264 @@ export function fish(state, place) {
   if (!addItem(state, id, 1).ok) return no('Your rucksack is full, so you let it go.');
   state.stats.fishCaught++;
   state.fishLog[id] = (state.fishLog[id] || 0) + 1;
-  return spend(state, 1, { ok: true, msg: king ? 'Old Hollin himself! The whole village will hear of this.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
+  return spend(state, toolCost(state, 1), { ok: true, msg: king ? 'Old Hollin himself! The whole village will hear of this.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
 }
 
+// Three to six things a day, on 14 spots; rarer kinds turn up less often.
 function rollForage(state) {
-  const spots = [0, 1, 2, 3, 4, 5, 6, 7], kinds = FORAGE[state.cal.season];
+  const spots = Array.from({ length: FORAGE_SPOT_COUNT }, (_, i) => i), kinds = FORAGE[state.cal.season];
   state.forage = [];
-  for (let n = 2 + rint(state, 3); n > 0; n--) state.forage.push({ spot: spots.splice(rint(state, spots.length), 1)[0], id: kinds[rint(state, kinds.length)] });
+  for (let n = 3 + rint(state, 4); n > 0; n--) state.forage.push({ spot: spots.splice(rint(state, spots.length), 1)[0], id: kinds[pick(state, kinds.map((k) => k[1]))][0] });
   state.forage.sort((a, b) => a.spot - b.spot);
 }
 export function pickForage(state, spot) {
   const i = state.forage.findIndex((f) => f.spot === spot);
   if (i < 0) return fail('There is nothing growing here today.', { gained: [] });
   const id = state.forage[i].id;
-  if (!addItem(state, id, 1).ok) return fail(FULL, { gained: [] });
+  const put = stash(state, id, 1); if (!put.ok) return fail(FULL, { gained: [] });
   state.forage.splice(i, 1);
-  return { ok: true, msg: `You picked a ${lower(id)}.`, gained: [{ id, n: 1 }] };
+  ensure(state).foraged[id] = (state.foraged[id] || 0) + 1;
+  return { ok: true, msg: `You picked a ${lower(id)}${put.basket ? ' into the basket' : ''}.`, gained: [{ id, n: 1 }], basket: put.basket };
+}
+
+
+// ---------------------------------------------------------------- the basket (2026-11-18)
+// Held in the hand, the basket catches picked produce (30 in all, one stack a kind): state.player.basket.
+const basketList = (state) => ensure(state).player.basket;
+export const basketTotal = (state) => basketList(state).reduce((a, b) => a + (b ? b.n : 0), 0);
+export const basketHeld = (state) => { const s = selected(state); return !!s && s.id === 'basket'; };
+const basketRoom = (state, id) => (itemOf(id) && PRODUCE.has(ITEMS[id].kind) ? BASKET_CAP - basketTotal(state) : 0);
+// Picked things go to the basket when it is held and has room, else to the rucksack.
+function stash(state, id, n) {
+  if (basketHeld(state) && basketRoom(state, id) >= n) {
+    const b = basketList(state), line = b.find((x) => x.id === id);
+    if (line) line.n += n; else b.push({ id, n });
+    return { ok: true, basket: true };
+  }
+  const r = addItem(state, id, n);
+  return { ok: r.ok, basket: false, msg: r.ok && basketHeld(state) && PRODUCE.has(ITEMS[id].kind) ? 'The basket is full, so it went in the rucksack.' : undefined };
+}
+// E at the shipping bin with the basket in hand: the whole basket goes in.
+export function shipBasket(state) {
+  if (!countItem(state, 'basket')) return fail('You do not have a basket.');
+  const b = basketList(state); if (!b.length) return fail('The basket is empty.');
+  let n = 0;
+  for (const { id, n: k } of b) { if (!ITEMS[id].sell) continue; const line = state.bin.find((x) => x.id === id); if (line) line.n += k; else state.bin.push({ id, n: k }); n += k; }
+  state.player.basket = b.filter((x) => !ITEMS[x.id].sell);
+  if (!n) return fail('Nobody buys what is in the basket.');
+  state.stats.shippedItems += n;
+  return { ok: true, msg: `You tipped the basket into the bin: ${n} thing${n > 1 ? 's' : ''}. Paid at dawn.`, n };
+}
+// Take a line (or n of it) out of the basket into the rucksack.
+export function basketTake(state, index, n) {
+  const b = basketList(state), line = int(index) && index >= 0 ? b[index] : null;
+  if (!line) return fail('There is nothing there in the basket.');
+  if (n === undefined || n === null) n = line.n;
+  n = Math.min(Math.max(1, int(n) ? n : 1), line.n, room(state, line.id));
+  if (n < 1) return fail(FULL);
+  addItem(state, line.id, n); line.n -= n; if (!line.n) b.splice(index, 1);
+  return { ok: true, msg: `Took ${n} × ${ITEMS[line.id].name} out of the basket.` };
+}
+
+// ---------------------------------------------------------------- things set down on the land
+// Field chests (farm or hill), solar chargers (farm) and fruit trees (farm) each take one tile.
+// The UI checks the ground itself (free grass or dirt, not the field, not a path into a door).
+export const PLACE_MAPS = { field_chest: ['farm', 'hill'], solar_panel: ['farm'] };
+const at = (list, map, x, y) => list.findIndex((o) => o.map === map && o.x === x && o.y === y);
+export const chestAt = (state, map, x, y) => at(ensure(state).chests, map, x, y);
+export const panelAt = (state, map, x, y) => at(ensure(state).panels, map, x, y);
+export const fruitTreeAt = (state, map, x, y) => at(ensure(state).fruitTrees, map, x, y);
+export const occupied = (state, map, x, y) => chestAt(state, map, x, y) >= 0 || panelAt(state, map, x, y) >= 0 || fruitTreeAt(state, map, x, y) >= 0;
+// Space with a field chest or a solar charger in hand.
+export function placeItem(state, map, x, y) {
+  const s = selected(state);
+  if (!s || !own(PLACE_MAPS, s.id)) return fail('Hold a field chest or a solar charger to set it down.');
+  if (!int(x) || !int(y) || x < 0 || y < 0 || x > 99 || y > 99) return fail('There is no room there.');
+  if (!PLACE_MAPS[s.id].includes(map)) return fail(s.id === 'solar_panel' ? 'The charger goes on your farm.' : 'Field chests go on the farm or the hill.');
+  if (occupied(state, map, x, y)) return fail('Something is already standing there.');
+  const id = s.id; takeFromSlot(state, state.player.sel, 1);
+  if (id === 'field_chest') { state.chests.push({ map, x, y, items: new Array(CHEST_SIZE).fill(null) }); return { ok: true, msg: 'You set the field chest down. E opens it; an axe picks it up when it is empty.', kind: 'chest', index: state.chests.length - 1 }; }
+  state.panels.push({ map, x, y, slots: [null, null] });
+  return { ok: true, msg: 'The solar charger unfolds and tilts to the sun-line. Put empty batteries in with E.', kind: 'charger', index: state.panels.length - 1 };
+}
+// The axe on an empty chest or charger picks it back up.
+export function pickUpPlaced(state, map, x, y) {
+  const s = selected(state); if (!s || s.id !== 'axe') return fail('Use the axe to pry it up.');
+  const c = chestAt(state, map, x, y), p = panelAt(state, map, x, y);
+  if (c < 0 && p < 0) return fail('There is nothing to pick up there.');
+  const id = c >= 0 ? 'field_chest' : 'solar_panel';
+  if (c >= 0 && state.chests[c].items.some(Boolean)) return fail('Empty the chest before you move it.');
+  if (p >= 0 && state.panels[p].slots.some(Boolean)) return fail('Take the batteries out of the charger first.');
+  if (room(state, id) < 1) return fail(FULL);
+  if (c >= 0) state.chests.splice(c, 1); else state.panels.splice(p, 1);
+  addItem(state, id, 1);
+  return { ok: true, msg: `You picked up the ${lower(id)}.`, kind: c >= 0 ? 'chest' : 'charger' };
+}
+// E at a charger: take charged batteries out, or put empty ones in.
+export function useCharger(state, index) {
+  const pnl = int(index) ? ensure(state).panels[index] : null;
+  if (!pnl) return fail('There is no charger there.', { gained: [] });
+  const full = pnl.slots.filter((b) => b === 'battery_full').length;
+  if (full) {
+    const n = Math.min(full, room(state, 'battery_full'));
+    if (n < 1) return fail(FULL, { gained: [] });
+    let k = n; pnl.slots = pnl.slots.map((b) => (b === 'battery_full' && k-- > 0 ? null : b));
+    addItem(state, 'battery_full', n);
+    return { ok: true, msg: `You took ${n} charged batter${n > 1 ? 'ies' : 'y'} out of the charger.`, gained: [{ id: 'battery_full', n }] };
+  }
+  const free = pnl.slots.filter((b) => !b).length, have = countItem(state, 'battery');
+  if (!free) return fail('Both batteries are charging. Come back in the morning.', { gained: [] });
+  if (!have) return fail(pnl.slots.some(Boolean) ? 'One battery is charging. Bring an empty one to fill the other slot.' : 'The charger is empty. Bring an empty battery; it will be charged by morning.', { gained: [] });
+  const n = Math.min(free, have); removeItem(state, 'battery', n);
+  let k = n; pnl.slots = pnl.slots.map((b) => (!b && k-- > 0 ? 'battery' : b));
+  return { ok: true, msg: `You clipped ${n} empty batter${n > 1 ? 'ies' : 'y'} into the charger. Charged by morning, if the sun-line is bright.`, gained: [] };
+}
+
+// ---------------------------------------------------------------- fruit trees
+export const treeAge = (state, t) => absDay(state) - t.planted;
+// 0 sapling, 1 young, 2 grown (from TREE_DAYS on).
+export const treeStage = (state, t) => { const a = treeAge(state, t); return a >= TREE_DAYS ? 2 : a >= 10 ? 1 : 0; };
+export const fruitReady = (state, t) => !!t && own(FRUIT_TREES, t.kind) && treeStage(state, t) === 2 && FRUIT_TREES[t.kind].season === state.cal.season && t.picked !== absDay(state);
+// Space with a sapling in hand on free farm grass.
+export function plantTree(state, map, x, y) {
+  const s = selected(state), def = s && itemOf(s.id);
+  if (!def || def.kind !== 'sapling') return fail('Hold a sapling to plant it.');
+  if (map !== 'farm') return fail('Fruit trees go on your own farm.');
+  if (!int(x) || !int(y) || x < 0 || y < 0 || x > 99 || y > 99) return fail('There is no room there.');
+  if (state.cal.season === 3) return fail('The ground is frozen. Plant it in spring.');
+  if (occupied(state, map, x, y)) return fail('Something is already standing there.');
+  takeFromSlot(state, state.player.sel, 1);
+  state.fruitTrees.push({ map, x, y, kind: def.tree, planted: absDay(state), picked: -1 });
+  return { ok: true, msg: `You planted the ${def.name.toLowerCase()}. It will bear fruit in ${TREE_DAYS} days.`, index: state.fruitTrees.length - 1 };
+}
+export function pickFruit(state, index) {
+  const t = int(index) ? ensure(state).fruitTrees[index] : null;
+  if (!t) return fail('There is no tree there.', { gained: [] });
+  const def = FRUIT_TREES[t.kind];
+  if (treeStage(state, t) < 2) return fail(`The ${def.name.toLowerCase()} is still growing. ${TREE_DAYS - treeAge(state, t)} more days.`, { gained: [] });
+  if (state.cal.season !== def.season) return fail(`The ${def.name.toLowerCase()} fruits in ${SEASONS[def.season].toLowerCase()}.`, { gained: [] });
+  if (t.picked === absDay(state)) return fail('You picked it today. More tomorrow.', { gained: [] });
+  const put = stash(state, def.fruit, 1); if (!put.ok) return fail(FULL, { gained: [] });
+  t.picked = absDay(state);
+  return { ok: true, msg: `You picked a ${lower(def.fruit)}${put.basket ? ' into the basket' : ''}.`, gained: [{ id: def.fruit, n: 1 }], basket: put.basket };
+}
+// The axe takes out a sapling or a young tree (nothing is refunded); a grown tree stays.
+export function removeTree(state, index) {
+  const t = int(index) ? ensure(state).fruitTrees[index] : null;
+  if (!t) return fail('There is no tree there.');
+  const s = selected(state); if (!s || s.id !== 'axe') return fail('Use the axe to dig it out.');
+  if (treeStage(state, t) === 2) return fail('The tree is too well rooted now. Leave it to fruit.');
+  state.fruitTrees.splice(index, 1);
+  return { ok: true, msg: 'You dug the young tree out. The ground is free again.' };
+}
+
+// ---------------------------------------------------------------- the Terrace Onsen
+export const onsenOpen = (state) => state.cal.minute >= DAY_START && state.cal.minute < DAY_END - 60;
+export const satoBirthday = (state) => state.cal.season === SATO_BIRTHDAY.season && state.cal.day === SATO_BIRTHDAY.day;
+// An hour in the hot spring: stamina full, and the tools are lighter for the rest of the day.
+export function soak(state) {
+  if (!onsenOpen(state)) return fail('The onsen takes its last bathers at eleven. Come back in the morning.');
+  const free = satoBirthday(state);
+  if (!free && state.player.money < ONSEN_PRICE) return fail(`A soak costs ${ONSEN_PRICE} cr.`);
+  if (!free) state.player.money -= ONSEN_PRICE;
+  tick(state, 60);
+  state.player.stamina = state.player.maxStamina;
+  state.flags.onsenDay = absDay(state);
+  state.stats.soaks = (state.stats.soaks || 0) + 1;
+  return { ok: true, free, msg: free ? 'Happy birthday! The keeper waves you in for free. An hour in the hot water: you feel brand new, and your tools feel lighter today.' : 'An hour in the hot water, warmed by the colony\'s heat exchangers. Stamina restored, and your tools feel lighter today.' };
+}
+
+// ---------------------------------------------------------------- Field-units (leased robots)
+export const robotLevel = (r) => Math.min(5, 1 + Math.floor((r.days || 0) / 5));
+export const robotReach = (r) => ({ water: 24, harvest: 12 }[r.job] || 0) + 4 * (robotLevel(r) - 1);
+export const robotCost = (r) => (r.job === 'rest' ? 0 : ({ water: 25, harvest: 30, animals: 30 }[r.job] || 0) + 2 * (robotLevel(r) - 1));
+const robotOf = (state, i) => (int(i) ? ensure(state).robots[i] || null : null);
+export function robotMood(state, i) {
+  const r = robotOf(state, i); if (!r) return '';
+  const lines = ROBOT_MOODS[r.charge <= 0 ? 'flat' : r.charge < 30 && r.job !== 'rest' ? 'tired' : r.mood] || ROBOT_MOODS.happy;
+  let h = 7; for (const c of r.name + absDay(state)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return lines[h % lines.length];
+}
+export function setRobotJob(state, i, job) {
+  const r = robotOf(state, i); if (!r) return fail('There is no robot there.');
+  if (!own(ROBOT_JOBS, job)) return fail('Field-units know four jobs: water, harvest, animals and rest.');
+  r.job = job; r.mood = job === 'rest' ? 'bored' : r.mood === 'bored' ? 'happy' : r.mood;
+  return { ok: true, msg: job === 'rest' ? `${r.name} settles down for a rest.` : `${r.name} beeps: job set to ${ROBOT_JOBS[job].toLowerCase()}. It will start tomorrow morning.` };
+}
+export function renameRobot(state, i, name) {
+  const r = robotOf(state, i); if (!r) return fail('There is no robot there.');
+  const clean = typeof name === 'string' ? name.replace(/[^\p{L}\p{N} '\-]/gu, '').trim().slice(0, 16) : '';
+  if (!clean) return fail('A robot needs a name with a letter in it.');
+  r.name = clean;
+  return { ok: true, msg: `The Field-unit's display flickers: ${clean}.` };
+}
+// E with a charged battery: +60 charge, and the empty battery comes back.
+export function chargeRobot(state, i) {
+  const r = robotOf(state, i); if (!r) return fail('There is no robot there.');
+  if (!countItem(state, 'battery_full')) return fail(countItem(state, 'battery') ? 'That battery is flat. Charge it in a solar charger first.' : 'You need a charged battery.');
+  if (r.charge >= 100) return fail(`${r.name} is fully charged already.`);
+  removeItem(state, 'battery_full', 1);
+  addItem(state, 'battery', 1);           // there is always room: the charged one just left
+  r.charge = Math.min(100, r.charge + 60);
+  if (r.mood === 'tired' || r.mood === 'flat') r.mood = 'happy';
+  return { ok: true, msg: `${r.name} whirrs happily. Charge ${r.charge}%. You keep the empty battery.` };
+}
+// The morning's work, in order of the robots: [{ name, job, done, used, charge, short, levelUp }].
+function robotsWork(state, notes) {
+  const out = [], fields = [state.fields.farm, ...(state.flags.greenhouse ? [state.fields.greenhouse] : [])];
+  for (const r of ensure(state).robots) {
+    const cost = robotCost(r), rec = { name: r.name, job: r.job, done: 0, used: 0, charge: r.charge, short: false, levelUp: false };
+    out.push(rec);
+    if (r.job === 'rest' || !own(ROBOT_JOBS, r.job)) { r.mood = 'bored'; r.done = 0; continue; }
+    if (r.charge <= 0) { r.mood = 'flat'; r.done = 0; rec.short = true; notes.push(`${r.name} has a flat battery and did no work. Give it a charged battery.`); continue; }
+    let full = r.job === 'animals' ? state.animals.length + (state.eggs > 0 ? 1 : 0) : robotReach(r);
+    const cap = r.charge >= cost ? full : Math.floor(full * r.charge / cost);
+    let done = 0, extra = '';
+    if (r.job === 'water') {
+      for (const f of fields) for (const t of f.tiles) { if (done >= cap) break; if (t.till && t.crop && !t.crop.dead && !t.wet) { t.wet = true; done++; } }
+      extra = `watered ${done} plant${done === 1 ? '' : 's'}`;
+    } else if (r.job === 'harvest') {
+      const got = {};
+      for (const f of fields) for (const t of f.tiles) {
+        if (done >= cap) break;
+        if (!t.crop || t.crop.dead || !own(CROPS, t.crop.id) || t.crop.age < CROPS[t.crop.id].days) continue;
+        const c = CROPS[t.crop.id], line = state.bin.find((b) => b.id === c.id);
+        if (line) line.n++; else state.bin.push({ id: c.id, n: 1 });
+        got[c.id] = (got[c.id] || 0) + 1; done++;
+        if (c.regrow) t.crop.age = c.days - c.regrow; else t.crop = null;
+      }
+      extra = done ? `harvested ${Object.entries(got).map(([id, n]) => `${n} ${n > 1 ? CROPS[id].plural : CROPS[id].name.toLowerCase()}`).join(', ')} into the shipping bin` : 'found nothing ripe';
+    } else {
+      let fed = 0, eggs = 0, out = false;
+      for (const a of state.animals) {
+        if (done >= cap) break;
+        const food = HOUSING[a.kind].food; if (a.fed) continue;
+        if (state.stock[food] < 1) { out = true; continue; }
+        a.fed = true; state.stock[food]--; fed++; done++;
+      }
+      if (state.eggs > 0 && done < cap) { eggs = state.eggs; const line = state.bin.find((b) => b.id === 'egg'); if (line) line.n += eggs; else state.bin.push({ id: 'egg', n: eggs }); state.eggs = 0; done++; }
+      extra = `fed ${fed} animal${fed === 1 ? '' : 's'}${eggs ? ` and put ${eggs} egg${eggs > 1 ? 's' : ''} in the bin` : ''}${out ? ' (the feed or fodder ran out; Corran sells more)' : ''}`;
+      if (!state.animals.length) extra = 'found no animals to tend';
+    }
+    const used = !done ? 0 : cap < full && done >= cap ? r.charge : Math.min(r.charge, done >= full ? cost : Math.max(4, Math.round(cost * done / Math.max(1, full))));
+    r.charge -= used; rec.done = r.done = done; rec.used = used; rec.charge = r.charge;
+    rec.short = cap < full;
+    if (done) { const before = robotLevel(r); r.days = (r.days || 0) + 1; rec.levelUp = robotLevel(r) > before; }
+    r.mood = rec.levelUp ? 'proud' : rec.short ? 'tired' : done ? 'happy' : 'idle';
+    notes.push(`${r.name} ${extra}${rec.short ? ', then its battery ran out' : ''}. Battery ${r.charge}%.`);
+    if (rec.levelUp) notes.push(`${r.name} is now skill level ${robotLevel(r)}.`);
+  }
+  return out;
+}
+// The chargers, overnight: sunny days charge two batteries, rain or snow one, a storm none.
+function chargeOvernight(state, weather, notes) {
+  let n = 0;
+  for (const p of ensure(state).panels) {
+    let k = { sun: 2, rain: 1, snow: 1, storm: 0 }[weather] ?? 0;
+    p.slots = p.slots.map((b) => (b === 'battery' && k-- > 0 ? (n++, 'battery_full') : b));
+  }
+  if (n) notes.push(`The solar charger${state.panels.length > 1 ? 's' : ''} charged ${n} batter${n > 1 ? 'ies' : 'y'}.`);
+  else if (weather === 'storm' && state.panels.some((p) => p.slots.includes('battery'))) notes.push('The storm hid the sun-line: the chargers did nothing.');
 }
 
 // ---------------------------------------------------------------- the night
@@ -829,6 +1142,7 @@ export function sleep(state, { collapsed = false } = {}) {
     state.ledger.shipped[id] = (state.ledger.shipped[id] || 0) + n;
   }
   state.bin = []; p.money += earned; state.ledger.earned += earned;
+  ensure(state); chargeOvernight(state, state.weather, notes);
   // 2. Wet crops grow a day; the soil dries.
   for (const f of Object.values(state.fields)) {
     for (const t of f.tiles) {
@@ -882,6 +1196,8 @@ export function sleep(state, { collapsed = false } = {}) {
       notes.push(`Ruess finished your ${name}.`);
     } else notes.push(`Ruess finished your ${name}, but your rucksack is full. He will keep it until you have room.`);
   }
+  // 7b. The Field-units do their morning work (after the rain and the deliveries).
+  const robots = robotsWork(state, notes);
   // 8. A fresh day.
   rollForage(state);
   for (const n of Object.values(state.npc)) { n.talked = false; n.gifted = false; }
@@ -889,7 +1205,7 @@ export function sleep(state, { collapsed = false } = {}) {
   p.stamina = collapsed ? Math.floor(p.maxStamina / 2) : p.maxStamina;
   if (collapsed) notes.push('You wake up sore. Half your strength is back.');
   state.stats.days++;
-  return { ok: true, earned, shipped, notes, seasonChanged, newYear };
+  return { ok: true, earned, shipped, notes, seasonChanged, newYear, robots };
 }
 
 // ---------------------------------------------------------------- goals

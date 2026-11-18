@@ -35,7 +35,7 @@ const MAIN = VILLAGERS.filter((id) => id !== 'moraine');
 const needTalk = (id) => (id === 'moraine' ? 12 : NEWCOMERS.includes(id) ? 22 : 25);
 const SPOTS = new Set(('farm.porch farm.bin farm.gate farm.pond farm.field village.square village.memorial village.bridge village.dock ' +
   'village.bench village.storefront village.cafefront village.hallfront village.workshopfront village.ranchyard village.river ' +
-  'hill.wreck hill.lake hill.overlook store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
+  'hill.wreck hill.lake hill.overlook hill.onsen store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
   'cafe.counter cafe.table1 cafe.table2 cafe.table3 hall.desk hall.floor ' +
   'clinic.counter clinic.floor library.counter library.floor village.clinicfront village.libraryfront').split(' '));
 const STYLES = new Set(['bob', 'short', 'long', 'bald', 'bun', 'bandana', 'cap']);
