@@ -159,8 +159,8 @@ export const hopeStaff = (state) => { const j = hopeJobs(state); return j ? Math
 
 // ---------------------------------------------------------------- placement
 const footprint = (d, x, y) => { const out = []; for (let dy = 0; dy < d.size; dy++) for (let dx = 0; dx < d.size; dx++) out.push([x + dx, y + dy]); return out; };
-export function hopeBuildingAt(state, x, y) {
-  return (state.hope?.buildings || []).find((b) => { const s = HOPE_BUILDING[b.key]?.size || 1; return x >= b.x && y >= b.y && x < b.x + s && y < b.y + s; }) || null;
+export function hopeBuildingAt(state, x, y, ignore = null) {
+  return (state.hope?.buildings || []).find((b) => { const s = HOPE_BUILDING[b.key]?.size || 1; return b.id !== ignore && x >= b.x && y >= b.y && x < b.x + s && y < b.y + s; }) || null;
 }
 function occupancy(state) {
   const m = hopeMap(state), occ = new Uint8Array(m.w * m.h);
@@ -177,7 +177,7 @@ function near(m, d, x, y, rad, test) {
 }
 export const hopeCost = (key) => ({ credits: 0, parts: 0, alloy: 0, ...(HOPE_BUILDING[key]?.cost || {}) });
 // Why the building cannot stand at (x, y) on Earth, or null.
-export function hopeCanBuild(state, key, x, y) {
+export function hopeCanBuild(state, key, x, y, opts = {}) {
   if (!hopeOn(state)) return 'Earth is out of reach until the Ark is complete.';
   const d = HOPE_BUILDING[key];
   if (!d) return `Only the Hope's own buildings can stand on Earth (${BUILDING[key]?.name || key} cannot).`;
@@ -190,11 +190,13 @@ export function hopeCanBuild(state, key, x, y) {
       const n = TERRAIN[v]?.name || 'this ground';
       return v === T.OUTSIDE ? 'Beyond the Hope.' : HOPE.harmful.has(v) || v === T.RUINS || v === T.MIRE || v === T.DEADSEA ? `${n}: treat it first.` : `Needs ${d.on.map((k) => TERRAIN[K[k]].name.toLowerCase()).join(' or ')}.`;
     }
-    if (hopeBuildingAt(state, tx, ty)) return 'Something already stands here.';
+    const at = hopeBuildingAt(state, tx, ty, opts.ignore);
+    if (at) return 'Something already stands here.';
   }
   if (d.clear && near(m, d, x, y, d.clear, (v) => HOPE.harmful.has(v))) return `Toxic gas or radiation within ${d.clear} tiles: clear it first.`;
   if (d.nearSea && !near(m, d, x, y, 1, (v) => v === T.DEADSEA || v === T.SEA)) return 'Must stand on the shore.';
   if (d.needsSeeds && !state.hope.buildings.some((b) => b.key === 'seedbank' && working(b))) return 'Needs a finished Seed Bank on Earth.';
+  if (opts.free) return null;
   const c = hopeCost(key), h = state.hope;
   if (c.credits > (state.stock.credits || 0)) return `Needs ${fmt(c.credits)} credits.`;
   for (const g of ['parts', 'alloy']) if (c[g] > (h.stock[g] || 0)) return `Needs ${fmt(c[g])} ${g} on Earth (the Hope has ${fmt(h.stock[g] || 0)}): send them down with the Ark.`;
@@ -209,6 +211,21 @@ export function hopeBuild(state, key, x, y) {
   h.buildings.push(b);
   log(state, `${d.name} ordered on Earth.`);
   return ok(`${d.name} placed on Earth: ${d.days} days of work for a crew.`, { id: b.id });
+}
+// Move a building on Earth (owner, 2026-11-18): the same 20% fee as on Eden, credits from Eden, parts from the Hope.
+export function hopeMove(state, id, x, y) {
+  const h = state.hope, b = h?.buildings.find((v) => v.id === id);
+  if (!b) return no('That building is gone.');
+  const d = HOPE_BUILDING[b.key];
+  if (d.fixed) return no(`The ${d.name} cannot be moved.`);
+  if (b.x === x && b.y === y) return no('It already stands there.');
+  const why = hopeCanBuild(state, b.key, x, y, { ignore: b.id, free: true });
+  if (why) return no(why);
+  const fee = { credits: Math.ceil((d.cost.credits || 0) * 0.2), parts: Math.ceil((d.cost.parts || 0) * 0.2) };
+  if ((state.stock.credits || 0) < fee.credits || (h.stock.parts || 0) < fee.parts) return no(`Moving costs ${fmt(fee.credits)} credits and ${fmt(fee.parts)} parts on Earth.`);
+  state.stock.credits -= fee.credits; h.stock.parts -= fee.parts;
+  b.x = x; b.y = y;
+  return ok(`${d.name} moved for ${fmt(fee.credits)} credits and ${fmt(fee.parts)} parts.`);
 }
 export function hopeDemolish(state, id) {
   const h = state.hope, b = h?.buildings.find((x) => x.id === id);

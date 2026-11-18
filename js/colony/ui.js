@@ -644,7 +644,7 @@ export function createUI(root, api) {
   let cat = CATEGORIES[0].key, cardSig = '', inspAt = null, inspSig = '', logSig = '', logOpen = false, evId = null, marketSig = '', happySig = '';
   let summary = null, dirty = false;
   // version 13 (docs/COLONY-V13.md): the Ark panel for the Hope (js/colony/hopeui.js)
-  const hopeWin = (() => { try { return mountHope(root, { S, R: api.rules, act: (r) => api.act(r), esc, setDeck: (d) => api.setDeck?.(d) }); } catch (e) { console.warn('hope ui', e); return null; } })();
+  const hopeWin = (() => { try { return mountHope(root, { S, R: api.rules, act: (r) => api.act(r), esc, setDeck: (d) => api.setDeck?.(d), move: (id) => api.move?.(id) }); } catch (e) { console.warn('hope ui', e); return null; } })();
 
   const result = (r) => api.act(r);
 

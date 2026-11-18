@@ -238,7 +238,7 @@ const api = {
   settings,
   act: (r) => afterAction(r),
   pick: (key) => setPlacing(key ? { key } : null),
-  move: (id) => { const b = state.buildings.find((x) => x.id === id); if (b) { setDeck(deckOf(b), { quiet: true }); setPlacing({ key: b.key, moveId: id }); } },
+  move: (id) => { const e = state.hope?.buildings?.find((x) => x.id === id); if (e) { setDeck('earth', { quiet: true }); setPlacing({ key: e.key, moveId: id }); return; } const b = state.buildings.find((x) => x.id === id); if (b) { setDeck(deckOf(b), { quiet: true }); setPlacing({ key: b.key, moveId: id }); } },
   placingKey: () => placing && !placing.moveId ? placing.key : null,
   setSpeed,
   setOverlay: (name) => { overlay = name; applyOverlay(); },

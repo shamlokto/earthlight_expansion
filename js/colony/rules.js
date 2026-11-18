@@ -58,9 +58,9 @@ import { ensureGardens } from './gardens.js';
 import { answerReckoning } from './reckoning.js';
 export { RECKONING, CLUES, CONSPIRATORS, JUSTICE_TEXT, JUSTICE_ENDING, JUSTICE_MARROW, ensureReckoning, reckoningStatus, broadcast, canBroadcast, siegeWaiting, strikeReady, strikePhase, generalReady, justiceDone, resolveReckoningBattle, RECKONING_BATTLES } from './reckoning.js';
 // version 13 (docs/COLONY-V13.md): story arc 2, The Hope (Earth, js/colony/hope.js)
-import { ensureHope, hopeCanBuild, hopeBuild, hopeDemolish, hopeTileInfo, hopeToggle } from './hope.js';
+import { ensureHope, hopeCanBuild, hopeBuild, hopeDemolish, hopeTileInfo, hopeToggle, hopeMove } from './hope.js';
 export { HOPE, HOPE_BEATS, HOPE_ENDING, HOPE_ENDING_TEXT, HOPE_UNLOCK, generateHope, ensureHope, unlockHope, hopeOn, hopeMap, hopeStatus, hopeRecovery,
-  hopeCanBuild, hopeBuild, hopeDemolish, hopeToggle, hopeTileInfo, hopeBuildingAt, hopeHousing, hopeCaps, hopeJobs, hopeCost, hopeGoalPop, launchArk, setManifest,
+  hopeCanBuild, hopeBuild, hopeDemolish, hopeToggle, hopeMove, hopeTileInfo, hopeBuildingAt, hopeHousing, hopeCaps, hopeJobs, hopeCost, hopeGoalPop, launchArk, setManifest,
   setArkAuto, sendDown, dropper, arkLoad, tripDays } from './hope.js';
 import { ensureLuxuries, luxuriesMet, luxuriesHold, LUX_GOODS, luxCap } from './luxuries.js';
 import { ensureNeighbours, answerNeighbour, neighbourSell, neighbourBuy, neighbourTribute, neighbourTruce } from './neighbours.js';
@@ -650,6 +650,7 @@ export function demolish(state, id) {
 }
 
 export function move(state, id, x, y) {
+  if (state.hope?.buildings?.some((v) => v.id === id)) return hopeMove(state, id, x, y);   // on Earth
   const b = byId(state, id);
   if (!b) return no('That building is gone.');
   const d = BUILDING[b.key];

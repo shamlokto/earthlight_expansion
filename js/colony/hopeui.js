@@ -49,7 +49,7 @@ export function hopeInspector(s, x, y, R, esc) {
     const d = HOPE_BUILDING[b.key];
     parts.push(`<section class="cl-isec"><h4>${esc(d.name)}${b.build > 0 ? ` <small>building: ${b.build} days left</small>` : b.off ? ' <small>switched off</small>' : ''}</h4><p class="cl-dim">${esc(d.text)}</p>
       ${d.treats ? `<p class="cl-dim">Treats: ${d.treats.map((t) => `${t.from.join(', ')} → ${t.to} (${t.rate}/day)`).join('; ')} within ${d.radius} tiles.</p>` : ''}
-      ${!d.fixed ? `<div class="cl-iacts"><button type="button" class="cl-btn sm" data-hope-toggle="${b.id}">${b.off ? 'Switch on' : 'Switch off'}</button> <button type="button" class="cl-btn sm" data-hope-demolish="${b.id}">Take down</button></div>` : ''}
+      ${!d.fixed ? `<div class="cl-iacts"><button type="button" class="cl-btn sm" data-hope-toggle="${b.id}">${b.off ? 'Switch on' : 'Switch off'}</button> <button type="button" class="cl-btn sm" data-hope-move="${b.id}">Move</button> <button type="button" class="cl-btn sm" data-hope-demolish="${b.id}">Take down</button></div>` : ''}
       ${b.key === 'landingfield' ? `<div class="cl-iacts"><button type="button" class="cl-btn primary sm" data-hope-ark>Ark panel ›</button></div>` : ''}</section>`);
   }
   parts.push(`<section class="cl-isec cl-hopeinsp">${statusHtml(st, esc)}<p class="cl-dim">The Ark: ${esc(ARK_AT[st.ark.at])}${st.ark.days ? ` (${st.ark.days} days)` : ''}.</p></section>`);
@@ -69,7 +69,7 @@ export const HOPE_HELP = `
     </ul>`;
 
 // ---------------------------------------------------------------- the Ark panel
-export function mountHope(root, { S, R, act, esc, setDeck }) {
+export function mountHope(root, { S, R, act, esc, setDeck, move }) {
   const win = document.createElement('section');
   win.className = 'cl-win cl-hopewin'; win.hidden = true; win.setAttribute('role', 'dialog'); win.setAttribute('aria-label', 'The Ark and the Hope');
   root.appendChild(win);
@@ -129,6 +129,7 @@ export function mountHope(root, { S, R, act, esc, setDeck }) {
     const t = e.target;
     if (t.closest('[data-hope-ark]')) { open(); return; }
     const tg = t.closest('[data-hope-toggle]'); if (tg) { act(R.hopeToggle(S(), +tg.dataset.hopeToggle)); return; }
+    const mv = t.closest('[data-hope-move]'); if (mv) { move?.(+mv.dataset.hopeMove); return; }
     const dm = t.closest('[data-hope-demolish]'); if (dm) { act(R.hopeDemolish(S(), +dm.dataset.hopeDemolish)); }
   });
   return { update, open, close, toggle: () => (win.hidden ? open() : close()), get open_() { return !win.hidden; } };
