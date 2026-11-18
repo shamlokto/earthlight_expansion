@@ -1606,7 +1606,7 @@ export const SIGNS = {
 export const HELP = [
   {
     title: 'Controls',
-    body: 'Move: W A S D or the arrow keys. Hold Shift to run.\nUse the held tool or item: Space or left click.\nTalk, interact, harvest, enter a door: E.\nChoose a rucksack slot: keys 1 to 0, or the mouse wheel.\nEat the food you are holding: R.\nOpen the rucksack: Tab.\nMenu (save, settings, this guide): Esc.\nDrag with the mouse to turn the camera.\n\nOn a touch screen there is a stick on the left to move, and buttons on the right for Use, Interact, Eat and the rucksack. Drag anywhere else to turn the camera.',
+    body: 'Move: W A S D or the arrow keys. Hold Shift to run.\nUse the held tool or item: Space or left click.\nTalk, interact, harvest, enter a door: E.\nChoose a rucksack slot: keys 1 to 0, or the mouse wheel.\nEat the food you are holding: R.\nOpen the rucksack: Tab.\nThe town map: M (or the map button; click the little map in the corner too).\nMenu (save, settings, music, this guide): Esc.\nDrag with the mouse to turn the camera.\n\nOn a touch screen there is a stick on the left to move, and buttons on the right for Use, Interact, Eat and the rucksack. Drag anywhere else to turn the camera.',
   },
   {
     title: 'The day',

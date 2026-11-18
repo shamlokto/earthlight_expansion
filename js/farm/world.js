@@ -5,8 +5,9 @@ import * as THREE from 'three';
 import * as art from './art.js';
 import { CROPS } from './data.js';
 import { cropStage } from './sim.js';
+import { ColonySky, buildSurroundings, colonyProp, buildingExtras, COLONY_KINDS, Bots, mergeStatic, lightPools, setColonyTime, U as HAZE } from './colony.js';
 
-const GROUND_TEX = { f: 'soil_dry', p: 'path_dirt', c: 'cobble', s: 'sand', k: 'wood_floor', a: 'ash_ground', o: 'stone_floor', h: 'hay', b: 'wood_floor' };
+const GROUND_TEX = { f: 'soil_dry', p: 'path_dirt', c: 'cobble', s: 'sand', k: 'wood_floor', a: 'ash_ground', o: 'stone_floor', h: 'hay', b: 'wood_floor', d: 'deck_floor' };
 const SEASON_KEY = ['spring', 'summer', 'autumn', 'winter'];
 const CROP_COLOR = { turnip: '#f1ece0', potato: '#c9a56a', cucumber: '#3f8a3a', strawberry: '#d5283c', tomato: '#d8362a', corn: '#f0c93c', onion: '#d8b25e', pumpkin: '#e8812a', carrot: '#ee7a22', eggplant: '#5b2c7a', sweetpotato: '#b0546a', spinach: '#2f7a35', moonflower: '#cfe6ff' };
 const CROP_H = { corn: 1.7, tomato: 1.1, cucumber: 1.0, eggplant: 0.9, moonflower: 0.9, pumpkin: 0.7 };
@@ -66,6 +67,22 @@ const PROPS = {
   chair: { model: 'chair', h: 0.9, fit: 'foot' },
   calendar_board: { model: 'calendar_board', h: 1.6, fit: 'foot' },
   float: { model: 'fish_float', h: 0.22, soft: true },
+  // the colony's own things (built stand-ins in colony.js until models arrive under these names)
+  airlock_door: { model: 'airlock_door', h: 2.3, fit: 'foot' },
+  solar_panel: { model: 'solar_panel', h: 1.3, fit: 'stretch' },
+  hydro_tower: { model: 'hydro_tower', h: 2.1, fit: 'foot' },
+  colony_lamp: { model: 'colony_lamp', h: 2.5, fit: 'foot' },
+  pipe_run: { model: 'pipe_run', h: 0.6, fit: 'repeat' },
+  vent: { model: 'vent', h: 0.1, fit: 'foot', soft: true },
+  maint_bot: { model: 'maint_bot', h: 0.75, fit: 'foot', turn: true },
+  cargo_crate: { model: 'cargo_crate', h: 0.8, fit: 'foot' },
+  lift_kiosk: { model: 'lift_kiosk', h: 3.2, fit: 'foot' },
+  water_tank: { model: 'water_tank', h: 2.4, fit: 'foot' },
+  wind_turbine_small: { model: 'wind_turbine_small', h: 4.0, fit: 'foot' },
+  noticeboard: { model: 'noticeboard', h: 1.8, fit: 'stretch' },
+  fountain: { model: 'fountain', h: 1.6, fit: 'foot' },
+  fan_tower: { model: 'fan_tower', h: 5.2, fit: 'foot' },
+  market_stall: { model: 'market_stall', h: 2.1, fit: 'foot' },
 };
 const BUILDING = {
   house: { model: 'farmhouse', facade: 'buildings/house', wall: 'plank_wall', roof: 'roof_tin' },
@@ -83,6 +100,12 @@ const BUILDING = {
   cottage_a: { model: 'cottage_a', facade: 'buildings/cottage_a', wall: 'plaster_wall', roof: 'roof_red' },
   cottage_b: { model: 'cottage_b', facade: 'buildings/cottage_b', wall: 'plank_wall', roof: 'roof_shingle' },
   lift: { model: 'lift', facade: 'buildings/lift_tower', wall: 'metal_hull', roof: 'roof_tin', frame: true },
+  // more of Willowfall: extra homes reuse the cottage models until their own arrive; colony buildings
+  cottage_c: { model: ['cottage_c', 'cottage_b'], facade: 'buildings/cottage_c', wall: 'plaster_wall', roof: 'roof_shingle' },
+  cottage_d: { model: ['cottage_d', 'cottage_a'], facade: 'buildings/cottage_d', wall: 'plank_wall', roof: 'roof_red' },
+  pumphouse: { model: 'pumphouse', facade: 'buildings/pumphouse', wall: 'metal_hull', roof: 'roof_tin' },
+  post: { model: 'post_office', facade: 'buildings/post', wall: 'plaster_wall', roof: 'roof_red' },
+  guard: { model: 'guard_post', facade: 'buildings/guard', wall: 'metal_hull', roof: 'roof_red' },
 };
 
 const col = (c) => new THREE.Color(c);
@@ -98,7 +121,7 @@ export class World {
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
     r.toneMapping = THREE.NoToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(38, 1, 0.3, 600);
+    this.camera = new THREE.PerspectiveCamera(38, 1, 0.3, 3200);
     this.yaw = 0; this.pitch = 0.66; this.dist = 12; this.focus = new THREE.Vector3();
     this.hemi = new THREE.HemisphereLight(0xdcecff, 0x8a7a55, 1.0); this.scene.add(this.hemi);
     const s = this.sun = new THREE.DirectionalLight(0xfff2d8, 2.2); s.castShadow = true; s.shadow.mapSize.set(2048, 2048);
@@ -108,6 +131,7 @@ export class World {
     this.spriteTint = new THREE.Color(1, 1, 1);
     this.spriteMats = []; this.facers = []; this.anims = []; this.fx = [];
     this.sky = this.makeSky();
+    this.colony = new ColonySky(this.scene);           // the inside of the cylinder: land overhead, the sun-line, the window band
     this.root = new THREE.Group(); this.scene.add(this.root);
     this.cursor = new THREE.Mesh(new THREE.RingGeometry(0.36, 0.47, 4, 1, Math.PI / 4), new THREE.MeshBasicMaterial({ color: 0xfff2b8, transparent: true, opacity: 0.85, depthWrite: false }));
     this.cursor.rotation.x = -Math.PI / 2; this.cursor.renderOrder = 5; this.scene.add(this.cursor);
@@ -136,30 +160,34 @@ export class World {
   }
   // minute 360..1440; sets the sun, the sky layers and the tint of every picture sprite.
   setTime(minute, weather, map) {
-    const indoor = map && map.indoor, ruins = map && map.ruins;
-    const h = minute / 60, day = Math.max(0, Math.min(1, Math.min((h - 5) / 1.0, (20.5 - h) / 1.5)));     // 1 by day, 0 at night
-    const dusk = Math.max(0, 1 - Math.abs(h - 18.6) / 1.6) + Math.max(0, 1 - Math.abs(h - 6.2) / 0.9) * 0.7;
+    const indoor = map && map.indoor, ruins = map && map.ruins, colony = !indoor && !ruins;
+    const h = minute / 60, sm = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+    // The colony schedules its light: the sun-line fades up from 6:00 and down from 18:30. (Down in the Old World, a real sun.)
+    const day = ruins ? Math.max(0, Math.min(1, Math.min((h - 5) / 1.0, (20.5 - h) / 1.5))) : sm(5.7, 6.5, h) * (1 - sm(18.0, 19.9, h));
+    const dusk = ruins ? Math.max(0, 1 - Math.abs(h - 18.6) / 1.6) : Math.max(0, 1 - Math.abs(h - 18.75) / 1.25) + Math.max(0, 1 - Math.abs(h - 6.1) / 0.7) * 0.5;
     const wet = weather === 'rain' || weather === 'storm', snow = weather === 'snow';
-    const ang = ((h - 6) / 14) * Math.PI;                                    // the sun-line's light swings east to west
     const f = this.focus;
-    this.sun.position.set(f.x + Math.cos(ang) * 30, 26 + Math.sin(ang) * 14, f.z + 16);
+    if (ruins) { const ang = ((h - 6) / 14) * Math.PI; this.sun.position.set(f.x + Math.cos(ang) * 30, 26 + Math.sin(ang) * 14, f.z + 16); }
+    else this.sun.position.set(f.x + 7, f.y + 42, f.z + 19);                // overhead, from the sun-line along the axis
     this.sun.target.position.copy(f);
-    const sunCol = col(0xfff2d8).lerp(col(0xff9a55), Math.min(1, dusk)).lerp(col(0x7f95c8), 1 - day);
-    this.sun.color.copy(sunCol); this.sun.intensity = indoor ? 0.45 : (0.2 + 1.55 * day) * (wet ? 0.45 : snow ? 0.75 : 1) * (ruins ? 0.7 : 1);
-    this.hemi.intensity = indoor ? 1.55 : (0.5 + 0.75 * day) * (wet ? 0.85 : 1);
-    this.hemi.color.set(indoor ? 0xffe6c4 : ruins ? 0xd9b878 : 0xcfe4ff).lerp(col(0x38466e), indoor ? 0 : (1 - day) * 0.8);
-    this.hemi.groundColor.set(ruins ? 0x5a4a30 : 0x6b5a3a);
+    const sunCol = col(0xfff4e0).lerp(col(0xffa070), Math.min(1, dusk) * 0.8).lerp(col(0x6f8fd8), 1 - day);
+    this.sun.color.copy(sunCol); this.sun.intensity = indoor ? 0.45 : (0.12 + 1.6 * day) * (wet ? 0.45 : snow ? 0.75 : 1) * (ruins ? 0.7 : 1);
+    this.hemi.intensity = indoor ? 1.55 : (0.45 + 0.8 * day) * (wet ? 0.85 : 1);
+    this.hemi.color.set(indoor ? 0xffe6c4 : ruins ? 0xd9b878 : 0xd6ecff).lerp(col(0x34507e), indoor ? 0 : (1 - day) * 0.8);
+    this.hemi.groundColor.set(ruins ? 0x5a4a30 : 0x6f6a4a);
     const sk = this.sky, set = (k, v) => { sk[k].material.opacity = v; sk[k].visible = v > 0.01; };
+    // the bluish haze inside the cylinder: pale by day, lavender at dusk, deep blue at night
+    const haze = col(0xb2cbe6).lerp(col(0xd2b2c8), Math.min(1, dusk) * 0.7).lerp(col(0x0e1934), 1 - day);
+    if (wet) haze.lerp(col(0x7f8a99), 0.55 * (0.4 + 0.6 * day));
+    this.colony.group.visible = colony;
     if (indoor) { for (const k in sk) set(k, 0); this.scene.background = col(0x0b0907); }
     else if (ruins) { for (const k in sk) set(k, k === 'ruins' ? 1 : 0); this.scene.background = col(0xb89858); }
-    else {
-      const st = wet ? 1 : 0, d = Math.min(1, dusk) * (1 - st);
-      set('night', 1); set('day', day * (1 - st)); set('dusk', d * 0.9); set('storm', st * (0.25 + 0.75 * day)); set('ruins', 0);
-      this.scene.background = col(0x0c1430);
-    }
-    const fogC = indoor ? col(0x0b0907) : ruins ? col(0xb39a66) : col(0xbcd7ee).lerp(col(0xf1b98a), Math.min(1, dusk) * 0.6).lerp(col(0x101a36), 1 - day);
-    if (wet) fogC.lerp(col(0x7f8a94), 0.6);
-    this.scene.fog.color.copy(fogC); this.scene.fog.near = indoor ? 60 : wet ? 18 : ruins ? 14 : 40; this.scene.fog.far = indoor ? 200 : wet ? 80 : ruins ? 60 : 160;
+    else { for (const k in sk) set(k, 0); this.scene.background = haze.clone(); this.colony.setTime(day, Math.min(1, dusk), 1 - day, wet); }
+    const fogC = indoor ? col(0x0b0907) : ruins ? col(0xb39a66) : haze;
+    this.scene.fog.color.copy(fogC); this.scene.fog.near = indoor ? 60 : wet ? 16 : ruins ? 14 : 40; this.scene.fog.far = indoor ? 200 : wet ? 170 : ruins ? 60 : 420;
+    HAZE.haze.value.copy(fogC); HAZE.hazeNear.value = this.scene.fog.near; HAZE.hazeFar.value = this.scene.fog.far; HAZE.hazeCap.value = wet ? 0.9 : 0.5 + 0.25 * (1 - day);
+    setColonyTime(1 - day);
+    if (this.pools) this.pools.material.opacity = (1 - day) * 0.75;
     const b = indoor ? 1 : 0.42 + 0.58 * day;
     this.spriteTint.setRGB(b, b, b).multiply(indoor ? col(0xffffff) : col(0xffffff).lerp(sunCol, 0.22));
     if (ruins) this.spriteTint.multiply(col(0xf0dcb0));
@@ -243,7 +271,7 @@ export class World {
       case 'lamp': { g.add(cyl(0.03, 0.05, 1.3, dark), cyl(0.12, 0.2, 0.25, std({ color: 0xf3dfa8, emissive: 0x6a5020 }), 0, 1.25, 0, 12)); const pl = new THREE.PointLight(0xffd7a0, 6, 6, 1.6); pl.position.y = 1.3; g.add(pl); break; }
       case 'chair': g.add(box(0.45, 0.06, 0.45, wood, 0, 0.45), box(0.45, 0.5, 0.06, wood, 0, 0.5, -0.2), box(0.05, 0.45, 0.05, dark, -0.18, 0, 0.18), box(0.05, 0.45, 0.05, dark, 0.18, 0, 0.18)); break;
       case 'calendar_board': g.add(box(0.06, 1.0, 0.06, dark, 0, 0), box(0.8, 0.6, 0.05, std({ color: 0xc9a877 }), 0, 0.95), box(0.25, 0.3, 0.01, std({ color: 0xffffff }), -0.15, 1.1, 0.03), box(0.2, 0.15, 0.01, std({ color: 0xffe08a }), 0.2, 1.0, 0.03)); break;
-      default: g.add(box(0.6, 0.6, 0.6, std({ color: 0x999999 })));
+      default: { const c = colonyProp(kind, o, this.colonyFx || undefined); g.add(c || box(0.6, 0.6, 0.6, std({ color: 0x999999 }))); }
     }
     if (kind === 'memorial' || kind === 'bench') for (const c of g.children) c.position.x += 0.5;
     return g;
@@ -255,7 +283,7 @@ export class World {
     const slot = def.sprite ? def.sprite(this) : null, p = slot && art.pic(slot);
     const mname = o.model && art.hasModel(o.model) ? o.model : typeof def.model === 'function' ? def.model(this) : def.model;
     holder.userData.is3d = !!(mname && art.hasModel(mname)) || !p;
-    const fallback = () => { if (p) holder.add(this.billboard(p, h, def)); else { const m = this.proc(kind, o); if (o.scale) m.scale.setScalar(o.scale); if (fw > 1 || fd > 1) m.position.set(-(fw - 1) / 2, 0, -(fd - 1) / 2); holder.add(m); } };
+    const fallback = () => { if (p) holder.add(this.billboard(p, h, def)); else { const m = this.proc(kind, o); if (o.scale) m.scale.setScalar(o.scale); if ((fw > 1 || fd > 1) && !COLONY_KINDS.has(kind)) m.position.set(-(fw - 1) / 2, 0, -(fd - 1) / 2); holder.add(m); } };
     if (mname && art.hasModel(mname)) {
       art.model(mname).then((m) => {
         if (!m) return fallback();
@@ -284,7 +312,7 @@ export class World {
     const def = BUILDING[b.kind] || BUILDING.house, g = new THREE.Group();
     g.position.set(b.x + b.w / 2, 0, b.y + b.d / 2);
     const kind = b.kind === 'greenhouse' && !this.flags.greenhouse ? 'greenhouse_ruin' : b.kind;
-    const mname = kind === 'greenhouse_ruin' ? 'greenhouse_ruin' : def.model;
+    const mname = kind === 'greenhouse_ruin' ? 'greenhouse_ruin' : Array.isArray(def.model) ? def.model.find((n) => art.hasModel(n)) : def.model;
     const proc = () => {
       const H = b.height, wallH = def.round || def.frame ? H : H * 0.62;
       if (def.round) { g.add(cyl(b.w * 0.45, b.w * 0.45, H * 0.85, std({ map: art.tex(def.wall, { repeat: 1 }) }), 0, 0, 0, 20)); const c = new THREE.Mesh(new THREE.ConeGeometry(b.w * 0.5, H * 0.2, 20), std({ map: art.tex(def.roof) })); c.position.y = H * 0.95; c.castShadow = true; g.add(c); return; }
@@ -297,6 +325,7 @@ export class World {
       const roof = new THREE.Mesh(gable(b.w + 0.5, b.d + 0.5, H - wallH), rm); roof.position.y = wallH; roof.castShadow = !glass; roof.receiveShadow = true; g.add(roof);
       if (fp) { const f = new THREE.Mesh(new THREE.PlaneGeometry(b.w - 0.1, H), this.spriteMat(fp.tex, { alphaTest: 0.3 })); f.position.set(0, H / 2, b.d / 2 - 0.03); g.add(f); }
       else if (!glass) { g.add(box(0.9, 1.6, 0.06, std({ color: 0x4a3626 }), 0, 0, b.d / 2 - 0.04)); for (const x of [-1, 1]) if (b.w > 4) g.add(box(0.7, 0.6, 0.05, std({ color: 0x9fd0e0, roughness: 0.2 }), x * b.w * 0.3, wallH * 0.45, b.d / 2 - 0.04)); }
+      buildingExtras(b, g);
     };
     if (mname && art.hasModel(mname)) {
       art.model(mname).then((m) => {
@@ -328,14 +357,17 @@ export class World {
         wm.map.wrapS = wm.map.wrapT = THREE.RepeatWrapping; wm.map.needsUpdate = true; this.waterMats.push(wm);
         const m = new THREE.Mesh(tiles(cells, -0.1), wm); m.receiveShadow = true; R.add(m); continue;
       }
-      const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : GROUND_TEX[c] || 'soil_dry';
-      const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : 0, false, c === 'c' ? 0.34 : c === 'k' || c === 'b' ? 0.5 : 0.25), std({ map: art.tex(slot, { repeat: 1 }), color: c === 'f' ? 0xb48a66 : c === 'c' ? 0xd8d2c8 : 0xffffff })); m.receiveShadow = true; R.add(m);
+      const cp = c === 'c' && !map.indoor && art.has('textures/colony_path');   // colony art, when the pack has it
+      const slot = c === 'g' ? (this.season !== 3 && !map.indoor && art.has('textures/grass_colony') ? 'grass_colony' : 'grass_' + SEASON_KEY[this.season]) : cp ? 'colony_path' : GROUND_TEX[c] || 'soil_dry';
+      const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : c === 'd' ? 0.015 : 0, false, c === 'c' ? 0.34 : c === 'k' || c === 'b' || c === 'd' ? 0.5 : 0.25), std({ map: art.tex(slot, { repeat: 1 }), color: c === 'f' ? 0xb48a66 : c === 'c' ? 0xd8d2c8 : 0xffffff })); m.receiveShadow = true; R.add(m);
     }
-    if (!map.indoor) {                                   // land beyond the map's edge
+    this.colony.setCentre(H / 2); this.spinners = []; this.bots = null; this.pools = null;
+    if (!map.indoor && !map.ruins) R.add(buildSurroundings(map, this.season));   // terraces rising into the cylinder's curve
+    else if (!map.indoor) {                              // the Old World: ash plains and broken towers
       const slot = map.ruins ? 'ash_ground' : 'grass_' + SEASON_KEY[this.season];
       const t = art.tex(slot, { repeat: 1 }).clone(); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(60, 60); t.needsUpdate = true;
       const far = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), std({ map: t })); far.rotation.x = -Math.PI / 2; far.position.set(W / 2, -0.04, H / 2); far.receiveShadow = true; R.add(far);
-      if (!map.ruins) for (let i = 0; i < 70; i++) { const a = i * 2.399, d = Math.max(W, H) * 0.62 + (i % 7) * 4; const x = W / 2 + Math.cos(a) * d, z = H / 2 + Math.sin(a) * d * 0.9; if (x > -2 && x < W + 2 && z > -2 && z < H + 2) continue; if (z > H && Math.abs(x - W / 2) < 16) continue; const p = this.makeProp(i % 3 ? 'tree' : 'pine', { scale: 1 + (i % 5) * 0.12 }); p.position.set(x, 0, z); R.add(p); }
+      if (false) for (let i = 0; i < 70; i++) { const a = i * 2.399, d = Math.max(W, H) * 0.62 + (i % 7) * 4; const x = W / 2 + Math.cos(a) * d, z = H / 2 + Math.sin(a) * d * 0.9; if (x > -2 && x < W + 2 && z > -2 && z < H + 2) continue; if (z > H && Math.abs(x - W / 2) < 16) continue; const p = this.makeProp(i % 3 ? 'tree' : 'pine', { scale: 1 + (i % 5) * 0.12 }); p.position.set(x, 0, z); R.add(p); }
       else for (let i = 0; i < 26; i++) { const a = i * 2.399, d = 14 + (i % 6) * 5; const h = 3 + (i % 5) * 2.2; const t2 = box(2 + (i % 3), h, 2 + (i % 2), std({ map: art.tex(i % 2 ? 'concrete_ruin' : 'brick_ruin', { repeat: 0.25 }) })); t2.position.set(W / 2 + Math.cos(a) * d, h / 2, H / 2 + Math.sin(a) * d - 6); if (t2.position.z > H - 1) continue; t2.rotation.z = (i % 4 - 1.5) * 0.03; R.add(t2); }
     } else {                                             // room walls: back and sides, open to the camera
       const wm = map.glass ? new THREE.MeshStandardMaterial({ color: 0xcfeaf0, transparent: true, opacity: 0.3, roughness: 0.1 }) : std({ map: art.tex(map.id === 'barn' || map.id === 'ranch' ? 'barn_red' : map.id === 'coop' || map.id === 'house' || map.id === 'workshop' ? 'plank_wall' : map.id === 'cafe' ? 'metal_hull' : 'plaster_wall', { repeat: 0.5 }) });
@@ -344,14 +376,25 @@ export class World {
       const lamp = new THREE.PointLight(0xffd9a0, 30, 30, 1.6); lamp.position.set(W / 2, 3.4, H / 2); R.add(lamp);
     }
     for (const b of map.buildings) R.add(this.makeBuilding(b));
+    const built = [], pools = [];
     for (const p of map.props) {
       const kind = p.kind === 'tree' && p.y >= H - 1 ? 'bush' : p.kind;
+      this.colonyFx = { spin: this.spinners, glow: [] };
       const o = this.makeProp(kind, p);
+      if (COLONY_KINDS.has(kind) && !art.hasModel(kind) && kind !== 'maint_bot') built.push(o);
+      const rr = p.rot && o.userData.is3d ? p.rot : 0;
+      for (const q of this.colonyFx.glow) pools.push({ x: p.x + p.w / 2 + q.x * Math.cos(rr) + q.z * Math.sin(rr), z: p.y + p.d / 2 - q.x * Math.sin(rr) + q.z * Math.cos(rr), warm: q.warm });
+      if (kind === 'lantern') pools.push({ x: p.x + 0.5, z: p.y + 0.5, warm: true, r: 2.2 });
       o.position.set(p.x + p.w / 2, p.onWater ? -0.1 : 0, p.y + p.d / 2);
       if (p.rot && (o.userData.is3d || kind === 'fence')) o.rotation.y = p.rot;
       R.add(o); p.obj = o; if (kind === 'tree' || kind === 'pine') this.tallProps.push(o);
       const lampL = o.userData.lamp || (o.children[0] && o.children[0].userData.lamp); if (lampL) this.lamps.push(lampL);
     }
+    this.colonyFx = null;
+    for (const s of this.spinners) s.o.userData.moving = true;
+    if (built.length) mergeStatic(built, R);                   // the built colony props: one mesh per material
+    if (pools.length) { this.pools = lightPools(pools); R.add(this.pools); }
+    if (map.bots) this.bots = new Bots(map.bots, R, () => this.makeProp('maint_bot', {}));
     this.dyn = new THREE.Group(); R.add(this.dyn);
     if (map.field) this.buildField(map.field);
     if (map.pasture) this.buildPasture();
@@ -426,8 +469,12 @@ export class World {
     const cp = Math.cos(this.pitch), c = this.camera;
     c.position.set(this.focus.x + Math.sin(this.yaw) * cp * d, this.focus.y + Math.sin(this.pitch) * d, this.focus.z + Math.cos(this.yaw) * cp * d);
     if (this.shake > 0.002) { c.position.x += (Math.random() - 0.5) * this.shake; c.position.y += (Math.random() - 0.5) * this.shake; this.shake *= Math.pow(0.02, dt); } else this.shake = 0;
-    c.lookAt(this.focus);
+    const up = indoor ? 0 : Math.max(0, 0.42 - this.pitch) * d * 0.6;   // a low camera tilts up to the land overhead
+    c.lookAt(this.focus.x, this.focus.y + up, this.focus.z);
     for (const k in this.sky) this.sky[k].position.copy(c.position);
+    this.colony.update(c);
+    for (const s of this.spinners || []) s.o.rotation[s.axis] += s.speed * dt;
+    if (this.bots) this.bots.update(dt, this.t);
     for (const f of this.facers) f.rotation.y = this.yaw;
     for (const m of this.waterMats || []) m.map.offset.set(this.t * 0.015, this.t * 0.01);
     for (const l of this.lamps || []) l.intensity = (this.night || 0) * 14;

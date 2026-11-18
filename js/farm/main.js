@@ -9,6 +9,7 @@ import { NPCS } from './story.js';
 import * as art from './art.js';
 import { allMaps, ruinsMap, doorTarget, outsideOf, findSpot, FORAGE_SPOTS } from './maps.js';
 import { World } from './world.js';
+import { initMap, toggleMap, isOpen as mapOpen } from './minimap.js';
 import { Actor, DIRV } from './actors.js';
 import * as ui from './ui.js';
 import { sfx, music, musicPlaying, setMood } from './sfx.js';
@@ -506,13 +507,13 @@ function bindInput() {
     if (e.code === 'Tab') { e.preventDefault(); if (ui.windowOpen()) ui.closeWin(); else openMenu('bag'); return; }
     if (e.code === 'F1') { e.preventDefault(); return openMenu('help'); }
     if (e.repeat) return;
+    if (e.code === 'KeyM') { if (mapOpen()) ui.closeWin(); else toggleMap(); return; }   // the town map (music: the menu's button)
     if (e.code === 'KeyE' || e.code === 'Enter') return pressE();
     if (e.code === 'Space') { e.preventDefault(); return pressUse(); }
     if (ui.windowOpen() || ui.talking()) return;
     keys.add(e.code);
     if (/^Digit\d$/.test(e.code)) selectSlot(e.code === 'Digit0' ? 9 : +e.code.slice(5) - 1);
     if (e.code === 'KeyR') { const s = sim.selected(S); if (s && ITEMS[s.id].stamina) { const r = sim.eat(S, S.player.sel); ui.toast(r.msg || 'That was good.'); refreshHud(); } }
-    if (e.code === 'KeyM') ui.toast(music(!musicPlaying()) ? 'Music on.' : 'Music off.');
     if (map && map.ruins && e.code === 'KeyF') placeHydra();
     if (map && map.ruins && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) pallasDash();
     if (e.code === 'KeyQ') W.yaw -= Math.PI / 4; if (e.code === 'KeyC') W.yaw += Math.PI / 4;
@@ -520,7 +521,7 @@ function bindInput() {
   addEventListener('keyup', (e) => keys.delete(e.code)); addEventListener('blur', () => keys.clear());
   const cv = $('view'); let drag = null;
   cv.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId }; cv.setPointerCapture(e.pointerId); });
-  cv.addEventListener('pointermove', (e) => { if (!drag || drag.id !== e.pointerId) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 5) drag.moved = true; if (drag.moved) { W.yaw -= dx * 0.006; W.pitch = Math.max(0.45, Math.min(1.25, W.pitch + dy * 0.004)); drag.x = e.clientX; drag.y = e.clientY; } });
+  cv.addEventListener('pointermove', (e) => { if (!drag || drag.id !== e.pointerId) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 5) drag.moved = true; if (drag.moved) { W.yaw -= dx * 0.006; W.pitch = Math.max(0.1, Math.min(1.25, W.pitch + dy * 0.004)); drag.x = e.clientX; drag.y = e.clientY; } });
   cv.addEventListener('pointerup', (e) => { if (drag && !drag.moved && e.pointerType === 'mouse' && e.button === 0) pressUse(); drag = null; });
   cv.addEventListener('wheel', (e) => { e.preventDefault(); if (e.ctrlKey || e.shiftKey) W.dist = Math.max(6, Math.min(22, W.dist + Math.sign(e.deltaY))); else if (mode === 'play' && S) selectSlot(S.player.sel + Math.sign(e.deltaY)); }, { passive: false });
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -549,6 +550,7 @@ async function begin(state, fresh) {
 async function boot() {
   const info = await art.loadArt();
   W = new World($('view')); bindInput();
+  initMap({ get: () => ({ S, map, me, npcs, W }), ctx: () => (S ? ctx() : null), openWin: ui.openWindow, closeWin: ui.closeWin, canOpen: () => mode === 'play' && !busy && !ui.talking() && !ui.windowOpen(), toast: ui.toast });
   const tv = art.url('video/title'), tp = art.url('scenes/title');
   $('titleArt').innerHTML = (tp ? `<img src="${tp}" alt="">` : '') + (tv ? `<video src="${tv}" autoplay loop muted playsinline></video>` : '');
   const old = loadSaved();

@@ -1092,5 +1092,45 @@
    0.6239
   ],
   "note": "table lamp with cream shade"
+ },
+ "chair": {
+  "file": "chair.glb",
+  "tris": 3000,
+  "size": [
+   0.6378,
+   1.0,
+   0.584
+  ],
+  "note": "wooden chair with cushion, seat faces +Z"
+ },
+ "calendar_board": {
+  "file": "calendar_board.glb",
+  "tris": 4000,
+  "size": [
+   0.6685,
+   1.0,
+   0.4529
+  ],
+  "note": "calendar noticeboard on an easel, faces +Z"
+ },
+ "solar_panel": {
+  "file": "solar_panel.glb",
+  "tris": 2999,
+  "size": [
+   0.6727,
+   1.0,
+   0.583
+  ],
+  "note": "solar panel on a post, faces +Z"
+ },
+ "hydro_tower": {
+  "file": "hydro_tower.glb",
+  "tris": 8000,
+  "size": [
+   0.397,
+   1.0,
+   0.3961
+  ],
+  "note": "vertical hydroponic garden tower (grow lights faint in the texture; add an emissive glow in code if wanted)"
  }
 }

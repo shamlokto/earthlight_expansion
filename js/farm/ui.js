@@ -138,6 +138,7 @@ function openWin(title, html, onClose, cls = '') {
   $('win').hidden = false; $('win').className = 'fm-win ' + cls; winClose = onClose || null;
   $('winTitle').textContent = title; $('winBody').innerHTML = html; $('winBody').scrollTop = 0; return $('winBody');
 }
+export const openWindow = (...a) => openWin(...a);       // for the map screen (minimap.js)
 export function shop(state, shopId, keeper, onChange) {
   return new Promise((res) => {
     const draw = () => {
@@ -184,7 +185,7 @@ export function menu(state, hooks, tab = 'bag') {
     } else if (tab === 'help') {
       h += HELP.map((x) => `<h3>${esc(x.title)}</h3><p>${esc(x.body).replace(/\n/g, '<br>')}</p>`).join('');
     } else {
-      h += `<div class="fm-sys"><button data-act="save">Save the game</button><button data-act="export">Export save to a file</button><button data-act="music">Music on / off (M)</button><button data-act="title">Back to the title</button></div><p class="fm-dim">The game also saves by itself every morning.</p>`;
+      h += `<div class="fm-sys"><button data-act="save">Save the game</button><button data-act="export">Export save to a file</button><button data-act="music">Music on / off</button><button data-act="title">Back to the title</button></div><p class="fm-dim">The game also saves by itself every morning.</p>`;
     }
     const body = openWin('Sato’s Harvest', h, () => hooks.close && hooks.close(), 'menu');
     body.onclick = (e) => {
