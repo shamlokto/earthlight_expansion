@@ -73,7 +73,7 @@ const PROPS = {
   hydro_tower: { model: 'hydro_tower', h: 2.1, fit: 'foot' },
   colony_lamp: { model: 'colony_lamp', h: 2.5, fit: 'foot' },
   pipe_run: { model: 'pipe_run', h: 0.6, fit: 'repeat' },
-  vent: { model: 'vent', h: 0.1, fit: 'foot', soft: true },
+  vent: { model: 'vent', h: 0.55, fit: 'foot' },
   maint_bot: { model: 'maint_bot', h: 0.75, fit: 'foot', turn: true },
   cargo_crate: { model: 'cargo_crate', h: 0.8, fit: 'foot' },
   lift_kiosk: { model: 'lift_kiosk', h: 3.2, fit: 'foot' },
@@ -380,13 +380,16 @@ export class World {
     for (const p of map.props) {
       const kind = p.kind === 'tree' && p.y >= H - 1 ? 'bush' : p.kind;
       this.colonyFx = { spin: this.spinners, glow: [] };
-      const o = this.makeProp(kind, p);
+      const turn = kind === 'pipe_run' && p.d > p.w;            // a pipe running north-south is built east-west and turned
+      const o = this.makeProp(kind, turn ? { ...p, w: p.d, d: p.w } : p);
+      if (turn) o.userData.turn = true;
       if (COLONY_KINDS.has(kind) && !art.hasModel(kind) && kind !== 'maint_bot') built.push(o);
       const rr = p.rot && o.userData.is3d ? p.rot : 0;
       for (const q of this.colonyFx.glow) pools.push({ x: p.x + p.w / 2 + q.x * Math.cos(rr) + q.z * Math.sin(rr), z: p.y + p.d / 2 - q.x * Math.sin(rr) + q.z * Math.cos(rr), warm: q.warm });
       if (kind === 'lantern') pools.push({ x: p.x + 0.5, z: p.y + 0.5, warm: true, r: 2.2 });
       o.position.set(p.x + p.w / 2, p.onWater ? -0.1 : 0, p.y + p.d / 2);
       if (p.rot && (o.userData.is3d || kind === 'fence')) o.rotation.y = p.rot;
+      if (o.userData.turn) o.rotation.y = Math.PI / 2;
       R.add(o); p.obj = o; if (kind === 'tree' || kind === 'pine') this.tallProps.push(o);
       const lampL = o.userData.lamp || (o.children[0] && o.children[0].userData.lamp); if (lampL) this.lamps.push(lampL);
     }

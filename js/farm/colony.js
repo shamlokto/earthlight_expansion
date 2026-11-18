@@ -324,10 +324,10 @@ export function colonyProp(kind, o = {}, fx = { spin: [], glow: [] }) {
       along.add(bx(0.1, 0.06, 0.1, GLOW.cyan, -0.3, 0.62, -0.08));
       if (d > w) along.rotation.y = Math.PI / 2; g.add(along); break;
     }
-    case 'vent': {
-      g.add(bx(0.92, 0.05, 0.92, SLATE(), 0, 0), bx(0.98, 0.07, 0.08, CREAM(), 0, 0, 0.45), bx(0.98, 0.07, 0.08, CREAM(), 0, 0, -0.45));
-      for (let i = -2; i <= 2; i++) g.add(bx(0.8, 0.03, 0.07, M(0x2c3640), 0, 0.05, i * 0.16));
-      g.add(bx(0.08, 0.03, 0.08, GLOW.cyan, 0.38, 0.07, 0.38)); for (const c of g.children) c.castShadow = false; break;
+    case 'vent': {                                                   // a low cooling unit with a grille on top
+      g.add(bx(0.86, 0.4, 0.86, M(0xb9c6cc, { metalness: 0.25 })), bx(0.9, 0.06, 0.9, CREAM(), 0, 0.4));
+      for (let i = -2; i <= 2; i++) g.add(bx(0.7, 0.03, 0.07, M(0x2c3640), 0, 0.46, i * 0.14));
+      g.add(bx(0.88, 0.05, 0.02, GLOW.cyan, 0, 0.2, 0.435)); break;
     }
     case 'maint_bot': {
       const body = sp(0.28, CREAM(), 0, 0.42, 0, 2); body.scale.set(1, 0.86, 1); g.add(body, cy(0.286, 0.286, 0.08, CORAL(), 0, 0.37, 0, 16));
