@@ -195,6 +195,8 @@ const FILES = {
   'card/seedbank': 'art/colony/card/seedbank.webp',
   'card/firstfields': 'art/colony/card/firstfields.webp',
   'card/reforest': 'art/colony/card/reforest.webp',
+  'card/seaplatform': 'art/colony/card/seaplatform.webp',
+  'card/ruinbreaker': 'art/colony/card/ruinbreaker.webp',
   'title/rebuild': 'art/colony/title/rebuild.webp',
   'sky/earth-below': 'art/colony/sky/earth-below.webp',
   'terrain/void': 'art/colony/terrain/void.webp',
