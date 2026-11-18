@@ -233,9 +233,9 @@ function ambush() {
   const open = (x, y) => cv.ok(x, y) && cv.get(x, y) <= 3;
   const generalAt = [14, 15];   // the General in the middle of the column, the fleet all round him
   const home = homeSlots(cv, (x, y) => x >= 6 && x <= 24 && y >= 9 && y <= 21, { x: 14, y: 15 }, new Set());
-  const homeSet = new Set(home.slice(0, 48).map(([x, y]) => `${x},${y}`));
-  // the slots of each wave: open hexes in its area, a hex apart, nearest its centre first
-  const used = new Set(homeSet);
+  // the slots of each wave: open hexes in its area, a hex apart, nearest its centre first, never on the
+  // strike force's staging hexes (all of them: the player may bring the whole armoury)
+  const used = new Set(home.map(([x, y]) => `${x},${y}`));
   const area = (test, centre, n) => pick(cv, test, centre, n, used);
   const ROLES = ['craft', 'mecha', 'ship', 'craft', 'armour', 'mecha', 'craft', 'ship'];
   const waves = [
@@ -248,6 +248,17 @@ function ambush() {
     // turn 13: behind, the west edge: the way home is shut
     { key: 'behind', turn: 12, share: 1.5, hexes: area((x, y) => x <= 3 && y >= 2 && y <= 29, { x: 1, y: 15 }, 14) },
   ];
+  // more slots for a bigger strike force (owner, 2026-11-18: no 40-machine cap): picked after the first 88
+  // so those stay as tuned, the two halves of the flanks and the hammer taken in turn; 150 in all, the
+  // picket's cap (1.5 x 100 machines; docs/COLONY-V12.md §7a)
+  const alt = (a, b) => a.flatMap((h, i) => [h, b[i]]).concat(b.slice(a.length)).filter(Boolean);
+  const more = {
+    front: area((x, y) => x >= 38 && x <= 57 && y >= 5 && y <= 26, { x: 46, y: 15 }, 19),
+    flanks: alt(area((x, y) => y <= 3 && x >= 26 && x <= 54, { x: 40, y: 1 }, 10), area((x, y) => y >= 28 && x >= 26 && x <= 54, { x: 40, y: 30 }, 9)),
+    hammer: alt(area((x, y) => x >= 46 && y <= 9, { x: 58, y: 1 }, 8), area((x, y) => x >= 46 && y >= 22, { x: 58, y: 30 }, 8)),
+    behind: area((x, y) => x <= 3 && y >= 2 && y <= 29, { x: 1, y: 15 }, 8),
+  };
+  for (const w of waves) w.hexes = [...w.hexes, ...more[w.key]];
   // the slot order: take each wave's share in turn, so any count keeps all four directions
   const slots = [];
   const per = waves.map((w) => ({ w, i: 0 }));
@@ -265,7 +276,7 @@ function ambush() {
     version: 1, name: 'AMBUSH', title: 'The Ambush', chapter: 'The Reckoning · II',
     screensW: 4, screensH: 3, pairs: PAIRS.map((p) => [...p]), grid: grid(cv), units: [], arrivals: [],
     waves: waves.map((w) => ({ key: w.key, turn: w.turn, ...(w.hold ? { hold: w.hold } : {}) })), slots,
-    objective: { kind: 'hold', turns: 15 }, flee: true, noFlee: true, awaitArrivals: true, music: 29, cap: 40,
+    objective: { kind: 'hold', turns: 15 }, flee: true, noFlee: true, awaitArrivals: true, music: 29,
     goal: 'Break out: keep the strike force together to the end of turn 15, when the jump drives are charged. Destroying the whole picket also wins. If the General falls, it is over.',
     home, generalAt,
     briefing: [
@@ -376,7 +387,7 @@ function stronghold() {
   const mission = {
     version: 1, name: 'HESK', title: 'Hesk\'s Stronghold', chapter: 'The Reckoning · II',
     screensW: 4, screensH: 4, pairs: PAIRS.map((p) => [...p]), grid: grid(cv), units, arrivals, cannons: [cannon],
-    objective: { kind: 'flagship', type: 59 }, turnLimit: 30, flee: true, noFlee: true, awaitArrivals: true, music: 29, cap: 40,
+    objective: { kind: 'flagship', type: 59 }, turnLimit: 30, flee: true, noFlee: true, awaitArrivals: true, music: 29,
     goal: 'Sink Major Hesk\'s flagship, the Verdict, within 30 turns. She comes out on turn 15. If the General falls, it is over.',
     home, generalAt: [7, 35], reinforcements,
     briefing: [
