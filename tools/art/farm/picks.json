@@ -61,7 +61,7 @@
  "icons/matsutake": 1001,
  "icons/wild_grape": 1001,
  "icons/persimmon_jam": 1001,
- "icons/wild_apple": null,
- "icons/mulberry": null,
+ "icons/wild_apple": 3002,
+ "icons/mulberry": 3001,
  "icons/fiddlehead_tempura": null
 }

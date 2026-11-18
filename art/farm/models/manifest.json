@@ -1723,5 +1723,495 @@
    1.0
   ],
   "note": "item"
+ },
+ "cherry": {
+  "file": "cherry.glb",
+  "tris": 4000,
+  "size": [
+   0.9406,
+   1.0,
+   0.5283
+  ],
+  "note": "item"
+ },
+ "persimmon": {
+  "file": "persimmon.glb",
+  "tris": 4000,
+  "size": [
+   0.9996,
+   0.8797,
+   1.0
+  ],
+  "note": "item"
+ },
+ "chestnut": {
+  "file": "chestnut.glb",
+  "tris": 4000,
+  "size": [
+   0.8953,
+   0.7515,
+   1.0
+  ],
+  "note": "item"
+ },
+ "wild_grape": {
+  "file": "wild_grape.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.9768,
+   0.6219
+  ],
+  "note": "item"
+ },
+ "honeycomb": {
+  "file": "honeycomb.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.5087,
+   0.9844
+  ],
+  "note": "item"
+ },
+ "matsutake": {
+  "file": "matsutake.glb",
+  "tris": 3999,
+  "size": [
+   0.8859,
+   1.0,
+   0.8738
+  ],
+  "note": "item"
+ },
+ "mushroom": {
+  "file": "mushroom.glb",
+  "tris": 4000,
+  "size": [
+   0.9181,
+   1.0,
+   0.9179
+  ],
+  "note": "item"
+ },
+ "frostcap": {
+  "file": "frostcap.glb",
+  "tris": 4000,
+  "size": [
+   0.7773,
+   1.0,
+   0.7846
+  ],
+  "note": "item"
+ },
+ "herb": {
+  "file": "herb.glb",
+  "tris": 4000,
+  "size": [
+   0.8056,
+   1.0,
+   0.3592
+  ],
+  "note": "item"
+ },
+ "wild_mint": {
+  "file": "wild_mint.glb",
+  "tris": 3999,
+  "size": [
+   0.9526,
+   1.0,
+   0.9069
+  ],
+  "note": "item"
+ },
+ "bamboo_shoot": {
+  "file": "bamboo_shoot.glb",
+  "tris": 4000,
+  "size": [
+   0.4793,
+   1.0,
+   0.4607
+  ],
+  "note": "item"
+ },
+ "fiddlehead": {
+  "file": "fiddlehead.glb",
+  "tris": 3999,
+  "size": [
+   0.8326,
+   1.0,
+   0.202
+  ],
+  "note": "item"
+ },
+ "pine_nut": {
+  "file": "pine_nut.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.5878,
+   0.6477
+  ],
+  "note": "item"
+ },
+ "winter_root": {
+  "file": "winter_root.glb",
+  "tris": 4000,
+  "size": [
+   0.7643,
+   1.0,
+   0.7547
+  ],
+  "note": "item"
+ },
+ "berry": {
+  "file": "berry.glb",
+  "tris": 4000,
+  "size": [
+   0.9974,
+   1.0,
+   0.683
+  ],
+  "note": "item"
+ },
+ "milk_s": {
+  "file": "milk_s.glb",
+  "tris": 4000,
+  "size": [
+   0.5321,
+   1.0,
+   0.5281
+  ],
+  "note": "item"
+ },
+ "milk_m": {
+  "file": "milk_m.glb",
+  "tris": 4000,
+  "size": [
+   0.4098,
+   1.0,
+   0.4164
+  ],
+  "note": "item"
+ },
+ "milk_l": {
+  "file": "milk_l.glb",
+  "tris": 4000,
+  "size": [
+   0.5575,
+   1.0,
+   0.6044
+  ],
+  "note": "item"
+ },
+ "photo": {
+  "file": "photo.glb",
+  "tris": 4000,
+  "size": [
+   0.8654,
+   1.0,
+   0.1373
+  ],
+  "note": "item"
+ },
+ "teacup": {
+  "file": "teacup.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.6406,
+   0.8497
+  ],
+  "note": "item"
+ },
+ "book": {
+  "file": "book.glb",
+  "tris": 4000,
+  "size": [
+   0.6668,
+   0.2838,
+   1.0
+  ],
+  "note": "item"
+ },
+ "watch": {
+  "file": "watch.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.9172,
+   0.9333
+  ],
+  "note": "item"
+ },
+ "toy": {
+  "file": "toy.glb",
+  "tris": 4000,
+  "size": [
+   0.7069,
+   0.9898,
+   1.0
+  ],
+  "note": "item"
+ },
+ "medal": {
+  "file": "medal.glb",
+  "tris": 3999,
+  "size": [
+   0.636,
+   1.0,
+   0.3938
+  ],
+  "note": "item"
+ },
+ "seedtin": {
+  "file": "seedtin.glb",
+  "tris": 4000,
+  "size": [
+   0.7788,
+   1.0,
+   0.8898
+  ],
+  "note": "item"
+ },
+ "musicbox": {
+  "file": "musicbox.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.9502,
+   0.9367
+  ],
+  "note": "item"
+ },
+ "datachip": {
+  "file": "datachip.glb",
+  "tris": 4000,
+  "size": [
+   0.7705,
+   0.3395,
+   1.0
+  ],
+  "note": "item"
+ },
+ "ring": {
+  "file": "ring.glb",
+  "tris": 4000,
+  "size": [
+   0.9977,
+   1.0,
+   0.2785
+  ],
+  "note": "item"
+ },
+ "scrap": {
+  "file": "scrap.glb",
+  "tris": 3999,
+  "size": [
+   0.9791,
+   0.5359,
+   1.0
+  ],
+  "note": "item"
+ },
+ "alloy": {
+  "file": "alloy.glb",
+  "tris": 4000,
+  "size": [
+   0.6209,
+   0.3884,
+   1.0
+  ],
+  "note": "item"
+ },
+ "crystal": {
+  "file": "crystal.glb",
+  "tris": 4000,
+  "size": [
+   0.835,
+   1.0,
+   0.7717
+  ],
+  "note": "item"
+ },
+ "battery": {
+  "file": "battery.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.6118,
+   0.6102
+  ],
+  "note": "item"
+ },
+ "battery_full": {
+  "file": "battery_full.glb",
+  "tris": 3445,
+  "size": [
+   1.0,
+   0.5339,
+   0.5744
+  ],
+  "note": "item"
+ },
+ "can": {
+  "file": "can.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.7403,
+   0.5055
+  ],
+  "note": "item"
+ },
+ "sickle": {
+  "file": "sickle.glb",
+  "tris": 4000,
+  "size": [
+   0.6484,
+   1.0,
+   0.1338
+  ],
+  "note": "item"
+ },
+ "hammer": {
+  "file": "hammer.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.3475,
+   0.6132
+  ],
+  "note": "item"
+ },
+ "axe": {
+  "file": "axe.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.1802,
+   0.6604
+  ],
+  "note": "item"
+ },
+ "rod": {
+  "file": "rod.glb",
+  "tris": 4000,
+  "size": [
+   0.2013,
+   0.4328,
+   1.0
+  ],
+  "note": "item"
+ },
+ "milker": {
+  "file": "milker.glb",
+  "tris": 4000,
+  "size": [
+   0.6683,
+   1.0,
+   0.6442
+  ],
+  "note": "item"
+ },
+ "brush": {
+  "file": "brush.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.5287,
+   0.523
+  ],
+  "note": "item"
+ },
+ "basket": {
+  "file": "basket.glb",
+  "tris": 4000,
+  "size": [
+   0.9884,
+   0.9863,
+   1.0
+  ],
+  "note": "item"
+ },
+ "plum": {
+  "file": "plum.glb",
+  "tris": 4000,
+  "size": [
+   0.9448,
+   1.0,
+   0.9152
+  ],
+  "note": "item"
+ },
+ "loquat": {
+  "file": "loquat.glb",
+  "tris": 4000,
+  "size": [
+   0.9294,
+   0.913,
+   1.0
+  ],
+  "note": "item"
+ },
+ "yuzu": {
+  "file": "yuzu.glb",
+  "tris": 4000,
+  "size": [
+   0.8474,
+   1.0,
+   0.7771
+  ],
+  "note": "item"
+ },
+ "wild_apple": {
+  "file": "wild_apple.glb",
+  "tris": 4000,
+  "size": [
+   0.8133,
+   1.0,
+   0.7931
+  ],
+  "note": "item"
+ },
+ "mulberry": {
+  "file": "mulberry.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.2085,
+   0.9766
+  ],
+  "note": "item"
+ },
+ "berry_jam": {
+  "file": "berry_jam.glb",
+  "tris": 4000,
+  "size": [
+   0.9744,
+   0.9306,
+   1.0
+  ],
+  "note": "item"
+ },
+ "chestnut_roast": {
+  "file": "chestnut_roast.glb",
+  "tris": 4000,
+  "size": [
+   0.5204,
+   1.0,
+   0.5231
+  ],
+  "note": "item"
+ },
+ "honeyed_nuts": {
+  "file": "honeyed_nuts.glb",
+  "tris": 4000,
+  "size": [
+   0.8241,
+   1.0,
+   0.6668
+  ],
+  "note": "item"
  }
 }

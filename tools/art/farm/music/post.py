@@ -65,8 +65,8 @@ def make(name, src):
           % (TARGET, j["input_i"], j["input_tp"], j["input_lra"], j["input_thresh"], j["target_offset"]))
     af = trim + "," + ln + ",aresample=44100"
     ogg, mp3 = os.path.join(OUT, name + ".ogg"), os.path.join(OUT, name + ".mp3")
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-af", af, "-ac", "2", "-c:a", "libvorbis", "-b:a", "96k", ogg], check=True)
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-af", af, "-ac", "2", "-c:a", "libmp3lame", "-b:a", "112k", mp3], check=True)
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-af", af, "-ac", "2", "-c:a", "libvorbis", "-b:a", "80k", ogg], check=True)
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-af", af, "-ac", "2", "-c:a", "libmp3lame", "-b:a", "96k", mp3], check=True)
     sec = round(duration(ogg), 2)
     o = stats(ogg)
     print("%-9s %6.1fs  %5.1f LUFS  peak %5.1f dB  ogg %4d kB  mp3 %4d kB  (from %s, cut %.1f-%.1f)" % (

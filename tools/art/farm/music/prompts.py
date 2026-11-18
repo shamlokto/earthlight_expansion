@@ -30,6 +30,8 @@ TRACKS = {
                  "bittersweet, peaceful, major key, remembrance"),
     "wedding":  ("warm celebratory, simple, piano melody, acoustic guitar, light strings, glockenspiel, 92 bpm, major key, "
                  "happy, heartfelt, gentle waltz, instrumental only"),
+    "belt":     ("calm space ambient, drifting, warm synth pads, soft piano notes, gentle sparkling arpeggio, slow pulse, "
+                 "wonder, peaceful, starlight, 76 bpm, major key"),
 }
 
 SECONDS = {"night": 80, "ruins": 90, "lantern": 80, "wedding": 70, "festival": 80}

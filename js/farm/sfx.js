@@ -27,14 +27,14 @@ export function sfx(name) {
 }
 
 // ---------------------------------------------------------------- music
-// The track comes from the mood main.js reports: { season, night, ruins, map, festival, title }.
+// The track comes from the mood main.js reports: { season, night, ruins, belt, map, festival, title }.
 // Tracks are decoded into Web Audio buffers and looped sample-exactly; a change crossfades over 2 s.
 // No file for the track (or no audio decoding) -> the quiet generated tune below plays instead.
 const PREF_KEY = 'satoHarvest.music';
 const prefs = (() => { try { const p = JSON.parse(localStorage.getItem(PREF_KEY) || 'null'); if (p && typeof p === 'object') return { on: p.on !== false, vol: Number.isFinite(p.vol) ? Math.min(1, Math.max(0, p.vol)) : 0.7 }; } catch { /* no storage */ } return { on: true, vol: 0.7 }; })();
 const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch { /* fine */ } };
 const SEASON_TRACKS = ['spring', 'summer', 'autumn', 'winter'], FADE = 2;
-let musicOn = false, musicTimer = null, step = 0, mood = { season: 0, night: false, ruins: false, map: null, festival: null, title: false };
+let musicOn = false, musicTimer = null, step = 0, mood = { season: 0, night: false, ruins: false, belt: false, map: null, festival: null, title: false };
 let master = null, cur = null, want = null, token = 0;
 const buffers = new Map(), order = [];   // decoded tracks, the last few kept
 
@@ -61,13 +61,13 @@ async function decode(url) {
   const a = await r.arrayBuffer();
   return await new Promise((res, rej) => { const p = ac.decodeAudioData(a, res, rej); if (p && p.then) p.then(res, rej); });
 }
-async function bufferFor(name, src) {
-  if (buffers.has(name)) return buffers.get(name);
+async function bufferFor(src) {
+  const key = src.main; if (buffers.has(key)) return buffers.get(key);
   let b, used = src.main;
   try { b = await decode(src.main); } catch (e) { if (!src.alt) throw e; used = src.alt; b = await decode(src.alt); }
-  buffers.set(name, { b, url: used }); order.push(name);
-  for (let i = 0; order.length > 3 && i < order.length;) { if (cur && order[i] === cur.name) i++; else buffers.delete(order.splice(i, 1)[0]); }
-  return buffers.get(name);
+  buffers.set(key, { b, url: used }); order.push(key);
+  for (let i = 0; order.length > 3 && i < order.length;) { if (cur && order[i] === cur.key) i++; else buffers.delete(order.splice(i, 1)[0]); }
+  return buffers.get(key);
 }
 function fadeOutCur() {
   if (!cur) return; const c = cur; cur = null;
@@ -83,12 +83,12 @@ async function update() {
   if (cur && cur.name === name && cur.node) return;   // back to the track that is still playing
   if (src) {
     try {
-      const { b, url } = await bufferFor(name, src); if (my !== token || !musicOn) return;
+      const { b, url } = await bufferFor(src); if (my !== token || !musicOn) return;
       fadeOutCur();
       const node = ac.createBufferSource(), gain = ac.createGain(), t = ac.currentTime;
       node.buffer = b; node.loop = true; gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(1, t + FADE);
       node.connect(gain).connect(master); node.start(t);
-      cur = { name, node, gain, src: url }; return;
+      cur = { name, key: src.main, node, gain, src: url }; return;
     } catch { if (my !== token || !musicOn) return; }
   }
   if (cur && !cur.node) { cur.name = name; return; }   // the generated tune is already playing: it follows the mood itself
