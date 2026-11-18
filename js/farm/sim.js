@@ -527,6 +527,36 @@ export function cook(state, recipeId) {
   return { ok: true, msg: `You made ${ITEMS[r.id].name.toLowerCase()}.`, gained: [{ id: r.id, n: 1 }] };
 }
 
+// ---------------------------------------------------------------- trees and berry bushes
+// Trees on the farm and the hill can be felled with the axe for lumber; a stump regrows into a tree
+// after TREE_REGROW days. Bushes give berries from spring to autumn, at most every BUSH_DAYS days.
+export const TREE_REGROW = 14, BUSH_DAYS = 3;
+const TREE_HITS = [0, 5, 3, 2];
+export function treeFelled(state, key) { const t = (state.trees || {})[key]; return !!(t && t.felled != null && absDay(state) - t.felled < TREE_REGROW); }
+export function chopTree(state, key) {
+  if (typeof key !== 'string' || !key) return fail('There is no tree there.');
+  const s = selected(state); if (!s || s.id !== 'axe') return fail('Hold the axe to chop a tree.');
+  state.trees ||= {};
+  if (treeFelled(state, key)) return fail('Only a stump is left. It will grow back.');
+  const p = state.player; if (p.stamina <= 0) return fail('You are too tired to swing the axe.');
+  const t = state.trees[key] = state.trees[key] && state.trees[key].felled == null ? state.trees[key] : { hits: 0, felled: null };
+  t.hits += 1; p.stamina = Math.max(0, p.stamina - 3);
+  const need = TREE_HITS[p.toolLevel.axe || 1] || 5;
+  if (t.hits < need) return { ok: true, msg: null, felled: false, cost: 3, left: need - t.hits, gained: [], fainted: p.stamina <= 0 };
+  t.felled = absDay(state); t.hits = 0; state.stock.lumber += 8; state.stats.treesFelled = (state.stats.treesFelled || 0) + 1;
+  return { ok: true, msg: 'Timber! +8 lumber. The stump will grow back in two weeks.', felled: true, cost: 3, gained: [{ id: 'lumber', n: 8 }], fainted: p.stamina <= 0 };
+}
+export function bushReady(state, key) { const d = (state.bushes || {})[key]; return state.cal.season < 3 && (d == null || absDay(state) - d >= BUSH_DAYS); }
+export function pickBush(state, key) {
+  if (typeof key !== 'string' || !key) return fail('There is no bush there.');
+  if (state.cal.season === 3) return fail('The bush is bare for the winter.');
+  if (!bushReady(state, key)) return fail('No ripe berries yet. Come back in a few days.');
+  const n = state.cal.season === 1 ? 2 + Math.floor(rnd(state) * 2) : 1 + Math.floor(rnd(state) * 2);
+  if (!canAdd(state, 'berry', n)) return fail(FULL);
+  (state.bushes ||= {})[key] = absDay(state); addItem(state, 'berry', n);
+  return { ok: true, msg: `You picked ${n} berr${n > 1 ? 'ies' : 'y'}.`, gained: [{ id: 'berry', n }] };
+}
+
 // What a shop sells today. Private fields: give (item id), once, req [[id, n]], lumber, stop(n) -> why, apply(n).
 function shelves(state, shopId) {
   const p = state.player, out = [];

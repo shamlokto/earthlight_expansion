@@ -130,17 +130,6 @@
   ],
   "note": "cargo lift head-frame on a small stone base"
  },
- "pallas": {
-  "file": "pallas.glb",
-  "tris": 20000,
-  "size": [
-   0.781,
-   1.0,
-   0.5882
-  ],
-  "note": "Sato's Pallas: navy with rose trim, claw on its left side as seen from the front, cargo basket on the back; faces +Z",
-  "unit": "height"
- },
  "drone": {
   "file": "drone.glb",
   "tris": 8000,

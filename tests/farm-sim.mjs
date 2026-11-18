@@ -829,5 +829,18 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   const old = JSON.parse(saveState(newGame({ seed: 3 }))); delete old.storage; delete old.fridge; const o = loadState(JSON.stringify(old));
   sim.addItem(o, 'egg', 1); r = sim.storeItem(o, 'storage', o.player.inv.findIndex((x) => x && x.id === 'egg')); check(r.ok && o.storage.length === sim.STORAGE_SIZE, 'an old save gains a storage box');
 }
+// ---------------------------------------------------------------- trees and berry bushes (2026-11-18)
+{
+  const s = newGame({ seed: 91 }); s.player.sel = s.player.inv.findIndex((x) => x && x.id === 'axe');
+  let r; for (let i = 0; i < 4; i++) { r = sim.chopTree(s, 'farm:7'); check(r.ok && !r.felled, 'chop ' + (i + 1) + ' does not fell yet'); }
+  const lumber = s.stock.lumber; r = sim.chopTree(s, 'farm:7'); check(r.ok && r.felled && s.stock.lumber === lumber + 8 && sim.treeFelled(s, 'farm:7'), 'fifth chop fells the tree for 8 lumber');
+  r = sim.chopTree(s, 'farm:7'); check(!r.ok && r.msg, 'a stump cannot be chopped');
+  s.player.sel = 0; r = sim.chopTree(s, 'farm:8'); check(!r.ok && /axe/.test(r.msg), 'chopping needs the axe');
+  s.cal.day += 14; check(!sim.treeFelled(s, 'farm:7'), 'the tree grows back after 14 days');
+  const t = newGame({ seed: 5 }); r = sim.pickBush(t, 'hill:3'); check(r.ok && sim.countItem(t, 'berry') >= 1, 'pick berries from a bush');
+  r = sim.pickBush(t, 'hill:3'); check(!r.ok && r.msg, 'a picked bush needs a few days');
+  t.cal.day += 3; check(sim.pickBush(t, 'hill:3').ok, 'berries again after three days');
+  t.cal.season = 3; check(!sim.pickBush(t, 'hill:4').ok, 'no berries in winter');
+}
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

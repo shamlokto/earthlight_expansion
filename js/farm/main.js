@@ -46,7 +46,15 @@ function canStand(x, y) {
   const r = 0.26;
   if (blocked(x - r, y - r) || blocked(x + r, y - r) || blocked(x - r, y + r) || blocked(x + r, y + r)) return false;
   for (const n of npcs.values()) if (Math.hypot(n.actor.x - x, n.actor.y - y) < 0.55) return false;
+  for (const [px, py, pr, pi] of map.posts || []) if (Math.hypot(px - x, py - y) < pr + 0.22 && !felledAt(pi)) return false;
   return true;
+}
+// Trees on the farm and the hill can be felled (they come back as stumps first); village trees are the village's.
+const felledAt = (pi) => { const p = map.props[pi]; return !!p && (p.kind === 'tree' || p.kind === 'pine') && sim.treeFelled(S, map.id + ':' + pi); };
+function plantAhead(kinds) {
+  const [dx, dy] = DIRV[me.dir], ax = me.x + dx * 0.9, ay = me.y + dy * 0.9; let best = null, bd = 1.0;
+  map.props.forEach((p, pi) => { if (!kinds.includes(p.kind)) return; const d = Math.hypot(p.x + p.w / 2 - ax, p.y + p.d / 2 - ay); if (d < bd) { bd = d; best = { p, pi, key: map.id + ':' + pi }; } });
+  return best;
 }
 function target() { const [dx, dy] = DIRV[me.dir]; return [Math.floor(me.x + dx * 0.85), Math.floor(me.y + dy * 0.85)]; }
 
@@ -235,7 +243,7 @@ async function descend(depth) {
   sim.enterMine(S, depth);
   if (first) { mode = 'talk'; ui.scene('descent'); await ui.say(story.RUINS.arrive.map((t) => ({ who: 'narrator', text: t }))); mode = 'play'; }
   await go({ map: 'ruins' });
-  ui.toast(first ? 'Space fires the Pallas. F sets down the Hydra. Shift boosts. E searches rubble.' : pick(depth > 1 ? story.RUINS.deeper : story.RUINS.arrive), 5200);
+  ui.toast(first ? 'Space fires the Pallas (up close it swings the beam sabre). F sets down the Hydra. Shift boosts. E searches rubble.' : pick(depth > 1 ? story.RUINS.deeper : story.RUINS.arrive), 5200);
 }
 function popMonster(mon) {
   const i = S.mine.monsters.indexOf(mon.ref); const r = i >= 0 ? sim.defeatMonster(S, i) : { gained: [] };
@@ -263,7 +271,18 @@ function spawnBolt(x, y, dx, dy, from) {
   const speed = from === 'enemy' ? 4.2 : 14;
   bolts.push({ m, x, y, vx: dx / l * speed, vy: dy / l * speed, from, life: from === 'enemy' ? 3 : 1.1 });
 }
+// The beam sabre: when a creature is close in front, Space swings instead of firing (2 damage, a wide arc).
+let slashCd = 0;
+function pallasSlash() {
+  const [dx, dy] = DIRV[me.dir]; let hit = 0;
+  for (const mon of [...monsters]) { const ex = mon.x - me.x, ey = mon.y - me.y, d = Math.hypot(ex, ey); if (d < 1.9 && (ex * dx + ey * dy) / (d || 1) > -0.1) { hurtMonster(mon, 2, me.x, me.y); hit++; } }
+  slashCd = 0.42; fireCd = 0.3; me.swing = 1.4; sfx('chop');
+  const arc = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.55, 24, 1, -1.2, 2.4), new THREE.MeshBasicMaterial({ color: 0x8ff4ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
+  arc.rotation.x = -Math.PI / 2; arc.rotation.z = Math.atan2(-dy, dx); arc.position.set(me.x, 1.1, me.y); W.scene.add(arc); bolts.push({ m: arc, x: me.x, y: me.y, vx: 0, vy: 0, from: 'fx', life: 0.18 });
+  if (hit > 1) floatText(me.x, me.y, 'double!');
+}
 function pallasFire() {
+  if (slashCd <= 0) { const [dx, dy] = DIRV[me.dir]; if (monsters.some((m) => { const ex = m.x - me.x, ey = m.y - me.y, d = Math.hypot(ex, ey); return d < 1.7 && (ex * dx + ey * dy) / (d || 1) > 0.2; })) return pallasSlash(); }
   if (fireCd > 0) return; fireCd = 0.26;
   let [dx, dy] = DIRV[me.dir], best = null, bs = 0.5;                       // gentle aim: the nearest creature in a wide cone ahead
   for (const mon of monsters) { const ex = mon.x - me.x, ey = mon.y - me.y, d = Math.hypot(ex, ey); if (d > 9 || !d) continue; const c = (ex * dx + ey * dy) / d, sc = c - d * 0.03; if (c > 0.55 && sc > bs) { bs = sc; best = mon; } }
@@ -284,7 +303,7 @@ function satoHit(fromX, fromY) {
 }
 function pallasDash() { if (dashCd > 0) return; dashCd = 0.9; dashT = 0.2; W.puff(me.x, me.y, 0x9fd8ee, 10, 0.3); sfx('zap'); }
 function ruinsTick(dt) {
-  hurtT -= dt; fireCd -= dt; hydraCd -= dt; dashCd -= dt; dashT -= dt;
+  hurtT -= dt; fireCd -= dt; slashCd -= dt; hydraCd -= dt; dashCd -= dt; dashT -= dt;
   if (me.group) me.group.visible = !(hurtT > 0 && Math.floor(hurtT * 12) % 2);
   for (const mon of [...monsters]) {
     const ex = me.x - mon.x, ey = me.y - mon.y, d = Math.hypot(ex, ey) || 0.01; mon.wob += dt; mon.t -= dt;
@@ -308,7 +327,8 @@ function ruinsTick(dt) {
     if (best) { hydra.o.rotation.y = Math.atan2(best.x - hydra.x, best.y - hydra.y); if (hydra.cd <= 0) { hydra.cd = 0.55; spawnBolt(hydra.x, hydra.y, best.x - hydra.x, best.y - hydra.y, 'hydra'); } }
   }
   for (let i = bolts.length - 1; i >= 0; i--) {
-    const b = bolts[i]; b.life -= dt; b.x += b.vx * dt; b.y += b.vy * dt; b.m.position.x = b.x; b.m.position.z = b.y;
+    const b = bolts[i]; if (b.from === 'fx') { b.life -= dt; b.m.material.opacity = Math.max(0, b.life * 5); if (b.life <= 0) { W.scene.remove(b.m); bolts.splice(i, 1); } continue; }
+    b.life -= dt; b.x += b.vx * dt; b.y += b.vy * dt; b.m.position.x = b.x; b.m.position.z = b.y;
     let dead = b.life <= 0 || map.solid(b.x, b.y);
     if (!dead && b.from !== 'enemy') for (const mon of monsters) if (Math.hypot(mon.x - b.x, mon.y - b.y) < (mon.big ? 0.65 : 0.5)) { hurtMonster(mon, 1, b.x - b.vx * 0.05, b.y - b.vy * 0.05); dead = true; break; }
     if (!dead && b.from === 'enemy' && Math.hypot(me.x - b.x, me.y - b.y) < 0.55) { satoHit(b.x - b.vx, b.y - b.vy); dead = true; }
@@ -341,6 +361,7 @@ function probe() {                                   // → { label, run } for E
   }
   const fa = fieldAt(tx, ty) || fieldAt(Math.floor(me.x), Math.floor(me.y));
   if (fa && fa.tile.crop && !fa.tile.crop.dead && sim.cropStage(fa.tile.crop) === 3) return { label: `Harvest the ${CROPS[fa.tile.crop.id].name.toLowerCase()}`, run: () => { const r = sim.harvest(S, fa.f.id, fa.x, fa.y); if (r.ok) { sfx('pick'); ui.gainedToast(r.gained); refreshChanged(fa.f.id, [{ x: fa.x, y: fa.y }]); goals(); } else ui.toast(r.msg); refreshHud(); } };
+  const bush = !map.indoor && plantAhead(['bush']); if (bush && sim.bushReady(S, bush.key)) return { label: 'Pick berries', run: () => { const r = sim.pickBush(S, bush.key); if (r.ok) { sfx('pick'); ui.gainedToast(r.gained); } else ui.toast(r.msg); refreshHud(); } };
   const b = nearestBeast(1.4); if (b) return { label: `Pet ${S.animals[b.i].name}`, run: () => { const r = sim.petAnimal(S, b.i); ui.toast(r.msg || `${S.animals[b.i].name} seems pleased.`); floatText(b.o.position.x, b.o.position.z, '♥'); } };
   if (map.id === 'hill') for (const f of S.forage || []) { const [x, y] = FORAGE_SPOTS[f.spot]; if (Math.hypot(x + 0.5 - me.x, y + 0.5 - me.y) < 1.2) return { label: `Pick the ${ITEMS[f.id].name.toLowerCase()}`, run: () => { const r = sim.pickForage(S, f.spot); if (r.ok) { sfx('pick'); ui.gainedToast(r.gained); drawForage(); } else ui.toast(r.msg); refreshHud(); } }; }
   const d = map.doors.find((q) => q.x === Math.floor(me.x) && q.y === Math.floor(me.y)); if (d) return { label: 'Go in', run: () => enterDoor(d) };
@@ -394,6 +415,12 @@ function use() {                                     // Space: the held tool or 
   if (s.id === 'can' && (waterAt(tx, ty) || (propAt(tx, ty) || {}).act === 'well')) { const r = sim.refillCan(S); ui.toast(r.msg || 'Filled.'); if (r.ok) sfx('water'); return refreshHud(); }
   if (s.id === 'rod') { if (waterAt(tx, ty)) return cast(tx, ty); return ui.toast('Face the water to cast.'); }
   if (s.id === 'milker' || s.id === 'brush') { const b = nearestBeast(1.6); if (!b || S.animals[b.i].kind !== 'cow') return ui.toast('Stand beside a cow.'); const r = s.id === 'milker' ? sim.milk(S, b.i) : sim.brush(S, b.i); ui.toast(r.msg || (r.ok ? 'Done.' : '')); ui.gainedToast(r.gained); if (r.ok) { sfx('pick'); floatText(b.o.position.x, b.o.position.z, '♥'); } return refreshHud(); }
+  if (s.id === 'axe' && !map.indoor) { const t = plantAhead(['tree', 'pine']); if (t && !felledAt(t.pi)) {
+    if (map.id === 'village') return ui.toast('These trees belong to Willowfall. Try the ones on your farm or the hill.');
+    const r = sim.chopTree(S, t.key); if (!r.ok) return ui.toast(r.msg);
+    W.puff(t.p.x + 0.5, t.p.y + 0.5, 0xc9a877, 7, 0.8); W.shake = 0.05; sfx('chop'); if (t.p.obj) { t.p.obj.rotation.z = 0.06; setTimeout(() => { if (t.p.obj) t.p.obj.rotation.z = 0; }, 120); }
+    if (r.felled) { ui.toast(r.msg, 3200); ui.gainedToast(r.gained); const old = t.p.obj, st = W.makeProp('stump', {}); if (old) { st.position.copy(old.position); W.root.remove(old); const k = W.tallProps.indexOf(old); if (k >= 0) W.tallProps.splice(k, 1); } W.root.add(st); t.p.obj = st; W.puff(t.p.x + 0.5, t.p.y + 0.5, 0x6fbf5a, 16, 1.6); } else if (r.left) floatText(t.p.x + 0.5, t.p.y + 0.5, String(r.left));
+    refreshHud(); if (r.fainted) night(true); return; } }
   const fa = fieldAt(tx, ty), pa = !fa && pastureAt(tx, ty);
   if (!fa && !pa) return;
   const r = fa ? sim.useTool(S, fa.f.id, fa.x, fa.y, me.dir) : sim.usePasture(S, pa.x, pa.y, me.dir);
@@ -549,7 +576,7 @@ async function begin(state, fresh) {
 }
 async function boot() {
   const info = await art.loadArt();
-  W = new World($('view')); bindInput();
+  W = new World($('view')); W.isFelled = (key) => !!S && sim.treeFelled(S, key); bindInput();
   initMap({ get: () => ({ S, map, me, npcs, W }), ctx: () => (S ? ctx() : null), openWin: ui.openWindow, closeWin: ui.closeWin, canOpen: () => mode === 'play' && !busy && !ui.talking() && !ui.windowOpen(), toast: ui.toast });
   const tv = art.url('video/title'), tp = art.url('scenes/title');
   $('titleArt').innerHTML = (tp ? `<img src="${tp}" alt="">` : '') + (tv ? `<video src="${tv}" autoplay loop muted playsinline></video>` : '');
