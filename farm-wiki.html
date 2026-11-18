@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sato's Harvest Wiki</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
+  <style>
+    /* The Sato's Harvest wiki. Every table is built at load time from the game's own data
+       (js/farm/data.js, sim.js, story.js), so it never falls behind the game. */
+    :root { --ink: #2b2118; --paper: #faf3e2; --paper-2: #f1e6cc; --edge: #c9b78f; --gold: #b8790f; --green: #4f8a3a; --dim: #7a6a55;
+      --f-display: "Chakra Petch", system-ui, sans-serif; --f-body: "IBM Plex Sans", system-ui, sans-serif; --f-story: "Spectral", Georgia, serif; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ink: #efe6d2; --paper: #1d1813; --paper-2: #2a231b; --edge: #4d4232; --gold: #e8b04a; --dim: #b3a48c; } }
+    :root[data-theme="dark"] { --ink: #efe6d2; --paper: #1d1813; --paper-2: #2a231b; --edge: #4d4232; --gold: #e8b04a; --dim: #b3a48c; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.55 var(--f-body); }
+    a { color: var(--gold); }
+    header.hero { position: relative; min-height: 340px; display: grid; align-items: end; color: #fff8e6; background: #2b3a2a center/cover; }
+    header.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(10, 8, 5, .82), rgba(10, 8, 5, .1) 70%); }
+    header.hero > div { position: relative; z-index: 1; padding: 28px max(16px, 5vw); max-width: 1100px; }
+    .eyebrow { font: 600 12px var(--f-display); letter-spacing: .2em; text-transform: uppercase; color: #f0cf7a; }
+    h1 { font: 700 clamp(34px, 6vw, 60px)/1.05 var(--f-display); margin: 6px 0 10px; }
+    header.hero p { font: 400 18px/1.5 var(--f-story); margin: 0 0 14px; max-width: 640px; }
+    .btns a { display: inline-block; margin: 4px 8px 0 0; padding: 9px 16px; border-radius: 9px; background: #c8891a; color: #1c1408; font: 600 14px var(--f-display); text-decoration: none; }
+    .btns a.ghost { background: rgba(20, 16, 10, .55); color: #fff3d6; border: 1px solid rgba(255, 240, 200, .45); }
+    nav.toc { position: sticky; top: 0; z-index: 5; background: var(--paper-2); border-bottom: 1px solid var(--edge); display: flex; gap: 4px; overflow-x: auto; padding: 8px max(16px, 5vw); }
+    nav.toc a { white-space: nowrap; padding: 5px 11px; border-radius: 16px; font: 600 13px var(--f-display); text-decoration: none; color: var(--ink); }
+    nav.toc a:hover { background: var(--edge); }
+    main { max-width: 1100px; margin: 0 auto; padding: 8px max(16px, 5vw) 60px; }
+    section { margin-top: 34px; }
+    h2 { font: 700 26px var(--f-display); margin: 0 0 4px; }
+    h2 + .lead { margin-top: 0; }
+    h3 { font: 600 17px var(--f-display); margin: 18px 0 6px; color: var(--gold); }
+    .lead { font: italic 17px/1.5 var(--f-story); color: var(--dim); }
+    .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+    .gallery figure { margin: 0; background: var(--paper-2); border: 1px solid var(--edge); border-radius: 10px; overflow: hidden; cursor: zoom-in; }
+    .gallery img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+    .gallery figcaption { padding: 6px 10px; font-size: 13px; color: var(--dim); }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+    .card { background: var(--paper-2); border: 1px solid var(--edge); border-radius: 12px; padding: 12px; display: flex; gap: 12px; }
+    .card img.face { width: 76px; height: 96px; object-fit: cover; object-position: top; border-radius: 8px; flex: none; background: #1a2238; }
+    .card b { font: 600 15px var(--f-display); display: block; }
+    .card .t { font-size: 13px; color: var(--dim); }
+    .card .g { font-size: 12.5px; margin-top: 6px; }
+    .tag { display: inline-block; font: 600 11px var(--f-display); padding: 1px 7px; border-radius: 10px; background: #c84a6a; color: #fff; margin-left: 4px; vertical-align: 1px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--edge); vertical-align: middle; }
+    th { font: 600 13px var(--f-display); color: var(--dim); position: sticky; top: 46px; background: var(--paper); }
+    td.n { text-align: right; font-variant-numeric: tabular-nums; }
+    .tw { overflow-x: auto; }
+    img.ico { width: 30px; height: 30px; object-fit: contain; vertical-align: middle; margin-right: 6px; }
+    .fake { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; background: var(--edge); font: 700 11px var(--f-display); margin-right: 6px; vertical-align: middle; }
+    .filter { margin: 8px 0; display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter button, .filter input { font: 600 13px var(--f-display); padding: 5px 11px; border-radius: 14px; border: 1px solid var(--edge); background: var(--paper-2); color: var(--ink); }
+    .filter button.on { background: var(--gold); color: #fff; border-color: var(--gold); }
+    .help { columns: 2 340px; column-gap: 24px; }
+    .help div { break-inside: avoid; margin-bottom: 14px; }
+    .help p { margin: 4px 0; white-space: pre-line; font-size: 14px; }
+    dialog { border: 0; padding: 0; background: transparent; max-width: 96vw; }
+    dialog img { max-width: 96vw; max-height: 90vh; border-radius: 10px; display: block; }
+    dialog::backdrop { background: rgba(0, 0, 0, .8); }
+    footer { text-align: center; color: var(--dim); font-size: 13px; padding: 30px 16px; }
+    @media (max-width: 600px) { th { position: static; } .card img.face { width: 60px; height: 76px; } }
+  </style>
+</head>
+<body>
+  <header class="hero" id="hero"><div>
+    <div class="eyebrow">Earth Light · after the war · the wiki</div>
+    <h1>Sato's Harvest</h1>
+    <p>Captain Mira Sato handed in her bars after Major Hesk's defeat and bought the old Hollin field on Eden's Upper deck. She has never grown anything. She means to learn.</p>
+    <div class="btns"><a href="farm.html">▶ Play</a><a class="ghost" href="#gallery">Pictures</a><a class="ghost" href="#people">People</a><a class="ghost" href="#crops">Crops</a><a class="ghost" href="#items">Items</a></div>
+  </div></header>
+  <nav class="toc" id="toc"></nav>
+  <main id="main"><p class="lead">Loading the wiki from the game's data…</p></main>
+  <dialog id="zoom"><img alt=""></dialog>
+  <footer>Built from the game's own data files, so it always matches the version you play. Nothing here needs the original ROM.</footer>
+  <script type="module">
+    import { ITEMS, CROPS, SEASONS } from './js/farm/data.js';
+    import * as sim from './js/farm/sim.js';
+    import * as story from './js/farm/story.js';
+    const $ = (s) => document.querySelector(s);
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const get = async (u) => { try { const r = await fetch(u); return r.ok ? r.json() : null; } catch { return null; } };
+    const art = ((await get('art/farm/manifest.json')) || {}).files || {};
+    const models = (await get('art/farm/models/manifest.json')) || {};
+    const url = (slot) => (art[slot] ? 'art/farm/' + art[slot].file : null);
+    const name = (id) => (ITEMS[id] ? ITEMS[id].name : id);
+    const ico = (id) => { const u = url('icons/' + id) || (ITEMS[id] && ITEMS[id].kind === 'seed' && url('icons/seedbag')); return u ? `<img class="ico" src="${u}" alt="" loading="lazy">` : `<span class="fake">${esc(name(id).slice(0, 2))}</span>`; };
+    const seasonName = (s) => (typeof s === 'number' ? SEASONS[s] : s);
+    const face = (id) => { const n = story.NPCS[id]; const u = url(`people/${id}_portrait`) || url(`people/${id}_front`) || (n && n.portrait && !n.portrait.startsWith('svg:') ? n.portrait : ''); return u ? `<img class="face" src="${u}" alt="" loading="lazy">` : '<div class="face"></div>'; };
+    const sections = [];
+    const add = (id, title, html) => sections.push({ id, title, html });
+    if (url('scenes/title')) $('#hero').style.backgroundImage = `url(${url('scenes/title')})`;
+
+    // ---- pictures
+    const SHOTS = [['title', 'The title screen'], ['intro', 'The opening'], ['farm', 'The Hollin field'], ['pasture', 'The pasture and pond'], ['farm_dusk', 'Dusk on the Upper deck'],
+      ['village_market', 'Market Street, Willowfall'], ['village_square', 'Lantern Square'], ['colony_overhead', 'Look up: the colony curves overhead'], ['village_night', 'Willowfall at night'],
+      ['house', 'The farmhouse'], ['barn', 'The barn'], ['cafe', 'The Hangar canteen'], ['clinic', "Dr. Mori's clinic"], ['hill', 'Terrace Hill'], ['ruins_fight', 'The Old World: the Pallas at work'], ['map', 'The town map']];
+    const scenes = Object.keys(art).filter((k) => k.startsWith('scenes/') && k !== 'scenes/title').map((k) => [url(k), k.slice(7).replace(/_/g, ' ')]);
+    add('gallery', 'Pictures', `<p class="lead">Screenshots from the game, then the story pictures.</p>
+      <div class="gallery">${SHOTS.map(([f, c]) => `<figure><img src="art/farm/wiki/${f}.webp" alt="${esc(c)}" loading="lazy"><figcaption>${esc(c)}</figcaption></figure>`).join('')}</div>
+      <h3>Story pictures</h3><div class="gallery">${scenes.map(([u, c]) => `<figure><img src="${u}" alt="${esc(c)}" loading="lazy"><figcaption>${esc(c)}</figcaption></figure>`).join('')}</div>`);
+
+    // ---- story
+    add('story', 'Story', `<p class="lead">${story.INTRO.map((l) => esc(l.text)).join(' ')}</p>`);
+
+    // ---- people
+    const R = story.ROMANCE || { candidates: [] };
+    const person = (id) => { const n = story.NPCS[id]; if (!n) return ''; const love = R.candidates.includes(id);
+      return `<div class="card">${face(id)}<div><b>${esc(n.name)}${love ? '<span class="tag">♥ romance</span>' : ''}</b><div class="t">${esc(n.title || '')}</div>
+        ${n.birthday ? `<div class="t">Birthday: ${esc(seasonName(n.birthday.season))} ${n.birthday.day}</div>` : ''}
+        ${n.loves && n.loves.length ? `<div class="g"><b style="display:inline;font-size:12.5px">Loves</b> ${n.loves.map((x) => esc(name(x))).join(', ')}</div>` : ''}
+        ${n.likes && n.likes.length ? `<div class="g">Likes ${n.likes.slice(0, 6).map((x) => esc(name(x))).join(', ')}</div>` : ''}
+        ${n.dislikes && n.dislikes.length ? `<div class="g">Dislikes ${n.dislikes.map((x) => esc(name(x))).join(', ')}</div>` : ''}</div></div>`; };
+    const ids = Object.keys(story.NPCS).filter((k) => k !== 'sato');
+    add('people', 'People of Willowfall', `<p class="lead">Talk every day, bring gifts and do favours. Six of them can become more than friends.</p>
+      <div class="cards">${person('sato')}${ids.map(person).join('')}</div>`);
+
+    // ---- love
+    add('love', 'Love', `<p>Friendship grows from talking (once a day), gifts (loved ones count most, birthdays triple) and <b>favours</b>: now and then someone asks Sato for something, and bringing it is worth more than any gift.</p>
+      <p>A love story starts only when you have seen that person's heart events, done <b>two favours</b> for them and reached <b>8 hearts</b>: then, after a conversation, they say how they feel. At <b>10 hearts</b>, the <b>Earthlight pendant</b> from Queen Moraine's barge asks the question, and the wedding follows under the lanterns of the square. Your partner then shares the farm, waits on the porch at dawn and in the evening, and waters some of the field before you wake.</p>
+      <p><b>Romance candidates:</b> ${R.candidates.map((c) => esc(story.NPCS[c] ? story.NPCS[c].name : c)).join(', ')}.</p>
+      ${R.pendant ? `<p class="lead">${esc(R.pendant)}</p>` : ''}`);
+
+    // ---- crops
+    const crops = Object.values(CROPS);
+    add('crops', 'Crops', `<p class="lead">A seed bag sows a 3×3 patch. A crop grows one day for each night it was watered; rain waters the whole field. Out-of-season crops die when the season turns. The greenhouse grows anything, any time.</p>
+      <div class="tw"><table><tr><th>Crop</th><th>Season</th><th class="n">Days</th><th class="n">Regrows</th><th class="n">Sells for</th><th class="n">Seed bag</th><th class="n">Bag earns*</th></tr>
+      ${crops.map((c) => `<tr><td>${ico(c.id)}${esc(c.name)}</td><td>${c.seasons.length > 3 ? 'Spring to autumn' : c.seasons.map(seasonName).join(', ')}</td><td class="n">${c.days}</td><td class="n">${c.regrow ? 'every ' + c.regrow : '–'}</td><td class="n">${c.sell} cr</td><td class="n">${c.bag ? c.bag + ' cr' : '–'}</td><td class="n">${c.sell * 9 * (c.regrow ? 1 + Math.floor((30 - c.days) / c.regrow) : 1) - (c.bag || 0)} cr</td></tr>`).join('')}
+      </table></div><p class="t" style="font-size:12.5px;color:var(--dim)">* Nine plants sown on day 1 of their season and watered every day, minus the bag.</p>`);
+
+    // ---- recipes
+    const book = sim.RECIPES || [];
+    add('cooking', 'Cooking', `<p class="lead">A kitchen refit from Prof. Ruess (2,500 cr and 60 lumber) gives the farmhouse a stove and a fridge. Ingredients come from the rucksack first, then the fridge.</p>
+      <div class="tw"><table><tr><th>Dish</th><th>Ingredients</th><th class="n">Stamina</th><th class="n">Sells for</th></tr>
+      ${book.map((r) => `<tr><td>${ico(r.id)}${esc(r.name)}</td><td>${r.needs.map((slot) => slot.length > 3 ? 'any of ' + (slot === r.needs[0] && slot.includes('fish_s') ? 'fish' : slot.includes('turnip') ? 'a vegetable' : slot.slice(0, 3).map(name).join(' / ') + '…') : slot.map(name).join(' or ')).join(' + ')}</td><td class="n">${ITEMS[r.id] && ITEMS[r.id].stamina ? '+' + ITEMS[r.id].stamina : ''}</td><td class="n">${ITEMS[r.id] && ITEMS[r.id].sell ? ITEMS[r.id].sell + ' cr' : ''}</td></tr>`).join('')}
+      </table></div>`);
+
+    // ---- items
+    const KIND = { tool: 'Tools', seed: 'Seeds', crop: 'Crops', animal: 'Animal goods', fish: 'Fish', forage: 'Forage', ore: 'Materials', relic: 'Old-world finds', food: 'Food', keepsake: 'Keepsakes', stock: 'Farm stock' };
+    const kinds = [...new Set(Object.values(ITEMS).map((i) => i.kind))];
+    const itemRows = Object.values(ITEMS).map((i) => `<tr data-k="${i.kind}" data-n="${esc(i.name.toLowerCase())}"><td>${ico(i.id)}${esc(i.name)}</td><td>${esc(KIND[i.kind] || i.kind)}</td><td>${esc(i.detail || i.desc || '')}</td><td class="n">${i.sell ? i.sell + ' cr' : ''}</td><td class="n">${i.stamina ? '+' + i.stamina : ''}</td></tr>`).join('');
+    add('items', 'Items', `<div class="filter" id="kf"><input id="q" placeholder="Search…" size="14"><button class="on" data-k="">All</button>${kinds.map((k) => `<button data-k="${k}">${esc(KIND[k] || k)}</button>`).join('')}</div>
+      <div class="tw"><table id="itab"><tr><th>Item</th><th>Kind</th><th>About</th><th class="n">Sells</th><th class="n">Stamina</th></tr>${itemRows}</table></div>`);
+
+    // ---- fishing and the Old World
+    add('fishing', 'Fishing', `<p class="lead">Face water, Space to cast, wait for the float to dip, Space again. Rain and the hill lake are best; Ruess can upgrade the rod.</p>
+      <div class="tw"><table><tr><th>Fish</th><th>About</th><th class="n">Sells</th></tr>${(story.FISH || []).map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc((story.FISHING && story.FISHING.caught && story.FISHING.caught[id]) || (ITEMS[id] && ITEMS[id].desc) || '')}</td><td class="n">${ITEMS[id] && ITEMS[id].sell ? ITEMS[id].sell + ' cr' : ''}</td></tr>`).join('')}</table></div>`);
+    add('ruins', 'The Old World', `<p>On Terrace Hill, Nell Vashti keeps the <b>Descent</b>, an old cargo lift down to the ruins of human civilisation on Earth's surface. Sato goes down in her <b>Pallas</b>. <b>Space</b> fires its rifle, and up close swings the beam sabre. <b>F</b> sets down the <b>Hydra</b> autoturret, <b>Shift</b> boosts, and <b>E</b> searches rubble. Creatures wind up before they lunge; a hit costs a little stamina, never more. One pile on every level hides the way down, and deeper levels hold rarer finds.</p>
+      <h3>Finds for the Memory Room</h3><div class="tw"><table><tr><th>Find</th><th>About</th><th class="n">Sells</th></tr>${(story.RELICS || []).map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc((story.RUINS && story.RUINS.relic && story.RUINS.relic[id]) || '')}</td><td class="n">${ITEMS[id] && ITEMS[id].sell ? ITEMS[id].sell + ' cr' : ''}</td></tr>`).join('')}</table></div>`);
+
+    // ---- festivals and places
+    add('festivals', 'Festivals', `<div class="cards">${story.FESTIVALS.map((f) => `<div class="card">${url('scenes/festival_' + (f.id === 'yearsend' ? 'yearend' : f.id)) ? `<img class="face" style="width:110px;height:70px;object-position:center" src="${url('scenes/festival_' + (f.id === 'yearsend' ? 'yearend' : f.id))}" alt="">` : ''}<div><b>${esc(f.name)}</b><div class="t">${esc(seasonName(f.season))} ${f.day}</div><div class="g">${esc(f.blurb)}</div></div></div>`).join('')}</div>`);
+    add('help', 'How to play', `<div class="help">${story.HELP.map((h) => `<div><h3>${esc(h.title)}</h3><p>${esc(h.body)}</p></div>`).join('')}</div>`);
+    add('art', 'About the art', `<p>Everything in Sato's Harvest is original. The 3D models (${Object.keys(models).length} of them) were made by turning anime-style concept pictures into textured meshes. The story pictures, film clips, skies and icons were generated from our own prompts. The cast's look comes from the colony game's portraits. Prompts and scripts are in <code>tools/art/farm/</code>.</p>`);
+
+    $('#main').innerHTML = sections.map((s) => `<section id="${s.id}"><h2>${esc(s.title)}</h2>${s.html}</section>`).join('');
+    $('#toc').innerHTML = sections.map((s) => `<a href="#${s.id}">${esc(s.title)}</a>`).join('');
+    // item filter
+    const kf = $('#kf'), q = $('#q'); let kind = '';
+    const apply = () => { const t = q.value.trim().toLowerCase(); for (const tr of document.querySelectorAll('#itab tr[data-k]')) tr.hidden = (kind && tr.dataset.k !== kind) || (t && !tr.dataset.n.includes(t)); };
+    kf.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; kind = b.dataset.k; kf.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); apply(); });
+    q.addEventListener('input', apply);
+    // zoom
+    const z = $('#zoom'); document.addEventListener('click', (e) => { const f = e.target.closest('.gallery figure'); if (f) { z.querySelector('img').src = f.querySelector('img').src; z.showModal(); } else if (e.target.closest('#zoom')) z.close(); });
+  </script>
+</body>
+</html>
