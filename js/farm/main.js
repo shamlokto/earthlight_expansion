@@ -145,10 +145,21 @@ async function favour(id, firstToday) {
 const LOVE = () => story.ROMANCE || { candidates: [], people: {} };
 async function maybeConfess(id) {
   const R = LOVE(), who = R.people[id];
-  if (!who || !R.candidates.includes(id) || S.flags.sweet || S.flags.partner || S.flags['confess_' + id] || sim.hearts(S, id) < 8) return;
-  if (story.EVENTS.some((e) => e.npc === id && e.hearts < 8 && !S.flags['ev_' + e.id]) || (S.flags['favours_' + id] || 0) < 2) return;   // love needs their story and a couple of favours first
-  sim.setFlag(S, 'confess_' + id); sim.setFlag(S, 'sweet', id); sfx('good');
-  await ui.say(who.confess); floatText(me.x, me.y, '♥♥'); ui.toast(`${NPCS[id].short || NPCS[id].name} is your sweetheart now.`, 4200);
+  if (!who || !R.candidates.includes(id) || S.flags.partner || sim.hearts(S, id) < 8) return;
+  if (S.flags.sweet === id) return;
+  const declined = S.flags['declined_' + id];
+  if (!S.flags['confess_' + id]) {                  // the story: once, after their last heart event and two favours
+    if (story.EVENTS.some((e) => e.npc === id && e.hearts < 8 && !S.flags['ev_' + e.id]) || (S.flags['favours_' + id] || 0) < 2) return;
+    sim.setFlag(S, 'confess_' + id); await ui.say(who.confess); floatText(me.x, me.y, '♥♥');
+  } else if (declined == null || sim.absDay(S) - declined < 7) return;   // asked again a week after a 'not yet'
+  // The choice is Sato's: become sweethearts now, or not yet.
+  mode = 'talk'; const other = S.flags.sweet && S.flags.sweet !== id ? S.flags.sweet : null, nm = NPCS[id].short || NPCS[id].name;
+  const opts = other ? [`Yes, and say goodbye to ${NPCS[other].short || NPCS[other].name}`, 'Not yet'] : ['Yes, I would like that', 'Not yet'];
+  const pick = await ui.choose(`Will you be ${nm}'s sweetheart?`, opts); mode = 'play';
+  if (pick !== 0) { sim.setFlag(S, 'declined_' + id, sim.absDay(S)); await ui.say([{ who: 'sato', text: 'Not yet. Ask me again, if you still want to.' }]); return; }
+  sim.setFlag(S, 'sweet', id); sim.setFlag(S, 'declined_' + id, null); sfx('good');
+  await ui.say([{ who: id, text: other ? `Then it's settled. I hope ${NPCS[other].short || NPCS[other].name} understands.` : `Then it's settled, Sato. Come and have tea with me sometime.` }]);
+  ui.toast(`${nm} is your sweetheart now.`, 4200);
 }
 async function offerPendant(id) {
   const R = LOVE(), who = R.people[id], n = npcs.get(id); n.actor.face(me.x, me.y); mode = 'talk';

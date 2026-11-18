@@ -239,7 +239,14 @@ export function boxWindow(state, where, onChange, title) {
       <p class="fm-dim">${esc(msg)}</p>`, null, 'menu');
     body.onclick = (e) => {
       const b = e.target.closest('[data-side]'); if (!b) return;
-      const r = b.dataset.side === 'inv' ? sim.storeItem(state, where, +b.dataset.i) : sim.takeItem(state, where, +b.dataset.i);
+      // Ask how many: the stack's size is the default, and the rules still check the real count.
+      const inv = b.dataset.side === 'inv', stack = inv ? (state.player.inv[+b.dataset.i] || {}).n : (state[where] || [])[+b.dataset.i]?.n;
+      if (!stack) { draw('That space is empty.'); return; }
+      const ans = window.prompt(`How many to ${inv ? 'put away' : 'take out'}? (1–${stack})`, String(stack));
+      if (ans === null) return;
+      const n = Math.floor(Number(ans));
+      if (!(n >= 1)) { draw('Please enter a number of at least 1.'); return; }
+      const r = inv ? sim.storeItem(state, where, +b.dataset.i, n) : sim.takeItem(state, where, +b.dataset.i, n);
       onChange && onChange(); draw(r.msg || '');
     };
   };
