@@ -24,6 +24,7 @@ const { chromium } = require('playwright');
   await p.evaluate(() => window.__farm.go({ map: 'village' })); ok = (await want('village', 'village by day')) && ok;
   await p.evaluate(() => window.__farm.go({ map: 'central' })); ok = (await want('central', 'Eden Central')) && ok;
   await p.evaluate(() => { const f = window.__farm; f.sim.enterMine(f.S, 1); return f.go({ map: 'ruins' }); }); ok = (await want('ruins', 'ruins')) && ok;
+  if (await p.evaluate(() => !!window.__farm.sim.enterBelt)) { await p.evaluate(() => { const f = window.__farm; f.sim.leaveMine(f.S); f.sim.enterBelt(f.S, 1); return f.go({ map: 'ruins' }); }); ok = (await want('belt', 'asteroid belt')) && ok; }
   await p.evaluate(() => { const f = window.__farm; f.sim.leaveMine(f.S); f.S.cal.minute = 1200; return f.go({ map: 'farm' }); }); ok = (await want('night', 'farm at night')) && ok;
   await p.evaluate(() => { const f = window.__farm; f.S.cal.minute = 600; f.S.cal.season = 2; return f.go({ map: 'farm' }); }); ok = (await want('autumn', 'farm, autumn day')) && ok;
   await p.evaluate(async () => { const m = await import('./js/farm/sfx.js'); m.setMood({ festival: 'lantern' }); }); ok = (await want('lantern', 'Lantern Night')) && ok;
