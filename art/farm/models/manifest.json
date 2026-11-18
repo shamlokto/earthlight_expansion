@@ -1212,5 +1212,75 @@
    0.5723
   ],
   "note": "village noticeboard with a little roof, faces +Z (a small loose fleck at its foot)"
+ },
+ "crawler_big": {
+  "file": "crawler_big.glb",
+  "tris": 9339,
+  "size": [
+   0.8653,
+   0.9393,
+   1.0
+  ],
+  "note": "big rust crawler with mossy shell; face on +Z (baked shadow sheet removed with drop_floor.py)"
+ },
+ "drone_swarm": {
+  "file": "drone_swarm.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.7267,
+   0.5316
+  ],
+  "note": "three linked drones as one model, faces +Z"
+ },
+ "sentry": {
+  "file": "sentry.glb",
+  "tris": 6000,
+  "size": [
+   0.9768,
+   1.0,
+   0.9753
+  ],
+  "note": "old rusty squat sentry turret, barrel points to +X"
+ },
+ "ruin_car": {
+  "file": "ruin_car.glb",
+  "tris": 10000,
+  "size": [
+   0.7289,
+   0.4437,
+   1.0
+  ],
+  "note": "overgrown rusty old car, bonnet on +Z"
+ },
+ "ruin_sign": {
+  "file": "ruin_sign.glb",
+  "tris": 3000,
+  "size": [
+   1.0,
+   0.1274,
+   0.9227
+  ],
+  "note": "fallen rusty street sign, blank plates"
+ },
+ "ruin_lamp": {
+  "file": "ruin_lamp.glb",
+  "tris": 4000,
+  "size": [
+   0.4411,
+   1.0,
+   0.2338
+  ],
+  "note": "bent rusty street lamp"
+ },
+ "cow_brown": {
+  "file": "cow_brown.glb",
+  "tris": 12000,
+  "size": [
+   0.5395,
+   0.7794,
+   1.0
+  ],
+  "note": "brown-and-white dairy cow, head towards +Z"
  }
 }
