@@ -14,7 +14,7 @@
 //   strike      the siege was won: the hiding place is known; the counterattack can be launched (again
 //               STRIKE_RETRY days after a failed one). The strike has two phases (owner, 2026-11-16):
 //               the General's machine always flies (no strike without him fit); phase 1, the AMBUSH, on
-//               the way (Hesk's picket, ambushRatio x the strike force by number), then phase 2, HESK'S
+//               the way (Hesk's picket: a fixed RECKONING.ambushSize machines), then phase 2, HESK'S
 //               STRONGHOLD. Once the ambush is won (r.ambushDone) later strikes go straight to phase 2.
 //   crossroads  the ambush is won: the General chooses (an event): go home and regroup, or press on
 //   onward      pressing on: the strike force goes on as it is (no repairs, no new machines: r.fleet holds
@@ -36,10 +36,9 @@ export const RECKONING = {
   regroup: 60,             // days after a lost siege before they come again
   warnBefore: 10,          // a last warning this many days before a siege
   strikeRetry: 30,         // days after a failed counterattack before the next
-  ambushRatio: 1.5,        // phase 1: Hesk's picket is this many times the strike force, by number of machines
-  ambushLevels: 2,         // ... its pilots this many levels below the strike force's mean (at least 0)
-  ambushLighter: 2,        // ... and this many slots in every 3 one tier lighter than the strike force's own
-  ambushFloor: 12,         // ... and never fewer than this (a tiny strike force still meets a real ambush)
+  ambushSize: 60,          // phase 1: Hesk's picket, a fixed force (owner, 2026-11-18: "no need to scale"): bring more, it is easier
+  ambushLevel: 5,          // ... its pilots' level (the leader +1, Easy -2)
+  ambushTiers: [2, 1, 0],  // ... its machines' tier by slot, in turn: heavy, middle, light
   survivorsCap: 20,        // the picket's survivors who follow the fleet home and strike Eden (a regroup)
   counterDelay: 12,        // days after going home before the picket and its reinforcements strike Eden
   afterCounter: 10,        // days after holding the counterstrike before the strike can go again

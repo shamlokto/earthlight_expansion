@@ -432,7 +432,7 @@ export function helpHtml(art, diff) {
       <li><b>After the broadcast</b> the people it names will not go quietly. Watch for signs over the following months (the Market, the traders, the neighbours), and use the time: machines, crews, Battery Emplacements.</li>
       <li><b>Its battles are fought on the Earth Light hex map</b> (they need the Earth Light pack), turn by turn: no auto-fight and no tribute. Until a battle is fought, it waits.</li>
       <li>Eden fields up to 40 crewed guardians at home, the General leading, and every working emplacement as a hull gun. Keep the General's machine safe: if it falls, the battle is lost.</li>
-      <li><b>The strike</b> on Hesk's hiding place cannot go without the General: you pick the machines (as many as you like), his always among them, and if it falls the battle is lost. On the way there, expect to be met by half as many again as you bring. Win through, and you choose: <b>go home and regroup</b> (repairs and new machines, but they follow you home, and the rock gets time to prepare; hold them, and you pick a fresh fleet for the rock), or <b>press on</b> as you are (no repairs, no new machines, but he has no time).</li>
+      <li><b>The strike</b> on Hesk's hiding place cannot go without the General: you pick the machines (as many as you like), his always among them, and if it falls the battle is lost. On the way there a picket of sixty waits, whatever you bring: the more you take, the easier it is. Win through, and you choose: <b>go home and regroup</b> (repairs and new machines, but they follow you home, and the rock gets time to prepare; hold them, and you pick a fresh fleet for the rock), or <b>press on</b> as you are (no repairs, no new machines, but he has no time).</li>
       <li>A battle lost is not the end of the story. Eden recovers, and so do they.</li>
     </ul>`)}
   ${sec('expeditions', 'Expeditions', `<figure class="cl-hfig cl-hbook"><span style="font-size:42px;color:#7affd8">✦</span><figcaption>Star chart</figcaption></figure>`, `
@@ -3099,7 +3099,7 @@ export function createUI(root, api) {
     const st = which === 'strike' ? rule('reckoningStatus', s) : null;
     const wait = st && !st.strike && st.stage === 'strike' ? `The fleet is mending: the strike can go in ${Math.max(0, (st.nextStrike || 0) - s.day)} day${(st.nextStrike || 0) - s.day === 1 ? '' : 's'}.` : '';
     const why = !packReady ? COMMAND_WHY[packReady] : gen && gen.ok === false ? gen.msg : wait;
-    const tip = phase === 'ambush' ? 'Two battles: Hesk\'s picket on the way (half as many again as you), then the rock. You choose the machines, as many as you like; the General must fly.' : 'The General leads the strike force into Hesk\'s stronghold: you choose the fleet.';
+    const tip = phase === 'ambush' ? 'Two battles: Hesk\'s picket on the way (60 machines, whatever you bring), then the rock. You choose the machines, as many as you like; the General must fly.' : 'The General leads the strike force into Hesk\'s stronghold: you choose the fleet.';
     return `<button type="button" class="cl-btn fight" data-command data-reckon="${which}"${key ? ` data-rkey="${key}"` : ''} ${why ? `disabled title="${esc(why)}"` : `title="${esc(which === 'siege' || which === 'counter' ? 'Fight it yourself, turn by turn, on the Earth Light hex map' : tip)}"`}>${label}</button>`;
   }
   // which 'strike' (phase 1, or phase 2 straight after a regroup or a failed assault): the picker first;
@@ -3135,7 +3135,7 @@ export function createUI(root, api) {
     }).join('');
     spEl.innerHTML = `<div class="cl-evkind">The Reckoning · ${phase === 'ambush' ? 'phase 1, the ambush' : 'phase 2, the stronghold'}</div>
       <h2 id="spTitle">The strike force</h2>
-      <p class="cl-dim">Crewed, fit machines at home: take as many as you like; the General's machine always flies.${phase === 'ambush' ? ' Hesk\'s picket will be half as many again.' : ''}</p>
+      <p class="cl-dim">Crewed, fit machines at home: take as many as you like; the General's machine always flies.${phase === 'ambush' ? ' Hesk\'s picket is 60 machines, whatever you bring: more of yours makes it easier.' : ''}</p>
       <div class="cl-dsec"><h4>Chosen <small class="cl-dim" data-spcount>${chosen.length} of ${list.length} · power ${num(total)}</small></h4><div class="cl-xglist cl-spglist">${rows || note('No crewed machine at home.')}</div></div>
       <div class="cl-row"><button type="button" class="cl-btn sm" data-spbest>Best ${cap}</button><button type="button" class="cl-btn sm" data-spall>All <small>${list.length}</small></button><button type="button" class="cl-btn sm" data-spclear>Clear</button><span style="flex:1"></span>
         <button type="button" class="cl-btn sm" data-spcancel>Cancel</button><button type="button" class="cl-btn fight" data-splaunch ${sel.ok ? '' : `disabled title="${esc(sel.msg)}"`}>Launch <small>${chosen.length}</small></button></div>`;
@@ -3181,7 +3181,7 @@ export function createUI(root, api) {
       : st.stage === 'crossroads' ? '<p>The ambush is broken. The General has to decide: go home and regroup, or press on to the rock (the event).</p>'
       : st.stage === 'onward' ? `<p><b>Pressing on.</b> ${st.fleet} machine${st.fleet === 1 ? '' : 's'} left${st.fleetHp != null ? `, at ${st.fleetHp}% HP` : ''}: no repairs, no new machines.</p>${reckonButton('stronghold')}`
       : st.stage === 'strike' ? (st.strike ? (st.phase === 'ambush'
-        ? `<p>Hesk's stronghold is found. The strike has two battles: the road there (Hesk will not leave it unguarded: expect half as many again as you bring), then the rock itself. The General must lead it: you choose the crewed machines at home (as many as you like), his always among them.</p>${reckonButton('strike')}`
+        ? `<p>Hesk's stronghold is found. The strike has two battles: the road there (Hesk will not leave it unguarded: expect a picket of 60 machines, whatever you bring), then the rock itself. The General must lead it: you choose the crewed machines at home (as many as you like), his always among them.</p>${reckonButton('strike')}`
         : `<p>The road is clear: the strike goes straight to the rock with a fresh fleet. The General leads the crewed machines at home you pick (as many as you like).${st.reinforce ? ` Hesk has had time: the rock is stronger (×${st.reinforce}).` : ''}</p>${reckonButton('strike')}`)
         : `<p>The fleet is recovering: the next strike${st.phase === 'stronghold' ? ', on the stronghold with a fresh fleet of your choice,' : ''} in ${Math.max(0, (st.nextStrike || 0) - s.day)} day${(st.nextStrike || 0) - s.day === 1 ? '' : 's'}.</p>`)
       : `<p>Justice for Eden, day ${st.justice?.day}. Major Hesk's flagship is sunk.</p>`;

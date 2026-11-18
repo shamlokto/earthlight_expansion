@@ -330,32 +330,24 @@ export function counterMission(state, siegeBase) {
   return m;
 }
 
-// Phase 1 of the strike: the ambush (missions/colony/ambush.json). Hesk's picket is RECKONING.ambushRatio
-// times the strike force by number (at least ambushFloor), its machines of the strike force's own tier
-// (by the fleet's mean price; ambushLighter slots in 3 a tier lighter) and level (its mean pilot level,
-// ambushLevels lower): the slots' order keeps all four directions at any count. opts.ids: the machines
-// the player picked (strikeSelection: any number), else the automatic best 40. The picket never outgrows
-// the map's slots (150 in ambush.json: the full 1.5x up to 100 machines, capped above that). Pure.
+// Phase 1 of the strike: the ambush (missions/colony/ambush.json). Hesk's picket is a fixed force (owner,
+// 2026-11-18: "the ambush no need to scale anymore"): RECKONING.ambushSize machines on the map's first
+// slots (the slots' order keeps all four directions), each slot's role filled by a machine of the tier
+// RECKONING.ambushTiers gives it in turn (heavy, middle, light), at RECKONING.ambushLevel. The strike
+// force is whatever the player picked (opts.ids, strikeSelection: any number), else the automatic best 40:
+// bring more and it is easier, fewer and it is harder. Pure.
 export const AMBUSH_TYPES = {   // role -> [light, mid, heavy] (price ~8 | ~16-24 | ~32-66)
   craft: [[8, 9], [12, 4, 10], [73, 66, 67]], mecha: [[0, 3, 1], [2, 60], [60, 80, 69, 68]],
   armour: [[16, 15], [70, 16], [70]], ship: [[49, 39, 50], [42, 31, 38], [30, 72, 31, 33]],
 };
-export function ambushTier(gs) {
-  const mean = gs.length ? gs.reduce((t, g) => t + (MACHINE[g.type]?.price || 8), 0) / gs.length : 8;
-  return mean < 14 ? 0 : mean < 30 ? 1 : 2;
-}
-export const ambushCount = (n) => Math.max(R.RECKONING.ambushFloor, Math.ceil(R.RECKONING.ambushRatio * n));
+export const ambushCount = () => R.RECKONING.ambushSize ?? 60;
 export function ambushMission(state, base, opts = {}) {
   const gs = opts.ids ? strikeSelection(state, opts.ids).gs : reckoningCrew(state, false), eden = placeEden(state, base, gs, [], null, true);
-  const placed = gs.filter((g) => eden.units.some((u) => u.rosterId === g.id));
-  const tier = ambushTier(placed), n = eden.units.length;
-  const mean = Math.round(placed.reduce((t, g) => t + (g.level || 0), 0) / Math.max(1, placed.length));
-  const lv = Math.max(0, Math.min(8, mean - (R.RECKONING.ambushLevels ?? 0)));
-  const light = R.RECKONING.ambushLighter ?? 1;
-  const want = Math.min(base.slots.length, ambushCount(n));
+  const n = eden.units.length, lv = R.RECKONING.ambushLevel ?? 5, tiers = R.RECKONING.ambushTiers || [2, 1, 0];
+  const want = Math.min(base.slots.length, ambushCount());
   const hold = new Map(base.waves.filter((w) => w.hold).map((w) => [w.key, w.hold]));
   const units = base.slots.slice(0, want).map((sl, i) => {
-    const t = i % 3 >= 3 - light ? Math.max(0, tier - 1) : tier, list = AMBUSH_TYPES[sl.role][t];
+    const list = AMBUSH_TYPES[sl.role][tiers[i % tiers.length]];
     return { type: list[Math.floor(i / 8) % list.length], army: 1, x: sl.x, y: sl.y, level: Math.min(9, lv + (sl.name ? 1 : 0)), ...(sl.name ? { name: sl.name } : {}), ...(hold.has(sl.wave) ? { hold: hold.get(sl.wave) } : {}) };
   });
   const lowered = easyLevels(state, units);
@@ -366,8 +358,8 @@ export function ambushMission(state, base, opts = {}) {
   const { slots, waves, ...rest } = base;
   return {
     ...rest, units: [...eden.units, ...first], arrivals, general: eden.general,
-    briefing: `${base.briefing}\n\nThe strike force: ${n} machine${n === 1 ? '' : 's'}, the General leading. The picket: ${want}${want < ambushCount(n) ? ' (all the picket Hesk could muster)' : ''}.`,
-    colony: { day: state.day, battle: 'ambush', from: 'east', count: want, ratio: R.RECKONING.ambushRatio, ...(want < ambushCount(n) ? { capped: base.slots.length } : {}), left: { guardians: eden.left, raiders: [] } },
+    briefing: `${base.briefing}\n\nThe strike force: ${n} machine${n === 1 ? '' : 's'}, the General leading. The picket: ${want}.`,
+    colony: { day: state.day, battle: 'ambush', from: 'east', count: want, left: { guardians: eden.left, raiders: [] } },
   };
 }
 

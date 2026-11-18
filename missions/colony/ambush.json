@@ -585,40 +585,28 @@
    "role": "mecha"
   },
   {
-   "wave": "front",
-   "x": 43,
-   "y": 17,
-   "role": "ship"
-  },
-  {
    "wave": "flanks",
    "x": 36,
    "y": 30,
-   "role": "craft"
+   "role": "ship"
   },
   {
    "wave": "flanks",
    "x": 44,
    "y": 30,
-   "role": "armour"
-  },
-  {
-   "wave": "flanks",
-   "x": 35,
-   "y": 1,
-   "role": "mecha"
+   "role": "craft"
   },
   {
    "wave": "hammer",
    "x": 58,
    "y": 26,
-   "role": "craft"
+   "role": "armour"
   },
   {
    "wave": "hammer",
    "x": 55,
    "y": 27,
-   "role": "ship"
+   "role": "mecha"
   },
   {
    "wave": "behind",
@@ -627,370 +615,10 @@
    "role": "craft"
   },
   {
-   "wave": "front",
-   "x": 49,
-   "y": 17,
-   "role": "mecha"
-  },
-  {
-   "wave": "front",
-   "x": 44,
-   "y": 18,
-   "role": "ship"
-  },
-  {
-   "wave": "front",
-   "x": 48,
-   "y": 18,
-   "role": "craft"
-  },
-  {
-   "wave": "flanks",
-   "x": 35,
-   "y": 29,
-   "role": "armour"
-  },
-  {
-   "wave": "flanks",
-   "x": 45,
-   "y": 1,
-   "role": "mecha"
-  },
-  {
-   "wave": "flanks",
-   "x": 45,
-   "y": 29,
-   "role": "craft"
-  },
-  {
-   "wave": "hammer",
-   "x": 53,
-   "y": 1,
-   "role": "ship"
-  },
-  {
-   "wave": "hammer",
-   "x": 54,
-   "y": 28,
-   "role": "craft"
-  },
-  {
-   "wave": "hammer",
-   "x": 53,
-   "y": 3,
-   "role": "mecha"
-  },
-  {
    "wave": "behind",
    "x": 3,
    "y": 19,
    "role": "ship"
-  },
-  {
-   "wave": "behind",
-   "x": 2,
-   "y": 20,
-   "role": "craft"
-  },
-  {
-   "wave": "front",
-   "x": 46,
-   "y": 10,
-   "role": "armour"
-  },
-  {
-   "wave": "front",
-   "x": 43,
-   "y": 11,
-   "role": "mecha"
-  },
-  {
-   "wave": "front",
-   "x": 49,
-   "y": 11,
-   "role": "craft"
-  },
-  {
-   "wave": "flanks",
-   "x": 35,
-   "y": 3,
-   "role": "ship"
-  },
-  {
-   "wave": "flanks",
-   "x": 34,
-   "y": 28,
-   "role": "craft"
-  },
-  {
-   "wave": "flanks",
-   "x": 45,
-   "y": 3,
-   "role": "mecha"
-  },
-  {
-   "wave": "hammer",
-   "x": 54,
-   "y": 30,
-   "role": "ship"
-  },
-  {
-   "wave": "hammer",
-   "x": 54,
-   "y": 4,
-   "role": "craft"
-  },
-  {
-   "wave": "behind",
-   "x": 1,
-   "y": 9,
-   "role": "armour"
-  },
-  {
-   "wave": "front",
-   "x": 42,
-   "y": 12,
-   "role": "mecha"
-  },
-  {
-   "wave": "front",
-   "x": 50,
-   "y": 12,
-   "role": "craft"
-  },
-  {
-   "wave": "front",
-   "x": 41,
-   "y": 13,
-   "role": "ship"
-  },
-  {
-   "wave": "flanks",
-   "x": 34,
-   "y": 30,
-   "role": "craft"
-  },
-  {
-   "wave": "flanks",
-   "x": 34,
-   "y": 2,
-   "role": "mecha"
-  },
-  {
-   "wave": "flanks",
-   "x": 46,
-   "y": 30,
-   "role": "ship"
-  },
-  {
-   "wave": "hammer",
-   "x": 57,
-   "y": 25,
-   "role": "craft"
-  },
-  {
-   "wave": "hammer",
-   "x": 57,
-   "y": 5,
-   "role": "armour"
-  },
-  {
-   "wave": "hammer",
-   "x": 59,
-   "y": 25,
-   "role": "mecha"
-  },
-  {
-   "wave": "behind",
-   "x": 2,
-   "y": 10,
-   "role": "craft"
-  },
-  {
-   "wave": "behind",
-   "x": 1,
-   "y": 21,
-   "role": "ship"
-  },
-  {
-   "wave": "front",
-   "x": 51,
-   "y": 13,
-   "role": "craft"
-  },
-  {
-   "wave": "front",
-   "x": 41,
-   "y": 15,
-   "role": "mecha"
-  },
-  {
-   "wave": "front",
-   "x": 51,
-   "y": 15,
-   "role": "ship"
-  },
-  {
-   "wave": "flanks",
-   "x": 46,
-   "y": 2,
-   "role": "craft"
-  },
-  {
-   "wave": "flanks",
-   "x": 33,
-   "y": 29,
-   "role": "armour"
-  },
-  {
-   "wave": "flanks",
-   "x": 33,
-   "y": 1,
-   "role": "mecha"
-  },
-  {
-   "wave": "hammer",
-   "x": 59,
-   "y": 5,
-   "role": "craft"
-  },
-  {
-   "wave": "hammer",
-   "x": 56,
-   "y": 26,
-   "role": "ship"
-  },
-  {
-   "wave": "behind",
-   "x": 3,
-   "y": 9,
-   "role": "craft"
-  },
-  {
-   "wave": "front",
-   "x": 41,
-   "y": 17,
-   "role": "mecha"
-  },
-  {
-   "wave": "front",
-   "x": 51,
-   "y": 17,
-   "role": "ship"
-  },
-  {
-   "wave": "front",
-   "x": 42,
-   "y": 18,
-   "role": "craft"
-  },
-  {
-   "wave": "flanks",
-   "x": 47,
-   "y": 29,
-   "role": "armour"
-  },
-  {
-   "wave": "flanks",
-   "x": 47,
-   "y": 1,
-   "role": "mecha"
-  },
-  {
-   "wave": "flanks",
-   "x": 32,
-   "y": 28,
-   "role": "craft"
-  },
-  {
-   "wave": "hammer",
-   "x": 58,
-   "y": 6,
-   "role": "ship"
-  },
-  {
-   "wave": "hammer",
-   "x": 53,
-   "y": 27,
-   "role": "craft"
-  },
-  {
-   "wave": "hammer",
-   "x": 52,
-   "y": 2,
-   "role": "mecha"
-  },
-  {
-   "wave": "behind",
-   "x": 3,
-   "y": 21,
-   "role": "ship"
-  },
-  {
-   "wave": "behind",
-   "x": 2,
-   "y": 22,
-   "role": "craft"
-  },
-  {
-   "wave": "front",
-   "x": 50,
-   "y": 18,
-   "role": "armour"
-  },
-  {
-   "wave": "front",
-   "x": 45,
-   "y": 19,
-   "role": "mecha"
-  },
-  {
-   "wave": "front",
-   "x": 47,
-   "y": 19,
-   "role": "craft"
-  },
-  {
-   "wave": "flanks",
-   "x": 33,
-   "y": 3,
-   "role": "ship"
-  },
-  {
-   "wave": "flanks",
-   "x": 32,
-   "y": 30,
-   "role": "craft"
-  },
-  {
-   "wave": "flanks",
-   "x": 47,
-   "y": 3,
-   "role": "mecha"
-  },
-  {
-   "wave": "hammer",
-   "x": 53,
-   "y": 29,
-   "role": "ship"
-  },
-  {
-   "wave": "hammer",
-   "x": 55,
-   "y": 5,
-   "role": "craft"
-  },
-  {
-   "wave": "behind",
-   "x": 1,
-   "y": 7,
-   "role": "armour"
-  },
-  {
-   "wave": "hammer",
-   "x": 58,
-   "y": 24,
-   "role": "mecha"
   }
  ],
  "objective": {
@@ -1245,7 +873,7 @@
   [24,21,1]
  ],
  "generalAt": [14,15],
- "briefing": "Halfway to the far belt, in the dark between nowhere and nothing, the scopes light up.\n\nHesk knew the way we would come. His picket was waiting: half as many again as we are, and more of them coming from every side.\n\nThe jump drives need fifteen turns to charge for the last leg. Until then the fleet has to stay alive, and so does the General.",
+ "briefing": "Halfway to the far belt, in the dark between nowhere and nothing, the scopes light up.\n\nHesk knew the way we would come. His picket was waiting: sixty machines, and more of them coming from every side.\n\nThe jump drives need fifteen turns to charge for the last leg. Until then the fleet has to stay alive, and so does the General.",
  "strategy": [
   "They come in waves: ahead of you at once (waiting behind the rocks for four turns), both flanks on turn 6, the far corners on turn 10, behind you on turn 13.",
   "The rocks are the only cover out here. A tight ring around the General beats a charge.",

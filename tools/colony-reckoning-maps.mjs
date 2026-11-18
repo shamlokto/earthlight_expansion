@@ -215,9 +215,8 @@ function siege() {
 // Deep space on the way to the far belt: debris, a few asteroid clusters for cover, nothing else.
 // The strike force flies east in a column (the General in the middle); Hesk's picket waits ahead
 // and closes in from every side in waves. The ambushers are SLOTS: hand-placed hexes in an order
-// (the colony takes the first ambushRatio x n of them, js/colony/battle.js ambushMission) with a
-// role (craft | mecha | armour | ship); the colony picks each slot's machine by the strike force's
-// own tier and level. Every slot is on open void, so any machine may stand there.
+// (the colony takes the first RECKONING.ambushSize of them, js/colony/battle.js ambushMission) with a
+// role (craft | mecha | armour | ship); the colony picks each slot's machine (a fixed tier mix and level). Every slot is on open void, so any machine may stand there.
 function ambush() {
   const cv = new Canvas(4, 3, 0xa3b05);
   // the asteroid clusters (cover)
@@ -248,17 +247,6 @@ function ambush() {
     // turn 13: behind, the west edge: the way home is shut
     { key: 'behind', turn: 12, share: 1.5, hexes: area((x, y) => x <= 3 && y >= 2 && y <= 29, { x: 1, y: 15 }, 14) },
   ];
-  // more slots for a bigger strike force (owner, 2026-11-18: no 40-machine cap): picked after the first 88
-  // so those stay as tuned, the two halves of the flanks and the hammer taken in turn; 150 in all, the
-  // picket's cap (1.5 x 100 machines; docs/COLONY-V12.md §7a)
-  const alt = (a, b) => a.flatMap((h, i) => [h, b[i]]).concat(b.slice(a.length)).filter(Boolean);
-  const more = {
-    front: area((x, y) => x >= 38 && x <= 57 && y >= 5 && y <= 26, { x: 46, y: 15 }, 19),
-    flanks: alt(area((x, y) => y <= 3 && x >= 26 && x <= 54, { x: 40, y: 1 }, 10), area((x, y) => y >= 28 && x >= 26 && x <= 54, { x: 40, y: 30 }, 9)),
-    hammer: alt(area((x, y) => x >= 46 && y <= 9, { x: 58, y: 1 }, 8), area((x, y) => x >= 46 && y >= 22, { x: 58, y: 30 }, 8)),
-    behind: area((x, y) => x <= 3 && y >= 2 && y <= 29, { x: 1, y: 15 }, 8),
-  };
-  for (const w of waves) w.hexes = [...w.hexes, ...more[w.key]];
   // the slot order: take each wave's share in turn, so any count keeps all four directions
   const slots = [];
   const per = waves.map((w) => ({ w, i: 0 }));
@@ -281,7 +269,7 @@ function ambush() {
     home, generalAt,
     briefing: [
       'Halfway to the far belt, in the dark between nowhere and nothing, the scopes light up.',
-      'Hesk knew the way we would come. His picket was waiting: half as many again as we are, and more of them coming from every side.',
+      'Hesk knew the way we would come. His picket was waiting: sixty machines, and more of them coming from every side.',
       'The jump drives need fifteen turns to charge for the last leg. Until then the fleet has to stay alive, and so does the General.',
     ].join('\n\n'),
     strategy: [
