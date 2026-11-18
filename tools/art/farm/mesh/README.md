@@ -33,6 +33,8 @@ before selling anything that ships these meshes.
 | `autoq.py` | pod | turns every new concept picture into a job for `gen3d.py --watch` |
 | `harvest.py` | this machine | fetches all newly finished GLBs, renders them, stacks contact sheets to look at |
 | `rotate_glb.py` | this machine | quarter turn about Y for a model that came out lengthwise along Z |
+| `drop_floor.py` | this machine | deletes a flat "shadow sheet" baked under a model, then re-normalises |
+| `pod-setup.sh` | pod | the whole Hunyuan3D-2 install (about 4 minutes on a fresh L40S pod) |
 
 ## Output contract (`art/farm/models/<name>.glb`)
 
@@ -115,3 +117,8 @@ next run: `pod-setup.sh` (the pod set-up used), `concepts-pending/` (approved co
 mori, clinic, library, bookshelf, display_case, plantpot, fish_float, cow_brown, reeds,
 greenhouse_ruin and ruin_tower) and updated prompts for yui, clinic_bed, egg, pendant and a
 navy-haired sato in `prompts.json`. Start pods with `../sandbox/sandbox.sh` running.
+* **Glass** reconstructs as an opaque white box. Ask for open frames (see `display_case`) and add a transparent
+  box in code if needed.
+* **Braids**: Qwen-Image put a braid forward over the shoulder in every one of 8 tries, whatever the wording.
+  `yui` got a bun instead, which the rig can take.
+* A concept with a strong cast shadow can come back with a flat sheet of geometry on the floor; `drop_floor.py` removes it.

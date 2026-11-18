@@ -94,7 +94,7 @@ function farm() {
   m.prop('reeds', 27, 26, { solid: false }); m.prop('reeds', 35, 24, { solid: false });
   // the colony's share of the farm: a panel by the barn, a rain tank, the irrigation main along the field
   m.prop('solar_panel', 31, 6, { w: 2 }); m.prop('water_tank', 40, 3, { w: 2, d: 2 }); m.prop('pipe_run', 2, 11, { d: fh });
-  m.prop('colony_lamp', 19, 7); m.prop('vent', 33, 10, { solid: false });
+  m.prop('colony_lamp', 19, 7); m.prop('vent', 33, 10);
   return m;
 }
 
@@ -137,7 +137,7 @@ function village() {
   m.prop('noticeboard', 27, 11, { w: 2, act: 'sign', sign: 'village.square' });
   m.prop('lantern', 25, 11); m.prop('lantern', 38, 11); m.prop('lantern', 25, 21); m.prop('lantern', 38, 21);
   m.prop('bench', 34, 23, { w: 2 });
-  m.prop('vent', 27, 23, { solid: false }); m.prop('vent', 38, 23, { solid: false });
+  m.prop('vent', 27, 23); m.prop('vent', 38, 23);
   // signs
   m.prop('signpost', 29, 10, { act: 'sign', sign: 'village.square' });
   m.prop('signpost', 21, 7, { act: 'sign', sign: 'village.storefront' });
@@ -163,7 +163,7 @@ function village() {
   m.prop('noticeboard', 53, 15, { act: 'sign', sign: 'village.square' });
   m.prop('cargo_crate', 61, 15); m.prop('cargo_crate', 60, 15, { scale: 0.75 });
   m.prop('maint_bot', 58, 14, { solid: false, rot: 2.4 });
-  m.prop('vent', 52, 13, { solid: false }); m.prop('vent', 57, 15, { solid: false });
+  m.prop('vent', 52, 13); m.prop('vent', 57, 15);
   m.spot('village.lift', 56.5, 13.7);
   // the river: dock, barge, pipes along the bank, reeds
   m.prop('barge', 48, 27, { w: 4, d: 2, solid: false, onWater: true, label: 'Dock' });
@@ -176,7 +176,7 @@ function village() {
   for (let x = 3; x <= 9; x++) m.prop('fence', x, 33, {});
   for (const [x, y] of [[55, 33], [58, 33], [55, 35], [58, 35]]) m.prop('solar_panel', x, y, { w: 2 });
   m.prop('wind_turbine_small', 61, 37);
-  m.prop('vent', 33, 37, { solid: false });
+  m.prop('vent', 33, 37);
   // Willow Lane: gardens in front of the cottages
   for (const x of [5, 12, 19, 26]) { m.prop('solar_panel', x + 2, 49, { w: 2, scale: 0.8 }); m.prop('flowers', x, 49, { solid: false }); m.prop('fence', x - 1, 48, {}); m.prop('fence', x + 4, 48, {}); }
   m.prop('water_tank', 30, 49, { w: 1, d: 1, scale: 0.7 });
@@ -219,7 +219,7 @@ function hill() {
   m.prop('bench', 30, 21, { w: 2 });
   // the colony at work up here: panels, a turbine, crates waiting for the lift, a bot on its break
   m.prop('solar_panel', 30, 4, { w: 2 }); m.prop('wind_turbine_small', 32, 16); m.prop('colony_lamp', 22, 11); m.prop('colony_lamp', 29, 10);
-  m.prop('cargo_crate', 23, 5); m.prop('cargo_crate', 23, 6, { scale: 0.8 }); m.prop('maint_bot', 29, 7, { solid: false, rot: 3.6 }); m.prop('vent', 18, 9, { solid: false });
+  m.prop('cargo_crate', 23, 5); m.prop('cargo_crate', 23, 6, { scale: 0.8 }); m.prop('maint_bot', 29, 7, { solid: false, rot: 3.6 }); m.prop('vent', 18, 9);
   m.prop('pipe_run', 25, 3, { w: 4 });
   m.exit(0, 11, 0, 14, { map: 'farm', x: 42.2, y: 9, dir: 2 });
   m.spot('hill.wreck', 24.4, 9.4).spot('hill.lake', 11, 16.4).spot('hill.overlook', 31, 20.4);
