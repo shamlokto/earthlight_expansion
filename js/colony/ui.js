@@ -432,7 +432,7 @@ export function helpHtml(art, diff) {
       <li><b>After the broadcast</b> the people it names will not go quietly. Watch for signs over the following months (the Market, the traders, the neighbours), and use the time: machines, crews, Battery Emplacements.</li>
       <li><b>Its battles are fought on the Earth Light hex map</b> (they need the Earth Light pack), turn by turn: no auto-fight and no tribute. Until a battle is fought, it waits.</li>
       <li>Eden fields up to 40 crewed guardians at home, the General leading, and every working emplacement as a hull gun. Keep the General's machine safe: if it falls, the battle is lost.</li>
-      <li><b>The strike</b> on Hesk's hiding place cannot go without the General: you pick up to 40 machines, his always among them, and if it falls the battle is lost. On the way there, expect to be met by half as many again as you bring. Win through, and you choose: <b>go home and regroup</b> (repairs and new machines, but they follow you home, and the rock gets time to prepare), or <b>press on</b> as you are (no repairs, no new machines, but he has no time).</li>
+      <li><b>The strike</b> on Hesk's hiding place cannot go without the General: you pick the machines (as many as you like), his always among them, and if it falls the battle is lost. On the way there a picket of sixty waits, whatever you bring: the more you take, the easier it is. Win through, and you choose: <b>go home and regroup</b> (repairs and new machines, but they follow you home, and the rock gets time to prepare; hold them, and you pick a fresh fleet for the rock), or <b>press on</b> as you are (no repairs, no new machines, but he has no time).</li>
       <li>A battle lost is not the end of the story. Eden recovers, and so do they.</li>
     </ul>`)}
   ${sec('expeditions', 'Expeditions', `<figure class="cl-hfig cl-hbook"><span style="font-size:42px;color:#7affd8">✦</span><figcaption>Star chart</figcaption></figure>`, `
@@ -3096,8 +3096,10 @@ export function createUI(root, api) {
     const label = which === 'siege' ? 'Command the siege' : which === 'counter' ? 'Defend Eden' : key === 'proceed' ? 'Press on to the stronghold'
       : phase === 'ambush' ? 'Launch the strike' : 'Strike the stronghold';
     const gen = which === 'siege' || which === 'counter' ? null : rule('generalReady', s);
-    const why = !packReady ? COMMAND_WHY[packReady] : gen && gen.ok === false ? gen.msg : '';
-    const tip = phase === 'ambush' ? 'Two battles: Hesk\'s picket on the way (half as many again as you), then the rock. You choose up to 40 machines; the General must fly.' : 'The General leads the strike force into Hesk\'s stronghold.';
+    const st = which === 'strike' ? rule('reckoningStatus', s) : null;
+    const wait = st && !st.strike && st.stage === 'strike' ? `The fleet is mending: the strike can go in ${Math.max(0, (st.nextStrike || 0) - s.day)} day${(st.nextStrike || 0) - s.day === 1 ? '' : 's'}.` : '';
+    const why = !packReady ? COMMAND_WHY[packReady] : gen && gen.ok === false ? gen.msg : wait;
+    const tip = phase === 'ambush' ? 'Two battles: Hesk\'s picket on the way (60 machines, whatever you bring), then the rock. You choose the machines, as many as you like; the General must fly.' : 'The General leads the strike force into Hesk\'s stronghold: you choose the fleet.';
     return `<button type="button" class="cl-btn fight" data-command data-reckon="${which}"${key ? ` data-rkey="${key}"` : ''} ${why ? `disabled title="${esc(why)}"` : `title="${esc(which === 'siege' || which === 'counter' ? 'Fight it yourself, turn by turn, on the Earth Light hex map' : tip)}"`}>${label}</button>`;
   }
   // which 'strike' (phase 1, or phase 2 straight after a regroup or a failed assault): the picker first;
@@ -3107,8 +3109,8 @@ export function createUI(root, api) {
     const go = () => (picks ? openStrikePick() : battleMod.commandReckoning(S(), which, () => api.save(), null, ids ? { ids } : {}).then((r) => { if (r?.ok === false) toast(r.msg, 'bad'); }));
     if (battleMod?.commandReckoning) go(); else import('./battle.js').then((m) => { battleMod = m; go(); });
   }
-  // The strike picker (owner, 2026-11-16): the machines that may fly (js/colony/battle.js strikeCandidates),
-  // up to RECKONING_CAP ticked, the General's machine locked in; Best 40 / Clear; Launch with the chosen ids.
+  // The strike picker (owner, 2026-11-16; no cap since 2026-11-18): the machines that may fly (js/colony/battle.js
+  // strikeCandidates), any number ticked, the General's machine locked in; Best 40 / All / Clear; Launch with the ids.
   const spModal = $('.cl-spickm'), spEl = $('[data-spick]');
   let spPick = null;
   function openStrikePick() {
@@ -3124,18 +3126,18 @@ export function createUI(root, api) {
     for (const id of [...spPick]) if (!list.some((c) => c.g.id === id)) spPick.delete(id);
     for (const c of list) if (c.general) spPick.add(c.g.id);
     const chosen = list.filter((c) => spPick.has(c.g.id)), sel = battleMod.strikeSelection(s, [...spPick]);
-    const total = chosen.reduce((t, c) => t + c.power, 0), full = chosen.length >= cap;
+    const total = chosen.reduce((t, c) => t + c.power, 0);
     const phase = rule('strikePhase', s) || 'ambush';
     const rows = list.map(({ g, general, power }) => {
-      const m = mInfo(g.type), on = spPick.has(g.id), lock = general, off = !on && full;
+      const m = mInfo(g.type), on = spPick.has(g.id), lock = general;
       const who = g.commander ? esc(CMDR[g.commander]?.name || g.commander) : '';
-      return `<label class="cl-xg${off ? ' off' : ''}${lock ? ' lock' : ''}"${lock ? ' title="The General flies his own machine: always in the strike force"' : ''}><input type="checkbox" data-spg="${g.id}" ${on ? 'checked' : ''} ${lock || off ? 'disabled' : ''}><b>${esc(m.name)}</b><small>L${g.level || 0}${who ? ` · ${who}` : ''}${lock ? ' · locked' : ''}</small><span>${num(power)}</span><em>${num(hpOf(g))}/${num(maxHp(g))} HP</em></label>`;
+      return `<label class="cl-xg${lock ? ' lock' : ''}"${lock ? ' title="The General flies his own machine: always in the strike force"' : ''}><input type="checkbox" data-spg="${g.id}" ${on ? 'checked' : ''} ${lock ? 'disabled' : ''}><b>${esc(m.name)}</b><small>L${g.level || 0}${who ? ` · ${who}` : ''}${lock ? ' · locked' : ''}</small><span>${num(power)}</span><em>${num(hpOf(g))}/${num(maxHp(g))} HP</em></label>`;
     }).join('');
     spEl.innerHTML = `<div class="cl-evkind">The Reckoning · ${phase === 'ambush' ? 'phase 1, the ambush' : 'phase 2, the stronghold'}</div>
       <h2 id="spTitle">The strike force</h2>
-      <p class="cl-dim">Crewed, fit machines at home. Up to ${cap}; the General's machine always flies.${phase === 'ambush' ? ' Hesk\'s picket will be half as many again.' : ''}</p>
-      <div class="cl-dsec"><h4>Chosen <small class="cl-dim" data-spcount>${chosen.length}/${cap} · power ${num(total)}</small></h4><div class="cl-xglist cl-spglist">${rows || note('No crewed machine at home.')}</div></div>
-      <div class="cl-row"><button type="button" class="cl-btn sm" data-spbest>Best ${cap}</button><button type="button" class="cl-btn sm" data-spclear>Clear</button><span style="flex:1"></span>
+      <p class="cl-dim">Crewed, fit machines at home: take as many as you like; the General's machine always flies.${phase === 'ambush' ? ' Hesk\'s picket is 60 machines, whatever you bring: more of yours makes it easier.' : ''}</p>
+      <div class="cl-dsec"><h4>Chosen <small class="cl-dim" data-spcount>${chosen.length} of ${list.length} · power ${num(total)}</small></h4><div class="cl-xglist cl-spglist">${rows || note('No crewed machine at home.')}</div></div>
+      <div class="cl-row"><button type="button" class="cl-btn sm" data-spbest>Best ${cap}</button><button type="button" class="cl-btn sm" data-spall>All <small>${list.length}</small></button><button type="button" class="cl-btn sm" data-spclear>Clear</button><span style="flex:1"></span>
         <button type="button" class="cl-btn sm" data-spcancel>Cancel</button><button type="button" class="cl-btn fight" data-splaunch ${sel.ok ? '' : `disabled title="${esc(sel.msg)}"`}>Launch <small>${chosen.length}</small></button></div>`;
   }
   spEl.addEventListener('change', (e) => {
@@ -3145,20 +3147,18 @@ export function createUI(root, api) {
     refreshStrikePick();   // in place: the list keeps its scroll and the focus
   });
   function refreshStrikePick() {
-    const s = S(), cap = battleMod.RECKONING_CAP || 40, list = battleMod.strikeCandidates(s);
-    const chosen = list.filter((c) => spPick.has(c.g.id)), full = chosen.length >= cap, sel = battleMod.strikeSelection(s, [...spPick]);
+    const s = S(), list = battleMod.strikeCandidates(s);
+    const chosen = list.filter((c) => spPick.has(c.g.id)), sel = battleMod.strikeSelection(s, [...spPick]);
     const lock = new Set(list.filter((c) => c.general).map((c) => c.g.id));
-    for (const cb of spEl.querySelectorAll('[data-spg]')) {
-      const id = +cb.dataset.spg, off = !spPick.has(id) && full;
-      cb.disabled = lock.has(id) || off; cb.closest('.cl-xg')?.classList.toggle('off', off);
-    }
-    const n = spEl.querySelector('[data-spcount]'); if (n) n.textContent = `${chosen.length}/${cap} · power ${num(chosen.reduce((t, c) => t + c.power, 0))}`;
+    for (const cb of spEl.querySelectorAll('[data-spg]')) cb.disabled = lock.has(+cb.dataset.spg);
+    const n = spEl.querySelector('[data-spcount]'); if (n) n.textContent = `${chosen.length} of ${list.length} · power ${num(chosen.reduce((t, c) => t + c.power, 0))}`;
     const go = spEl.querySelector('[data-splaunch]');
     if (go) { go.disabled = !sel.ok; if (sel.ok) go.removeAttribute('title'); else go.title = sel.msg; go.querySelector('small').textContent = chosen.length; }
   }
   spEl.addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b || b.disabled || !spPick) return;
     if (b.dataset.spbest != null) { spPick = new Set(battleMod.strikeBest(S())); renderStrikePick(); }
+    else if (b.dataset.spall != null) { spPick = new Set(battleMod.strikeAll(S())); renderStrikePick(); }
     else if (b.dataset.spclear != null) { spPick.clear(); renderStrikePick(); }
     else if (b.dataset.spcancel != null) closeStrikePick();
     else if (b.dataset.splaunch != null) { const ids = [...spPick]; closeStrikePick(); reckonGo('strike', ids); }
@@ -3176,14 +3176,14 @@ export function createUI(root, api) {
     const body = st.stage === 'ready' ? `<p>The Ninefold vault is open. Ruess can broadcast the truth and name the people behind Protocol Ash. Once it is sent, it cannot be taken back.</p><button type="button" class="cl-btn sm primary" data-rbroadcast>Broadcast the truth</button>`
       : st.stage === 'gathering' ? `<p>The truth is out; Hesk and his circle are gathering a fleet somewhere. Build machines, crews and emplacements. ${n}</p><p class="cl-dim">Expected in about ${st.eta} day${st.eta === 1 ? '' : 's'}.</p>`
       : st.stage === 'siege' ? (st.siegeKind === 'counter' ? `<p><b>Hesk's picket is at the gates</b>, with reinforcements. Eden is blockaded until the battle is fought.</p>${reckonButton('counter')}` : `<p><b>Hesk's fleet is at the gates.</b> Eden is blockaded until the siege is fought.</p>${reckonButton('siege')}`)
-      : st.stage === 'regroup' ? `<p>${st.siegeKind === 'counter' ? 'The counterstrike' : 'The siege'} was lost. Hesk's fleet will be back in about ${st.eta} day${st.eta === 1 ? '' : 's'}.</p>`
-      : st.stage === 'counter' ? `<p>The strike force came home to regroup. Hesk's picket and its reinforcements follow: they strike Eden in about ${st.eta} day${st.eta === 1 ? '' : 's'}. Mend the machines, crew them, fill the emplacements.</p>`
+      : st.stage === 'regroup' ? `<p>${st.siegeKind === 'counter' ? 'The counterstrike' : 'The siege'} was lost. Hesk's fleet will be back in about ${st.eta} day${st.eta === 1 ? '' : 's'}.${st.siegeKind === 'counter' ? ' Hold them then, and the strike on the stronghold follows with a fresh fleet.' : ''}</p>`
+      : st.stage === 'counter' ? `<p><b>The picket follows you home: expect them in ${st.eta} day${st.eta === 1 ? '' : 's'}</b> (with reinforcements; a defence on the siege map). Then strike the stronghold with a fresh fleet: hold Eden, and about ${st.afterCounter} days later you pick any crewed machines at home for the rock.</p><p class="cl-dim">Meanwhile mend the machines, crew them, fill the emplacements.</p>`
       : st.stage === 'crossroads' ? '<p>The ambush is broken. The General has to decide: go home and regroup, or press on to the rock (the event).</p>'
       : st.stage === 'onward' ? `<p><b>Pressing on.</b> ${st.fleet} machine${st.fleet === 1 ? '' : 's'} left${st.fleetHp != null ? `, at ${st.fleetHp}% HP` : ''}: no repairs, no new machines.</p>${reckonButton('stronghold')}`
       : st.stage === 'strike' ? (st.strike ? (st.phase === 'ambush'
-        ? `<p>Hesk's stronghold is found. The strike has two battles: the road there (Hesk will not leave it unguarded: expect half as many again as you bring), then the rock itself. The General must lead it: you choose up to 40 crewed machines at home, his always among them.</p>${reckonButton('strike')}`
-        : `<p>The road is clear: the strike goes straight to the rock. The General leads up to 40 crewed machines at home, your choice.${st.reinforce ? ` Hesk has had time: the rock is stronger (×${st.reinforce}).` : ''}</p>${reckonButton('strike')}`)
-        : `<p>The fleet is recovering: the next strike in ${Math.max(0, (st.nextStrike || 0) - s.day)} days.</p>`)
+        ? `<p>Hesk's stronghold is found. The strike has two battles: the road there (Hesk will not leave it unguarded: expect a picket of 60 machines, whatever you bring), then the rock itself. The General must lead it: you choose the crewed machines at home (as many as you like), his always among them.</p>${reckonButton('strike')}`
+        : `<p>The road is clear: the strike goes straight to the rock with a fresh fleet. The General leads the crewed machines at home you pick (as many as you like).${st.reinforce ? ` Hesk has had time: the rock is stronger (×${st.reinforce}).` : ''}</p>${reckonButton('strike')}`)
+        : `<p>The fleet is recovering: the next strike${st.phase === 'stronghold' ? ', on the stronghold with a fresh fleet of your choice,' : ''} in ${Math.max(0, (st.nextStrike || 0) - s.day)} day${(st.nextStrike || 0) - s.day === 1 ? '' : 's'}.</p>`)
       : `<p>Justice for Eden, day ${st.justice?.day}. Major Hesk's flagship is sunk.</p>`;
     return `<div class="cl-rnote cl-dnote${st.stage === 'siege' ? ' warn' : ''}"><b>The Reckoning</b>${body}</div>`;
   }

@@ -215,9 +215,8 @@ function siege() {
 // Deep space on the way to the far belt: debris, a few asteroid clusters for cover, nothing else.
 // The strike force flies east in a column (the General in the middle); Hesk's picket waits ahead
 // and closes in from every side in waves. The ambushers are SLOTS: hand-placed hexes in an order
-// (the colony takes the first ambushRatio x n of them, js/colony/battle.js ambushMission) with a
-// role (craft | mecha | armour | ship); the colony picks each slot's machine by the strike force's
-// own tier and level. Every slot is on open void, so any machine may stand there.
+// (the colony takes the first RECKONING.ambushSize of them, js/colony/battle.js ambushMission) with a
+// role (craft | mecha | armour | ship); the colony picks each slot's machine (a fixed tier mix and level). Every slot is on open void, so any machine may stand there.
 function ambush() {
   const cv = new Canvas(4, 3, 0xa3b05);
   // the asteroid clusters (cover)
@@ -233,9 +232,9 @@ function ambush() {
   const open = (x, y) => cv.ok(x, y) && cv.get(x, y) <= 3;
   const generalAt = [14, 15];   // the General in the middle of the column, the fleet all round him
   const home = homeSlots(cv, (x, y) => x >= 6 && x <= 24 && y >= 9 && y <= 21, { x: 14, y: 15 }, new Set());
-  const homeSet = new Set(home.slice(0, 48).map(([x, y]) => `${x},${y}`));
-  // the slots of each wave: open hexes in its area, a hex apart, nearest its centre first
-  const used = new Set(homeSet);
+  // the slots of each wave: open hexes in its area, a hex apart, nearest its centre first, never on the
+  // strike force's staging hexes (all of them: the player may bring the whole armoury)
+  const used = new Set(home.map(([x, y]) => `${x},${y}`));
   const area = (test, centre, n) => pick(cv, test, centre, n, used);
   const ROLES = ['craft', 'mecha', 'ship', 'craft', 'armour', 'mecha', 'craft', 'ship'];
   const waves = [
@@ -265,12 +264,12 @@ function ambush() {
     version: 1, name: 'AMBUSH', title: 'The Ambush', chapter: 'The Reckoning · II',
     screensW: 4, screensH: 3, pairs: PAIRS.map((p) => [...p]), grid: grid(cv), units: [], arrivals: [],
     waves: waves.map((w) => ({ key: w.key, turn: w.turn, ...(w.hold ? { hold: w.hold } : {}) })), slots,
-    objective: { kind: 'hold', turns: 15 }, flee: true, noFlee: true, awaitArrivals: true, music: 29, cap: 40,
+    objective: { kind: 'hold', turns: 15 }, flee: true, noFlee: true, awaitArrivals: true, music: 29,
     goal: 'Break out: keep the strike force together to the end of turn 15, when the jump drives are charged. Destroying the whole picket also wins. If the General falls, it is over.',
     home, generalAt,
     briefing: [
       'Halfway to the far belt, in the dark between nowhere and nothing, the scopes light up.',
-      'Hesk knew the way we would come. His picket was waiting: half as many again as we are, and more of them coming from every side.',
+      'Hesk knew the way we would come. His picket was waiting: sixty machines, and more of them coming from every side.',
       'The jump drives need fifteen turns to charge for the last leg. Until then the fleet has to stay alive, and so does the General.',
     ].join('\n\n'),
     strategy: [
@@ -376,7 +375,7 @@ function stronghold() {
   const mission = {
     version: 1, name: 'HESK', title: 'Hesk\'s Stronghold', chapter: 'The Reckoning · II',
     screensW: 4, screensH: 4, pairs: PAIRS.map((p) => [...p]), grid: grid(cv), units, arrivals, cannons: [cannon],
-    objective: { kind: 'flagship', type: 59 }, turnLimit: 30, flee: true, noFlee: true, awaitArrivals: true, music: 29, cap: 40,
+    objective: { kind: 'flagship', type: 59 }, turnLimit: 30, flee: true, noFlee: true, awaitArrivals: true, music: 29,
     goal: 'Sink Major Hesk\'s flagship, the Verdict, within 30 turns. She comes out on turn 15. If the General falls, it is over.',
     home, generalAt: [7, 35], reinforcements,
     briefing: [

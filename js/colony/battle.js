@@ -211,7 +211,8 @@ export function commandBattle(state, save = () => {}) {
 
 // ---------------------------------------------------------------- the Reckoning's battles (docs/COLONY-V12.md)
 // Two hand-made maps (missions/colony/siege.json, stronghold.json, written by tools/colony-reckoning-maps.mjs)
-// filled in at launch with Eden's side: its crewed guardians at home (up to RECKONING_CAP, the General's
+// filled in at launch with Eden's side: its crewed guardians at home (the siege and the automatic strike:
+// up to RECKONING_CAP; a strike the player picked: any number, the overflow spilling outward; the General's
 // machine first (on the map's `generalAt` hex), then the strongest; no rail guns on the stronghold's map: it has no railway for them), placed on the map's `home` hexes nearest-first (ships only where
 // ships may stand, rail guns on `rails`); for the siege also the hull guns (one per working Battery
 // Emplacement, Dragon or Hydra by its mode) on the lift shafts and the hull's gun points. The siege's
@@ -234,16 +235,19 @@ export function strikeCandidates(state) {
     .sort((a, b) => generalAboard(state, b) - generalAboard(state, a) || power(b) - power(a) || a.id - b.id)
     .map((g) => ({ g, general: generalAboard(state, g), power: Math.round(power(g)) }));
 }
-// The automatic choice: the General's machine and the 39 strongest.
+// The automatic choice (the picker's "Best 40"): the General's machine and the 39 strongest.
 export const strikeBest = (state) => strikeCandidates(state).slice(0, RECKONING_CAP).map((c) => c.g.id);
-// The player's choice, checked: known candidates only (others dropped), at most RECKONING_CAP, the
-// General's machine always in. { ok, msg, gs } with gs the machines in the automatic order.
+// Everything that may fly (the picker's "All"; owner, 2026-11-18: "the player can pick everything in
+// his/her armory").
+export const strikeAll = (state) => strikeCandidates(state).map((c) => c.g.id);
+// The player's choice, checked: known candidates only (others dropped), any number (no cap: the maps
+// place them all, placeEden), the General's machine always in. { ok, msg, gs } with gs the machines in
+// the automatic order.
 export function strikeSelection(state, ids) {
   const want = new Set(ids || []), all = strikeCandidates(state);
   const gen = all.find((c) => c.general);
   const gs = all.filter((c) => c.general || want.has(c.g.id)).map((c) => c.g);
   if (!gen) return { ok: false, msg: 'The General\'s machine must lead the strike.', gs };
-  if (gs.length > RECKONING_CAP) return { ok: false, msg: `At most ${RECKONING_CAP} machines fly the strike (${gs.length} chosen).`, gs: gs.slice(0, RECKONING_CAP) };
   return { ok: true, msg: `${gs.length} machine${gs.length === 1 ? '' : 's'}, the General leading.`, gs };
 }
 const strip = (u) => { const { core, ...rest } = u; return rest; };
@@ -252,15 +256,33 @@ function cut(list, f) {
   const core = list.filter((u) => u.core), rest = list.filter((u) => !u.core);
   return [...core, ...rest.slice(0, Math.ceil(rest.length * f))].map(strip);
 }
-function placeEden(state, base, gs, extraRails = [], hpOver = null) {
+// More start hexes once `home` is full (the strike: any number of machines, owner 2026-11-18): open
+// void (any machine may stand there) outward from the General's start hex, never within SPILL_CLEAR
+// hexes of an enemy's start or arrival hex or a picket slot. Lazy; [x, y, 1].
+const SPILL_CLEAR = 3;
+function* spillHexes(base, used) {
+  const cols = (base.screensW || 4) * 15, rows = (base.screensH || 3) * 10, g = base.grid;
+  const foes = [...base.units.filter((u) => u.army !== 0), ...(base.arrivals || []).filter((a) => a.army !== 0).flatMap((a) => a.units), ...(base.slots || [])];
+  const near = (x, y) => foes.some((u) => hexDistance(u, { x, y }) <= SPILL_CLEAR);
+  const [x0, y0] = base.generalAt || base.home?.[0] || [1, 1], seen = new Set([`${x0},${y0}`]), q = [[x0, y0]];
+  while (q.length) {
+    const [x, y] = q.shift();
+    if (g?.[y]?.[x] !== undefined && g[y][x] <= 3 && !used.has(`${x},${y}`) && !near(x, y)) yield [x, y, 1];
+    for (const [nx, ny] of hexNeighbours(x, y)) if (nx >= 1 && nx <= cols - 1 && ny >= 1 && ny <= rows && !seen.has(`${nx},${ny}`)) { seen.add(`${nx},${ny}`); q.push([nx, ny]); }
+  }
+}
+// Eden's machines on the map's start hexes (`home`, nearest first; rail guns on `rails`). spill: once
+// `home` is full, place the rest outward (spillHexes) instead of leaving them at home (`left`).
+function placeEden(state, base, gs, extraRails = [], hpOver = null, spill = false) {
   const used = new Set(base.units.map((u) => `${u.x},${u.y}`)), units = [], left = [];
-  let general = null;
+  let general = null, more = null;
   const free = (x, y) => !used.has(`${x},${y}`);
   for (const g of gs) {
     const cat = catOf(g.type), rail = cat === RAIL_ONLY;
     const lead = !general && base.generalAt && generalAboard(state, g) && free(...base.generalAt) && !rail ? (base.home || []).find(([x, y, ships]) => x === base.generalAt[0] && y === base.generalAt[1] && (ships || !SHIP_CATS.has(cat))) : null;
-    const c = lead || (rail ? (base.rails || []).map(([x, y]) => [x, y, 1]).find(([x, y]) => free(x, y))
+    let c = lead || (rail ? (base.rails || []).map(([x, y]) => [x, y, 1]).find(([x, y]) => free(x, y))
       : (base.home || []).find(([x, y, ships]) => free(x, y) && (ships || !SHIP_CATS.has(cat)) && (cat !== RAIL_ONLY)));
+    if (!c && spill && !rail) { more ??= spillHexes(base, used); do { c = more.next().value; } while (c && !free(c[0], c[1])); }
     if (!c) { left.push(g.id); continue; }
     used.add(`${c[0]},${c[1]}`);
     const max = hpOf(g.type), own = Math.max(0, Math.min(1, g.hp / (R.maxHp(state, g) || max)));
@@ -308,31 +330,24 @@ export function counterMission(state, siegeBase) {
   return m;
 }
 
-// Phase 1 of the strike: the ambush (missions/colony/ambush.json). Hesk's picket is RECKONING.ambushRatio
-// times the strike force by number (at least ambushFloor), its machines of the strike force's own tier
-// (by the fleet's mean price; ambushLighter slots in 3 a tier lighter) and level (its mean pilot level,
-// ambushLevels lower): the slots' order keeps all four directions at any count. opts.ids: the machines
-// the player picked (strikeSelection), else the automatic best 40. Pure.
+// Phase 1 of the strike: the ambush (missions/colony/ambush.json). Hesk's picket is a fixed force (owner,
+// 2026-11-18: "the ambush no need to scale anymore"): RECKONING.ambushSize machines on the map's first
+// slots (the slots' order keeps all four directions), each slot's role filled by a machine of the tier
+// RECKONING.ambushTiers gives it in turn (heavy, middle, light), at RECKONING.ambushLevel. The strike
+// force is whatever the player picked (opts.ids, strikeSelection: any number), else the automatic best 40:
+// bring more and it is easier, fewer and it is harder. Pure.
 export const AMBUSH_TYPES = {   // role -> [light, mid, heavy] (price ~8 | ~16-24 | ~32-66)
   craft: [[8, 9], [12, 4, 10], [73, 66, 67]], mecha: [[0, 3, 1], [2, 60], [60, 80, 69, 68]],
   armour: [[16, 15], [70, 16], [70]], ship: [[49, 39, 50], [42, 31, 38], [30, 72, 31, 33]],
 };
-export function ambushTier(gs) {
-  const mean = gs.length ? gs.reduce((t, g) => t + (MACHINE[g.type]?.price || 8), 0) / gs.length : 8;
-  return mean < 14 ? 0 : mean < 30 ? 1 : 2;
-}
-export const ambushCount = (n) => Math.max(R.RECKONING.ambushFloor, Math.ceil(R.RECKONING.ambushRatio * n));
+export const ambushCount = () => R.RECKONING.ambushSize ?? 60;
 export function ambushMission(state, base, opts = {}) {
-  const gs = opts.ids ? strikeSelection(state, opts.ids).gs : reckoningCrew(state, false), eden = placeEden(state, base, gs);
-  const placed = gs.filter((g) => eden.units.some((u) => u.rosterId === g.id));
-  const tier = ambushTier(placed), n = eden.units.length;
-  const mean = Math.round(placed.reduce((t, g) => t + (g.level || 0), 0) / Math.max(1, placed.length));
-  const lv = Math.max(0, Math.min(8, mean - (R.RECKONING.ambushLevels ?? 0)));
-  const light = R.RECKONING.ambushLighter ?? 1;
-  const want = Math.min(base.slots.length, ambushCount(n));
+  const gs = opts.ids ? strikeSelection(state, opts.ids).gs : reckoningCrew(state, false), eden = placeEden(state, base, gs, [], null, true);
+  const n = eden.units.length, lv = R.RECKONING.ambushLevel ?? 5, tiers = R.RECKONING.ambushTiers || [2, 1, 0];
+  const want = Math.min(base.slots.length, ambushCount());
   const hold = new Map(base.waves.filter((w) => w.hold).map((w) => [w.key, w.hold]));
   const units = base.slots.slice(0, want).map((sl, i) => {
-    const t = i % 3 >= 3 - light ? Math.max(0, tier - 1) : tier, list = AMBUSH_TYPES[sl.role][t];
+    const list = AMBUSH_TYPES[sl.role][tiers[i % tiers.length]];
     return { type: list[Math.floor(i / 8) % list.length], army: 1, x: sl.x, y: sl.y, level: Math.min(9, lv + (sl.name ? 1 : 0)), ...(sl.name ? { name: sl.name } : {}), ...(hold.has(sl.wave) ? { hold: hold.get(sl.wave) } : {}) };
   });
   const lowered = easyLevels(state, units);
@@ -344,13 +359,13 @@ export function ambushMission(state, base, opts = {}) {
   return {
     ...rest, units: [...eden.units, ...first], arrivals, general: eden.general,
     briefing: `${base.briefing}\n\nThe strike force: ${n} machine${n === 1 ? '' : 's'}, the General leading. The picket: ${want}.`,
-    colony: { day: state.day, battle: 'ambush', from: 'east', count: want, ratio: R.RECKONING.ambushRatio, left: { guardians: eden.left, raiders: [] } },
+    colony: { day: state.day, battle: 'ambush', from: 'east', count: want, left: { guardians: eden.left, raiders: [] } },
   };
 }
 
 // Phase 2: Hesk's stronghold. opts.fleet [{ id, hp }]: the General pressed on after the ambush: only
 // those machines, at no more than the HP they came out with. opts.ids: the machines the player picked
-// (strikeSelection; ignored when pressing on), else the automatic best 40. opts.reinforce n: the base had time (a regroup, a failed assault): the first
+// (strikeSelection: any number; ignored when pressing on), else the automatic best 40. opts.reinforce n: the base had time (a regroup, a failed assault): the first
 // RECKONING.reinforceStep x n of base.reinforcements join the garrison, every enemy n levels higher (at most 9).
 export function strongholdMission(state, base, opts = {}) {
   const r = state.reckoning || {}, fleet = opts.fleet ?? (r.onward ? r.fleet : null);
@@ -359,10 +374,10 @@ export function strongholdMission(state, base, opts = {}) {
   if (fleet) {
     const ids = new Set(fleet.map((f) => f.id));
     gs = state.guardians.filter((g) => ids.has(g.id) && g.hp > 0 && !g.away && catOf(g.type) !== RAIL_ONLY)
-      .sort((a, b) => generalAboard(state, b) - generalAboard(state, a) || power(b) - power(a) || a.id - b.id).slice(0, RECKONING_CAP);
+      .sort((a, b) => generalAboard(state, b) - generalAboard(state, a) || power(b) - power(a) || a.id - b.id);   // all of them: no cap
     hpOver = new Map(fleet.map((f) => [f.id, f.hp]));
   }
-  const eden = placeEden(state, base, gs, [], hpOver);
+  const eden = placeEden(state, base, gs, [], hpOver, true);
   const up = (list) => list.map((u) => (u.type === 59 || !reinforce ? u : { ...u, level: Math.min(9, (u.level || 0) + reinforce) }));
   const extra = (base.reinforcements || []).slice(0, (R.RECKONING.reinforceStep || 8) * reinforce).map((u) => ({ ...u, army: 1 }));
   const foes = easyLevels(state, up([...base.units, ...extra].map(strip)));
@@ -385,7 +400,7 @@ export const generalReady = (state) => R.generalReady(state);
 // Off to the battle page with one of the Reckoning's battles ('siege' | 'counter' | 'ambush' | 'stronghold';
 // 'strike' picks the strike's next phase). Async: the map is fetched. Marks state.reckoning.fighting until
 // the result comes back (main.js). opts.ids: the strike force the player picked (the picker; checked by
-// strikeSelection), else the automatic best 40; pressing on always takes the survivors.
+// strikeSelection: any number), else the automatic best 40; pressing on always takes the survivors.
 export async function commandReckoning(state, which, save = () => {}, load = null, opts = {}) {
   const r = state.reckoning;
   if (!r) return { ok: false, msg: 'Nothing is waiting.' };

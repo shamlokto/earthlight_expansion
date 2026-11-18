@@ -14,7 +14,7 @@
 //   strike      the siege was won: the hiding place is known; the counterattack can be launched (again
 //               STRIKE_RETRY days after a failed one). The strike has two phases (owner, 2026-11-16):
 //               the General's machine always flies (no strike without him fit); phase 1, the AMBUSH, on
-//               the way (Hesk's picket, ambushRatio x the strike force by number), then phase 2, HESK'S
+//               the way (Hesk's picket: a fixed RECKONING.ambushSize machines), then phase 2, HESK'S
 //               STRONGHOLD. Once the ambush is won (r.ambushDone) later strikes go straight to phase 2.
 //   crossroads  the ambush is won: the General chooses (an event): go home and regroup, or press on
 //   onward      pressing on: the strike force goes on as it is (no repairs, no new machines: r.fleet holds
@@ -36,10 +36,9 @@ export const RECKONING = {
   regroup: 60,             // days after a lost siege before they come again
   warnBefore: 10,          // a last warning this many days before a siege
   strikeRetry: 30,         // days after a failed counterattack before the next
-  ambushRatio: 1.5,        // phase 1: Hesk's picket is this many times the strike force, by number of machines
-  ambushLevels: 2,         // ... its pilots this many levels below the strike force's mean (at least 0)
-  ambushLighter: 2,        // ... and this many slots in every 3 one tier lighter than the strike force's own
-  ambushFloor: 12,         // ... and never fewer than this (a tiny strike force still meets a real ambush)
+  ambushSize: 60,          // phase 1: Hesk's picket, a fixed force (owner, 2026-11-18: "no need to scale"): bring more, it is easier
+  ambushLevel: 5,          // ... its pilots' level (the leader +1, Easy -2)
+  ambushTiers: [2, 1, 0],  // ... its machines' tier by slot, in turn: heavy, middle, light
   survivorsCap: 20,        // the picket's survivors who follow the fleet home and strike Eden (a regroup)
   counterDelay: 12,        // days after going home before the picket and its reinforcements strike Eden
   afterCounter: 10,        // days after holding the counterstrike before the strike can go again
@@ -107,6 +106,8 @@ export function ensureReckoning(state) {
   state.reckoning ??= { stage: 'locked', offered: false, broadcast: null, siegeDay: null, siegeKind: 'siege', clues: [], fighting: null, sieges: [], strikes: [], nextStrike: null, ambushDone: false, reinforce: 0, fleet: null, survivors: [], onward: false, justice: null, lastRemind: null };
   const r = state.reckoning;
   r.clues ??= []; r.sieges ??= []; r.strikes ??= []; r.justice ??= null; r.siegeKind ??= 'siege'; r.reinforce ??= 0; r.survivors ??= []; r.ambushDone ??= false;
+  // an old save sent home to regroup without a counterstrike date (or kind): it still comes, the day after
+  if (r.stage === 'counter') { r.siegeKind = 'counter'; if (r.siegeDay == null) r.siegeDay = (state.day || 0) + 1; }
   if (r.stage === 'locked' && state.secrets?.finalOpened) r.stage = 'ready';
   return r;
 }
@@ -139,6 +140,7 @@ export function reckoningStatus(state) {
     canBroadcast: r.stage === 'ready', siege: r.stage === 'siege', siegeKind: r.siegeKind, strike: strikeReady(state), nextStrike: r.nextStrike, justice: r.justice,
     phase: strikePhase(state), ambushDone: !!r.ambushDone, reinforce: r.reinforce || 0, onward: r.stage === 'onward', fleet: r.fleet ? r.fleet.length : 0,
     fleetHp: r.fleet?.length ? Math.round((100 * r.fleet.reduce((t, f) => t + f.hp, 0)) / r.fleet.length) : null, survivors: (r.survivors || []).length,
+    afterCounter: RECKONING.afterCounter,
   };
 }
 
@@ -308,7 +310,7 @@ export function resolveReckoningBattle(state, res) {
       text = `The Siege of Eden is broken: ${killed} of their machines destroyed, ${lost.length} guardian${lost.length === 1 ? '' : 's'} lost. Salvage: ${salvage.credits} credits and ${salvage.parts} parts. A captured pilot gives up the hiding place.`;
       const p = addPending(state, 'reckoning', 'The hiding place', `${text} Hesk's fleet came from a nameless rock beyond the far belt, an old Directorate quarry dug into a fortress. That is where he is now, with everything he has left. The road there is long, and he will not leave it unguarded.`, [{ key: 'ok', label: 'We go to him' }]);
       p.speaker = 'sato'; p.step = 'hideout'; p.tone = 'good'; p.entry = entry;
-      p.quote = 'He will have turned that rock into a trap, and he will be waiting on the way to it too. Forty machines, Governor, the best we have, and the General leads them. No General, no strike.';
+      p.quote = 'He will have turned that rock into a trap, and he will be waiting on the way to it too. Every machine we can crew, Governor, and the General leads them. No General, no strike.';
     } else {
       const loss = siegeLoss(state, rng, res);
       r.stage = 'regroup'; r.siegeDay = state.day + RECKONING.regroup;
@@ -330,7 +332,7 @@ export function resolveReckoningBattle(state, res) {
       p.quote = 'We can go home and mend, and let him come to us. Or we go now, while he still thinks his picket stopped us.';
       p.summary = { fleet: n, hp, lost: lost.length, lostList: tally(lost), killed, survivors: left, reinforce: r.reinforce || 0 };
       p.options = [
-        ['Go home and regroup', `The fleet flies home and mends at Eden as usual, and new machines can join. But the picket${left ? `'s ${left} survivors` : ''} and fresh reinforcements follow: in about ${RECKONING.counterDelay} days they strike Eden (a defence on the siege map). Hold, and the next strike goes straight to the rock, which by then will be stronger.`],
+        ['Go home and regroup', `The fleet flies home and mends at Eden as usual, and new machines can join. But the picket${left ? `'s ${left} survivors` : ''} and fresh reinforcements follow: in about ${RECKONING.counterDelay} days they strike Eden (a defence on the siege map). Hold, and ${RECKONING.afterCounter} days later the strike goes straight to the rock with a fresh fleet you pick (any crewed machines at home), though the rock will be stronger by then.`],
         ['Press on to the stronghold', `Straight into the battle for the rock with the ${n} machine${n === 1 ? '' : 's'} left, at the HP they have now: no repairs, no new machines. The picket is scattered, and the rock has had no time to prepare.`],
       ];
     } else {
@@ -381,10 +383,10 @@ function crossroads(state, r, p, key) {
   }
   r.stage = 'counter'; r.onward = false; r.fleet = null; r.siegeDay = state.day + RECKONING.counterDelay; r.siegeKind = 'counter';
   log(state, 'The General brings the strike force home to regroup.');
-  const w = addPending(state, 'reckoning', 'They are following', `The strike force is coming home to mend. Behind it, the picket${r.survivors.length ? `'s ${r.survivors.length} survivors` : ''} and fresh Directorate machines: they will strike Eden in about ${RECKONING.counterDelay} days. Crew every machine and fill every emplacement.`, [{ key: 'ok', label: 'Ready the defences' }]);
+  const w = addPending(state, 'reckoning', 'They are following', `The strike force is coming home to mend. Behind it, the picket${r.survivors.length ? `'s ${r.survivors.length} survivors` : ''} and fresh Directorate machines: they will strike Eden in about ${RECKONING.counterDelay} days. Crew every machine and fill every emplacement. Hold them, and ${RECKONING.afterCounter} days later strike the stronghold with a fresh fleet of your choice.`, [{ key: 'ok', label: 'Ready the defences' }]);
   w.speaker = 'sato'; w.step = 'warn'; w.tone = 'warn';
   w.quote = 'Let them come to us. Our walls, our guns. Then we go to his.';
-  return ok(`Home to regroup: Hesk's picket will strike Eden in about ${RECKONING.counterDelay} days.`);
+  return ok(`Home to regroup: the picket follows you home: expect them in about ${RECKONING.counterDelay} days. Then strike the stronghold with a fresh fleet.`);
 }
 
 // A lost siege: stores carried off, buildings knocked out (the dock for certain if it fell).

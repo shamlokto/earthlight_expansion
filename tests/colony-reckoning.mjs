@@ -9,7 +9,7 @@ import { newGame } from '../js/colony/state.js';
 import * as R from '../js/colony/rules.js';
 import { dayTick } from '../js/colony/sim.js';
 import { CLUES, RECKONING, reckoningDay, ensureReckoning } from '../js/colony/reckoning.js';
-import { siegeMission, strongholdMission, counterMission, ambushMission, ambushCount, ambushTier, commandReckoning, reckoningCrew, siegeShare, hexDistance, RECKONING_CAP, strikeCandidates, strikeBest, strikeSelection } from '../js/colony/battle.js';
+import { siegeMission, strongholdMission, counterMission, ambushMission, ambushCount, AMBUSH_TYPES, commandReckoning, reckoningCrew, siegeShare, hexDistance, RECKONING_CAP, strikeCandidates, strikeBest, strikeAll, strikeSelection } from '../js/colony/battle.js';
 import { MACHINE } from '../js/colony/data/machines.js';
 import { buildMap, isFrame, SCREEN_COLS, SCREEN_ROWS } from '../js/expansion/mission.js';
 import { ExpansionBattle, colonyResult } from '../js/expansion/battle.js';
@@ -95,7 +95,7 @@ const count = (list) => list.reduce((t, u) => t + 1 + (u.cargo || []).length, 0)
   check(![...HOLD.units, ...HOLD.arrivals.slice(0, -1).flatMap((a) => a.units)].some((u) => u.type === 59 || (u.cargo || []).includes(59)), 'stronghold: no other Leviathan (the flagship objective is unambiguous)');
   check(![...HOLD.units, ...HOLD.arrivals.flatMap((a) => a.units)].some((u) => [53, 54, 55, 56].includes(u.type)), 'stronghold: no command centre or fortress for Hesk (only the flagship ends it)');
   check(hs.has(`${verdict.x},${verdict.y}`), 'stronghold: Eden\'s ships can sail into the harbour where the Verdict berths');
-  check(HOLD.turnLimit === 30 && HOLD.cap === 40, 'stronghold: 30 turns, 40 machines');
+  check(HOLD.turnLimit === 30 && !HOLD.cap && !AMB.cap, 'stronghold: 30 turns; no deployment cap on either strike map (the player brings any number)');
   check(HOLD.cannons.length === 1 && HOLD.units.some((u) => u.type === 57 && u.x === HOLD.cannons[0].tower[0] && u.y === HOLD.cannons[0].tower[1]), 'stronghold: the fortress cannon and its tower');
   const sleepers = HOLD.units.filter((u) => u.wakes && u.hold === 6);
   check(sleepers.length >= 15 && sleepers.every((u) => [3, 4].includes(H.cls(u.x, u.y))), `stronghold: ${sleepers.length} ambushers asleep on the ridges and in the plasma`);
@@ -107,8 +107,8 @@ const count = (list) => list.reduce((t, u) => t + 1 + (u.cargo || []).length, 0)
   check(HOLD.reinforcements.length >= 3 * RECKONING.reinforceStep && HOLD.reinforcements.every((u) => H.can(u.type, u.x, u.y)) && HOLD.reinforcements.some((u) => u.type === 72), `stronghold: ${HOLD.reinforcements.length} reinforcements on legal hexes, cruisers among them`);
   // the ambush (phase 1): open space, slots on void for any machine, four directions, hold 12
   const A = terrain(AMB);
-  check(AMB.slots.length >= RECKONING.ambushRatio * RECKONING_CAP && AMB.slots.every((sl) => A.can(30, sl.x, sl.y) && A.can(0, sl.x, sl.y) && A.cls(sl.x, sl.y) === 0), `ambush: ${AMB.slots.length} picket slots, every one on open void (any machine)`);
-  check(new Set(AMB.slots.map((sl) => `${sl.x},${sl.y}`)).size === AMB.slots.length && !AMB.slots.some((sl) => AMB.home.slice(0, 48).some(([x, y]) => x === sl.x && y === sl.y)), 'ambush: slots distinct and off the strike force\'s hexes');
+  check(AMB.slots.length >= RECKONING.ambushSize && AMB.slots.every((sl) => A.can(30, sl.x, sl.y) && A.can(0, sl.x, sl.y) && A.cls(sl.x, sl.y) === 0), `ambush: ${AMB.slots.length} picket slots, every one on open void (any machine)`);
+  check(new Set(AMB.slots.map((sl) => `${sl.x},${sl.y}`)).size === AMB.slots.length && !AMB.slots.some((sl) => AMB.home.some(([x, y]) => x === sl.x && y === sl.y)), 'ambush: slots distinct and off every one of the strike force\'s hexes');
   check(['front', 'flanks', 'hammer', 'behind'].every((k) => AMB.slots.slice(0, 20).some((sl) => sl.wave === k)), 'ambush: even a small picket comes from every side');
   const wt = AMB.waves.filter((w) => w.turn > 0).map((w) => w.turn + 1).join();
   check(AMB.objective.kind === 'hold' && AMB.objective.turns === 15 && wt === '6,10,13' && AMB.waves[0].hold === 5, `ambush: hold 15 turns; the picket on the map (moving on turn 5), waves on turns 6, 10 and 13 (${wt})`);
@@ -216,20 +216,25 @@ function strikeState(n, opts = {}) { const s = siegeState(n, 0, opts); s.reckoni
 const army = (m, a) => m.units.filter((u) => u.army === a);
 const foesOf = (m) => count(army(m, 1)) + m.arrivals.reduce((t, a) => t + count(a.units), 0);
 {
-  // the picket: ambushRatio x the strike force by number, a floor for a tiny one; the strike force's own tier and level
+  // the picket (owner, 2026-11-18: "no need to scale"): a fixed RECKONING.ambushSize, the same tiers and level whatever comes
+  let picket0 = null;
   for (const [n, kinds, level] of [[40, [72, 73, 30, 69, 2, 31, 70, 9, 39, 66], 6], [15, [30, 8, 9, 0, 2, 39], 4], [8, [73, 66, 31], 7], [3, [0, 8], 2]]) {
     const s = strikeState(n, { kinds, level }), m = ambushMission(s, AMB);
     legal(m, `ambush mission (${n})`);
-    const mine = army(m, 0).filter((u) => u.rosterId !== undefined), want = Math.max(RECKONING.ambushFloor, Math.ceil(RECKONING.ambushRatio * mine.length));
-    check(foesOf(m) === want && m.colony.count === want, `ambush mission: ${mine.length} machines meet ${foesOf(m)} (${RECKONING.ambushRatio}x by number${want === RECKONING.ambushFloor ? ', the floor' : ''})`);
-    const picket = [...army(m, 1), ...m.arrivals.flatMap((a) => a.units)], price = (t) => MACHINE[t]?.price || types[t].value * types[t].hp;
-    const ep = mine.reduce((t, u) => t + price(u.type), 0) / mine.length, pp = picket.reduce((t, u) => t + price(u.type), 0) / picket.length;
-    const lv = Math.round(s.guardians.slice(0, mine.length).reduce((t, g) => t + g.level, 0) / mine.length);
-    const plv = Math.max(0, Math.min(8, lv - RECKONING.ambushLevels));
-    check(pp <= Math.max(1.3 * ep, 20) && pp >= 0.25 * ep && picket.filter((u) => !u.name).every((u) => u.level === plv), `ambush mission: lighter, greener machines (mean price ${pp.toFixed(0)} vs ${ep.toFixed(0)}, level ${picket[1]?.level} vs the fleet's ${lv})`);
+    const mine = army(m, 0).filter((u) => u.rosterId !== undefined), picket = [...army(m, 1), ...m.arrivals.flatMap((a) => a.units)];
+    const sig = picket.map((u) => `${u.type}/${u.level}/${u.x},${u.y}`).join();
+    check(foesOf(m) === RECKONING.ambushSize && m.colony.count === RECKONING.ambushSize && (picket0 ??= sig) === sig, `ambush mission: ${mine.length} machines meet the same ${foesOf(m)}`);
+    check(picket.filter((u) => !u.name).every((u) => u.level === RECKONING.ambushLevel) && picket.find((u) => u.name)?.level === RECKONING.ambushLevel + 1, `ambush mission: the picket at level ${RECKONING.ambushLevel} (the leader +1)`);
     check(m.general && mine.some((u) => u.rosterId === s.guardians[0].id && u.x === m.general.x && u.y === m.general.y), `ambush mission (${n}): the General's machine flies`);
   }
-  check(RECKONING.ambushRatio === 1.5 && RECKONING.ambushLevels === 2 && ambushCount(1) === RECKONING.ambushFloor && ambushCount(40) === 60 && ambushTier([{ type: 0 }]) === 0 && ambushTier([{ type: 72 }]) === 2, 'ambush: count and tier helpers');
+  {
+    const m = ambushMission(strikeState(40), AMB), picket = [...army(m, 1), ...m.arrivals.flatMap((a) => a.units)];
+    const tierOf = (u, i) => AMB.slots.findIndex((sl) => sl.x === u.x && sl.y === u.y);
+    const ok = picket.every((u) => { const i = tierOf(u); return i >= 0 && AMBUSH_TYPES[AMB.slots[i].role][RECKONING.ambushTiers[i % 3]].includes(u.type); });
+    check(RECKONING.ambushSize === 60 && ambushCount() === 60 && ok && !('ambushRatio' in RECKONING), 'ambush: a fixed 60, a heavy, a middle and a light machine in turn');
+    const easy = ambushMission(strikeState(40, { difficulty: 'easy' }), AMB);
+    check(army(easy, 1).filter((u) => !u.name).every((u) => u.level === RECKONING.ambushLevel - 2), 'ambush: Easy\'s picket two levels lower');
+  }
   // the General's machine is always in the strike force, however weak, among 44 stronger ones
   const w = strikeState(45, { kinds: [0, 72, 73, 30, 31, 70], level: 6 });
   const crew = reckoningCrew(w, false);
@@ -240,13 +245,30 @@ const foesOf = (m) => count(army(m, 1)) + m.arrivals.reduce((t, a) => t + count(
   check(cand.length === 45 && cand[0].general && cand[0].g.id === w.guardians[0].id && cand.slice(1).every((c) => !c.general && c.power > 0) && best.join() === crew.map((g) => g.id).join(), 'picker: every machine that may fly, the General first; Best 40 = the automatic choice');
   const weakest = cand.slice(-10).map((c) => c.g.id), pick = strikeSelection(w, weakest);
   check(pick.ok && pick.gs.length === 11 && pick.gs[0].id === w.guardians[0].id, 'picker: the General is added to any choice');
-  check(!strikeSelection(w, cand.map((c) => c.g.id)).ok && strikeSelection(w, [...best, 99999]).ok && strikeSelection(w, []).gs.length === 1, 'picker: more than 40 refused; unknown ids dropped; an empty choice is the General alone');
+  const every = strikeSelection(w, strikeAll(w));
+  check(every.ok && every.gs.length === 45 && strikeAll(w).length === cand.length && strikeSelection(w, [...best, 99999]).ok && strikeSelection(w, [...best, 99999]).gs.length === 40 && strikeSelection(w, []).gs.length === 1, 'picker: no cap (All: 45 accepted); unknown ids dropped; an empty choice is the General alone');
   const am = ambushMission(w, AMB, { ids: weakest }), flown = army(am, 0).map((u) => u.rosterId).filter((x) => x !== undefined);
-  check(flown.length === 11 && weakest.every((id) => flown.includes(id)) && am.general && am.colony.count === RECKONING.ambushFloor + 5, `picker: the ambush flies the chosen machines (${flown.length}) and the picket scales to them (${am.colony.count})`);
+  check(flown.length === 11 && weakest.every((id) => flown.includes(id)) && am.general && am.colony.count === RECKONING.ambushSize, `picker: the ambush flies the chosen machines (${flown.length}) against the fixed picket (${am.colony.count})`);
   const sm = strongholdMission(w, HOLD, { ids: weakest });
   check(army(sm, 0).filter((u) => u.rosterId !== undefined).length === 11, 'picker: so does a direct strike on the stronghold');
-  const tooMany = await commandReckoning(w, 'strike', () => {}, loader, { ids: cand.map((c) => c.g.id) });
-  check(tooMany.ok === false && /At most 40/.test(tooMany.msg), 'picker: launching more than 40 is refused');
+  const wAll = JSON.parse(JSON.stringify(w)), goAll = await commandReckoning(wAll, 'strike', () => {}, loader, { ids: strikeAll(wAll) });
+  const storedAll = JSON.parse(store.get('el-colony-raid'));
+  check(goAll.ok && storedAll.units.filter((u) => u.army === 0).length === 45 && storedAll.colony.count === RECKONING.ambushSize, `picker: launching all 45 flies all 45 against ${storedAll.colony.count}`);
+  // the whole armoury (owner, 2026-11-18): 250 machines on both strike maps, every one placed legally,
+  // past the staging hexes (240 on the ambush's map, 180 on the stronghold's) where they run out
+  const BIG = 250, big = strikeState(BIG, { kinds: [72, 73, 30, 69, 2, 31, 70, 9, 39, 66], level: 6 });
+  for (let i = 0; i < 80; i++) big.buildings.push({ id: 9300 + i, key: 'barracks', x: 0, y: 0, build: 0, deck: 'main' });
+  const bigIds = strikeAll(big), bigAm = ambushMission(big, AMB, { ids: bigIds }), bigHold = strongholdMission(big, HOLD, { ids: bigIds });
+  legal(bigAm, `ambush mission (all ${bigIds.length})`); legal(bigHold, `stronghold mission (all ${bigIds.length})`);
+  check(bigIds.length === BIG && army(bigAm, 0).length === BIG && !bigAm.colony.left.guardians.length && bigAm.general, `ambush: all ${bigIds.length} machines placed, the General among them`);
+  check(foesOf(bigAm) === RECKONING.ambushSize, `ambush: the whole armoury still meets the same ${RECKONING.ambushSize}`);
+  const bigFoes = [...army(bigAm, 1), ...bigAm.arrivals.flatMap((a) => a.units)];
+  check(army(bigAm, 0).every((u) => bigFoes.every((e) => hexDistance(u, e) >= 2)) && army(bigAm, 0).filter((u) => !AMB.home.some(([x, y]) => x === u.x && y === u.y)).length === BIG - AMB.home.length, 'ambush: the overflow spills past the staging area, clear of the picket');
+  check(army(bigHold, 0).length === BIG && !bigHold.colony.left.guardians.length && bigHold.general, `stronghold: all ${bigIds.length} machines placed (${HOLD.home.length} staging hexes, the rest spilled outward)`);
+  const holdFoes = [...army(bigHold, 1), ...bigHold.arrivals.flatMap((a) => a.units)], spilled = army(bigHold, 0).filter((u) => !HOLD.home.some(([x, y]) => x === u.x && y === u.y));
+  check(spilled.length === BIG - HOLD.home.length && spilled.every((u) => holdFoes.every((e) => hexDistance(u, e) > 3)), `stronghold: ${spilled.length} spilled past the staging area, none within 3 hexes of an enemy`);
+  const bigOn = JSON.parse(JSON.stringify(big)); bigOn.reckoning.stage = 'onward'; bigOn.reckoning.onward = true; bigOn.reckoning.fleet = bigOn.guardians.slice(0, 60).map((g) => ({ id: g.id, hp: 0.5 }));
+  check(army(strongholdMission(bigOn, HOLD), 0).length === 60, 'stronghold: pressing on with 60 survivors takes all 60');
   const w2 = strikeState(45, { kinds: [0, 72, 73, 30, 31, 70], level: 6 }), mine3 = strikeCandidates(w2).slice(-5).map((c) => c.g.id);
   const go3 = await commandReckoning(w2, 'strike', () => {}, loader, { ids: mine3 });
   const stored3 = JSON.parse(store.get('el-colony-raid')).units.filter((u) => u.army === 0).map((u) => u.rosterId);
@@ -288,6 +310,10 @@ const foesOf = (m) => count(army(m, 1)) + m.arrivals.reduce((t, a) => t + count(
   const t = branch, tc = ctx(t), cr = t.pending.find((p) => p.step === 'crossroads');
   check(R.answer(t, cr.id, 'regroup').ok && t.reckoning.stage === 'counter' && t.reckoning.siegeDay === t.day + RECKONING.counterDelay && t.pending.some((p) => p.step === 'warn'), 'flow: going home: they follow, Eden is warned');
   t.pending.length = 0;
+  const old = JSON.parse(JSON.stringify(t)); old.reckoning.siegeDay = null; old.reckoning.siegeKind = 'siege';   // an old save: home, no date
+  ensureReckoning(old); old.day++; reckoningDay(old, ctx(old));
+  check(old.reckoning.stage === 'siege' && old.reckoning.siegeKind === 'counter' && old.pending.some((p) => p.battle === 'counter'), 'flow: an old save sent home without a date: the counterstrike still comes');
+  check(R.reckoningStatus(t).stage === 'counter' && R.reckoningStatus(t).eta === RECKONING.counterDelay && R.reckoningStatus(t).afterCounter === RECKONING.afterCounter, 'flow: going home: the Raids card knows when they come and when the strike follows');
   for (let d = 0; d < RECKONING.counterDelay; d++) { t.day++; reckoningDay(t, tc); }
   const strikeEv = t.pending.find((p) => p.step === 'siege');
   check(t.reckoning.stage === 'siege' && t.reckoning.siegeKind === 'counter' && strikeEv?.battle === 'counter', 'flow: the counterstrike comes to Eden');
@@ -300,6 +326,9 @@ const foesOf = (m) => count(army(m, 1)) + m.arrivals.reduce((t, a) => t + count(
   check(t.reckoning.stage === 'strike' && t.reckoning.ambushDone && t.reckoning.reinforce === 1 && t.reckoning.nextStrike === t.day + RECKONING.afterCounter && t.pending.some((p) => p.step === 'counterwon'), 'flow: Eden holds: the picket is spent, the rock reinforced');
   t.day = t.reckoning.nextStrike;
   check(R.strikePhase(t) === 'stronghold' && !strongholdMission(t, HOLD).colony.onward && (await commandReckoning(t, 'ambush', () => {}, loader)).ok === false, 'flow: the next strike goes straight to phase 2 with a full fleet');
+  const fresh = strikeAll(t).slice(-4), goFresh = await commandReckoning(t, 'strike', () => {}, loader, { ids: fresh });
+  const storedFresh = JSON.parse(store.get('el-colony-raid'));
+  check(goFresh.ok && storedFresh.colony.battle === 'stronghold' && !storedFresh.colony.onward && fresh.every((id) => storedFresh.units.some((u) => u.rosterId === id)), 'flow: after the regroup the player picks a fresh fleet for the stronghold');
   // a lost ambush: home, try again later, the ambush again
   const u = strikeState(6); u.reckoning.fighting = 'ambush';
   R.resolveReckoningBattle(u, { battle: 'ambush', won: false, reason: 'general', enemies: 12, enemiesDestroyed: 3, guardians: [] });

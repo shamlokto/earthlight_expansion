@@ -843,7 +843,6 @@
  "noFlee": true,
  "awaitArrivals": true,
  "music": 29,
- "cap": 40,
  "goal": "Sink Major Hesk's flagship, the Verdict, within 30 turns. She comes out on turn 15. If the General falls, it is over.",
  "home": [
   [7,35,1],
