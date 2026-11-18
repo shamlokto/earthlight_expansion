@@ -226,7 +226,7 @@ function village() {
 // The lift kiosk's notice lives here with the map that has the kiosk (story.js owns the other signs).
 const MAP_SIGNS = {
   'central.board': 'EDEN CENTRAL, Main deck. Governor\'s office: weekdays 9 to 5 (the General). The Ashfall Exchange: Her Majesty receives traders daily but Saturdays. Arrivals: courier runs Tuesdays and Fridays. Viewing gallery open all night; please do not tap the glass.',
-  'central.dock': 'CENTRAL DOCK. Canal craft, lighters and the Ashfall trading ship. Her Majesty trades from the ship on Saturdays and from the Exchange on the plaza the rest of the week. Mind the crane.',
+  'central.dock': 'SPACE DOCK, BAY ONE. Courier shuttles, cargo lighters and the Ashfall trader. Her Majesty trades from her ship on Saturdays and from the Exchange on the plaza the rest of the week. Stay behind the yellow lines when the bay doors cycle.',
   'central.watch': 'SATO\'S WATCH. Observatory and beacon of the Main deck, named by the Colony Council for Captain M. Sato, who kept watch. Dome open to the public from 7 in the evening. (The Captain has asked twice for the name to be changed. The Council has declined twice.)',
   'central.plaza': 'THE PLAZA. Laid out by the founders, rebuilt after the siege. Avenue north to the great window; south to the lift terminal. Canal walks east and west.',
   'central.arrivals': 'ARRIVALS. Courier and supply runs from the Middle and Lower decks. J. Maris lands at 8 on Tuesdays and Fridays and asks that nobody wave at her during docking.',
@@ -299,7 +299,7 @@ function central() {
   for (const x of [10, 11, 33, 34, 35, 36, 57, 58]) m.fill(x, 36, x, 37, 'k');   // its bridges
   // walls: the window to the north, hull plate elsewhere
   m.prop('hull_window', 0, 0, { w: 70, tileSolid: true, label: 'The great window' });
-  m.prop('hull_wall', 0, 1, { d: 55, tileSolid: true }); m.prop('hull_wall', 69, 1, { d: 55, tileSolid: true }); m.prop('hull_wall', 1, 55, { w: 68, tileSolid: true });
+  m.prop('hull_wall', 0, 1, { d: 5, tileSolid: true }); m.prop('hull_wall', 0, 19, { d: 37, tileSolid: true }); m.prop('hull_wall', 69, 1, { d: 55, tileSolid: true }); m.prop('hull_wall', 1, 55, { w: 68, tileSolid: true });
   m.prop('glass_roof', 0, 0, { w: 70, d: 56, solid: false });
   // the viewing gallery
   for (const x of [5, 12, 19, 26, 41, 48, 55, 62]) m.prop('bench', x, 3, { w: 2, rot: Math.PI, act: 'gallery', label: 'Viewing gallery' });
@@ -322,14 +322,18 @@ function central() {
   for (const [x, y] of [[5, 22], [9, 22], [13, 22], [5, 28], [9, 28], [13, 28]]) m.prop('market_stall', x, y, { w: 2, tint: x + y });
   m.prop('vending', 17, 24, { act: 'counter', shop: 'grandmarket', label: 'Grand Market' }); m.prop('vending', 17, 27, { act: 'counter', shop: 'grandmarket', label: 'Grand Market' });
   m.prop('signpost', 20, 25, { act: 'sign', sign: 'central.market' });
-  // the Central dock (north-west): a hull-side basin with a quay, cranes and moored craft; Moraine's ship lies here
-  m.fill(1, 6, 11, 18, 'w').fill(12, 6, 14, 18, 'k').fill(12, 19, 14, 20, 'c');
-  m.prop('barge', 7, 9, { w: 4, d: 5, solid: false, onWater: true, label: "Moraine's ship" });
-  m.prop('barge', 2, 14, { w: 2, d: 2, solid: false, onWater: true, rot: 0.4 }); m.prop('barge', 4, 7, { w: 2, d: 2, solid: false, onWater: true, rot: -0.3 });
-  m.prop('crane', 14, 7, { label: 'Dock crane' }); m.prop('crane', 14, 15, { label: 'Dock crane' });
-  m.prop('cargo_crate', 12, 17); m.prop('cargo_crate', 13, 17, { scale: 0.8 }); m.prop('cargo_crate', 14, 12, { scale: 0.9 });
-  m.prop('signpost', 12, 6, { act: 'sign', sign: 'central.dock' });
-  m.spot('central.dock', 12.6, 10.5);
+  // the space dock (north-west): a docking bay at the hull, with a pressure window and bay doors onto the stars,
+  // landing pads, Moraine's cartel trader, a shuttle, cranes, crates, fuel lines and hazard paint
+  m.fill(1, 6, 15, 18, 'o').fill(12, 19, 14, 20, 'c');
+  m.prop('bay_window', 0, 6, { d: 13, tileSolid: true, label: 'Pressure window' });
+  m.prop('landing_pad', 2, 7, { w: 5, d: 5, solid: false }); m.prop('landing_pad', 2, 13, { w: 4, d: 4, solid: false });
+  m.prop('trader_ship', 2, 7, { w: 5, d: 5, label: "Moraine's ship" });
+  m.prop('shuttle', 2, 13, { w: 4, d: 4, label: 'Courier shuttle' });
+  m.prop('crane', 9, 6, { label: 'Dock crane' }); m.prop('crane', 9, 17, { label: 'Dock crane' });
+  m.prop('cargo_crate', 10, 11); m.prop('cargo_crate', 10, 12, { scale: 0.8 }); m.prop('cargo_crate', 14, 16, { scale: 0.9 }); m.prop('cargo_crate', 15, 6);
+  m.prop('pipe_run', 7, 6, { d: 12 }); m.prop('hazard_stripes', 1, 12, { w: 6, solid: false }); m.prop('hazard_stripes', 7, 18, { w: 7, solid: false });
+  m.prop('signpost', 12, 18, { act: 'sign', sign: 'central.dock' });
+  m.spot('central.dock', 8.6, 9.5);
   for (const x of [16, 18]) m.prop('hydro_tower', x, 10); for (const x of [16, 18]) m.prop('hydro_tower', x, 13);
   // the north-east cargo yard
   for (const [x, y] of [[17, 8], [17, 15], [51, 9], [61, 16]]) m.prop('tree', x, y, { rot: y });

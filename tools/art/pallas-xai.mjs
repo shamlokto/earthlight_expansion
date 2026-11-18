@@ -6,8 +6,9 @@
 // Sources in tools/art/pallas/ (prompts in prompts.txt), generated with xAI's image model
 // (tools/art/xai-gen.py): the unit-info pictures (jet, spent jet, robot) and side views for the
 // fight poses (tools/art/pallas-poses.py: 32x32 in the craft fight rows' colours and 96x96 full
-// colour, keyed by the Athena sheet tiles each pose stands in for). Map icons: drawn here from
-// shapes (24x16, colour numbers 1-7 of the icon rows, facing right), after the side views.
+// colour, keyed by the Athena sheet tiles each pose stands in for). Map icons (24x16, colour
+// numbers 1-7 of the icon rows, facing right): the jets' drawn here from shapes, the robot's placed
+// pixel by pixel. Redesigned 2026-11-18 from tools/art/pallas/redesign/ (no V-fin, no wings).
 // Three sets, one per look of the machine:
 //   pallasJet      62, the jet with its torpedo
 //   pallasJetSpent 63, the jet after the bomb run
@@ -29,22 +30,33 @@ const jet = (armed) => [
   { shape: ellipse(15.5, 6.6, 3, 1.4), ramp: GLASS, bevel: 1, dome: 1 },
   ...(armed ? [{ shape: union(capsule(6, 12.6, 16, 12.6, 1.5), poly([[16, 11.2], [18.5, 12.6], [16, 14]])), ramp: [6, 5, 4, 3], bevel: 1, dome: 1 }] : []),
 ];
-// the robot facing right: the wing binder behind it, the V crest, the railgun levelled forward
-const robot = () => [
-  { shape: poly([[3, 2], [5, 2], [8, 5], [8, 9], [5, 8]]), ramp: BODY, bevel: 1 },
-  { shape: union(rect(7, 9.5, 10.4, 13.4), rect(11.6, 9.5, 15, 13.4)), ramp: LIGHT, bevel: 1 },
-  { shape: union(rect(6, 13.5, 10.4, 15), rect(11.6, 13.5, 16, 15)), ramp: BODY, bevel: 1 },
-  { shape: poly([[6.5, 4.5], [16, 4.5], [15, 10], [7, 10]]), ramp: LIGHT, bevel: 2, dome: 1 },
-  { shape: rect(7, 4.5, 10, 7), ramp: DARK, bevel: 1 },
-  { shape: rect(9.5, 1, 14, 4.6), ramp: LIGHT, bevel: 1 },
-  { shape: rect(12.5, 2.4, 14, 3.4), ramp: GLASS, flat: 1, line: false },
-  { shape: rect(14, 7, 18, 9.4), ramp: BODY, bevel: 1 },
+// the robot facing right (2026-11-18 redesign, from tools/art/pallas/redesign/): placed pixel by
+// pixel, colour numbers of the icon rows ('.' clear): a tall thruster fin on its back (no wings),
+// a rounded helmet with a white visor band and one swept-back crest (no V-fin), the big round
+// shoulder thruster pod, the railgun levelled forward
+const ROBOT_ICON = [
+  '.77....7777.............',
+  '7337..74447777..........',
+  '7337...7733337..........',
+  '7337...7322117..........',
+  '73337..7733337..........',
+  '.7337.777777777.........',
+  '.73377444772237.........',
+  '.7377455547222777.......',
+  '..7745676547227777777777',
+  '..774556654333333333333.',
+  '...77455547337777777777.',
+  '....77444773337.........',
+  '......7337.7337.........',
+  '......7337.7337.........',
+  '.....75557.75557........',
+  '.....77777.77777........',
 ];
-// one-pixel lines shading can't keep: [x0, x1, y, colour], drawn last (the nose tips, the V
-// crest, the railgun)
-const LINES = { jet: [[22, 23, 8, 3]], spent: [[22, 23, 8, 3]], robot: [[18, 23, 8, 3], [10, 10, 0, 4], [13, 13, 0, 4]] };
+// one-pixel lines shading can't keep on the jets: [x0, x1, y, colour], drawn last (the nose tips)
+const LINES = { jet: [[22, 23, 8, 3]], spent: [[22, 23, 8, 3]] };
 export function icon(form) {
-  const img = render(24, 16, form === 'robot' ? robot() : jet(form === 'jet'), { outline: 7, cel: true, smooth: 0 });
+  if (form === 'robot') return { w: 24, h: 16, px: Uint8Array.from(ROBOT_ICON.join(''), (c) => (c === '.' ? 0 : +c)) };
+  const img = render(24, 16, jet(form === 'jet'), { outline: 7, cel: true, smooth: 0 });
   for (const [x0, x1, y, c] of LINES[form]) for (let x = x0; x <= x1; x++) img.px[y * 24 + x] = c;
   return img;
 }

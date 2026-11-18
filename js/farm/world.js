@@ -90,6 +90,7 @@ const PROPS = {
   farm_bot: { model: 'farm_bot', h: 0.8, fit: 'foot', turn: true },
   hull_window: { h: 12 }, hull_wall: { h: 10 }, glass_roof: { h: 16 }, vending: { model: 'vending', h: 1.9, fit: 'foot' }, feed_sacks: { model: 'feed_sacks', h: 0.8, fit: 'foot' },
   crane: { model: 'dock_crane', h: 5.5, fit: 'foot' },
+  bay_window: { h: 10 }, landing_pad: { h: 0.1 }, hazard_stripes: { h: 0.05 }, trader_ship: { model: 'cartel_ship', h: 3.4, fit: 'foot' }, shuttle: { model: 'shuttle', h: 2.4, fit: 'foot' },
   feed_mill: { model: 'feed_mill', h: 2.6, fit: 'foot' }, charge_terminal: { model: 'charge_terminal', h: 1.6, fit: 'foot' }, house_door: { h: 1 }, starglow: { h: 0.5 },
   fruit_tree: { h: 3.4 }, fruit_tree_young: { h: 2.1 }, sapling: { model: 'sapling', h: 1.0 },
 };
@@ -323,6 +324,46 @@ export class World {
         const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ color: 0xcfeaf0, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide, roughness: 0.05 }));
         glass.rotation.x = -Math.PI / 2; glass.position.set(w / 2 - 0.5, Y + 0.2, d / 2 - 0.5); glass.castShadow = false; glass.receiveShadow = false; g.add(glass);
         g.traverse((q) => { if (q.isMesh && q !== glass) q.castShadow = true; });
+        break;
+      }
+      case 'bay_window': {                               // the docking bay's pressure window and bay doors, along the west hull
+        const d = o.d || 10, hull = std({ map: art.tex('hull_plate', { repeat: 0.5 }).clone() }); hull.map.repeat.set(d / 2, 1); hull.map.needsUpdate = true;
+        const view = new THREE.Mesh(new THREE.PlaneGeometry(d, 7), new THREE.MeshBasicMaterial({ map: earthBand(), fog: false })); view.rotation.y = Math.PI / 2; view.position.set(-0.1, 4.9, 0); g.add(view);
+        g.add(box(0.6, 1.4, d, hull, 0, 0, 0), box(0.6, 2, d, hull, 0, 8.4, 0));
+        for (let z = -d / 2; z <= d / 2 + 0.01; z += 2.6) g.add(box(0.4, 7, 0.3, std({ color: 0xe8b830, metalness: 0.3 }), 0.05, 1.4, z));
+        for (let z = -d / 2 + 0.3; z < d / 2; z += 1.2) g.add(box(0.05, 0.25, 0.6, std({ color: z % 2.4 < 1.2 ? 0x222222 : 0xe8b830 }), 0.35, 1.0, z + 0.3));
+        for (const c of g.children) c.position.z += (d - 1) / 2;
+        break;
+      }
+      case 'landing_pad': {
+        const w = o.w || 3, d = o.d || 3, r = Math.min(w, d) / 2 - 0.1;
+        const disc = new THREE.Mesh(new THREE.CircleGeometry(r, 32), std({ color: 0x5d6a77, metalness: 0.4 })); disc.rotation.x = -Math.PI / 2; disc.position.y = 0.03; disc.receiveShadow = true; g.add(disc);
+        const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.25, r - 0.08, 32), new THREE.MeshBasicMaterial({ color: 0xe8b830 })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; g.add(ring);
+        for (let i = 0; i < 8; i++) { const l = ball(0.06, new THREE.MeshBasicMaterial({ color: 0x7dffe0 }), Math.cos(i * 0.785) * (r - 0.15), 0.06, Math.sin(i * 0.785) * (r - 0.15), 0); l.castShadow = false; g.add(l); }
+        const h = new THREE.Mesh(new THREE.PlaneGeometry(r * 0.9, 0.18), new THREE.MeshBasicMaterial({ color: 0xffffff })); h.rotation.x = -Math.PI / 2; h.position.y = 0.045; g.add(h);
+        for (const c of g.children) { c.position.x += (w - 1) / 2; c.position.z += (d - 1) / 2; }
+        break;
+      }
+      case 'hazard_stripes': { const w = o.w || 3; for (let i = 0; i < w * 2; i++) { const q = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.3), new THREE.MeshBasicMaterial({ color: i % 2 ? 0x222222 : 0xe8b830 })); q.rotation.x = -Math.PI / 2; q.position.set(-0.25 + i * 0.5, 0.03, 0); g.add(q); } break; }
+      case 'trader_ship': {                              // the Ashfall trader: a chunky hull, a purple stripe, cargo pods, engines, landing legs
+        const w = o.w || 5, hull = std({ color: 0x6e5a7a, metalness: 0.4, roughness: 0.5 }), trim = std({ color: 0xc9a24e, metalness: 0.6, roughness: 0.3 }), dk = std({ color: 0x2b2b33 });
+        const s0 = new THREE.Group(); s0.position.y = 0.6;
+        s0.add(box(2.2, 1.5, 3.8, hull, 0, 0, 0), box(1.6, 0.9, 1.2, hull, 0, 0.3, 2.2), box(1.2, 0.5, 0.05, new THREE.MeshBasicMaterial({ color: 0x9ff4ff }), 0, 0.75, 2.81));
+        s0.add(box(2.25, 0.18, 3.85, trim, 0, 1.0, 0), box(0.9, 0.9, 1.6, std({ color: 0x8a7a5a }), -1.5, 0.1, -0.4), box(0.9, 0.9, 1.6, std({ color: 0x8a7a5a }), 1.5, 0.1, -0.4));
+        for (const x of [-0.6, 0.6]) { const e = cyl(0.35, 0.45, 0.6, dk, x, 0.25, -2.2, 12); e.rotation.x = Math.PI / 2; s0.add(e); const f = ball(0.25, new THREE.MeshBasicMaterial({ color: 0x9fd8ff }), x, 0.55, -2.5, 1); f.castShadow = false; s0.add(f); }
+        s0.add(box(0.12, 0.9, 0.12, dk, 0, 1.6, -1)); g.add(s0);
+        for (const [x, z] of [[-0.9, -1.4], [0.9, -1.4], [-0.9, 1.4], [0.9, 1.4]]) g.add(box(0.12, 0.6, 0.12, dk, x, 0, z), box(0.4, 0.06, 0.4, dk, x, 0, z));
+        for (const c of g.children) { c.position.x += (w - 1) / 2; c.position.z += ((o.d || 5) - 1) / 2; }
+        g.rotation.y = 0; break;
+      }
+      case 'shuttle': {                                  // Juno Maris's courier shuttle: white and orange, swept wings
+        const w = o.w || 4, wh = std({ color: 0xf2f2ee, roughness: 0.4, metalness: 0.2 }), or = std({ color: 0xe0782a }), dk = std({ color: 0x2b2b33 });
+        const s0 = new THREE.Group(); s0.position.y = 0.55;
+        const body = cyl(0.55, 0.7, 2.8, wh, 0, 0, 0, 14); body.rotation.x = Math.PI / 2; body.position.set(0, 0.6, 0); s0.add(body);
+        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.9, 14), wh); nose.rotation.x = Math.PI / 2; nose.position.set(0, 0.6, 1.85); nose.castShadow = true; s0.add(nose);
+        s0.add(box(3.0, 0.08, 1.0, or, 0, 0.35, -0.4), box(0.08, 0.8, 0.8, or, 0, 1.0, -1.2), box(0.8, 0.25, 0.05, new THREE.MeshBasicMaterial({ color: 0x9ff4ff }), 0, 0.9, 1.45));
+        g.add(s0); for (const [x, z] of [[-0.5, -0.8], [0.5, -0.8], [0, 1.0]]) g.add(box(0.08, 0.6, 0.08, dk, x, 0, z));
+        for (const c of g.children) { c.position.x += (w - 1) / 2; c.position.z += ((o.d || 4) - 1) / 2; }
         break;
       }
       case 'crane': {                                    // a dock crane: a yellow lattice tower, a jib over the water, a hook
