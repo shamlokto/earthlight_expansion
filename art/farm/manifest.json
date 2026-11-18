@@ -1158,6 +1158,11 @@
    "fps": 16,
    "frames": 81,
    "loop": false
+  },
+  "music/belt": {
+   "file": "music/belt.mp3",
+   "ogg": "music/belt.ogg",
+   "seconds": 93.12
   }
  }
 }

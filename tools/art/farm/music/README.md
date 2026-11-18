@@ -34,7 +34,7 @@ python3 post.py make title=title__1283458114.flac spring=spring__616079578.flac 
 title `title__1283458114` · spring `spring__616079578` · summer `summer__1313593150` · autumn `autumn__344630495` ·
 winter `winter__1499151026` · night `night__1675831722` · village `village__853721459` · central `central__2006568500` ·
 ruins `ruins__15835880` · festival `festival__1706954080` · lantern `lantern__2080519183` · wedding `wedding__1614028200`
-(belt: see manifest; without it the game plays `night` in the belt).
+belt `belt__543612052` (without a belt file the game plays `night` there).
 
 ## In the game
 
