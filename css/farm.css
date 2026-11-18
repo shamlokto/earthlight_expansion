@@ -103,3 +103,4 @@ button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outl
 .fm-seed .fm-mini { left: auto; top: auto; border: 0; border-radius: 0; box-shadow: none; background: none; overflow: visible; cursor: inherit; }
 .fm-bar.grid .fm-seed .fm-mini { width: calc(var(--slot, 52px) * 0.45); height: calc(var(--slot, 52px) * 0.45); }
 #hud #stick { bottom: calc(var(--barH, 64px) + 36px); } #hud #tUse { bottom: calc(var(--barH, 64px) + 40px); } #hud #tAct { bottom: calc(var(--barH, 64px) + 126px); }
+.fm-vol { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 13px; } .fm-vol input { width: 100%; accent-color: var(--gold); }

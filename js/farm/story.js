@@ -2225,3 +2225,24 @@ export const CENTRAL = {
   gallery: ['Through the great window the Earth turns, blue and white and patient. From up here, you cannot see the ash at all.', 'The window frames half the Earth and a slice of the Moon. Somebody on the bench beside you is asleep, smiling.', 'The night shift sun-line dims, and the stars come out on the far side of the glass. Somewhere down there, the old world is waiting for spring.'],
   galleryDay: 'In daylight the window shows mostly glare and the hull\'s own shadow. The view is better after dark.',
 };
+
+// Sato's Watch: the dome at night, by season; the plaque; the General's visit.
+export const WATCH = {
+  season: [
+    ['The dome splits open with a long, patient grind. Through the telescope, Earth fills the eyepiece: spring cloud over the old oceans.', 'Below the cloud, here and there, a green that was not there last year.'],
+    ['Summer on the Main deck: the sun-line dimmed, the stars hard and bright beyond the glass.', 'The Moon slides into the eyepiece, grey and patient. Somebody has scratched a small heart on the brass of the focusing knob.'],
+    ['Autumn. The Earth turns its night side to the colony, and the dark is not quite dark: a few lights burn where the ash has thinned.', 'Someone down there is keeping a fire. Sato watches it for a long time.'],
+    ['Winter. The great window frosts at its edges, and the stars come through it sharp as needles.', 'The radar dish turns overhead, steady as a heartbeat. Everything that is coming home is being watched for.'],
+  ],
+  plaque: [
+    { who: 'narrator', text: 'By the door, a brass plaque: SATO\'S WATCH. FOR CAPTAIN M. SATO, WHO KEPT WATCH WHEN NO ONE ELSE COULD.' },
+    { who: 'sato', text: 'I asked them to call it something else. Anything else. "The Observatory" was right there.' },
+    { who: 'sato', text: '...It is a very good telescope, though.' },
+  ],
+  general: [
+    { who: 'general', text: 'They told me I would find you here. Under your own name, pretending not to notice it.' },
+    { who: 'sato', text: 'I am looking at the stars. The name is on the outside. I cannot see it from in here.' },
+    { who: 'general', text: 'Then I will read it for you, Mira, as often as you need. You kept watch. Let someone else do it for a while.' },
+  ],
+  again: 'You sit a while longer under the open dome. (Stargazing restores your strength once a night.)',
+};

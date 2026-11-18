@@ -206,9 +206,10 @@ export function menu(state, hooks, tab = 'bag') {
     } else if (tab === 'help') {
       h += HELP.map((x) => `<h3>${esc(x.title)}</h3><p>${esc(x.body).replace(/\n/g, '<br>')}</p>`).join('');
     } else {
-      h += `<div class="fm-sys"><button data-act="save">Save the game</button><button data-act="export">Export save to a file</button><button data-act="music">Music on / off</button><button data-act="title">Back to the title</button></div><p class="fm-dim">The game also saves by itself every morning.</p>`;
+      h += `<div class="fm-sys"><button data-act="save">Save the game</button><button data-act="export">Export save to a file</button><button data-act="music">Music on / off</button>${hooks.musicVolume ? `<label class="fm-vol">Music volume <input type="range" id="fmVol" min="0" max="100" step="5" value="${Math.round(hooks.musicVolume() * 100)}"></label>` : ''}<button data-act="title">Back to the title</button></div><p class="fm-dim">The game also saves by itself every morning.</p>`;
     }
     const body = openWin('Sato’s Harvest', h, () => hooks.close && hooks.close(), 'menu');
+    const vol = body.querySelector('#fmVol'); if (vol && hooks.setMusicVolume) vol.oninput = () => hooks.setMusicVolume(vol.value / 100);
     body.onclick = (e) => {
       const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; pick = -1; return draw(); }
       const bk = e.target.closest('[data-bk]'); if (bk) { const r = sim.basketTake(state, +bk.dataset.bk); toast(r.msg); hooks.change && hooks.change(); return draw(); }

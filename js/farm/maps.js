@@ -226,6 +226,7 @@ function village() {
 // The lift kiosk's notice lives here with the map that has the kiosk (story.js owns the other signs).
 const MAP_SIGNS = {
   'central.board': 'EDEN CENTRAL, Main deck. Governor\'s office: weekdays 9 to 5 (the General). The Ashfall Exchange: Her Majesty receives traders daily but Saturdays. Arrivals: courier runs Tuesdays and Fridays. Viewing gallery open all night; please do not tap the glass.',
+  'central.watch': 'SATO\'S WATCH. Observatory and beacon of the Main deck, named by the Colony Council for Captain M. Sato, who kept watch. Dome open to the public from 7 in the evening. (The Captain has asked twice for the name to be changed. The Council has declined twice.)',
   'central.plaza': 'THE PLAZA. Laid out by the founders, rebuilt after the siege. Avenue north to the great window; south to the lift terminal. Canal walks east and west.',
   'central.arrivals': 'ARRIVALS. Courier and supply runs from the Middle and Lower decks. J. Maris lands at 8 on Tuesdays and Fridays and asks that nobody wave at her during docking.',
   'central.market': 'GRAND MARKET. Imported seeds, saplings in any season, batteries. The terminals also BUY fine food at a fifth above bin prices. No haggling with the machines.',
@@ -322,9 +323,14 @@ function central() {
   m.prop('signpost', 20, 25, { act: 'sign', sign: 'central.market' });
   // the north-west garden and the north-east cargo yard
   for (const y of [7, 10, 13, 16]) for (const x of [4, 7, 10, 13]) m.prop('hydro_tower', x, y);
-  for (const [x, y] of [[17, 8], [17, 15], [52, 8], [60, 15]]) m.prop('tree', x, y, { rot: y });
-  for (const [x, y] of [[50, 7], [51, 7], [50, 8], [56, 10], [57, 10], [62, 7], [63, 8], [64, 12]]) m.prop('cargo_crate', x, y, { scale: 0.85 + (x % 3) * 0.1 });
-  m.prop('water_tank', 58, 14, { w: 2, d: 2 }); m.prop('fan_tower', 64, 15, { w: 2, d: 2 });
+  for (const [x, y] of [[17, 8], [17, 15], [51, 9], [61, 16]]) m.prop('tree', x, y, { rot: y });
+  for (const [x, y] of [[49, 6], [50, 6], [49, 7], [63, 6], [64, 7]]) m.prop('cargo_crate', x, y, { scale: 0.85 + (x % 3) * 0.1 });
+  m.prop('water_tank', 64, 10, { w: 2, d: 2 }); m.prop('fan_tower', 64, 15, { w: 2, d: 2 });
+  // Sato's Watch: the colony's landmark (an observatory named for her), at the head of its own walk off the plaza
+  m.fill(53, 13, 60, 14, 'c').fill(57, 15, 58, 20, 'c');
+  m.building('observatory', 53, 6, 8, 7, { height: 9, label: "Sato's Watch" });
+  m.prop('house_door', 57, 12, { act: 'stargaze', solid: false, label: "Sato's Watch" });
+  m.prop('signpost', 59, 14, { act: 'sign', sign: 'central.watch' });
   m.prop('pipe_run', 1, 6, { d: 26 }); m.prop('pipe_run', 68, 6, { d: 26 });
   // homes: flats and townhouses on the side streets; the empty ones keep their doors shut (act 'house')
   const homes = [

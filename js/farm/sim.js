@@ -1215,6 +1215,18 @@ export function gallerySit(state) {
   return { ok: true, restored: p.stamina - before, night: true };
 }
 
+// Sato's Watch (the observatory in Eden Central): stargazing after 19:00, +20 stamina once a day.
+// first: the first visit ever (she finds the plaque); general: the General's one-time visit, once he is her sweetheart or partner.
+export function stargaze(state) {
+  if (state.cal.minute < 19 * 60) return fail('The dome opens at seven in the evening.');
+  const p = state.player, f = state.flags, first = !f.watchSeen, again = f.watchDay === absDay(state);
+  const general = !first && !f.watchGeneral && (f.sweet === 'general' || f.partner === 'general');
+  f.watchSeen = true; if (general) f.watchGeneral = true;
+  let restored = 0;
+  if (!again) { f.watchDay = absDay(state); const b = p.stamina; p.stamina = Math.min(p.maxStamina, p.stamina + 20); restored = p.stamina - b; }
+  return { ok: true, first, general, restored, again };
+}
+
 // ---------------------------------------------------------------- the silo and the feed mill
 export const isVeg = (id) => VEG.includes(id);
 const MILLABLE = new Set([...VEG, 'chestnut', 'pine_nut']);
