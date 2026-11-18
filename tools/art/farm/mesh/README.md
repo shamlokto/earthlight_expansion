@@ -121,4 +121,6 @@ navy-haired sato in `prompts.json`. Start pods with `../sandbox/sandbox.sh` runn
   box in code if needed.
 * **Braids**: Qwen-Image put a braid forward over the shoulder in every one of 8 tries, whatever the wording.
   `yui` got a bun instead, which the rig can take.
+* Recreating a design from a pixel-art picture: Qwen-Image-Edit kept the pixel look until asked for a "smooth 3D figurine render (not pixel art)"; editing the clean result again then gave the weapon pose (`pallas`).
+* ComfyUI keeps Qwen-Image and Qwen-Edit loaded (about 42 GB) and the 3D worker then dies with out-of-memory: after the image jobs, call `POST /free {"unload_models": true, "free_memory": true}` before starting `gen3d.py`.
 * A concept with a strong cast shadow can come back with a flat sheet of geometry on the floor; `drop_floor.py` removes it.

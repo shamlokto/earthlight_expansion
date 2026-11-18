@@ -402,7 +402,7 @@ ICONS = {
     "bamboo_shoot": "one fresh bamboo shoot, a pointed cone of brown-green husk leaves", "wild_mint": "one small bunch of fresh bright green mint leaves",
     "fiddlehead": "one small bunch of three curled green fiddlehead fern shoots", "wild_grape": "one small cluster of dark purple wild grapes with a curly tendril and a leaf",
     "honeycomb": "one piece of golden honeycomb dripping with honey", "chestnut": "two glossy brown chestnuts beside an open spiky green husk",
-    "wild_apple": "one small yellow-green wild crab apple with a rosy blush on a twig with a leaf", "matsutake": "one thick white-and-brown matsutake mushroom with a firm stem",
+    "wild_apple": "one small yellow-green wild crab apple with a rosy blush, with a short stalk and one leaf, drawn as a simple still life", "matsutake": "one thick white-and-brown matsutake mushroom with a firm stem",
     "pine_nut": "one small heap of pale pine nuts beside a brown pine cone", "winter_root": "one knobbly pale purple winter root vegetable with a few dry leaves",
     "grape_juice": "one glass bottle of dark purple grape juice with a cork, plain, no label", "fruit_tart": "one small round fruit tart topped with strawberries, peach slices and berries on a cream filling",
     "mushroom_soup": "one wooden bowl of creamy mushroom soup with mushroom slices and a sprig of herbs", "mint_tea": "one glass cup of pale green mint tea with fresh mint leaves",

@@ -776,5 +776,11 @@
   "tris": 12000,
   "kind": "plant",
   "x": "small round fruit tree with a short thick brown trunk and a round puffy green leafy crown made of a few large soft clumps, whole tree from roots to top, with many round orange persimmons among the leaves"
+ },
+ "pallas_unarmed": {
+  "tris": 24000,
+  "x": "compact stocky humanoid work mecha robot, original design, toy-like but cool, standing straight and still like a figurine in a symmetrical neutral A-pose with both feet flat on the floor and both arms hanging down at its sides, glossy navy blue armour with rose-pink trim lines, a small rounded head with one glowing cyan visor, its right forearm is a big chunky three-pronged salvage claw gripper instead of a hand, its left arm has a normal mechanical hand, a wire cargo basket mounted on its back visible behind the shoulders, broad shoulders, big sturdy legs and feet, full body, front view",
+  "kind": "creature",
+  "opts": "hv768"
  }
 }
