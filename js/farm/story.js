@@ -133,7 +133,7 @@ export const SPOTS = [
   'farm.porch', 'farm.bin', 'farm.gate', 'farm.pond', 'farm.field',
   'village.square', 'village.memorial', 'village.bridge', 'village.dock', 'village.bench', 'village.storefront',
   'village.cafefront', 'village.hallfront', 'village.workshopfront', 'village.ranchyard', 'village.river',
-  'hill.wreck', 'hill.lake', 'hill.overlook', 'hill.onsen', 'central.office', 'central.arrivals',
+  'hill.wreck', 'hill.lake', 'hill.overlook', 'hill.onsen', 'central.office', 'central.arrivals', 'central.exchange', 'central.plaza',
   'store.counter', 'store.floor', 'ranch.counter', 'workshop.counter', 'workshop.bench',
   'cafe.counter', 'cafe.table1', 'cafe.table2', 'cafe.table3', 'hall.desk', 'hall.floor',
   'clinic.counter', 'clinic.floor', 'library.counter', 'library.floor', 'village.clinicfront', 'village.libraryfront',
@@ -290,9 +290,10 @@ const SCHEDULE = {
     const lake = wd === 1 || wd === 3 || wd === 5;
     return pick(m, [H(8), H(18), 'hill.wreck'], [H(18), H(20, 30), lake ? 'hill.lake' : 'hill.overlook']);
   },
-  // Saturdays at the dock; her barge is her counter.
+  // Saturdays at the dock (her barge is her counter); other days her trading house in Eden Central.
   moraine(wd, m) {
-    return wd === 5 ? pick(m, [H(9), H(17), 'village.dock']) : null;
+    if (wd === 5) return pick(m, [H(9), H(17), 'village.dock']);
+    return pick(m, [H(9), H(10), 'central.plaza'], [H(10), H(18), 'central.exchange']);   // the Ashfall Exchange on the Main deck
   },
   // Saturdays in the village, Sundays at the farm; from year 2, Wednesday evenings at the Hangar.
   general(wd, m, c) {

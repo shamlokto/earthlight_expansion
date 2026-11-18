@@ -35,7 +35,7 @@ const MAIN = VILLAGERS.filter((id) => id !== 'moraine');
 const needTalk = (id) => (id === 'moraine' ? 12 : NEWCOMERS.includes(id) ? 22 : 25);
 const SPOTS = new Set(('farm.porch farm.bin farm.gate farm.pond farm.field village.square village.memorial village.bridge village.dock ' +
   'village.bench village.storefront village.cafefront village.hallfront village.workshopfront village.ranchyard village.river ' +
-  'hill.wreck hill.lake hill.overlook hill.onsen central.office central.arrivals store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
+  'hill.wreck hill.lake hill.overlook hill.onsen central.office central.arrivals central.exchange central.plaza store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
   'cafe.counter cafe.table1 cafe.table2 cafe.table3 hall.desk hall.floor ' +
   'clinic.counter clinic.floor library.counter library.floor village.clinicfront village.libraryfront').split(' '));
 const STYLES = new Set(['bob', 'short', 'long', 'bald', 'bun', 'bandana', 'cap']);
@@ -192,7 +192,8 @@ for (let wd = 0; wd < 7; wd++) {
   for (const m of [540, 700, 950]) check((at('marrow', wd, m) === 'hall.desk') === (wd < 5), `Marrow's desk hours (wd ${wd}, ${m})`);
   check(at('marrow', wd, 960) !== 'hall.desk', 'Marrow leaves the desk at four');
   for (const m of [540, 720, 1010]) check((at('moraine', wd, m) === 'village.dock') === (wd === 5), `Moraine's barge is in on Saturdays only (wd ${wd}, ${m})`);
-  for (const m of [480, 1020]) check(at('moraine', wd, m) === null, 'Moraine is away outside 09:00-17:00');
+  for (const m of [480, 1020]) check(wd === 5 ? at('moraine', wd, m) === null : at('moraine', wd, m) === (m < 1080 && m >= 600 ? 'central.exchange' : null), `Moraine: the dock 9-17 on Saturdays, the Exchange 10-18 other days (wd ${wd}, ${m})`);
+  if (wd !== 5) check(at('moraine', wd, 700) === 'central.exchange' && at('moraine', wd, 550) === 'central.plaza' && at('moraine', wd, 1090) === null, `Moraine keeps the Ashfall Exchange in Eden Central (wd ${wd})`);
   for (const m of [1020, 1040, 1055]) check(at('maris', wd, m) === 'farm.bin', `Maris is at the bin at five (wd ${wd}, ${m})`);
   check(at('maris', wd, 1060) !== 'farm.bin' && at('maris', wd, 1010) !== 'farm.bin', 'Maris is at the bin only 17:00-17:40');
   // The General.
