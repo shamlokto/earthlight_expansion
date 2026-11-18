@@ -46,7 +46,7 @@ const SLOTS = {
     // version 10 (docs/COLONY-V10.md): the luxuries (prompts written; pictures not made yet)
     'coffee', 'vineyard', 'artisan',
     // version 13 (docs/COLONY-V13.md): the Hope's buildings on Earth (prompts written; pictures not made yet)
-    'landingfield', 'sealeddome', 'airscrubber', 'deconplant', 'soilreactor', 'seapurifier', 'tidewall', 'seedbank', 'firstfields', 'reforest'],
+    'landingfield', 'sealeddome', 'airscrubber', 'deconplant', 'soilreactor', 'seapurifier', 'tidewall', 'seedbank', 'firstfields', 'reforest', 'seaplatform', 'ruinbreaker'],
   title: ['rebuild'],
   sky: ['earth-below'],
   terrain: ['void', 'asteroid', 'magnetic', 'atmosphere', 'hull', 'deck', 'plain', 'fertile', 'river', 'rubble', 'breach',

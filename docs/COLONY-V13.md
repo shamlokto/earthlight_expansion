@@ -114,3 +114,12 @@ terrains), `data/buildings.js` (BUILDING lookup), `rules.js` (re-exports; canBui
 'earth'; ensureHope), `sim.js` (hopeDay), `state.js` (save the Earth deck), `main.js` (the 'earth' deck, the ending's
 save and sting), `ui.js` (switcher, menu, inspector, victory screen, help), `view3d/view.js`, `view3d/kits.js`,
 `art.js`, `css/colony.css`, prompts in `tools/art/colony/prompts/`, `tests/colony-hope.mjs`.
+
+## Ocean Platform and Ruin Breaker (2026-11-18)
+
+The owner asked "the sea, how can we clean the rest of the water? … how do we clear the city ruins?". The Sea Purifier only reaches 12 tiles from the shore, and the Soil Reactor breaks down only one ruin tile a day. Two buildings were added:
+
+| Building | Size, ground | Cost (credits / parts / alloy) | Days | Effect |
+|---|---|---|---|---|
+| Ocean Platform | 2×2, on clean sea | 10,000 / 500 / 300 | 14 | Poisoned sea → clean sea, 6 tiles a day, radius 14; +40 water. Build each one on sea already cleaned to leapfrog out to the open ocean. |
+| Ruin Breaker | 2×2, ground | 7,000 / 250 / 150 | 10 | Ruins → dead ground, 4 tiles a day, radius 12; +6 parts a tile. Dead ground then needs a Soil Reactor. |

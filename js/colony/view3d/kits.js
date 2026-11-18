@@ -1665,3 +1665,7 @@ Object.assign(KITS, {
     cyl([0.05, 1.2, 0.05], [0.8, 0.08, -0.8], STEEL), dome([0.12, 0.1, 0.12], [0.8, 1.28, -0.8], CLEAN, GLOW),
   ],
 });
+
+// owner, 2026-11-18: the Hope's Ocean Platform and Ruin Breaker reuse the Sea Purifier's and Soil Reactor's shapes
+KITS.seaplatform = KITS.seaplatform || ((...a) => KITS.seapurifier(...a));
+KITS.ruinbreaker = KITS.ruinbreaker || ((...a) => KITS.soilreactor(...a));
