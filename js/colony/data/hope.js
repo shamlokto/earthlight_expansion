@@ -52,5 +52,15 @@ export const HOPE_BUILDINGS = [
     cost: { credits: 8000, parts: 300, alloy: 120 }, days: 12, jobs: 6, upkeep: 30, makes: { air: 20 },
     treats: [{ from: ['fertile'], to: 'forest', rate: 1 }],
     text: 'Seedling nurseries and planting drones: fertile ground within 8 tiles grows into forest, a tile a day.' },
+  // owner, 2026-11-18 ("the sea, how can we clean the rest of the water? … how do we clear the city ruins?"): the
+  // Sea Purifier only reaches 12 tiles from the shore and the Soil Reactor breaks one ruin a day
+  { key: 'seaplatform', name: 'Ocean Platform', cat: 'hope', size: 2, decks: ['earth'], on: ['sea'], ver: 13, radius: 14,
+    cost: { credits: 10000, parts: 500, alloy: 300 }, days: 14, jobs: 6, upkeep: 40, makes: { water: 40 },
+    treats: [{ from: ['deadsea'], to: 'sea', rate: 6 }],
+    text: 'A filter rig anchored on clean water: cleans the poisoned sea within 14 tiles, six tiles a day. Build it on sea you have already cleaned and leapfrog out to the open ocean.' },
+  { key: 'ruinbreaker', name: 'Ruin Breaker', cat: 'hope', size: 2, decks: ['earth'], on: HOPE_GROUND, ver: 13, radius: 12, salvage: 6,
+    cost: { credits: 7000, parts: 250, alloy: 150 }, days: 10, jobs: 8, upkeep: 30,
+    treats: [{ from: ['ruins'], to: 'ash', rate: 4 }],
+    text: 'Cranes, crushers and salvage crews: tears down city ruins within 12 tiles, four tiles a day, and sends six parts a tile to the stores. Leaves dead ground for a Soil Reactor.' },
 ];
 export const HOPE_BUILDING = Object.fromEntries(HOPE_BUILDINGS.map((b) => [b.key, b]));
