@@ -31,7 +31,7 @@ export const STORAGE_SIZE = 40, FRIDGE_SIZE = 30;
 const FRIDGE_KINDS = new Set(['crop', 'animal', 'fish', 'forage', 'food', 'fruit']);
 // The basket takes farm produce: crops, forage, fruit, eggs and milk.
 const PRODUCE = new Set(['crop', 'forage', 'fruit', 'animal']);
-export const BASKET_CAP = 30, CHEST_SIZE = 20, MAX_ROBOTS = 3, FORAGE_SPOT_COUNT = 14, ONSEN_PRICE = 100;
+export const BASKET_CAP = 30, CHEST_SIZE = 20, MAX_ROBOTS = 7, FORAGE_SPOT_COUNT = 14, ONSEN_PRICE = 100;
 export const RUCKSACK_TIERS = [[15, 1500], [20, 4000], [25, 8000], [30, 15000]];
 const FRUITS = ['cherry', 'peach', 'apple', 'persimmon', 'wild_apple', 'wild_grape', 'berry', 'plum', 'loquat', 'mulberry', 'yuzu'];
 const MUSHROOMS = ['mushroom', 'frostcap'];
@@ -655,7 +655,7 @@ function shelves(state, shopId) {
     sell('field_chest', 1200, { lumber: 20, needs: '20 lumber' });
     const robots = ensure(state).robots.length;
     out.push({ key: 'robot', label: 'Lease a Field-unit', desc: `A little farm robot (${robots}/${MAX_ROBOTS}). It waters, harvests or tends animals each morning on a battery. Talk to it on the farm to give it a job.`, price: 300, once: true,
-      stop: () => (robots >= MAX_ROBOTS ? 'Ruess has no more Field-units to spare. Three is plenty, he says.' : null),
+      stop: () => (robots >= MAX_ROBOTS ? 'Ruess has no more Field-units to spare. Seven is a whole crew, he says.' : null),
       apply: () => { const name = ROBOT_NAMES.find((n) => !state.robots.some((r) => r.name === n)) || `Unit ${state.robots.length + 1}`; state.robots.push({ name, job: 'water', days: 0, charge: 100, mood: 'happy', done: 0 }); return `${name} rolls out of the workshop, fully charged, and follows you home.`; } });
     sell('solar_panel', 1500, { lumber: 10, needs: '10 lumber' });
     sell('battery', 200);

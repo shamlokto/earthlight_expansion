@@ -281,6 +281,7 @@ const DETAIL = {
 };
 for (const it of Object.values(ITEMS)) {
   if (DETAIL[it.id]) it.detail = DETAIL[it.id];
+  else if (it.detail) { /* given with the item */ }
   else if (it.kind === 'seed' && it.crop) { const c = CROPS[it.crop]; it.detail = `A paper bag of ${c.name.toLowerCase()} seeds from ${it.crop === 'moonflower' ? 'Moraine\'s barge' : 'Seln\'s store'}. It sows a 3×3 patch of tilled soil; water it every day and it ripens in ${c.days} days${c.regrow ? `, then gives again every ${c.regrow}` : ''}.`; }
   else if (it.id === 'seed_grass') it.detail = 'Pasture grass seed from Seln\'s store. Sow it in the pasture; in nine days the sickle cuts it to fodder, and it grows back.';
   else it.detail = it.desc;

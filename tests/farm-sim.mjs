@@ -948,9 +948,10 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   // robots
   const R = rich(61); wipe(R);
   check(shopStock(R, 'workshop').find((e) => e.key === 'robot').price === 300, 'a Field-unit lease costs 300');
-  for (let i = 0; i < 3; i++) check(buy(R, 'workshop', 'robot').ok, `lease robot ${i + 1}`);
-  check(R.robots.length === 3 && new Set(R.robots.map((x) => x.name)).size === 3 && R.robots.every((x) => x.charge === 100 && x.job === 'water'), 'three robots, named, charged');
-  check(!shopStock(R, 'workshop').find((e) => e.key === 'robot').can && !act(buy(R, 'workshop', 'robot')).ok, 'no more than three');
+  for (let i = 0; i < sim.MAX_ROBOTS; i++) check(buy(R, 'workshop', 'robot').ok, `lease robot ${i + 1}`);
+  check(sim.MAX_ROBOTS === 7 && R.robots.length === 7 && new Set(R.robots.map((x) => x.name)).size === 7 && R.robots.every((x) => x.charge === 100 && x.job === 'water'), 'seven robots, named, charged');
+  check(!shopStock(R, 'workshop').find((e) => e.key === 'robot').can && !act(buy(R, 'workshop', 'robot')).ok, 'no more than seven');
+  R.robots.length = 3;                                       // the checks below follow three of them
   for (let i = 0; i < 40; i++) { const t = R.fields.farm.tiles[i]; Object.assign(t, { till: true, crop: { id: 'turnip', age: i < 20 ? 4 : 1, dead: false } }); }
   check(sim.setRobotJob(R, 0, 'harvest').ok && sim.setRobotJob(R, 1, 'water').ok && sim.setRobotJob(R, 2, 'animals').ok && !act(sim.setRobotJob(R, 0, 'dance')).ok, 'set jobs');
   check(sim.renameRobot(R, 0, 'Tanuki <b>').ok && R.robots[0].name === 'Tanuki b' && !act(sim.renameRobot(R, 0, '<<>>')).ok, 'rename (cleaned)');
@@ -1006,6 +1007,17 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   check(sim.shopStock(s2, 'store').some((e) => e.key === 'basket') && sim.shopStock(s2, 'workshop').some((e) => e.key === 'robot'), 'old saves can shop for the new things');
   // the forage spots match the hill
   check(sim.FORAGE_SPOT_COUNT === 14, '14 forage spots');
+}
+// ---------------------------------------------------------------- wild fruit trees (2026-11-18)
+{
+  const s = newGame({ seed: 12 });
+  let r = sim.pickWild(s, 'hill:5', 'plum'); check(r.ok && sim.countItem(s, 'plum') >= 1 && sim.countItem(s, 'plum') <= 3, 'pick 1-3 wild plums in spring');
+  r = sim.pickWild(s, 'hill:5', 'plum'); check(!r.ok && r.msg, 'a picked tree needs a few days');
+  s.cal.day += 3; check(sim.pickWild(s, 'hill:5', 'plum').ok, 'plums again after three days');
+  r = sim.pickWild(s, 'hill:6', 'yuzu'); check(!r.ok && /winter/.test(r.msg), 'yuzu only in winter');
+  const v = newGame({ seed: 4 }); r = sim.pickWild(v, 'village:9', 'plum', true); check(r.ok && sim.countItem(v, 'plum') === 1, 'a village tree gives one fruit');
+  v.cal.day += 3; check(!sim.pickWild(v, 'village:9', 'plum', true).ok, 'village trees take longer to come back'); v.cal.day += 2; check(sim.pickWild(v, 'village:9', 'plum', true).ok, 'and then fruit again');
+  check(!sim.pickWild(v, 'x', 'banana').ok, 'unknown fruit refused');
 }
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

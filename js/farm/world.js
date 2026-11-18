@@ -446,6 +446,12 @@ export class World {
       if (p.rot && (o.userData.is3d || kind === 'fence')) o.rotation.y = p.rot;
       if (o.userData.turn) o.rotation.y = Math.PI / 2;
       R.add(o); p.obj = o; if (kind === 'tree' || kind === 'pine' || kind === 'bush') this.tallProps.push(o);
+      if (kind === 'tree' && p.fruit && this.wildFruitShown && this.wildFruitShown(map, p)) {     // a fruiting wild tree: fruit in the canopy
+        const col = { plum: 0x7a2f6a, loquat: 0xf0a830, mulberry: 0x3a1838, wild_apple: 0xc8402a, chestnut: 0x8a5a2a, yuzu: 0xf2d23a }[p.fruit] || 0xd04030;
+        const fg = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.5 }), geo = new THREE.SphereGeometry(0.11, 8, 6), sc = p.scale || 1;
+        for (let i = 0; i < 9; i++) { const a = i * 2.4 + p.x, r = 0.8 + (i % 3) * 0.25, f = new THREE.Mesh(geo, mat); f.position.set(Math.cos(a) * r * sc, (2.1 + (i % 4) * 0.35) * sc, Math.sin(a) * r * sc); fg.add(f); }
+        o.add(fg); o.userData.fruits = fg;
+      }
       const lampL = o.userData.lamp || (o.children[0] && o.children[0].userData.lamp); if (lampL) this.lamps.push(lampL);
     }
     this.colonyFx = null;

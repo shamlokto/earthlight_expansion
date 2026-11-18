@@ -3,6 +3,7 @@ import * as THREE from 'three';
 // the maps, the 3D world and the interface: movement, tools, people, shops, sleep, fishing and
 // the trips down to the Old World. Needs no ROM.
 import * as sim from './sim.js';
+import { WILD_TREES } from './data.js';
 import { ITEMS, CROPS, RELICS, FRUIT_TREES, ROBOT_JOBS, TREE_DAYS } from './data.js';
 import * as story from './story.js';
 import { NPCS } from './story.js';
@@ -463,6 +464,8 @@ function probe() {                                   // → { label, run } for E
   }
   const fa = fieldAt(tx, ty) || fieldAt(Math.floor(me.x), Math.floor(me.y));
   if (fa && fa.tile.crop && !fa.tile.crop.dead && sim.cropStage(fa.tile.crop) === 3) return { label: `Harvest the ${CROPS[fa.tile.crop.id].name.toLowerCase()}${sim.basketHeld(S) ? ' into the basket' : ''}`, run: () => { const r = sim.harvest(S, fa.f.id, fa.x, fa.y); if (r.ok) { sfx('pick'); pickedToast(r); refreshChanged(fa.f.id, [{ x: fa.x, y: fa.y }]); goals(); } else ui.toast(r.msg); refreshHud(); } };
+  const wild = !map.indoor && plantAhead(['tree']);
+  if (wild && wild.p.fruit && !felledAt(wild.pi) && sim.wildReady(S, wild.key, wild.p.fruit, !!map.wildShared)) return { label: `Pick ${ITEMS[WILD_TREES[wild.p.fruit].fruit].name.toLowerCase()}`, run: () => { const r = sim.pickWild(S, wild.key, wild.p.fruit, !!map.wildShared); if (r.ok) { sfx('pick'); ui.gainedToast(r.gained); const f = wild.p.obj && wild.p.obj.userData.fruits; if (f) f.visible = false; } else ui.toast(r.msg); refreshHud(); } };
   const bush = !map.indoor && plantAhead(['bush']); if (bush && sim.bushReady(S, bush.key)) return { label: 'Pick berries', run: () => { const r = sim.pickBush(S, bush.key); if (r.ok) { sfx('pick'); pickedToast(r); } else ui.toast(r.msg); refreshHud(); } };
   const b = nearestBeast(1.4); if (b) return { label: `Pet ${S.animals[b.i].name}`, run: () => { const r = sim.petAnimal(S, b.i); ui.toast(r.msg || `${S.animals[b.i].name} seems pleased.`); floatText(b.o.position.x, b.o.position.z, '♥'); } };
   if (map.id === 'hill') for (const f of S.forage || []) { const [x, y] = FORAGE_SPOTS[f.spot]; if (Math.hypot(x + 0.5 - me.x, y + 0.5 - me.y) < 1.2) return { label: `Pick the ${ITEMS[f.id].name.toLowerCase()}`, run: () => { const r = sim.pickForage(S, f.spot); if (r.ok) { sfx('pick'); pickedToast(r); drawForage(); } else ui.toast(r.msg); refreshHud(); } }; }
@@ -691,7 +694,7 @@ async function begin(state, fresh) {
 }
 async function boot() {
   const info = await art.loadArt();
-  W = new World($('view')); W.isFelled = (key) => !!S && sim.treeFelled(S, key); bindInput();
+  W = new World($('view')); W.isFelled = (key) => !!S && sim.treeFelled(S, key); W.wildFruitShown = (m, p) => !!S && sim.wildReady(S, m.id + ':' + p.index, p.fruit, !!m.wildShared); bindInput();
   initMap({ get: () => ({ S, map, me, npcs, W }), ctx: () => (S ? ctx() : null), openWin: ui.openWindow, closeWin: ui.closeWin, canOpen: () => mode === 'play' && !busy && !ui.talking() && !ui.windowOpen(), toast: ui.toast });
   const tv = art.url('video/title'), tp = art.url('scenes/title');
   $('titleArt').innerHTML = (tp ? `<img src="${tp}" alt="">` : '') + (tv ? `<video src="${tv}" autoplay loop muted playsinline></video>` : '');

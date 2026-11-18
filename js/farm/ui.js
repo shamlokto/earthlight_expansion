@@ -400,18 +400,23 @@ function toolShape(id) {
   }
   return g;
 }
-// An icon on a slowly turning card, for things without a model.
+// For things without a 3D model yet: the item's picture as a chunky cut-out with real thickness
+// (stacked slices of its silhouette, darker inside), not a card. Real models replace it as they arrive.
 function iconCard(id) {
   const g = new THREE.Group(), html = icon(id), c = document.createElement('canvas'); c.width = c.height = 256;
   const ctx = c.getContext('2d'), tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  const paint = (img) => { ctx.clearRect(0, 0, 256, 256); const gr = ctx.createRadialGradient(128, 110, 20, 128, 128, 150); gr.addColorStop(0, '#fffaf0'); gr.addColorStop(1, '#ead9b4'); ctx.fillStyle = gr; ctx.beginPath(); ctx.roundRect(8, 8, 240, 240, 28); ctx.fill(); ctx.strokeStyle = '#b89a62'; ctx.lineWidth = 6; ctx.stroke(); if (img) ctx.drawImage(img, 36, 36, 184, 184); tex.needsUpdate = true; };
-  paint(null);
+  const paint = (img) => { ctx.clearRect(0, 0, 256, 256); if (img) ctx.drawImage(img, 8, 8, 240, 240); tex.needsUpdate = true; };
   const m = /src="([^"]+)"/.exec(html), svg = /<svg[\s\S]*?<\/svg>/.exec(html), img = new Image();
   img.onload = () => paint(img);
   if (m) img.src = m[1]; else if (svg) img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg[0].replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" '));
-  else { ctx.font = 'bold 90px sans-serif'; ctx.fillStyle = '#7a5410'; ctx.textAlign = 'center'; ctx.fillText(ITEMS[id].name.slice(0, 2), 128, 160); tex.needsUpdate = true; }
-  const card = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 0.06), [0, 1, 2, 3].map(() => new THREE.MeshStandardMaterial({ color: 0xd9c49a })).concat([new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, transparent: true, alphaTest: 0.4 }), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, transparent: true, alphaTest: 0.4 })]));
-  g.add(card); return g;
+  else { ctx.beginPath(); ctx.arc(128, 128, 100, 0, 7); ctx.fillStyle = '#c9a877'; ctx.fill(); ctx.font = 'bold 90px sans-serif'; ctx.fillStyle = '#5a3c10'; ctx.textAlign = 'center'; ctx.fillText(ITEMS[id].name.slice(0, 2), 128, 160); tex.needsUpdate = true; }
+  const geo = new THREE.PlaneGeometry(1.5, 1.5), N = 9, depth = 0.16;
+  for (let i = 0; i < N; i++) {
+    const edge = i > 0 && i < N - 1, t = i / (N - 1);
+    const mat = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.7, color: edge ? 0x9a8a78 : 0xffffff });
+    const sl = new THREE.Mesh(geo, mat); sl.position.z = (t - 0.5) * depth; const k = edge ? 0.985 : 1; sl.scale.set(k, k, 1); g.add(sl);
+  }
+  return g;
 }
 // Which model shows an item: its own id, crops as crop_<id>, saplings, and a few by sense.
 const MODEL_FOR = { solar_panel: ['solar_charger', 'solar_panel'], sapling_apple: ['sapling', 'fruit_tree_apple'], sapling_peach: ['sapling', 'fruit_tree_peach'], sapling_cherry: ['sapling', 'fruit_tree_cherry'], sapling_persimmon: ['sapling', 'fruit_tree_persimmon'], field_chest: ['field_chest', 'storage_box'], toy: ['toy', 'maint_bot'], lumber: ['lumber', 'crate'], fodder: ['fodder', 'haybale'] };
