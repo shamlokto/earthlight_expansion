@@ -1089,6 +1089,12 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   for (let i = 0; i < 8; i++) sleep(h);
   r = sim.hydroHarvest(h, 0); check(r.ok && countItem(h, 'strawberry') === 1 && h.hydro[0].crop.age === 6, 'ripe in 8 days without watering, and it regrows');
   setDate(h, 3, 30); rep = sleep(h); check(!h.hydro.length && rep.notes.some((n) => /rentals ended/.test(n)), 'rentals end at the season change');
+  // Sato's Watch
+  const w = newGame({ seed: 211 }); w.cal.minute = 700; check(!act(sim.stargaze(w)).ok, 'the dome opens at seven');
+  w.cal.minute = 1200; w.player.stamina = 40; r = sim.stargaze(w); check(r.ok && r.first && r.restored === 20 && !r.general, 'the first night: the plaque, +20');
+  r = sim.stargaze(w); check(r.ok && !r.first && r.again && !r.restored, 'once a night');
+  w.flags.sweet = 'general'; sleep(w); w.cal.minute = 1200; r = sim.stargaze(w); check(r.ok && r.general && w.flags.watchGeneral, 'the General comes once, when he is her sweetheart');
+  sleep(w); w.cal.minute = 1200; check(!sim.stargaze(w).general, 'only once');
   // old saves
   const old = JSON.parse(saveState(newGame({ seed: 210 }))); for (const kk of ['mill', 'hydro', 'solarYard']) delete old[kk];
   const O = loadState(JSON.stringify(old)); check(O && Array.isArray(O.mill) && Array.isArray(O.hydro) && Array.isArray(O.solarYard.slots) && sleep(O).ok, 'an old save gains the mill, the towers and the yard');
