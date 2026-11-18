@@ -7,6 +7,7 @@
 "icons/brush": {},
 "icons/can": {},
 "icons/carrot": {},
+"icons/cooked_meal": {},
 "icons/corn": {},
 "icons/crystal": {},
 "icons/cucumber": {},
@@ -15,6 +16,7 @@
 "icons/eggplant": {},
 "icons/feed": {},
 "icons/fish_autumn": {},
+"icons/fish_grill": {},
 "icons/fish_king": {},
 "icons/fish_l": {},
 "icons/fish_m": {},
@@ -23,6 +25,7 @@
 "icons/fish_summer": {},
 "icons/fish_winter": {},
 "icons/fodder": {},
+"icons/fridge": {},
 "icons/frostcap": {},
 "icons/hammer": {},
 "icons/herb": {},
@@ -36,6 +39,7 @@
 "icons/moonflower": {},
 "icons/mushroom": {},
 "icons/musicbox": {},
+"icons/omelette": {},
 "icons/onion": {},
 "icons/pendant": {},
 "icons/photo": {},
@@ -44,11 +48,14 @@
 "icons/pumpkin": {},
 "icons/ring": {},
 "icons/rod": {},
+"icons/salad": {},
 "icons/scrap": {},
+"icons/seedbag": {},
 "icons/seedtin": {},
 "icons/sickle": {},
 "icons/soup": {},
 "icons/spinach": {},
+"icons/storage_box": {},
 "icons/strawberry": {},
 "icons/sweetpotato": {},
 "icons/tea": {},
@@ -57,6 +64,7 @@
 "icons/tonic": {},
 "icons/toy": {},
 "icons/turnip": {},
+"icons/veg_soup": {},
 "icons/watch": {},
 "people/corran_front": {
 "anchor": [
@@ -136,13 +144,37 @@
 766
 ]
 },
+"sky/sky_colony_day": {
+"note": "axis view forward and backward",
+"wrap": "mirror"
+},
+"sky/sky_colony_dusk": {
+"note": "axis view forward and backward",
+"wrap": "mirror"
+},
+"sky/sky_colony_night": {
+"note": "axis view forward and backward",
+"wrap": "mirror"
+},
 "textures/cliff_rock": {
 "tile": "quilt"
 },
 "textures/cobble": {
 "tile": "period"
 },
+"textures/colony_path": {
+"tile": "edge"
+},
+"textures/deck_floor": {
+"tile": "edge"
+},
+"textures/glass_window": {
+"tile": "edge"
+},
 "textures/grass_autumn": {
+"tile": "quilt"
+},
+"textures/grass_colony": {
 "tile": "quilt"
 },
 "textures/grass_spring": {
@@ -153,6 +185,9 @@
 },
 "textures/grass_winter": {
 "tile": "quilt"
+},
+"textures/hull_plate": {
+"tile": "edge"
 },
 "textures/path_dirt": {
 "tile": "quilt"
@@ -181,6 +216,36 @@
 "textures/wood_floor": {
 "tile": "period"
 },
+"video/descent": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/festival_harvest": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/festival_lantern": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/festival_planting": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/festival_yearend": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/heart10": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
 "video/intro1": {
 "fps": 16,
 "frames": 81,
@@ -191,7 +256,62 @@
 "frames": 81,
 "loop": false
 },
+"video/intro3": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/intro4": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/intro5": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/morning": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/ruins": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/season_autumn": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/season_spring": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/season_summer": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/season_winter": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
 "video/title": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/upperdeck": {
+"fps": 16,
+"frames": 81,
+"loop": false
+},
+"video/wedding": {
 "fps": 16,
 "frames": 81,
 "loop": false

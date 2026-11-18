@@ -142,6 +142,18 @@ def g_t2i(prompt, w=1024, h=1024, seed=0, prefix="farm/t2i", neg=NEG, steps=8, s
     }
 
 
+def g_i2i(prompt, image, w=1024, h=1024, seed=0, prefix="farm/i2i", denoise=0.8, neg=NEG, steps=8, shift=3.1):
+    """Qwen-Image img2img: repaint an uploaded guide image (layout / scale) from the prompt."""
+    g = g_t2i(prompt, w, h, seed, prefix, neg=neg, steps=steps, shift=shift)
+    g["L"] = {"class_type": "LoadImage", "inputs": {"image": image}}
+    g["S"] = {"class_type": "ImageScale", "inputs": {"image": ["L", 0], "upscale_method": "lanczos", "width": w, "height": h, "crop": "center"}}
+    g["E"] = {"class_type": "VAEEncode", "inputs": {"pixels": ["S", 0], "vae": ["5", 0]}}
+    g["9"]["inputs"]["latent_image"] = ["E", 0]
+    g["9"]["inputs"]["denoise"] = denoise
+    del g["8"]
+    return g
+
+
 def g_edit(prompt, images, w=1024, h=1024, seed=0, prefix="farm/edit", steps=8, shift=3.0):
     """images: 1-3 names already uploaded to the server's input folder."""
     g = {
@@ -227,6 +239,8 @@ def run_jobs(c, jobs, work=WORK, seeds=1, force=False, base_seed=None, log=print
             names.append(uploaded[key])
         if j["kind"] == "edit":
             return g_edit(j["prompt"], names, j["w"], j["h"], seed, prefix)
+        if j["kind"] == "i2i":
+            return g_i2i(j["prompt"], names[0], j["w"], j["h"], seed, prefix, j.get("denoise", 0.8))
         return g_i2v(j["prompt"], names[0], j["w"], j["h"], j.get("length", 81), seed, prefix)
 
     log("to do: %d" % len(todo))

@@ -128,8 +128,49 @@ def make(slot, rng):
         "roof_shingle": ["#5d5955", "#757069", "#8e8880"], "roof_red": ["#8e4326", "#a5502f", "#c0683f"], "roof_tin": ["#75828a", "#8d99a0", "#a9b4ba"],
         "metal_hull": ["#5d6a77", "#6e7b88", "#8592a0"], "concrete_ruin": ["#787771", "#8b8a84", "#a09f99"], "brick_ruin": ["#6d4435", "#8a5a48", "#a36f59"],
         "ash_ground": ["#66625b", "#7c776f", "#938d84"], "hay": ["#b99a42", "#d4b45a", "#e6ca78"], "water": ["#1f4a5c", "#2d5f73", "#3d7387"],
+        "hull_plate": ["#a9b0b8", "#c3c9cf", "#dde1e5"], "deck_floor": ["#6d7680", "#848d96", "#9aa3ab"], "glass_window": ["#0b1530", "#14224a", "#22356a"],
+        "colony_path": ["#cfcac0", "#e0dbd2", "#eeeae3"], "grass_colony": ["#4f9a3a", "#62ad48", "#7cc35a"],
     }[slot]
     cs = [hexc(p) for p in P]
+    if slot == "hull_plate":
+        im = bricks(rng, P, N // 3, N // 4, mortar=(120, 126, 134))
+        d = ImageDraw.Draw(im)
+        for y in range(0, N, N // 4):
+            for x in range(0, N, N // 24):
+                d.ellipse((x + 10, y + 12, x + 18, y + 20), fill=(150, 156, 164))
+        return im
+    if slot == "deck_floor":
+        im = bricks(rng, P, N // 4, N // 4, mortar=(60, 66, 72)).filter(ImageFilter.GaussianBlur(1))
+        d = ImageDraw.Draw(im)
+        for y in range(8, N, 22):
+            for x in range((y // 22 % 2) * 11, N, 22):
+                d.line((x, y, x + 8, y + 8), fill=tuple(int(c * 1.12) for c in cs[1]), width=3)
+        for x in (N // 8, N * 5 // 8):
+            d.line((x, 0, x, N), fill=(90, 210, 220), width=6)
+        return im
+    if slot == "glass_window":
+        im = base(rng, P, octaves=(2, 4, 8))
+        speck(im, rng, 700, [(230, 235, 255), (200, 210, 255), (255, 240, 220)], r=(1, 3))
+        d = ImageDraw.Draw(im)
+        d.ellipse((int(N * 0.55), int(N * 0.72), int(N * 1.25), int(N * 1.42)), fill=(60, 120, 200))
+        for x in range(0, N, N // 3):
+            d.rectangle((x, 0, x + 26, N), fill=(170, 176, 184))
+        d.rectangle((0, 0, N, 40), fill=(170, 176, 184)); d.rectangle((0, N - 40, N, N), fill=(170, 176, 184))
+        return im
+    if slot == "colony_path":
+        im = bricks(rng, P, N // 4, N // 4, mortar=(180, 175, 166), jitter=0)
+        d = ImageDraw.Draw(im)
+        for y in range(N // 8, N, N // 2):
+            d.rectangle((0, y - 5, N, y + 5), fill=(200, 245, 250))
+        return im
+    if slot == "grass_colony":
+        im = base(rng, P, octaves=(8, 32, 128, 256))
+        strokes(im, rng, 9000, cs + [cs[2]], ln=(8, 18), w=2)
+        d = ImageDraw.Draw(im)
+        for y in range(N // 8, N, N // 4):
+            for x in range(N // 8, N, N // 4):
+                d.ellipse((x - 6, y - 6, x + 6, y + 6), fill=(180, 186, 192))
+        return im
     if slot.startswith("grass") and slot != "grass_winter":
         im = base(rng, P, octaves=(8, 32, 128, 256))
         strokes(im, rng, 9000, cs + [cs[2]], ln=(10, 26), w=2)

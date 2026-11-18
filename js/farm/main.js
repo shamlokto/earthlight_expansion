@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 // Sato's Harvest: the game itself (docs/FARM.md). Glues the rules (sim.js), the words (story.js),
 // the maps, the 3D world and the interface: movement, tools, people, shops, sleep, fishing and
 // the trips down to the Old World. Needs no ROM.
@@ -8,6 +9,7 @@ import { NPCS } from './story.js';
 import * as art from './art.js';
 import { allMaps, ruinsMap, doorTarget, outsideOf, findSpot, FORAGE_SPOTS } from './maps.js';
 import { World } from './world.js';
+import { initMap, toggleMap, isOpen as mapOpen } from './minimap.js';
 import { Actor, DIRV } from './actors.js';
 import * as ui from './ui.js';
 import { sfx, music, musicPlaying, setMood } from './sfx.js';
@@ -17,7 +19,7 @@ const $ = (id) => document.getElementById(id);
 const MIN_SECONDS = 0.6;                 // one game minute
 let S = null, W = null, map = null, me = null, mode = 'title', busy = false;
 let npcs = new Map(), beasts = [], monsters = [], hydra = null, fishing = null, labels = [];
-let clock = 0, lastPlaced = -1, zapT = 0, hydraT = 0, hurtT = 0, doorHold = 0;
+let clock = 0, lastPlaced = -1, hurtT = 0, doorHold = 0;
 const keys = new Set(), stick = { x: 0, y: 0 };
 // Small touches to the built figures, on top of the colours in story.js.
 const LOOKS = { sato: { top: '#f4eddc', bottom: '#2f4488', eye: '#7a4a22', skin: '#f8dcc4', bib: true, hat: true }, seln: { apron: '#4f8a3a' }, mori: { glasses: true, top: '#f4f6f8' }, yui: { glasses: true }, kestrel: {}, corran: { moustache: '#f2f2f2', age: 'old', bib: true }, marrow: { age: 'old' }, ruess: { age: 'old', glasses: true }, oduya: { bib: true }, vashti: {}, maris: {}, general: {}, moraine: {} };
@@ -50,7 +52,7 @@ function target() { const [dx, dy] = DIRV[me.dir]; return [Math.floor(me.x + dx 
 
 async function go(to, { quick = false } = {}) {
   busy = true; if (!quick) await ui.fade(true, 220);
-  fishing = null; hydra = null; monsters = []; beasts = []; npcs = new Map(); lastPlaced = -1;
+  fishing = null; hydra = null; monsters = []; for (const b of bolts) W.scene.remove(b.m); bolts = []; beasts = []; npcs = new Map(); lastPlaced = -1;
   map = to.map === 'ruins' ? ruinsMap(S.mine) : allMaps()[to.map];
   W.setMap(map, S);
   me = new Actor(W, 'sato', lookOf('sato'), map.ruins ? { pallas: true, tall: 2.5 } : {});
@@ -206,37 +208,111 @@ const FORAGE_COLOR = { herb: 0x6fbf5a, berry: 0xc23a6a, mushroom: 0xb0825a, fros
 function drawForage() { for (let i = 0; i < FORAGE_SPOTS.length; i++) W.unplace('forage' + i); for (const f of S.forage || []) { const [x, y] = FORAGE_SPOTS[f.spot]; const p = art.pic('icons/' + f.id); if (p) { const g = W.place('forage' + f.spot, null, x + 0.5, y + 0.5); g.add(W.billboard(p, 0.42, {})); } else W.place('forage' + f.spot, null, x + 0.5, y + 0.5, { procKind: 'forage', color: FORAGE_COLOR[f.id] }); } }
 
 // ---------------------------------------------------------------- the Old World
+// The fight below is pest control, not war: creatures telegraph every attack, the Pallas aims for you,
+// and the worst a hit does is cost a little stamina. Space fires, F sets the Hydra, Shift boosts.
+let bolts = [], dashT = 0, dashCd = 0, fireCd = 0, hydraCd = 0;
+function hpBar(mon) {
+  const g = new THREE.Group(), w = 0.7;
+  const bg = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.09), new THREE.MeshBasicMaterial({ color: 0x1a1410, transparent: true, opacity: 0.7, depthTest: false }));
+  const fg = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.09), new THREE.MeshBasicMaterial({ color: 0x7dffb0, depthTest: false }));
+  fg.geometry.translate(w / 2, 0, 0); fg.position.x = -w / 2; fg.position.z = 0.001; bg.renderOrder = fg.renderOrder = 9;
+  g.add(bg, fg); g.position.y = mon.kind === 'drone' ? 1.55 : mon.big ? 1.25 : 0.95; g.visible = false; mon.o.add(g); W.facers.push(g); mon.bar = fg; mon.barG = g;
+}
 function drawRuins() {
-  const m = S.mine; monsters = [];
+  const m = S.mine; monsters = []; bolts = []; dashT = 0;
   for (let i = 0; i < m.cells.length; i++) { const c = m.cells[i], x = (i % m.w) + 1.5, y = Math.floor(i / m.w) + 1.5; W.unplace('r' + i); if (c === 1) W.place('r' + i, 'rubble', x, y, { scale: 0.9 + (i % 4) * 0.08 }); else if (c === 2) W.place('r' + i, 'stairs', x, y); }
-  m.monsters.forEach((ref, k) => { const o = W.place('mon' + k + '_' + Math.random(), ref.kind, ref.x + 1.5, ref.y + 1.5); monsters.push({ ref, o, x: ref.x + 1.5, y: ref.y + 1.5, wob: Math.random() * 6 }); });
+  const depth = m.depth || 1;
+  m.monsters.forEach((ref, k) => {
+    const big = ref.kind === 'crawler' && depth >= 4 && k % 3 === 0;
+    const kind = big && art.hasModel('crawler_big') ? 'crawler_big' : ref.kind;
+    const o = W.place('mon' + k + '_' + Math.random(), kind, ref.x + 1.5, ref.y + 1.5, { scale: big && kind === 'crawler' ? 1.5 : 1 });
+    const mon = { ref, o, kind: ref.kind, big, x: ref.x + 1.5, y: ref.y + 1.5, hp: ref.hp + (big ? 2 : 0), wob: Math.random() * 6, state: 'wander', t: Math.random() * 2, squash: 0, shotT: 1.5 + Math.random() * 2 };
+    mon.max = mon.hp; hpBar(mon); monsters.push(mon);
+  });
 }
 async function descend(depth) {
   const first = !S.flags.descended; sim.setFlag(S, 'descended');
   sim.enterMine(S, depth);
   if (first) { mode = 'talk'; ui.scene('descent'); await ui.say(story.RUINS.arrive.map((t) => ({ who: 'narrator', text: t }))); mode = 'play'; }
   await go({ map: 'ruins' });
-  ui.toast(first ? 'E searches rubble. Space sets down the Hydra.' : pick(depth > 1 ? story.RUINS.deeper : story.RUINS.arrive), 4200);
+  ui.toast(first ? 'Space fires the Pallas. F sets down the Hydra. Shift boosts. E searches rubble.' : pick(depth > 1 ? story.RUINS.deeper : story.RUINS.arrive), 5200);
 }
 function popMonster(mon) {
   const i = S.mine.monsters.indexOf(mon.ref); const r = i >= 0 ? sim.defeatMonster(S, i) : { gained: [] };
-  W.puff(mon.x, mon.y, 0xff9a55, 12, 0.5); W.dyn.remove(mon.o); W.unface(mon.o); monsters.splice(monsters.indexOf(mon), 1); sfx('pop');
-  ui.gainedToast(r.gained); if (Math.random() < 0.4) ui.toast(pick(story.RUINS.monster)); refreshHud();
+  W.puff(mon.x, mon.y, 0xffb347, 18, 0.5); W.puff(mon.x, mon.y, 0x7dffb0, 8, 0.8); W.shake = Math.max(W.shake || 0, 0.12);
+  const k = W.facers.indexOf(mon.barG); if (k >= 0) W.facers.splice(k, 1);
+  W.dyn.remove(mon.o); W.unface(mon.o); monsters.splice(monsters.indexOf(mon), 1); sfx('pop'); floatText(mon.x, mon.y, pick(['pop!', 'poof', 'shoo!']));
+  ui.gainedToast(r.gained); if (Math.random() < 0.35) ui.toast(pick(story.RUINS.monster));
+  if (!monsters.length) ui.toast('All quiet on this level.', 2200);
+  refreshHud();
 }
+function hurtMonster(mon, dmg, fromX, fromY) {
+  mon.hp -= dmg; mon.squash = 1;
+  const d = Math.hypot(mon.x - fromX, mon.y - fromY) || 1, kx = (mon.x - fromX) / d * 0.5, ky = (mon.y - fromY) / d * 0.5;
+  if (!blocked(mon.x + kx, mon.y)) mon.x += kx; if (!blocked(mon.x, mon.y + ky)) mon.y += ky;
+  if (mon.state === 'windup' || mon.state === 'lunge') { mon.state = 'stun'; mon.t = 0.6; }
+  mon.barG.visible = true; mon.bar.scale.x = Math.max(0.001, mon.hp / mon.max);
+  W.puff(mon.x, mon.y, 0xfff2b8, 6, 0.45); sfx('zap');
+  if (mon.hp <= 0) popMonster(mon);
+}
+function spawnBolt(x, y, dx, dy, from) {
+  const l = Math.hypot(dx, dy) || 1, color = from === 'pallas' ? 0x7dffb0 : from === 'hydra' ? 0xffb347 : 0xff6a5a;
+  const m = new THREE.Mesh(new THREE.SphereGeometry(from === 'enemy' ? 0.13 : 0.09, 8, 6), new THREE.MeshBasicMaterial({ color }));
+  m.add(new THREE.Mesh(new THREE.SphereGeometry(from === 'enemy' ? 0.26 : 0.2, 8, 6), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false })));
+  m.position.set(x, from === 'pallas' ? 1.6 : from === 'hydra' ? 0.7 : 0.9, y); W.scene.add(m);
+  const speed = from === 'enemy' ? 4.2 : 14;
+  bolts.push({ m, x, y, vx: dx / l * speed, vy: dy / l * speed, from, life: from === 'enemy' ? 3 : 1.1 });
+}
+function pallasFire() {
+  if (fireCd > 0) return; fireCd = 0.26;
+  let [dx, dy] = DIRV[me.dir], best = null, bs = 0.5;                       // gentle aim: the nearest creature in a wide cone ahead
+  for (const mon of monsters) { const ex = mon.x - me.x, ey = mon.y - me.y, d = Math.hypot(ex, ey); if (d > 9 || !d) continue; const c = (ex * dx + ey * dy) / d, sc = c - d * 0.03; if (c > 0.55 && sc > bs) { bs = sc; best = mon; } }
+  if (best) { dx = best.x - me.x; dy = best.y - me.y; me.face(best.x, best.y); }
+  spawnBolt(me.x + dx * 0.1, me.y + dy * 0.1, dx, dy, 'pallas'); me.swing = 1; sfx('zap');
+}
+function placeHydra() {
+  if (hydraCd > 0) return ui.toast('The Hydra is still unfolding.', 900);
+  hydraCd = 2.5; if (hydra) W.unplace('hydra');
+  const [dx, dy] = DIRV[me.dir]; let x = me.x + dx * 0.9, y = me.y + dy * 0.9; if (blocked(x, y)) { x = me.x; y = me.y; }
+  hydra = { x, y, o: W.place('hydra', 'hydra', x, y), cd: 0.6 }; W.puff(x, y, 0xc9c2b0, 8, 0.2); sfx('drop'); ui.toast('Hydra set.', 900);
+}
+function satoHit(fromX, fromY) {
+  if (hurtT > 0 || dashT > 0) return false;
+  hurtT = 1.4; const r = sim.monsterHit(S); ui.toast(r.msg); W.shake = 0.2; sfx('bad');
+  const d = Math.hypot(me.x - fromX, me.y - fromY) || 1; for (let k = 0; k < 6; k++) { const nx = me.x + (me.x - fromX) / d * 0.12, ny = me.y + (me.y - fromY) / d * 0.12; if (canStand(nx, ny)) { me.x = nx; me.y = ny; } }
+  refreshHud(); return true;
+}
+function pallasDash() { if (dashCd > 0) return; dashCd = 0.9; dashT = 0.2; W.puff(me.x, me.y, 0x9fd8ee, 10, 0.3); sfx('zap'); }
 function ruinsTick(dt) {
-  zapT -= dt; hydraT -= dt; hurtT -= dt;
+  hurtT -= dt; fireCd -= dt; hydraCd -= dt; dashCd -= dt; dashT -= dt;
+  if (me.group) me.group.visible = !(hurtT > 0 && Math.floor(hurtT * 12) % 2);
   for (const mon of [...monsters]) {
-    const d = Math.hypot(me.x - mon.x, me.y - mon.y); mon.wob += dt;
-    let vx = Math.cos(mon.wob * 0.7) * 0.4, vy = Math.sin(mon.wob * 0.9) * 0.4;
-    if (d < 6.5 && d > 0.1) { vx = (me.x - mon.x) / d * 1.25; vy = (me.y - mon.y) / d * 1.25; }
-    const nx = mon.x + vx * dt, ny = mon.y + vy * dt; if (!blocked(nx, mon.y)) mon.x = nx; if (!blocked(mon.x, ny)) mon.y = ny;
-    mon.o.position.x = mon.x; mon.o.position.z = mon.y; if (mon.o.userData.is3d) mon.o.rotation.y = Math.atan2(vx, vy);
-    if (d < 2.1 && zapT <= 0) { zapT = 0.45; W.beam(me.x, me.y, 1.7, mon.x, mon.y, 0.4, 0x7dffb0); me.swing = 1; sfx('zap'); if (--mon.ref.hp <= 0) { popMonster(mon); continue; } }
-    if (d < 0.75 && hurtT <= 0) { hurtT = 1.6; const r = sim.monsterHit(S); ui.toast(r.msg); mon.x -= vx * 0.8; mon.y -= vy * 0.8; refreshHud(); }
+    const ex = me.x - mon.x, ey = me.y - mon.y, d = Math.hypot(ex, ey) || 0.01; mon.wob += dt; mon.t -= dt;
+    let sp = 0, tx = 0, ty = 0;
+    if (mon.kind === 'drone') {                                            // drones keep their distance and lob slow orbs
+      if (d < 7) { const want = d < 3 ? -1 : d > 4.5 ? 1 : 0; tx = ex / d * want + Math.cos(mon.wob) * 0.6; ty = ey / d * want + Math.sin(mon.wob * 1.3) * 0.6; sp = 1.3; mon.shotT -= dt; if (mon.shotT <= 0) { mon.shotT = 2.4 + Math.random(); spawnBolt(mon.x, mon.y, ex, ey, 'enemy'); floatText(mon.x, mon.y, '!'); } }
+      else { tx = Math.cos(mon.wob * 0.5); ty = Math.sin(mon.wob * 0.6); sp = 0.4; }
+    } else if (mon.state === 'wander') { tx = Math.cos(mon.wob * 0.7); ty = Math.sin(mon.wob * 0.9); sp = 0.45; if (d < 6) { mon.state = 'chase'; floatText(mon.x, mon.y, '!'); } }
+    else if (mon.state === 'chase') { tx = ex / d; ty = ey / d; sp = mon.big ? 1.0 : 1.45; if (d < 1.7) { mon.state = 'windup'; mon.t = mon.big ? 0.7 : 0.5; mon.lx = ex / d; mon.ly = ey / d; } if (d > 9) mon.state = 'wander'; }
+    else if (mon.state === 'windup') { if (mon.t <= 0) { mon.state = 'lunge'; mon.t = 0.28; } }
+    else if (mon.state === 'lunge') { tx = mon.lx; ty = mon.ly; sp = mon.big ? 5 : 6.5; if (d < 0.75) { satoHit(mon.x, mon.y); mon.state = 'rest'; mon.t = 0.9; } else if (mon.t <= 0) { mon.state = 'rest'; mon.t = 0.8; } }
+    else if (mon.t <= 0) mon.state = 'chase';                              // rest or stun
+    if (sp) { const nx = mon.x + tx * sp * dt, ny = mon.y + ty * sp * dt; if (!blocked(nx, mon.y)) mon.x = nx; if (!blocked(mon.x, ny)) mon.y = ny; if (mon.o.userData.is3d && (tx || ty)) mon.o.rotation.y = Math.atan2(tx, ty); }
+    mon.squash = Math.max(0, mon.squash - dt * 5); const q = 1 + Math.sin(mon.squash * 9) * mon.squash * 0.25;
+    mon.o.scale.set(q, 1 / q, q);
+    mon.o.position.set(mon.x, mon.state === 'windup' ? Math.abs(Math.sin(mon.t * 40)) * 0.06 : 0, mon.y);
   }
-  if (hydra && hydraT <= 0) {
-    let best = null, bd = 6; for (const mon of monsters) { const d = Math.hypot(hydra.x - mon.x, hydra.y - mon.y); if (d < bd) { bd = d; best = mon; } }
-    if (best) { hydraT = 0.4; W.beam(hydra.x, hydra.y, 0.7, best.x, best.y, 0.4, 0xffb347); sfx('zap'); hydra.o.rotation.y = Math.atan2(best.x - hydra.x, best.y - hydra.y); if (--best.ref.hp <= 0) popMonster(best); }
+  if (hydra) {                                                              // the Hydra: a short-range auto-turret
+    hydra.cd -= dt;
+    let best = null, bd = 6.5; for (const mon of monsters) { const d = Math.hypot(hydra.x - mon.x, hydra.y - mon.y); if (d < bd) { bd = d; best = mon; } }
+    if (best) { hydra.o.rotation.y = Math.atan2(best.x - hydra.x, best.y - hydra.y); if (hydra.cd <= 0) { hydra.cd = 0.55; spawnBolt(hydra.x, hydra.y, best.x - hydra.x, best.y - hydra.y, 'hydra'); } }
+  }
+  for (let i = bolts.length - 1; i >= 0; i--) {
+    const b = bolts[i]; b.life -= dt; b.x += b.vx * dt; b.y += b.vy * dt; b.m.position.x = b.x; b.m.position.z = b.y;
+    let dead = b.life <= 0 || map.solid(b.x, b.y);
+    if (!dead && b.from !== 'enemy') for (const mon of monsters) if (Math.hypot(mon.x - b.x, mon.y - b.y) < (mon.big ? 0.65 : 0.5)) { hurtMonster(mon, 1, b.x - b.vx * 0.05, b.y - b.vy * 0.05); dead = true; break; }
+    if (!dead && b.from === 'enemy' && Math.hypot(me.x - b.x, me.y - b.y) < 0.55) { satoHit(b.x - b.vx, b.y - b.vy); dead = true; }
+    if (dead) { W.scene.remove(b.m); if (b.life > 0) W.puff(b.x, b.y, b.from === 'enemy' ? 0xff6a5a : 0xfff2b8, 4, 0.6); bolts.splice(i, 1); }
   }
 }
 
@@ -260,7 +336,7 @@ function probe() {                                   // → { label, run } for E
   const p = propAt(tx, ty);
   if (p) {
     if (p.act === 'counter') { const k = nearestNpc(3.2); if (k) return { label: `Talk to ${NPCS[k].short || NPCS[k].name}`, run: () => talkTo(k) }; if (map.id === 'hall') return { label: 'Nobody is at the desk', run: () => ui.toast('Nobody is at the desk just now.') }; return { label: 'Nobody is at the counter', run: () => ui.toast('Nobody is here to serve just now.') }; }
-    const L = { bin: 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Listen to the forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', lift: 'Ride the Descent', museum: 'Look at the Memory Room', books: 'Read a book' }[p.act];
+    const L = { bin: 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Watch the colony forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', lift: 'Ride the Descent', museum: 'Look at the Memory Room', books: 'Read a book', storage: 'Open the storage box', fridge: 'Open the fridge', kitchen: 'Cook something', calendar: 'Read the noticeboard' }[p.act];
     return { label: L, run: () => act(p) };
   }
   const fa = fieldAt(tx, ty) || fieldAt(Math.floor(me.x), Math.floor(me.y));
@@ -280,6 +356,10 @@ async function act(p) {
     case 'bin': { if (!s) return ui.toast('Hold something to ship it. Maris collects at five.'); const r = sim.ship(S, S.player.sel); ui.toast(r.msg || (r.ok ? 'In the bin.' : 'That cannot be shipped.')); if (r.ok) sfx('drop'); goals(); break; }
     case 'well': { const r = sim.refillCan(S); ui.toast(r.msg || 'The watering can is full.'); if (r.ok) sfx('water'); break; }
     case 'sign': ui.say([{ who: 'narrator', text: story.SIGNS[p.sign] || '…' }]); break;
+    case 'storage': ui.boxWindow(S, 'storage', refreshHud); break;
+    case 'fridge': if (!S.flags.kitchen) ui.say([{ who: 'narrator', text: 'An old cold-locker from a ship, standing in the corner unplugged. Prof. Ruess could connect it with a kitchen refit.' }]); else ui.boxWindow(S, 'fridge', refreshHud); break;
+    case 'kitchen': if (!S.flags.kitchen) ui.say([{ who: 'narrator', text: 'A cold stove and a dry sink. Prof. Ruess at the Workshop can refit the kitchen.' }]); else ui.kitchenWindow(S, (r) => { if (r && r.ok) sfx('good'); refreshHud(); }); break;
+    case 'calendar': { const f = story.FESTIVALS.filter((x) => x.season === S.cal.season && x.day >= S.cal.day); const bd = Object.values(NPCS).filter((n) => n.id !== 'sato' && n.birthday && n.birthday.season === S.cal.season && n.birthday.day >= S.cal.day && S.npc[n.id] && S.npc[n.id].met); ui.say([{ who: 'narrator', text: `The noticeboard. ${f.length ? 'Coming up: ' + f.map((x) => `${x.name} on day ${x.day}`).join(', ') + '.' : 'No more festivals this season.'} ${bd.length ? 'Birthdays: ' + bd.map((n) => `${n.short || n.name} on day ${n.birthday.day}`).join(', ') + '.' : ''}` }]); break; }
     case 'radio': { const l = story.RADIO[S.weatherTomorrow] || story.RADIO.sun; ui.say([{ who: 'narrator', text: 'The radio crackles. ' + (Array.isArray(l) ? l[(S.cal.day + S.cal.season) % l.length] : l) }]); break; }
     case 'bed': { mode = 'talk'; const i = await ui.choose('The bed', ['Sleep until morning', 'Save the game', 'Not yet']); mode = 'play'; if (i === 0) await night(false); else if (i === 1) { save(); ui.toast('Saved.'); } break; }
     case 'feedcow': case 'feedhen': { const r = sim.feedAll(S, p.act === 'feedcow' ? 'cow' : 'chicken'); ui.toast(r.msg || (r.ok ? 'Fed.' : 'Nothing to feed.')); if (r.ok) sfx('drop'); break; }
@@ -305,7 +385,7 @@ async function leaveRuins() { sim.leaveMine(S); sfx('door'); await go({ map: 'hi
 
 function use() {                                     // Space: the held tool or item
   if (fishing) return pullLine();
-  if (map.ruins) { hydra = { x: me.x, y: me.y, o: W.place('hydra', 'hydra', me.x, me.y) }; sfx('drop'); ui.toast('Hydra set.', 1200); return; }
+  if (map.ruins) return pallasFire();
   const s = sim.selected(S); if (!s) return; const it = ITEMS[s.id], [tx, ty] = target();
   const near = nearestNpc(1.5); if (near && it.kind !== 'tool' && it.kind !== 'seed') return giveTo(near);
   if (it.kind === 'food' || (it.stamina && it.kind !== 'tool')) { if (it.kind === 'food') { const r = sim.eat(S, S.player.sel); ui.toast(r.msg || 'That was good.'); if (r.ok) sfx('pick'); refreshHud(); } return; }
@@ -385,7 +465,7 @@ function frame(now) {
       if (fishing) endFishing();
       ix /= Math.max(1, len); iy /= Math.max(1, len);
       const c = Math.cos(W.yaw), s = Math.sin(W.yaw), wx = ix * c + iy * s, wy = -ix * s + iy * c;
-      const tired = S.player.stamina < 15 ? 0.7 : 1, sp = (map.ruins ? 4.6 : keys.has('ShiftLeft') || keys.has('ShiftRight') ? 5.6 : 3.9) * tired * dt;
+      const tired = S.player.stamina < 15 ? 0.7 : 1, sp = (map.ruins ? (dashT > 0 ? 13 : 4.6) : keys.has('ShiftLeft') || keys.has('ShiftRight') ? 5.6 : 3.9) * tired * dt;
       me.dir = Math.abs(wx) > Math.abs(wy) ? (wx < 0 ? 2 : 3) : (wy < 0 ? 1 : 0);
       if (canStand(me.x + wx * sp, me.y)) me.x += wx * sp; if (canStand(me.x, me.y + wy * sp)) me.y += wy * sp;
       const tx = Math.floor(me.x), ty = Math.floor(me.y);
@@ -427,19 +507,21 @@ function bindInput() {
     if (e.code === 'Tab') { e.preventDefault(); if (ui.windowOpen()) ui.closeWin(); else openMenu('bag'); return; }
     if (e.code === 'F1') { e.preventDefault(); return openMenu('help'); }
     if (e.repeat) return;
+    if (e.code === 'KeyM') { if (mapOpen()) ui.closeWin(); else toggleMap(); return; }   // the town map (music: the menu's button)
     if (e.code === 'KeyE' || e.code === 'Enter') return pressE();
     if (e.code === 'Space') { e.preventDefault(); return pressUse(); }
     if (ui.windowOpen() || ui.talking()) return;
     keys.add(e.code);
     if (/^Digit\d$/.test(e.code)) selectSlot(e.code === 'Digit0' ? 9 : +e.code.slice(5) - 1);
     if (e.code === 'KeyR') { const s = sim.selected(S); if (s && ITEMS[s.id].stamina) { const r = sim.eat(S, S.player.sel); ui.toast(r.msg || 'That was good.'); refreshHud(); } }
-    if (e.code === 'KeyM') ui.toast(music(!musicPlaying()) ? 'Music on.' : 'Music off.');
+    if (map && map.ruins && e.code === 'KeyF') placeHydra();
+    if (map && map.ruins && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) pallasDash();
     if (e.code === 'KeyQ') W.yaw -= Math.PI / 4; if (e.code === 'KeyC') W.yaw += Math.PI / 4;
   });
   addEventListener('keyup', (e) => keys.delete(e.code)); addEventListener('blur', () => keys.clear());
   const cv = $('view'); let drag = null;
   cv.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId }; cv.setPointerCapture(e.pointerId); });
-  cv.addEventListener('pointermove', (e) => { if (!drag || drag.id !== e.pointerId) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 5) drag.moved = true; if (drag.moved) { W.yaw -= dx * 0.006; W.pitch = Math.max(0.45, Math.min(1.25, W.pitch + dy * 0.004)); drag.x = e.clientX; drag.y = e.clientY; } });
+  cv.addEventListener('pointermove', (e) => { if (!drag || drag.id !== e.pointerId) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 5) drag.moved = true; if (drag.moved) { W.yaw -= dx * 0.006; W.pitch = Math.max(0.1, Math.min(1.25, W.pitch + dy * 0.004)); drag.x = e.clientX; drag.y = e.clientY; } });
   cv.addEventListener('pointerup', (e) => { if (drag && !drag.moved && e.pointerType === 'mouse' && e.button === 0) pressUse(); drag = null; });
   cv.addEventListener('wheel', (e) => { e.preventDefault(); if (e.ctrlKey || e.shiftKey) W.dist = Math.max(6, Math.min(22, W.dist + Math.sign(e.deltaY))); else if (mode === 'play' && S) selectSlot(S.player.sel + Math.sign(e.deltaY)); }, { passive: false });
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -452,7 +534,7 @@ function bindInput() {
     const mv = (e) => { const r = st.getBoundingClientRect(), x = (e.clientX - r.left - 60) / 50, y = (e.clientY - r.top - 60) / 50, l = Math.max(1, Math.hypot(x, y)); stick.x = x / l; stick.y = y / l; knob.style.transform = `translate(${stick.x * 34}px, ${stick.y * 34}px)`; };
     st.addEventListener('pointerdown', (e) => { st.setPointerCapture(e.pointerId); mv(e); }); st.addEventListener('pointermove', (e) => { if (e.buttons || e.pressure) mv(e); });
     const up = () => { stick.x = stick.y = 0; knob.style.transform = ''; }; st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
-    $('tUse').addEventListener('pointerdown', (e) => { e.preventDefault(); pressUse(); }); $('tAct').addEventListener('pointerdown', (e) => { e.preventDefault(); pressE(); });
+    $('tUse').addEventListener('pointerdown', (e) => { e.preventDefault(); pressUse(); }); $('tAct').addEventListener('pointerdown', (e) => { e.preventDefault(); if (map && map.ruins && mode === 'play' && !ui.talking() && !probe()) placeHydra(); else pressE(); });
   }
 }
 
@@ -468,6 +550,7 @@ async function begin(state, fresh) {
 async function boot() {
   const info = await art.loadArt();
   W = new World($('view')); bindInput();
+  initMap({ get: () => ({ S, map, me, npcs, W }), ctx: () => (S ? ctx() : null), openWin: ui.openWindow, closeWin: ui.closeWin, canOpen: () => mode === 'play' && !busy && !ui.talking() && !ui.windowOpen(), toast: ui.toast });
   const tv = art.url('video/title'), tp = art.url('scenes/title');
   $('titleArt').innerHTML = (tp ? `<img src="${tp}" alt="">` : '') + (tv ? `<video src="${tv}" autoplay loop muted playsinline></video>` : '');
   const old = loadSaved();

@@ -138,6 +138,7 @@ function openWin(title, html, onClose, cls = '') {
   $('win').hidden = false; $('win').className = 'fm-win ' + cls; winClose = onClose || null;
   $('winTitle').textContent = title; $('winBody').innerHTML = html; $('winBody').scrollTop = 0; return $('winBody');
 }
+export const openWindow = (...a) => openWin(...a);       // for the map screen (minimap.js)
 export function shop(state, shopId, keeper, onChange) {
   return new Promise((res) => {
     const draw = () => {
@@ -184,7 +185,7 @@ export function menu(state, hooks, tab = 'bag') {
     } else if (tab === 'help') {
       h += HELP.map((x) => `<h3>${esc(x.title)}</h3><p>${esc(x.body).replace(/\n/g, '<br>')}</p>`).join('');
     } else {
-      h += `<div class="fm-sys"><button data-act="save">Save the game</button><button data-act="export">Export save to a file</button><button data-act="music">Music on / off (M)</button><button data-act="title">Back to the title</button></div><p class="fm-dim">The game also saves by itself every morning.</p>`;
+      h += `<div class="fm-sys"><button data-act="save">Save the game</button><button data-act="export">Export save to a file</button><button data-act="music">Music on / off</button><button data-act="title">Back to the title</button></div><p class="fm-dim">The game also saves by itself every morning.</p>`;
     }
     const body = openWin('Sato’s Harvest', h, () => hooks.close && hooks.close(), 'menu');
     body.onclick = (e) => {
@@ -201,4 +202,34 @@ export function menu(state, hooks, tab = 'bag') {
 export function museum(state, relics) {
   openWin('The Memory Room', `<p class="fm-lead">Things from the Old World, kept so that Eden's children know what was lost, and what was good.</p><div class="fm-grid wide">` +
     relics.map((r) => { const have = state.museum && state.museum[r.id]; return `<div class="fm-relic${have ? '' : ' no'}">${have ? icon(r.id) : '<span class="fm-ico fm-fake" style="background:#333">?</span>'}<b>${have ? esc(ITEMS[r.id].name) : '— empty case —'}</b>${have && r.text ? `<span>${esc(r.text)}</span>` : ''}</div>`; }).join('') + '</div>', null, 'menu');
+}
+
+// The storage box or the fridge: the rucksack on top, the box below; click a stack to move it across.
+export function boxWindow(state, where, onChange) {
+  const title = where === 'fridge' ? 'The fridge' : 'Storage box';
+  const draw = (msg = '') => {
+    const box = state[where] || [], inv = state.player.inv;
+    const cell = (s, i, side) => `<button class="fm-slot big" data-side="${side}" data-i="${i}" title="${s ? esc(ITEMS[s.id].name) : ''}">${s ? icon(s.id) + (s.n > 1 ? `<i>${s.n}</i>` : '') : ''}</button>`;
+    const body = openWin(title, `<p class="fm-dim">Click something in your rucksack to put it ${where === 'fridge' ? 'in the fridge (food only)' : 'away'}; click something below to take it out.</p>
+      <h3>Rucksack</h3><div class="fm-grid">${inv.map((s, i) => cell(s, i, 'inv')).join('')}</div>
+      <h3>${title}</h3><div class="fm-grid">${box.map((s, i) => cell(s, i, 'box')).join('')}</div>
+      <p class="fm-dim">${esc(msg)}</p>`, null, 'menu');
+    body.onclick = (e) => {
+      const b = e.target.closest('[data-side]'); if (!b) return;
+      const r = b.dataset.side === 'inv' ? sim.storeItem(state, where, +b.dataset.i) : sim.takeItem(state, where, +b.dataset.i);
+      onChange && onChange(); draw(r.msg || '');
+    };
+  };
+  draw();
+}
+// The kitchen: recipes that can be made from the rucksack and the fridge.
+export function kitchenWindow(state, onChange) {
+  const draw = (msg = '') => {
+    const book = sim.recipeBook(state);
+    const body = openWin('Kitchen', `<p class="fm-lead">The stove is a salvaged ship's galley ring. It still smells faintly of coolant and toast.</p>` +
+      book.map((r) => `<div class="fm-row${r.can ? '' : ' no'}"><div><b>${icon(r.id)} ${esc(r.name)}</b><span>${esc(r.desc)}${r.uses ? ' · uses ' + esc(r.uses.join(', ')) : ''}</span></div><button data-r="${r.id}" ${r.can ? '' : 'disabled'}>Cook</button></div>`).join('') +
+      `<p class="fm-dim">Ingredients come from your rucksack first, then the fridge. ${esc(msg)}</p>`, null, 'menu');
+    body.onclick = (e) => { const b = e.target.closest('[data-r]'); if (!b) return; const r = sim.cook(state, b.dataset.r); onChange && onChange(r); draw(r.msg || ''); };
+  };
+  draw();
 }

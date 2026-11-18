@@ -32,6 +32,8 @@ const FLAT = {
   metal_hull: ['#6e7b88', '#5d6a77', '#808d99'], concrete_ruin: ['#8b8a84', '#787771', '#9c9b95'], brick_ruin: ['#8a5a48', '#774c3c', '#9a6854'],
   ash_ground: ['#7c776f', '#6a665f', '#8c877e'], hay: ['#d4b45a', '#c2a24b', '#e0c26c'], water: ['#2d5f73', '#27556a', '#35697d'],
   stone_floor: ['#a9a69d', '#97948b', '#b7b4ab'], glass: ['#bfe3e6', '#a9d3d8', '#d3eef0'],
+  // the colony's own surfaces (art slots textures/deck_floor, hull_plate, colony_path, grass_colony)
+  deck_floor: ['#c4ccd0', '#b3bcc1', '#d3dadd'], hull_plate: ['#8a98a6', '#7b8997', '#9aa7b3'], colony_path: ['#d8d0c0', '#c8bfae', '#e4ddd0'], grass_colony: ['#6fae4c', '#5d9a40', '#83bd5c'],
 };
 function paintFlat(name, size = 128) {
   const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d');
@@ -42,7 +44,8 @@ function paintFlat(name, size = 128) {
   for (let i = 0; i < size * 14; i++) { g.fillStyle = r() < 0.5 ? lo : hi; g.globalAlpha = 0.5; g.fillRect(r() * size, r() * size, 1 + r() * 3, 1 + r() * 2); }
   g.globalAlpha = 1;
   if (/plank|barn|wood|soil_tilled|soil_wet|roof/.test(name)) { g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 2; const n = /roof/.test(name) ? 8 : 6; for (let i = 0; i < n; i++) { const p = (i + 0.5) * size / n; g.beginPath(); if (/soil|roof/.test(name)) { g.moveTo(0, p); g.lineTo(size, p); } else { g.moveTo(p, 0); g.lineTo(p, size); } g.stroke(); } }
-  if (/cobble|brick/.test(name)) { g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 2; for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) g.strokeRect(x * size / 4 + (y % 2 ? size / 8 : 0), y * size / 4, size / 4, size / 4); }
+  if (/deck|hull/.test(name)) { g.strokeStyle = 'rgba(40,55,65,.45)'; g.lineWidth = 2; for (let i = 0; i <= 2; i++) { g.beginPath(); g.moveTo(0, i * size / 2); g.lineTo(size, i * size / 2); g.moveTo(i * size / 2, 0); g.lineTo(i * size / 2, size); g.stroke(); } g.fillStyle = 'rgba(40,55,65,.5)'; for (const a of [8, size / 2 - 10, size / 2 + 8, size - 10]) for (const b of [8, size / 2 - 10, size / 2 + 8, size - 10]) g.fillRect(a, b, 3, 3); g.fillStyle = 'rgba(95,179,176,.55)'; g.fillRect(size / 2 - 1, size / 4, 2, size / 2); }
+  if (/cobble|brick|colony_path/.test(name)) { g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 2; for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) g.strokeRect(x * size / 4 + (y % 2 ? size / 8 : 0), y * size / 4, size / 4, size / 4); }
   return c;
 }
 

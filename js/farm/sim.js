@@ -26,6 +26,22 @@ import { SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, ITEMS, CROPS, T
 
 export const NPC_IDS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui'];
 export const CAN_CAPACITY = [0, 20, 40, 80];
+export const STORAGE_SIZE = 40, FRIDGE_SIZE = 30;
+// What goes in the fridge: anything you can eat or cook with.
+const FRIDGE_KINDS = new Set(['crop', 'animal', 'fish', 'forage', 'food']);
+const VEG = ['turnip', 'potato', 'cucumber', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach'];
+const FISH_IDS = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'];
+const MILK = ['milk_s', 'milk_m', 'milk_l'];
+// Each recipe: a list of ingredient slots; each slot is satisfied by any one of its ids. Different slots
+// of the same group must use different items (a salad is two DIFFERENT vegetables).
+export const RECIPES = [
+  { id: 'omelette', name: 'Omelette', needs: [['egg'], MILK] },
+  { id: 'salad', name: 'Garden salad', needs: [VEG, VEG] },
+  { id: 'veg_soup', name: 'Vegetable soup', needs: [VEG, VEG, VEG] },
+  { id: 'fish_grill', name: 'Grilled fish', needs: [FISH_IDS] },
+  { id: 'berry_jam', name: 'Berry jam', needs: [['berry'], ['berry'], ['berry']], same: true },
+  { id: 'cooked_meal', name: 'Colony bento', needs: [FISH_IDS, ['egg'], VEG] },
+];
 export const UPGRADABLE = ['hoe', 'can', 'sickle', 'hammer', 'axe', 'rod'];
 export const SHOPS = {
   store: { id: 'store', name: "Seln's Seed & Sundry", keeper: 'seln' },
@@ -109,6 +125,7 @@ export function newGame({ seed } = {}) {
     fields: { farm: field(FIELD_SIZES.farm), greenhouse: field(FIELD_SIZES.greenhouse) },
     pasture: { w: PASTURE_SIZE[0], h: PASTURE_SIZE[1], grass: Array(PASTURE_SIZE[0] * PASTURE_SIZE[1]).fill(0), age: Array(PASTURE_SIZE[0] * PASTURE_SIZE[1]).fill(0) },
     stock: { lumber: 0, fodder: 0, feed: 0 },
+    storage: new Array(STORAGE_SIZE).fill(null), fridge: new Array(FRIDGE_SIZE).fill(null),
     animals: [], eggs: 0, bin: [],
     ledger: { shipped: {}, earned: 0 },
     npc: {}, flags: { greenhouse: false },
@@ -443,6 +460,73 @@ export function eat(state, slot) {
   return { ok: true, msg: `You had ${def.name.toLowerCase()}. +${def.stamina} stamina.` };
 }
 
+// ---------------------------------------------------------------- storage box, fridge and kitchen
+function boxes(state) {
+  if (!Array.isArray(state.storage)) state.storage = new Array(STORAGE_SIZE).fill(null);
+  if (!Array.isArray(state.fridge)) state.fridge = new Array(FRIDGE_SIZE).fill(null);
+  return { storage: state.storage, fridge: state.fridge };
+}
+const boxOf = (state, where) => (where === 'storage' || where === 'fridge' ? boxes(state)[where] : null);
+// Put a rucksack stack (or n of it) into the storage box or the fridge.
+export function storeItem(state, where, slot, n) {
+  const box = boxOf(state, where); if (!box) return fail('There is nowhere like that to put things.');
+  const s = slotItem(state, slot); if (!s) return fail('That slot is empty.');
+  const def = ITEMS[s.id];
+  if (def.kind === 'tool' && where === 'fridge') return fail('Tools do not go in the fridge.');
+  if (where === 'fridge' && !FRIDGE_KINDS.has(def.kind)) return fail('Only food goes in the fridge.');
+  if (where === 'fridge' && !state.flags.kitchen) return fail('The fridge is not connected yet. Ruess can refit the kitchen.');
+  if (n === undefined || n === null) n = s.n;
+  if (!int(n) || n < 1) return fail('Choose how many.');
+  n = Math.min(n, s.n);
+  let left = n;
+  for (const b of box) if (b && b.id === s.id && left) { const k = Math.min(left, STACK - b.n); b.n += k; left -= k; }
+  for (let i = 0; i < box.length && left; i++) if (!box[i]) { const k = Math.min(left, STACK); box[i] = { id: s.id, n: k }; left -= k; }
+  const put = n - left;
+  if (!put) return fail(where === 'fridge' ? 'The fridge is full.' : 'The storage box is full.');
+  takeFromSlot(state, slot, put);
+  return { ok: true, msg: `${put} × ${def.name} ${where === 'fridge' ? 'in the fridge' : 'in the storage box'}.` };
+}
+// Take a stack (or n of it) out of the box into the rucksack.
+export function takeItem(state, where, index, n) {
+  const box = boxOf(state, where); if (!box) return fail('There is nowhere like that.');
+  const b = int(index) && index >= 0 && index < box.length ? box[index] : null;
+  if (!b) return fail('That space is empty.');
+  if (n === undefined || n === null) n = b.n;
+  n = Math.min(Math.max(1, int(n) ? n : 1), b.n, room(state, b.id));
+  if (n < 1) return fail(FULL);
+  addItem(state, b.id, n); b.n -= n; if (!b.n) box[index] = null;
+  return { ok: true, msg: `Took ${n} × ${ITEMS[b.id].name}.` };
+}
+// Ingredients come from the rucksack first, then the fridge.
+function pantry(state) {
+  const have = {};
+  for (const s of [...state.player.inv, ...boxes(state).fridge]) if (s) have[s.id] = (have[s.id] || 0) + s.n;
+  return have;
+}
+function planRecipe(state, r) {
+  const have = pantry(state), used = {}, picks = [];
+  for (const slot of r.needs) {
+    const id = slot.find((x) => (have[x] || 0) - (used[x] || 0) > 0 && (r.same || !picks.includes(x)));
+    if (!id) return null;
+    used[id] = (used[id] || 0) + 1; picks.push(id);
+  }
+  return picks;
+}
+export function recipeBook(state) {
+  return RECIPES.map((r) => { const p = state.flags.kitchen ? planRecipe(state, r) : null; return { id: r.id, name: r.name, desc: ITEMS[r.id].desc, can: !!p, uses: p ? p.map((x) => ITEMS[x].name) : null }; });
+}
+export function cook(state, recipeId) {
+  if (!state.flags.kitchen) return fail('The kitchen needs a refit first. Ruess can do it.');
+  const r = RECIPES.find((x) => x.id === recipeId); if (!r) return fail('There is no such recipe.');
+  const picks = planRecipe(state, r); if (!picks) return fail(`You do not have the ingredients for ${r.name.toLowerCase()}.`);
+  if (!room(state, r.id)) return fail(FULL);
+  for (const id of picks) {
+    if (!removeItem(state, id, 1)) { const f = boxes(state).fridge, k = f.findIndex((b) => b && b.id === id); if (k >= 0) { f[k].n -= 1; if (!f[k].n) f[k] = null; } }
+  }
+  addItem(state, r.id, 1); state.stats.cooked = (state.stats.cooked || 0) + 1;
+  return { ok: true, msg: `You made ${ITEMS[r.id].name.toLowerCase()}.`, gained: [{ id: r.id, n: 1 }] };
+}
+
 // What a shop sells today. Private fields: give (item id), once, req [[id, n]], lumber, stop(n) -> why, apply(n).
 function shelves(state, shopId) {
   const p = state.player, out = [];
@@ -473,6 +557,10 @@ function shelves(state, shopId) {
         needs: req.map(([id, n]) => `${n} ${lower(id)}`).join(', '),
         stop: () => (state.pending.upgrade ? 'Ruess is already working on one of your tools.' : null),
         apply: () => { removeItem(state, tool, 1); state.pending.upgrade = { tool, level }; return `Ruess will have your ${name} ready in the morning.`; } });
+    }
+    if (!state.flags.kitchen) {
+      out.push({ key: 'kitchen', label: 'Kitchen refit', desc: 'A stove, a sink and a cold-locker fridge for the farmhouse. Cook meals from your own harvest.', price: 2500, lumber: 60, needs: '60 lumber', once: true,
+        apply: () => { state.flags.kitchen = true; boxes(state); return 'Ruess refitted your kitchen. The fridge hums like a small engine.'; } });
     }
     if (!state.flags.greenhouse) {
       out.push({ key: 'greenhouse', label: 'Greenhouse repair', desc: 'Crops grow in the greenhouse in any season.', price: 4000, lumber: 120, needs: '120 lumber', once: true,

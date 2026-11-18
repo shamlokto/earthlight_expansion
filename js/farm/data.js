@@ -85,6 +85,13 @@ export const RELICS = [
 ].map(([id, name, sell, depth, desc]) => { item(id, name, 'relic', desc, { sell }); return { id, depth }; });
 
 item('bread', 'Bread', 'food', 'Restores 20 stamina.', { stamina: 20 });
+// Home cooking (the kitchen): better than shop food, and worth more in the bin than the raw goods.
+item('omelette', 'Omelette', 'food', 'Egg and milk, folded soft. Restores 45 stamina.', { stamina: 45, sell: 220 });
+item('salad', 'Garden salad', 'food', 'Two fresh vegetables, crisp. Restores 30 stamina.', { stamina: 30, sell: 190 });
+item('veg_soup', 'Vegetable soup', 'food', 'Three vegetables, simmered. Restores 60 stamina.', { stamina: 60, sell: 320 });
+item('fish_grill', 'Grilled fish', 'food', 'Any fish, salt and a hot pan. Restores 50 stamina.', { stamina: 50, sell: 260 });
+item('cooked_meal', 'Colony bento', 'food', 'Fish, egg and a vegetable in a tin box, the way crews ate on the carriers. Restores 90 stamina.', { stamina: 90, sell: 480 });
+item('berry_jam', 'Berry jam', 'food', 'Berries and patience. Restores 25 stamina.', { stamina: 25, sell: 160 });
 item('soup', 'Soup', 'food', 'Restores 40 stamina.', { stamina: 40 });
 item('pie', 'Pie', 'food', 'Restores 70 stamina.', { stamina: 70 });
 item('tea', 'Tea', 'food', 'Restores 10 stamina.', { stamina: 10 });
