@@ -8,6 +8,9 @@ import { SIGNS } from './story.js';
 // r cliff rock (solid) · a ash (the Old World) · o stone floor · h hay · b boards (indoor floor)
 // d deck plating (the colony's own metal paving) · x nothing
 export const SOLID_GROUND = new Set(['w', 'r', 'x']);
+// Thin or round things collide as a small circle around their middle instead of a whole tile, so
+// lawns with trees and lamps stay walkable (radius in tiles).
+export const POST_RADIUS = { tree: 0.32, pine: 0.3, bush: 0.42, lantern: 0.14, colony_lamp: 0.16, signpost: 0.14, noticeboard: 0.3, solar_panel: 0.38, hydro_tower: 0.36, water_tank: 0.62, wind_turbine_small: 0.3, fan_tower: 0.4, scarecrow: 0.2, rockdecor: 0.4, vent: 0.38, fountain: 0.95, well: 0.5, bin: 0.42, memorial: 0.6, cargo_crate: 0.45, maint_bot: 0.3 };
 
 function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
@@ -17,6 +20,7 @@ class MapDef {
     this.buildings = []; this.props = []; this.exits = []; this.spots = {}; this.doors = [];
     this.indoor = false; this.name = id; Object.assign(this, opts);
     this.block = new Uint8Array(w * h);            // 1 = a building or solid prop stands here
+    this.posts = [];                                // [x, y, r, propIndex] round obstacles
   }
   at(x, y) { return x < 0 || y < 0 || x >= this.w || y >= this.h ? 'x' : this.g[y * this.w + x]; }
   fill(x0, y0, x1, y1, c) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.g[y * this.w + x] = c; return this; }
@@ -30,12 +34,14 @@ class MapDef {
   }
   prop(kind, x, y, o = {}) {
     const p = { kind, x, y, solid: true, w: 1, d: 1, ...o }; this.props.push(p);
+    if (p.solid && POST_RADIUS[kind] && !o.tileSolid) { const r = POST_RADIUS[kind] * Math.min(1.3, p.scale || 1); this.posts.push([Math.floor(x) + p.w / 2, Math.floor(y) + p.d / 2, r, this.props.length - 1]); p.post = true; return p; }
     if (p.solid) for (let j = 0; j < p.d; j++) for (let i = 0; i < p.w; i++) { const xx = Math.floor(x) + i, yy = Math.floor(y) + j; if (xx >= 0 && yy >= 0 && xx < this.w && yy < this.h) this.block[yy * this.w + xx] = 1; }
     return p;
   }
   exit(x0, y0, x1, y1, to) { this.exits.push({ x0, y0, x1, y1, to }); return this; }
   spot(name, x, y) { this.spots[name] = [x, y]; return this; }
-  free(x, y) { return !this.solid(x, y) && this.at(x, y) === 'g'; }
+  postNear(x, y, r) { return this.posts.some(([px, py, pr]) => Math.hypot(px - x, py - y) < pr + r); }
+  free(x, y) { return !this.solid(x, y) && this.at(x, y) === 'g' && !this.postNear(x + 0.5, y + 0.5, 0.55); }
   // Trees and bushes on free grass, away from paths and doors.
   scatter(seed, n, kinds, keep = () => true) {
     const r = rng(seed); let tries = 0;
@@ -44,6 +50,7 @@ class MapDef {
       if (!this.free(x, y) || !keep(x, y)) continue;
       let ok = true;
       for (let j = -1; j <= 1 && ok; j++) for (let i = -1; i <= 1; i++) { const c = this.at(x + i, y + j); if (c !== 'g' || this.block[(y + j) * this.w + x + i]) { ok = false; break; } }
+      if (ok && this.postNear(x + 0.5, y + 0.5, 1.2)) ok = false;
       if (!ok || this.doors.some((d) => Math.abs(d.x - x) < 3 && Math.abs(d.y - y) < 3)) continue;
       const kind = kinds[Math.floor(r() * kinds.length)];
       this.prop(kind, x, y, { solid: kind !== 'flowers', scale: 0.85 + r() * 0.4, rot: r() * 6.28 }); n--;
@@ -55,7 +62,7 @@ class MapDef {
     for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) {
       if (x > 0 && y > 0 && x < this.w - 1 && y < this.h - 1) continue;
       if (skip(x, y) || this.at(x, y) !== 'g') continue;
-      this.prop(kind, x, y, { scale: 1 + r() * 0.5, rot: r() * 6.28 });
+      this.prop(kind, x, y, { scale: 1 + r() * 0.5, rot: r() * 6.28, tileSolid: true });
     }
     return this;
   }

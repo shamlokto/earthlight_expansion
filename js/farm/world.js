@@ -331,7 +331,9 @@ export class World {
       art.model(mname).then((m) => {
         if (!m) return proc();
         const s = art.modelInfo(mname).size || [1, 1, 1];
-        m.scale.setScalar(Math.min((b.w + 0.4) / s[0], (b.d + 0.4) / s[2], (b.height * 1.25) / s[1]));
+        // fill the footprint (no invisible walls around a small model), stretching x and z by at most a third
+        const kx = (b.w + 0.2) / s[0], kz = (b.d + 0.2) / s[2], k = Math.min(kx, kz, (b.height * 1.4) / s[1]);
+        m.scale.set(Math.min(kx, k * 1.33), k, Math.min(kz, k * 1.33));
         g.add(m);
       });
     } else proc();
@@ -377,8 +379,10 @@ export class World {
     }
     for (const b of map.buildings) R.add(this.makeBuilding(b));
     const built = [], pools = [];
+    map.props.forEach((p, pi) => { p.index = pi; });
     for (const p of map.props) {
-      const kind = p.kind === 'tree' && p.y >= H - 1 ? 'bush' : p.kind;
+      let kind = p.kind === 'tree' && p.y >= H - 1 ? 'bush' : p.kind;
+      if ((kind === 'tree' || kind === 'pine') && this.isFelled && this.isFelled(map.id + ':' + p.index)) kind = 'stump';
       this.colonyFx = { spin: this.spinners, glow: [] };
       const turn = kind === 'pipe_run' && p.d > p.w;            // a pipe running north-south is built east-west and turned
       const o = this.makeProp(kind, turn ? { ...p, w: p.d, d: p.w } : p);
@@ -390,7 +394,7 @@ export class World {
       o.position.set(p.x + p.w / 2, p.onWater ? -0.1 : 0, p.y + p.d / 2);
       if (p.rot && (o.userData.is3d || kind === 'fence')) o.rotation.y = p.rot;
       if (o.userData.turn) o.rotation.y = Math.PI / 2;
-      R.add(o); p.obj = o; if (kind === 'tree' || kind === 'pine') this.tallProps.push(o);
+      R.add(o); p.obj = o; if (kind === 'tree' || kind === 'pine' || kind === 'bush') this.tallProps.push(o);
       const lampL = o.userData.lamp || (o.children[0] && o.children[0].userData.lamp); if (lampL) this.lamps.push(lampL);
     }
     this.colonyFx = null;
@@ -484,7 +488,15 @@ export class World {
     for (const a of this.actors.values()) a.update(dt, this);
     // trees standing between the camera and Sato step aside
     const cx = Math.sin(this.yaw), cz = Math.cos(this.yaw);
-    for (const o of this.tallProps || []) { const rx = o.position.x - px, rz = o.position.z - py, along = rx * cx + rz * cz, lat = Math.abs(rx * cz - rz * cx); const hide = along > 0.4 && along < 9 && lat < 2.4; const k = o.userData.k = Math.max(0.02, Math.min(1, (o.userData.k ?? 1) + (hide ? -dt : dt) * 5)); o.scale.set(1, k, 1); }
+    // trees between the camera and Sato turn see-through (about 8% opaque) instead of collapsing
+    for (const o of this.tallProps || []) {
+      const rx = o.position.x - px, rz = o.position.z - py, along = rx * cx + rz * cz, lat = Math.abs(rx * cz - rz * cx);
+      const hide = along > 0.3 && along < 9 && lat < 2.2, k0 = o.userData.k ?? 1;
+      const k = Math.max(0.08, Math.min(1, k0 + (hide ? -dt : dt) * 4)); if (k === k0) continue; o.userData.k = k;
+      if (!o.userData.ownMats) { o.userData.ownMats = []; o.traverse((q) => { if (q.isMesh && q.material) { q.material = q.material.clone(); q.material.transparent = true; o.userData.ownMats.push(q.material); } }); }
+      for (const m of o.userData.ownMats) { m.opacity = k; m.depthWrite = k > 0.97; m.alphaTest = k > 0.97 ? (m.alphaTest || 0) : 0; }
+      o.traverse((q) => { if (q.isMesh) q.castShadow = k > 0.5; });
+    }
     for (const [k, o] of this.tileObjs) if (o.userData.hover || (o.children[0] && o.children[0].userData.hover)) o.position.y = Math.sin(this.t * 2 + k.length) * 0.08;
     if (this.weather.visible) {
       const p = this.weather.geometry.attributes.position; this.weather.position.set(px, 0, py);

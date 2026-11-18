@@ -143,15 +143,20 @@ function toolMesh(id) {
   return g;
 }
 
-function robot() {                                  // Sato's Pallas, built: navy and rose
-  const g = new THREE.Group(), navy = std({ color: '#1f3a78', metalness: 0.4, roughness: 0.55 }), rose = std({ color: '#d85a8c', metalness: 0.3, roughness: 0.5 }), grey = std({ color: '#59626e', metalness: 0.5 });
-  const b = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
-  const leg = (x) => { const p = new THREE.Group(); const u = new THREE.Mesh(new THREE.BoxGeometry(0.32, 1.0, 0.36), navy); u.position.y = -0.5; u.castShadow = true; const f = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.2, 0.6), grey); f.position.set(0, -1.05, 0.1); f.castShadow = true; p.add(u, f); p.position.set(x, 1.15, 0); g.add(p); return p; };
-  const L = leg(-0.3), R = leg(0.3);
-  b(0.95, 0.75, 0.6, navy, 0, 1.6, 0); b(0.5, 0.3, 0.2, rose, 0, 1.7, 0.31); b(0.36, 0.3, 0.36, navy, 0, 2.15, 0); b(0.3, 0.07, 0.05, new THREE.MeshBasicMaterial({ color: '#7dffb0' }), 0, 2.17, 0.19);
-  b(0.7, 0.6, 0.4, grey, 0, 1.65, -0.5);                                                       // cargo basket
-  const arm = (x) => { const p = new THREE.Group(); const u = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.85, 0.26), x < 0 ? navy : rose); u.position.y = -0.4; u.castShadow = true; p.add(u); p.position.set(x, 1.92, 0); g.add(p); return p; };
-  const A = arm(-0.62), B = arm(0.62);
+function robot() {                                  // Sato's Pallas, built in the expansion's colours: white and blue, magenta and gold
+  const g = new THREE.Group(), white = std({ color: '#e9edf5', metalness: 0.3, roughness: 0.45 }), blue = std({ color: '#2457b8', metalness: 0.35, roughness: 0.45 }), mag = std({ color: '#c8346f', metalness: 0.3, roughness: 0.5 }), gold = std({ color: '#d9a43a', metalness: 0.6, roughness: 0.35 }), grey = std({ color: '#4a5260', metalness: 0.5 });
+  const b = (w, h, d, m, x, y, z, p = g) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; p.add(o); return o; };
+  const leg = (x) => { const p = new THREE.Group(); b(0.3, 0.55, 0.34, white, 0, -0.3, 0, p); b(0.34, 0.5, 0.38, blue, 0, -0.8, 0, p); b(0.38, 0.18, 0.6, white, 0, -1.08, 0.08, p); b(0.2, 0.08, 0.06, gold, 0, -0.55, 0.19, p); p.position.set(x, 1.15, 0); g.add(p); return p; };
+  const L = leg(-0.28), R = leg(0.28);
+  b(0.5, 0.3, 0.36, mag, 0, 1.2, 0); b(0.92, 0.62, 0.56, blue, 0, 1.62, 0); b(0.42, 0.3, 0.06, white, 0, 1.66, 0.29); b(0.5, 0.06, 0.07, gold, 0, 1.4, 0.29);
+  b(0.34, 0.3, 0.34, white, 0, 2.08, 0); b(0.26, 0.06, 0.04, new THREE.MeshBasicMaterial({ color: '#7dffb0' }), 0, 2.1, 0.18);
+  for (const s2 of [-1, 1]) { const f = b(0.04, 0.26, 0.04, gold, s2 * 0.1, 2.32, 0.12); f.rotation.z = -s2 * 0.6; }                      // the V-fin
+  for (const s2 of [-1, 1]) { const w = b(0.12, 0.7, 0.36, white, s2 * 0.42, 2.0, -0.32); w.rotation.z = s2 * 0.35; b(0.05, 0.55, 0.37, mag, s2 * 0.47, 2.0, -0.32).rotation.z = s2 * 0.35; }   // back wings
+  const arm = (x, right) => { const p = new THREE.Group(); b(0.34, 0.28, 0.36, white, 0, 0, 0, p); b(0.24, 0.72, 0.26, right ? blue : white, 0, -0.45, 0, p); b(0.1, 0.06, 0.27, gold, 0, -0.2, 0, p);
+    if (right) { const sab = b(0.05, 1.1, 0.05, new THREE.MeshBasicMaterial({ color: '#8ff4ff' }), 0, -1.2, 0.25, p); sab.rotation.x = 0.6; b(0.08, 0.18, 0.08, grey, 0, -0.78, 0.05, p); }
+    else { b(0.12, 0.14, 0.9, grey, 0, -0.75, 0.3, p); }   // the rifle
+    p.position.set(x, 1.92, 0); g.add(p); return p; };
+  const A = arm(-0.62, false), B = arm(0.62, true);
   g.userData.limbs = { L, R, A, B };
   return g;
 }

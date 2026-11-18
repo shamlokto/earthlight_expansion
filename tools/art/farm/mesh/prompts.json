@@ -89,10 +89,10 @@
   "x": "short arched wooden footbridge with a chunky plank deck and simple handrails on both sides, warm brown timber"
  },
  "pallas": {
-  "tris": 20000,
+  "tris": 24000,
   "x": "compact stocky humanoid work mecha robot, original design, toy-like but cool, standing straight and still like a figurine in a symmetrical neutral A-pose with both feet flat on the floor and both arms hanging down at its sides, glossy navy blue armour with rose-pink trim lines, a small rounded head with one glowing cyan visor, its right forearm is a big chunky three-pronged salvage claw gripper instead of a hand, its left arm has a normal mechanical hand, a wire cargo basket mounted on its back visible behind the shoulders, broad shoulders, big sturdy legs and feet, full body, front view",
   "kind": "creature",
-  "opts": "h"
+  "opts": "hv768"
  },
  "hydra": {
   "tris": 8000,
@@ -695,5 +695,44 @@
   "kind": "char",
   "x": "a Japanese woman in her late twenties, a librarian: dark-brown hair tied up in a neat round bun at the back of her head with a short fringe, round glasses, a mustard yellow cardigan over a cream blouse, dark trousers, brown flat shoes",
   "opts": "hv768"
+ },
+ "_edit_pallas": "Turn this pixel-art robot into a smooth high-quality 3D anime collectible figurine render (not pixel art, no pixels), chibi proportions about three heads tall with a big head, still clearly a mecha. Same machine, same colours: white and blue armour, magenta and gold trim, gold V-shaped head fin, green visor eyes, swept white-and-magenta back wings. Pose: standing straight and symmetrical, straight front view at eye level, feet apart, both arms hanging straight down a little away from the body. The left hand holds the rifle hanging vertically, barrel pointing at the ground, beside the outside of the left leg. The right hand holds the beam sabre hilt with the short cyan blade pointing straight down at the ground beside the outside of the right leg. Nothing crosses in front of the body. Soft studio lighting, plain pure white background, no shadow, the whole figure visible.",
+ "_edit_pallasnw": "Redraw this exact robot as a high-quality cute anime collectible figurine render with chibi proportions, about three heads tall, a big head and short sturdy limbs, still clearly a mecha. Keep the same machine and the same colours: white and blue armour plates, magenta and gold trim, the gold V-shaped fin on the head, the green visor eyes, the swept white-and-magenta wings on its back. It stands straight and symmetrical, feet apart with a gap between the legs, straight front view at eye level, both arms held a little away from the body. Both hands are empty and open, no weapons at all. Smooth clean 3D render, soft studio lighting, plain pure white background, no shadow, no base, the whole figure visible.",
+ "pallase": {
+  "tris": 24000,
+  "x": "compact stocky humanoid work mecha robot, original design, toy-like but cool, standing straight and still like a figurine in a symmetrical neutral A-pose with both feet flat on the floor and both arms hanging down at its sides, glossy navy blue armour with rose-pink trim lines, a small rounded head with one glowing cyan visor, its right forearm is a big chunky three-pronged salvage claw gripper instead of a hand, its left arm has a normal mechanical hand, a wire cargo basket mounted on its back visible behind the shoulders, broad shoulders, big sturdy legs and feet, full body, front view",
+  "kind": "creature",
+  "opts": "hv768"
+ },
+ "pallasnwe": {
+  "tris": 24000,
+  "x": "compact stocky humanoid work mecha robot, original design, toy-like but cool, standing straight and still like a figurine in a symmetrical neutral A-pose with both feet flat on the floor and both arms hanging down at its sides, glossy navy blue armour with rose-pink trim lines, a small rounded head with one glowing cyan visor, its right forearm is a big chunky three-pronged salvage claw gripper instead of a hand, its left arm has a normal mechanical hand, a wire cargo basket mounted on its back visible behind the shoulders, broad shoulders, big sturdy legs and feet, full body, front view",
+  "kind": "creature",
+  "opts": "hv768"
+ },
+ "fountain": {
+  "tris": 8000,
+  "kind": "obj",
+  "x": "small round space-colony fountain: a round basin made of riveted pale hull plates, a short central column with water arcing out, a soft glowing cyan light ring around the rim"
+ },
+ "market_stall": {
+  "tris": 12000,
+  "kind": "obj",
+  "x": "wide village market stall twice as wide as deep: a wooden counter with crates of colourful vegetables, a red-and-white striped canvas awning on four posts, a small hanging blank sign, a little cyan lamp"
+ },
+ "pumphouse": {
+  "tris": 14000,
+  "kind": "obj",
+  "x": "small space-colony pump house: a squat building of riveted metal panels and brick, a curved hull-plate roof, a big valve wheel and thick pipes on the front wall going into the ground, a round porthole window, a small cyan indicator light"
+ },
+ "post_office": {
+  "tris": 16000,
+  "kind": "obj",
+  "x": "small courier post office building: cream walls with riveted hull-plate trim, a curved teal roof with a white satellite dish on top, a round porthole window, a rounded door with a mail slot, a red post box by the door"
+ },
+ "guard_post": {
+  "tris": 12000,
+  "kind": "obj",
+  "x": "small guard post booth: a compact white and navy metal building with a flat roof, a big window, a rounded door, a navy-and-white banner hanging on a pole beside it, a small cyan light on the roof"
  }
 }
