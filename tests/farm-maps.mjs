@@ -2,7 +2,7 @@
 // every door, exit, spot and working prop can be walked to.   node tests/farm-maps.mjs
 import { allMaps, ruinsMap, doorTarget, outsideOf, findSpot, FORAGE_SPOTS } from '../js/farm/maps.js';
 import * as story from '../js/farm/story.js';
-import { newGame, enterMine } from '../js/farm/sim.js';
+import { newGame, enterMine, FORAGE_SPOT_COUNT } from '../js/farm/sim.js';
 
 let failures = 0, checks = 0;
 const check = (cond, what) => { checks++; if (!cond) { failures++; console.log('FAIL', what); } };
@@ -30,6 +30,8 @@ for (const m of Object.values(maps)) {
   if (m.pasture) check(seen.has(m.pasture.x + ',' + m.pasture.y), `${m.id}: the pasture can be entered`);
 }
 for (const [x, y] of FORAGE_SPOTS) check(!maps.hill.solid(x, y) && near(reach(maps.hill, 1.6, 13), x, y), `forage spot ${x},${y} can be reached`);
+check(FORAGE_SPOTS.length === FORAGE_SPOT_COUNT && new Set(FORAGE_SPOTS.map((p) => p.join())).size === FORAGE_SPOTS.length, `${FORAGE_SPOTS.length} different forage spots, as many as the sim rolls`);
+check(maps.hill.props.some((p) => p.act === 'onsen' && p.w === 4 && p.d === 3) && findSpot('hill.onsen')?.map === 'hill', 'the Terrace Onsen is on the hill');
 // every person's place, at every hour, is a real spot
 for (const id of Object.keys(story.NPCS)) if (id !== 'sato') for (let season = 0; season < 4; season++) for (let weekday = 0; weekday < 7; weekday++) for (let minute = 360; minute < 1440; minute += 60) for (const weather of ['sun', 'rain']) {
   const w = story.whereIs(id, { season, day: 1 + weekday, weekday, minute, weather, festival: null }); if (w) check(!!findSpot(w.spot), `${id} stands on a real spot (${w.spot})`);

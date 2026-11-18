@@ -1,0 +1,36 @@
+# Backstop for the art pipeline's GPU pods (tools/art/farm/sandbox/): every 15 minutes, on GitHub's own
+# servers, delete any Runpod pod named "sandbox-u<unix time>" whose time has passed. It runs whatever
+# happens to Claude, the pod or anyone's computer. It needs the repository secret RUNPOD_API_KEY
+# (Settings -> Secrets and variables -> Actions); without it the job does nothing.
+name: Sandbox pod reaper
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  reap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Delete expired sandbox pods
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+        run: |
+          if [ -z "$RUNPOD_API_KEY" ]; then echo "No RUNPOD_API_KEY secret: nothing to do."; exit 0; fi
+          python3 - <<'PY'
+          import json, os, re, time, urllib.request
+          def gql(q):
+              r = urllib.request.Request('https://api.runpod.io/graphql', data=json.dumps({'query': q}).encode(),
+                  headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + os.environ['RUNPOD_API_KEY']})
+              return json.load(urllib.request.urlopen(r, timeout=60))
+          pods = gql('query { myself { pods { id name } } }')['data']['myself']['pods']
+          now = time.time()
+          for p in pods:
+              m = re.match(r'^sandbox.*-u(\d{10})$', p['name'] or '')
+              if m and now > int(m.group(1)) + 300:
+                  print('deleting expired pod', p['id'], p['name'], gql('mutation { podTerminate(input: { podId: "%s" }) }' % p['id']))
+              elif m:
+                  print('pod', p['id'], 'expires in', int((int(m.group(1)) - now) / 60), 'min')
+          print(len(pods), 'pods checked')
+          PY

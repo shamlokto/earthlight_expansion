@@ -56,5 +56,10 @@
  "sky/sky_colony_dusk": 8000,
  "sky/sky_colony_night": 8000,
  "scenes/townmap": 8000,
- "scenes/ruins_fight": 8000
+ "scenes/ruins_fight": 8000,
+ "icons/battery": 1001,
+ "icons/matsutake": 1001,
+ "icons/wild_grape": 1001,
+ "icons/persimmon_jam": 1001,
+ "icons/wild_apple": null
 }

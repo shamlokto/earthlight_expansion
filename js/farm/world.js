@@ -83,6 +83,12 @@ const PROPS = {
   fountain: { model: 'fountain', h: 1.6, fit: 'foot' },
   fan_tower: { model: 'fan_tower', h: 5.2, fit: 'foot' },
   market_stall: { model: 'market_stall', h: 2.1, fit: 'foot' },
+  // 2026-11-18: the onsen, things Sato sets down, her robots and fruit trees (built stand-ins until models arrive)
+  onsen_pool: { model: 'onsen_pool', h: 0.7, fit: 'stretch' },
+  field_chest: { model: 'field_chest', h: 0.8, fit: 'foot' },
+  charger: { model: () => (art.hasModel('solar_charger') ? 'solar_charger' : 'solar_panel'), h: 1.2, fit: 'foot' },
+  farm_bot: { model: 'farm_bot', h: 0.8, fit: 'foot', turn: true },
+  fruit_tree: { h: 3.4 }, fruit_tree_young: { h: 2.1 }, sapling: { model: 'sapling', h: 1.0 },
 };
 const BUILDING = {
   house: { model: 'farmhouse', facade: 'buildings/house', wall: 'plank_wall', roof: 'roof_tin' },
@@ -106,7 +112,10 @@ const BUILDING = {
   pumphouse: { model: 'pumphouse', facade: 'buildings/pumphouse', wall: 'metal_hull', roof: 'roof_tin' },
   post: { model: 'post_office', facade: 'buildings/post', wall: 'plaster_wall', roof: 'roof_red' },
   guard: { model: 'guard_post', facade: 'buildings/guard', wall: 'metal_hull', roof: 'roof_red' },
+  onsen_house: { model: 'onsen_house', facade: 'buildings/onsen_house', wall: 'plank_wall', roof: 'roof_red' },
 };
+const FRUIT_COLOR = { apple: 0xd8362a, peach: 0xffa48a, cherry: 0xc8102e, persimmon: 0xf07a1a };
+const BLOSSOM = { apple: 0xfbe3ea, peach: 0xf7a8c0, cherry: 0xffc6d9, persimmon: 0xf3f0d6 };
 
 const col = (c) => new THREE.Color(c);
 const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.95, metalness: 0, ...o });
@@ -271,6 +280,39 @@ export class World {
       case 'lamp': { g.add(cyl(0.03, 0.05, 1.3, dark), cyl(0.12, 0.2, 0.25, std({ color: 0xf3dfa8, emissive: 0x6a5020 }), 0, 1.25, 0, 12)); const pl = new THREE.PointLight(0xffd7a0, 6, 6, 1.6); pl.position.y = 1.3; g.add(pl); break; }
       case 'chair': g.add(box(0.45, 0.06, 0.45, wood, 0, 0.45), box(0.45, 0.5, 0.06, wood, 0, 0.5, -0.2), box(0.05, 0.45, 0.05, dark, -0.18, 0, 0.18), box(0.05, 0.45, 0.05, dark, 0.18, 0, 0.18)); break;
       case 'calendar_board': g.add(box(0.06, 1.0, 0.06, dark, 0, 0), box(0.8, 0.6, 0.05, std({ color: 0xc9a877 }), 0, 0.95), box(0.25, 0.3, 0.01, std({ color: 0xffffff }), -0.15, 1.1, 0.03), box(0.2, 0.15, 0.01, std({ color: 0xffe08a }), 0.2, 1.0, 0.03)); break;
+      case 'onsen_pool': {                                 // a stone rim around steaming water, built centred and moved to the first tile
+        const w = o.w || 4, d = o.d || 3, rim = std({ color: 0x9a958c }), dk = std({ color: 0x6f6a62 });
+        const water = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.5, d - 0.5), new THREE.MeshStandardMaterial({ color: 0x8fd3d0, emissive: 0x2a6f6a, emissiveIntensity: 0.35, transparent: true, opacity: 0.88, roughness: 0.1 }));
+        water.rotation.x = -Math.PI / 2; water.position.y = 0.22; g.add(water, box(w - 0.5, 0.2, d - 0.5, std({ color: 0x3f6f6a }), 0, 0, 0));
+        g.add(box(w, 0.32, 0.25, rim, 0, 0, -d / 2 + 0.125), box(w, 0.32, 0.25, rim, 0, 0, d / 2 - 0.125), box(0.25, 0.32, d, rim, -w / 2 + 0.125), box(0.25, 0.32, d, rim, w / 2 - 0.125));
+        for (let i = 0; i < 9; i++) { const a = i * 0.7, r = 0.16 + (i % 3) * 0.06; g.add(ball(r, i % 2 ? rim : dk, Math.cos(a) * (w / 2) * 0.98, 0.3, Math.sin(a) * (d / 2) * 0.98, 0)); }
+        g.add(box(0.1, 0.5, 0.1, std({ color: 0x8a6a45 }), w / 2 - 0.4, 0.3, -d / 2 + 0.12), box(0.5, 0.06, 0.06, std({ color: 0x8a6a45 }), w / 2 - 0.4, 0.75, -d / 2 + 0.12));   // the hot-water spout
+        for (const c of g.children) { c.position.x += (w - 1) / 2; c.position.z += (d - 1) / 2; }
+        break;
+      }
+      case 'field_chest': g.add(box(0.85, 0.5, 0.58, std({ color: 0x5f7f8f, metalness: 0.3, roughness: 0.6 })), box(0.89, 0.14, 0.62, std({ color: 0x8a6a45 }), 0, 0.5), box(0.12, 0.1, 0.04, new THREE.MeshBasicMaterial({ color: 0xffd36a }), 0, 0.38, 0.3), box(0.89, 0.05, 0.05, dark, 0, 0.12, 0.3), box(0.89, 0.05, 0.05, dark, 0, 0.12, -0.3)); break;
+      case 'charger': { const c = colonyProp('solar_panel', { w: 1 }, { spin: [], glow: [] }); if (c) g.add(c); break; }
+      case 'charge_lights': { g.add(box(0.5, 0.26, 0.16, std({ color: 0x3c4650, metalness: 0.4 }), 0, 0, 0.5)); for (let i = 0; i < 2; i++) { const s = o.slots && o.slots[i]; g.add(box(0.14, 0.18, 0.04, s ? new THREE.MeshBasicMaterial({ color: s === 'battery_full' ? 0x7dffb0 : 0xffb347 }) : std({ color: 0x222222 }), -0.11 + i * 0.22, 0.04, 0.59)); } break; }
+      case 'farm_bot': {                                   // a cute round robot: body, face screen, antenna, little wheels
+        const shell = std({ color: o.color || 0xf2efe6, roughness: 0.5 }), trim = std({ color: o.trim || 0x5fb3b0, roughness: 0.5 });
+        g.add(ball(0.26, shell, 0, 0.36, 0, 2), cyl(0.27, 0.27, 0.07, trim, 0, 0.24, 0, 18));
+        const scr = new THREE.Mesh(new THREE.CircleGeometry(0.15, 18), new THREE.MeshBasicMaterial({ color: 0x1f2a38 })); scr.position.set(0, 0.42, 0.245); g.add(scr);
+        for (const x of [-0.06, 0.06]) { const e = new THREE.Mesh(new THREE.CircleGeometry(0.03, 10), new THREE.MeshBasicMaterial({ color: 0x7dffe0 })); e.position.set(x, 0.44, 0.25); g.add(e); }
+        const sm = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.008, 4, 10, Math.PI), new THREE.MeshBasicMaterial({ color: 0x7dffe0 })); sm.rotation.z = Math.PI; sm.position.set(0, 0.39, 0.25); g.add(sm);
+        g.add(cyl(0.012, 0.012, 0.18, dark, 0, 0.6, 0, 5), ball(0.04, new THREE.MeshBasicMaterial({ color: 0xffd36a }), 0, 0.8, 0, 1));
+        for (const x of [-0.16, 0.16]) { const wh = cyl(0.07, 0.07, 0.06, dark, x, 0.0, 0, 10); wh.rotation.z = Math.PI / 2; wh.position.y = 0.07; g.add(wh); }
+        g.add(cyl(0.05, 0.06, 0.12, trim, -0.27, 0.32, 0.02, 8), cyl(0.05, 0.06, 0.12, trim, 0.27, 0.32, 0.02, 8));
+        break;
+      }
+      case 'sapling': case 'fruit_tree_young': case 'fruit_tree': {   // sapling, young, grown; blossom in spring, fruit in season
+        const st = kind === 'sapling' ? 0 : kind === 'fruit_tree_young' ? 1 : 2, leafC = season === 3 ? 0x8a7a5a : season === 0 && st === 2 ? (BLOSSOM[o.tree] || 0xffc6d9) : season === 2 && o.tree !== 'peach' ? 0x9fbf4a : 0x4f9a3a;
+        const lf = std({ color: leafC });
+        if (st === 0) { g.add(cyl(0.03, 0.04, 0.7, dark), ball(0.2, std({ color: 0x6fbf5a }), 0, 0.75, 0), cyl(0.18, 0.2, 0.08, std({ color: 0x7a5a3a }), 0, 0, 0, 10)); break; }
+        const k = st === 1 ? 0.6 : 1;
+        g.add(cyl(0.1 * k, 0.16 * k, 1.3 * k, dark), ball(0.95 * k, lf, 0, 1.9 * k, 0), ball(0.65 * k, lf, 0.5 * k, 2.3 * k, 0.2 * k), ball(0.6 * k, lf, -0.45 * k, 2.2 * k, -0.25 * k));
+        if (o.fruit) for (let i = 0; i < 9; i++) { const a = i * 2.4, r = 0.75 + (i % 3) * 0.12; g.add(ball(0.11, std({ color: FRUIT_COLOR[o.tree] || 0xd8362a, roughness: 0.5 }), Math.cos(a) * r, 1.6 + (i % 4) * 0.25, Math.sin(a) * r, 1)); }
+        break;
+      }
       default: { const c = colonyProp(kind, o, this.colonyFx || undefined); g.add(c || box(0.6, 0.6, 0.6, std({ color: 0x999999 }))); }
     }
     if (kind === 'memorial' || kind === 'bench') for (const c of g.children) c.position.x += 0.5;
@@ -295,7 +337,7 @@ export class World {
         }
         if (def.fit === 'stretch') m.scale.set(fw * 0.98 / s[0], h / s[1], Math.min(h / s[1], fd * 0.9 / s[2]));
         else if (def.fit === 'foot') m.scale.setScalar(Math.min(h / s[1], fw * 0.96 / s[0], fd * 0.96 / s[2]));
-        else if (def.fit === 'wide') m.scale.setScalar(Math.max(fw, 0.8) * 0.95 / Math.max(s[0], s[2]));
+        else if (def.fit === 'wide') { const [ex, ez] = o.turned ? [fd, fw] : [Math.max(fw, 0.8), Math.max(fw, 0.8)]; m.scale.setScalar(Math.min(ex * 0.95 / s[0], ez * 0.95 / s[2])); }   // a turned prop (the barge) fits its footprint across
         else m.scale.setScalar(Math.min(h / (s[1] || 1), (def.maxW || 99) * (o.scale || 1) / Math.max(s[0], s[2])));
         if (def.hover) m.position.y = def.hover * 0.5;
         if (def.soft) m.traverse((q) => { if (q.isMesh) q.castShadow = false; });
@@ -304,7 +346,15 @@ export class World {
       if (def.lamp) { const pl = new THREE.PointLight(0xffc878, 0, 9, 1.6); pl.position.y = def.lamp; holder.add(pl); holder.userData.lamp = pl; }
     } else fallback();
     if (def.hover && !(mname && art.hasModel(mname))) holder.userData.hover = def.hover;
+    if (kind === 'onsen_pool') holder.add(this.steamCloud(fw, fd));
     return holder;
+  }
+  // Wisps of steam that rise and fade over hot water (animated in update()).
+  steamCloud(w, d) {
+    if (!World.steamTex) { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 2, 32, 32, 31); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.5, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); World.steamTex = new THREE.CanvasTexture(c); }
+    const g = new THREE.Group();
+    for (let i = 0; i < 16; i++) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: World.steamTex, transparent: true, opacity: 0.3, depthWrite: false })); m.userData.seed = i * 1.37; m.userData.x = (((i * 0.618) % 1) - 0.5) * (w - 0.8); m.userData.z = (((i * 0.383) % 1) - 0.5) * (d - 0.8); g.add(m); }
+    (this.steam ||= []).push(g); return g;
   }
 
   // ------------------------------------------------------------ buildings
@@ -345,7 +395,7 @@ export class World {
     this.map = map; this.state = state; this.season = state.cal.season; this.flags = state.flags || {};
     this.root.clear(); this.facers.length = 0; this.spriteMats.length = 0; this.anims.length = 0; this.tileObjs.clear();
     for (const a of this.actors.values()) a.dispose && a.dispose(); this.actors.clear();
-    this.lamps = []; this.waterMats = []; this.tallProps = [];
+    this.lamps = []; this.waterMats = []; this.tallProps = []; this.steam = [];
     const R = this.root, W = map.w, H = map.h;
     // ground, one merged mesh per kind
     const byKind = {};
@@ -355,9 +405,10 @@ export class World {
       if (c === 'r') { const m = new THREE.Mesh(tiles(cells, 1.7, true), std({ map: art.tex('cliff_rock', { repeat: 1 }) })); m.castShadow = m.receiveShadow = true; R.add(m); continue; }
       if (c === 'w') {
         const bed = new THREE.Mesh(tiles(cells, -0.5), std({ color: 0x2a3a34 })); R.add(bed);
-        const wm = new THREE.MeshStandardMaterial({ map: art.tex('water', { repeat: 1 }).clone(), color: 0x9fc4d0, transparent: true, opacity: 0.82, roughness: 0.12, metalness: 0.1 });
+        // the surface sits just above the colony's surrounding ground sheet (y -0.07), which runs under the whole map
+        const wm = new THREE.MeshStandardMaterial({ map: art.tex('water', { repeat: 1 }).clone(), color: 0xb8dce6, transparent: true, opacity: 0.94, roughness: 0.12, metalness: 0.1 });
         wm.map.wrapS = wm.map.wrapT = THREE.RepeatWrapping; wm.map.needsUpdate = true; this.waterMats.push(wm);
-        const m = new THREE.Mesh(tiles(cells, -0.1), wm); m.receiveShadow = true; R.add(m); continue;
+        const m = new THREE.Mesh(tiles(cells, -0.04), wm); m.receiveShadow = true; R.add(m); continue;
       }
       const cp = c === 'c' && !map.indoor && art.has('textures/colony_path');   // colony art, when the pack has it
       const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : cp ? 'colony_path' : GROUND_TEX[c] || 'soil_dry';
@@ -391,7 +442,7 @@ export class World {
       const rr = p.rot && o.userData.is3d ? p.rot : 0;
       for (const q of this.colonyFx.glow) pools.push({ x: p.x + p.w / 2 + q.x * Math.cos(rr) + q.z * Math.sin(rr), z: p.y + p.d / 2 - q.x * Math.sin(rr) + q.z * Math.cos(rr), warm: q.warm });
       if (kind === 'lantern') pools.push({ x: p.x + 0.5, z: p.y + 0.5, warm: true, r: 2.2 });
-      o.position.set(p.x + p.w / 2, p.onWater ? -0.1 : 0, p.y + p.d / 2);
+      o.position.set(p.x + p.w / 2, p.onWater ? -0.18 : 0, p.y + p.d / 2);
       if (p.rot && (o.userData.is3d || kind === 'fence')) o.rotation.y = p.rot;
       if (o.userData.turn) o.rotation.y = Math.PI / 2;
       R.add(o); p.obj = o; if (kind === 'tree' || kind === 'pine' || kind === 'bush') this.tallProps.push(o);
@@ -481,6 +532,7 @@ export class World {
     for (const k in this.sky) this.sky[k].position.copy(c.position);
     this.colony.update(c);
     for (const s of this.spinners || []) s.o.rotation[s.axis] += s.speed * dt;
+    for (const g of this.steam || []) for (const m of g.children) { const k = ((this.t * 0.25 + m.userData.seed) % 1); m.position.set(m.userData.x + Math.sin(this.t + m.userData.seed) * 0.15, 0.3 + k * 1.7, m.userData.z); m.scale.setScalar(0.7 + k * 1.6); m.material.opacity = 0.42 * Math.sin(k * Math.PI); }
     if (this.bots) this.bots.update(dt, this.t);
     for (const f of this.facers) f.rotation.y = this.yaw;
     for (const m of this.waterMats || []) m.map.offset.set(this.t * 0.015, this.t * 0.01);

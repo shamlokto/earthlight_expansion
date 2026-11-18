@@ -6,8 +6,38 @@
    "w": 256,
    "h": 256
   },
+  "icons/apple": {
+   "file": "icons/apple.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/axe": {
    "file": "icons/axe.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/bamboo_shoot": {
+   "file": "icons/bamboo_shoot.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/bamboo_stirfry": {
+   "file": "icons/bamboo_stirfry.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/basket": {
+   "file": "icons/basket.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/battery": {
+   "file": "icons/battery.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/battery_full": {
+   "file": "icons/battery_full.webp",
    "w": 256,
    "h": 256
   },
@@ -38,6 +68,16 @@
   },
   "icons/carrot": {
    "file": "icons/carrot.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/cherry": {
+   "file": "icons/cherry.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/chestnut": {
+   "file": "icons/chestnut.webp",
    "w": 256,
    "h": 256
   },
@@ -78,6 +118,16 @@
   },
   "icons/feed": {
    "file": "icons/feed.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fiddlehead": {
+   "file": "icons/fiddlehead.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/field_chest": {
+   "file": "icons/field_chest.webp",
    "w": 256,
    "h": 256
   },
@@ -131,6 +181,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/forest_bento": {
+   "file": "icons/forest_bento.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/fridge": {
    "file": "icons/fridge.webp",
    "w": 256,
@@ -138,6 +193,21 @@
   },
   "icons/frostcap": {
    "file": "icons/frostcap.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fruit_salad": {
+   "file": "icons/fruit_salad.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fruit_tart": {
+   "file": "icons/fruit_tart.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/grape_juice": {
+   "file": "icons/grape_juice.webp",
    "w": 256,
    "h": 256
   },
@@ -156,8 +226,28 @@
    "w": 256,
    "h": 256
   },
+  "icons/honey_toast": {
+   "file": "icons/honey_toast.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/honeycomb": {
+   "file": "icons/honeycomb.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/lumber": {
    "file": "icons/lumber.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/matsutake": {
+   "file": "icons/matsutake.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/matsutake_grill": {
+   "file": "icons/matsutake_grill.webp",
    "w": 256,
    "h": 256
   },
@@ -186,6 +276,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/mint_tea": {
+   "file": "icons/mint_tea.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/moonflower": {
    "file": "icons/moonflower.webp",
    "w": 256,
@@ -193,6 +288,11 @@
   },
   "icons/mushroom": {
    "file": "icons/mushroom.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/mushroom_soup": {
+   "file": "icons/mushroom_soup.webp",
    "w": 256,
    "h": 256
   },
@@ -211,8 +311,23 @@
    "w": 256,
    "h": 256
   },
+  "icons/peach": {
+   "file": "icons/peach.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/pendant": {
    "file": "icons/pendant.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/persimmon": {
+   "file": "icons/persimmon.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/persimmon_jam": {
+   "file": "icons/persimmon_jam.webp",
    "w": 256,
    "h": 256
   },
@@ -223,6 +338,11 @@
   },
   "icons/pie": {
    "file": "icons/pie.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/pine_nut": {
+   "file": "icons/pine_nut.webp",
    "w": 256,
    "h": 256
   },
@@ -246,8 +366,18 @@
    "w": 256,
    "h": 256
   },
+  "icons/root_stew": {
+   "file": "icons/root_stew.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/salad": {
    "file": "icons/salad.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/sapling_apple": {
+   "file": "icons/sapling_apple.webp",
    "w": 256,
    "h": 256
   },
@@ -333,6 +463,21 @@
   },
   "icons/watch": {
    "file": "icons/watch.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/wild_grape": {
+   "file": "icons/wild_grape.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/wild_mint": {
+   "file": "icons/wild_mint.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/winter_root": {
+   "file": "icons/winter_root.webp",
    "w": 256,
    "h": 256
   },

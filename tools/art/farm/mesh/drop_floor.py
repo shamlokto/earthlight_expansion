@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""drop_floor.py IN.glb OUT.glb [EPS] : delete triangles lying flat on the ground (all three corners below EPS,
+"""drop_floor.py IN.glb OUT.glb [EPS] [h] : delete triangles lying flat on the ground (all three corners below EPS,
 default 0.006 units) -- removes a baked "shadow sheet" under a model. Then re-grounds, re-centres and
-re-normalises like gen3d.py (longest side 1). Index buffer is rewritten in place (unused vertices stay)."""
+re-normalises like gen3d.py (longest side 1, or height 1 with a final `h` for characters). Index buffer is rewritten in place (unused vertices stay)."""
 import json, struct, sys
 import numpy as np
 src, dst = sys.argv[1:3]; eps = float(sys.argv[3]) if len(sys.argv) > 3 else 0.006
+by_height = len(sys.argv) > 4 and sys.argv[4] == 'h'
 b = open(src, 'rb').read(); n = struct.unpack('<I', b[12:16])[0]; g = json.loads(b[20:20 + n])
 blob = bytearray(b[20 + n + 8:])
 p = g['meshes'][0]['primitives'][0]
@@ -16,7 +17,7 @@ def view(i):
 pa, poff, pos = view(p['attributes']['POSITION']); ia, ioff, idx = view(p['indices'])
 tri = idx.reshape(-1, 3); keep = ~(pos[tri][:, :, 1] < eps).all(1)
 used = np.unique(tri[keep]); lo, hi = pos[used].min(0), pos[used].max(0)
-pos[:, 0] -= (lo[0] + hi[0]) / 2; pos[:, 2] -= (lo[2] + hi[2]) / 2; pos[:, 1] -= lo[1]; pos /= (hi - lo).max()
+pos[:, 0] -= (lo[0] + hi[0]) / 2; pos[:, 2] -= (lo[2] + hi[2]) / 2; pos[:, 1] -= lo[1]; pos /= (hi - lo)[1] if by_height else (hi - lo).max()
 newi = tri[keep].reshape(-1).astype(idx.dtype)
 blob[ioff:ioff + newi.nbytes] = newi.tobytes(); ia['count'] = int(newi.size)
 blob[poff:poff + pos.nbytes] = pos.astype(np.float32).tobytes()

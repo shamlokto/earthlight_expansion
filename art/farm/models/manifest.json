@@ -1271,5 +1271,157 @@
    1.0
   ],
   "note": "brown-and-white dairy cow, head towards +Z"
+ },
+ "pallas": {
+  "file": "pallas.glb",
+  "tris": 23501,
+  "size": [
+   0.89,
+   1.0,
+   0.4811
+  ],
+  "note": "Pallas from the expansion picture: white/blue armour, magenta and gold trim, V-fin, wings; rifle hangs by its left leg, cyan sabre in its right hand, both pointing down; chibi figurine, faces +Z",
+  "unit": "height"
+ },
+ "pallas_unarmed": {
+  "file": "pallas_unarmed.glb",
+  "tris": 23691,
+  "size": [
+   0.8875,
+   1.0,
+   0.4808
+  ],
+  "note": "the same Pallas with empty hands (spare, for attaching weapons in code)",
+  "unit": "height"
+ },
+ "fountain": {
+  "file": "fountain.glb",
+  "tris": 8000,
+  "size": [
+   0.9993,
+   0.6,
+   1.0
+  ],
+  "note": "colony fountain with hull-plate basin and cyan light ring"
+ },
+ "market_stall": {
+  "file": "market_stall.glb",
+  "tris": 12000,
+  "size": [
+   1.0,
+   0.9799,
+   0.7688
+  ],
+  "note": "striped-awning market stall with vegetable crates, length along X (2 tiles), front +Z"
+ },
+ "post_office": {
+  "file": "post_office.glb",
+  "tris": 16000,
+  "size": [
+   0.7689,
+   1.0,
+   0.6121
+  ],
+  "note": "courier post office with satellite dish, door on +Z"
+ },
+ "pumphouse": {
+  "file": "pumphouse.glb",
+  "tris": 14000,
+  "size": [
+   0.9629,
+   0.8355,
+   1.0
+  ],
+  "note": "colony pump house with valve wheels and pipes, door on +Z"
+ },
+ "guard_post": {
+  "file": "guard_post.glb",
+  "tris": 12000,
+  "size": [
+   0.5657,
+   1.0,
+   0.9678
+  ],
+  "note": "Guardians' post booth with navy-and-white banner; door on +Z, big window on the +X side"
+ },
+ "farm_bot": {
+  "file": "farm_bot.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.9618,
+   0.9428
+  ],
+  "note": "farm robot with watering spout and basket, lens faces +Z"
+ },
+ "field_chest": {
+  "file": "field_chest.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.9075,
+   0.8601
+  ],
+  "note": "outdoor storage chest with hull-plate corners, latch on +Z"
+ },
+ "onsen_pool": {
+  "file": "onsen_pool.glb",
+  "tris": 8000,
+  "size": [
+   0.9986,
+   0.2012,
+   1.0
+  ],
+  "note": "hot-spring pool ringed with stones, bucket on +Z; the water is a flat sheet at floor level with a pale rim (one loose pebble)"
+ },
+ "sapling": {
+  "file": "sapling.glb",
+  "tris": 4000,
+  "size": [
+   0.5881,
+   1.0,
+   0.613
+  ],
+  "note": "young tree sapling tied to a stake, in a soil mound"
+ },
+ "fruit_tree_apple": {
+  "file": "fruit_tree_apple.glb",
+  "tris": 12000,
+  "size": [
+   0.909,
+   1.0,
+   0.7871
+  ],
+  "note": "apple tree with red apples"
+ },
+ "fruit_tree_peach": {
+  "file": "fruit_tree_peach.glb",
+  "tris": 12000,
+  "size": [
+   0.8637,
+   1.0,
+   0.8383
+  ],
+  "note": "peach tree with peaches (fruit mostly on the front and top)"
+ },
+ "fruit_tree_cherry": {
+  "file": "fruit_tree_cherry.glb",
+  "tris": 12000,
+  "size": [
+   0.8313,
+   1.0,
+   0.8027
+  ],
+  "note": "cherry tree with pink blossoms and cherries"
+ },
+ "fruit_tree_persimmon": {
+  "file": "fruit_tree_persimmon.glb",
+  "tris": 12000,
+  "size": [
+   0.8857,
+   1.0,
+   0.891
+  ],
+  "note": "persimmon tree with orange persimmons"
  }
 }
