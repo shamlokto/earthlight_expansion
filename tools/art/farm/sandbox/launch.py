@@ -59,7 +59,17 @@ def arm(pod, pw, max_minutes, idle):
         from urllib.parse import urlparse
         u = urlparse(px); kw = dict(http_proxy_host=u.hostname, http_proxy_port=u.port, proxy_type='http')
     ca = os.environ.get('SSL_CERT_FILE') or ('/root/.ccr/ca-bundle.crt' if os.path.exists('/root/.ccr/ca-bundle.crt') else None)
-    ws = websocket.create_connection(f'wss://{pod}-8888.proxy.runpod.net/api/kernels/{kid}/channels?token={pw}', timeout=60, header=['User-Agent: sandbox-launcher/1.0'], sslopt={'ca_certs': ca} if ca else {}, **kw)
+    ws = None
+    for _ in range(20):                                    # the kernel's websocket can 404 for a short while after start-up
+        try:
+            ws = websocket.create_connection(f'wss://{pod}-8888.proxy.runpod.net/api/kernels/{kid}/channels?token={pw}', timeout=60, header=['User-Agent: sandbox-launcher/1.0'], sslopt={'ca_certs': ca} if ca else {}, **kw)
+            break
+        except Exception:
+            time.sleep(6)
+            try:                                           # start a fresh kernel in case that one died
+                with urllib.request.urlopen(urllib.request.Request(req.full_url, data=req.data, method='POST', headers=dict(req.header_items())), timeout=30) as r: kid = json.load(r)['id']
+            except Exception: pass
+    if not ws: return 'could not reach a kernel'
     mid = uuid.uuid4().hex
     code = 'import subprocess\nprint(subprocess.run(%r, shell=True, capture_output=True, text=True, executable="/bin/bash").stdout)' % cmd
     ws.send(json.dumps({'header': {'msg_id': mid, 'username': 'x', 'session': uuid.uuid4().hex, 'msg_type': 'execute_request', 'version': '5.3'}, 'parent_header': {}, 'metadata': {},

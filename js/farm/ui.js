@@ -48,7 +48,7 @@ const DRAWN = {
 };
 const KIND_COLOR = { fruit: '#d8564a', sapling: '#5f9a3a', placeable: '#5f7f8f', part: '#8a98a6', keepsake: '#c98ab0', tool: '#6f7f95', seed: '#8a6f3d', crop: '#4f9a3a', animal: '#d9c79a', fish: '#3f7fa8', forage: '#7a9a4a', ore: '#77736d', relic: '#b08d3c', food: '#c9853a', stock: '#a37a4f' };
 // Round fruit and forage drawn in their own colour when the art pack has no picture yet.
-const ROUND = { cherry: '#c8102e', peach: '#ffa48a', apple: '#d8362a', persimmon: '#f07a1a', wild_apple: '#d8a03a', wild_grape: '#5a2f7a', chestnut: '#7a4a2a', pine_nut: '#a07a4a', honeycomb: '#f0b32a', winter_root: '#efe2c8', bamboo_shoot: '#c9d27a', wild_mint: '#58c08a', fiddlehead: '#7a9a3a', matsutake: '#e8d8b8' };
+const ROUND = { star_plum: '#9a5ad8', comet_ice: '#cfeefa', star_metal: '#c9d2dc', colony_feast: '#e0782a', founders_cake: '#e8c46a', cherry: '#c8102e', peach: '#ffa48a', apple: '#d8362a', persimmon: '#f07a1a', wild_apple: '#d8a03a', wild_grape: '#5a2f7a', chestnut: '#7a4a2a', pine_nut: '#a07a4a', honeycomb: '#f0b32a', winter_root: '#efe2c8', bamboo_shoot: '#c9d27a', wild_mint: '#58c08a', fiddlehead: '#7a9a3a', matsutake: '#e8d8b8' };
 const roundIcon = (c, id) => id === 'honeycomb' ? `<path d="M20 18h12l6 10-6 10H20l-6-10Z M38 28h12l6 10-6 10H38l-6-10Z M20 38h12l6 10-6 10H20l-6-10Z" fill="${c}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`
   : id === 'matsutake' ? `<path d="M12 30c0-16 40-16 40 0Z" fill="#a8743f" stroke="${INK}" stroke-width="2"/><path d="M26 30h12l3 24H23Z" fill="${c}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`
   : ['bamboo_shoot', 'fiddlehead', 'wild_mint', 'winter_root'].includes(id) ? `<path d="M32 56C18 44 22 20 32 8c10 12 14 36 0 48Z" fill="${c}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/><path d="M32 52V16" stroke="${INK}" stroke-width="1.5" opacity=".5"/>`
@@ -163,7 +163,7 @@ export function shop(state, shopId, keeper, onChange) {
   return new Promise((res) => {
     const draw = () => {
       const stock = sim.shopStock(state, shopId), bg = art.url('scenes/shop_' + shopId);
-      const body = openWin(sim.SHOPS[shopId].name, `<div class="fm-shop"${bg ? ` style="--bg:url(${bg})"` : ''}><div class="fm-shophead">${face(keeper)}<div><b>${esc(NPCS[keeper].name)}</b><span>${state.player.money.toLocaleString()} cr</span></div></div>` +
+      const body = openWin(sim.SHOPS[shopId].name, `<div class="fm-shop"${bg ? ` style="--bg:url(${bg})"` : ''}><div class="fm-shophead">${keeper ? face(keeper) : '<div class="fm-face fm-terminal">◈</div>'}<div><b>${keeper ? esc(NPCS[keeper].name) : 'Vending terminal'}</b><span>${state.player.money.toLocaleString()} cr</span></div></div>` +
         (stock.length ? stock.map((s) => `<div class="fm-row${s.can ? '' : ' no'}"><div><b>${esc(s.label)}</b><span>${esc(s.desc || '')}${s.needs ? ' · needs ' + esc(s.needs) : ''}${!s.can && s.why ? ` · <em>${esc(s.why)}</em>` : ''}</span></div><button data-key="${esc(s.key)}" ${s.can ? '' : 'disabled'}>${s.price.toLocaleString()} cr</button></div>`).join('') : '<p class="fm-dim">Nothing for sale today.</p>') + '</div>', () => res());
       body.onclick = (e) => { const b = e.target.closest('button[data-key]'); if (!b) return; const r = sim.buy(state, shopId, b.dataset.key, 1); toast(r.msg || (r.ok ? 'Bought.' : 'You cannot buy that.')); onChange && onChange(); draw(); };
     };
@@ -206,16 +206,17 @@ export function menu(state, hooks, tab = 'bag') {
     } else if (tab === 'help') {
       h += HELP.map((x) => `<h3>${esc(x.title)}</h3><p>${esc(x.body).replace(/\n/g, '<br>')}</p>`).join('');
     } else {
-      h += `<div class="fm-sys"><button data-act="save">Save the game</button><button data-act="export">Export save to a file</button><button data-act="music">Music on / off</button><button data-act="title">Back to the title</button></div><p class="fm-dim">The game also saves by itself every morning.</p>`;
+      h += `<div class="fm-sys"><button data-act="save">Save the game</button><button data-act="export">Export save to a file</button><button data-act="music">Music on / off</button>${hooks.musicVolume ? `<label class="fm-vol">Music volume <input type="range" id="fmVol" min="0" max="100" step="5" value="${Math.round(hooks.musicVolume() * 100)}"></label>` : ''}<button data-act="title">Back to the title</button></div><p class="fm-dim">The game also saves by itself every morning.</p>`;
     }
     const body = openWin('Sato’s Harvest', h, () => hooks.close && hooks.close(), 'menu');
+    const vol = body.querySelector('#fmVol'); if (vol && hooks.setMusicVolume) vol.oninput = () => hooks.setMusicVolume(vol.value / 100);
     body.onclick = (e) => {
       const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; pick = -1; return draw(); }
       const bk = e.target.closest('[data-bk]'); if (bk) { const r = sim.basketTake(state, +bk.dataset.bk); toast(r.msg); hooks.change && hooks.change(); return draw(); }
       const s = e.target.closest('[data-slot]');
       if (s) { const i = +s.dataset.slot; if (pick >= 0 && pick !== i) { const inv = state.player.inv; [inv[pick], inv[i]] = [inv[i], inv[pick]]; pick = -1; hooks.change(); } else pick = pick === i ? -1 : i; return draw(); }
       const a = e.target.closest('[data-act]'); if (!a) return;
-      if (a.dataset.act === 'eat') { const r = sim.eat(state, pick); toast(r.msg || (r.ok ? 'That was good.' : '')); hooks.change(); if (!state.player.inv[pick]) pick = -1; draw(); }
+      if (a.dataset.act === 'eat') { const r = sim.eat(state, pick); if (r.celebrate) celebrate(r.msg); else toast(r.msg || (r.ok ? 'That was good.' : '')); hooks.change(); if (!state.player.inv[pick]) pick = -1; draw(); }
       else hooks[a.dataset.act] && hooks[a.dataset.act]();
     };
   };
@@ -291,6 +292,7 @@ function todayTab(state, extra) {
     <div><span>${WEATHER_ICON[state.weather]} Today: ${state.weather}</span><span>${WEATHER_ICON[state.weatherTomorrow]} Tomorrow: ${state.weatherTomorrow}</span></div>
     <div><b class="fm-big">${p.money.toLocaleString()} cr</b><span>Stamina ${p.stamina}/${p.maxStamina}${buff ? ' · <span class="fm-ok">♨ onsen glow: tools cost 1 less today</span>' : ''}</span></div></div>`;
   if (fc) h += `<p class="fm-dim">Forecast: ${esc(fc)}</p>`;
+  h += `<div class="fm-stats fm-strength"><span>Max stamina <b>${p.maxStamina}</b>/${sim.MAX_STAMINA_CAP}</span><span>★ Star-plums found <b>${sim.starPlumsFound(state)}</b>/10</span><span>eaten <b>${(state.stats && state.stats.starPlums) || 0}</b></span>${['colony_feast', 'founders_cake'].map((id) => `<span>${state.flags['ate_' + id] ? '✓' : '○'} ${esc(ITEMS[id].name)}</span>`).join('')}</div>`;
   h += `<h3>The Hollin field</h3>${fieldSummary(state, 'farm')}`;
   h += `<h3>Greenhouse</h3>${state.flags.greenhouse ? fieldSummary(state, 'greenhouse') : '<p class="fm-dim">Still a wreck. Ruess can repair it (4,000 cr and 120 lumber).</p>'}`;
   const g = state.pasture.grass, sown = g.filter(Boolean).length, rg = g.filter((x) => x === 3).length;
@@ -302,6 +304,9 @@ function todayTab(state, extra) {
   if (P.length) h += `<p>Solar chargers: ${P.map((x) => `[${x.slots.map((b) => (b === 'battery_full' ? '🔋' : b ? '▫ charging' : '·')).join(' ')}]`).join(' ')} · batteries in your rucksack: ${sim.countItem(state, 'battery_full')} charged, ${sim.countItem(state, 'battery')} empty.</p>`;
   const T = state.fruitTrees || [];
   h += `<h3>Fruit trees</h3>` + (T.length ? T.map((t) => { const d = FRUIT_TREES[t.kind], st = sim.treeStage(state, t), left = TREE_DAYS - sim.treeAge(state, t); return `<div class="fm-row"><div><b>${icon(d.fruit)} ${esc(d.name)}</b><span>${st < 2 ? `${st ? 'young tree' : 'sapling'}, ${left} day${left > 1 ? 's' : ''} to go` : sim.fruitReady(state, t) ? '<span class="fm-ok">a fruit is ready to pick</span>' : state.cal.season === d.season ? 'picked today' : `fruits in ${SEASONS[d.season].toLowerCase()}`}</span></div></div>`; }).join('') : '<p class="fm-dim">None yet. Seln sells saplings (2,500 cr), any season but winter.</p>');
+  const hy = state.hydro || [], yard = (state.solarYard && state.solarYard.slots) || [];
+  h += `<h3>Silo, mill and the village</h3><p>Silo: ${state.stock.fodder} fodder · ${state.stock.feed} hen feed.${state.flags.feed_mill ? ` Feed mill hopper: ${sim.millCount(state)}/${sim.MILL_DAY}.` : ' No feed mill yet (Ruess builds one).'}</p>`;
+  h += `<p>Solar yard: ${yard.length ? `${yard.filter((b) => b === 'battery_full').length} charged, ${yard.filter((b) => b === 'battery').length} charging` : 'none of your batteries'}. Hydroponic towers: ${hy.length ? hy.map((t) => `#${t.tower + 1} ${t.crop ? `${esc(CROPS[t.crop.id].name)}${sim.cropStage(t.crop) === 3 ? ' <span class="fm-ok">ripe</span>' : ` (${CROPS[t.crop.id].days - t.crop.age} days)`}` : 'empty'}`).join(' · ') : 'none rented (Seln, 600 cr a season)'}.</p>`;
   const up = state.pending.upgrade, q = state.flags.quest;
   h += `<h3>Errands</h3><p>${up ? `Ruess is working on your ${esc(TOOL_LEVELS[up.level])} ${esc(ITEMS[up.tool].name.toLowerCase())}; ready tomorrow.` : 'No tool at the Workshop.'}</p>`;
   h += `<p>${q && NPCS[q.npc] && ITEMS[q.item] ? `Favour for ${esc(NPCS[q.npc].short || NPCS[q.npc].name)}: ${q.n} × ${esc(ITEMS[q.item].name)} (you have ${sim.countItem(state, q.item)}).` : 'No favour asked of you just now.'}</p>`;
@@ -400,18 +405,23 @@ function toolShape(id) {
   }
   return g;
 }
-// An icon on a slowly turning card, for things without a model.
+// For things without a 3D model yet: the item's picture as a chunky cut-out with real thickness
+// (stacked slices of its silhouette, darker inside), not a card. Real models replace it as they arrive.
 function iconCard(id) {
   const g = new THREE.Group(), html = icon(id), c = document.createElement('canvas'); c.width = c.height = 256;
   const ctx = c.getContext('2d'), tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  const paint = (img) => { ctx.clearRect(0, 0, 256, 256); const gr = ctx.createRadialGradient(128, 110, 20, 128, 128, 150); gr.addColorStop(0, '#fffaf0'); gr.addColorStop(1, '#ead9b4'); ctx.fillStyle = gr; ctx.beginPath(); ctx.roundRect(8, 8, 240, 240, 28); ctx.fill(); ctx.strokeStyle = '#b89a62'; ctx.lineWidth = 6; ctx.stroke(); if (img) ctx.drawImage(img, 36, 36, 184, 184); tex.needsUpdate = true; };
-  paint(null);
+  const paint = (img) => { ctx.clearRect(0, 0, 256, 256); if (img) ctx.drawImage(img, 8, 8, 240, 240); tex.needsUpdate = true; };
   const m = /src="([^"]+)"/.exec(html), svg = /<svg[\s\S]*?<\/svg>/.exec(html), img = new Image();
   img.onload = () => paint(img);
   if (m) img.src = m[1]; else if (svg) img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg[0].replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" '));
-  else { ctx.font = 'bold 90px sans-serif'; ctx.fillStyle = '#7a5410'; ctx.textAlign = 'center'; ctx.fillText(ITEMS[id].name.slice(0, 2), 128, 160); tex.needsUpdate = true; }
-  const card = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 0.06), [0, 1, 2, 3].map(() => new THREE.MeshStandardMaterial({ color: 0xd9c49a })).concat([new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, transparent: true, alphaTest: 0.4 }), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, transparent: true, alphaTest: 0.4 })]));
-  g.add(card); return g;
+  else { ctx.beginPath(); ctx.arc(128, 128, 100, 0, 7); ctx.fillStyle = '#c9a877'; ctx.fill(); ctx.font = 'bold 90px sans-serif'; ctx.fillStyle = '#5a3c10'; ctx.textAlign = 'center'; ctx.fillText(ITEMS[id].name.slice(0, 2), 128, 160); tex.needsUpdate = true; }
+  const geo = new THREE.PlaneGeometry(1.5, 1.5), N = 9, depth = 0.16;
+  for (let i = 0; i < N; i++) {
+    const edge = i > 0 && i < N - 1, t = i / (N - 1);
+    const mat = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.7, color: edge ? 0x9a8a78 : 0xffffff });
+    const sl = new THREE.Mesh(geo, mat); sl.position.z = (t - 0.5) * depth; const k = edge ? 0.985 : 1; sl.scale.set(k, k, 1); g.add(sl);
+  }
+  return g;
 }
 // Which model shows an item: its own id, crops as crop_<id>, saplings, and a few by sense.
 const MODEL_FOR = { solar_panel: ['solar_charger', 'solar_panel'], sapling_apple: ['sapling', 'fruit_tree_apple'], sapling_peach: ['sapling', 'fruit_tree_peach'], sapling_cherry: ['sapling', 'fruit_tree_cherry'], sapling_persimmon: ['sapling', 'fruit_tree_persimmon'], field_chest: ['field_chest', 'storage_box'], toy: ['toy', 'maint_bot'], lumber: ['lumber', 'crate'], fodder: ['fodder', 'haybale'] };
@@ -447,4 +457,43 @@ function startViewer(el, id) {
     holder.rotation.set(V.rx, V.ry, 0); V.renderer.render(V.scene, V.camera); requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
+}
+
+// ---------------------------------------------------------------- a celebration toast (star-plums, first feasts)
+export function celebrate(msg) {
+  if (!msg) return; const e = document.createElement('div'); e.className = 'fm-toast fm-star'; e.textContent = '★ ' + msg; $('toasts').appendChild(e);
+  setTimeout(() => e.classList.add('out'), 5200); setTimeout(() => e.remove(), 5800);
+}
+// The Grand Market terminal: buy imports, sell fine food for a fifth more than the bin.
+export function marketWindow(state, onChange) {
+  let tab = 'buy';
+  const draw = (msg = '') => {
+    let h = `<div class="fm-shophead"><div class="fm-face fm-terminal">◈</div><div><b>Grand Market · vending terminal</b><span>${state.player.money.toLocaleString()} cr</span></div></div>
+      <nav class="fm-tabs"><button data-tab="buy" class="${tab === 'buy' ? 'on' : ''}">Buy imports</button><button data-tab="sell" class="${tab === 'sell' ? 'on' : ''}">Sell fine food (+20%)</button></nav>`;
+    if (tab === 'buy') h += sim.shopStock(state, 'grandmarket').map((s) => `<div class="fm-row${s.can ? '' : ' no'}"><div><b>${esc(s.label)}</b><span>${esc(s.desc || '')}${!s.can && s.why ? ` · <em>${esc(s.why)}</em>` : ''}</span></div><button data-key="${esc(s.key)}" ${s.can ? '' : 'disabled'}>${s.price.toLocaleString()} cr</button></div>`).join('');
+    else {
+      const rows = state.player.inv.map((s, i) => (s && sim.marketPrice(s.id) ? `<div class="fm-row"><div><b>${icon(s.id)} ${esc(ITEMS[s.id].name)} × ${s.n}</b><span>${sim.marketPrice(s.id)} cr each (the bin pays ${ITEMS[s.id].sell})</span></div><button data-sell="${i}" data-n="1">Sell 1</button>${s.n > 1 ? `<button data-sell="${i}">Sell all</button>` : ''}</div>` : '')).join('');
+      h += rows || '<p class="fm-dim">The terminals buy cooked dishes, and produce worth 300 cr or more. Nothing like that in your rucksack.</p>';
+    }
+    const body = openWin('Grand Market', h + `<p class="fm-dim">${esc(msg)}</p>`, null, 'menu');
+    body.onclick = (e) => {
+      const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; return draw(); }
+      const b = e.target.closest('[data-key]'); if (b) { const r = sim.buy(state, 'grandmarket', b.dataset.key, 1); onChange && onChange(); return draw(r.msg); }
+      const sl = e.target.closest('[data-sell]'); if (sl) { const r = sim.sellToMarket(state, +sl.dataset.sell, sl.dataset.n ? +sl.dataset.n : undefined); onChange && onChange(); return draw(r.msg); }
+    };
+  };
+  draw();
+}
+// The silo (vegetables → fodder) and, once built, the feed mill (crops → hen feed overnight).
+export function siloWindow(state, onChange) {
+  const draw = (msg = '') => {
+    const inv = state.player.inv, mill = !!state.flags.feed_mill;
+    const row = (s, i) => { const veg = sim.isVeg(s.id), millable = veg || s.id === 'chestnut' || s.id === 'pine_nut'; if (!millable) return ''; return `<div class="fm-row"><div><b>${icon(s.id)} ${esc(ITEMS[s.id].name)} × ${s.n}</b><span>${veg ? '1 → 2 fodder' : ''}${mill ? `${veg ? ' · ' : ''}mill: ${s.id === 'corn' ? '1 → 5 feed' : '2 → 3 feed'}` : ''}</span></div>${veg ? `<button data-silo="${i}">Silo: all</button>` : ''}${mill ? `<button data-mill="${i}">Mill</button>` : ''}</div>`; };
+    const rows = inv.map((s, i) => (s ? row(s, i) : '')).join('');
+    const body = openWin('The silo', `<div class="fm-stats"><span>Fodder <b>${state.stock.fodder}</b></span><span>Hen feed <b>${state.stock.feed}</b></span>${mill ? `<span>Mill hopper <b>${sim.millCount(state)}</b>/${sim.MILL_DAY}</span>` : ''}</div>
+      <p class="fm-dim">Spare vegetables go into the silo as fodder for the cows (1 crop = 2 fodder).${mill ? ' The feed mill grinds up to 20 crops a night into hen feed: corn 1 → 5, any other vegetable, chestnut or pine nut 2 → 3.' : ' Ruess can build a feed mill beside it that turns crops into hen feed.'} Cut pasture grass goes straight into the silo as fodder.</p>
+      ${rows || '<p class="fm-dim">Nothing in your rucksack the silo or the mill can use.</p>'}<p class="fm-dim">${esc(msg)}</p>`, null, 'menu');
+    body.onclick = (e) => { const a = e.target.closest('[data-silo]'), m = e.target.closest('[data-mill]'); if (!a && !m) return; const r = a ? sim.siloAdd(state, +a.dataset.silo) : sim.millAdd(state, +m.dataset.mill); onChange && onChange(); draw(r.msg); };
+  };
+  draw();
 }

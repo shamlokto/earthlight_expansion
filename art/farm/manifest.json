@@ -46,6 +46,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/berry_jam": {
+   "file": "icons/berry_jam.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/book": {
    "file": "icons/book.webp",
    "w": 256,
@@ -78,6 +83,11 @@
   },
   "icons/chestnut": {
    "file": "icons/chestnut.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/chestnut_roast": {
+   "file": "icons/chestnut_roast.webp",
    "w": 256,
    "h": 256
   },
@@ -236,6 +246,16 @@
    "w": 256,
    "h": 256
   },
+  "icons/honeyed_nuts": {
+   "file": "icons/honeyed_nuts.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/loquat": {
+   "file": "icons/loquat.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/lumber": {
    "file": "icons/lumber.webp",
    "w": 256,
@@ -346,6 +366,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/plum": {
+   "file": "icons/plum.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/potato": {
    "file": "icons/potato.webp",
    "w": 256,
@@ -381,6 +406,21 @@
    "w": 256,
    "h": 256
   },
+  "icons/sapling_cherry": {
+   "file": "icons/sapling_cherry.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/sapling_peach": {
+   "file": "icons/sapling_peach.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/sapling_persimmon": {
+   "file": "icons/sapling_persimmon.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/scrap": {
    "file": "icons/scrap.webp",
    "w": 256,
@@ -398,6 +438,11 @@
   },
   "icons/sickle": {
    "file": "icons/sickle.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/solar_panel": {
+   "file": "icons/solar_panel.webp",
    "w": 256,
    "h": 256
   },
@@ -478,6 +523,11 @@
   },
   "icons/winter_root": {
    "file": "icons/winter_root.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/yuzu": {
+   "file": "icons/yuzu.webp",
    "w": 256,
    "h": 256
   },

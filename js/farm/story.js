@@ -33,7 +33,7 @@ export const NPCS = {
     look: { skin: '#e0b896', hair: '#9a9da3', top: '#6b5a48', bottom: '#3a3632', style: 'short' },
     birthday: { season: 2, day: 21 },
     loves: ['scrap', 'alloy', 'crystal', 'datachip', 'watch'],
-    likes: ['tea', 'bread', 'corn', 'potato', 'egg', 'musicbox', 'toy'],
+    likes: ['tea', 'bread', 'corn', 'potato', 'egg', 'musicbox', 'toy', 'comet_ice'],
     dislikes: ['moonflower', 'berry', 'spinach'],
     shop: 'workshop',
   },
@@ -81,7 +81,7 @@ export const NPCS = {
     dislikes: ['scrap', 'onion', 'frostcap'],
   },
   vashti: {
-    id: 'vashti', name: 'Nell Vashti', short: 'Vashti', title: 'Salvage hunter; keeper of the Descent', portrait: P + 'w_vashti.webp',
+    id: 'vashti', name: 'Nell Vashti', short: 'Vashti', title: 'Salvage pilot; keeper of the hangar and the Descent', portrait: P + 'w_vashti.webp',
     look: { skin: '#b98a66', hair: '#3b2a20', top: '#55604a', bottom: '#2f2c28', style: 'bandana' },
     birthday: { season: 1, day: 17 },
     loves: ['crystal', 'photo', 'watch', 'datachip', 'medal'],
@@ -131,9 +131,9 @@ export const VILLAGERS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya
 
 export const SPOTS = [
   'farm.porch', 'farm.bin', 'farm.gate', 'farm.pond', 'farm.field',
-  'village.square', 'village.memorial', 'village.bridge', 'village.dock', 'village.bench', 'village.storefront',
+  'village.square', 'village.memorial', 'village.bridge', 'village.riverside', 'village.bench', 'village.storefront',
   'village.cafefront', 'village.hallfront', 'village.workshopfront', 'village.ranchyard', 'village.river',
-  'hill.wreck', 'hill.lake', 'hill.overlook', 'hill.onsen',
+  'hill.wreck', 'hill.lake', 'hill.overlook', 'hill.onsen', 'central.office', 'central.arrivals', 'central.exchange', 'central.plaza', 'central.dock', 'hangar.floor',
   'store.counter', 'store.floor', 'ranch.counter', 'workshop.counter', 'workshop.bench',
   'cafe.counter', 'cafe.table1', 'cafe.table2', 'cafe.table3', 'hall.desk', 'hall.floor',
   'clinic.counter', 'clinic.floor', 'library.counter', 'library.floor', 'village.clinicfront', 'village.libraryfront',
@@ -248,7 +248,7 @@ const SCHEDULE = {
   },
   // Ranch: closed Thursday.
   corran(wd, m) {
-    if (wd === 3) return pick(m, [H(9), H(11), 'village.memorial'], [H(11), H(13), 'workshop.bench'], [H(13), H(16), 'village.dock'], [H(16), H(20), 'cafe.table2']);
+    if (wd === 3) return pick(m, [H(9), H(11), 'village.memorial'], [H(11), H(13), 'workshop.bench'], [H(13), H(16), 'village.riverside'], [H(16), H(20), 'cafe.table2']);
     const pint = wd === 0 || wd === 2 || wd === 4 || wd === 5;
     return pick(m, [H(7), H(9), 'village.ranchyard'], [H(9), H(17), 'ranch.counter'], [H(17), H(18), 'village.ranchyard'],
       [H(18), H(21), pint ? 'cafe.table2' : (wd === 6 ? 'hill.onsen' : 'village.bridge')]);   // Sunday evenings: a soak at the Terrace Onsen
@@ -263,7 +263,7 @@ const SCHEDULE = {
   // The Hangar: every day, ten till ten.
   oduya(wd, m) {
     const market = wd === 0 || wd === 3;
-    return pick(m, [H(8), H(9, 30), market ? 'village.dock' : 'village.river'], [H(9, 30), H(10), 'village.cafefront'], [H(10), H(22), 'cafe.counter']);
+    return pick(m, [H(8), H(9, 30), market ? 'village.riverside' : 'village.river'], [H(9, 30), H(10), 'village.cafefront'], [H(10), H(22), 'cafe.counter']);
   },
   // The Hall: desk hours Monday to Friday.
   marrow(wd, m) {
@@ -277,22 +277,23 @@ const SCHEDULE = {
   // The courier: the farm's bin at five, the village otherwise.
   maris(wd, m) {
     const round = ['village.ranchyard', 'village.workshopfront', 'village.bridge', 'village.square', 'village.ranchyard', 'village.memorial', 'village.river'][wd];
-    return pick(m, [H(8), H(9, 30), wd === 5 ? 'village.square' : 'village.dock'],
+    return pick(m, [H(8), H(9, 30), wd === 5 ? 'village.square' : wd === 1 || wd === 4 ? 'central.arrivals' : 'village.riverside'],   // Tue and Fri: her run lands at Eden Central
       [H(9, 30), H(10, 30), wd < 5 ? 'hall.floor' : 'village.hallfront'],
       [H(10, 30), H(12), 'village.storefront'], [H(12), H(13, 30), 'cafe.table2'], [H(13, 30), H(16, 20), round],
       [H(16, 20), H(17), 'farm.gate'], [H(17), H(17, 40), 'farm.bin'], [H(17, 40), H(18, 10), 'farm.gate'],
       [H(18, 30), H(20, 30), wd === 1 || wd === 6 ? 'cafe.table2' : 'village.cafefront']);
   },
-  // The Descent: the lift pad on the hill.
+  // The hangar at the top of the hull lift (the Descent), where the Pallas launches for the belt.
   vashti(wd, m) {
-    if (wd === 6) return pick(m, [H(9), H(11), 'hill.lake'], [H(11, 30), H(15), 'cafe.table3'], [H(15), H(18), 'hill.wreck']);
+    if (wd === 6) return pick(m, [H(9), H(11), 'hill.lake'], [H(11, 30), H(15), 'cafe.table3'], [H(15), H(18), 'hangar.floor']);
     if (wd === 4 && m >= H(15, 30) && m < H(17)) return 'workshop.bench';
     const lake = wd === 1 || wd === 3 || wd === 5;
-    return pick(m, [H(8), H(18), 'hill.wreck'], [H(18), H(20, 30), lake ? 'hill.lake' : 'hill.overlook']);
+    return pick(m, [H(8), H(18), 'hangar.floor'], [H(18), H(20, 30), lake ? 'hill.lake' : 'hill.overlook']);
   },
-  // Saturdays at the dock; her barge is her counter.
+  // Saturdays at the dock (her barge is her counter); other days her trading house in Eden Central.
   moraine(wd, m) {
-    return wd === 5 ? pick(m, [H(9), H(17), 'village.dock']) : null;
+    if (wd === 5) return pick(m, [H(9), H(17), 'central.dock']);   // Saturdays: trading from her ship at the Central dock
+    return pick(m, [H(9), H(10), 'central.plaza'], [H(10), H(18), 'central.exchange']);   // the Ashfall Exchange on the Main deck
   },
   // Saturdays in the village, Sundays at the farm; from year 2, Wednesday evenings at the Hangar.
   general(wd, m, c) {
@@ -302,15 +303,15 @@ const SCHEDULE = {
       if (c.weather === 'rain' || c.weather === 'snow') return 'farm.porch';
       return pick(m, [H(11), H(12, 30), 'farm.porch'], [H(12, 30), H(14, 30), 'farm.field'], [H(14, 30), H(16), 'farm.pond']);
     }
-    if (wd === 2 && (c.year || 1) >= 2) return pick(m, [H(18), H(21), 'cafe.table1']);
-    return null;
+    if (wd === 2 && (c.year || 1) >= 2 && m >= H(18)) return pick(m, [H(18), H(21), 'cafe.table1']);
+    return wd < 5 ? pick(m, [H(9), H(17), 'central.office']) : null;   // weekdays: the Governor's office on the Main deck
   },
 };
 
 Object.assign(SCHEDULE, {
   // The Guardians' commander: about the village by day, the overlook some evenings.
   kestrel(wd, m) {
-    const after = ['village.clinicfront', 'village.square', 'village.libraryfront', 'village.ranchyard', 'village.square', 'village.dock', 'village.bench'][wd];
+    const after = ['village.clinicfront', 'village.square', 'village.libraryfront', 'village.ranchyard', 'village.square', 'village.riverside', 'village.bench'][wd];
     const sky = wd === 0 || wd === 2 || wd === 4;
     return pick(m, [H(9), H(11), 'village.square'], [H(11), H(13), 'village.bridge'],
       [H(13), H(14, 30), wd === 6 ? 'village.cafefront' : 'cafe.table3'], [H(14, 30), H(17, 30), after],
@@ -340,7 +341,7 @@ const FESTIVAL_SPOTS = {
   },
   'village.bridge': {
     general: 'village.bridge', marrow: 'village.bridge', seln: 'village.river', corran: 'village.river', ruess: 'village.bench',
-    oduya: 'village.bench', maris: 'village.bridge', vashti: 'village.dock', moraine: 'village.dock',
+    oduya: 'village.bench', maris: 'village.bridge', vashti: 'village.riverside', moraine: 'village.river',
     kestrel: 'village.bridge', mori: 'village.river', yui: 'village.bench',
   },
 };
@@ -359,7 +360,7 @@ export function whereIs(npcId, ctx) {
   if (fest) {
     // Shops are shut all day; the village gathers from an hour before until the end.
     if (m >= fest.from - 60 && m < fest.to) spot = (FESTIVAL_SPOTS[fest.spot] || FESTIVAL_SPOTS['village.square'])[npcId] || fest.spot;
-    else if (npcId === 'vashti' && m >= H(8) && m < Math.min(H(18), fest.from - 60)) spot = 'hill.wreck';
+    else if (npcId === 'vashti' && m >= H(8) && m < Math.min(H(18), fest.from - 60)) spot = 'hangar.floor';
     if (storm) spot = null;
   } else {
     spot = plan(wd, m, ctx);
@@ -1362,7 +1363,7 @@ export const EVENTS = [
 
   // ---- Vashti: what she looks for in the Old World.
   {
-    id: 'vashti3', npc: 'vashti', hearts: 3, map: 'hill', from: H(8), to: H(18),
+    id: 'vashti3', npc: 'vashti', hearts: 3, map: 'hangar', from: H(8), to: H(18),
     lines: [
       L('narrator', 'Vashti is greasing the cable drum of the Descent. A square of card is tucked into her bandana, the way other people keep a pencil.'),
       L('sato', 'You have a photograph in your hat.'),
@@ -1378,7 +1379,7 @@ export const EVENTS = [
     reward: { love: 3, item: ['crystal', 1] },
   },
   {
-    id: 'vashti7', npc: 'vashti', hearts: 7, map: 'hill', from: H(8), to: H(18),
+    id: 'vashti7', npc: 'vashti', hearts: 7, map: 'hangar', from: H(8), to: H(18),
     lines: [
       L('narrator', 'The lift is up and locked, in the middle of the day. Vashti sits on the edge of the pad with her boots hanging over the shaft.'),
       L('vashti', 'I found it. Willow Lane. The door is grey now. It was blue under the ash. I scratched it to be sure.'),
@@ -1398,7 +1399,7 @@ export const EVENTS = [
 
   // ---- Moraine: the price of peace.
   {
-    id: 'moraine3', npc: 'moraine', hearts: 3, map: 'village', weekday: 5, from: H(9), to: H(17),
+    id: 'moraine3', npc: 'moraine', hearts: 3, map: 'central', weekday: 5, from: H(9), to: H(17),
     lines: [
       L('narrator', 'Moraine is on the foredeck of her barge under a striped awning, with a ledger open on her knee and a pen she is not using.'),
       L('moraine', 'Captain. Come aboard. I am doing my accounts and I require a witness of good character. You will have to serve.'),
@@ -1413,7 +1414,7 @@ export const EVENTS = [
     reward: { love: 3, item: ['tonic', 1] },
   },
   {
-    id: 'moraine7', npc: 'moraine', hearts: 7, map: 'village', weekday: 5, from: H(9), to: H(17),
+    id: 'moraine7', npc: 'moraine', hearts: 7, map: 'central', weekday: 5, from: H(9), to: H(17),
     lines: [
       L('narrator', 'There is a crate on the dock beside the barge, nailed shut, with the Ashfall crest burned into the lid. Moraine is looking at it and not at Sato.'),
       L('moraine', 'My crown is in there. The real one. Hull plate from the first carrier I ever stole, beaten into a circle. Ugly. I adored it.'),
@@ -1592,13 +1593,13 @@ export const SIGNS = {
   'farm.bin': 'SHIPPING BIN. Collection daily at five (J. Maris, courier). Payment at dawn. No tools, no livestock, no notes saying "sorry about the eggs".',
   'village.square': 'WILLOWFALL, on the Lantern Ring. Population 94 (the 4 is freshly painted). Notices: Planting Day, Spring 18. Lantern Night, Summer 24. Harvest Fair, Autumn 9. Year\'s End, Winter 30.',
   'village.memorial': 'Ships on the left. People on the right. They kept the dark out, in two wars and a siege. The strawberries are for everyone; take one and remember somebody.',
-  'village.dock': 'RIVER DOCK. Courier boats daily. The Ashfall trading barge calls on Saturdays, nine till five. Her Majesty asks that you do not lean on the awning.',
+  'village.riverside': 'THE RIVERSIDE WALK. Willows, benches and the best bank for fishing in Willowfall. The old dock was taken down after the siege; boats moor on the Main deck now.',
   'village.storefront': "SELN'S SEED & SUNDRY. Seeds in season, fresh bread, rucksacks, fishing rods. Open 9 to 5. Closed Sundays, when the steward is out counting seedlings.",
   'village.cafefront': "THE HANGAR. The Upper deck's canteen. Hot food, ten till ten, every day of the year. Storms included. If you are hungry and cannot pay, come in anyway. T. Oduya, chef.",
   'village.hallfront': 'VILLAGE HALL. Warden E. Marrow. Desk hours 9 to 4, Monday to Friday. The Memory Room is open to all: things from the Old World, kept so we know what was good.',
   'village.workshopfront': 'RUESS: WORKSHOP. Tools upgraded overnight. Greenhouses mended. Clocks, prams and rods considered. Open 9 to 5. Closed Wednesdays. Do not touch the carousel.',
   'village.ranchyard': "CORRAN'S RANCH. Chickens, cows, feed and fodder, milkers and brushes. Open 9 to 5. Closed Thursdays (gone fishing). The shouting is normal.",
-  'hill.wreck': 'THE DESCENT. Cargo lift to the Old World. Runs 8 to 6; N. Vashti, keeper. Walk your machine on. Set your turret down before you dig. The crawlers are pests, not monsters.',
+  'hill.wreck': 'THE DESCENT. Hull lift up to the hangar; Pallas runs to the asteroid belt, 8 to 6. N. Vashti, keeper. The Old World is reached by shuttle from the Eden Central space dock.',
   'hill.lake': 'HILL LAKE. Best fishing on the Upper deck. Home of "Old Hollin", a carp of great age and poor manners. Rods lost to him so far: 14.',
   'hill.overlook': 'THE OVERLOOK. From here the whole Lantern Ring curves up and over. At dusk the great window opens, and you can see the Earth. Give it time. So are we.',
 };
@@ -1642,7 +1643,7 @@ export const HELP = [
   },
   {
     title: 'The Old World, fishing and forage',
-    body: 'On the hill, Vashti\'s cargo lift, the Descent, carries Sato and her Pallas down to the ruins of the Old World. Search rubble with E for scrap, alloy, crystal and relics. Set the Hydra turret down with Space: it sees off the crawlers and stray drones, which are pests and no real threat. Deeper levels hold rarer things. Give one of each relic to Marrow\'s Memory Room in the hall, or sell or gift the rest.\n\nFishing: hold the rod, face water and press Space to cast. When the float dips, press Space again. Rain and the hill lake are best, each season has its own fish, and Ruess can improve the rod.\n\nForage grows on the hill each day: herbs, berries, mushrooms, frostcaps.',
+    body: 'On the hill, the Descent (Vashti\'s hull lift) climbs to her hangar; from there the Pallas flies sector runs into the asteroid belt. Drill rocks with E for ore, comet ice and rare star-metal; one hides the jump buoy deeper. The Old World is a shuttle trip from Eden Central with Maris: search rubble for relics, set the Hydra down with F, and keep out of the haze until Ruess fits filters. Relics go to the Memory Room.\n\nFishing: hold the rod, face water and press Space to cast. When the float dips, press Space again. Rain and the hill lake are best, each season has its own fish, and Ruess can improve the rod.\n\nForage grows on the hill each day: herbs, berries, mushrooms, frostcaps.',
   },
   {
     title: 'Seasons and festivals',
@@ -1698,9 +1699,9 @@ export const FISHING = {
 
 export const RUINS = {
   arrive: [
-    'The lift settles. Grey light, still air, and the long quiet of streets nobody has walked in a lifetime.',
-    'The Pallas steps off the platform into ash and ivy. Somewhere, a shop sign is still creaking.',
-    'The Old World. Roofless houses, a rusted tram, and a sky the colour of old pewter.',
+    'The shuttle settles on its skids. Grey light, still air, and the long quiet of streets nobody has walked in a lifetime.',
+    'The Pallas steps off the shuttle ramp into ash and ivy. Somewhere, a shop sign is still creaking. Green haze pools in the low streets.',
+    'The Old World. Roofless houses, a rusted tram, and a sky the colour of old pewter. The air meter on the Pallas ticks.',
   ],
   deeper: [
     'Further in. The buildings are taller here, and the dust has kept things better.',
@@ -2206,4 +2207,58 @@ export const QUESTS = {
     Q('yui_fish', 'fish_m', 1, 'One river trout? I should like a quiet fish supper. For two, if... if you are not busy. You need not talk.', 'Thank you. Come at seven. I have laid the table already. Twice.', { minHearts: 5 }),
     Q('yui_musicbox', 'musicbox', 1, 'There is a thing I would like, if you ever find one. A music box. The library is very silent after six, and I have begun to mind.', 'It plays. Listen. ...Stay till it winds down? It is a short tune. I should like it to be longer.', { minHearts: 6 }),
   ],
+};
+
+// ------------------------------------------------------------------ star-plums and the Main deck (2026-11-18)
+export const STAR_PLUM = {
+  found: 'A star-plum! Eat it and your strength grows for good.',
+  seln7: [{ who: 'seln', text: 'Oh, and Mira. There was a second paper in that drawer, and this came up from it in my window box overnight. Star-plum. The founders brought six seeds. I think you should have it.' }],
+  marrow7: [{ who: 'marrow', text: 'One more thing. The hall\'s little tree fruited this year, for the first time since the sealing. Star-plum, the founders called it. Eat it, Captain. Grow strong; the village leans on you now.' }],
+  harvest: [{ who: 'marrow', text: 'And the fair\'s first prize, by vote of the judges and much argument: a star-plum from the hall tree. Well grown, Mira.' }],
+  lantern: [{ who: 'general', text: 'Someone left this on the bridge rail with your name on it. A star-plum. I suspect the whole village, frankly.' }],
+  mori: [{ who: 'mori', text: 'Five favours. You have kept half my clinic stocked. Doctor\'s orders: eat this. A star-plum. I was saving it for a patient who needed it, and you are the one who never stops.' }],
+  hill: 'Under a fern in a quiet corner, something glows violet: a star-plum.',
+};
+export const CENTRAL = {
+  down: 'The car drops through the spoke. You get heavier as you go; at the bottom, the Main deck.',
+  up: 'The car climbs back to the Lantern Ring. Your feet remember the lighter pull.',
+  gallery: ['Through the great window the Earth turns, blue and white and patient. From up here, you cannot see the ash at all.', 'The window frames half the Earth and a slice of the Moon. Somebody on the bench beside you is asleep, smiling.', 'The night shift sun-line dims, and the stars come out on the far side of the glass. Somewhere down there, the old world is waiting for spring.'],
+  galleryDay: 'In daylight the window shows mostly glare and the hull\'s own shadow. The view is better after dark.',
+};
+
+// Sato's Watch: the dome at night, by season; the plaque; the General's visit.
+export const WATCH = {
+  season: [
+    ['The dome splits open with a long, patient grind. Through the telescope, Earth fills the eyepiece: spring cloud over the old oceans.', 'Below the cloud, here and there, a green that was not there last year.'],
+    ['Summer on the Main deck: the sun-line dimmed, the stars hard and bright beyond the glass.', 'The Moon slides into the eyepiece, grey and patient. Somebody has scratched a small heart on the brass of the focusing knob.'],
+    ['Autumn. The Earth turns its night side to the colony, and the dark is not quite dark: a few lights burn where the ash has thinned.', 'Someone down there is keeping a fire. Sato watches it for a long time.'],
+    ['Winter. The great window frosts at its edges, and the stars come through it sharp as needles.', 'The radar dish turns overhead, steady as a heartbeat. Everything that is coming home is being watched for.'],
+  ],
+  plaque: [
+    { who: 'narrator', text: 'By the door, a brass plaque: SATO\'S WATCH. FOR CAPTAIN M. SATO, WHO KEPT WATCH WHEN NO ONE ELSE COULD.' },
+    { who: 'sato', text: 'I asked them to call it something else. Anything else. "The Observatory" was right there.' },
+    { who: 'sato', text: '...It is a very good telescope, though.' },
+  ],
+  general: [
+    { who: 'general', text: 'They told me I would find you here. Under your own name, pretending not to notice it.' },
+    { who: 'sato', text: 'I am looking at the stars. The name is on the outside. I cannot see it from in here.' },
+    { who: 'general', text: 'Then I will read it for you, Mira, as often as you need. You kept watch. Let someone else do it for a while.' },
+  ],
+  again: 'You sit a while longer under the open dome. (Stargazing restores your strength once a night.)',
+};
+
+// The asteroid belt (from Vashti's hangar) and Maris's shuttle to Earth.
+export const BELT = {
+  arrive: ['The cradle flings the Pallas out of the hangar mouth. Eden turns behind you, a great slow drum; ahead, the belt glitters.', 'Sector run. Rocks drift in the dust lane, slow as thought. The Earth hangs enormous over your shoulder.', 'The belt. No air, no wind, no sound but your own breathing and the drill.'],
+  deeper: ['The jump buoy flashes you through to the next sector. The rocks here are darker, and richer.', 'Further out. The colony is a bright coin behind you now.'],
+  drill: ['The drill bites. Dust sparkles away into the dark.', 'A clean core. Vashti will be pleased.'],
+  debris: 'A tumbling scrap of old hull bumps the Pallas aside. No harm done.',
+  hangar: 'Vashti\'s hangar: the launch cradle, the Pallas on its gantry, and through the hangar mouth, the stars.',
+};
+export const SHUTTLE = {
+  board: [{ who: 'maris', text: 'Strap in, Captain. Down through the soup and out the other side. Keep your lunch where it is.' }],
+  boardAlt: [{ who: 'maris', text: 'Earth run! I love this one. Well. I love the coming back.' }],
+  descent: 'The shuttle drops out of the dock and down the long fall to Earth. The windows go orange, then grey, then the poisoned clouds close round you, thick as wool. Then, below: the old world.',
+  home: 'The shuttle climbs out of the grey into black, and there is Eden, turning, every window lit.',
+  haze: 'The Pallas\'s air meter chatters: the haze here is not good to breathe. (It drains stamina until Ruess fits air filters.)',
 };

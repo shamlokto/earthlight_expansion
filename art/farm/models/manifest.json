@@ -1274,24 +1274,24 @@
  },
  "pallas": {
   "file": "pallas.glb",
-  "tris": 23501,
+  "tris": 24000,
   "size": [
-   0.89,
+   0.5867,
    1.0,
-   0.4811
+   0.52
   ],
-  "note": "Pallas from the expansion picture: white/blue armour, magenta and gold trim, V-fin, wings; rifle hangs by its left leg, cyan sabre in its right hand, both pointing down; chibi figurine, faces +Z",
+  "note": "redesigned Pallas (successor of the Athena Kai): white and crimson, visor band, swept crest horns, round shoulder binders; rifle by the left leg, cyan sabre in the right hand, both pointing down; chibi figurine, faces +Z",
   "unit": "height"
  },
  "pallas_unarmed": {
   "file": "pallas_unarmed.glb",
-  "tris": 23691,
+  "tris": 24000,
   "size": [
-   0.8875,
+   0.6293,
    1.0,
-   0.4808
+   0.4706
   ],
-  "note": "the same Pallas with empty hands (spare, for attaching weapons in code)",
+  "note": "the same redesigned Pallas with empty hands",
   "unit": "height"
  },
  "fountain": {
@@ -1423,5 +1423,305 @@
    0.891
   ],
   "note": "persimmon tree with orange persimmons"
+ },
+ "bread": {
+  "file": "bread.glb",
+  "tris": 4000,
+  "size": [
+   0.9591,
+   0.7815,
+   1.0
+  ],
+  "note": "item"
+ },
+ "omelette": {
+  "file": "omelette.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.1956,
+   0.9596
+  ],
+  "note": "item"
+ },
+ "salad": {
+  "file": "salad.glb",
+  "tris": 4000,
+  "size": [
+   0.9967,
+   0.5335,
+   1.0
+  ],
+  "note": "item"
+ },
+ "veg_soup": {
+  "file": "veg_soup.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.5145,
+   0.9983
+  ],
+  "note": "item"
+ },
+ "fish_grill": {
+  "file": "fish_grill.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.1854,
+   0.5704
+  ],
+  "note": "item"
+ },
+ "cooked_meal": {
+  "file": "cooked_meal.glb",
+  "tris": 3705,
+  "size": [
+   0.8218,
+   0.575,
+   1.0
+  ],
+  "note": "item"
+ },
+ "forest_bento": {
+  "file": "forest_bento.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.4247,
+   0.7832
+  ],
+  "note": "item"
+ },
+ "fruit_tart": {
+  "file": "fruit_tart.glb",
+  "tris": 4000,
+  "size": [
+   0.997,
+   0.7243,
+   1.0
+  ],
+  "note": "item"
+ },
+ "pie": {
+  "file": "pie.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.3324,
+   0.9883
+  ],
+  "note": "item"
+ },
+ "soup": {
+  "file": "soup.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.7894,
+   0.9351
+  ],
+  "note": "item"
+ },
+ "tea": {
+  "file": "tea.glb",
+  "tris": 2912,
+  "size": [
+   1.0,
+   0.8426,
+   0.8065
+  ],
+  "note": "item"
+ },
+ "mint_tea": {
+  "file": "mint_tea.glb",
+  "tris": 4000,
+  "size": [
+   0.703,
+   1.0,
+   0.6929
+  ],
+  "note": "item"
+ },
+ "grape_juice": {
+  "file": "grape_juice.glb",
+  "tris": 4000,
+  "size": [
+   0.4326,
+   1.0,
+   0.4344
+  ],
+  "note": "item"
+ },
+ "honey_toast": {
+  "file": "honey_toast.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.2456,
+   0.998
+  ],
+  "note": "item"
+ },
+ "persimmon_jam": {
+  "file": "persimmon_jam.glb",
+  "tris": 4000,
+  "size": [
+   0.9851,
+   0.7765,
+   1.0
+  ],
+  "note": "item"
+ },
+ "mushroom_soup": {
+  "file": "mushroom_soup.glb",
+  "tris": 4000,
+  "size": [
+   0.9979,
+   0.6152,
+   1.0
+  ],
+  "note": "item"
+ },
+ "root_stew": {
+  "file": "root_stew.glb",
+  "tris": 3999,
+  "size": [
+   1.0,
+   0.3802,
+   0.9472
+  ],
+  "note": "item"
+ },
+ "bamboo_stirfry": {
+  "file": "bamboo_stirfry.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.1836,
+   0.9952
+  ],
+  "note": "item"
+ },
+ "matsutake_grill": {
+  "file": "matsutake_grill.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.2282,
+   0.6515
+  ],
+  "note": "item"
+ },
+ "tonic": {
+  "file": "tonic.glb",
+  "tris": 4000,
+  "size": [
+   0.5011,
+   1.0,
+   0.4848
+  ],
+  "note": "item"
+ },
+ "fish_s": {
+  "file": "fish_s.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.5894,
+   0.2988
+  ],
+  "note": "item"
+ },
+ "fish_m": {
+  "file": "fish_m.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.4554,
+   0.282
+  ],
+  "note": "item"
+ },
+ "fish_l": {
+  "file": "fish_l.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.6848,
+   0.4292
+  ],
+  "note": "item"
+ },
+ "fish_spring": {
+  "file": "fish_spring.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.6177,
+   0.3315
+  ],
+  "note": "item"
+ },
+ "fish_summer": {
+  "file": "fish_summer.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.7567,
+   0.4298
+  ],
+  "note": "item"
+ },
+ "fish_autumn": {
+  "file": "fish_autumn.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.7418,
+   0.4212
+  ],
+  "note": "item"
+ },
+ "fish_winter": {
+  "file": "fish_winter.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.551,
+   0.2459
+  ],
+  "note": "item"
+ },
+ "fish_king": {
+  "file": "fish_king.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.7502,
+   0.4423
+  ],
+  "note": "item"
+ },
+ "apple": {
+  "file": "apple.glb",
+  "tris": 4000,
+  "size": [
+   0.8605,
+   1.0,
+   0.8303
+  ],
+  "note": "item"
+ },
+ "peach": {
+  "file": "peach.glb",
+  "tris": 4000,
+  "size": [
+   0.9836,
+   0.9565,
+   1.0
+  ],
+  "note": "item"
  }
 }

@@ -7,6 +7,18 @@ import { SIGNS } from './story.js';
 // Ground codes: g grass · f field soil · p dirt path · c cobble · s sand · w water · k planks
 // r cliff rock (solid) · a ash (the Old World) · o stone floor · h hay · b boards (indoor floor)
 // d deck plating (the colony's own metal paving) · x nothing
+// Some trees bear fruit anyone may pick (data.js WILD_TREES). Chosen by position so saves stay valid.
+const WILD_KINDS = ['plum', 'loquat', 'mulberry', 'wild_apple', 'chestnut', 'yuzu'];
+function wildFruit(m, every, kinds = WILD_KINDS, limit = 99) {
+  let k = 0, n = 0, k2 = 0;
+  for (const p of m.props) {
+    if (p.kind !== 'tree' || n >= limit) continue;
+    if (p.x <= 0 || p.y <= 0 || p.x >= m.w - 1 || p.y >= m.h - 1) continue;       // not the border wall of trees
+    if (k2++ % every !== 0) continue;
+    p.fruit = kinds[k++ % kinds.length]; n++;
+  }
+}
+// v: the belt's dust lane (a dark floor between drifting rocks)
 export const SOLID_GROUND = new Set(['w', 'r', 'x']);
 // Thin or round things collide as a small circle around their middle instead of a whole tile, so
 // lawns with trees and lamps stay walkable (radius in tiles).
@@ -83,6 +95,8 @@ function farm() {
   m.building('coop', 14, 3, 4, 3, { height: 2.2, to: { map: 'coop' }, label: 'Hen coop' });
   m.building('barn', 21, 2, 7, 5, { height: 4.2, to: { map: 'barn' }, label: 'Barn' });
   m.building('silo', 29, 4, 2, 2, { height: 5, label: 'Silo' });
+  m.prop('feed_sacks', 29, 6, { act: 'silo', label: 'Silo hatch' });          // E: the silo's stores (fodder, hen feed)
+  m.millAt = [31, 4, 2, 2];                                                     // where Ruess builds the feed mill (drawn when flags.feed_mill)
   m.building('greenhouse', 34, 2, 6, 4, { height: 2.8, to: { map: 'greenhouse' }, lock: 'greenhouse', label: 'Greenhouse' });
   m.prop('bin', 10, 6, { act: 'bin' });
   m.prop('well', 12, 6, { act: 'well' });
@@ -102,6 +116,7 @@ function farm() {
   // the colony's share of the farm: a panel by the barn, a rain tank, the irrigation main along the field
   m.prop('solar_panel', 31, 6, { w: 2 }); m.prop('water_tank', 40, 3, { w: 2, d: 2 }); m.prop('pipe_run', 2, 11, { d: fh });
   m.prop('colony_lamp', 19, 7); m.prop('vent', 33, 10);
+  wildFruit(m, 3); m.wildShared = false;
   return m;
 }
 
@@ -117,9 +132,8 @@ function village() {
   m.fill(25, 11, 38, 21, 'c');                                                         // Lantern Square
   m.fill(31, 26, 32, 30, 'k').fill(12, 26, 13, 30, 'k');                              // the road bridge and the west footbridge
   m.fill(12, 19, 13, 25, 'p').fill(12, 31, 13, 38, 'p');                              // footbridge path
-  // the harbour: the river widens into a basin at the dock, with a sandy rim and a pier out to the barge
-  m.fill(44, 25, 58, 32, 's').fill(45, 26, 57, 31, 'w');
-  m.fill(48, 19, 49, 24, 'p').fill(46, 25, 54, 25, 'k').fill(49, 26, 50, 28, 'k');      // to the dock, the quay and the pier
+  // the riverside walk (the old dock is gone: the real one is on the Main deck)
+  m.fill(48, 19, 49, 24, 'p').fill(43, 25, 57, 25, 'p');
   m.fill(3, 39, 60, 40, 'p');                                                          // the south lane
   m.fill(4, 46, 60, 47, 'p');                                                          // Willow Lane, on into the park
   m.fill(2, 11, 11, 15, 'd');                                                          // the hydroponics garden
@@ -154,19 +168,19 @@ function village() {
   m.prop('signpost', 22, 16, { act: 'sign', sign: 'village.workshopfront' });
   m.prop('signpost', 41, 19, { act: 'sign', sign: 'village.hallfront' });
   m.prop('signpost', 11, 38, { act: 'sign', sign: 'village.ranchyard' });
-  m.prop('signpost', 46, 24, { act: 'sign', sign: 'village.dock' });
+  m.prop('signpost', 47, 24, { act: 'sign', sign: 'village.riverside' });
   // Market Street: stalls, crates and lamps
   for (const x of [23, 26, 35, 38]) m.prop('market_stall', x, 6, { w: 2, rot: 0, tint: x });
   m.prop('cargo_crate', 22, 5); m.prop('cargo_crate', 40, 5); m.prop('cargo_crate', 29, 6); m.prop('cargo_crate', 34, 6, { scale: 0.8 });
   m.prop('water_tank', 9, 3, { w: 2, d: 2, scale: 1.15 });
   for (const [x, y] of [[6, 10], [13, 10], [50, 10], [24, 7], [37, 7], [8, 19], [23, 19], [40, 19], [55, 19], [15, 41], [28, 41], [36, 41], [44, 41], [54, 41], [9, 48], [16, 48], [23, 48], [38, 48], [56, 48], [30, 25], [34, 31]]) m.prop('colony_lamp', x, y);
   // the hydroponics garden: towers in rows, fed from the tank by a pipe
-  for (const y of [12, 14]) for (const x of [3, 5, 7, 9]) m.prop('hydro_tower', x, y);
+  { let k = 0; for (const y of [12, 14]) for (const x of [3, 5, 7, 9]) m.prop('hydro_tower', x, y, { act: 'hydro', tower: k++ }); }   // towers Seln rents out
   m.prop('water_tank', 12, 11, { w: 2, d: 2 });
   m.prop('pipe_run', 3, 11, { w: 9 });
   m.prop('wind_turbine_small', 3, 20);
   // the lift kiosk plaza: the lift between the decks, the air-circulation tower, an access hatch
-  m.prop('lift_kiosk', 55, 11, { w: 3, d: 2, act: 'sign', sign: 'village.lift', label: 'Lift' });
+  m.prop('lift_kiosk', 55, 11, { w: 3, d: 2, act: 'liftdown', sign: 'village.lift', label: 'Lift' });   // down the spoke to Eden Central
   m.prop('fan_tower', 59, 11, { w: 2, d: 2 });
   m.prop('airlock_door', 51, 10, { w: 2 });
   m.prop('noticeboard', 53, 15, { act: 'sign', sign: 'village.square' });
@@ -174,9 +188,10 @@ function village() {
   m.prop('maint_bot', 58, 14, { solid: false, rot: 2.4 });
   m.prop('vent', 52, 13); m.prop('vent', 57, 15);
   m.spot('village.lift', 56.5, 13.7);
-  // the river: dock, barge, pipes along the bank, reeds
-  m.prop('barge', 50, 27, { w: 5, d: 3, solid: false, onWater: true, rot: Math.PI / 2, turned: true, label: 'Dock' });   // moored along the pier, bow downstream
-  m.prop('cargo_crate', 54, 25); m.prop('cargo_crate', 46, 25, { scale: 0.8 });
+  // the river: the riverside walk with willows, benches and a fishing spot; pipes along the bank, reeds
+  for (const x of [44, 52]) m.prop('bench', x, 23, { w: 2 });
+  for (const [x, y] of [[43, 23], [47, 22], [51, 22], [56, 23]]) m.prop('tree', x, y, { scale: 1.1, rot: x, model: 'willow' });
+  m.prop('reeds', 50, 26, { solid: false }); m.prop('reeds', 55, 26, { solid: false }); m.prop('flowers', 49, 23, { solid: false });
   m.prop('pipe_run', 36, 25, { w: 8 });
   m.prop('pipe_run', 36, 31, { w: 9 });
   for (const x of [4, 9, 21, 40, 58]) m.prop('reeds', x, 26, { solid: false });
@@ -184,6 +199,7 @@ function village() {
   // south of the river: the ranch fence, the solar yard
   for (let x = 3; x <= 9; x++) m.prop('fence', x, 33, {});
   for (const [x, y] of [[55, 33], [58, 33], [55, 35], [58, 35]]) m.prop('solar_panel', x, y, { w: 2 });
+  m.prop('charge_terminal', 57, 37, { act: 'solaryard', label: 'Solar yard' });   // leave batteries to charge overnight
   m.prop('wind_turbine_small', 61, 37);
   m.prop('vent', 33, 37);
   // Willow Lane: gardens in front of the cottages
@@ -195,26 +211,35 @@ function village() {
   for (const [x, y, k] of [[37, 43, 'tree'], [39, 50, 'tree'], [55, 43, 'tree'], [58, 50, 'pine'], [61, 44, 'tree'], [43, 49, 'bush'], [50, 49, 'bush'], [35, 49, 'pine']]) m.prop(k, x, y, { scale: 1.05, rot: x });
   for (const [x, y] of [[42, 41], [52, 41], [45, 49], [48, 49], [40, 45], [53, 45], [57, 44], [36, 45]]) m.prop('flowers', x, y, { solid: false });
   m.exit(31, 0, 32, 0, { map: 'farm', x: 22, y: 32.2, dir: 1 });
-  m.spot('village.square', 31.5, 19.6).spot('village.memorial', 32, 16.8).spot('village.bridge', 30.2, 26.5).spot('village.dock', 50.5, 25.6)
+  m.spot('village.square', 31.5, 19.6).spot('village.memorial', 32, 16.8).spot('village.bridge', 30.2, 26.5).spot('village.riverside', 50.5, 25.6)
     .spot('village.bench', 35, 24.4).spot('village.storefront', 18.6, 8.6).spot('village.cafefront', 46.4, 8.6).spot('village.hallfront', 47.4, 18.4)
     .spot('village.clinicfront', 41.6, 40.4).spot('village.libraryfront', 50.4, 40.4).spot('village.workshopfront', 19.6, 17.6).spot('village.ranchyard', 9, 40.4).spot('village.river', 20, 26.5);
   m.water = 'village'; m.start = [31.5, 1.6];
   // district names and the maintenance bots' rounds (both only for the map screen and the look)
-  m.areas = [['Market Street', 31.5, 10.3], ['Lantern Square', 31.5, 13], ['Hydroponics', 6.5, 16.5], ['Lift Plaza', 56, 17.6], ['River Dock', 50.5, 24], ['Willow Lane', 17, 50.3], ['Fountain Park', 47, 48.6], ['Solar Yard', 58, 32.3], ['Lantern River', 22, 28.5]];
+  m.areas = [['Market Street', 31.5, 10.3], ['Lantern Square', 31.5, 13], ['Hydroponics', 6.5, 16.5], ['Lift Plaza', 56, 17.6], ['Riverside', 50.5, 24], ['Willow Lane', 17, 50.3], ['Fountain Park', 47, 48.6], ['Solar Yard', 58, 32.3], ['Lantern River', 22, 28.5]];
   m.bots = [[[4, 8.5], [59.5, 8.5]], [[7, 17.5], [59.5, 17.5]], [[4, 39.5], [59.5, 39.5]], [[31.5, 2], [31.5, 46.5], [58, 46.5]]];
   m.border('tree', 21, (x, y) => (y === 0 && (x === 31 || x === 32)));
   const park = (x, y) => x >= 34 && y >= 41;
   m.scatter(8, 44, ['tree', 'tree', 'pine', 'bush', 'flowers', 'flowers'], (x, y) => !park(x, y) && !(x >= 50 && y <= 18) && !(y >= 48));
+  wildFruit(m, 4, ['plum', 'loquat', 'yuzu', 'mulberry'], 5); m.wildShared = true;
   return m;
 }
 // The lift kiosk's notice lives here with the map that has the kiosk (story.js owns the other signs).
 const MAP_SIGNS = {
+  'central.board': 'EDEN CENTRAL, Main deck. Governor\'s office: weekdays 9 to 5 (the General). The Ashfall Exchange: Her Majesty receives traders daily but Saturdays. Arrivals: courier runs Tuesdays and Fridays. Viewing gallery open all night; please do not tap the glass.',
+  'central.dock': 'SPACE DOCK, BAY ONE. Courier shuttles, cargo lighters and the Ashfall trader. Her Majesty trades from her ship on Saturdays and from the Exchange on the plaza the rest of the week. Stay behind the yellow lines when the bay doors cycle.',
+  'central.watch': 'SATO\'S WATCH. Observatory and beacon of the Main deck, named by the Colony Council for Captain M. Sato, who kept watch. Dome open to the public from 7 in the evening. (The Captain has asked twice for the name to be changed. The Council has declined twice.)',
+  'central.plaza': 'THE PLAZA. Laid out by the founders, rebuilt after the siege. Avenue north to the great window; south to the lift terminal. Canal walks east and west.',
+  'central.arrivals': 'ARRIVALS. Courier and supply runs from the Middle and Lower decks. J. Maris lands at 8 on Tuesdays and Fridays and asks that nobody wave at her during docking.',
+  'central.market': 'GRAND MARKET. Imported seeds, saplings in any season, batteries. The terminals also BUY fine food at a fifth above bin prices. No haggling with the machines.',
   'hill.onsen': 'THE TERRACE ONSEN. Hot spring, warmed by the colony\'s heat exchangers (Ruess says the pipes were "spare"). Open 6 till midnight. 100 cr a soak; free on your birthday. Please rinse before you get in. No towels in the water.',
   'village.lift': 'LANTERN RING LIFT. Spoke cars to the Middle deck and the hub, every twenty minutes. The climb takes nine; you get lighter as you go, so hold the rail near the top. Hesk\'s barricade stood here. The scorch marks are being kept, on purpose.',
 };
 for (const [k, v] of Object.entries(MAP_SIGNS)) if (!(k in SIGNS)) SIGNS[k] = v;
 
 // Fourteen places where something grows each day (sim.FORAGE_SPOT_COUNT); a few hide in the corners.
+// The hidden corner where a star-plum shows on one day a season (sim.STAR_SPOT).
+export const STAR_SPOT_XY = [2, 17];
 export const FORAGE_SPOTS = [[3, 8], [14, 5], [18, 3], [20, 6], [30, 12], [8, 15], [18, 21], [26, 19], [32, 22], [1, 23], [33, 2], [16, 10], [24, 14], [12, 8]];
 
 function hill() {
@@ -222,8 +247,8 @@ function hill() {
   m.fill(0, 0, 35, 1, 'r').fill(0, 24, 35, 25, 'r').fill(34, 0, 35, 25, 'r').fill(0, 0, 0, 10, 'r').fill(0, 15, 0, 25, 'r');
   m.fill(0, 12, 20, 13, 'p').fill(20, 9, 21, 13, 'p').fill(20, 9, 28, 10, 'p').fill(24, 8, 30, 9, 'c');
   m.fill(5, 17, 16, 23, 's').fill(6, 18, 15, 22, 'w');
-  m.building('lift', 25, 4, 4, 4, { height: 6, label: 'The Descent' });
-  m.prop('liftpad', 27, 8, { solid: false, act: 'lift' });
+  m.building('lift', 25, 4, 4, 4, { height: 6, label: 'The Descent', to: { map: 'hangar' } });   // the hull lift up to Vashti's hangar
+  m.prop('liftpad', 27, 8, { solid: false });
   m.prop('signpost', 23, 8, { act: 'sign', sign: 'hill.wreck' });
   m.prop('signpost', 9, 16, { act: 'sign', sign: 'hill.lake' });
   m.prop('signpost', 31, 19, { act: 'sign', sign: 'hill.overlook' });
@@ -243,8 +268,123 @@ function hill() {
   m.spot('hill.wreck', 24.4, 9.4).spot('hill.lake', 11, 16.4).spot('hill.overlook', 31, 20.4).spot('hill.onsen', 6, 6.5);
   m.water = 'hill'; m.start = [1.6, 13];
   m.forage = FORAGE_SPOTS;
-  m.scatter(31, 30, ['tree', 'pine', 'pine', 'bush', 'rockdecor', 'flowers'], (x, y) => !FORAGE_SPOTS.some(([a, b]) => a === x && b === y) && !(x <= 12 && y <= 10));   // keep the onsen's view open
+  m.scatter(31, 30, ['tree', 'pine', 'pine', 'bush', 'rockdecor', 'flowers'], (x, y) => !FORAGE_SPOTS.some(([a, b]) => a === x && b === y) && !(x === STAR_SPOT_XY[0] && y === STAR_SPOT_XY[1]) && !(x <= 12 && y <= 10));   // keep the onsen's view open
+  wildFruit(m, 2, ['wild_apple', 'chestnut', 'yuzu', 'plum']); m.wildShared = false;
   return m;
+}
+
+
+// ---------------------------------------------------------------- Eden Central (the Main deck city)
+// Down the spoke lift from Willowfall: a covered city under a glass roof, the great hull window along
+// its north side. The avenue runs from the lift terminal (south) past the plaza (the Governor's office
+// and the Ashfall Exchange) to the viewing gallery at the window; side streets of flats and townhouses,
+// a canal with bridges, the Arrivals hall and the Grand Market. Some houses stand empty (central.house_N).
+export const CENTRAL_HOUSES = {
+  'central.house_1': 'A neat townhouse with a brass knocker. A card in the window: TO LET. THE HOUSING OFFICE WILL DECIDE.',
+  'central.house_2': 'Boarded up since the siege. Someone has chalked a sunflower on the boards.',
+  'central.house_3': 'The door is locked. Through the glass: dust sheets over furniture, and a piano.',
+  'central.house_4': 'A corner house with a shopfront, shutters down. RESERVED: ENQUIRE AT THE GOVERNOR\'S OFFICE.',
+  'central.house_5': 'Empty and swept clean. A note on the door: KEYS WITH WARDEN MARROW, WILLOWFALL. (Marrow says she has never heard of it.)',
+  'central.house_6': 'A tall narrow house with a roof garden gone to seed. The lock is new; the paint is not.',
+};
+function central() {
+  const m = new MapDef('central', 70, 56, 'd', { name: 'Eden Central · the Main deck', covered: true });
+  m.fill(0, 0, 69, 0, 'x');
+  m.fill(1, 1, 68, 4, 'c');                                    // the promenade along the great window
+  m.fill(33, 5, 36, 51, 'c');                                  // the avenue
+  m.fill(22, 20, 47, 30, 'c');                                 // the plaza
+  m.fill(4, 21, 19, 31, 'c');                                  // the Grand Market
+  m.fill(48, 28, 66, 31, 'c');                                 // the arrivals apron
+  m.fill(2, 33, 67, 34, 'c').fill(2, 43, 67, 44, 'c').fill(2, 50, 67, 51, 'c');   // side streets
+  m.fill(2, 36, 67, 37, 'w');                                  // the canal
+  for (const x of [10, 11, 33, 34, 35, 36, 57, 58]) m.fill(x, 36, x, 37, 'k');   // its bridges
+  // walls: the window to the north, hull plate elsewhere
+  m.prop('hull_window', 0, 0, { w: 70, tileSolid: true, label: 'The great window' });
+  m.prop('hull_wall', 0, 1, { d: 5, tileSolid: true }); m.prop('hull_wall', 0, 19, { d: 37, tileSolid: true }); m.prop('hull_wall', 69, 1, { d: 55, tileSolid: true }); m.prop('hull_wall', 1, 55, { w: 68, tileSolid: true });
+  m.prop('glass_roof', 0, 0, { w: 70, d: 56, solid: false });
+  // the viewing gallery
+  for (const x of [5, 12, 19, 26, 41, 48, 55, 62]) m.prop('bench', x, 3, { w: 2, rot: Math.PI, act: 'gallery', label: 'Viewing gallery' });
+  m.spot('central.gallery', 30, 2.5);
+  // the plaza: the Governor's office, the Ashfall Exchange, the fountain
+  m.building('gov_office', 22, 13, 10, 7, { height: 6, to: { map: 'office' }, label: "Governor's office" });
+  m.building('exchange', 38, 13, 10, 7, { height: 5.5, to: { map: 'exchange' }, label: 'The Ashfall Exchange' });
+  m.prop('fountain', 34, 24, { w: 2, d: 2, label: 'Fountain' });
+  m.prop('noticeboard', 30, 21, { w: 2, act: 'sign', sign: 'central.board' });
+  m.prop('signpost', 37, 31, { act: 'sign', sign: 'central.plaza' });
+  for (const [x, y] of [[23, 22], [46, 22], [23, 29], [46, 29]]) m.prop('tree', x, y, { scale: 0.9, rot: x });
+  for (const [x, y] of [[26, 26], [42, 26]]) m.prop('bench', x, y, { w: 2 });
+  m.spot('central.plaza', 29.5, 27.5);
+  // the Arrivals hall and its apron
+  m.building('arrivals', 50, 21, 12, 7, { height: 5, label: 'Arrivals hall' });
+  m.prop('liftpad', 52, 29, { solid: false }); m.prop('cargo_crate', 63, 29); m.prop('cargo_crate', 64, 29, { scale: 0.8 }); m.prop('cargo_crate', 63, 30, { scale: 0.9 });
+  m.spot('central.arrivals', 56.5, 29.5);
+  m.prop('signpost', 49, 31, { act: 'sign', sign: 'central.arrivals' });
+  // the Grand Market: stalls and the vending terminals that run it
+  for (const [x, y] of [[5, 22], [9, 22], [13, 22], [5, 28], [9, 28], [13, 28]]) m.prop('market_stall', x, y, { w: 2, tint: x + y });
+  m.prop('vending', 17, 24, { act: 'counter', shop: 'grandmarket', label: 'Grand Market' }); m.prop('vending', 17, 27, { act: 'counter', shop: 'grandmarket', label: 'Grand Market' });
+  m.prop('signpost', 20, 25, { act: 'sign', sign: 'central.market' });
+  // the space dock (north-west): a docking bay at the hull, with a pressure window and bay doors onto the stars,
+  // landing pads, Moraine's cartel trader, a shuttle, cranes, crates, fuel lines and hazard paint
+  m.fill(1, 6, 15, 18, 'o').fill(12, 19, 14, 20, 'c');
+  m.prop('bay_window', 0, 6, { d: 13, tileSolid: true, label: 'Pressure window' });
+  m.prop('landing_pad', 2, 7, { w: 5, d: 5, solid: false }); m.prop('landing_pad', 2, 13, { w: 4, d: 4, solid: false });
+  m.prop('trader_ship', 2, 7, { w: 5, d: 5, label: "Moraine's ship" });
+  m.prop('shuttle', 2, 13, { w: 4, d: 4, label: 'Courier shuttle' });
+  m.prop('crane', 9, 6, { label: 'Dock crane' }); m.prop('crane', 9, 17, { label: 'Dock crane' });
+  m.prop('cargo_crate', 10, 11); m.prop('cargo_crate', 10, 12, { scale: 0.8 }); m.prop('cargo_crate', 14, 16, { scale: 0.9 }); m.prop('cargo_crate', 15, 6);
+  m.prop('pipe_run', 7, 6, { d: 12 }); m.prop('hazard_stripes', 1, 12, { w: 6, solid: false }); m.prop('hazard_stripes', 7, 18, { w: 7, solid: false });
+  m.prop('signpost', 12, 18, { act: 'sign', sign: 'central.dock' });
+  m.prop('shuttle_gate', 6, 15, { act: 'shuttle', label: 'Shuttle gate' });   // Maris's courier shuttle to the Old World
+  m.spot('central.dock', 8.6, 9.5);
+  for (const x of [16, 18]) m.prop('hydro_tower', x, 10); for (const x of [16, 18]) m.prop('hydro_tower', x, 13);
+  // the north-east cargo yard
+  for (const [x, y] of [[17, 8], [17, 15], [51, 9], [61, 16]]) m.prop('tree', x, y, { rot: y });
+  for (const [x, y] of [[49, 6], [50, 6], [49, 7], [63, 6], [64, 7]]) m.prop('cargo_crate', x, y, { scale: 0.85 + (x % 3) * 0.1 });
+  m.prop('water_tank', 64, 10, { w: 2, d: 2 }); m.prop('fan_tower', 64, 15, { w: 2, d: 2 });
+  // Sato's Watch: the colony's landmark (an observatory named for her), at the head of its own walk off the plaza
+  m.fill(53, 13, 60, 14, 'c').fill(57, 15, 58, 20, 'c');
+  m.building('observatory', 53, 6, 8, 7, { height: 9, label: "Sato's Watch" });
+  m.prop('house_door', 57, 12, { act: 'stargaze', solid: false, label: "Sato's Watch" });
+  m.prop('signpost', 59, 14, { act: 'sign', sign: 'central.watch' });
+  m.prop('pipe_run', 1, 20, { d: 12 }); m.prop('pipe_run', 68, 6, { d: 26 });
+  // homes: flats and townhouses on the side streets; the empty ones keep their doors shut (act 'house')
+  const homes = [
+    ['apartment', 4, 39, 6], ['townhouse', 11, 39, 5], ['house', 17, 39, 5, 'central.house_1'], ['apartment', 23, 39, 6],
+    ['apartment', 38, 39, 6], ['house', 45, 39, 5, 'central.house_2'], ['townhouse', 51, 39, 5], ['apartment', 57, 39, 6], ['house', 64, 39, 4, 'central.house_3'],
+    ['house', 4, 46, 5, 'central.house_4'], ['apartment', 10, 46, 6], ['townhouse', 17, 46, 5], ['house', 23, 46, 6, 'central.house_5'],
+    ['townhouse', 38, 46, 6], ['apartment', 45, 46, 6], ['house', 52, 46, 5, 'central.house_6'], ['apartment', 58, 46, 6],
+  ];
+  for (const [kind, x, y, w, id] of homes) {
+    m.building(id ? (id.endsWith('1') || id.endsWith('5') ? 'townhouse' : 'cottage_d') : kind, x, y, w, 4, { height: kind === 'apartment' ? 7 : 4.2, label: id ? 'Empty house' : kind === 'apartment' ? 'Flats' : 'Townhouse', city: true });
+    if (id) m.prop('house_door', x + Math.floor(w / 2), y + 3, { act: 'house', house: id, solid: false });
+  }
+  // street furniture
+  for (let y = 7; y <= 49; y += 6) { m.prop('colony_lamp', 32, y); m.prop('colony_lamp', 37, y); }
+  for (const x of [6, 14, 22, 28, 42, 50, 58, 64]) { m.prop('colony_lamp', x, 35); m.prop('colony_lamp', x, 45); }
+  for (const x of [8, 20, 26, 44, 54, 62]) m.prop('plantpot', x, 32);
+  for (const x of [3, 9, 27, 40, 49, 65]) m.prop('bush', x, 52, { scale: 0.9, rot: x });
+  m.prop('vent', 30, 9); m.prop('vent', 40, 9); m.prop('vent', 20, 48); m.prop('vent', 48, 48);
+  // the lift terminal at the south end of the avenue
+  m.prop('lift_kiosk', 33, 52, { w: 3, d: 2, act: 'liftup', label: 'Lift to the Lantern Ring' });
+  m.spot('central.lift', 34.5, 50.5);
+  m.start = [34.5, 50.5];
+  m.areas = [['The great window', 34.5, 2.5], ['The plaza', 34.5, 31.5], ['Grand Market', 11.5, 32], ['Arrivals', 56, 32.3], ['Canal', 22, 38.4], ['Lift terminal', 34.5, 54.3], ['Gardens', 9, 18.5]];
+  m.bots = [[[34.5, 6], [34.5, 49]], [[3, 33.5], [66, 33.5]], [[3, 43.5], [66, 43.5]], [[3, 2.5], [66, 2.5]], [[5, 50.5], [64, 50.5]]];
+  // inside: the Governor's office and the Exchange
+  const o = room('office', 12, 8, "Governor's office");
+  o.prop('desk', 5, 2, { w: 3 }); o.spot('central.office', 6.5, 1.5);
+  o.prop('shelf', 0, 0, { w: 2, model: 'bookshelf' }); o.prop('shelf', 10, 0, { w: 2, model: 'bookshelf' }); o.prop('plantpot', 3, 0); o.prop('plantpot', 9, 0);
+  o.prop('table', 9, 5, { w: 2 }); o.prop('chair', 8, 5, { solid: false }); o.prop('rug', 5, 4, { solid: false, w: 2, d: 2 });
+  const hg = room('hangar', 16, 12, "Vashti's hangar", 'd');
+  hg.prop('hangar_mouth', 2, 0, { w: 12, tileSolid: true, label: 'Hangar mouth' });
+  hg.prop('launch_cradle', 6, 2, { w: 4, d: 4, act: 'launch', label: 'Launch cradle' });
+  hg.prop('workbench', 0, 5, { d: 2 }); hg.prop('crate', 15, 8); hg.prop('crate', 15, 9); hg.prop('cargo_crate', 14, 2); hg.prop('cargo_crate', 1, 2, { scale: 0.8 });
+  hg.prop('pipe_run', 0, 9, { w: 5 }); hg.prop('noticeboard', 12, 7, { act: 'sign', sign: 'hill.wreck' });
+  hg.spot('hangar.floor', 11.5, 6.5);
+  const x = room('exchange', 12, 9, 'The Ashfall Exchange');
+  x.prop('counter', 4, 2, { w: 5, act: 'counter' }); x.spot('central.exchange', 6.5, 1.5);
+  x.prop('crate', 0, 4); x.prop('crate', 0, 5); x.prop('crate', 11, 6); x.prop('shelf', 0, 0, { w: 2 }); x.prop('shelf', 10, 0, { w: 2 }); x.prop('rug', 5, 5, { solid: false, w: 2, d: 2 }); x.prop('plantpot', 11, 3);
+  return { central: m, office: o, exchange: x, hangar: hg };
 }
 
 // ---------------------------------------------------------------- indoors
@@ -318,22 +458,25 @@ function interiors() {
 }
 
 // The Old World site, built from the sim's grid (state.mine): 0 empty, 1 rubble, 2 way down, 3 wall.
+// A site from the sim's grid (state.mine): the Old World (mode 'earth': rubble, walls of ruin, haze) or a
+// belt sector (mode 'belt': asteroid rocks to drill, great unbreakable rocks, a dark dust lane).
 export function ruinsMap(mine) {
-  const m = new MapDef('ruins', mine.w + 2, mine.h + 3, 'a', { name: `The Old World, level ${mine.depth || mine.floor || 1}`, ruins: true });
+  const belt = mine.mode === 'belt';
+  const m = new MapDef('ruins', mine.w + 2, mine.h + 3, belt ? 'v' : 'a', { name: belt ? `The belt, sector ${mine.depth || 1}` : `The Old World, level ${mine.depth || mine.floor || 1}`, ruins: true, belt, earth: !belt });
   m.fill(0, 0, m.w - 1, 0, 'x'); m.fill(0, 0, 0, m.h - 1, 'x'); m.fill(m.w - 1, 0, m.w - 1, m.h - 1, 'x'); m.fill(0, m.h - 1, m.w - 1, m.h - 1, 'x');
   m.origin = [1, 1];
   for (let y = 0; y < mine.h; y++) for (let x = 0; x < mine.w; x++) {
     const c = mine.cells[y * mine.w + x];
-    if (c === 3) m.prop('ruinwall', x + 1, y + 1, { cell: [x, y] });
+    if (c === 3) m.prop(belt ? 'asteroid_big' : 'ruinwall', x + 1, y + 1, { cell: [x, y] });
   }
-  m.prop('liftpad', 8, mine.h + 1, { solid: false, act: 'liftup' });
+  m.prop(belt ? 'launch_pad' : 'shuttle_pad', 8, mine.h + 1, { solid: false, act: 'liftup' });
   m.start = [8.5, mine.h + 1.5];
   return m;
 }
 
 let cache = null;
 export function allMaps() {
-  if (!cache) cache = { farm: farm(), village: village(), hill: hill(), ...interiors() };
+  if (!cache) cache = { farm: farm(), village: village(), hill: hill(), ...central(), ...interiors() };
   return cache;
 }
 // Where a door leads: inside, just above the room's exit tile; and back out to the door tile.

@@ -33,6 +33,7 @@ const FLAT = {
   ash_ground: ['#7c776f', '#6a665f', '#8c877e'], hay: ['#d4b45a', '#c2a24b', '#e0c26c'], water: ['#2d5f73', '#27556a', '#35697d'],
   stone_floor: ['#a9a69d', '#97948b', '#b7b4ab'], glass: ['#bfe3e6', '#a9d3d8', '#d3eef0'],
   // the colony's own surfaces (art slots textures/deck_floor, hull_plate, colony_path, grass_colony)
+  dust_lane: ['#24262f', '#1c1e26', '#2e3038'],
   deck_floor: ['#c4ccd0', '#b3bcc1', '#d3dadd'], hull_plate: ['#8a98a6', '#7b8997', '#9aa7b3'], colony_path: ['#d8d0c0', '#c8bfae', '#e4ddd0'], grass_colony: ['#6fae4c', '#5d9a40', '#83bd5c'],
 };
 function paintFlat(name, size = 128) {

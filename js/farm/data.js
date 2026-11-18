@@ -90,6 +90,20 @@ export const FRUIT_TREES = {
   persimmon: { id: 'persimmon', name: 'Persimmon tree', fruit: 'persimmon', season: 2 },
 };
 export const TREE_DAYS = 28;
+// Wild fruit trees: some of the trees already growing on the Upper deck bear fruit anyone may pick.
+// season: when it fruits; most: fruit per picking; every: days between pickings.
+export const WILD_TREES = {
+  plum: { fruit: 'plum', season: 0, most: 3, every: 3 },
+  loquat: { fruit: 'loquat', season: 1, most: 3, every: 3 },
+  mulberry: { fruit: 'mulberry', season: 1, most: 4, every: 2 },
+  wild_apple: { fruit: 'wild_apple', season: 2, most: 3, every: 3 },
+  chestnut: { fruit: 'chestnut', season: 2, most: 4, every: 3 },
+  yuzu: { fruit: 'yuzu', season: 3, most: 2, every: 3 },
+};
+item('plum', 'Wild plum', 'fruit', 'A small tart plum from the old orchard rows nobody owns any more. Spring.', { sell: 60, stamina: 6, detail: 'Wild plum trees flower white along the hill paths and fruit in spring. Anyone may pick them; they come back every few days. Good in a fruit tart.' });
+item('loquat', 'Loquat', 'fruit', 'A golden early-summer fruit, sweet and a little floral.', { sell: 70, stamina: 8, detail: 'Loquats came up to the Upper deck in a seed vault and went wild. Summer, every few days, from trees on the hill and in the village.' });
+item('mulberry', 'Mulberry', 'fruit', 'Dark summer mulberries that stain everything they touch.', { sell: 35, stamina: 5, detail: 'Mulberry trees grow along the colony irrigation lines. Summer; a handful every couple of days. Children of Willowfall come home purple.' });
+item('yuzu', 'Yuzu', 'fruit', 'A fragrant winter citrus, too sour to eat, wonderful to cook with.', { sell: 120, stamina: 4, detail: 'The only tree on the Upper deck that fruits in winter, under the cool sun-line. The canteen pays well for them.' });
 for (const t of Object.values(FRUIT_TREES)) item(`sapling_${t.id}`, `${t.name} sapling`, 'sapling', `Plant on farm grass (not the field). Grows for ${TREE_DAYS} days, then gives a ${t.fruit} a day in ${SEASONS[t.season].toLowerCase()}.`, { tree: t.id });
 
 // Gear for the bigger farm: carried and placed things, and the field robots' batteries.
@@ -100,8 +114,10 @@ item('battery', 'Battery (empty)', 'part', 'A flat robot battery. Put it in a so
 item('battery_full', 'Battery (charged)', 'part', 'A charged robot battery. Give it to a Field-unit with E (+60 charge).', { sell: 90 });
 
 item('scrap', 'Scrap', 'ore', 'Scrap metal from the ruins.', { sell: 15 });
-item('alloy', 'Alloy', 'ore', 'Good alloy, found from depth 5 down.', { sell: 40 });
-item('crystal', 'Crystal', 'ore', 'A drive crystal, found from depth 10 down.', { sell: 150 });
+item('comet_ice', 'Comet ice', 'ore', 'Dirty ice from the belt, full of useful volatiles. Ruess always wants some.', { sell: 60, detail: 'Drilled out of belt rocks in Vashti\'s sector runs, at every depth. It sells, the Workshop uses it for coolant, and Ruess is fond of a gift of it.' });
+item('star_metal', 'Star-metal', 'ore', 'A rare nickel-iron from deep in the belt, bright as a mirror.', { sell: 500, detail: 'Found only in the asteroid belt, from sector 3 down, and not often. Ruess needs one to fit the Pallas with air filters for the Old World.' });
+item('alloy', 'Alloy', 'ore', 'Good alloy, drilled from belt rocks from sector 5 out.', { sell: 40 });
+item('crystal', 'Crystal', 'ore', 'A drive crystal, drilled from belt rocks from sector 10 out.', { sell: 150 });
 
 // Old-world artefacts from the ruins, cheapest first. `depth` is the shallowest site they turn up in.
 export const RELICS = [
@@ -222,9 +238,9 @@ const DETAIL = {
   solar_panel: 'A small solar charger from Ruess\'s workshop. Set it on the farm, put empty robot batteries in with E, and they are charged by morning: two on a bright day, one in rain or snow, none in a storm.',
   battery: 'A flat Field-unit battery. Charge it overnight in a solar charger. Ruess sells them, and they turn up in the ruins.',
   battery_full: 'A charged Field-unit battery. Give it to one of your robots with E for 60 charge; you get the empty one back.',
-  scrap: 'Twisted metal from the Old World ruins. Ruess wants five for every Alloy upgrade, and he never says no to more.',
-  alloy: 'Good structural alloy, found from level 5 of the Descent. Five go into a Starsteel upgrade.',
-  crystal: 'A drive crystal from before the fall, found from level 10 down. Starsteel tools need one.',
+  scrap: 'Twisted metal from the Old World ruins and the belt rocks. Ruess wants five for every Alloy upgrade, and he never says no to more.',
+  alloy: 'Good structural alloy, drilled from asteroid rocks from belt sector 5 out. Five go into a Starsteel upgrade; three into the Pallas filters.',
+  crystal: 'A drive crystal, drilled from the belt from sector 10 out. Starsteel tools need one.',
   photo: 'Strangers smiling under a blue sky, faded to sepia. Found in the shallowest ruins; the Memory Room keeps one.',
   teacup: 'A porcelain cup without a chip on it, somehow. Found in the shallow ruins.',
   book: 'An old-world book whose pages still turn. Found from level 2 of the ruins.',
@@ -267,10 +283,20 @@ const DETAIL = {
 };
 for (const it of Object.values(ITEMS)) {
   if (DETAIL[it.id]) it.detail = DETAIL[it.id];
+  else if (it.detail) { /* given with the item */ }
   else if (it.kind === 'seed' && it.crop) { const c = CROPS[it.crop]; it.detail = `A paper bag of ${c.name.toLowerCase()} seeds from ${it.crop === 'moonflower' ? 'Moraine\'s barge' : 'Seln\'s store'}. It sows a 3×3 patch of tilled soil; water it every day and it ripens in ${c.days} days${c.regrow ? `, then gives again every ${c.regrow}` : ''}.`; }
   else if (it.id === 'seed_grass') it.detail = 'Pasture grass seed from Seln\'s store. Sow it in the pasture; in nine days the sickle cuts it to fodder, and it grows back.';
   else it.detail = it.desc;
 }
+
+// Star-plums (2026-11-18): small glowing violet fruit grown from seeds the colony's founders brought.
+// Each raises max stamina by 10 (to 200). Ten are hidden about the colony, one place each.
+item('star_plum', 'Star-plum', 'fruit', 'A small violet fruit that glows faintly. Eating one raises your max stamina by 10, for good.', { maxUp: 10,
+  detail: 'Grown from the founders\' own seeds, and there are only a handful left on the whole ring. One may show itself on Terrace Hill on one day a season; the deep ruins hide two; the festivals, two old friends, a doctor, a queen and a collector each keep one.' });
+item('colony_feast', 'Colony feast', 'food', 'Fish, fruit, a vegetable and an egg: a meal for the whole crew. Restores 100 stamina; the first one you eat raises max stamina by 5.', { stamina: 100, sell: 900, firstMaxUp: 5,
+  detail: 'The founders\' landing-day meal, cooked from everything the ring grows. The first time you eat one, it raises your max stamina by 5 for good.' });
+item('founders_cake', 'Founders\' cake', 'food', 'Honeycomb, chestnut, milk and egg, baked slow. Restores 80 stamina; the first one you eat raises max stamina by 5.', { stamina: 80, sell: 560, firstMaxUp: 5,
+  detail: 'Marrow says the first crews baked it on the anniversary of the sealing, from the only sweet things they had. The first slice raises your max stamina by 5 for good.' });
 
 // The Field-units (leased farm robots): their names and what they say (by mood).
 export const ROBOT_NAMES = ['Mochi', 'Sprocket', 'Tamago', 'Pebble', 'Kettle', 'Daikon', 'Bolt', 'Yuzu'];

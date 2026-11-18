@@ -25,7 +25,7 @@ const select = (s, id) => { s.player.sel = s.player.inv.findIndex((i) => i && i.
 const slotOf = (s, id) => s.player.inv.findIndex((i) => i && i.id === id);
 const wipe = (s, f = 'farm') => { for (const t of s.fields[f].tiles) Object.assign(t, { till: false, wet: false, crop: null, obj: null, hp: 0 }); };
 const setObj = (s, x, y, obj) => Object.assign(tile(s, x, y), { obj, hp: obj === 'stump' || obj === 'boulder' ? 3 : 1 });
-const rich = (seed = 5) => { const s = newGame({ seed }); s.player.money = 1e6; s.stock.lumber = 500; while (s.player.inv.length < 15) s.player.inv.push(null); s.player.slots = 15; addItem(s, 'scrap', 20); addItem(s, 'alloy', 20); addItem(s, 'crystal', 5); return s; };
+const rich = (seed = 5) => { const s = newGame({ seed }); s.player.money = 1e6; s.stock.lumber = 500; while (s.player.inv.length < 16) s.player.inv.push(null); s.player.slots = 16; addItem(s, 'scrap', 20); addItem(s, 'alloy', 20); addItem(s, 'crystal', 5); addItem(s, 'star_metal', 2); return s; };
 const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
 
 // ---------------------------------------------------------------- data
@@ -76,7 +76,7 @@ const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
 
 function script(s, days = 12) {
   let k = 7;
-  const r = (n) => (k = (k * 1103515245 + 12345) & 0x7fffffff) % n;
+  const r = (n) => ((k = (k * 1103515245 + 12345) & 0x7fffffff) >>> 8) % n;   // high bits: the low ones cycle
   for (let d = 0; d < days; d++) {
     for (let i = 0; i < 30; i++) {
       s.player.sel = r(8);
@@ -558,8 +558,7 @@ function script(s, days = 12) {
   const relicIds = RELICS.map((r) => r.id), relics = (t) => relicIds.reduce((n, id) => n + (t.got[id] || 0), 0);
   const t1 = tally(1), t5 = tally(5), t12 = tally(12);
   check(!t1.got.alloy && !t1.got.crystal && t1.got.scrap > 0, 'depth 1: scrap only');
-  check(t5.got.alloy > 0 && !t5.got.crystal, 'depth 5: alloy, no crystal');
-  check(t12.got.alloy > 0 && t12.got.crystal > 0, 'depth 12: crystal too');
+  check(!t5.got.alloy && !t5.got.crystal && !t12.got.alloy && !t12.got.crystal && !t12.got.comet_ice, 'Earth rubble: scrap only, no ore (that is the belt\'s)');
   for (const t of [t1, t5, t12]) { const per = t.piles / relics(t); check(per > 6.5 && per < 12, `about one relic in 8–10 piles (${per.toFixed(1)})`); }
   check(Object.keys(t1.got).filter((id) => relicIds.includes(id)).sort().join() === 'photo,teacup', 'depth 1 relics: the common two');
   check(t5.got.medal > 0 && !t5.got.seedtin && !t5.got.ring && !t5.got.datachip, 'depth 5 relics stop at the medal');
@@ -579,7 +578,7 @@ function script(s, days = 12) {
     while (q.mine.monsters.length) { fights++; for (const f of sim.defeatMonster(q, 0).gained) { drops++; kinds[`${depth}${f.id}`] = 1; } }
     removeItem(q, 'scrap', countItem(q, 'scrap')); removeItem(q, 'alloy', countItem(q, 'alloy'));
   }
-  check(Math.abs(drops / fights - 0.35) < 0.06 && kinds['1scrap'] && !kinds['1alloy'] && kinds['6alloy'] && kinds['6scrap'], `monster drops ${(drops / fights).toFixed(2)}: scrap, alloy from depth 5`);
+  check(Math.abs(drops / fights - 0.35) < 0.06 && kinds['1scrap'] && !kinds['1alloy'] && !kinds['6alloy'] && kinds['6scrap'], `monster drops ${(drops / fights).toFixed(2)}: scrap`);
   q.player.stamina = 20; r = sim.monsterHit(q);
   check(r.ok && r.msg && q.player.stamina === 15, 'a hit costs five stamina');
   q.player.stamina = 3; sim.monsterHit(q); check(q.player.stamina === 1, 'never below one');
@@ -653,13 +652,16 @@ function script(s, days = 12) {
 
 {
   const s = newGame({ seed: 80 }), kinds = [{}, {}, {}, {}], counts = {};
+  let stars = 0;
   for (let d = 0; d < 480; d++) {
     sleep(s);
+    if (s.forage.some((f) => f.spot === sim.STAR_SPOT)) { stars++; check(s.forage.find((f) => f.spot === sim.STAR_SPOT).id === 'star_plum' && s.cal.day === sim.starPlumDay(s), 'the hill star-plum shows on its day'); s.forage = s.forage.filter((f) => f.spot !== sim.STAR_SPOT); }
     check(s.forage.length >= 3 && s.forage.length <= 6 && new Set(s.forage.map((f) => f.spot)).size === s.forage.length && s.forage.every((f) => f.spot >= 0 && f.spot < 14), `forage day ${d}`);
     counts[s.forage.length] = 1;
     for (const f of s.forage) kinds[s.cal.season][f.id] = 1;
   }
   check(Object.keys(counts).sort().join() === '3,4,5,6', 'three to six spots');
+  check(stars === 16, `the star-plum spot shows once a season until found (${stars} in 16 seasons)`);
   check(Object.keys(kinds[0]).sort().join() === 'bamboo_shoot,fiddlehead,herb,wild_mint' && Object.keys(kinds[1]).sort().join() === 'berry,herb,honeycomb,wild_grape' && Object.keys(kinds[2]).sort().join() === 'chestnut,matsutake,mushroom,wild_apple' && Object.keys(kinds[3]).sort().join() === 'frostcap,pine_nut,winter_root', `forage by season: ${kinds.map((k) => Object.keys(k).sort().join('/')).join(' | ')}`);
   const f = s.forage[0], n = s.forage.length;
   const r = sim.pickForage(s, f.spot);
@@ -741,7 +743,7 @@ function script(s, days = 12) {
   for (const seed of [1001, 1002, 1003]) {
     const s = newGame({ seed });
     let k = seed, threw = null, minMoney = s.player.money, actions = 0, good = 0;
-    const r = (n) => (k = (k * 1103515245 + 12345) & 0x7fffffff) % n;
+    const r = (n) => ((k = (k * 1103515245 + 12345) & 0x7fffffff) >>> 8) % n;   // high bits: the low ones cycle
     const junk = [undefined, null, -1, 999, 1.5, NaN, 'x', '__proto__', 'constructor', {}, [], true, Infinity];
     const any = (v) => (r(12) === 0 ? junk[r(junk.length)] : v);
     const itemIds = Object.keys(ITEMS), shops = [...Object.keys(sim.SHOPS), 'nowhere'], npcs = [...sim.NPC_IDS, 'nobody'];
@@ -763,7 +765,8 @@ function script(s, days = 12) {
       () => sim.gift(s, any(npcs[r(npcs.length)]), any(r(s.player.slots)), any(tiers[r(4)]), r(10) === 0),
       () => sim.addLove(s, any(npcs[r(npcs.length)]), any(r(9) - 4)),
       () => sim.setFlag(s, any(`ev_${r(5)}`)),
-      () => { sim.enterMine(s, any(1 + r(15))); return { ok: true }; },
+      () => { sim.enterMine(s, any(1 + r(15)), any(['earth', 'belt'][r(2)])); return { ok: true }; },
+      () => [() => sim.takeShuttle(s, any(1 + r(5))), () => sim.hazardTick(s, any(r(14)), any(r(12))), () => { sim.enterBelt(s, any(1 + r(12))); return { ok: true }; }][r(3)](),
       () => sim.hitRock(s, any(r(14)), any(r(12))), () => sim.hitRock(s, r(14), r(12)),
       () => sim.defeatMonster(s, any(r(4))), () => sim.monsterHit(s), () => sim.leaveMine(s),
       () => sim.donate(s, any(r(s.player.slots))),
@@ -780,7 +783,10 @@ function script(s, days = 12) {
       () => sim.pickFruit(s, any(r(4))), () => sim.removeTree(s, any(r(4))),
       () => sim.storeItem(s, any(`chest:${r(3)}`), any(r(s.player.slots))), () => sim.takeItem(s, any(`chest:${r(3)}`), any(r(20))),
       () => sim.useCharger(s, any(r(3))), () => sim.chargeRobot(s, any(r(4))), () => sim.setRobotJob(s, any(r(4)), any(['water', 'harvest', 'animals', 'rest'][r(4)])),
-      () => sim.renameRobot(s, any(r(4)), any('Bean')), () => sim.soak(s), () => sim.shipBasket(s), () => sim.basketTake(s, any(r(3))),
+      () => sim.renameRobot(s, any(r(4)), any('Bean')),
+      () => [() => sim.grantPlum(s, any(sim.STAR_PLUM_SOURCES[r(10)])), () => sim.sellToMarket(s, any(r(s.player.slots))), () => sim.gallerySit(s),
+        () => sim.siloAdd(s, any(r(s.player.slots))), () => sim.millAdd(s, any(r(s.player.slots))), () => sim.yardDeposit(s), () => sim.yardCollect(s),
+        () => sim.hydroPlant(s, any(r(8))), () => sim.hydroHarvest(s, any(r(8)))][r(9)](), () => sim.soak(s), () => sim.shipBasket(s), () => sim.basketTake(s, any(r(3))),
     ];
     try {
       for (let day = 0; day < 120; day++) {
@@ -948,9 +954,10 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   // robots
   const R = rich(61); wipe(R);
   check(shopStock(R, 'workshop').find((e) => e.key === 'robot').price === 300, 'a Field-unit lease costs 300');
-  for (let i = 0; i < 3; i++) check(buy(R, 'workshop', 'robot').ok, `lease robot ${i + 1}`);
-  check(R.robots.length === 3 && new Set(R.robots.map((x) => x.name)).size === 3 && R.robots.every((x) => x.charge === 100 && x.job === 'water'), 'three robots, named, charged');
-  check(!shopStock(R, 'workshop').find((e) => e.key === 'robot').can && !act(buy(R, 'workshop', 'robot')).ok, 'no more than three');
+  for (let i = 0; i < sim.MAX_ROBOTS; i++) check(buy(R, 'workshop', 'robot').ok, `lease robot ${i + 1}`);
+  check(sim.MAX_ROBOTS === 7 && R.robots.length === 7 && new Set(R.robots.map((x) => x.name)).size === 7 && R.robots.every((x) => x.charge === 100 && x.job === 'water'), 'seven robots, named, charged');
+  check(!shopStock(R, 'workshop').find((e) => e.key === 'robot').can && !act(buy(R, 'workshop', 'robot')).ok, 'no more than seven');
+  R.robots.length = 3;                                       // the checks below follow three of them
   for (let i = 0; i < 40; i++) { const t = R.fields.farm.tiles[i]; Object.assign(t, { till: true, crop: { id: 'turnip', age: i < 20 ? 4 : 1, dead: false } }); }
   check(sim.setRobotJob(R, 0, 'harvest').ok && sim.setRobotJob(R, 1, 'water').ok && sim.setRobotJob(R, 2, 'animals').ok && !act(sim.setRobotJob(R, 0, 'dance')).ok, 'set jobs');
   check(sim.renameRobot(R, 0, 'Tanuki <b>').ok && R.robots[0].name === 'Tanuki b' && !act(sim.renameRobot(R, 0, '<<>>')).ok, 'rename (cleaned)');
@@ -1006,6 +1013,123 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   check(sim.shopStock(s2, 'store').some((e) => e.key === 'basket') && sim.shopStock(s2, 'workshop').some((e) => e.key === 'robot'), 'old saves can shop for the new things');
   // the forage spots match the hill
   check(sim.FORAGE_SPOT_COUNT === 14, '14 forage spots');
+}
+// ---------------------------------------------------------------- wild fruit trees (2026-11-18)
+{
+  const s = newGame({ seed: 12 });
+  let r = sim.pickWild(s, 'hill:5', 'plum'); check(r.ok && sim.countItem(s, 'plum') >= 1 && sim.countItem(s, 'plum') <= 3, 'pick 1-3 wild plums in spring');
+  r = sim.pickWild(s, 'hill:5', 'plum'); check(!r.ok && r.msg, 'a picked tree needs a few days');
+  s.cal.day += 3; check(sim.pickWild(s, 'hill:5', 'plum').ok, 'plums again after three days');
+  r = sim.pickWild(s, 'hill:6', 'yuzu'); check(!r.ok && /winter/.test(r.msg), 'yuzu only in winter');
+  const v = newGame({ seed: 4 }); r = sim.pickWild(v, 'village:9', 'plum', true); check(r.ok && sim.countItem(v, 'plum') === 1, 'a village tree gives one fruit');
+  v.cal.day += 3; check(!sim.pickWild(v, 'village:9', 'plum', true).ok, 'village trees take longer to come back'); v.cal.day += 2; check(sim.pickWild(v, 'village:9', 'plum', true).ok, 'and then fruit again');
+  check(!sim.pickWild(v, 'x', 'banana').ok, 'unknown fruit refused');
+}
+
+// ---------------------------------------------------------------- star-plums, the Main deck, silo, mill, solar yard, hydroponics
+{
+  check(sim.STAR_PLUM_SOURCES.length === 10 && ITEMS.star_plum && ITEMS.star_plum.maxUp === 10 && !ITEMS.star_plum.sell, 'ten star-plum sources; it cannot be shipped');
+  const s = rich(201); s.player.stamina = 50;
+  check(sim.grantPlum(s, 'harvest').ok && countItem(s, 'star_plum') === 1 && !act(sim.grantPlum(s, 'harvest')).ok && !act(sim.grantPlum(s, 'nowhere')).ok, 'each source gives once');
+  let r = sim.eat(s, slotOf(s, 'star_plum')); check(r.ok && r.celebrate && s.player.maxStamina === 110 && s.player.stamina === 60 && s.stats.starPlums === 1, 'a star-plum: max stamina 110');
+  s.player.maxStamina = 195; addItem(s, 'star_plum', 2); r = sim.eat(s, slotOf(s, 'star_plum')); check(r.ok && s.player.maxStamina === 200, 'capped at 200');
+  check(!act(sim.eat(s, slotOf(s, 'star_plum'))).ok && countItem(s, 'star_plum') === 1, 'at the cap it is kept');
+  const k = rich(202); k.flags.kitchen = true; while (k.player.inv.length < 25) k.player.inv.push(null); k.player.slots = 25; for (const id of ['fish_s', 'apple', 'carrot', 'egg', 'honeycomb', 'chestnut', 'milk_s', 'egg']) addItem(k, id, 1);
+  check(sim.cook(k, 'colony_feast').ok && sim.cook(k, 'founders_cake').ok, 'colony feast and founders\' cake');
+  k.player.stamina = 100; r = sim.eat(k, slotOf(k, 'colony_feast')); check(r.ok && r.celebrate && k.player.maxStamina === 105, 'the first colony feast: +5 max even when full');
+  addItem(k, 'colony_feast', 1); k.player.stamina = 10; r = sim.eat(k, slotOf(k, 'colony_feast')); check(r.ok && !r.celebrate && k.player.maxStamina === 105, 'the second: just food');
+  r = sim.eat(k, slotOf(k, 'founders_cake')); check(r.ok && k.player.maxStamina === 110, 'the first founders\' cake: +5');
+  // the ruins at depth 10
+  const d = newGame({ seed: 203 }); sim.enterMine(d, 10); const star = d.mine.star; check(star >= 0 && d.mine.cells[star] === 1, 'depth 10 has a star pile');
+  r = sim.hitRock(d, star % d.mine.w, Math.floor(star / d.mine.w)); check(r.ok && r.star && countItem(d, 'star_plum') === 1 && d.flags.plum_ruins10, 'searching it finds the star-plum');
+  sim.enterMine(d, 10); check(d.mine.star === -1, 'only once'); sim.enterMine(d, 9); check(d.mine.star === -1, 'not at depth 9');
+  // Moraine: one a year
+  const m = rich(204); setDate(m, 0, 6);
+  check(shopStock(m, 'barge').find((e) => e.key === 'star_plum').price === 8000 && buy(m, 'barge', 'star_plum').ok && !shopStock(m, 'barge').some((e) => e.key === 'star_plum') && m.flags.plum_moraine, 'Moraine sells one star-plum a year');
+  m.cal.year = 2; check(shopStock(m, 'barge').some((e) => e.key === 'star_plum'), 'and another next year');
+  // the collector
+  const c = newGame({ seed: 205 }); for (const id of Object.keys(ITEMS).filter((x) => ITEMS[x].sell).slice(0, sim.COLLECTOR_KINDS)) c.ledger.shipped[id] = 1;
+  for (let i = 0; i < 10; i++) if (!c.player.inv[i]) c.player.inv[i] = { id: 'bread', n: 99 };
+  let rep = sleep(c); check(c.flags.plum_collector && c.storage.some((b) => b && b.id === 'star_plum') && rep.notes.some((n) => /star-plum/.test(n)), 'the collector\'s star-plum (into the storage box when the rucksack is full)');
+  check(sim.starPlumsFound(c) === 1, 'found: 1 of 10');
+  // the Grand Market
+  const g = rich(206);
+  const gs = shopStock(g, 'grandmarket'); check(gs.find((e) => e.key === 'gm_seed_turnip').price === 150 && gs.find((e) => e.key === 'gm_sapling_apple').price === 2800 && gs.some((e) => e.key === 'gm_battery'), 'the market sells imports at a premium');
+  setDate(g, 3, 4); check(shopStock(g, 'grandmarket').some((e) => e.key === 'gm_sapling_cherry'), 'saplings even in winter');
+  check(buy(g, 'grandmarket', 'gm_battery').ok && countItem(g, 'battery') === 1, 'buy a battery');
+  check(sim.marketPrice('fruit_tart') === 456 && sim.marketPrice('matsutake') === 480 && sim.marketPrice('turnip') === 0 && sim.marketPrice('ring') === 0, 'it buys fine food at +20%');
+  addItem(g, 'fruit_tart', 2); const before = g.player.money; r = sim.sellToMarket(g, slotOf(g, 'fruit_tart')); check(r.ok && g.player.money === before + 912 && !countItem(g, 'fruit_tart') && g.ledger.shipped.fruit_tart === 2, 'sell two fruit tarts');
+  addItem(g, 'turnip', 1); check(!act(sim.sellToMarket(g, slotOf(g, 'turnip'))).ok, 'not turnips');
+  g.cal.minute = 700; r = sim.gallerySit(g); check(r.ok && !r.restored && !r.night, 'the gallery by day: just the view');
+  g.cal.minute = 1200; g.player.stamina = 50; r = sim.gallerySit(g); check(r.ok && r.restored === 20 && g.player.stamina === 70, 'after dark: +20');
+  r = sim.gallerySit(g); check(r.ok && !r.restored && r.again, 'once a day');
+  // the silo and the feed mill
+  const f = rich(207); addItem(f, 'carrot', 5); f.stock.fodder = 0;
+  r = sim.siloAdd(f, slotOf(f, 'carrot'), 3); check(r.ok && f.stock.fodder === 6 && countItem(f, 'carrot') === 2, 'silo: 1 crop = 2 fodder');
+  addItem(f, 'egg', 1); check(!act(sim.siloAdd(f, slotOf(f, 'egg'))).ok, 'no eggs in the silo');
+  check(!act(sim.millAdd(f, slotOf(f, 'carrot'))).ok, 'no mill yet');
+  check(buy(f, 'workshop', 'feed_mill').ok && f.flags.feed_mill && !shopStock(f, 'workshop').some((e) => e.key === 'feed_mill'), 'Ruess builds the feed mill, once');
+  addItem(f, 'corn', 2); addItem(f, 'chestnut', 3); f.stock.feed = 0;
+  check(sim.millAdd(f, slotOf(f, 'corn')).ok && sim.millAdd(f, slotOf(f, 'carrot')).ok && sim.millAdd(f, slotOf(f, 'chestnut')).ok && sim.millCount(f) === 7, 'seven crops in the hopper');
+  addItem(f, 'potato', 30); r = sim.millAdd(f, slotOf(f, 'potato')); check(r.ok && sim.millCount(f) === 20 && countItem(f, 'potato') === 17, 'twenty a day');
+  rep = sleep(f); check(f.stock.feed === 10 + Math.floor(18 / 2) * 3 && sim.millCount(f) === 0 && rep.notes.some((n) => /feed mill ground/.test(n)), `milled overnight: ${f.stock.feed} feed`);
+  // the solar yard
+  const y = rich(208); addItem(y, 'battery', 8); const m0 = y.player.money;
+  r = sim.yardDeposit(y); check(r.ok && y.solarYard.slots.length === 6 && y.player.money === m0 - 180 && countItem(y, 'battery') === 2, 'six batteries racked for 30 cr each');
+  y.weather = 'rain'; sleep(y); check(y.solarYard.slots.filter((b) => b === 'battery_full').length === 3, 'rain: half charged');
+  r = sim.yardDeposit(y); check(r.ok && countItem(y, 'battery_full') === 3 && y.solarYard.slots.length === 3, 'collect the charged ones');
+  y.weather = 'storm'; sleep(y); check(!y.solarYard.slots.includes('battery_full'), 'a storm: none'); y.weather = 'sun'; sleep(y); check(y.solarYard.slots.every((b) => b === 'battery_full'), 'sun: all');
+  // the hydroponics garden
+  const h = rich(209); setDate(h, 3, 2);
+  check(!act(sim.hydroPlant(h, 0)).ok, 'an unrented tower');
+  for (let i = 0; i < 4; i++) check(buy(h, 'store', 'hydro_tower').ok, `rent tower ${i + 1}`);
+  check(!act(buy(h, 'store', 'hydro_tower')).ok && h.hydro.length === 4, 'four at most');
+  addItem(h, 'seed_strawberry', 1); select(h, 'seed_strawberry'); r = sim.hydroPlant(h, 0); check(r.ok && h.hydro[0].crop.id === 'strawberry', 'strawberries in winter, in a tower');
+  check(!act(sim.hydroHarvest(h, 0)).ok, 'not ripe yet');
+  for (let i = 0; i < 8; i++) sleep(h);
+  r = sim.hydroHarvest(h, 0); check(r.ok && countItem(h, 'strawberry') === 1 && h.hydro[0].crop.age === 6, 'ripe in 8 days without watering, and it regrows');
+  setDate(h, 3, 30); rep = sleep(h); check(!h.hydro.length && rep.notes.some((n) => /rentals ended/.test(n)), 'rentals end at the season change');
+  // Sato's Watch
+  const w = newGame({ seed: 211 }); w.cal.minute = 700; check(!act(sim.stargaze(w)).ok, 'the dome opens at seven');
+  w.cal.minute = 1200; w.player.stamina = 40; r = sim.stargaze(w); check(r.ok && r.first && r.restored === 20 && !r.general, 'the first night: the plaque, +20');
+  r = sim.stargaze(w); check(r.ok && !r.first && r.again && !r.restored, 'once a night');
+  w.flags.sweet = 'general'; sleep(w); w.cal.minute = 1200; r = sim.stargaze(w); check(r.ok && r.general && w.flags.watchGeneral, 'the General comes once, when he is her sweetheart');
+  sleep(w); w.cal.minute = 1200; check(!sim.stargaze(w).general, 'only once');
+  // old saves
+  const old = JSON.parse(saveState(newGame({ seed: 210 }))); for (const kk of ['mill', 'hydro', 'solarYard']) delete old[kk];
+  const O = loadState(JSON.stringify(old)); check(O && Array.isArray(O.mill) && Array.isArray(O.hydro) && Array.isArray(O.solarYard.slots) && sleep(O).ok, 'an old save gains the mill, the towers and the yard');
+}
+
+// ---------------------------------------------------------------- the asteroid belt, the shuttle, the haze (2026-11-18)
+{
+  const a = newGame({ seed: 301 }), b = newGame({ seed: 301 });
+  const s1 = sim.enterBelt(a, 4), s2 = sim.enterBelt(b, 4);
+  check(s1.mode === 'belt' && JSON.stringify(s1) === JSON.stringify(s2) && !s1.monsters.length && s1.haz.every((x) => !x), 'belt sectors: from the seed, no creatures, no haze');
+  check(s1.cells[s1.hatch] === 1 && a.stats.deepestBelt === 4 && a.stats.deepest === 0, 'one rock hides the jump buoy; the belt keeps its own depth record');
+  const beltTally = (depth) => { const g = rich(310 + depth), got = {}; let n = 0; while (n < 2500) { sim.enterBelt(g, depth); g.mine.cells.forEach((v, i) => { if (v !== 1) return; g.player.stamina = 100; n++; for (const f of sim.hitRock(g, i % 14, Math.floor(i / 14)).gained) got[f.id] = (got[f.id] || 0) + f.n; }); for (let i = 0; i < 15; i++) if (g.player.inv[i] && !['hoe', 'can', 'sickle', 'hammer', 'axe'].includes(g.player.inv[i].id)) g.player.inv[i] = null; } return got; };
+  const b1 = beltTally(1), b5 = beltTally(5), b12 = beltTally(12);
+  check(b1.scrap > 0 && b1.comet_ice > 0 && !b1.alloy && !b1.crystal && !b1.star_metal, 'sector 1: scrap and comet ice');
+  check(b5.alloy > 0 && !b5.crystal && b5.star_metal > 0 && b12.crystal > 0 && b12.alloy > 0, 'alloy from sector 5, crystal from 10, star-metal from 3');
+  check(!Object.keys(b12).some((id) => ITEMS[id].kind === 'relic') && b12.star_metal < b12.comet_ice / 3, 'no relics in space; star-metal is rare');
+  const h = sim.hitRock(a, s1.hatch % 14, Math.floor(s1.hatch / 14)); check(h.ok && h.hatch && /buoy/.test(h.msg), 'drilling the right rock shows the jump buoy');
+  // the shuttle
+  const t = newGame({ seed: 302 }); t.player.money = 500;
+  check(sim.shuttleFare(t) === 200 && sim.takeShuttle(t, 1).ok && t.player.money === 300 && t.mine.mode === 'earth', 'the shuttle costs 200 cr');
+  t.player.money = 100; check(!act(sim.takeShuttle(t, 1)).ok, 'not without the fare');
+  sim.addLove(t, 'maris', 50); check(sim.shuttleFare(t) === 0 && sim.takeShuttle(t, 2).ok && t.player.money === 100, 'free once Maris is at 5 hearts');
+  // the haze
+  let cell = -1; for (let k = 0; k < 20 && cell < 0; k++) { sim.enterMine(t, 6); cell = t.mine.haz.findIndex((x) => x > 0); }
+  check(cell >= 0 && t.mine.haz.some((x) => x === 2) === t.mine.haz.some((x) => x === 2), 'Earth sites have haze patches');
+  const hx = cell % 14, hy = Math.floor(cell / 14); t.player.stamina = 50;
+  let r = sim.hazardTick(t, hx, hy); check(r.ok && r.drained === 1 && t.player.stamina === 49 && sim.hazardAt(t, hx, hy) > 0, 'haze drains a stamina a tick');
+  r = sim.hazardTick(t, 7, 11); check(r.ok && !r.drained, 'the landing is clear');
+  const u = rich(303); check(shopStock(u, 'workshop').find((e) => e.key === 'up_filters').needs === '3 alloy, 1 star-metal', 'the filters need alloy and star-metal');
+  check(buy(u, 'workshop', 'up_filters').ok && u.flags.filters && countItem(u, 'star_metal') === 1, 'Ruess fits the filters');
+  sim.enterMine(u, 6); const c2 = u.mine.haz.findIndex((x) => x > 0); u.player.stamina = 50;
+  if (c2 >= 0) { r = sim.hazardTick(u, c2 % 14, Math.floor(c2 / 14)); check(r.ok && r.filtered && u.player.stamina === 50, 'with filters the haze costs nothing'); }
+  // old saves: a saved site is cleared on load
+  const old = JSON.parse(saveState(newGame({ seed: 304 }))); old.mine = { floor: 3, w: 14, h: 12, cells: [] };
+  check(loadState(JSON.stringify(old)).mine === null, 'an old site is cleared on load');
 }
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);
