@@ -653,13 +653,16 @@ function script(s, days = 12) {
 
 {
   const s = newGame({ seed: 80 }), kinds = [{}, {}, {}, {}], counts = {};
+  let stars = 0;
   for (let d = 0; d < 480; d++) {
     sleep(s);
+    if (s.forage.some((f) => f.spot === sim.STAR_SPOT)) { stars++; check(s.forage.find((f) => f.spot === sim.STAR_SPOT).id === 'star_plum' && s.cal.day === sim.starPlumDay(s), 'the hill star-plum shows on its day'); s.forage = s.forage.filter((f) => f.spot !== sim.STAR_SPOT); }
     check(s.forage.length >= 3 && s.forage.length <= 6 && new Set(s.forage.map((f) => f.spot)).size === s.forage.length && s.forage.every((f) => f.spot >= 0 && f.spot < 14), `forage day ${d}`);
     counts[s.forage.length] = 1;
     for (const f of s.forage) kinds[s.cal.season][f.id] = 1;
   }
   check(Object.keys(counts).sort().join() === '3,4,5,6', 'three to six spots');
+  check(stars === 16, `the star-plum spot shows once a season until found (${stars} in 16 seasons)`);
   check(Object.keys(kinds[0]).sort().join() === 'bamboo_shoot,fiddlehead,herb,wild_mint' && Object.keys(kinds[1]).sort().join() === 'berry,herb,honeycomb,wild_grape' && Object.keys(kinds[2]).sort().join() === 'chestnut,matsutake,mushroom,wild_apple' && Object.keys(kinds[3]).sort().join() === 'frostcap,pine_nut,winter_root', `forage by season: ${kinds.map((k) => Object.keys(k).sort().join('/')).join(' | ')}`);
   const f = s.forage[0], n = s.forage.length;
   const r = sim.pickForage(s, f.spot);

@@ -32,6 +32,9 @@ const FRIDGE_KINDS = new Set(['crop', 'animal', 'fish', 'forage', 'food', 'fruit
 // The basket takes farm produce: crops, forage, fruit, eggs and milk.
 const PRODUCE = new Set(['crop', 'forage', 'fruit', 'animal']);
 export const BASKET_CAP = 30, CHEST_SIZE = 20, MAX_ROBOTS = 7, FORAGE_SPOT_COUNT = 14, ONSEN_PRICE = 100;
+export const MAX_STAMINA_CAP = 200, STAR_SPOT = 99, COLLECTOR_KINDS = 75, HYDRO_TOWERS = 8, HYDRO_MAX = 4, YARD_SLOTS = 6, YARD_PRICE = 30, MILL_DAY = 20;
+// The ten one-time star-plum sources (flags plum_<id>).
+export const STAR_PLUM_SOURCES = ['hill', 'ruins10', 'ruins20', 'harvest', 'lantern', 'seln7', 'marrow7', 'moraine', 'mori', 'collector'];
 export const RUCKSACK_TIERS = [[15, 1500], [20, 4000], [25, 8000], [30, 15000]];
 const FRUITS = ['cherry', 'peach', 'apple', 'persimmon', 'wild_apple', 'wild_grape', 'berry', 'plum', 'loquat', 'mulberry', 'yuzu'];
 const MUSHROOMS = ['mushroom', 'frostcap'];
@@ -62,13 +65,15 @@ export const RECIPES = [
   { id: 'honeyed_nuts', name: 'Honeyed nuts', needs: [['pine_nut'], ['honeycomb']] },
   { id: 'matsutake_grill', name: 'Grilled matsutake', needs: [['matsutake'], ['herb', 'wild_mint']] },
   { id: 'forest_bento', name: 'Forest bento', needs: [FISH_IDS, MUSHROOMS, VEG] },
+  { id: 'colony_feast', name: 'Colony feast', needs: [FISH_IDS, FRUITS, VEG, ['egg']] },
+  { id: 'founders_cake', name: 'Founders\' cake', needs: [['honeycomb'], ['chestnut'], MILK, ['egg']] },
 ];
 // The kitchen window's groups.
 export const RECIPE_GROUPS = [
   ['Everyday', ['omelette', 'salad', 'veg_soup', 'fish_grill', 'mint_tea', 'fiddlehead_tempura', 'bamboo_stirfry']],
   ['Sweet things', ['berry_jam', 'grape_juice', 'honey_toast', 'fruit_salad', 'fruit_tart', 'persimmon_jam', 'honeyed_nuts', 'chestnut_roast']],
   ['From the hill', ['mushroom_soup', 'root_stew', 'matsutake_grill']],
-  ['Feasts', ['cooked_meal', 'forest_bento']],
+  ['Feasts', ['cooked_meal', 'forest_bento', 'colony_feast', 'founders_cake']],
 ];
 export const UPGRADABLE = ['hoe', 'can', 'sickle', 'hammer', 'axe', 'rod'];
 export const SHOPS = {
@@ -78,6 +83,7 @@ export const SHOPS = {
   cafe: { id: 'cafe', name: 'The Hangar', keeper: 'oduya' },
   barge: { id: 'barge', name: "Moraine's Barge", keeper: 'moraine' },
   clinic: { id: 'clinic', name: 'Willowfall Clinic', keeper: 'mori' },
+  grandmarket: { id: 'grandmarket', name: 'Grand Market (Main deck)', keeper: null },
 };
 export const GOALS = [
   { id: 'clear', title: 'Clear some ground', hint: 'Cut a weed with the sickle, or break a rock with the hammer.', reward: 50 },
@@ -165,7 +171,7 @@ export function newGame({ seed } = {}) {
     npc: {}, flags: { greenhouse: false },
     pending: { upgrade: null, animals: [] },
     mine: null, forage: [], museum: {}, fishLog: {},
-    chests: [], panels: [], robots: [], fruitTrees: [], cooked: {}, foraged: {},
+    chests: [], panels: [], robots: [], fruitTrees: [], cooked: {}, foraged: {}, mill: [], hydro: [], solarYard: { slots: [] },
     stats: { tilesCleared: 0, tilled: 0, sown: 0, watered: 0, harvested: 0, shippedItems: 0, fishCaught: 0, searched: 0, monsters: 0, gifts: 0, deepest: 0, days: 0 },
     goals: {},
   };
@@ -197,6 +203,7 @@ export function ensure(s) {
   const obj = (o, k) => { if (!o[k] || typeof o[k] !== 'object' || Array.isArray(o[k])) o[k] = {}; };
   arr(s.player, 'basket'); arr(s, 'chests'); arr(s, 'panels'); arr(s, 'robots'); arr(s, 'fruitTrees');
   obj(s, 'cooked'); obj(s, 'foraged'); obj(s, 'flags'); obj(s, 'museum'); obj(s, 'fishLog');
+  arr(s, 'mill'); arr(s, 'hydro'); obj(s, 'solarYard'); arr(s.solarYard, 'slots'); obj(s, 'stats');
   if (!Array.isArray(s.storage)) s.storage = new Array(STORAGE_SIZE).fill(null);
   if (!Array.isArray(s.fridge)) s.fridge = new Array(FRIDGE_SIZE).fill(null);
   return s;
@@ -502,10 +509,21 @@ export function eat(state, slot) {
   const s = slotItem(state, slot), p = state.player;
   if (!s) return fail('That slot is empty.');
   const def = ITEMS[s.id];
+  if (def.maxUp) {                                   // a star-plum: max stamina up for good
+    if (p.maxStamina >= MAX_STAMINA_CAP) return fail('Your strength is already at its peak. Keep it for someone who needs it.');
+    const up = Math.min(def.maxUp, MAX_STAMINA_CAP - p.maxStamina);
+    p.maxStamina += up; p.stamina = Math.min(p.maxStamina, p.stamina + up); takeFromSlot(state, slot, 1);
+    state.stats.starPlums = (state.stats.starPlums || 0) + 1;
+    return { ok: true, celebrate: true, maxUp: up, msg: `The star-plum tastes of sunlight. Max stamina +${up} (now ${p.maxStamina}).` };
+  }
   if (!def.stamina) return fail('You cannot eat that.');
-  if (p.stamina >= p.maxStamina) return fail('You are not hungry.');
+  const first = !!def.firstMaxUp && !state.flags['ate_' + s.id] && p.maxStamina < MAX_STAMINA_CAP;
+  if (!first && p.stamina >= p.maxStamina) return fail('You are not hungry.');
+  let up = 0;
+  if (first) { state.flags['ate_' + s.id] = true; up = Math.min(def.firstMaxUp, MAX_STAMINA_CAP - p.maxStamina); p.maxStamina += up; }
   p.stamina = Math.min(p.maxStamina, p.stamina + def.stamina);
   takeFromSlot(state, slot, 1);
+  if (up) return { ok: true, celebrate: true, maxUp: up, msg: `You had ${def.name.toLowerCase()}. A first taste like that stays with you: max stamina +${up} (now ${p.maxStamina}).` };
   return { ok: true, msg: `You had ${def.name.toLowerCase()}. +${def.stamina} stamina.` };
 }
 
@@ -634,6 +652,10 @@ function shelves(state, shopId) {
     }
     if (!state.flags.basket) sell('basket', 800, { once: true, apply: () => { addItem(state, 'basket', 1); state.flags.basket = true; ensure(state); return 'A harvest basket. Hold it while you pick, and the crops go in the basket.'; } });
     if (state.cal.season < 3) for (const k of Object.keys(FRUIT_TREES)) sell(`sapling_${k}`, 2500);
+    const rented = ensure(state).hydro.length;
+    out.push({ key: 'hydro_tower', label: 'Rent a hydroponic tower', desc: `One tower in the village garden for the rest of this season (${rented}/${HYDRO_MAX}). Any seed, any season, no watering.`, price: 600, once: true,
+      stop: () => (rented >= HYDRO_MAX ? 'Four towers is all Seln can spare.' : null),
+      apply: () => { const used = new Set(state.hydro.map((h) => h.tower)); const tower = [...Array(HYDRO_TOWERS).keys()].find((k) => !used.has(k)); state.hydro.push({ tower, crop: null, planted: 0, season: state.cal.season }); return `Tower ${tower + 1} in the hydroponics garden is yours until the season turns.`; } });
   } else if (shopId === 'ranch') {
     for (const [kind, price, desc] of [['chicken', 1500, 'Lays an egg each morning when fed.'], ['cow', 5000, 'Gives milk each day when fed.']]) {
       const h = HOUSING[kind], have = state.animals.filter((a) => a.kind === kind).length + state.pending.animals.filter((k) => k === kind).length;
@@ -658,6 +680,8 @@ function shelves(state, shopId) {
       stop: () => (robots >= MAX_ROBOTS ? 'Ruess has no more Field-units to spare. Seven is a whole crew, he says.' : null),
       apply: () => { const name = ROBOT_NAMES.find((n) => !state.robots.some((r) => r.name === n)) || `Unit ${state.robots.length + 1}`; state.robots.push({ name, job: 'water', days: 0, charge: 100, mood: 'happy', done: 0 }); return `${name} rolls out of the workshop, fully charged, and follows you home.`; } });
     sell('solar_panel', 1500, { lumber: 10, needs: '10 lumber' });
+    if (!state.flags.feed_mill) out.push({ key: 'feed_mill', label: 'Feed mill', desc: 'A little mill beside your silo. Put crops in by day; by morning they are hen feed.', price: 1500, lumber: 40, needs: '40 lumber', once: true,
+      apply: () => { state.flags.feed_mill = true; ensure(state); return 'Ruess will have the feed mill standing beside your silo by tonight. "It grinds. It does not judge."'; } });
     sell('battery', 200);
     if (!state.flags.kitchen) {
       out.push({ key: 'kitchen', label: 'Kitchen refit', desc: 'A stove, a sink and a cold-locker fridge for the farmhouse. Cook meals from your own harvest.', price: 2500, lumber: 60, needs: '60 lumber', once: true,
@@ -669,7 +693,13 @@ function shelves(state, shopId) {
     }
   } else if (shopId === 'cafe') {
     sell('tea', 30); sell('soup', 80); sell('pie', 150);
+  } else if (shopId === 'grandmarket') {             // the Main deck's vending terminals: imports at a premium
+    const gm = (id, price) => sell(id, price, { key: 'gm_' + id });
+    for (const c of Object.values(CROPS)) if (c.seasons.length === 1 && c.seasons[0] === state.cal.season) gm(`seed_${c.id}`, Math.round(c.bag * 1.25));
+    for (const k of Object.keys(FRUIT_TREES)) gm(`sapling_${k}`, 2800);
+    gm('battery', 220); gm('honeycomb', 180); gm('chestnut', 90); gm('tonic', 550);
   } else if (shopId === 'barge') {
+    if (!state.flags['plum_moraine_y' + state.cal.year]) sell('star_plum', 8000, { once: true, apply: () => { addItem(state, 'star_plum', 1); state.flags['plum_moraine_y' + state.cal.year] = true; state.flags.plum_moraine = true; return 'Moraine weighs the star-plum in her palm before she lets it go. "One a year. My grandmother\'s rule, not mine."'; } });
     sell('seed_moonflower', 1000); sell('tonic', 500);
     if (!countItem(state, 'pendant') && !state.flags.partner) sell('pendant', 3000, { once: true });
   } else if (shopId === 'clinic') {
@@ -784,7 +814,12 @@ export function enterMine(state, depth = 1) {
     monsters.push({ x: i % w, y: (i - (i % w)) / w, kind: rnd(state) < 0.6 ? 'crawler' : 'drone', hp: 1 + rint(state, 2) });
   }
   state.stats.deepest = Math.max(state.stats.deepest, depth);
-  state.mine = { depth, floor: depth, w, h, cells, monsters, hatch };
+  // Depth 10 and 20 each hide a star-plum in the pile farthest from the lift (once ever).
+  let star = -1;
+  if ((depth === 10 || depth === 20) && !state.flags['plum_ruins' + depth]) {
+    let bd = -1; for (const i of piles) { const d = Math.abs((i % w) - ENTRY[0]) + Math.abs(Math.floor(i / w) - ENTRY[1]); if (d > bd) { bd = d; star = i; } }
+  }
+  state.mine = { depth, floor: depth, w, h, cells, monsters, hatch, star };
   return state.mine;
 }
 // What a pile or a monster gives up at this depth.
@@ -808,7 +843,9 @@ export function hitRock(state, x, y) {
   const i = y * m.w + x, hatch = i === m.hatch, id = find(state, m.depth);
   m.cells[i] = hatch ? 2 : 0;
   state.stats.searched++;
-  const res = take(state, id ? [[id, 1]] : [], { ok: true, broke: true, gained: [], hatch });
+  const starHere = i === m.star && !state.flags['plum_ruins' + m.depth];
+  const res = take(state, [...(id ? [[id, 1]] : []), ...(starHere ? [['star_plum', 1]] : [])], { ok: true, broke: true, gained: [], hatch });
+  if (starHere && res.gained.some((g) => g.id === 'star_plum')) { state.flags['plum_ruins' + m.depth] = true; m.star = -1; res.star = true; res.msg = 'Under the rubble, in a sealed seed tin, a small fruit glowing violet: a star-plum.'; }
   if (hatch) res.msg = res.gained.length ? `You found ${lower(id)}, and a way down.` : 'Under the rubble is a way down.';
   return spend(state, 1, res);
 }
@@ -865,7 +902,10 @@ function rollForage(state) {
   state.forage = [];
   for (let n = 3 + rint(state, 4); n > 0; n--) state.forage.push({ spot: spots.splice(rint(state, spots.length), 1)[0], id: kinds[pick(state, kinds.map((k) => k[1]))][0] });
   state.forage.sort((a, b) => a.spot - b.spot);
+  if (!state.flags.plum_hill && state.cal.day === starPlumDay(state)) state.forage.push({ spot: STAR_SPOT, id: 'star_plum' });
 }
+// The one day each season the hill's star-plum shows itself (until it is found).
+export const starPlumDay = (state) => 3 + (((state.seed >>> 0) % 997) + state.cal.year * 7 + state.cal.season * 11) % 25;
 export function pickForage(state, spot) {
   const i = state.forage.findIndex((f) => f.spot === spot);
   if (i < 0) return fail('There is nothing growing here today.', { gained: [] });
@@ -873,6 +913,7 @@ export function pickForage(state, spot) {
   const put = stash(state, id, 1); if (!put.ok) return fail(FULL, { gained: [] });
   state.forage.splice(i, 1);
   ensure(state).foraged[id] = (state.foraged[id] || 0) + 1;
+  if (id === 'star_plum') state.flags.plum_hill = true;
   return { ok: true, msg: `You picked a ${lower(id)}${put.basket ? ' into the basket' : ''}.`, gained: [{ id, n: 1 }], basket: put.basket };
 }
 
@@ -1132,6 +1173,136 @@ function chargeOvernight(state, weather, notes) {
   else if (weather === 'storm' && state.panels.some((p) => p.slots.includes('battery'))) notes.push('The storm hid the sun-line: the chargers did nothing.');
 }
 
+
+// ---------------------------------------------------------------- star-plums (one-time sources)
+export const starPlumsFound = (state) => STAR_PLUM_SOURCES.filter((k) => state.flags['plum_' + k]).length;
+// Give the star-plum of a source once. With { storage: true } a full rucksack sends it to the storage box.
+export function grantPlum(state, src, { storage = false } = {}) {
+  if (typeof src !== 'string' || !STAR_PLUM_SOURCES.includes(src)) return fail('There is no such gift.');
+  if (state.flags['plum_' + src]) return fail('That star-plum was given long ago.');
+  if (!addItem(state, 'star_plum', 1).ok) {
+    const box = boxes(state).storage, k = box.findIndex((b) => !b);
+    if (!storage || k < 0) return fail('Your rucksack is full. Make room and ask again.');
+    box[k] = { id: 'star_plum', n: 1 };
+  }
+  state.flags['plum_' + src] = true;
+  return { ok: true, msg: 'You received a star-plum.', gained: [{ id: 'star_plum', n: 1 }] };
+}
+
+// ---------------------------------------------------------------- the Grand Market (Main deck)
+// It buys fine food (cooked dishes, and produce worth 300 cr or more) for a fifth more than the bin.
+export function marketPrice(id) {
+  const def = itemOf(id); if (!def || !def.sell) return 0;
+  return def.kind === 'food' || (['crop', 'forage', 'fruit', 'fish', 'animal'].includes(def.kind) && def.sell >= 300) ? Math.round(def.sell * 1.2) : 0;
+}
+export function sellToMarket(state, slot, n) {
+  const s = slotItem(state, slot); if (!s) return fail('That slot is empty.');
+  const price = marketPrice(s.id); if (!price) return fail(`The Grand Market does not buy ${lower(s.id)}. Try the shipping bin.`);
+  if (n === undefined || n === null) n = s.n;
+  if (!int(n) || n < 1) return fail('Choose how many to sell.');
+  n = Math.min(n, s.n); const id = s.id;
+  takeFromSlot(state, slot, n); state.player.money += price * n;
+  state.ledger.shipped[id] = (state.ledger.shipped[id] || 0) + n; state.ledger.earned += price * n;
+  return { ok: true, msg: `Sold ${n} × ${ITEMS[id].name} for ${price * n} cr.`, earned: price * n };
+}
+// The viewing gallery: a seat facing the great window. After dark, once a day, 20 stamina back.
+export function gallerySit(state) {
+  const night = state.cal.minute >= 19 * 60, p = state.player;
+  if (!night) return { ok: true, restored: 0, night: false };
+  if (state.flags.galleryDay === absDay(state)) return { ok: true, restored: 0, night: true, again: true };
+  state.flags.galleryDay = absDay(state);
+  const before = p.stamina; p.stamina = Math.min(p.maxStamina, p.stamina + 20);
+  return { ok: true, restored: p.stamina - before, night: true };
+}
+
+// ---------------------------------------------------------------- the silo and the feed mill
+export const isVeg = (id) => VEG.includes(id);
+const MILLABLE = new Set([...VEG, 'chestnut', 'pine_nut']);
+// Spare vegetables in the silo: 1 crop = 2 fodder.
+export function siloAdd(state, slot, n) {
+  const s = slotItem(state, slot); if (!s) return fail('That slot is empty.');
+  if (!isVeg(s.id)) return fail('The silo takes vegetables for fodder.');
+  if (n === undefined || n === null) n = s.n;
+  if (!int(n) || n < 1) return fail('Choose how many.');
+  n = Math.min(n, s.n); const id = s.id; takeFromSlot(state, slot, n); state.stock.fodder += 2 * n;
+  return { ok: true, msg: `${n} × ${ITEMS[id].name} into the silo: +${2 * n} fodder.` };
+}
+export const millCount = (state) => ensure(state).mill.reduce((a, b) => a + b.n, 0);
+// Crops into the mill's hopper (up to 20 a day); ground overnight into hen feed.
+export function millAdd(state, slot, n) {
+  if (!state.flags.feed_mill) return fail('There is no feed mill yet. Ruess can build one.');
+  const s = slotItem(state, slot); if (!s) return fail('That slot is empty.');
+  if (!MILLABLE.has(s.id)) return fail('The mill grinds vegetables, chestnuts and pine nuts.');
+  if (n === undefined || n === null) n = s.n;
+  if (!int(n) || n < 1) return fail('Choose how many.');
+  n = Math.min(n, s.n, MILL_DAY - millCount(state));
+  if (n < 1) return fail('The hopper is full for today: twenty is all it grinds in a night.');
+  const id = s.id; takeFromSlot(state, slot, n);
+  const line = state.mill.find((x) => x.id === id); if (line) line.n += n; else state.mill.push({ id, n });
+  return { ok: true, msg: `${n} × ${ITEMS[id].name} in the hopper. Hen feed by morning.` };
+}
+// Corn 1 → 5 feed; any other vegetable, chestnut or pine nut 2 → 3 (an odd one waits for tomorrow).
+function millOvernight(state, notes) {
+  const m = ensure(state).mill; if (!m.length || !state.flags.feed_mill) return 0;
+  let feed = 0, ground = 0, other = 0;
+  for (const x of m) { if (x.id === 'corn') { feed += 5 * x.n; ground += x.n; } else other += x.n; }
+  const pairs = Math.floor(other / 2); feed += 3 * pairs; ground += 2 * pairs;
+  let left = other - 2 * pairs; state.mill = [];
+  if (left) { const odd = m.find((x) => x.id !== 'corn'); state.mill.push({ id: odd.id, n: 1 }); }
+  state.stock.feed += feed;
+  if (feed) notes.push(`The feed mill ground ${ground} crop${ground > 1 ? 's' : ''} into ${feed} hen feed.`);
+  return feed;
+}
+
+// ---------------------------------------------------------------- the solar yard (village)
+// Leave empty batteries (30 cr each, up to 6); collect them charged: sun all, rain or snow half, storm none.
+export function yardDeposit(state) {
+  const y = ensure(state).solarYard, free = YARD_SLOTS - y.slots.length, have = countItem(state, 'battery');
+  if (y.slots.some((b) => b === 'battery_full')) return yardCollect(state);
+  if (!have) return fail(y.slots.length ? `${y.slots.length} of your batteries are charging. Come back in the morning.` : 'Bring empty batteries: the yard charges them overnight for 30 cr each.');
+  if (!free) return fail('Your six racks are full. Come back in the morning.');
+  const n = Math.min(free, have, Math.floor(state.player.money / YARD_PRICE));
+  if (n < 1) return fail(`Charging costs ${YARD_PRICE} cr a battery.`);
+  removeItem(state, 'battery', n); state.player.money -= n * YARD_PRICE;
+  for (let i = 0; i < n; i++) y.slots.push('battery');
+  return { ok: true, msg: `You racked ${n} empty batter${n > 1 ? 'ies' : 'y'} for ${n * YARD_PRICE} cr. Collect them tomorrow.` };
+}
+export function yardCollect(state) {
+  const y = ensure(state).solarYard, full = y.slots.filter((b) => b === 'battery_full').length;
+  if (!full) return fail('Nothing is charged yet.');
+  const n = Math.min(full, room(state, 'battery_full')); if (n < 1) return fail(FULL);
+  let k = n; y.slots = y.slots.filter((b) => !(b === 'battery_full' && k-- > 0));
+  addItem(state, 'battery_full', n);
+  return { ok: true, msg: `You collected ${n} charged batter${n > 1 ? 'ies' : 'y'}.`, gained: [{ id: 'battery_full', n }] };
+}
+function yardOvernight(state, weather, notes) {
+  const y = ensure(state).solarYard, empty = y.slots.filter((b) => b === 'battery').length; if (!empty) return;
+  const n = weather === 'sun' ? empty : weather === 'storm' ? 0 : Math.floor(empty / 2);
+  let k = n; y.slots = y.slots.map((b) => (b === 'battery' && k-- > 0 ? 'battery_full' : b));
+  notes.push(n ? `The solar yard charged ${n} of your batteries.` : 'The solar yard could not charge your batteries yesterday.');
+}
+
+// ---------------------------------------------------------------- the hydroponics garden (village)
+export const hydroAt = (state, tower) => ensure(state).hydro.findIndex((h) => h.tower === tower);
+export function hydroPlant(state, tower) {
+  const k = hydroAt(state, tower); if (k < 0) return fail('Rent this tower from Seln\'s store.');
+  const h = state.hydro[k]; if (h.crop) return fail('Something is already growing in this tower.');
+  const s = selected(state), def = s && ITEMS[s.id];
+  if (!def || def.kind !== 'seed' || !def.crop) return fail('Hold a bag of crop seeds to plant the tower.');
+  removeItem(state, s.id, 1); h.crop = { id: def.crop, age: 0, dead: false }; h.planted = absDay(state);
+  return { ok: true, msg: `You planted ${CROPS[def.crop].plural} in tower ${tower + 1}. The nutrient mist does the watering.` };
+}
+export function hydroHarvest(state, tower) {
+  const k = hydroAt(state, tower); if (k < 0) return fail('Rent this tower from Seln\'s store.', { gained: [] });
+  const h = state.hydro[k], c = h.crop && CROPS[h.crop.id];
+  if (!c) return fail('The tower is empty. Plant a seed bag in it.', { gained: [] });
+  if (h.crop.age < c.days) return fail(`The ${c.plural} need ${c.days - h.crop.age} more day${c.days - h.crop.age > 1 ? 's' : ''}.`, { gained: [] });
+  const put = stash(state, c.id, 1); if (!put.ok) return fail(FULL, { gained: [] });
+  if (c.regrow) h.crop.age = c.days - c.regrow; else h.crop = null;
+  state.stats.harvested++;
+  return { ok: true, msg: `You picked ${c.name.toLowerCase()} from tower ${tower + 1}.`, gained: [{ id: c.id, n: 1 }], basket: put.basket };
+}
+
 // ---------------------------------------------------------------- the night
 
 // Always draws once, so the generator stays in step whatever the date.
@@ -1158,7 +1329,10 @@ export function sleep(state, { collapsed = false } = {}) {
     state.ledger.shipped[id] = (state.ledger.shipped[id] || 0) + n;
   }
   state.bin = []; p.money += earned; state.ledger.earned += earned;
-  ensure(state); chargeOvernight(state, state.weather, notes);
+  ensure(state); chargeOvernight(state, state.weather, notes); yardOvernight(state, state.weather, notes); millOvernight(state, notes);
+  for (const h of state.hydro) if (h.crop && own(CROPS, h.crop.id)) h.crop.age = Math.min(CROPS[h.crop.id].days, h.crop.age + 1);
+  // The collector's star-plum: so many kinds shipped (it waits in the storage box if the rucksack is full).
+  if (!state.flags.plum_collector && Object.keys(state.ledger.shipped).length >= COLLECTOR_KINDS && grantPlum(state, 'collector', { storage: true }).ok) notes.push(`Marrow sends a note: you have shipped ${COLLECTOR_KINDS} kinds of things, a village record. With it, a star-plum from the hall's own tree.`);
   // 2. Wet crops grow a day; the soil dries.
   for (const f of Object.values(state.fields)) {
     for (const t of f.tiles) {
@@ -1183,6 +1357,7 @@ export function sleep(state, { collapsed = false } = {}) {
   state.weatherTomorrow = rollWeather(state, after.season, after.day);
   if (newYear) notes.push(`Year ${cal.year} begins.`);
   if (seasonChanged) notes.push(`${SEASONS[cal.season]} has come to Willowfall.`);
+  if (seasonChanged && state.hydro.length) { state.hydro = []; notes.push('Your hydroponic tower rentals ended with the season. Seln will rent them again.'); }
   notes.push(WEATHER_NOTE[state.weather]);
   // 5. Out-of-season crops die outdoors; rain waters the field at dawn; weeds creep back.
   const farm = state.fields.farm, died = new Set(), rain = state.weather === 'rain' || state.weather === 'storm';

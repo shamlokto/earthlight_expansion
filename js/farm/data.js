@@ -287,6 +287,15 @@ for (const it of Object.values(ITEMS)) {
   else it.detail = it.desc;
 }
 
+// Star-plums (2026-11-18): small glowing violet fruit grown from seeds the colony's founders brought.
+// Each raises max stamina by 10 (to 200). Ten are hidden about the colony, one place each.
+item('star_plum', 'Star-plum', 'fruit', 'A small violet fruit that glows faintly. Eating one raises your max stamina by 10, for good.', { maxUp: 10,
+  detail: 'Grown from the founders\' own seeds, and there are only a handful left on the whole ring. One may show itself on Terrace Hill on one day a season; the deep ruins hide two; the festivals, two old friends, a doctor, a queen and a collector each keep one.' });
+item('colony_feast', 'Colony feast', 'food', 'Fish, fruit, a vegetable and an egg: a meal for the whole crew. Restores 100 stamina; the first one you eat raises max stamina by 5.', { stamina: 100, sell: 900, firstMaxUp: 5,
+  detail: 'The founders\' landing-day meal, cooked from everything the ring grows. The first time you eat one, it raises your max stamina by 5 for good.' });
+item('founders_cake', 'Founders\' cake', 'food', 'Honeycomb, chestnut, milk and egg, baked slow. Restores 80 stamina; the first one you eat raises max stamina by 5.', { stamina: 80, sell: 560, firstMaxUp: 5,
+  detail: 'Marrow says the first crews baked it on the anniversary of the sealing, from the only sweet things they had. The first slice raises your max stamina by 5 for good.' });
+
 // The Field-units (leased farm robots): their names and what they say (by mood).
 export const ROBOT_NAMES = ['Mochi', 'Sprocket', 'Tamago', 'Pebble', 'Kettle', 'Daikon', 'Bolt', 'Yuzu'];
 export const ROBOT_JOBS = { water: 'Water', harvest: 'Harvest', animals: 'Animals', rest: 'Rest' };
