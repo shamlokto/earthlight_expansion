@@ -170,7 +170,7 @@ function drawMini(t) {
   const cv = mini.cv, dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth || 160;
   if (cv.width !== Math.round(W * dpr)) { cv.width = cv.height = Math.round(W * dpr); }
   const bt = m.belt, g = cv.getContext('2d'), s = bt ? 2.4 : 4.2, cx = st.me.x, cy = st.me.y; g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.fillStyle = bt ? '#05070d' : '#5f7f55'; g.fillRect(0, 0, W, W);
+  g.fillStyle = bt ? '#05070d' : m.under ? '#1d2126' : '#5f7f55'; g.fillRect(0, 0, W, W);
   const TL = bt ? 6 : TILE, b = bt ? beltOf(m, st.S.mine) : baseOf(m, st.S ? st.S.cal.season : 0), sx = (cx - W / 2 / s) * TL, sy = (cy - W / 2 / s) * TL, sw = (W / s) * TL;
   g.drawImage(b, sx, sy, sw, sw, 0, 0, W, W);
   if (bt) beltMarks(g, m, st.S.mine, s, W / 2 - cx * s, W / 2 - cy * s, t, false);
