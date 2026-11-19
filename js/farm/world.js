@@ -1123,7 +1123,9 @@ class BeltRocks {
     for (const k of [1, 3, 4, 5]) {
       const d = ROCK_KIND[k], cap = Math.min(count[k] || 0, k === 3 ? 520 : 420) + 4;
       rockGeo(d.model, d.big).then(({ geo, mat }) => {
-        if (!this.alive) return; const im = new THREE.InstancedMesh(geo, mat, cap); im.castShadow = true; im.frustumCulled = false; im.count = 0;
+        if (!this.alive) return;
+        if (k !== 4) { mat = mat.clone(); mat.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  { float lum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.18 + lum * 0.9) * vec3(1.06, 0.98, 0.9), 0.82); }'); }; mat.customProgramCacheKey = () => 'stone-rock'; }   // the model paints them purple: take it to stone grey
+        const im = new THREE.InstancedMesh(geo, mat, cap); im.castShadow = true; im.frustumCulled = false; im.count = 0;
         im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); this.meshes[k] = im; this.root.add(im); this.ver = -1;
       });
     }
