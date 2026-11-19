@@ -46,6 +46,21 @@
    "w": 256,
    "h": 256
   },
+  "icons/beehive": {
+   "file": "icons/beehive.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/beet": {
+   "file": "icons/beet.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/bell_pepper": {
+   "file": "icons/bell_pepper.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/berry": {
    "file": "icons/berry.webp",
    "w": 256,
@@ -56,8 +71,18 @@
    "w": 256,
    "h": 256
   },
+  "icons/blossom_tea": {
+   "file": "icons/blossom_tea.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/book": {
    "file": "icons/book.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/bouquet": {
+   "file": "icons/bouquet.webp",
    "w": 256,
    "h": 256
   },
@@ -68,6 +93,16 @@
   },
   "icons/brush": {
    "file": "icons/brush.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/cabbage": {
+   "file": "icons/cabbage.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/cabbage_rolls": {
+   "file": "icons/cabbage_rolls.webp",
    "w": 256,
    "h": 256
   },
@@ -86,6 +121,26 @@
    "w": 256,
    "h": 256
   },
+  "icons/cheese": {
+   "file": "icons/cheese.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/cheese_omelette": {
+   "file": "icons/cheese_omelette.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/cheese_press": {
+   "file": "icons/cheese_press.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/cheese_toast": {
+   "file": "icons/cheese_toast.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/cherry": {
    "file": "icons/cherry.webp",
    "w": 256,
@@ -98,6 +153,11 @@
   },
   "icons/chestnut_roast": {
    "file": "icons/chestnut_roast.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/clippers": {
+   "file": "icons/clippers.webp",
    "w": 256,
    "h": 256
   },
@@ -118,6 +178,16 @@
   },
   "icons/corn": {
    "file": "icons/corn.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/cosmos": {
+   "file": "icons/cosmos.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/cranberry": {
+   "file": "icons/cranberry.webp",
    "w": 256,
    "h": 256
   },
@@ -146,6 +216,21 @@
    "w": 256,
    "h": 256
   },
+  "icons/duck_custard": {
+   "file": "icons/duck_custard.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/duck_egg": {
+   "file": "icons/duck_egg.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/duck_feather": {
+   "file": "icons/duck_feather.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/egg": {
    "file": "icons/egg.webp",
    "w": 256,
@@ -153,6 +238,11 @@
   },
   "icons/eggplant": {
    "file": "icons/eggplant.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/elderflower": {
+   "file": "icons/elderflower.webp",
    "w": 256,
    "h": 256
   },
@@ -173,6 +263,11 @@
   },
   "icons/field_chest": {
    "file": "icons/field_chest.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fine_wool": {
+   "file": "icons/fine_wool.webp",
    "w": 256,
    "h": 256
   },
@@ -241,6 +336,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/frost_leek": {
+   "file": "icons/frost_leek.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/frostcap": {
    "file": "icons/frostcap.webp",
    "w": 256,
@@ -266,6 +366,26 @@
    "w": 256,
    "h": 256
   },
+  "icons/goat_cheese": {
+   "file": "icons/goat_cheese.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/goat_cheese_salad": {
+   "file": "icons/goat_cheese_salad.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/goat_milk": {
+   "file": "icons/goat_milk.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/goat_milk_l": {
+   "file": "icons/goat_milk_l.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/grape_juice": {
    "file": "icons/grape_juice.webp",
    "w": 256,
@@ -286,6 +406,21 @@
    "w": 256,
    "h": 256
   },
+  "icons/honey": {
+   "file": "icons/honey.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/honey_cake": {
+   "file": "icons/honey_cake.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/honey_melon": {
+   "file": "icons/honey_melon.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/honey_toast": {
    "file": "icons/honey_toast.webp",
    "w": 256,
@@ -298,6 +433,16 @@
   },
   "icons/honeyed_nuts": {
    "file": "icons/honeyed_nuts.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/kale": {
+   "file": "icons/kale.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/kale_frittata": {
+   "file": "icons/kale_frittata.webp",
    "w": 256,
    "h": 256
   },
@@ -333,6 +478,11 @@
   },
   "icons/medal": {
    "file": "icons/medal.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/melon": {
+   "file": "icons/melon.webp",
    "w": 256,
    "h": 256
   },
@@ -461,6 +611,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/record": {
+   "file": "icons/record.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/ring": {
    "file": "icons/ring.webp",
    "w": 256,
@@ -473,6 +628,16 @@
   },
   "icons/root_stew": {
    "file": "icons/root_stew.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/rosehip": {
+   "file": "icons/rosehip.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/ruby_soup": {
+   "file": "icons/ruby_soup.webp",
    "w": 256,
    "h": 256
   },
@@ -506,6 +671,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/seed_loaf": {
+   "file": "icons/seed_loaf.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/seedbag": {
    "file": "icons/seedbag.webp",
    "w": 256,
@@ -526,6 +696,21 @@
    "w": 256,
    "h": 256
   },
+  "icons/snap_pea": {
+   "file": "icons/snap_pea.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/snowbell": {
+   "file": "icons/snowbell.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/snowdrop": {
+   "file": "icons/snowdrop.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/solar_panel": {
    "file": "icons/solar_panel.webp",
    "w": 256,
@@ -538,6 +723,11 @@
   },
   "icons/spinach": {
    "file": "icons/spinach.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/spinning_wheel": {
+   "file": "icons/spinning_wheel.webp",
    "w": 256,
    "h": 256
   },
@@ -563,6 +753,21 @@
   },
   "icons/strawberry": {
    "file": "icons/strawberry.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/stuffed_peppers": {
+   "file": "icons/stuffed_peppers.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/sun_bun": {
+   "file": "icons/sun_bun.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/sunflower": {
+   "file": "icons/sunflower.webp",
    "w": 256,
    "h": 256
   },
@@ -596,6 +801,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/tulip": {
+   "file": "icons/tulip.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/turnip": {
    "file": "icons/turnip.webp",
    "w": 256,
@@ -626,8 +836,28 @@
    "w": 256,
    "h": 256
   },
+  "icons/wild_violet": {
+   "file": "icons/wild_violet.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/winter_root": {
    "file": "icons/winter_root.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/wool": {
+   "file": "icons/wool.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/yarn": {
+   "file": "icons/yarn.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/yarn_scarf": {
+   "file": "icons/yarn_scarf.webp",
    "w": 256,
    "h": 256
   },
@@ -939,6 +1169,11 @@
   },
   "scenes/descent": {
    "file": "scenes/descent.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/festival_bloom": {
+   "file": "scenes/festival_bloom.webp",
    "w": 1344,
    "h": 768
   },

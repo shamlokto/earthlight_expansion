@@ -713,12 +713,18 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   Marrow make it up. Reward: a **slice of ring three** (keepsake), max stamina +10, `ld_vault`. Afterwards Marrow's scene at the hall
   (`marrow_vault`: the names go on the memorial), the Governor's board and the gallery sign change (`story.SIGNS_VAULT`), Vesna's
   radio has new lines on alternate days (`story.RADIO_VAULT`), and the people below talk about it (`TALK[id].flag`).
-* **Schedules**: Venn at the Works after lunch, the reactor console at three, the open vault at night, the arena gate on Sundays;
+* **Schedules**: Hana (below); Venn at the Works after lunch, the reactor console at three, the open vault at night, the arena gate on Sundays;
   Wick soaks on Sundays and eats lunch in the stands; Moth plays in the drum on Saturday afternoons.
 * **Art slots** (built stand-ins in `lowerworld.js`): `works_hall` (now `fit: 'box'`, stretched along Z to its 8×6 footprint),
   `fabricator`, `scrap_bin`, `vent_bath`, `reactor_console`, `zero_g_arena`, `decimator_ring`, `vault_door_open`, `decor_lantern`,
   `decor_clock`, `decor_model`, `decor_shelf`; icons for `tin_lantern`, `gear_brooch`, `pipe_whistle`, `ring_shard`, `hub_cup`.
 * Old saves: nothing new is needed; `flags.reactor` defaults to 0. Tests: `node tests/farm-lower.mjs` (release 2 blocks).
-* **Not built yet**: a new Lower deck resident (a young woman returning from hiding or working in the Works) was in scope but left
-  for a later pass; the departures board in the Governor's office still shows "LOWER · UNDERCROFT · SEALED".
+* **Hana Corvel** (`hana`, story.js block at the end; in `UNDERFOLK`, `VILLAGERS`, `sim.NPC_IDS`; not a romance candidate): Venn's
+  apprentice, about twenty, who hid in the ducts above the Works for three years and drops out of a ceiling hatch the day the press
+  wakes. Appears once `ld_works` is set: the press (`lower.press`) 7:30-17, lunch at the kettle, the vent bath after work, the
+  landing in the evening; Sundays in the drum and on the warm tiles. Birthday Winter 19; loves copper, honey toast, strawberries,
+  glowcaps (and the gear brooch). First meeting, ~25 conversations, gift lines, six favours, events `hana3` (the Works, she gives
+  you a gear brooch) and `hana7` (the vent bath). Look: navy odango buns tied with red cloth, rust overalls, freckles, a soot smudge
+  (`portrait: 'look:hana'`, LOOKS in main.js); a portrait `people/hana_front` can replace it.
+* The status board in the Governor's office follows the deck: UNDERCROFT SEALED, then RESTORING (work lights), then OPEN (`ld_vault`).
 

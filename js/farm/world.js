@@ -579,8 +579,9 @@ export class World {
         g.add(box(w, 0.06, 0.06, glow(0x7dffe0), (w - 1) / 2, 0.08, -0.44)); break;
       }
       case 'departures_board': {                         // a glowing departures screen on a stand
-        const B = o.board || { title: 'DEPARTURES', rows: [['08:00', 'MIDDLE DECK', 'ON TIME'], ['10:20', 'LOWER DECK', 'BOARDING'], ['ANY', 'EARTH  (J. MARIS)', 'ASK AT DESK'], ['14:40', 'HUB SUPPLY', 'ON TIME'], ['17:00', 'LANTERN RING', 'ON TIME']] };   // a board can carry its own lines
-        const w = o.w || 3, t = panelTex('board:' + B.title, 512, 256, (x, W, H) => { x.fillStyle = '#071820'; x.fillRect(0, 0, W, H); x.fillStyle = '#ffd36a'; x.font = 'bold 34px sans-serif'; x.fillText(B.title, 22, 44);
+        const B = { ...(o.board || { title: 'DEPARTURES', rows: [['08:00', 'MIDDLE DECK', 'ON TIME'], ['10:20', 'LOWER DECK', 'BOARDING'], ['ANY', 'EARTH  (J. MARIS)', 'ASK AT DESK'], ['14:40', 'HUB SUPPLY', 'ON TIME'], ['17:00', 'LANTERN RING', 'ON TIME']] }) };   // a board can carry its own lines
+        const f = this.flags || {}; B.rows = B.rows.map((r) => (r[1] === 'UNDERCROFT' ? [r[0], r[1], f.ld_vault ? 'OPEN' : f.ld_lights ? 'RESTORING' : 'SEALED'] : r));   // the Governor's board follows the Lower deck
+        const w = o.w || 3, t = panelTex('board:' + B.title + B.rows.map((r) => r[2]).join(), 512, 256, (x, W, H) => { x.fillStyle = '#071820'; x.fillRect(0, 0, W, H); x.fillStyle = '#ffd36a'; x.font = 'bold 34px sans-serif'; x.fillText(B.title, 22, 44);
           const rows = B.rows;
           x.font = '24px monospace'; rows.forEach(([a, b, c2], i) => { x.fillStyle = '#9ff4ff'; x.fillText(a, 22, 92 + i * 34); x.fillText(b, 120, 92 + i * 34); x.fillStyle = i === 2 ? '#7dffb0' : '#cfe6ff'; x.fillText(c2, 370, 92 + i * 34); }); });
         const scr = quad(w - 0.3, 1.2, new THREE.MeshBasicMaterial({ map: t })); scr.position.set((w - 1) / 2, 1.65, 0.07); g.add(scr);

@@ -2221,7 +2221,7 @@ export function reactorWhy(state) {
   if (!lowerDone(state, 'vents')) return 'The console is behind the cold wash hall. Restore the Thermal Vents first.';
   if (!st) return 'Done. Every needle on the console reads zero, and stays there.';
   if (state.flags.reactorDay === absDay(state)) return 'The needles need a night to settle after today\'s work. Come back tomorrow.';
-  for (const [id, n] of st.req) if (countItem(state, id) < n) return `${st.name}: you need ${n} ${lower(id)} in your rucksack.`;
+  for (const [id, n] of st.req) if (countItem(state, id) < n) return `You need ${n} ${lower(id)} in your rucksack.`;
   return null;
 }
 export function reactorStep(state) {

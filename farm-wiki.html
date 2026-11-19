@@ -117,7 +117,7 @@
         ${n.likes && n.likes.length ? `<div class="g">Likes ${n.likes.slice(0, 6).map((x) => esc(name(x))).join(', ')}</div>` : ''}
         ${n.dislikes && n.dislikes.length ? `<div class="g">Dislikes ${n.dislikes.map((x) => esc(name(x))).join(', ')}</div>` : ''}</div></div>`; };
     const ids = Object.keys(story.NPCS).filter((k) => k !== 'sato');
-    add('people', 'People of Willowfall and Eden Central', `<p class="lead">Talk every day, bring gifts and do favours. ${(story.ROMANCE || { candidates: [] }).candidates.length} of them can become more than friends. Market Lane, Willowfall's new east end, is home to Pia the tailor, Lark the baker, Noor of the Seedhouse, Tika the mechanic and Vesna of Radio Willowfall. Pastor Ines and Constable Fenn live and work in Eden Central, down the lift; Tobias Venn, Agnes Thorne, Moth and Ansel Wick live further down still, on the Lower deck.</p>
+    add('people', 'People of Willowfall and Eden Central', `<p class="lead">Talk every day, bring gifts and do favours. ${(story.ROMANCE || { candidates: [] }).candidates.length} of them can become more than friends. Market Lane, Willowfall's new east end, is home to Pia the tailor, Lark the baker, Noor of the Seedhouse, Tika the mechanic and Vesna of Radio Willowfall. Pastor Ines and Constable Fenn live and work in Eden Central, down the lift; Tobias Venn, Agnes Thorne, Moth and Ansel Wick live further down still, on the Lower deck, where Hana Corvel, Venn's apprentice, has come back to the Works.</p>
       <div class="cards">${person('sato')}${ids.map(person).join('')}</div>`);
 
     // ---- love

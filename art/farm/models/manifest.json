@@ -2713,5 +2713,105 @@
    0.943
   ],
   "note": "item: folded diary page standing like a tent card, crayon drawing on +Z (back side less clean)"
+ },
+ "goat": {
+  "file": "goat.glb",
+  "tris": 8000,
+  "size": [
+   0.6387,
+   0.9884,
+   1.0
+  ],
+  "note": "head towards +Z"
+ },
+ "sheep": {
+  "file": "sheep.glb",
+  "tris": 8000,
+  "size": [
+   0.776,
+   0.8812,
+   1.0
+  ],
+  "note": "head towards +Z"
+ },
+ "cheese_press": {
+  "file": "cheese_press.glb",
+  "tris": 8000,
+  "size": [
+   0.7382,
+   1.0,
+   0.7156
+  ],
+  "note": "screw handle on top, front +Z"
+ },
+ "spinning_wheel": {
+  "file": "spinning_wheel.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.76,
+   0.575
+  ],
+  "note": "wheel on the left (-X), long side along X"
+ },
+ "beehive": {
+  "file": "beehive.glb",
+  "tris": 6000,
+  "size": [
+   0.6468,
+   1.0,
+   0.6083
+  ],
+  "note": "entrance slit on +Z"
+ },
+ "fold": {
+  "file": "fold.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.9877,
+   0.8256
+  ],
+  "note": "double door on +Z"
+ },
+ "duckhouse": {
+  "file": "duckhouse.glb",
+  "tris": 8000,
+  "size": [
+   0.9998,
+   0.7415,
+   1.0
+  ],
+  "note": "round door and ramp on +Z, grass disc base"
+ },
+ "bakery": {
+  "file": "bakery.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.888,
+   0.7697
+  ],
+  "note": "shop front and awning on +Z"
+ },
+ "tailor": {
+  "file": "tailor.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.9276,
+   0.8443
+  ],
+  "note": "shop windows and door on +Z"
+ },
+ "seedhouse": {
+  "file": "seedhouse.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.7699,
+   0.8892
+  ],
+  "note": "door on +Z; glass is painted, not transparent"
  }
 }

@@ -93,11 +93,13 @@ export function lowerProp(kind, o = {}) {
     }
     case 'scrap_bin': g.add(box(0.9, 0.7, 0.8, mat(0x4f7a5a)), box(0.95, 0.06, 0.85, DARK(), 0, 0.7, 0), box(0.3, 0.18, 0.02, mat(0xf2eee4), 0, 0.4, 0.41)); for (let i = 0; i < 4; i++) g.add(box(0.2, 0.12, 0.3, RUST(), -0.25 + i * 0.17, 0.76, (i % 2) * 0.1 - 0.05)); break;
     case 'vent_bath': {                                  // a tiled pool fed by steam pipes, glowcaps on the ledge
-      g.add(box(w, 0.35, d, mat(0xb7a48a), cx, 0, cz), box(w - 0.7, 0.04, d - 0.7, mat(0x4fa8b8, { emissive: 0x1f6878, emissiveIntensity: 0.35, roughness: 0.15 }), cx, 0.3, cz));
-      for (let i = 0; i < 6; i++) g.add(box(0.5, 0.02, 0.5, mat(i % 2 ? 0xc96a4a : 0xe8d8bc), cx - w / 2 + 0.4 + i * 1.0, 0.36, cz + d / 2 - 0.2));
+      const T = mat(0xb7a48a), r = 0.35;
+      g.add(box(w, 0.08, d, mat(0x5f7f86), cx, 0, cz), box(w, 0.45, r, T, cx, 0, cz - d / 2 + r / 2), box(w, 0.45, r, T, cx, 0, cz + d / 2 - r / 2), box(r, 0.45, d, T, cx - w / 2 + r / 2, 0, cz), box(r, 0.45, d, T, cx + w / 2 - r / 2, 0, cz));
+      const wat = new THREE.Mesh(new THREE.PlaneGeometry(w - 2 * r, d - 2 * r), mat(0x4fb8c8, { emissive: 0x2f8898, emissiveIntensity: 0.45, roughness: 0.1, metalness: 0.2, transparent: true, opacity: 0.85 })); wat.rotation.x = -Math.PI / 2; wat.position.set(cx, 0.32, cz); g.add(wat);
+      for (let i = 0; i < 6; i++) g.add(box(0.5, 0.02, 0.3, mat(i % 2 ? 0xc96a4a : 0xe8d8bc), cx - w / 2 + 0.5 + i * 1.0, 0.45, cz + d / 2 - 0.18));
       for (const s2 of [-1, 1]) { const p = cyl(0.14, 0.14, d, BRASS(), cx + s2 * (w / 2 - 0.15), 0.6, cz); p.rotation.x = Math.PI / 2; p.position.y = 0.7; g.add(p, cyl(0.14, 0.14, 1.6, BRASS(), cx + s2 * (w / 2 - 0.15), 0.35, cz - d / 2 + 0.2)); }
-      for (let i = 0; i < 5; i++) { const x = cx - w / 2 + 0.8 + i * 1.1; g.add(cyl(0.03, 0.04, 0.12, mat(0xbff8f0), x, 0.36, cz - d / 2 + 0.18, 6)); const c = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), lit(0x4fe0d0)); c.position.set(x, 0.48, cz - d / 2 + 0.18); g.add(c); }
-      for (let i = 0; i < 7; i++) { const st = ball(0.22 + (i % 3) * 0.08, mat(0xf4f4f0, { transparent: true, opacity: 0.28, roughness: 1 }), cx - 1.8 + i * 0.6, 0.8 + (i % 3) * 0.35, cz + ((i * 0.37) % 1 - 0.5) * 1.6); st.castShadow = false; g.add(st); }
+      for (let i = 0; i < 5; i++) { const x = cx - w / 2 + 0.8 + i * 1.1; g.add(cyl(0.03, 0.04, 0.12, mat(0xbff8f0), x, 0.45, cz - d / 2 + 0.18, 6)); const c = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), lit(0x4fe0d0)); c.position.set(x, 0.57, cz - d / 2 + 0.18); g.add(c); }
+      for (let i = 0; i < 7; i++) { const st = ball(0.3 + (i % 3) * 0.1, mat(0xffffff, { transparent: true, opacity: 0.12, roughness: 1, depthWrite: false }), cx - 1.8 + i * 0.6, 0.7 + (i % 3) * 0.4, cz + ((i * 0.37) % 1 - 0.5) * 1.6); st.castShadow = false; g.add(st); }
       break;
     }
     case 'reactor_console': {                            // a long desk of gauges and red valves, needles green once safe
