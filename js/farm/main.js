@@ -35,7 +35,7 @@ function save() { const away = map.id === 'ruins', bt = away && map.belt; S.play
 function loadSaved() { try { const t = localStorage.getItem(SAVE_KEY); return t ? sim.loadState(t) : null; } catch { return null; } }
 
 // ---------------------------------------------------------------- context
-const festivalToday = () => story.FESTIVALS.find((f) => f.season === S.cal.season && f.day === S.cal.day) || null;
+const festivalToday = () => story.FESTIVALS.find((f) => f.season === S.cal.season && f.day === S.cal.day && (!f.flag || S.flags[f.flag])) || null;   // the Hub Cup waits for its arena
 function ctx(extra = {}) { const f = festivalToday(); return { season: S.cal.season, day: S.cal.day, weekday: sim.weekday(S), minute: S.cal.minute, weather: S.weather, festival: f ? f.id : null, year: S.cal.year, flags: S.flags, partner: S.flags.partner || undefined, sweetheart: S.flags.sweet || undefined, ...extra }; }
 const isBirthday = (id) => { const b = NPCS[id].birthday; return !!b && b.season === S.cal.season && b.day === S.cal.day; };
 
@@ -219,7 +219,7 @@ async function checkEvents() {
     const at = findSpot(f.spot), key = `fest_${f.id}_${S.cal.year}`;
     if (at && at.map === map.id && c.minute >= f.from && c.minute <= f.to && !S.flags[key]) {
       sim.setFlag(S, key); mode = 'talk'; ui.scene('festival_' + ({ yearsend: 'yearend', bloom: 'harvest' }[f.id] || f.id)); sfx('good'); setMood({ festival: f.id });
-      await ui.say(f.lines); setMood({ festival: null }); reward(f.reward); if (f.id === 'harvest' || f.id === 'lantern') await plumGift(f.id); sim.tick(S, 120); for (const k of Object.keys(NPCS)) if (k !== 'sato' && S.npc[k]) S.npc[k].met = true;
+      await ui.say(f.lines); if (f.id === 'hubcup') await hubCup(true); setMood({ festival: null }); reward(f.reward); if (f.id === 'harvest' || f.id === 'lantern') await plumGift(f.id); sim.tick(S, 120); for (const k of Object.keys(NPCS)) if (k !== 'sato' && S.npc[k]) S.npc[k].met = true;
       mode = 'play'; placeNpcs(true); refreshHud(); return;
     }
   }
@@ -390,6 +390,86 @@ async function mothPage() {
   const L = story.LOGS[r.id]; mode = 'talk';
   await ui.say([{ who: 'moth', text: r.id === 'moth_sun' ? 'This one is mine. I did it for you. You can keep it in your book.' : 'I found another page. In the crypt with the broken lid. You can have it. You look at them properly.' }, { who: 'narrator', text: `${L.author}: “${L.title}”.` }, { who: 'narrator', text: L.text }]); mode = 'play';
   sfx('good'); ui.toast('A diary page. Logged in your journal (P).', 3200);
+}
+// ---- release 2: the Works press, the vent bath, the reactor console and the round door
+async function worksPress() {
+  if (!S.flags.ld_works) return ui.toast(story.LOWER.worksShut, 3600);
+  if (!S.flags.works_seen) { sim.setFlag(S, 'works_seen'); mode = 'talk'; await ui.say([{ who: 'narrator', text: story.LOWER.works }]); mode = 'play'; }
+  await ui.shop(S, 'works', 'venn', refreshHud); refreshHud();
+}
+async function recycleBin() {
+  if (!S.flags.ld_works) return ui.toast(story.LOWER.worksShut, 3600);
+  const R = sim.recycleList(S); mode = 'talk'; const i = await ui.choose('The Works recycling bin · Venn pays better than the shipping bin', [...R.map((r) => `${r.label}${r.can ? '' : ` (${r.why})`}`), 'Not now']); mode = 'play';
+  if (i < 0 || i >= R.length) return;
+  const r = sim.recycle(S, R[i].id); ui.toast(r.msg, 3200); if (r.ok) sfx('drop'); refreshHud();
+}
+async function ventBath() {
+  if (!S.flags.ld_vents) return ui.toast(story.LOWER.ventsShut, 3600);
+  const free = !!S.flags.ld_reactor || sim.satoBirthday(S);
+  mode = 'talk'; const i = await ui.choose(`The Thermal Vents · ${free ? 'free' : sim.VENT_PRICE + ' cr'}`, ['Soak for an hour', 'Not now']); mode = 'play';
+  if (i !== 0) return;
+  const r = sim.ventSoak(S); if (!r.ok) return ui.toast(r.msg);
+  busy = true; await ui.fade(true, 600); W.setTime(S.cal.minute, S.weather, map); placeNpcs(true); await new Promise((q) => setTimeout(q, 350)); await ui.fade(false, 600); busy = false;
+  sfx('good'); floatText(me.x, me.y, '♨'); ui.toast(r.msg, 4200); refreshHud();
+}
+async function reactorConsole() {
+  if (!S.flags.ld_vents) return ui.toast(story.LOWER.reactorShut, 3600);
+  const k = sim.reactorDone(S), st = sim.REACTOR_STEPS[k];
+  if (!st) { mode = 'talk'; await ui.say([{ who: 'narrator', text: story.LOWER.reactorDone }]); mode = 'play'; return; }
+  const why = sim.reactorWhy(S), needs = st.req.map(([id, n]) => `${n} ${ITEMS[id].name.toLowerCase()}`).join(', ');
+  mode = 'talk'; const i = await ui.choose(`Reactor console · job ${k + 1} of ${sim.REACTOR_STEPS.length}: ${st.name}. ${st.desc} Needs ${needs}.${why ? ' (' + why + ')' : ''}`, why ? ['Step back'] : ['Do the job', 'Not now']); mode = 'play';
+  if (why || i !== 0) return;
+  const r = sim.reactorStep(S); if (!r.ok) return ui.toast(r.msg);
+  mode = 'talk'; await ui.say(story.REACTOR[r.step] || []);
+  if (r.log) { const L = story.LOGS[r.log]; await ui.say([{ who: 'narrator', text: `${L.author}: “${L.title}”.` }, { who: 'narrator', text: L.text }]); }
+  mode = 'play'; sfx('good'); if (r.last) ui.celebrate('The old reactor is safe. The vent bath is free from now on, and the catacomb beds grow twice as fast.'); else ui.toast(r.msg, 3600);
+  await refreshLower(); refreshHud();
+}
+// The Hub Cup: five throws. A ball sweeps the bar; press Space, E or click as it crosses the hoop (sim.hubCupThrow scores it).
+function hubCupThrows() {
+  return new Promise((res) => {
+    const el = document.createElement('div'), out = [], pts = [];
+    el.innerHTML = `<div style="background:#1b2430;color:#f2eee4;border:2px solid #d9a520;border-radius:14px;padding:18px 22px;width:min(440px,92vw);font:15px/1.4 system-ui,sans-serif;text-align:center"><b style="font-size:18px">The Hub Cup · Zero-G Arena</b><p style="margin:6px 0 12px">Let go as the ball crosses the hoop. Space, E or a tap. Throw <span data-n>1</span> of ${sim.HUB_CUP.throws}.</p><div style="position:relative;height:34px;border-radius:17px;background:#2b3a4a;overflow:hidden"><i style="position:absolute;left:22%;width:56%;top:0;bottom:0;background:#3a5a4a"></i><i style="position:absolute;left:35%;width:30%;top:0;bottom:0;background:#4f8a5a"></i><i style="position:absolute;left:44%;width:12%;top:0;bottom:0;background:#7dffb0"></i><i data-ball style="position:absolute;top:5px;width:24px;height:24px;margin-left:-12px;border-radius:50%;background:#ffd36a;box-shadow:0 0 10px #ffd36a"></i></div><p data-log style="min-height:22px;margin:12px 0 0">&nbsp;</p></div>`;
+    Object.assign(el.style, { position: 'fixed', inset: '0', display: 'grid', placeItems: 'center', background: 'rgba(8,12,20,.55)', zIndex: 80 });
+    document.body.appendChild(el);
+    const ball = el.querySelector('[data-ball]'), log = el.querySelector('[data-log]'), num = el.querySelector('[data-n]');
+    let t0 = performance.now(), wait = 0, raf = 0;
+    const phase = (t) => { const x = (Math.max(0, t - t0) / 1000 * sim.hubCupSpeed(out.length)) % 2; return x < 1 ? x : 2 - x; };
+    const draw = (t) => { ball.style.left = (wait ? out[out.length - 1] : phase(t)) * 100 + '%'; raf = requestAnimationFrame(draw); };
+    const press = (e) => {
+      if (e.type === 'keydown' && e.code !== 'Space' && e.key !== 'e' && e.key !== 'E' && e.key !== 'Enter') return;
+      e.preventDefault(); e.stopPropagation(); if (wait) return;
+      const p = phase(performance.now()), n = sim.hubCupThrow(p); out.push(p); pts.push(n); sfx(n ? 'good' : 'drop');
+      log.textContent = `${['Wide.', 'Off the rim: +1', 'In! +2', 'Clean through the hoop! +3'][n]}   ${pts.join(' · ')}`;
+      wait = 1; setTimeout(() => { wait = 0; t0 = performance.now() + 250; num.textContent = Math.min(out.length + 1, sim.HUB_CUP.throws); if (out.length >= sim.HUB_CUP.throws) { cancelAnimationFrame(raf); window.removeEventListener('keydown', press, true); el.remove(); res(out); } }, 900);
+    };
+    window.addEventListener('keydown', press, true); el.addEventListener('pointerdown', press); raf = requestAnimationFrame(draw);
+  });
+}
+async function hubCup(fromFestival) {
+  if (!sim.hubCupDay(S)) return ui.toast(story.HUB_CUP_LINES.arenaShut, 3600);
+  if (S.flags['hubcup_y' + S.cal.year]) return ui.toast(story.HUB_CUP_LINES.played, 3200);
+  mode = 'talk'; if (!fromFestival) await ui.say([{ who: 'kestrel', text: 'Five throws. Let go as it crosses the hoop. Do not chase the ball.' }]);
+  window.__hubcup = true; const phases = await hubCupThrows(); window.__hubcup = false;
+  const r = sim.playHubCup(S, phases); if (!r.ok) { mode = 'play'; return ui.toast(r.msg); }
+  const H = story.HUB_CUP_LINES, rows = r.rivals.map((x) => `${NPCS[x.id].short || NPCS[x.id].name} ${x.score}`).join(', ');
+  await ui.say([{ who: 'narrator', text: `Your throws: ${r.throws.join(', ')}. ${r.score} points. ${rows}.` }, ...(r.place === 1 ? H.win : r.place <= 3 ? H.place : H.try), { who: 'narrator', text: r.msg }]);
+  mode = 'play'; sfx('good'); if (r.place === 1) ui.celebrate(`🏆 You won the Hub Cup! ${r.prize} cr, and the cup itself.`); refreshHud();
+}
+async function vaultDoor() {
+  if (S.flags.ld_vault) return ui.say([{ who: 'narrator', text: story.VAULT.after }]);
+  const v = sim.vaultReady(S);
+  if (!v.ok) {
+    mode = 'talk'; await ui.say([{ who: 'narrator', text: story.LOWER.vault }, ...(v.key || v.power || v.drained || S.flags.ld_reactor ? [{ who: 'narrator', text: `${story.LOWER.vaultWait} ${v.key ? '✓' : '✗'} Venn's code · ${v.power ? '✓' : '✗'} a feed from the Works · ${v.drained ? '✓' : '✗'} the sill drained by the gallery pump.` }] : [])]); mode = 'play';
+    if (!(S.lower && S.lower.logs && S.lower.logs.ninefold != null)) await readLog({ log: 'ninefold' });
+    return;
+  }
+  busy = true; await ui.fade(true, 700); busy = false;
+  const r = sim.openVault(S); if (!r.ok) { ui.fade(false, 300); return ui.toast(r.msg); }
+  await refreshLower(); ui.fade(false, 700); mode = 'talk'; setMood({ festival: null });
+  await ui.say(story.VAULT.open);
+  for (const id of ['ninefold_report', 'the_roll', 'agnes_letter']) { const L = story.LOGS[id]; await ui.say([{ who: 'narrator', text: `${L.author}: “${L.title}”.` }, { who: 'narrator', text: L.text }]); }
+  mode = 'play'; sfx('good'); ui.celebrate('The vault is open. Every log is in your journal, and a slice of ring three is yours. Max stamina +10.'); refreshHud();
 }
 async function refreshLower() { if (map && map.under) { const at = { map: 'lower', x: me.x, y: me.y, dir: me.dir }; await go(at, { quick: true }); } }
 function pumpProbe(p) {
@@ -670,7 +750,7 @@ function probe() {                                   // → { label, run } for E
     if (p.act === 'pump') return pumpProbe(p);
     if (p.act === 'bed') return bedProbe(p);
     if (p.act === 'terminal') return { label: S.lower && S.lower.logs && S.lower.logs[p.log] != null ? `${p.label} (log recovered)` : p.kind === 'crypt_wall' ? 'Read the scratches on the wall' : `Recover the log from the ${p.label.toLowerCase()}`, run: () => act(p) };
-    const L = { lift: 'Ride the spoke lift', restore: 'Use the restoration terminal', vault: 'Look at the sealed round door', launch: 'Suit up at the launch cradle: fly out to the belt', shuttle: `Board Maris's shuttle to the Old World (${sim.shuttleFare(S) ? sim.shuttleFare(S) + ' cr' : 'free'})`, liftdown: 'Ride the spoke lift (Eden Central, the Lower deck)', liftup: 'Ride the spoke lift (Willowfall, the Lower deck)', gallery: 'Sit and look out of the great window', house: 'Try the door', silo: 'Open the silo', solaryard: 'Use the solar yard terminal', stargaze: 'Stargaze in the dome', onsen: 'Soak in the onsen', bin: sim.basketHeld(S) ? `Tip the basket into the bin (${sim.basketTotal(S)})` : 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Watch the colony forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', feedfold: 'Fill the fold troughs', feedduck: 'Fill the duck feeder', duckeggs: 'Look in the nest box', lift: 'Ride the orbital elevator', candles: 'Light a memorial candle', museum: 'Look at the Memory Room', books: 'Read a book', storage: 'Open the storage box', fridge: 'Open the fridge', kitchen: 'Cook something', calendar: 'Read the noticeboard' }[p.act];
+    const L = { lift: 'Ride the spoke lift', restore: 'Use the restoration terminal', vault: sim.vaultReady(S).ok ? 'Open the round door' : 'Look at the sealed round door', works: S.flags.ld_works ? 'Use the Works press' : 'Look at the sleeping press', recycle: 'Use the recycling bin', arena: sim.hubCupDay(S) && !S.flags['hubcup_y' + S.cal.year] ? 'Take your five throws in the Hub Cup' : 'Look at the zero-g drum', vents: S.flags.ld_vents ? `Soak in the vent bath (${S.flags.ld_reactor ? 'free' : sim.VENT_PRICE + ' cr'})` : 'Look at the cold bath', reactor: `Work at the reactor console (${sim.reactorDone(S)}/${sim.REACTOR_STEPS.length})`, launch: 'Suit up at the launch cradle: fly out to the belt', shuttle: `Board Maris's shuttle to the Old World (${sim.shuttleFare(S) ? sim.shuttleFare(S) + ' cr' : 'free'})`, liftdown: 'Ride the spoke lift (Eden Central, the Lower deck)', liftup: 'Ride the spoke lift (Willowfall, the Lower deck)', gallery: 'Sit and look out of the great window', house: 'Try the door', silo: 'Open the silo', solaryard: 'Use the solar yard terminal', stargaze: 'Stargaze in the dome', onsen: 'Soak in the onsen', bin: sim.basketHeld(S) ? `Tip the basket into the bin (${sim.basketTotal(S)})` : 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Watch the colony forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', feedfold: 'Fill the fold troughs', feedduck: 'Fill the duck feeder', duckeggs: 'Look in the nest box', lift: 'Ride the orbital elevator', candles: 'Light a memorial candle', museum: 'Look at the Memory Room', books: 'Read a book', storage: 'Open the storage box', fridge: 'Open the fridge', kitchen: 'Cook something', calendar: 'Read the noticeboard' }[p.act];
     return { label: L, run: () => act(p) };
   }
   const fa = fieldAt(tx, ty) || fieldAt(Math.floor(me.x), Math.floor(me.y));
@@ -695,7 +775,12 @@ async function act(p) {
     case 'liftdown': case 'liftup': case 'lift': await rideLift(map.id); break;
     case 'restore': await restoreTerminal(); break;
     case 'terminal': await readLog(p); break;
-    case 'vault': { mode = 'talk'; await ui.say([{ who: 'narrator', text: story.LOWER.vault }]); mode = 'play'; if (!(S.lower && S.lower.logs && S.lower.logs.ninefold != null)) await readLog({ log: 'ninefold' }); break; }
+    case 'vault': await vaultDoor(); break;
+    case 'works': await worksPress(); break;
+    case 'recycle': await recycleBin(); break;
+    case 'vents': await ventBath(); break;
+    case 'reactor': await reactorConsole(); break;
+    case 'arena': await hubCup(); break;
     case 'gallery': { const r = sim.gallerySit(S); mode = 'talk'; const G = story.CENTRAL; await ui.say([{ who: 'narrator', text: r.night ? G.gallery[sim.absDay(S) % G.gallery.length] : G.galleryDay }]); mode = 'play'; if (r.restored) { sfx('good'); ui.toast(`You sit a while. +${r.restored} stamina.`); } break; }
     case 'candles': { const c = story.CHURCH.candles; ui.say([{ who: 'narrator', text: c[(sim.absDay(S) + Math.floor(S.cal.minute / 120)) % c.length] }]); break; }
     case 'house': ui.say([{ who: 'narrator', text: (S.flags.ld_rehoused && story.LOWER.houses[p.house]) || CENTRAL_HOUSES[p.house] || 'The door is locked.' }]); break;
@@ -704,12 +789,12 @@ async function act(p) {
     case 'solaryard': { const r = sim.yardDeposit(S); ui.toast(r.msg); if (r.ok) sfx('drop'); break; }
     case 'bin': { if (s && s.id === 'basket') { const r = sim.shipBasket(S); ui.toast(r.msg); if (r.ok) sfx('drop'); goals(); break; } if (!s) return ui.toast('Hold something to ship it. Maris collects at five.'); const r = sim.ship(S, S.player.sel); ui.toast(r.msg || (r.ok ? 'In the bin.' : 'That cannot be shipped.')); if (r.ok) sfx('drop'); goals(); break; }
     case 'well': { const r = sim.refillCan(S); ui.toast(r.msg || 'The watering can is full.'); if (r.ok) sfx('water'); break; }
-    case 'sign': ui.say([{ who: 'narrator', text: story.SIGNS[p.sign] || '…' }]); break;
+    case 'sign': ui.say([{ who: 'narrator', text: (S.flags.ld_vault && story.SIGNS_VAULT[p.sign]) || story.SIGNS[p.sign] || '…' }]); break;
     case 'storage': ui.boxWindow(S, 'storage', refreshHud, 'Storage box'); break;
     case 'fridge': if (!S.flags.kitchen) ui.say([{ who: 'narrator', text: 'An old cold-locker from a ship, standing in the corner unplugged. Prof. Ruess could connect it with a kitchen refit.' }]); else ui.boxWindow(S, 'fridge', refreshHud, 'The fridge'); break;
     case 'kitchen': if (!S.flags.kitchen) ui.say([{ who: 'narrator', text: 'A cold stove and a dry sink. Prof. Ruess at the Workshop can refit the kitchen.' }]); else ui.kitchenWindow(S, (r) => { if (r && r.ok) sfx('good'); refreshHud(); }); break;
     case 'calendar': { const f = story.FESTIVALS.filter((x) => x.season === S.cal.season && x.day >= S.cal.day); const bd = Object.values(NPCS).filter((n) => n.id !== 'sato' && n.birthday && n.birthday.season === S.cal.season && n.birthday.day >= S.cal.day && S.npc[n.id] && S.npc[n.id].met); ui.say([{ who: 'narrator', text: `The noticeboard. ${f.length ? 'Coming up: ' + f.map((x) => `${x.name} on day ${x.day}`).join(', ') + '.' : 'No more festivals this season.'} ${bd.length ? 'Birthdays: ' + bd.map((n) => `${n.short || n.name} on day ${n.birthday.day}`).join(', ') + '.' : ''}` }]); break; }
-    case 'radio': { const l = story.RADIO[S.weatherTomorrow] || story.RADIO.sun; ui.say([{ who: 'narrator', text: 'The radio crackles. ' + (Array.isArray(l) ? l[(S.cal.day + S.cal.season) % l.length] : l) }]); break; }
+    case 'radio': { const l = S.flags.ld_vault && sim.absDay(S) % 2 ? story.RADIO_VAULT : story.RADIO[S.weatherTomorrow] || story.RADIO.sun; ui.say([{ who: 'narrator', text: 'The radio crackles. ' + (Array.isArray(l) ? l[(S.cal.day + S.cal.season) % l.length] : l) }]); break; }
     case 'bed': { mode = 'talk'; const i = await ui.choose('The bed', ['Sleep until morning', 'Save the game', 'Not yet']); mode = 'play'; if (i === 0) await night(false); else if (i === 1) { save(); ui.toast('Saved.'); } break; }
     case 'feedfold': { const a = sim.feedAll(S, 'goat'), b = sim.feedAll(S, 'sheep'), ok = a.ok || b.ok; ui.toast(ok ? 'You filled the troughs.' : (S.animals.some((x) => x.kind === 'goat' || x.kind === 'sheep') ? a.msg || b.msg : 'The fold is empty. Corran sells goats and sheep.')); if (ok) sfx('drop'); break; }
     case 'feedduck': { const r = sim.feedAll(S, 'duck'); ui.toast(r.msg || (r.ok ? 'Fed.' : 'Nothing to feed.')); if (r.ok) sfx('drop'); break; }

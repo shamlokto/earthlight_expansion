@@ -18,7 +18,7 @@ const night = (s) => sim.sleep(s);
 
 // ---------------------------------------------------------------- projects: costs, order, one at a time, done overnight
 const P = sim.LOWER_PROJECTS;
-check(P.map((p) => p.id).join() === 'lights,pumps,catacombs,enclave,rehouse', 'five projects in order');
+check(P.map((p) => p.id).join() === 'lights,pumps,catacombs,enclave,works,arena,rehouse,vents', 'eight projects in order (release 2 adds the Works, the Arena and the Vents)');
 for (const p of P) {
   check(Number.isInteger(p.price) && p.price > 0 && p.req.every(([id, n]) => ITEMS[id] && n > 0), `${p.id}: a price and known materials`);
   check(!p.after || P.findIndex((q) => q.id === p.after) < P.indexOf(p), `${p.id}: comes after ${p.after}`);
@@ -34,7 +34,7 @@ check(P.every((p, i) => !i || p.price > P[i - 1].price), 'each project costs mor
   check(!sim.fundProject(s, 'lights').ok && !sim.fundProject(s, 'pumps').ok, 'one project at a time');
   const rep = night(s);
   check(sim.lowerDone(s, 'lights') && s.lower.pending === null && rep.notes.some((n) => /Undercroft/.test(n)), 'the lights are on after a night, with a note');
-  for (const id of ['pumps', 'catacombs', 'enclave']) { check(sim.fundProject(s, id).ok, `${id} can be funded in turn`); night(s); check(sim.lowerDone(s, id), `${id} done overnight`); }
+  for (const id of ['pumps', 'catacombs', 'enclave', 'works', 'arena']) { check(sim.fundProject(s, id).ok, `${id} can be funded in turn`); night(s); check(sim.lowerDone(s, id), `${id} done overnight`); }
   const t = sim.enclaveTrust(s);
   check(!t.ok && !sim.fundProject(s, 'rehouse').ok, 'the rehousing waits for the families\' trust');
   for (const id of ['thorne', 'moth']) s.flags['favours_' + id] = 2; sim.addLove(s, 'thorne', 49);
@@ -43,6 +43,7 @@ check(P.every((p, i) => !i || p.price > P[i - 1].price), 'each project costs mor
   check(sim.enclaveTrust(s).ok && sim.fundProject(s, 'rehouse').ok, 'four favours and five hearts with Agnes open the rehousing');
   night(s);
   check(s.flags.ld_rehoused && s.lower.movedDay === sim.absDay(s), 'the families move up overnight');
+  check(sim.fundProject(s, 'vents').ok, 'the Thermal Vents come last'); night(s);
   check(sim.projectList(s).every((p) => p.done && !p.can), 'every project is done');
   // the school: lessons on weekdays from 8:30 to 15:00
   const at = (wd, minute) => { const t2 = JSON.parse(JSON.stringify(s)); while (sim.weekday(t2) !== wd) sim.sleep(t2); t2.cal.minute = minute; return t2; };
@@ -81,7 +82,7 @@ check(P.every((p, i) => !i || p.price > P[i - 1].price), 'each project costs mor
   lowerState(m, { ld_lights: true, ld_pumps: true, ld_pump2: true, ld_pump3: true });
   check(reach(...m.start).has('19,5'), 'the cistern pump drains the way to the old pump room');
   check(!can('lower.catacombs'), 'the catacombs stay shut until restored');
-  const all = { ld_lights: true, ld_pumps: true, ld_pump2: true, ld_pump3: true, ld_catacombs: true, ld_enclave: true };
+  const all = { ld_lights: true, ld_pumps: true, ld_pump2: true, ld_pump3: true, ld_catacombs: true, ld_enclave: true, ld_works: true, ld_arena: true, ld_vents: true, ld_vault: true };
   lowerState(m, { ...all, ld_enclave: false });
   check(can('lower.beds') && !can('lower.enclave'), 'the catacombs open; the enclave is behind its tarpaulins');
   lowerState(m, all);
@@ -142,7 +143,7 @@ check(P.every((p, i) => !i || p.price > P[i - 1].price), 'each project costs mor
 }
 // ---------------------------------------------------------------- logs
 {
-  check(LOWER_LOGS.length >= 8 && LOWER_LOGS.length <= 12, `8 to 12 logs in release 1 (${LOWER_LOGS.length})`);
+  check(LOWER_LOGS.length >= 19 && LOWER_LOGS.length <= 23, `11 logs in release 1, 8 to 12 more in release 2 (${LOWER_LOGS.length})`);
   const authors = new Set(LOWER_LOGS.map((l) => story.LOGS[l.id] && story.LOGS[l.id].author.split(' (')[0].split(',')[0]));
   for (const l of LOWER_LOGS) { const t = story.LOGS[l.id]; check(t && t.title && t.author && t.text && t.text.length <= 420, `log ${l.id} has a title, a voice and a short text`); }
   check(authors.size >= 6 && [...authors].some((a) => /Marrow/.test(a)) && [...authors].some((a) => /Venn/.test(a)) && [...authors].some((a) => /Galt/.test(a)) && [...authors].some((a) => /Pim|Moth/.test(a)), `many voices (${[...authors].join('; ')})`);
@@ -183,13 +184,127 @@ check(P.every((p, i) => !i || p.price > P[i - 1].price), 'each project costs mor
   const lines = story.talkLines('thorne', { season: 0, day: 3, weekday: 1, minute: 700, hearts: 3, met: true, year: 1, flags: { ...F, ld_rehoused: true } });
   check(Array.isArray(lines) && lines.length >= 1, 'Agnes talks after the move');
 }
+// ---------------------------------------------------------------- release 2: the Works
+const more = (s) => { for (const [id, n] of [['scrap', 99], ['alloy', 30], ['copper', 40], ['titanium', 20], ['silica', 20], ['nickel_iron', 40]]) sim.addItem(s, id, n); return s; };
+const upTo = (s, last) => { for (const id of ['lights', 'pumps', 'catacombs', 'enclave', 'works', 'arena', 'vents']) { if (id === 'vents') { s.flags.ld_rehoused = true; } if (!sim.lowerDone(s, id)) { sim.fundProject(s, id); night(s); } if (id === last) break; } return s; };
+{
+  const W = sim.WORKS_RECIPES;
+  check(new Set(W.map((r) => r[0])).size === W.length && W.length >= 14, `fabrication recipes with unique keys (${W.length})`);
+  for (const [key, , label, desc, price, req, m] of W) check(Number.isInteger(price) && price > 0 && label && desc && req.length && req.every(([id, n]) => ITEMS[id] && n > 0) && (m.give ? ITEMS[m.give] && m.n >= 1 : !!m.flag), `${key}: a price, known materials and an outcome`);
+  check(['Parts', 'For the robots', 'For your tools', 'For the farmhouse', 'Gifts'].every((g) => W.some((r) => r[1] === g)), 'parts, robot upgrades, tool parts, decor and gifts');
+  check(W.every((r) => r[5].some(([id]) => ['scrap', 'copper', 'nickel_iron', 'silica', 'titanium', 'alloy', 'battery_full'].includes(id))), 'everything the Works makes uses scrap or belt ore');
+  const s = rich(); check(!sim.shopStock(s, 'works').length || !sim.worksOpen(s), 'the Works is shut until restored');
+  upTo(s, 'enclave'); check(!sim.projectList(s).find((p) => p.id === 'works').done && sim.projectList(s).find((p) => p.id === 'works').can, 'the Works can be funded after the enclave');
+  upTo(s, 'works'); more(s); check(sim.worksOpen(s), 'the Works opens overnight');
+  const st = sim.shopStock(s, 'works');
+  check(st.length === W.length - 1 && !st.some((e) => e.key === 'vault_power'), 'everything is on the order book but the door feed (it waits for Venn\'s last log)');
+  const k0 = sim.countItem(s, 'lamp_kit'), sc = sim.countItem(s, 'scrap'), m0 = s.player.money, r = sim.buy(s, 'works', 'bulk_lamps');
+  check(r.ok && sim.countItem(s, 'lamp_kit') === k0 + 5 && sim.countItem(s, 'scrap') === sc - 16 && s.player.money === m0 - 450, 'five lamp kits for 450 cr, 16 scrap and 4 copper');
+  check(450 / 5 < 120, 'cheaper in bulk than at the bench');
+  sim.addItem(s, 'nickel_iron', 20); const pp = sim.countItem(s, 'pump_part'); sim.buy(s, 'works', 'bulk_pumps'); check(sim.countItem(s, 'pump_part') === pp + 5, 'five pump parts at a time');
+  // robot upgrades: every unit, old and new
+  s.robots.push({ name: 'Pip', job: 'water', days: 0, charge: 100, mood: 'happy', done: 0 });
+  const reach0 = sim.robotReach(s.robots[0]), cost0 = sim.robotCost(s.robots[0]);
+  for (const k of ['works_fast', 'works_cell', 'works_sturdy']) { check(sim.buy(s, 'works', k).ok && s.flags[k], `${k} fitted`); check(!sim.shopStock(s, 'works').some((e) => e.key === k), `${k} only once`); }
+  check(sim.robotReach(s.robots[0]) === reach0 + 6 && sim.robotCost(s.robots[0]) === cost0 - 6 && s.robots[0].cell, 'faster, sturdier, with a bigger battery');
+  s.robots.push({ name: 'Bolt', job: 'harvest', days: 0, charge: 100, mood: 'happy', done: 0 }); sim.ensure(s);
+  check(s.robots[1].fast && s.robots[1].sturdy && s.robots[1].cell, 'a unit leased later gets the upgrades too');
+  s.robots[0].charge = 10; sim.addItem(s, 'battery_full', 1); sim.chargeRobot(s, 0); check(s.robots[0].charge === 90, 'a deep-cell pack takes +80 from a charged battery');
+  check(sim.toolCost(s, 4) === 4 && sim.toolCost(s, 2) === 2, 'no grips yet');
+  check(sim.buy(s, 'works', 'works_grips').ok && sim.toolCost(s, 4) === 3 && sim.toolCost(s, 2) === 2, 'balanced grips: a heavy swing costs one less');
+  for (const k of ['decor_lantern', 'decor_clock', 'decor_model', 'decor_shelf']) check(sim.buy(s, 'works', k).ok && s.flags[k] && allMaps().house.props.some((p) => p.kind === k && p.when === k), `${k}: made, and stands in the farmhouse`);
+  for (const k of ['tin_lantern', 'gear_brooch', 'pipe_whistle']) { const n = sim.countItem(s, k); check(sim.buy(s, 'works', k).ok && sim.countItem(s, k) === n + 1 && ITEMS[k].sell > 0, `${k}: a gift from the press`); check(['venn', 'thorne', 'moth', 'wick'].some((id) => story.giftTier(id, k) === 'loved' || story.giftTier(id, k) === 'liked'), `${k}: somebody below likes it`); }
+  // recycling
+  const sc2 = sim.countItem(s, 'scrap'), m1 = s.player.money, rr = sim.recycle(s, 'scrap');
+  check(rr.ok && s.player.money === m1 + 220 && sim.countItem(s, 'scrap') === sc2 - 10 && 220 > 10 * ITEMS.scrap.sell, 'ten scrap recycle for 220 cr, better than the bin');
+  sim.addItem(s, 'battery', 1); const cu = sim.countItem(s, 'copper'); check(sim.recycle(s, 'battery').ok && sim.countItem(s, 'copper') === cu + 1, 'a flat battery gives its copper back');
+  sim.addItem(s, 'log_tape', 1); const tp = sim.countItem(s, 'log_tape'); check(tp >= 2 ? sim.recycle(s, 'tape').ok && sim.countItem(s, 'log_tape') === tp - 1 : true, 'a spare tape is wiped, one is kept');
+  const t = rich(); check(!sim.recycle(t, 'scrap').ok && sim.recycleList(t).every((x) => !x.can), 'no recycling before the Works');
+  check(!sim.recycle(s, 'nope').ok, 'the bin takes only what it takes');
+}
+// ---------------------------------------------------------------- release 2: the Thermal Vents and the reactor chain
+{
+  const s = rich(); upTo(s, 'arena');
+  check(!sim.ventSoak(s).ok && !sim.reactorStep(s).ok, 'no bath and no console before the Vents');
+  check(!sim.projectList(s).find((p) => p.id === 'vents').done, 'the Vents come after the Works');
+  upTo(s, 'vents'); s.cal.minute = 600; s.player.stamina = 5;
+  const m0 = s.player.money, r = sim.ventSoak(s);
+  check(r.ok && s.player.stamina === s.player.maxStamina && s.player.money === m0 - sim.VENT_PRICE && sim.onsenBuff(s), 'a soak: stamina full, the tools lighter, 60 cr');
+  s.cal.minute = 1390; check(!sim.ventSoak(s).ok, 'the steam is let down at night');
+  const R = sim.REACTOR_STEPS; check(R.length === 5 && R.some((x) => x.who === 'ruess') && R.some((x) => x.who === 'venn') && R.every((x) => x.req.every(([id, n]) => ITEMS[id] && n > 0)), 'five jobs, with Venn and Ruess, gauges, valves and parts');
+  sim.addItem(s, 'comet_ice', 10); sim.addItem(s, 'platinum', 2); sim.addItem(s, 'battery_full', 5);
+  s.cal.minute = 600; const st = [];
+  for (let d = 0; d < 7 && sim.reactorDone(s) < 5; d++) { const a = sim.reactorStep(s); if (a.ok) { st.push(a.step); check(!sim.reactorStep(s).ok, 'one job a day'); } night(s); s.cal.minute = 600; }
+  check(st.join() === R.map((x) => x.id).join() && s.flags.ld_reactor, 'the jobs in order, and the reactor is safe');
+  check(['day211', 'galt_door', 'venn_key'].every((id) => sim.logsFound(s).includes(id)), 'the console gives three logs, the last one Venn\'s key');
+  check(!sim.reactorStep(s).ok, 'nothing more to do at the console');
+  const m1 = s.player.money; check(sim.ventSoak(s).ok && s.player.money === m1, 'the bath is free once the reactor is safe');
+  sim.addItem(s, 'spore_bag', 1); s.player.sel = s.player.inv.findIndex((x) => x && x.id === 'spore_bag'); sim.plantBed(s, 3); const b = s.lower.beds.find((x) => x.bed === 3); night(s);
+  check(b.age === 2, 'the warm beds grow two days a night');
+  const poor = rich(); upTo(poor, 'vents'); poor.cal.minute = 600; sim.removeItem(poor, 'silica', sim.countItem(poor, 'silica'));
+  check(!sim.reactorStep(poor).ok && sim.reactorDone(poor) === 0, 'no parts, no job');
+}
+// ---------------------------------------------------------------- release 2: the logs and the vault
+{
+  const R2 = LOWER_LOGS.slice(11);
+  check(R2.length >= 8 && R2.length <= 12, `8 to 12 new logs (${R2.length})`);
+  for (const l of R2) check(story.LOGS[l.id] && story.LOGS[l.id].text.length <= 420, `log ${l.id} has a short text`);
+  check(R2.some((l) => l.id === 'venn_key') && /Works/.test(story.LOGS.venn_key.text) && /pump/.test(story.LOGS.venn_key.text), 'the key log says: power from the Works, drain the sill');
+  check(/Galt/.test(story.LOGS.galt_cover.text) && /Marshal/.test(story.LOGS.ninefold_report.author) && /Galt attack/.test(story.LOGS.ninefold_report.text), 'the cover story and the Directorate\'s own report');
+  const s = more(rich()); upTo(s, 'vents'); s.cal.minute = 600;
+  check(!sim.openVault(s).ok && !sim.vaultReady(s).ok, 'the vault stays shut');
+  sim.addItem(s, 'comet_ice', 10); sim.addItem(s, 'platinum', 2); sim.addItem(s, 'battery_full', 9);
+  for (let d = 0; d < 6; d++) { sim.reactorStep(s); night(s); s.cal.minute = 600; }
+  check(sim.vaultReady(s).key && !sim.vaultReady(s).power && !sim.vaultReady(s).drained, 'the key, but no feed and a wet sill');
+  check(sim.shopStock(s, 'works').some((e) => e.key === 'vault_power'), 'the Works offers the door feed once the key log is found');
+  check(sim.buy(s, 'works', 'vault_power').ok && sim.vaultReady(s).power, 'the feed runs from the Works');
+  check(!sim.openVault(s).ok, 'still wet');
+  for (const id of ['pump2', 'pump3']) sim.repairPump(s, id); sim.addItem(s, 'pump_part', 10);
+  const pp = sim.countItem(s, 'pump_part'), rp = sim.repairPump(s, 'pump4');
+  check(rp.ok && sim.countItem(s, 'pump_part') === pp - 6 && sim.vaultReady(s).ok, 'six pump parts in the gallery pump drain the sill');
+  const ms = s.player.maxStamina, r = sim.openVault(s);
+  check(r.ok && r.first && s.flags.ld_vault && sim.countItem(s, 'ring_shard') === 1 && s.player.maxStamina === ms + 10, 'the vault opens: a slice of ring three, and max stamina +10');
+  check(LOWER_LOGS.every((l) => !['vault', 'reactor'].includes(l.src) || sim.logsFound(s).includes(l.id)), 'the console\'s and the vault\'s logs are all found');
+  check(sim.openVault(s).again && sim.countItem(s, 'ring_shard') === 1, 'it opens once');
+  check(story.VAULT.open.some((l) => l.who === 'marrow') && story.VAULT.open.some((l) => l.who === 'thorne') && story.VAULT.open.length <= 20, 'Marrow and Agnes are there, and it is quiet');
+  check(story.LOWER_SCENES.some((e) => e.id === 'marrow_vault' && e.flag === 'ld_vault'), 'Marrow puts the names on the memorial');
+  check(story.SIGNS_VAULT['central.board'] && /Galt/.test(story.SIGNS_VAULT['central.board']) && story.RADIO_VAULT.length >= 3, 'the Governor\'s board and Vesna\'s radio change');
+  const m = allMaps().lower; lowerState(m, { ...Object.fromEntries(sim.LOWER_PROJECTS.map((p) => ['ld_' + p.id, true])), ld_pump2: true, ld_pump3: true });
+  check(m.solid(27, 19), 'the round door blocks the vault until it opens');
+  lowerState(m, { ...Object.fromEntries(sim.LOWER_PROJECTS.map((p) => ['ld_' + p.id, true])), ld_vault: true }); check(!m.solid(27, 19) && !m.solid(27, 18) && !m.solid(24, 17), 'then you can walk in');
+  for (const k of ['works_hall', 'fabricator', 'vent_bath', 'reactor_console', 'zero_g_arena', 'decimator_ring']) check(m.props.some((p) => p.kind === k), `the map has the ${k}`);
+}
+// ---------------------------------------------------------------- release 2: the Zero-G Arena and the Hub Cup
+{
+  const f = story.FESTIVALS.find((x) => x.id === 'hubcup');
+  check(f && f.season === sim.HUB_CUP.season && f.day === sim.HUB_CUP.day && f.flag === 'ld_arena' && f.spot === 'lower.arena', 'the Hub Cup is a festival in the arena');
+  check(['venn', 'wick', 'moth', 'tika', 'vesna'].every((id) => f.lines.some((l) => l.who === id)), 'the people below and the Lane are there');
+  check(sim.hubCupThrow(0.5) === 3 && sim.hubCupThrow(0.44) === 3 && sim.hubCupThrow(0.6) === 2 && sim.hubCupThrow(0.75) === 1 && sim.hubCupThrow(0.1) === 0 && sim.hubCupThrow(NaN) === 0, 'a throw scores by how close to the hoop');
+  check(sim.hubCupThrow(0.4) === sim.hubCupThrow(0.6) && sim.hubCupThrow(0.3) === sim.hubCupThrow(0.7), 'early and late count the same');
+  check(sim.hubCupPlace(15, [{ score: 9 }, { score: 12 }]) === 1 && sim.hubCupPlace(8, [{ score: 9 }, { score: 12 }]) === 3 && sim.hubCupPlace(9, [{ score: 9 }]) === 1, 'places: a tie goes to Sato');
+  check(sim.hubCupSpeed(4) < 1.2 && sim.hubCupSpeed(0) < sim.hubCupSpeed(4), 'a little faster each throw, never frantic');
+  const s = rich(); upTo(s, 'arena'); while (!(s.cal.season === 2 && s.cal.day === 19)) night(s);
+  const bad = rich(); while (!(bad.cal.season === 2 && bad.cal.day === 19)) night(bad);
+  check(!sim.playHubCup(bad, [0.5, 0.5, 0.5, 0.5, 0.5]).ok, 'no Hub Cup without the arena');
+  check(!sim.playHubCup(s, [0.5]).ok, 'five throws');
+  const m0 = s.player.money, r = sim.playHubCup(s, [0.5, 0.5, 0.52, 0.47, 0.5]);
+  check(r.ok && r.score === 15 && r.place === 1 && s.player.money === m0 + 1500 && sim.countItem(s, 'hub_cup') === 1, 'a perfect game wins the cup and 1,500 cr');
+  check(r.rivals.length === 3 && r.rivals.every((x) => x.score >= 5 && x.score <= 10), 'three rivals, fair scores');
+  check(!sim.playHubCup(s, [0.5, 0.5, 0.5, 0.5, 0.5]).ok, 'once a year');
+  const t = JSON.parse(JSON.stringify(s)); delete t.flags.hubcup_y1; const r2 = sim.playHubCup(t, [0, 0, 0, 0, 1]); check(r2.ok && r2.place === 4 && r2.prize === 100, 'a bad game still pays a little');
+  const w = story.whereIs('wick', { season: 2, day: 19, weekday: 3, minute: 700, weather: 'sun', festival: 'hubcup', year: 1, flags: { ld_pumps: true, ld_arena: true } });
+  check(w && /^lower\.(arena|stands|arenagate)/.test(w.spot), 'Wick comes up from the basins to compete');
+}
 // ---------------------------------------------------------------- old saves
 {
   const old = sim.newGame({ seed: 9 }); delete old.lower; for (const k of Object.keys(old.flags)) if (k.startsWith('ld_')) delete old.flags[k]; for (const id of story.UNDERFOLK) delete old.npc[id];
   const s = sim.loadState(JSON.stringify(old));
   check(!!s && story.UNDERFOLK.every((id) => s.npc[id]), 'an old save loads and meets the newcomers');
-  check(sim.projectList(s).length === 5 && sim.logsFound(s).length === 0 && sim.bedAt(s, 0) === -1, 'the Undercroft starts untouched in an old save');
+  check(sim.projectList(s).length === P.length && sim.logsFound(s).length === 0 && sim.bedAt(s, 0) === -1, 'the Undercroft starts untouched in an old save');
   const r = sim.sleep(s); check(r.ok && !s.flags.ld_lights, 'an old save sleeps through the night');
+  check(!s.flags.ld_works && !s.flags.ld_vault && sim.reactorDone(s) === 0 && !sim.vaultReady(s).ok && sim.shopStock(s, 'works').length > 0, 'release 2 starts untouched in an old save');
+  const r1 = sim.newGame({ seed: 4 }); r1.lower = { beds: [], logs: { quarantine: 3 }, pending: null }; for (const k of ['ld_lights', 'ld_pumps', 'ld_catacombs', 'ld_enclave', 'ld_rehoused']) r1.flags[k] = true; r1.robots = [{ name: 'Old', job: 'water', days: 9, charge: 50, mood: 'happy', done: 0 }];
+  const s1 = sim.loadState(JSON.stringify(r1)); check(s1 && sim.projectList(s1).find((p) => p.id === 'works').can === false && sim.projectList(s1).find((p) => p.id === 'works').open && !s1.robots[0].fast, 'a release-1 save: the Works is next, the old robot unchanged');
 }
 console.log(failures ? `${failures} of ${checks} checks FAILED` : `farm-lower: all ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

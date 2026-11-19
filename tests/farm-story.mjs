@@ -42,7 +42,7 @@ const LANE = ['pia', 'lark', 'noor', 'tika', 'vesna'];
 const NEWCOMERS = [...LANE, 'kestrel', 'mori', 'yui', 'calloway', 'fenn', 'venn', 'thorne', 'moth', 'wick'];
 const UNDER = story.UNDERFOLK || [];
 // The Undercroft's progress flags in order: year 2 schedules are checked with the deck half restored (spring, summer), then all of it.
-const LD = ['ld_lights', 'ld_pumps', 'ld_pump2', 'ld_pump3', 'ld_catacombs', 'ld_enclave', 'ld_rehoused'];
+const LD = ['ld_lights', 'ld_pumps', 'ld_pump2', 'ld_pump3', 'ld_catacombs', 'ld_enclave', 'ld_rehoused', 'ld_works', 'ld_arena', 'ld_vents', 'ld_reactor', 'ld_vault'];
 const ldUpTo = (flag) => Object.fromEntries(LD.slice(0, LD.indexOf(flag) + 1).map((k) => [k, true]));
 const LOVERS = ['general', 'ruess', 'kestrel', 'mori', 'oduya', 'yui', 'lark', 'vesna'];
 const VILLAGERS = Object.keys(CAST).filter((id) => id !== 'sato');
@@ -54,7 +54,7 @@ const SPOTS = new Set(('farm.porch farm.bin farm.gate farm.pond farm.field villa
   'cafe.counter cafe.table1 cafe.table2 cafe.table3 hall.desk hall.floor ' +
   'clinic.counter clinic.floor library.counter library.floor village.clinicfront village.libraryfront ' +
   'church.altar church.pew central.churchgarden central.schoolyard school.floor depot.desk depot.floor central.depotfront ' +
-  'central.gallery undercroft.counter lower.landing lower.gallery lower.pumps lower.pumphouse lower.sump lower.catacombs lower.beds lower.enclave lower.kettle school.teacher school.pupil central.homes').split(' '));
+  'central.gallery undercroft.counter lower.landing lower.gallery lower.pumps lower.pumphouse lower.sump lower.catacombs lower.beds lower.enclave lower.kettle school.teacher school.pupil central.homes lower.works lower.vents lower.reactor lower.vault lower.arena lower.stands lower.stands2 lower.arenagate').split(' '));
 const STYLES = new Set(['bob', 'short', 'long', 'bald', 'bun', 'bandana', 'cap', 'braid', 'ponytail', 'odango', 'twintails']);
 const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', 'cafe', 'hall', 'clinic', 'library', 'central', 'hangar', 'church', 'depot', 'school', 'lower']);
 const TIERS = new Set(['loved', 'liked', 'neutral', 'disliked']);
@@ -78,6 +78,7 @@ const FEST = {
   harvest: { name: 'Harvest Fair', season: 2, day: 9, from: 600, to: 960, spot: 'village.square' },
   yearsend: { name: "Year's End", season: 3, day: 30, from: 1080, to: 1380, spot: 'village.square' },
   bloom: { name: 'The Bloom Fair', season: 1, day: 10, from: 600, to: 960, spot: 'village.lane' },
+  hubcup: { name: 'The Hub Cup', season: 2, day: 19, from: 600, to: 960, spot: 'lower.arena', flag: 'ld_arena' },
 };
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
@@ -170,7 +171,7 @@ const seenBy = Object.fromEntries(VILLAGERS.map((id) => [id, new Set()]));
 for (const year of [1, 2]) for (let season = 0; season < 4; season++) for (let weekday = 0; weekday < 7; weekday++) {
   const day = dayFor(season, weekday, year);
   for (const weather of WEATHERS) for (let minute = 360; minute <= 1440; minute += 10) {
-    const ctx = { season, day, weekday, minute, weather, festival: null, year, flags: year === 2 ? ldUpTo(season === 0 ? 'ld_catacombs' : season === 1 ? 'ld_enclave' : 'ld_rehoused') : undefined };
+    const ctx = { season, day, weekday, minute, weather, festival: null, year, flags: year === 2 ? ldUpTo(season === 0 ? 'ld_catacombs' : season === 1 ? 'ld_enclave' : season === 2 ? 'ld_rehoused' : 'ld_vault') : undefined };
     const here = {};
     for (const id of VILLAGERS) {
       const spot = where(id, ctx);
@@ -249,6 +250,7 @@ check(['farm.porch', 'farm.pond', 'farm.field'].every((s) => sunSpots.has(s)), "
 for (const f of FESTIVALS) {
   const near = f.spot === 'village.lane' ? ['village.lane', 'village.bakeryfront', 'village.tailorfront', 'village.floristfront', 'village.garagefront', 'village.radiofront']
     : f.spot === 'village.bridge' ? ['village.bridge', 'village.river', 'village.riverside', 'village.bench']
+    : f.spot === 'lower.arena' ? ['lower.arena', 'lower.stands', 'lower.stands2', 'lower.arenagate']
     : ['village.square', 'village.bench', 'village.memorial', 'village.storefront', 'village.cafefront', 'village.hallfront'];
   for (const weather of WEATHERS) for (let minute = 360; minute <= 1440; minute += 10) {
     const ctx = { season: f.season, day: f.day, weekday: weekdayOf(f.season, f.day), minute, weather, festival: f.id, year: 1 };
@@ -563,7 +565,7 @@ for (const id of VILLAGERS) check(!JSON.stringify(story.TALK?.[id] ?? '').includ
 // ---------------------------------------------------------------- the pastor and the constable (2026-11-19)
 check(!ROMANCE.candidates.includes('calloway') && !ROMANCE.candidates.includes('fenn'), 'the pastor and the constable are friends, not romance candidates');
 const atC = (id, wd, m, more) => at(id, wd, m, more);
-function near2(f, spot) { return f.spot === 'village.bridge' ? ['village.bridge', 'village.river', 'village.riverside', 'village.bench'].includes(spot) : ['village.square', 'village.bench', 'village.memorial', 'village.storefront', 'village.cafefront', 'village.hallfront'].includes(spot); }
+function near2(f, spot) { return f.spot === 'lower.arena' ? ['lower.arena', 'lower.stands', 'lower.stands2', 'lower.arenagate'].includes(spot) : f.spot === 'village.bridge' ? ['village.bridge', 'village.river', 'village.riverside', 'village.bench'].includes(spot) : ['village.square', 'village.bench', 'village.memorial', 'village.storefront', 'village.cafefront', 'village.hallfront'].includes(spot); }
 for (const wd of [1, 2, 3, 4, 5]) for (const m of [600, 960]) check(atC('calloway', wd, m) === 'church.altar', `Pastor Ines keeps the altar (wd ${wd}, ${m})`);
 check([800, 840].every((m) => atC('calloway', 1, m) === 'central.churchgarden'), 'she tends her garden after lunch');
 check(atC('calloway', 2, 750) === 'school.floor', 'on Wednesdays she sits in the empty school');

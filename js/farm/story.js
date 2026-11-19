@@ -392,7 +392,7 @@ export function whereIs(npcId, ctx) {
   const wd = (((Number(ctx.weekday) || 0) % 7) + 7) % 7;
   const storm = ctx.weather === 'storm';
   // The Undercroft folk keep their own hours below decks: no weather, no festivals (until the Thornes move up).
-  if (UNDERFOLK.includes(npcId) && !(ctx.flags && ctx.flags.ld_rehoused && (npcId === 'thorne' || npcId === 'moth'))) { const s = plan(wd, m, ctx); return s ? { spot: festivalOf(ctx) && s.endsWith('.counter') ? 'lower.landing' : s } : null; }   // festival days: the bench is shut
+  if (UNDERFOLK.includes(npcId) && !(ctx.flags && ctx.flags.ld_rehoused && (npcId === 'thorne' || npcId === 'moth'))) { const fe = festivalOf(ctx); if (fe && fe.spot.startsWith('lower.') && m >= fe.from - 60 && m < fe.to) return { spot: (FESTIVAL_SPOTS[fe.spot] || {})[npcId] || fe.spot }; const s = plan(wd, m, ctx); return s ? { spot: festivalOf(ctx) && s.endsWith('.counter') ? 'lower.landing' : s } : null; }   // festival days: the bench is shut
   let spot = null;
   const fest = festivalOf(ctx);
   // Sato's partner lives at the farm: on the porch at dawn and in the evening (unless a festival is on).
@@ -3241,6 +3241,7 @@ Object.assign(NPCS, {
   },
 });
 VILLAGERS.push(...UNDERFOLK);
+SPOTS.push('lower.works', 'lower.vents', 'lower.reactor', 'lower.vault', 'lower.arena', 'lower.stands', 'lower.stands2', 'lower.arenagate');
 SPOTS.push('central.gallery', 'undercroft.counter', 'lower.landing', 'lower.gallery', 'lower.pumps', 'lower.pumphouse', 'lower.sump', 'lower.catacombs', 'lower.beds', 'lower.enclave', 'lower.kettle', 'school.teacher', 'school.pupil', 'central.homes');
 for (const id of UNDERFOLK) {
   const n = NPCS[id], m = {};
@@ -3253,16 +3254,16 @@ Object.assign(SCHEDULE, {
   venn(wd, m, c) {
     const f = (c && c.flags) || {};
     if (wd === 4 && f.ld_pumps && c.weather !== 'storm' && m >= H(17, 30) && m < H(19)) return 'village.workshopfront';
-    if (wd === 6) return pick(m, [H(9), H(12), f.ld_pumps ? 'lower.pumphouse' : 'lower.landing'], [H(12), H(14), f.ld_enclave ? 'lower.kettle' : 'undercroft.counter'], [H(14), H(18), f.ld_pump2 ? 'lower.sump' : f.ld_lights ? 'lower.gallery' : 'lower.landing']);
-    return pick(m, [H(7), H(12), 'undercroft.counter'], [H(12), H(13), f.ld_enclave ? 'lower.kettle' : 'undercroft.counter'], [H(13), H(15), f.ld_pumps ? 'lower.pumphouse' : 'undercroft.counter'],
-      [H(15), H(20), 'undercroft.counter'], [H(20), H(22), f.ld_lights ? 'lower.gallery' : 'lower.landing']);
+    if (wd === 6) return pick(m, [H(9), H(12), f.ld_pumps ? 'lower.pumphouse' : 'lower.landing'], [H(12), H(14), f.ld_arena ? 'lower.arenagate' : f.ld_enclave ? 'lower.kettle' : 'undercroft.counter'], [H(14), H(18), f.ld_pump2 ? 'lower.sump' : f.ld_lights ? 'lower.gallery' : 'lower.landing']);
+    return pick(m, [H(7), H(12), 'undercroft.counter'], [H(12), H(13), f.ld_enclave ? 'lower.kettle' : 'undercroft.counter'], [H(13), H(15), f.ld_works ? 'lower.works' : f.ld_pumps ? 'lower.pumphouse' : 'undercroft.counter'],
+      [H(15), H(16), f.ld_vents ? 'lower.reactor' : 'undercroft.counter'], [H(16), H(20), 'undercroft.counter'], [H(20), H(22), f.ld_vault ? 'lower.vault' : f.ld_lights ? 'lower.gallery' : 'lower.landing']);   // release 2: the Works after lunch, the needles at three, the open vault last thing
   },
   // The basins by day, the Sump at night once it is drained. He eats with the enclave when there is light to eat by.
   wick(wd, m, c) {
     const f = (c && c.flags) || {}; if (!f.ld_pumps) return null;
     const deep = f.ld_pump2 ? 'lower.sump' : 'lower.pumps';
-    if (wd === 6) return pick(m, [H(8), H(12), 'lower.pumps'], [H(12), H(15), f.ld_enclave ? 'lower.kettle' : 'lower.pumphouse'], [H(15), H(22), deep]);
-    return pick(m, [H(7), H(11), 'lower.pumps'], [H(11), H(13), deep], [H(13), H(14), f.ld_enclave ? 'lower.kettle' : 'lower.pumphouse'], [H(14), H(19), 'lower.pumps'], [H(19), H(23), deep]);
+    if (wd === 6) return pick(m, [H(8), H(12), 'lower.pumps'], [H(12), H(15), f.ld_vents ? 'lower.vents' : f.ld_enclave ? 'lower.kettle' : 'lower.pumphouse'], [H(15), H(22), deep]);   // Sundays: a long soak, once there is hot water
+    return pick(m, [H(7), H(11), 'lower.pumps'], [H(11), H(13), deep], [H(13), H(14), f.ld_arena ? 'lower.stands2' : f.ld_enclave ? 'lower.kettle' : 'lower.pumphouse'], [H(14), H(19), 'lower.pumps'], [H(19), H(23), deep]);   // lunch in the stands, practising in his head
   },
   // The rota and the kettle; after the move, the school (she taught the enclave's children for years, by lamplight).
   thorne(wd, m, c) {
@@ -3277,7 +3278,7 @@ Object.assign(SCHEDULE, {
     const f = (c && c.flags) || {}; if (!f.ld_catacombs) return null;
     if (!f.ld_enclave) return pick(m, [H(10), H(12), 'lower.catacombs'], [H(15), H(18), 'lower.beds']);
     if (!f.ld_rehoused) return pick(m, [H(8), H(11), 'lower.enclave'], [H(11), H(12), 'lower.pumps'], [H(12), H(13), 'lower.kettle'], [H(13), H(17), 'lower.beds'], [H(17), H(19, 30), 'lower.kettle']);
-    if (wd === 5) return pick(m, [H(9), H(17), 'lower.pumps']);
+    if (wd === 5) return f.ld_arena ? pick(m, [H(9), H(13), 'lower.pumps'], [H(13), H(15), 'lower.arena'], [H(15), H(17), 'lower.stands']) : pick(m, [H(9), H(17), 'lower.pumps']);   // Saturday afternoons in the drum
     if (wd === 6) return pick(m, [H(9), H(12), 'church.pew'], [H(13), H(17), 'central.gallery'], [H(17), H(19), 'central.homes']);
     return pick(m, [H(8), H(15), 'school.pupil'], [H(15), H(17), 'central.schoolyard'], [H(17), H(19), 'central.homes']);
   },
@@ -3701,7 +3702,7 @@ export const LOWER = {
   bedRotten: 'A rotten old growing bed. The catacombs need restoring before anything grows here.',
   pumpBroken: 'An old pump, silent. Its gauge reads zero. A brass plate: FIT PARTS HERE.',
   pumpRunning: 'The pump thrums steadily. The gauge needle trembles in the green.',
-  vault: 'A huge round door, sealed. Your hand on it: cold, and very faintly humming. Not yet, it seems to say. (Release 2.)',
+  vault: 'A huge round door, sealed. Your hand on it: cold, and very faintly humming. Not yet, it seems to say.',
   pupils: ['A pupil is drawing a fish with too many fins. "It is a Wick fish," she explains.', 'A boy is very carefully writing his own name, tongue out.', 'Two pupils are sharing a crayon and an argument about the colour of the sky.', 'A small girl waves at you with her whole arm.'],
   houses: {
     'central.house_1': 'THORNE, on a new brass plate. A rota is chalked on the inside of the window, and a child\'s drawing of a lamp.',
@@ -3716,3 +3717,147 @@ HELP.push({
   title: 'The Lower deck (the Undercroft)',
   body: 'The spoke lift goes all the way down, past Eden Central, to the Lower deck. At first only the landing is lit. Tobias Venn\'s restoration terminal by the lift lists the projects: work lights, the Pump Halls, the Mushroom Catacombs, the Survivors\' Enclave and, once the families trust you, homes for them up on the Main deck. Each costs credits and materials and is done by morning; Venn\'s bench makes lamp kits and pump parts.\n\nThe pump halls have cave fish, glowfish and, after six, pipe eels; fit pump parts to the silent pumps to drain more tunnels. Catacomb beds grow mushrooms from spore bags all year. Logs from the terminals and Moth\'s diary pages are in the journal (P), under Logs.',
 });
+
+// ------------------------------------------------------------------ the Undercroft, release 2 (docs/FARM.md §14)
+// The Works, the Thermal Vents and the reactor chain, the last ten logs and the vault behind the round door.
+Object.assign(LOGS, {
+  works_ledger: { title: 'Fabrication ledger', author: 'Engineer Tobias Venn', text: 'Works order 4471: forty-eight coil segments, ring three. Works order 4472: the same, because the Major dropped the first set. Works order 4473: a cot, a kettle and blankets for the crypts, signed for by me and charged to the Office of the Marshal. Let them find that one in the audit.' },
+  galt_cover: { title: 'Draft bulletin, unsent', author: 'Directorate dispatch office', text: 'DRAFT. "At 02:10 a Galt strike craft breached the Lower deck. Damage is contained. Evacuate to the ships in good order." Margin, in pencil: no Galt craft were within a light-hour. Reply, in ink: then nobody will contradict it. Approved. Burn the draft.' },
+  bathhouse: { title: 'Wash hall rota', author: 'Agnes Thorne, chalked by the boiler', text: 'Hot water from the core pipe, Tuesdays and Saturdays, while T.V. says the needle is green. Children first, then the old, then whoever is left. Two minutes each. Sing while you wash so the next one knows when you are done. Nobody is to say the word "reactor" in front of Moth.' },
+  marrow_last: { title: 'Chalk on the tiles', author: 'Warden Ilse Marrow', text: 'Going up tomorrow with the gardens and the ones who can climb. Agnes stays with the ones who cannot. Sixty-one counted down here; forty-nine go up with me. I will come back for twelve. I will come back for twelve. Wash the tiles if I am late. I will not be late.' },
+  day211: { title: 'Day 211', author: 'Engineer Tobias Venn, the reactor console', text: 'Full yield, 02:04. Ring three went out of phase at 02:06 and did not come back. It did not explode. It folded: the light went in instead of out, and took the test floor with it. The core held because I held it. The Major left on the first lift. I stayed, because somebody had to turn the valves.' },
+  galt_door: { title: 'Scratched inside the shielding', author: 'The Galt prisoners', text: 'The engineer opened our door the night of the shaking. Then the warden took us up the service ladder in colony coats with colony names. Twelve. We are going home on the ships as other people. If you find this, the singing worked. Thank the warden. Thank the tall sad one with the valves.' },
+  venn_key: { title: 'The sealing', author: 'Engineer Tobias Venn', text: 'I sealed Sector Nine with the Works bus, because the Directorate cut the main feed when they left. The code is Agnes\'s rota: water, cooking, watch, washing, lessons. Feed the lock from the Works, drain the sill with the gallery pump, and say the rota to the door. I hope it is you. I hope it is everyone.' },
+  ninefold_report: { title: 'Site Ninefold: final report', author: 'Office of the Marshal (copy left on the vault desk)', text: 'Test failed at full yield. Device unrecoverable. Lower deck to be written off. Public account: Galt attack, evacuation, heroic loss. Residents unaccounted for are presumed dead and are not to be recovered. Under it, in Venn\'s hand: "Sixty-one were recovered. By the people you did not count."' },
+  the_roll: { title: 'The roll', author: 'Chalk on the vault wall', text: 'Every name, in two hands: the warden\'s capitals and Agnes\'s neat joined-up. Sixty-one of the colony, twelve of Galt, one engineer. Beside each name a tick for every night counted. The last column has a heading in a child\'s writing: UP. Every name has a tick in it but one, and that is Venn\'s. He has added it now, in pencil.' },
+  agnes_letter: { title: 'A letter, finished', author: 'Agnes Thorne, to Ilse Marrow', text: 'Ilse. You did come back. Not for me: for the twelve, the night before the ships, and you took them up the ladder in our coats. I was so angry I did not write for three years. I have been wrong for about two and a half of them. Come for tea. Bring eggs. Bring the strawberries. Your friend, A.' },
+});
+Object.assign(LOWER, {
+  works: 'The Works. A press the size of a cottage wakes with a cough and a long, contented hiss. Venn wipes his hands and holds out the order book.',
+  worksShut: 'The press is asleep under a dust sheet. (The Works project at the terminal wakes it.)',
+  vents: 'The vent bath: warm tiles, a deep pool fed by the reactor\'s spare heat, steam ticking in the brass pipes, and glowcaps along the ledge.',
+  ventsShut: 'The wash hall is cold. (The Thermal Vents project at the terminal brings the heat back.)',
+  reactorShut: 'Behind the cold wash hall, a console of red needles. (Restore the Thermal Vents first.)',
+  reactorDone: 'Every needle on the reactor console reads zero and stays there. The core hums, very softly, like a cat that has decided to stay.',
+  vaultHint: 'The lock ring is cold. Venn\'s logs may say how it opens.',
+  vaultWait: 'The lock ring on the round door, checked off on your fingers:',
+  ventFree: 'The reactor pays for this one.',
+});
+// Each reactor job is a short scene at the console, with Venn and, for two of them, Ruess.
+export const REACTOR = {
+  gauges: [
+    L('narrator', 'Venn lifts a cracked gauge glass out with two fingers, like a splinter, and slots in the new silica one. The needle behind it is in the red, and has been for years.'),
+    L('venn', 'There. Now we can see how worried to be. Worried is better than guessing.'),
+    L('venn', 'There is a log in this console. Day 211. I never played it back. ...You play it. I will hold the torch.'),
+  ],
+  valves: [
+    L('narrator', 'Two red handwheels, seized solid. You lean on one, Venn on the other. Rust gives, then the cistern water sighs through the jacket and the first needle drops out of the red.'),
+    L('venn', 'Cold water round a warm heart. That is all a reactor wants. That is all most people want.'),
+    L('venn', 'Next, the jacket. I need titanium and I need Ruess. Do not tell him I said the second part.'),
+  ],
+  jacket: [
+    L('narrator', 'The lift comes down with a cart full of titanium plate and Prof. Ruess on top of it, in a hard hat, looking furious and delighted at once.'),
+    L('ruess', 'Tobias. You built a reactor in a cellar and then sat on it for three years.'),
+    L('venn', 'Yes.'),
+    L('ruess', '...Hold this. Not like that. Like that. Sato, rivets. Hand them to me in order of size and we will not speak of feelings.'),
+    L('narrator', 'Behind the last plate, Ruess stops. Something is scratched into the old shielding. He calls you over and, for once, says nothing at all.'),
+  ],
+  rods: [
+    L('narrator', 'The damping rods go in one at a time, platinum tips first, with comet ice packed round them hissing like a kettle. Ruess counts. Venn listens to the core with his ear to the casing.'),
+    L('ruess', 'Three needles green. I would like it on record that I have never worked on anything so stupid or so well built.'),
+    L('venn', 'It is on record. I am the record. One more job and it sleeps.'),
+  ],
+  cold: [
+    L('narrator', 'The safety loop takes the charged batteries with a click each. Then Venn walks the console from one end to the other, turning each needle down to zero, slowly, the way you would lower a sleeping child into a cot.'),
+    L('venn', 'Done. It is cold. It is safe. It will keep the bath warm and the beds warm, and nothing else, ever.'),
+    L('venn', 'There is one more tape in here. Mine. I recorded it the night I sealed the door. It says how to open it.'),
+    L('venn', '...I always meant it for whoever made the reactor safe first. I did not think it would be somebody with mud on their boots. I am very glad it is.'),
+  ],
+};
+// The vault: a quiet scene with the people who knew.
+export const VAULT = {
+  open: [
+    L('narrator', 'Word goes up the lift faster than you do. By the time the cable from the Works is humming, Venn is at the round door, Agnes beside him in her good coat, and Warden Marrow has come down the lift for the first time since the war, with a basket of eggs.'),
+    L('marrow', 'Agnes.'),
+    L('thorne', 'Ilse. You are late.'),
+    L('marrow', 'Three years. I know. I counted.'),
+    L('venn', 'Sato. The rota. Say it to the door.'),
+    L('sato', 'Water. Cooking. Watch. Washing. Lessons.'),
+    L('narrator', 'The lock ring turns, one click a word. The round door rolls aside on its rail, and a breath of cold, clean air comes out, the first in years.'),
+    L('narrator', 'Inside: a test floor gone smooth as glass, and on it the great broken ring of the machine, dark and still. A desk with a report on it. And on the far wall, in chalk, every name.'),
+    L('thorne', 'The roll. We wrote it in here because it was the only wall they never looked at.'),
+    L('marrow', 'And the twelve. Look, Agnes. Their names are on the ships\' list too, under ours. They got home.'),
+    L('thorne', '...I was so angry with you for going up. And you went up to get them out.'),
+    L('marrow', 'I should have told you. I was afraid you would make me take you, and someone had to keep the children singing.'),
+    L('narrator', 'Agnes takes a folded letter out of her coat, three years old, finished last night. She gives it to Marrow. Marrow gives her the eggs. Neither of them says anything for some time.'),
+    L('venn', 'It was not Galt. It was never Galt. It was me, and the Major, and a machine that should not have been built. Now everyone will know.'),
+    L('sato', 'Everyone will know who stayed, too.'),
+    L('narrator', 'Venn crouches by the ring and cuts away a thin sliver of it with a hand tool, then presses it into your palm. It is cold, and it glows faintly blue, like a held breath.'),
+    L('venn', 'Something from it should end up with somebody kind. Go on. It does nothing now but shine.'),
+  ],
+  after: 'The vault is open and quiet. The roll on the wall has a new pencil tick in the UP column.',
+};
+LOWER_SCENES.push(
+  { id: 'marrow_vault', npc: 'marrow', hearts: 0, map: 'hall', flag: 'ld_vault', from: H(9), to: H(16),
+    lines: [
+      L('narrator', 'Warden Marrow has cleared the hall\'s long table. On it lies a fair copy of the roll from the vault, sixty-one names and twelve and one.'),
+      L('marrow', 'They are going on the memorial. All of them. The colony\'s, the Galt twelve, and Tobias Venn, who is going to hate it.'),
+      L('marrow', 'For three years the board in Eden Central said "Galt attack". This morning the Governor took it down himself. He did not make a speech. I liked him for that.'),
+      L('sato', 'And Agnes?'),
+      L('marrow', 'Agnes has put me on her rota. Saturdays, eggs. I have never been so happy to be told what to do.'),
+    ],
+    reward: { love: 8 } },
+);
+// Notices that change once the vault is open (main.js reads SIGNS_VAULT[sign] before SIGNS[sign]).
+export const SIGNS_VAULT = {
+  'central.board': 'NOTICE FROM THE GOVERNOR\'S OFFICE: the Lower deck was not attacked by Galt. It was lost to a Directorate weapons test, and its people were kept alive below by their neighbours. Their names are on the Willowfall memorial. The lift goes all the way down. Visit.',
+  'lower.gallery': 'THE GALLERY. West: pump halls. East: the catacombs. South: the Works and the Vents. North: SECTOR NINE, OPEN. (Under the old stencil, in chalk: "Mind the step. Mind each other.")',
+};
+export const RADIO_VAULT = [
+  'Vesna on the night show: "This one is for the Lower deck. All of it. And for the people who kept the lamps lit when nobody upstairs knew there was anyone to light them for."',
+  'Vesna here. "I have had more letters this week than in a year. Most of them say: we didn\'t know. Some of them say: we did. Both are welcome on this station."',
+  'Radio Willowfall: "Tobias Venn has asked me to say that he is not a hero, and that he will not be giving interviews. He then talked to me for forty minutes about valves. Lovely man."',
+];
+HELP.push({
+  title: 'The Undercroft: the Works, the Vents and the vault',
+  body: 'Two more projects at Venn\'s terminal open the south of the Lower deck. The Works press turns scrap and belt ore into parts in bulk, batteries, alloy, robot upgrades, tool grips, farmhouse decor and gifts; its bin recycles junk. The Thermal Vents warm a bath that restores stamina like the onsen (60 cr).\n\nAt the reactor console, five jobs with Venn and Ruess, one a day, make the old core safe: then the bath is free and the catacomb beds grow twice as fast. Venn\'s last log says how to open the round door: a feed from the Works, the gallery pump running (6 pump parts), and the rota.',
+});
+// Gifts from the Works, and a word or two from the people below about the new halls.
+for (const [id, items] of Object.entries({ venn: { pipe_whistle: 'liked', gear_brooch: 'liked' }, thorne: { tin_lantern: 'loved', gear_brooch: 'liked' }, moth: { pipe_whistle: 'loved', tin_lantern: 'loved', gear_brooch: 'liked' }, wick: { tin_lantern: 'liked', pipe_whistle: 'liked' }, marrow: { tin_lantern: 'loved' } })) Object.assign(tierOf[id] ||= {}, items);
+Object.assign(TALK.venn.flag, {
+  ld_works: [['The press is awake. I had forgotten how it sings.', 'Bring me scrap. Bring me ore. The Works is the only machine I ever built that I am proud of.']],
+  ld_vents: ['Hot water. Real hot water, down here. Agnes cried. Wick pretended he was not in the bath at all.'],
+  ld_reactor: [['It is cold. It is safe. I keep going to look at the needles.', 'Three years of listening for the wrong noise. Now there is no noise at all. I do not know what to do with my ears.']],
+  ld_vault: [['Everyone knows now.', 'I thought it would feel like being found out. It feels like putting down a crate I have been carrying up a hill.'], 'Ruess has asked me to dinner on Fridays. On purpose. I am told this is called a friend.'],
+});
+Object.assign(TALK.thorne.flag, { ld_vault: [['Ilse comes on Saturdays now, with eggs. We argue about the rota.', 'It is the happiest I have been since before the war.'], 'I was angry with the wrong person for three years. Do not do that, Sato. It is very tiring.'] });
+Object.assign(TALK.moth.flag, { ld_vents: ['There is a BATH. It is warm. The glowcaps steam. I am going to live in it.'], ld_vault: ['The round door is open! It was just names inside. And a broken ring. And Mr Venn crying, but he says that was dust.'] });
+Object.assign(TALK.wick.flag, { ld_vents: ['I have had a bath. My first in four years with the water hot all the way through. The fish can smell the difference. They approve.'] });
+// ---- the Hub Cup: the Zero-G Arena's festival (Autumn 19, held once the arena is restored: `flag`). Sato throws five
+// times at the hoop (sim.playHubCup); Tika, Kestrel and Wick throw too, and the decks come down the lift to watch.
+FESTIVALS.push({
+  id: 'hubcup', name: 'The Hub Cup', season: 2, day: 19, from: H(10), to: H(16), spot: 'lower.arena', flag: 'ld_arena',
+  blurb: 'The Hub Cup in the Lower deck\'s Zero-G Arena from ten: five throws at the hoop with the gravity off, and every deck in the stands.',
+  lines: [
+    L('narrator', 'The lift has been running full since nine. The stands round the old drum are packed with all three decks at once, eating Lark\'s buns and pointing at the floating balls.'),
+    L('vesna', 'Good morning, Eden, live from the bottom of the world! This is the Hub Cup, back for the first time since the war. Tika, is the cable holding?'),
+    L('tika', 'It is holding! I tied it to Venn. If he walks off, we lose the broadcast.'),
+    L('venn', 'I am not walking anywhere. I have made a trophy. I would like to see somebody win it.'),
+    L('kestrel', 'Five throws. Gravity off. Push off the rail, let go at the top of the swing, and do not chase the ball. The ball always wins a chase.'),
+    L('wick', 'I played in the last Hub Cup before the war. I came fourth of four. I have been practising.'),
+    L('moth', 'GO SATO! Gran says I am allowed to shout because it is a sport.'),
+    L('marrow', 'Agnes and I have a bet on. I shall not say which way. Agnes, sit down, you are blocking the Constable.'),
+    L('fenn', 'I am not blocked. I am keeping order from a low position. It is a recognised technique.'),
+    L('sato', 'Let go at the top of the swing. Do not chase the ball. Right. I can do that. Probably.'),
+  ],
+  reward: { money: 300 },
+});
+FESTIVAL_SPOTS['lower.arena'] = Object.fromEntries(VILLAGERS.map((id, i) => [id, ['lower.stands', 'lower.stands2', 'lower.arenagate'][i % 3]]));
+Object.assign(FESTIVAL_SPOTS['lower.arena'], { tika: 'lower.arenagate', kestrel: 'lower.arenagate', wick: 'lower.arenagate', venn: 'lower.arenagate', vesna: 'lower.stands2', moth: 'lower.stands', thorne: 'lower.stands', marrow: 'lower.stands' });
+export const HUB_CUP_LINES = {
+  win: [L('venn', 'First place. Here. It is a pump bell with a handle. It is the best thing I have made this year, and I made a reactor safe.'), L('moth', 'SATO WON! I shouted and it WORKED!')],
+  place: [L('kestrel', 'Good throwing. You let go clean. Next year, let go a hair sooner.'), L('marrow', 'A fine effort, my dear. Agnes owes me an egg.')],
+  try: [L('wick', 'Fourth of four. Welcome to the club. We meet at the basins and say "next year".'), L('moth', 'You were the best at floating. That counts. I have decided it counts.')],
+  arenaShut: 'The drum is quiet, its balls tethered. The Hub Cup is on Autumn 19, from ten.',
+  played: 'You have had your five throws this year. The stands are still cheering someone.',
+};

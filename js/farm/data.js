@@ -436,3 +436,15 @@ export const LOWER_LOGS = [
   { id: 'venn60', src: 'terminal' }, { id: 'catacombs', src: 'terminal' }, { id: 'ninefold', src: 'vault' },
   { id: 'pim_grey', src: 'page', hearts: 0 }, { id: 'pim_shaking', src: 'page', hearts: 2 }, { id: 'pim_galt', src: 'page', hearts: 4 }, { id: 'moth_sun', src: 'page', hearts: 6 },
 ];
+// The Undercroft, release 2 (docs/FARM.md §14): what the Works makes, and the logs that finish the story.
+item('tin_lantern', 'Tin lantern', 'craft', 'A little lantern pressed from scrap, with a glowcap wick.', { sell: 180, detail: 'Venn\'s press stamps them out of old ration tins: a pierced shade, a brass handle, a glowcap in a jar for a wick. The enclave lit its first winter with lanterns like this.' });
+item('gear_brooch', 'Gear brooch', 'craft', 'A brooch made from a tiny brass gear and a copper wire.', { sell: 260, detail: 'A clock gear from a dead pump gauge, polished up and wired into a brooch. It still turns if you breathe on it.' });
+item('pipe_whistle', 'Pipe whistle', 'craft', 'A whistle cut from a length of nickel pipe.', { sell: 140, detail: 'Wick taught Venn how to tune them: one note for "dinner", two for "come and look at this fish". Children love them. Parents are more measured.' });
+item('ring_shard', 'Slice of ring three', 'keepsake', 'A thin, cold sliver of the broken ring from the vault. It glows a little.', { detail: 'All that is left of the machine under the Lower deck: a curved sliver of ring three, quite harmless now, that holds a faint blue light like a held breath. Venn cut it for you himself. "Something from it should end up with somebody kind."' });
+LOWER_LOGS.push(
+  { id: 'works_ledger', src: 'terminal' }, { id: 'galt_cover', src: 'terminal' }, { id: 'bathhouse', src: 'terminal' }, { id: 'marrow_last', src: 'wall' },
+  { id: 'day211', src: 'reactor' }, { id: 'galt_door', src: 'reactor' }, { id: 'venn_key', src: 'reactor' },
+  { id: 'ninefold_report', src: 'vault' }, { id: 'the_roll', src: 'vault' }, { id: 'agnes_letter', src: 'vault' },
+);
+FESTIVAL_DAYS.push([2, 19]);            // the Hub Cup in the Zero-G Arena (story.js FESTIVALS; held once the arena is restored)
+item('hub_cup', 'The Hub Cup', 'keepsake', 'A small, dented silver cup on a magnetic base, so it stays put in zero-g.', { detail: 'The Lower deck\'s zero-g ball trophy, first played for in the old training drum. Venn made it from a pump bell. Your name is scratched on the base, under several older names nobody can read.' });

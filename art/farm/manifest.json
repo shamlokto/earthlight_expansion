@@ -641,6 +641,11 @@
    "ogg": "music/autumn.ogg",
    "seconds": 93.84
   },
+  "music/belt": {
+   "file": "music/belt.mp3",
+   "ogg": "music/belt.ogg",
+   "seconds": 93.12
+  },
   "music/central": {
    "file": "music/central.mp3",
    "ogg": "music/central.ogg",
@@ -681,6 +686,11 @@
    "ogg": "music/title.ogg",
    "seconds": 93.78
   },
+  "music/undercroft": {
+   "file": "music/undercroft.mp3",
+   "ogg": "music/undercroft.ogg",
+   "seconds": 94.31
+  },
   "music/village": {
    "file": "music/village.mp3",
    "ogg": "music/village.ogg",
@@ -696,6 +706,15 @@
    "ogg": "music/winter.ogg",
    "seconds": 93.97
   },
+  "people/calloway_front": {
+   "file": "people/calloway_front.webp",
+   "w": 280,
+   "h": 768,
+   "anchor": [
+    132,
+    766
+   ]
+  },
   "people/corran_front": {
    "file": "people/corran_front.webp",
    "w": 390,
@@ -703,6 +722,15 @@
    "anchor": [
     168,
     765
+   ]
+  },
+  "people/fenn_front": {
+   "file": "people/fenn_front.webp",
+   "w": 282,
+   "h": 768,
+   "anchor": [
+    130,
+    766
    ]
   },
   "people/general_front": {
@@ -721,6 +749,15 @@
    "anchor": [
     118,
     765
+   ]
+  },
+  "people/lark_front": {
+   "file": "people/lark_front.webp",
+   "w": 242,
+   "h": 768,
+   "anchor": [
+    122,
+    766
    ]
   },
   "people/maris_front": {
@@ -759,12 +796,39 @@
     765
    ]
   },
+  "people/moth_front": {
+   "file": "people/moth_front.webp",
+   "w": 296,
+   "h": 768,
+   "anchor": [
+    162,
+    766
+   ]
+  },
+  "people/noor_front": {
+   "file": "people/noor_front.webp",
+   "w": 246,
+   "h": 768,
+   "anchor": [
+    118,
+    766
+   ]
+  },
   "people/oduya_front": {
    "file": "people/oduya_front.webp",
    "w": 340,
    "h": 768,
    "anchor": [
     146,
+    766
+   ]
+  },
+  "people/pia_front": {
+   "file": "people/pia_front.webp",
+   "w": 240,
+   "h": 768,
+   "anchor": [
+    113,
     766
    ]
   },
@@ -810,6 +874,24 @@
     765
    ]
   },
+  "people/thorne_front": {
+   "file": "people/thorne_front.webp",
+   "w": 277,
+   "h": 768,
+   "anchor": [
+    130,
+    766
+   ]
+  },
+  "people/tika_front": {
+   "file": "people/tika_front.webp",
+   "w": 277,
+   "h": 768,
+   "anchor": [
+    121,
+    766
+   ]
+  },
   "people/vashti_front": {
    "file": "people/vashti_front.webp",
    "w": 284,
@@ -817,6 +899,33 @@
    "anchor": [
     130,
     765
+   ]
+  },
+  "people/venn_front": {
+   "file": "people/venn_front.webp",
+   "w": 349,
+   "h": 768,
+   "anchor": [
+    164,
+    766
+   ]
+  },
+  "people/vesna_front": {
+   "file": "people/vesna_front.webp",
+   "w": 268,
+   "h": 768,
+   "anchor": [
+    123,
+    766
+   ]
+  },
+  "people/wick_front": {
+   "file": "people/wick_front.webp",
+   "w": 271,
+   "h": 768,
+   "anchor": [
+    120,
+    766
    ]
   },
   "people/yui_front": {
@@ -1253,16 +1362,6 @@
    "fps": 16,
    "frames": 81,
    "loop": false
-  },
-  "music/belt": {
-   "file": "music/belt.mp3",
-   "ogg": "music/belt.ogg",
-   "seconds": 93.12
-  },
-  "music/undercroft": {
-   "file": "music/undercroft.mp3",
-   "ogg": "music/undercroft.ogg",
-   "seconds": 94.31
   }
  }
 }
