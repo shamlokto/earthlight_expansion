@@ -2453,5 +2453,45 @@
    0.7747
   ],
   "note": "cyan ring; antennas on top"
+ },
+ "school": {
+  "file": "school.glb",
+  "tris": 8000,
+  "size": [
+   0.6396,
+   0.9403,
+   1.0
+  ],
+  "note": "clock and arched door on the +Z gable end; bell turret on top; long axis along Z (0.64 x 0.94 x 1)"
+ },
+ "church": {
+  "file": "church.glb",
+  "tris": 8000,
+  "size": [
+   0.7458,
+   1.0,
+   0.9392
+  ],
+  "note": "arched door, rose window and spire on the +Z gable end; long axis along Z"
+ },
+ "safety_depot": {
+  "file": "safety_depot.glb",
+  "tris": 8000,
+  "size": [
+   0.9088,
+   0.8711,
+   1.0
+  ],
+  "note": "entrance door with canopy on +Z, garage door on +X; beacon dish and antenna on the roof"
+ },
+ "orbital_elevator": {
+  "file": "orbital_elevator.glb",
+  "tris": 8000,
+  "size": [
+   0.5443,
+   1.0,
+   0.5325
+  ],
+  "note": "slim tower up Y on a round platform; elevator car at the base facing +Z"
  }
 }
