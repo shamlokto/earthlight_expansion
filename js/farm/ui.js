@@ -5,7 +5,10 @@ import * as art from './art.js';
 import { ITEMS, CROPS, SEASONS, TOOL_LEVELS, FRUIT_TREES, TREE_DAYS, ROBOT_JOBS, RELICS } from './data.js';
 import * as sim from './sim.js';
 import { NPCS, HELP, FESTIVALS, RADIO } from './story.js';
+import { LOGS as LOG_TEXT } from './story.js';
+import { LOWER_LOGS } from './data.js';
 import { portrait as svgPortrait } from '../expansion/portraits.js';
+import { lookPortrait } from './lookportrait.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -46,7 +49,7 @@ const DRAWN = {
   sapling: `<path d="M14 54h36l-4-10H18Z" fill="#a8783f" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/><path d="M32 44V20" stroke="#6b4a2a" stroke-width="3"/><path d="M32 30c-12 0-14-12-14-12 10 0 14 6 14 12Zm0-6c10 0 14-10 14-10-10 0-14 4-14 10Z" fill="#6fbf5a" stroke="${INK}" stroke-width="1.5"/>`,
   fodder: `<rect x="10" y="22" width="44" height="30" rx="6" fill="#e0c060" stroke="${INK}" stroke-width="2"/><path d="M10 32h44M10 42h44" stroke="#b08a2e" stroke-width="2"/><path d="M22 22v30M42 22v30" stroke="#a3402e" stroke-width="3"/>`,
 };
-const KIND_COLOR = { fruit: '#d8564a', sapling: '#5f9a3a', placeable: '#5f7f8f', part: '#8a98a6', keepsake: '#c98ab0', tool: '#6f7f95', seed: '#8a6f3d', crop: '#4f9a3a', animal: '#d9c79a', fish: '#3f7fa8', forage: '#7a9a4a', ore: '#77736d', relic: '#b08d3c', food: '#c9853a', stock: '#a37a4f' };
+const KIND_COLOR = { material: '#c9b28a', artisan: '#e0a83a', craft: '#c96a9a', fruit: '#d8564a', sapling: '#5f9a3a', placeable: '#5f7f8f', part: '#8a98a6', keepsake: '#c98ab0', tool: '#6f7f95', seed: '#8a6f3d', crop: '#4f9a3a', animal: '#d9c79a', fish: '#3f7fa8', forage: '#7a9a4a', ore: '#77736d', relic: '#b08d3c', food: '#c9853a', stock: '#a37a4f' };
 // Round fruit and forage drawn in their own colour when the art pack has no picture yet.
 const ROUND = { star_plum: '#9a5ad8', comet_ice: '#cfeefa', star_metal: '#c9d2dc', colony_feast: '#e0782a', founders_cake: '#e8c46a', cherry: '#c8102e', peach: '#ffa48a', apple: '#d8362a', persimmon: '#f07a1a', wild_apple: '#d8a03a', wild_grape: '#5a2f7a', chestnut: '#7a4a2a', pine_nut: '#a07a4a', honeycomb: '#f0b32a', winter_root: '#efe2c8', bamboo_shoot: '#c9d27a', wild_mint: '#58c08a', fiddlehead: '#7a9a3a', matsutake: '#e8d8b8' };
 const roundIcon = (c, id) => id === 'honeycomb' ? `<path d="M20 18h12l6 10-6 10H20l-6-10Z M38 28h12l6 10-6 10H38l-6-10Z M20 38h12l6 10-6 10H20l-6-10Z" fill="${c}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`
@@ -64,10 +67,13 @@ export function icon(id) {
   const ab = it.name.replace(/[^A-Za-z ]/g, '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || it.name.slice(0, 2);
   return `<span class="fm-ico fm-fake" style="background:${KIND_COLOR[it.kind] || '#666'}">${it.kind === 'seed' ? '✿' : esc(ab)}</span>`;
 }
+export { lookPortrait };
 export function face(who) {
   const n = NPCS[who]; if (!n) return '';
   const own = art.url(`people/${who}_portrait`) || art.url(`people/${who}_front`); if (own) return `<div class="fm-face"><img src="${own}" alt=""></div>`;
+  if (n.portrait && n.portrait.startsWith('art/farm/people/') && !art.has(`people/${who}_front`)) return `<div class="fm-face" style="display:grid;place-items:center;background:${n.look.top};color:#fff;font:700 26px var(--f-display)">${esc((n.short || n.name)[0])}</div>`;   // no portrait yet: an initial in their colours
   if (n.portrait && n.portrait.startsWith('svg:')) return `<div class="fm-face">${svgPortrait(n.portrait.slice(4))}</div>`;
+  if (n.portrait && n.portrait.startsWith('look:')) return `<div class="fm-face">${lookPortrait(n)}</div>`;
   return `<div class="fm-face"><img src="${n.portrait}" alt=""></div>`;
 }
 
@@ -297,7 +303,7 @@ function todayTab(state, extra) {
   h += `<h3>Greenhouse</h3>${state.flags.greenhouse ? fieldSummary(state, 'greenhouse') : '<p class="fm-dim">Still a wreck. Ruess can repair it (4,000 cr and 120 lumber).</p>'}`;
   const g = state.pasture.grass, sown = g.filter(Boolean).length, rg = g.filter((x) => x === 3).length;
   h += `<h3>Pasture</h3><p>${sown ? `${sown} patches of grass, <b>${rg}</b> ripe to cut for fodder.` : 'No grass sown yet.'} Stores: ${state.stock.fodder} fodder · ${state.stock.feed} hen feed · ${state.stock.lumber} lumber.</p>`;
-  h += `<h3>Animals</h3>` + (state.animals.length ? state.animals.map((a) => `<div class="fm-row"><div><b>${a.kind === 'cow' ? '🐄' : '🐔'} ${esc(a.name)}</b><span>fed ${yes(a.fed)} · ${a.kind === 'cow' ? `milked ${yes(a.milked)} · brushed ${yes(a.brushed)}` : 'lays an egg tomorrow if fed'} · said hello ${yes(a.talked)}</span></div>${hearts(a.love)}</div>`).join('') + (state.eggs ? `<p>${state.eggs} egg${state.eggs > 1 ? 's' : ''} waiting in the coop.</p>` : '') : '<p class="fm-dim">No animals yet. Corran sells chickens and cows.</p>');
+  h += `<h3>Animals</h3>` + (state.animals.length ? state.animals.map((a) => `<div class="fm-row"><div><b>${{ cow: '🐄', goat: '🐐', sheep: '🐑', duck: '🦆' }[a.kind] || '🐔'} ${esc(a.name)}</b><span>fed ${yes(a.fed)} · ${a.kind === 'cow' || a.kind === 'goat' ? `milked ${yes(a.milked)} · brushed ${yes(a.brushed)}` : a.kind === 'sheep' ? `fleece ${a.fleece >= 3 ? 'ready to shear' : `${a.fleece || 0}/3`} · brushed ${yes(a.brushed)}` : a.kind === 'duck' ? 'lays a duck egg tomorrow if fed' : 'lays an egg tomorrow if fed'} · said hello ${yes(a.talked)}</span></div>${hearts(a.love)}</div>`).join('') + (state.eggs ? `<p>${state.eggs} egg${state.eggs > 1 ? 's' : ''} waiting in the coop.</p>` : '') : '<p class="fm-dim">No animals yet. Corran sells chickens and cows.</p>');
   const R = state.robots || [];
   h += `<h3>Field-units</h3>` + (R.length ? R.map((r, i) => `<div class="fm-row"><div><b>🤖 ${esc(r.name)} · ${esc(ROBOT_JOBS[r.job] || r.job)}</b><span>skill ${sim.robotLevel(r)} (${r.job === 'animals' ? 'tends every animal' : r.job === 'rest' ? 'resting' : 'reaches ' + sim.robotReach(r) + ' tiles'}) · “${esc(sim.robotMood(state, i))}”${r.done ? ` · did ${r.done} this morning` : ''}</span></div><span class="fm-batt"><i style="width:${r.charge}%" class="${r.charge < 30 ? 'low' : ''}"></i><u>${r.charge}%</u></span></div>`).join('') : '<p class="fm-dim">None yet. Ruess leases them at the Workshop (300 cr).</p>');
   if (R.length) h += `<p>${crewLine(state)} <a class="fm-link" data-tab="robots">Robots tab ›</a></p>`;
@@ -376,7 +382,7 @@ function collectionsTab(state) {
   const L = state.ledger, chip = (id, n, have = true) => `<span class="fm-chip${have ? '' : ' no'}">${have ? icon(id) : '<span class="fm-ico fm-fake" style="background:#bbb">?</span>'} ${have ? esc(ITEMS[id].name) : '???'}${n ? ` × ${n}` : ''}</span>`;
   const sh = Object.entries(L.shipped || {}).filter(([id]) => ITEMS[id]);
   let h = `<h3>Shipped (${sh.length} kinds · ${(L.earned || 0).toLocaleString()} cr earned)</h3><div class="fm-chips">${sh.length ? sh.map(([id, n]) => chip(id, n)).join('') : '<p class="fm-dim">Nothing yet.</p>'}</div>`;
-  const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king'], fl = state.fishLog || {};
+  const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king', 'cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi'], fl = state.fishLog || {};
   h += `<h3>Fish log (${FISH.filter((f) => fl[f]).length}/${FISH.length})</h3><div class="fm-chips">${FISH.map((f) => chip(f, fl[f], !!fl[f])).join('')}</div>`;
   h += `<h3>Memory Room (${sim.museumCount(state)}/${RELICS.length})</h3><div class="fm-chips">${RELICS.map((r) => chip(r.id, 0, !!(state.museum || {})[r.id])).join('')}</div>`;
   const ck = state.cooked || {};
@@ -385,15 +391,38 @@ function collectionsTab(state) {
   h += `<h3>Forage found (${all.filter((x) => fg[x]).length}/${all.length})</h3><div class="fm-chips">${all.map((x) => chip(x, fg[x], !!fg[x])).join('')}</div>`;
   return h;
 }
+// The Logs tab: what the Undercroft's terminals, walls and Moth's pages have told Sato, in story order; and the restoration.
+function logsTab(state) {
+  const got = (state.lower && state.lower.logs) || {}, n = LOWER_LOGS.filter((l) => got[l.id] != null).length;
+  let h = `<h3>Recovered logs (${n}/${LOWER_LOGS.length})</h3><p class="fm-dim">From the terminals and walls of the Lower deck, and the diary pages Moth brings you. More are still down there, and something behind the round door.</p>`;
+  h += LOWER_LOGS.map((l) => { const t = LOG_TEXT[l.id] || {}; return got[l.id] != null ? `<div class="fm-log"><b>${l.src === 'page' ? '📄' : l.src === 'terminal' ? '📼' : '✎'} ${esc(t.title)}</b><span class="fm-dim">${esc(t.author)} · found ${esc(sim.dateLabel({ cal: { ...dayToCal(got[l.id]) } }).replace(/ \(.*\)/, ''))}</span><p>${esc(t.text)}</p></div>` : `<div class="fm-log no"><b>${l.src === 'page' ? '📄' : '📼'} ???</b><span class="fm-dim">${l.src === 'page' ? 'A diary page Moth has not found yet.' : 'Not recovered yet.'}</span></div>`; }).join('');
+  const P = sim.projectList(state);
+  h += `<h3>The Undercroft</h3>` + P.map((p) => `<p>${p.done ? '<span class="fm-ok">✓</span>' : p.pending ? '⏳' : '○'} <b>${esc(p.name)}</b> <span class="fm-dim">${p.done ? 'done' : p.pending ? 'tonight' : esc(p.why || 'ready to fund at the terminal')}</span></p>`).join('');
+  return h;
+}
+const dayToCal = (d) => ({ year: Math.floor(d / 120) + 1, season: Math.floor(d / 30) % 4, day: (d % 30) + 1, minute: 360 });
+// Venn's restoration terminal on the Lower deck: every project, what it needs, and Fund.
+export function projectWindow(state, onChange) {
+  const draw = (msg = '') => {
+    const P = sim.projectList(state), t = sim.enclaveTrust(state);
+    let h = `<div class="fm-shop"><div class="fm-shophead"><div class="fm-face fm-terminal">◈</div><div><b>Restoration terminal · Lower deck</b><span>${state.player.money.toLocaleString()} cr · ${state.stock.lumber} lumber in the wood store</span></div></div>`;
+    if (msg) h += `<p class="fm-kready">${esc(msg)}</p>`;
+    h += P.map((p) => `<div class="fm-row${p.can ? '' : ' no'}"><div><b>${p.done ? '✓ ' : p.pending ? '⏳ ' : ''}${esc(p.name)}</b><span>${esc(p.desc)} · needs ${esc(p.needs)}${!p.can && p.why && !p.done ? ` · <em>${esc(p.why)}</em>` : ''}</span></div><button data-proj="${p.id}" ${p.can ? '' : 'disabled'}>${p.done ? 'Done' : p.price.toLocaleString() + ' cr'}</button></div>`).join('');
+    h += `<p class="fm-dim">Pumps: ${sim.PUMP_REPAIRS.map((r) => `${esc(r.name)} ${sim.lowerDone(state, r.id) ? '<span class="fm-ok">running</span>' : `(fit ${r.parts} pump parts at the pump)`}`).join(' · ')}. The enclave's trust: ${t.favours}/${t.needFavours} favours, ${t.hearts}/${t.needHearts} hearts with Agnes. Lamp kits and pump parts: Venn's bench (talk to him).</p></div>`;
+    const body = openWin('Restoration terminal', h, null, 'shopwin');
+    body.onclick = (e) => { const b = e.target.closest('button[data-proj]'); if (!b) return; const r = sim.fundProject(state, b.dataset.proj); onChange && onChange(r); draw(r.msg); };
+  };
+  draw();
+}
 export function journal(state, opts = {}) {
   let tab = opts.tab || 'today', sel = null;
-  const tabs = [['today', 'Today'], ['robots', 'Robots'], ['items', 'Items'], ['collections', 'Collections']];
+  const tabs = [['today', 'Today'], ['robots', 'Robots'], ['items', 'Items'], ['collections', 'Collections'], ['logs', 'Logs']];
   let msg = '';
   journalIsOpen = true;
   const draw = () => {
     stopViewer();
     const h = `<nav class="fm-tabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('')}<span class="fm-paused">⏸ Paused · P or Esc to go back</span></nav>` +
-      (tab === 'today' ? todayTab(state, opts) : tab === 'robots' ? robotsTab(state, msg) : tab === 'items' ? itemsTab(state, sel) : collectionsTab(state));
+      (tab === 'today' ? todayTab(state, opts) : tab === 'robots' ? robotsTab(state, msg) : tab === 'items' ? itemsTab(state, sel) : tab === 'logs' ? logsTab(state) : collectionsTab(state));
     msg = '';
     const body = openWin('Farm journal', h, () => { journalIsOpen = false; stopViewer(); }, 'journal');
     body.onclick = (e) => {

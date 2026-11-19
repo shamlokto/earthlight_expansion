@@ -23,8 +23,9 @@
 //  * Ruins: cells (7,11) (the lift) is always open; walls never cut an open cell off from it.
 //    Finds that do not fit in a full rucksack are left behind (the result says so).
 import { SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, ITEMS, CROPS, TOOL_LEVELS, FIELD_SIZES, PASTURE_SIZE, RELICS, FESTIVAL_DAYS, FRUIT_TREES, TREE_DAYS, WILD_TREES, SATO_BIRTHDAY, ROBOT_NAMES, ROBOT_JOBS, ROBOT_MOODS } from './data.js';
+import { MUSHROOMS as BED_CROPS, LOWER_LOGS } from './data.js';
 
-export const NPC_IDS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui', 'calloway', 'fenn'];
+export const NPC_IDS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui', 'calloway', 'fenn', 'venn', 'thorne', 'moth', 'wick'];
 export const CAN_CAPACITY = [0, 20, 40, 80];
 export const STORAGE_SIZE = 40, FRIDGE_SIZE = 30;
 // What goes in the fridge: anything you can eat or cook with.
@@ -38,8 +39,9 @@ export const STAR_PLUM_SOURCES = ['hill', 'ruins10', 'ruins20', 'harvest', 'lant
 export const RUCKSACK_TIERS = [[15, 1500], [20, 4000], [25, 8000], [30, 15000]];
 const FRUITS = ['cherry', 'peach', 'apple', 'persimmon', 'wild_apple', 'wild_grape', 'berry', 'plum', 'loquat', 'mulberry', 'yuzu'];
 const MUSHROOMS = ['mushroom', 'frostcap'];
+const CAVE_SHROOMS = ['shiitake', 'pale_oyster', 'glowcap'], CAVE_FISH = ['cave_fish', 'glowfish', 'pipe_eel'];
 const VEG = ['turnip', 'potato', 'cucumber', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach'];
-const FISH_IDS = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'];
+const FISH_IDS = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'cave_fish', 'glowfish', 'pipe_eel'];
 const MILK = ['milk_s', 'milk_m', 'milk_l'];
 // Each recipe: a list of ingredient slots; each slot is satisfied by any one of its ids. Different slots
 // of the same group must use different items (a salad is two DIFFERENT vegetables).
@@ -67,6 +69,12 @@ export const RECIPES = [
   { id: 'forest_bento', name: 'Forest bento', needs: [FISH_IDS, MUSHROOMS, VEG] },
   { id: 'colony_feast', name: 'Colony feast', needs: [FISH_IDS, FRUITS, VEG, ['egg']] },
   { id: 'founders_cake', name: 'Founders\' cake', needs: [['honeycomb'], ['chestnut'], MILK, ['egg']] },
+  // 2026-11-19: from the Undercroft
+  { id: 'mushroom_skewer', name: 'Shiitake skewer', needs: [['shiitake'], ['onion', 'herb']] },
+  { id: 'oyster_fry', name: 'Oyster fry', needs: [['pale_oyster'], ['egg']] },
+  { id: 'glowcap_broth', name: 'Glowcap broth', needs: [['glowcap'], CAVE_FISH] },
+  { id: 'undercroft_stew', name: 'Undercroft stew', needs: [CAVE_SHROOMS, ['potato', 'winter_root', 'sweetpotato', 'carrot'], CAVE_FISH] },
+  { id: 'truffle_omelette', name: 'Truffle omelette', needs: [['deep_truffle'], ['egg'], MILK] },
 ];
 // The kitchen window's groups.
 export const RECIPE_GROUPS = [
@@ -74,6 +82,7 @@ export const RECIPE_GROUPS = [
   ['Sweet things', ['berry_jam', 'grape_juice', 'honey_toast', 'fruit_salad', 'fruit_tart', 'persimmon_jam', 'honeyed_nuts', 'chestnut_roast']],
   ['From the hill', ['mushroom_soup', 'root_stew', 'matsutake_grill']],
   ['Feasts', ['cooked_meal', 'forest_bento', 'colony_feast', 'founders_cake']],
+  ['From the Undercroft', ['mushroom_skewer', 'oyster_fry', 'glowcap_broth', 'undercroft_stew', 'truffle_omelette']],
 ];
 export const UPGRADABLE = ['hoe', 'can', 'sickle', 'hammer', 'axe', 'rod'];
 export const SHOPS = {
@@ -84,6 +93,7 @@ export const SHOPS = {
   barge: { id: 'barge', name: "Moraine's Barge", keeper: 'moraine' },
   clinic: { id: 'clinic', name: 'Willowfall Clinic', keeper: 'mori' },
   grandmarket: { id: 'grandmarket', name: 'Grand Market (Main deck)', keeper: null },
+  undercroft: { id: 'undercroft', name: 'Venn\'s workbench (Lower deck)', keeper: 'venn' },
 };
 export const GOALS = [
   { id: 'clear', title: 'Clear some ground', hint: 'Cut a weed with the sickle, or break a rock with the hammer.', reward: 50 },
@@ -112,7 +122,7 @@ export const FORAGE = [
   [['mushroom', 4], ['chestnut', 3], ['wild_apple', 3], ['matsutake', 0.5]],
   [['frostcap', 4], ['pine_nut', 3], ['winter_root', 3]],
 ];
-const FISH_ODDS = { farm: [70, 25, 5], village: [55, 35, 10], hill: [35, 40, 25] };   // small, medium, large
+const FISH_ODDS = { farm: [70, 25, 5], village: [55, 35, 10], hill: [35, 40, 25], lower: [0, 0, 0], sump: [0, 0, 0] };   // the Undercroft's waters: underFish()   // small, medium, large
 const SEASON_FISH = ['fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'];
 const GIFT = { loved: 8, liked: 4, neutral: 1, disliked: -4 };
 const UPGRADE_COST = [null, null, { price: 800, req: [['scrap', 5]] }, { price: 2500, req: [['alloy', 5], ['crystal', 1]] }];
@@ -185,7 +195,7 @@ export function newGame({ seed } = {}) {
   for (let n = 3 + rint(state, 2); n > 0; n--) setObj(tiles[rint(state, tiles.length)], 'boulder');
   state.weatherTomorrow = rollWeather(state, 0, 2);
   rollForage(state);
-  return state;
+  return ensure(state);
 }
 
 export const saveState = (state) => JSON.stringify(state);
@@ -208,6 +218,7 @@ export function ensure(s) {
   if (!s.miner || typeof s.miner !== 'object' || !Number.isFinite(s.miner.charge)) s.miner = null;
   if (!Array.isArray(s.storage)) s.storage = new Array(STORAGE_SIZE).fill(null);
   if (!Array.isArray(s.fridge)) s.fridge = new Array(FRIDGE_SIZE).fill(null);
+  laneEnsure(s);
   obj(s, 'npc'); for (const id of NPC_IDS) if (!s.npc[id] || typeof s.npc[id] !== 'object') s.npc[id] = { love: 0, talked: false, gifted: false, met: false };   // people who moved in after the save
   return s;
 }
@@ -353,6 +364,7 @@ export function useTool(state, fieldId, x, y, dir) {
   if (fieldId === 'pasture') return usePasture(state, x, y, dir);
   if (!own(state.fields, fieldId)) return nothing('There is no field there.');
   if (fieldId === 'greenhouse' && !state.flags.greenhouse) return nothing(LOCKED);
+  if (fieldId === 'east' && !state.flags.eastfield) return nothing(EAST_LOCKED);
   const f = state.fields[fieldId], it = selected(state);
   if (!it) return nothing('Your hands are empty. Pick a tool or a seed bag.');
   if (!int(x) || !int(y)) return nothing('There is nothing there.');
@@ -391,6 +403,7 @@ export function harvest(state, fieldId, x, y) {
   const no = (msg) => fail(msg, { gained: [] });
   if (!own(state.fields, fieldId)) return no('There is no field there.');
   if (fieldId === 'greenhouse' && !state.flags.greenhouse) return no(LOCKED);
+  if (fieldId === 'east' && !state.flags.eastfield) return no(EAST_LOCKED);
   const f = state.fields[fieldId];
   const t = inside(f, x, y) ? f.tiles[y * f.w + x] : null;
   if (!t || !t.crop) return no('There is nothing to pick here.');
@@ -457,11 +470,11 @@ const animalAt = (state, index) => (int(index) && state.animals[index]) || null;
 export function milk(state, index) {
   const a = animalAt(state, index), no = (msg) => fail(msg, { gained: [] });
   if (!a) return no('There is no animal there.');
-  if (a.kind !== 'cow') return no('Only cows give milk.');
+  if (a.kind !== 'cow' && a.kind !== 'goat') return no('Only cows and goats give milk.');
   if (!countItem(state, 'milker')) return no('You need a milker. Corran sells one.');
   if (a.milked) return no(`${a.name} has been milked today.`);
   if (!a.fed) return no(`${a.name} is hungry. Feed her first.`);
-  const id = a.love < 34 ? 'milk_s' : a.love < 67 ? 'milk_m' : 'milk_l';
+  const id = a.kind === 'goat' ? (a.love < 67 ? 'goat_milk' : 'goat_milk_l') : a.love < 34 ? 'milk_s' : a.love < 67 ? 'milk_m' : 'milk_l';
   if (!addItem(state, id, 1).ok) return no(FULL);
   a.milked = true;
   return { ok: true, msg: `${a.name} gave ${lower(id)}.`, gained: [{ id, n: 1 }] };
@@ -469,7 +482,7 @@ export function milk(state, index) {
 export function brush(state, index) {
   const a = animalAt(state, index);
   if (!a) return fail('There is no animal there.');
-  if (a.kind !== 'cow') return fail('Chickens do not care for the brush.');
+  if (a.kind === 'chicken' || a.kind === 'duck') return fail(`${a.kind === 'duck' ? 'Ducks' : 'Chickens'} do not care for the brush.`);
   if (!countItem(state, 'brush')) return fail('You need a brush. Corran sells one.');
   if (a.brushed) return fail(`${a.name} has been brushed today.`);
   a.brushed = true; bump(a, 3);
@@ -644,9 +657,11 @@ function shelves(state, shopId) {
   const p = state.player, out = [];
   const sell = (id, price, more) => out.push({ key: id, label: ITEMS[id].name, desc: ITEMS[id].desc, price, give: id, ...more });
   const once = (id, price) => { if (!countItem(state, id)) sell(id, price, { once: true }); };
+  if (LANE_SHOPS.has(shopId)) { laneShelves(state, shopId, sell, once, out); return out; }
   if (shopId === 'store') {
-    for (const c of Object.values(CROPS)) if (c.seasons.length === 1 && c.seasons[0] === state.cal.season) sell(`seed_${c.id}`, c.bag);
+    for (const c of Object.values(CROPS)) if (c.seasons.length === 1 && c.seasons[0] === state.cal.season && !c.shop) sell(`seed_${c.id}`, c.bag);
     sell('seed_grass', 500); sell('bread', 60); once('rod', 600);
+    if (state.flags.ld_catacombs) sell('spore_bag', SPORE_PRICE + 20);
     const tier = RUCKSACK_TIERS.find(([n]) => n > p.slots);
     if (tier) {
       const [to, price] = tier;
@@ -695,7 +710,7 @@ function shelves(state, shopId) {
       apply: () => { state.flags.yard_big = true; return 'Ruess glazes four new racks in the solar yard. "Belt glass. Better than anything we pour up here."'; } });
     if (state.flags.feed_mill && !state.flags.mill_rollers) out.push({ key: 'mill_rollers', label: 'Titanium mill rollers', desc: 'Steel-and-titanium rollers for your feed mill: it grinds forty crops a night instead of twenty.', price: 800, req: [['titanium', 2]], needs: '2 titanium ore', once: true,
       apply: () => { state.flags.mill_rollers = true; return 'Ruess fits the new rollers. The mill sounds less like it is complaining.'; } });
-    if (!state.miner) out.push({ key: 'miner', label: 'Lease a mining unit', desc: `A stubby belt robot with a drill arm. Take it out with you: F sets it down and it breaks the plain rocks and ice around it, ${MINER_RUN} charge a rock, on charged batteries from your rucksack. It leaves the rich veins to you.`, price: MINER_PRICE, once: true,
+    if (!state.miner) out.push({ key: 'miner', label: 'Lease a mining unit', desc: `A stubby belt robot with a drill arm. Take it out with you: F sets it down and it breaks the small rocks, ice and medium boulders around it, ${MINER_RUN} charge a rock (double for a medium one), on charged batteries from your rucksack. The large and huge boulders it leaves to you.`, price: MINER_PRICE, once: true,
       apply: () => { state.miner = { name: 'Gravel', charge: 100 }; return 'Ruess pats a squat orange robot with a drill for an arm. "Gravel. It is not clever, but it is very sincere."'; } });
     if (!state.flags.tank) out.push({ key: 'up_tank', label: 'Big suit air tank', desc: `A titanium-lined tank for your space suit: ${AIR_TANK_BIG} air instead of ${AIR_TANK}, so you can fly half as far again.`, price: 1800, req: [['titanium', 2], ['silica', 2]], needs: '2 titanium ore, 2 silica', once: true,
       apply: () => { state.flags.tank = true; return 'Ruess swaps the tank on your suit. "Breathe as much as you like. Within reason."'; } });
@@ -709,11 +724,14 @@ function shelves(state, shopId) {
       out.push({ key: 'greenhouse', label: 'Greenhouse repair', desc: 'Crops grow in the greenhouse in any season.', price: 4000, lumber: 120, needs: '120 lumber', once: true,
         apply: () => { state.flags.greenhouse = true; return 'Ruess repaired the greenhouse. It is yours to plant.'; } });
     }
+  } else if (shopId === 'undercroft') {            // Tobias Venn's bench by the restoration terminal
+    sell('lamp_kit', 120, { req: [['scrap', 4], ['copper', 1]], needs: '4 scrap, 1 copper ore' }); sell('pump_part', 180, { req: [['nickel_iron', 3], ['copper', 1]], needs: '3 nickel-iron, 1 copper ore' });
+    if (state.flags.ld_catacombs) sell('spore_bag', SPORE_PRICE);
   } else if (shopId === 'cafe') {
     sell('tea', 30); sell('soup', 80); sell('pie', 150);
   } else if (shopId === 'grandmarket') {             // the Main deck's vending terminals: imports at a premium
     const gm = (id, price) => sell(id, price, { key: 'gm_' + id });
-    for (const c of Object.values(CROPS)) if (c.seasons.length === 1 && c.seasons[0] === state.cal.season) gm(`seed_${c.id}`, Math.round(c.bag * 1.25));
+    for (const c of Object.values(CROPS)) if (c.seasons.length === 1 && c.seasons[0] === state.cal.season && !c.shop) gm(`seed_${c.id}`, Math.round(c.bag * 1.25));
     for (const k of Object.keys(FRUIT_TREES)) gm(`sapling_${k}`, 2800);
     gm('battery', 220); gm('honeycomb', 180); gm('chestnut', 90); gm('tonic', 550);
   } else if (shopId === 'barge') {
@@ -726,6 +744,7 @@ function shelves(state, shopId) {
       apply: () => { p.stamina = p.maxStamina; return 'You feel rested and well.'; } });
     sell('tonic', 500);
   }
+  if (shopId === 'ranch' || shopId === 'workshop') laneShelves(state, shopId, sell, once, out);
   return out;
 }
 // Why the player cannot buy n of this, or null.
@@ -912,16 +931,37 @@ export function leaveMine(state) { state.mine = null; return { ok: true }; }
 // Sato flies out of Vashti's hangar in a space suit with a thruster pack and breaks rocks with her hammer.
 // The belt is one map BELT_W wide, running north from the launch apron (the south edge) through BELT_SECTORS
 // bands of SECTOR_H rows: sector 1 near home, sector 20 at the far north, richer the further out. The layout
-// (rock fields, great unbreakable asteroids, comet ice, rich veins, a pickup pod in every sector, landmarks)
+// (rock fields of small rocks and medium, large and huge boulders, great unbreakable asteroids, comet ice, a pickup pod in every sector, landmarks)
 // comes from state.belt.seed and never changes; the rocks she breaks drift back 2–5 days later
 // (state.belt.gone: cell → the day it returns). The suit's air is the price of distance: AIR_PER_TILE a tile
 // flown. Every sector has a pickup pod that flies her home; the launch cradle starts a trip at sector 1, or at
 // sector 5, 10, 15, 20 once she has reached it (state.belt.reached, the milestones).
-// Cells: 0 open, 1 rock, 3 great asteroid (solid), 4 comet ice, 5 rich vein, 6 pickup pod, 7 landmark.
+// Cells: 0 open, 1 small rock, 2 medium boulder, 3 great asteroid (solid, never breaks), 4 comet ice, 5 large boulder,
+// 6 pickup pod, 7 landmark, 8 huge boulder (ROCK_SIZES: the bigger the rock, the better the hammer it needs and the ore).
 export const BELT_W = 34, SECTOR_H = 14, BELT_SECTORS = 20, BELT_APRON = 6, BELT_H = BELT_APRON + BELT_SECTORS * SECTOR_H;
 export const BELT_PAD = [17, BELT_H - 3], AIR_TANK = 100, AIR_TANK_BIG = 150, AIR_PER_TILE = 0.3, BELT_MILESTONE = 5;
 export const BELT_LANDMARKS = { 3: 'derelict', 8: 'comet', 13: 'wreck', 20: 'far_marker' };
 export const MINER_REACH = 4, MINER_RUN = 10, MINER_HOLD = 12, MINER_PRICE = 1200;
+// Rock sizes and the hammer: tier is the lowest hammer level that breaks it (1 Field, 2 Alloy, 3 Starsteel); hits by
+// hammer level (0: too soft). Small rocks and ice give common ore; medium boulders the sector's odds (beltOdds);
+// large boulders always one good ore; huge boulders two or three of the best.
+export const ROCK_SIZES = {
+  1: { id: 'small', name: 'small rock', tier: 1, hits: [0, 1, 1, 1] }, 4: { id: 'ice', name: 'comet ice', tier: 1, hits: [0, 1, 1, 1] },
+  2: { id: 'medium', name: 'medium boulder', tier: 1, hits: [0, 3, 2, 1] }, 5: { id: 'large', name: 'large boulder', tier: 2, hits: [0, 0, 3, 2] },
+  8: { id: 'huge', name: 'huge boulder', tier: 3, hits: [0, 0, 0, 3] },
+};
+const BELT_GOALS = { 1: [5], 2: [5, 8], 3: [8] };
+export const isRock = (kind) => own(ROCK_SIZES, String(kind));
+export const rockHits = (kind, level) => (isRock(kind) ? ROCK_SIZES[kind].hits[clamp(int(level) ? level : 1, 1, 3)] : 0);
+export const smallOdds = (s) => ({ scrap: 0.18, nickel_iron: 0.26, silica: 0.16, comet_ice: 0.08, ...(s >= 2 ? { copper: 0.04 } : {}) });
+const LARGE_W = (s) => { const k = 0.6 + s / 12; return { titanium: 3, alloy: 3, copper: 1.2, platinum: 1.6 * k, crystal: 1.2 * k, star_metal: 0.5 * k }; };
+const HUGE_W = (s) => ({ platinum: 3, crystal: 3, star_metal: 1.6 * (0.7 + s / 20), titanium: 1 });
+// The chance of each ore from one roll on a rock of this size in sector s (large and huge: per pick, and they always give).
+export function rockOdds(kind, s) {
+  if (kind === 1) return smallOdds(s); if (kind === 2) return beltOdds(s); if (kind === 4) return { comet_ice: 0.72, silica: 0.14 };
+  const w = kind === 8 ? HUGE_W(s) : kind === 5 ? LARGE_W(s) : {}, t = Object.values(w).reduce((a, b) => a + b, 0);
+  return Object.fromEntries(Object.entries(w).map(([id, v]) => [id, v / t]));
+}
 // The sector of a belt row (cell y): the apron and sector 1 are home; sector 20 is the far north.
 export const beltSector = (y) => (y >= BELT_H - BELT_APRON ? 1 : clamp(BELT_SECTORS - Math.floor(y / SECTOR_H), 1, BELT_SECTORS));
 export const sectorTop = (s) => (BELT_SECTORS - s) * SECTOR_H;          // the northmost row of a sector
@@ -942,8 +982,10 @@ export function beltLayout(seed) {
     for (let n = 4 + ri(3); n > 0; n--) blob(2 + r() * (w - 4), Y(), 2 + r() * 2.6, 1.4 + r() * 1.6, 1, 0.66);                      // rock fields with gaps between
     if (s >= 2) for (let n = s >= 6 && s <= 14 ? 2 : 1; n > 0; n--) blob(2 + r() * (w - 4), Y(), 1.2 + r(), 1 + r() * 0.8, 4, 0.8); // comet ice clusters
     for (let y = y0; y < y0 + SECTOR_H; y++) for (let x = 0; x < w; x++) if (!cells[at(x, y)] && r() < 0.022) cells[at(x, y)] = 1;
-    const pr = s < 3 ? 0 : Math.min(0.2, 0.012 * (s - 2));                // rich veins: only further out, and more of them
-    for (let y = y0; y < y0 + SECTOR_H; y++) for (let x = 0; x < w; x++) if (cells[at(x, y)] === 1 && r() < pr) cells[at(x, y)] = 5;
+    const pm = 0.12 + 0.012 * s, pl = s < 3 ? 0.008 : 0.02 + 0.008 * s, ph = s < 6 ? 0.004 : 0.01 + 0.007 * (s - 5);   // bigger rocks further north
+    const band = []; for (let y = y0; y < y0 + SECTOR_H; y++) for (let x = 0; x < w; x++) if (cells[at(x, y)] === 1) band.push(at(x, y));
+    for (const i of band) { const q = r(); cells[i] = q < ph ? 8 : q < ph + pl ? 5 : q < ph + pl + pm ? 2 : 1; }
+    for (const k of BELT_GOALS[s] || []) { const smalls = band.filter((i) => cells[i] === 1); if (smalls.length) cells[smalls[ri(smalls.length)]] = k; }   // a few big ones early: goals for a better hammer
     const lm = BELT_LANDMARKS[s];
     if (lm) { const x = 5 + ri(w - 10), y = y0 + 4 + ri(SECTOR_H - 8); if (lm === 'comet') blob(x, y, 3.5, 2.6, 4, 0.75, false); clear(x, y, 1); cells[at(x, y)] = 7; marks.push({ kind: lm, sector: s, x, y }); }
     let px, py; do { px = 4 + ri(w - 8); py = y0 + 3 + ri(SECTOR_H - 6); } while (marks.some((m) => Math.abs(m.x - px) < 5 && Math.abs(m.y - py) < 4));
@@ -975,15 +1017,11 @@ function beltOf(state) {
 export const beltAirMax = (state) => (state.flags.tank ? AIR_TANK_BIG : AIR_TANK);
 // Where the launch cradle can start a trip: sector 1, and every fifth sector she has reached.
 export const beltStarts = (state) => { const top = beltOf(state).reached; return [1, ...[5, 10, 15, 20].filter((s) => s <= top)]; };
-// The hardness of a rock: plain rock and ice 1; a rich vein 2, and 3 from sector 10. The hammer's level must be at
-// least the hardness; a hammer one level harder than the rock breaks it in one hit, an equal one takes two.
-export const rockHardness = (kind, sector) => (kind === 5 ? (sector >= 10 ? 3 : 2) : kind === 1 || kind === 4 ? 1 : 0);
-export const hammerHits = (hard, level) => (!hard || level < hard ? 0 : level > hard ? 1 : 2);
 export function enterBelt(state, start = 1) {
   const b = beltOf(state), L = beltLayout(b.seed), today = absDay(state);
   start = beltStarts(state).includes(start) ? start : 1;
   for (const k of Object.keys(b.gone)) if (!(b.gone[k] > today)) delete b.gone[k];
-  const cells = L.cells.slice(); for (const k of Object.keys(b.gone)) if (cells[+k] === 1 || cells[+k] === 4 || cells[+k] === 5) cells[+k] = 0;
+  const cells = L.cells.slice(); for (const k of Object.keys(b.gone)) if (isRock(cells[+k])) cells[+k] = 0;
   const pod = L.pods.find((p) => p.sector === start), pos = start > 1 && pod ? [pod.x + 0.5, pod.y + 2.5] : [BELT_PAD[0] + 0.5, BELT_PAD[1] + 0.5];
   const air = beltAirMax(state);
   state.mine = { mode: 'belt', depth: start, floor: start, sector: start, start, w: L.w, h: L.h, sectors: BELT_SECTORS, sectorH: SECTOR_H, apron: BELT_APRON, cells, hp: {}, pods: L.pods, marks: L.marks, pos, air, airMax: air, monsters: [], haz: [], hatch: -1, star: -1, miner: null, ver: 0 };
@@ -1016,34 +1054,31 @@ export function beltHome(state, how = 'pad') {
   state.mine = null; tick(state, minutes);
   return { ok: true, minutes, how, msg: how === 'tow' ? 'The air alarm, then the tug of the tow line: Vashti reels you in. It takes an hour, and it takes it out of you.' : how === 'pod' ? 'The pickup pod seals, hums, and flies you home on its own. Fifteen minutes of stars.' : 'Back through the hangar mouth.' };
 }
-// What a rock gives up: plain rock by the sector's odds; comet ice mostly ice; a rich vein always something good.
-function richFind(state, s) {
-  const pool = [['titanium', 4, 3], ['star_metal', 3, 2.5], ['platinum', 8, 2.5], ['crystal', 10, 2], ['alloy', 1, s < 5 ? 3 : 1], ['copper', 1, s < 4 ? 3 : 0.5]].filter(([, from]) => s >= from);
-  return pool[pick(state, pool.map((p) => p[2]))][0];
-}
+// What a rock gives up, by its size (rockOdds): a list of ore ids, maybe empty.
+function roll(state, odds) { let r = rnd(state), acc = 0; for (const [id, p] of Object.entries(odds)) { acc += p; if (r < acc) return id; } return null; }
 function beltFind(state, kind, s) {
-  if (kind === 5) return richFind(state, s);
-  if (kind === 4) { const r = rnd(state); return r < 0.72 ? 'comet_ice' : r < 0.86 ? 'silica' : null; }
-  return find(state, s, 'belt');
+  if (kind === 8) return Array.from({ length: rnd(state) < 0.35 ? 3 : 2 }, () => roll(state, rockOdds(8, s)) || 'platinum');
+  const id = roll(state, rockOdds(kind, s)); return id ? [id] : [];
 }
 function breakCell(state, m, i, by) {
   const kind = m.cells[i], s = beltSector(Math.floor(i / m.w)), b = beltOf(state);
   m.cells[i] = 0; delete m.hp[i]; m.ver++; state.stats.searched++;
   b.gone[i] = absDay(state) + 2 + (hash32(b.seed, i, absDay(state)) % 4);   // a fresh rock drifts in 2–5 days later
-  const id = beltFind(state, kind, s), extra = by === 'sato' && state.flags.drill && rnd(state) < DRILL_BONUS ? beltFind(state, kind === 5 ? 1 : kind, s) : null;
-  return [...(id ? [id] : []), ...(extra ? [extra] : [])];
+  const got = beltFind(state, kind, s);
+  if (by === 'sato' && state.flags.drill && rnd(state) < DRILL_BONUS) got.push(...beltFind(state, kind === 8 ? 5 : kind, s));   // the rock-splitter: now and then one more
+  return got;
 }
 // Space with the hammer (or E): one hit on a belt rock. 1 stamina a hit.
 function beltHit(state, x, y) {
-  const m = state.mine, no = (msg) => fail(msg, { broke: false, gained: [] });
+  const m = state.mine, no = (msg, more) => fail(msg, { broke: false, gained: [], ...more });
   const i = int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? y * m.w + x : -1, kind = i >= 0 ? m.cells[i] : 0, s = i >= 0 ? beltSector(y) : 1;
-  const hard = rockHardness(kind, s);
-  if (!hard) return no(kind === 3 ? 'Too big to break: a whole asteroid. Fly round it.' : 'There is nothing to break here.');
+  const size = isRock(kind) ? ROCK_SIZES[kind] : null;
+  if (!size) return no(kind === 3 ? 'Too big to break: a whole asteroid. Fly round it.' : 'There is nothing to break here.');
   if (!countItem(state, 'hammer')) return no(state.pending.upgrade && state.pending.upgrade.tool === 'hammer' ? 'Your hammer is at Ruess\'s workshop.' : 'You need your hammer to break rocks.');
-  const lv = state.player.toolLevel.hammer || 1, hits = hammerHits(hard, lv);
-  if (!hits) return no(`A ${hard >= 3 ? 'starsteel-hard' : 'hard'} vein: it needs ${hard >= 3 ? 'a Starsteel' : 'an Alloy'} hammer. Ruess can rework yours.`);
+  const lv = state.player.toolLevel.hammer || 1, hits = rockHits(kind, lv);
+  if (!hits) return no(`A ${size.name}: it needs ${size.tier >= 3 ? 'a Starsteel' : 'an Alloy'} hammer, and yours is ${TOOL_LEVELS[lv]}. Ruess can rework it.`, { need: size.tier });
   const left = (m.hp[i] ?? hits) - 1;
-  if (left > 0) { m.hp[i] = left; return spend(state, 1, { ok: true, broke: false, gained: [], left, msg: 'Crack. One more.' }); }
+  if (left > 0) { m.hp[i] = left; return spend(state, 1, { ok: true, broke: false, gained: [], left, kind, msg: `Crack. ${left} more hit${left > 1 ? 's' : ''}.` }); }
   const res = take(state, breakCell(state, m, i, 'sato').map((id) => [id, 1]), { ok: true, broke: true, gained: [], left: 0, kind });
   if (!res.gained.length && !res.msg) res.msg = kind === 4 ? 'The ice shatters into glitter. Nothing worth keeping.' : 'The rock splits. Nothing inside but more rock.';
   return spend(state, 1, res);
@@ -1051,7 +1086,8 @@ function beltHit(state, x, y) {
 // The mining unit (Ruess leases one, MINER_PRICE): F sets it down near Sato in the belt and it breaks plain rocks and
 // ice within MINER_REACH tiles of where it stands, one at a time (the UI calls minerWork every few seconds), MINER_RUN
 // charge a rock. A run is a charged battery from her rucksack (the flat one comes back); it keeps what it breaks in
-// its hopper (MINER_HOLD) until she comes close or recalls it. It will not touch the rich veins: those are hers.
+// its hopper (MINER_HOLD) until she comes close or recalls it. It breaks small rocks, ice and medium
+// boulders (a medium one costs a double run); the large and huge boulders are hers.
 export function minerDeploy(state, x, y) {
   const m = inBelt(state), u = ensure(state).miner;
   if (!u) return fail('You have no mining unit. Ruess leases them at the Workshop.');
@@ -1070,12 +1106,13 @@ export function minerWork(state) {
   if (d.hold.reduce((a, g) => a + g.n, 0) >= MINER_HOLD) return fail(`${u.name}'s hopper is full. Come and empty it.`, { full: true });
   let best = -1, bd = MINER_REACH + 0.01;
   for (let y = Math.max(0, Math.floor(d.y - MINER_REACH)); y <= Math.min(m.h - 1, d.y + MINER_REACH); y++) for (let x = Math.max(0, Math.floor(d.x - MINER_REACH)); x <= Math.min(m.w - 1, d.x + MINER_REACH); x++) {
-    const c = m.cells[y * m.w + x]; if (c !== 1 && c !== 4) continue; const dd = Math.hypot(x + 0.5 - d.x, y + 0.5 - d.y); if (dd < bd) { bd = dd; best = y * m.w + x; }
+    const c = m.cells[y * m.w + x]; if (c !== 1 && c !== 2 && c !== 4) continue; const dd = Math.hypot(x + 0.5 - d.x, y + 0.5 - d.y); if (dd < bd) { bd = dd; best = y * m.w + x; }
   }
   if (best < 0) return fail(`${u.name} has broken everything in reach. Set it down somewhere new.`, { idle: true });
   let swapped = false;
-  if (u.charge < MINER_RUN) { if (!countItem(state, 'battery_full')) return fail(`${u.name}'s battery is flat. Give it a charged one (F to recall it, then set it down again).`, { flat: true }); removeItem(state, 'battery_full', 1); addItem(state, 'battery', 1); u.charge = 100; swapped = true; }
-  u.charge -= MINER_RUN; const got = breakCell(state, m, best, 'miner');
+  const cost = m.cells[best] === 2 ? MINER_RUN * 2 : MINER_RUN;       // a medium boulder takes a double run
+  if (u.charge < cost) { if (!countItem(state, 'battery_full')) return fail(`${u.name}'s battery is flat. Give it a charged one (F to recall it, then set it down again).`, { flat: true }); removeItem(state, 'battery_full', 1); addItem(state, 'battery', 1); u.charge = 100; swapped = true; }
+  u.charge -= cost; const got = breakCell(state, m, best, 'miner');
   for (const id of got) { const l = d.hold.find((g) => g.id === id); if (l) l.n++; else d.hold.push({ id, n: 1 }); }
   return { ok: true, x: best % m.w, y: Math.floor(best / m.w), got, charge: u.charge, swapped };
 }
@@ -1139,6 +1176,7 @@ export function fish(state, place) {
   if (!own(FISH_ODDS, place)) return no('There is no water here.');
   const it = selected(state);
   if (!it || it.id !== 'rod') return no(countItem(state, 'rod') ? 'Select the fishing rod first.' : 'You need a fishing rod. Seln sells one.');
+  if (place === 'lower' || place === 'sump') return underFish(state, place);
   const level = state.player.toolLevel.rod, wet = state.weather === 'rain' || state.weather === 'storm';
   const [s, m, l] = FISH_ODDS[place], seasonal = SEASON_FISH[state.cal.season];
   // Better rods and rain move the odds from small fish to large and seasonal ones.
@@ -1219,7 +1257,7 @@ const at = (list, map, x, y) => list.findIndex((o) => o.map === map && o.x === x
 export const chestAt = (state, map, x, y) => at(ensure(state).chests, map, x, y);
 export const panelAt = (state, map, x, y) => at(ensure(state).panels, map, x, y);
 export const fruitTreeAt = (state, map, x, y) => at(ensure(state).fruitTrees, map, x, y);
-export const occupied = (state, map, x, y) => chestAt(state, map, x, y) >= 0 || panelAt(state, map, x, y) >= 0 || fruitTreeAt(state, map, x, y) >= 0;
+export const occupied = (state, map, x, y) => chestAt(state, map, x, y) >= 0 || panelAt(state, map, x, y) >= 0 || fruitTreeAt(state, map, x, y) >= 0 || machineAt(state, map, x, y) >= 0;
 // Space with a field chest or a solar charger in hand.
 export function placeItem(state, map, x, y) {
   const s = selected(state);
@@ -1227,6 +1265,7 @@ export function placeItem(state, map, x, y) {
   if (!int(x) || !int(y) || x < 0 || y < 0 || x > 99 || y > 99) return fail('There is no room there.');
   if (!PLACE_MAPS[s.id].includes(map)) return fail(s.id === 'solar_panel' ? 'The charger goes on your farm.' : 'Field chests go on the farm or the hill.');
   if (occupied(state, map, x, y)) return fail('Something is already standing there.');
+  if (MACHINES[s.id]) return placeMachine(state, s.id, map, x, y);
   const id = s.id; takeFromSlot(state, state.player.sel, 1);
   if (id === 'field_chest') { state.chests.push({ map, x, y, items: new Array(CHEST_SIZE).fill(null) }); return { ok: true, msg: 'You set the field chest down. E opens it; an axe picks it up when it is empty.', kind: 'chest', index: state.chests.length - 1 }; }
   state.panels.push({ map, x, y, slots: [null, null] });
@@ -1235,7 +1274,12 @@ export function placeItem(state, map, x, y) {
 // The axe on an empty chest or charger picks it back up.
 export function pickUpPlaced(state, map, x, y) {
   const s = selected(state); if (!s || s.id !== 'axe') return fail('Use the axe to pry it up.');
-  const c = chestAt(state, map, x, y), p = panelAt(state, map, x, y);
+  const c = chestAt(state, map, x, y), p = panelAt(state, map, x, y), mi = machineAt(state, map, x, y);
+  if (mi >= 0 && c < 0 && p < 0) {
+    const m = state.machines[mi]; if (m.item || (m.out && m.n)) return fail(`Empty the ${MACHINES[m.kind].name.toLowerCase()} before you move it.`);
+    if (room(state, m.kind) < 1) return fail(FULL);
+    state.machines.splice(mi, 1); addItem(state, m.kind, 1); return { ok: true, msg: `You picked up the ${lower(m.kind)}.`, kind: 'machine' };
+  }
   if (c < 0 && p < 0) return fail('There is nothing to pick up there.');
   const id = c >= 0 ? 'field_chest' : 'solar_panel';
   if (c >= 0 && state.chests[c].items.some(Boolean)) return fail('Empty the chest before you move it.');
@@ -1431,7 +1475,7 @@ export function crewBatteries(state) {
 // The morning's work, in order of the robots: [{ name, job, done, used, charge, short, levelUp }]. The battery
 // keepers go first, so the crew starts the day on fresh batteries.
 function robotsWork(state, notes) {
-  const out = [], fields = [state.fields.farm, ...(state.flags.greenhouse ? [state.fields.greenhouse] : [])], R = ensure(state).robots;
+  const out = [], fields = [state.fields.farm, ...(state.flags.greenhouse ? [state.fields.greenhouse] : []), ...(state.flags.eastfield && state.fields.east ? [state.fields.east] : [])], R = ensure(state).robots;
   const recs = R.map((r) => ({ name: r.name, job: r.job, done: 0, used: 0, charge: r.charge, short: false, levelUp: false }));
   R.forEach((r, i) => { if (r.job === 'batteries') keeperWork(state, r, recs[i], notes); });
   for (const [ri, r] of R.entries()) {
@@ -1676,6 +1720,7 @@ export function sleep(state, { collapsed = false } = {}) {
   let hungry = 0;
   for (const a of state.animals) {
     if (a.fed && a.kind === 'chicken') state.eggs++;
+    else if (a.fed) foldNight(state, a);
     bump(a, a.fed ? 2 : -5);
     if (!a.fed) hungry++;
     a.fed = a.milked = a.brushed = a.talked = false;
@@ -1721,6 +1766,8 @@ export function sleep(state, { collapsed = false } = {}) {
   }
   // 7b. The Field-units do their morning work (after the rain and the deliveries).
   const robots = robotsWork(state, notes);
+  lowerOvernight(state, notes);
+  laneOvernight(state, notes, seasonChanged);
   // 8. A fresh day.
   rollForage(state);
   for (const n of Object.values(state.npc)) { n.talked = false; n.gifted = false; }
@@ -1729,6 +1776,210 @@ export function sleep(state, { collapsed = false } = {}) {
   if (collapsed) notes.push('You wake up sore. Half your strength is back.');
   state.stats.days++;
   return { ok: true, earned, shipped, notes, seasonChanged, newYear, robots };
+}
+
+// ---------------------------------------------------------------- the fold, the duck house, the hives and Market Lane (2026-11-19)
+import { EAST_FIELD, FIELD_ORIGINS } from './data.js';
+// Five new villagers (story.js); goats and sheep in the fold, ducks in the duck house by the east pond (Ruess repairs both:
+// flags.fold, flags.duckhouse); the East Terrace field (flags.eastfield); artisan machines set down on the farm like chests
+// (state.machines = [ { kind, map, x, y, item, out, n, days } ]); the shops of Market Lane; a song request on the radio.
+NPC_IDS.push('pia', 'lark', 'noor', 'tika', 'vesna');
+Object.assign(HOUSING, { goat: { cap: 4, home: 'fold', food: 'fodder' }, sheep: { cap: 4, home: 'fold', food: 'fodder' }, duck: { cap: 6, home: 'duck house', food: 'feed' } });
+Object.assign(NAMES, {
+  goat: ['Clementine', 'Pickle', 'Sorrel', 'Barnaby', 'Tuppence', 'Quince', 'Fennel', 'Hazelnut'],
+  sheep: ['Mallow', 'Dumplin', 'Cloud', 'Woolsey', 'Biscotti', 'Lamington', 'Fleecy', 'Oatcake'],
+  duck: ['Puddle', 'Quill', 'Admiral', 'Dabble', 'Splash', 'Marigold', 'Ripple', 'Wader', 'Pebble', 'Teal'],
+});
+Object.assign(SHOPS, {
+  bakery: { id: 'bakery', name: 'The Sunrise Oven', keeper: 'lark' },
+  tailor: { id: 'tailor', name: "Varga's Mend & Make", keeper: 'pia' },
+  florist: { id: 'florist', name: 'The Seedhouse', keeper: 'noor' },
+  garage: { id: 'garage', name: "Brandt's Garage", keeper: 'tika' },
+  radio: { id: 'radio', name: 'Radio Willowfall', keeper: 'vesna' },
+});
+Object.assign(PLACE_MAPS, { cheese_press: ['farm'], spinning_wheel: ['farm'], beehive: ['farm'] });
+FORAGE[0].push(['wild_violet', 2]); FORAGE[1].push(['elderflower', 2]); FORAGE[2].push(['rosehip', 2]); FORAGE[3].push(['snowdrop', 2]);
+VEG.push('cabbage', 'snap_pea', 'bell_pepper', 'beet', 'kale', 'frost_leek'); FRUITS.push('cranberry', 'rosehip'); MILK.push('goat_milk', 'goat_milk_l');
+for (const id of ['honey_toast', 'honeyed_nuts', 'founders_cake']) RECIPES.find((r) => r.id === id).needs.find((s) => s.includes('honeycomb')).push('honey');
+const LANE_FLOWERS = ['tulip', 'sunflower', 'cosmos', 'snowbell', 'wild_violet', 'elderflower', 'snowdrop'], CHEESES = ['cheese', 'goat_cheese'], EGGS = ['egg', 'duck_egg'], LOAVES = ['bread', 'seed_loaf'];
+export const LANE_RECIPES = [
+  { id: 'goat_cheese_salad', name: 'Goat cheese salad', needs: [['goat_cheese'], VEG] },
+  { id: 'cheese_omelette', name: 'Cheese omelette', needs: [EGGS, CHEESES] },
+  { id: 'duck_custard', name: 'Duck egg custard', needs: [['duck_egg'], MILK, ['honey']] },
+  { id: 'honey_cake', name: 'Honey cake', needs: [['honey'], EGGS, LOAVES] },
+  { id: 'blossom_tea', name: 'Blossom tea', needs: [LANE_FLOWERS, ['herb', 'wild_mint']] },
+  { id: 'cheese_toast', name: 'Cheese toast', needs: [LOAVES, CHEESES] },
+  { id: 'stuffed_peppers', name: 'Stuffed peppers', needs: [['bell_pepper'], CHEESES, ['onion', 'tomato']] },
+  { id: 'cabbage_rolls', name: 'Cabbage rolls', needs: [['cabbage'], ['potato', 'carrot', 'onion', 'beet'], EGGS] },
+  { id: 'honey_melon', name: 'Honeyed melon', needs: [['melon'], ['honey']] },
+  { id: 'ruby_soup', name: 'Ruby beet soup', needs: [['beet'], ['kale', 'cabbage', 'spinach'], MILK] },
+  { id: 'kale_frittata', name: 'Green frittata', needs: [['kale', 'snap_pea', 'frost_leek', 'spinach'], ['duck_egg'], CHEESES] },
+];
+RECIPES.push(...LANE_RECIPES);
+RECIPE_GROUPS.push(['From the fold and the hives', LANE_RECIPES.map((r) => r.id)]);
+// The artisan machines: what each takes and what comes out by morning (a beehive takes nothing and fills itself).
+export const MACHINES = {
+  cheese_press: { name: 'Cheese press', takes: { milk_s: ['cheese', 1], milk_m: ['cheese', 1], milk_l: ['cheese', 1], goat_milk: ['goat_cheese', 1], goat_milk_l: ['goat_cheese', 1] }, hint: 'Hold a bottle of milk to put it in the press.' },
+  spinning_wheel: { name: 'Spinning wheel', takes: { wool: ['yarn', 1], fine_wool: ['yarn', 2] }, hint: 'Hold a fleece to put it on the wheel.' },
+  beehive: { name: 'Beehive', takes: {}, hint: 'The bees are busy. Honey every three days, spring to autumn; flowers close by make it two.' },
+};
+export const HIVE_DAYS = 3, HIVE_DAYS_FLOWERS = 2, HIVE_FLOWERS = 3, HIVE_REACH = 6, HIVE_MAX = 3, SONG_PRICE = 150, MAX_MACHINES = 12;
+const EAST_LOCKED = 'The East Terrace is rubble and dry ground. Ruess could clear it and run water out to it.';
+export const machineAt = (state, map, x, y) => ensure(state).machines.findIndex((m) => m.map === map && m.x === x && m.y === y);
+function placeMachine(state, id, map, x, y) {
+  if (state.machines.length >= MAX_MACHINES) return fail(`Twelve machines is all the farm's wiring will take.`);
+  takeFromSlot(state, state.player.sel, 1);
+  state.machines.push({ kind: id, map, x, y, item: null, out: null, n: 0, days: 0 });
+  const msg = { cheese_press: 'You set the cheese press down. E with a bottle of milk puts it in; cheese by morning.', spinning_wheel: 'You set the spinning wheel down. E with a fleece puts it on; yarn by morning.', beehive: 'You set the hive down. The bees come out to look at the farm, and seem to approve.' }[id];
+  return { ok: true, msg, kind: 'machine', index: state.machines.length - 1 };
+}
+// Farm flowers within reach of a hive (field tiles: data.js FIELD_ORIGINS).
+export function hiveFlowers(state, m) {
+  let n = 0;
+  for (const [fid, [ox, oy]] of Object.entries(FIELD_ORIGINS)) {
+    const f = state.fields[fid]; if (!f || m.map !== 'farm') continue;
+    for (let i = 0; i < f.tiles.length; i++) { const t = f.tiles[i], c = t.crop; if (!c || c.dead || !own(CROPS, c.id) || !(CROPS[c.id].flower || c.id === 'moonflower')) continue; if (Math.max(Math.abs(ox + (i % f.w) - m.x), Math.abs(oy + Math.floor(i / f.w) - m.y)) <= HIVE_REACH) n++; }
+  }
+  return n;
+}
+// E at a machine: take what is ready, or put the held thing in.
+export function useMachine(state, index) {
+  const m = int(index) ? ensure(state).machines[index] : null, no = (msg) => fail(msg, { gained: [] });
+  if (!m) return no('There is no machine there.');
+  const def = MACHINES[m.kind];
+  if (m.out && m.n > 0) {
+    const n = Math.min(m.n, room(state, m.out)); if (n < 1) return no(FULL);
+    addItem(state, m.out, n); m.n -= n; const id = m.out; if (!m.n) m.out = null;
+    state.stats.artisan = (state.stats.artisan || 0) + n;
+    return { ok: true, msg: `You took ${n > 1 ? n + ' × ' : ''}${ITEMS[id].name.toLowerCase()} from the ${def.name.toLowerCase()}.`, gained: [{ id, n }] };
+  }
+  if (m.kind === 'beehive') return no(state.cal.season === 3 ? 'The bees are huddled up for the winter. Honey again in spring.' : `The hive hums. ${hiveFlowers(state, m) >= HIVE_FLOWERS ? 'The flowers nearby keep them busy: honey every two days.' : 'Plant flowers close by and they will work faster.'}`);
+  if (m.item) return no(`The ${def.name.toLowerCase()} is working on the ${ITEMS[m.item].name.toLowerCase()}. Ready by morning.`);
+  const s = selected(state);
+  if (!s || !own(def.takes, s.id)) return no(def.hint);
+  takeFromSlot(state, state.player.sel, 1); m.item = s.id;
+  return { ok: true, msg: `The ${ITEMS[m.item].name.toLowerCase()} goes into the ${def.name.toLowerCase()}. Ready by morning.`, gained: [] };
+}
+export function machineLabel(state, index) {
+  const m = ensure(state).machines[index]; if (!m) return '';
+  const def = MACHINES[m.kind], s = selected(state);
+  if (m.out && m.n) return `Take the ${ITEMS[m.out].name.toLowerCase()} from the ${def.name.toLowerCase()}${m.n > 1 ? ` (${m.n})` : ''}`;
+  if (m.item) return `${def.name}: working on the ${ITEMS[m.item].name.toLowerCase()}`;
+  if (s && own(def.takes, s.id)) return `Put the ${ITEMS[s.id].name.toLowerCase()} in the ${def.name.toLowerCase()}`;
+  return m.kind === 'beehive' ? 'Look at the beehive' : `${def.name} (empty)`;
+}
+function machinesOvernight(state, notes) {
+  let made = 0, honey = 0;
+  for (const m of state.machines) {
+    const def = MACHINES[m.kind]; if (!def) continue;
+    if (m.kind === 'beehive') {
+      if (state.cal.season === 3) { m.days = 0; continue; }
+      m.days = (m.days || 0) + 1;
+      if (m.days >= (hiveFlowers(state, m) >= HIVE_FLOWERS ? HIVE_DAYS_FLOWERS : HIVE_DAYS) && (m.n || 0) < HIVE_MAX) { m.out = 'honey'; m.n = (m.n || 0) + 1; m.days = 0; honey++; }
+    } else if (m.item && own(def.takes, m.item) && !m.out) { const [out, k] = def.takes[m.item]; m.out = out; m.n = k; m.item = null; made++; }
+  }
+  if (made) notes.push(made === 1 ? 'Something is ready in one of your machines.' : `${made} of your machines have finished their work.`);
+  if (honey) notes.push(honey === 1 ? 'A beehive has honey ready.' : `${honey} beehives have honey ready.`);
+}
+// Sheep: shear a fed sheep whose fleece has grown (three fed nights) with the clippers in the rucksack.
+export function shear(state, index) {
+  const a = animalAt(state, index), no = (msg) => fail(msg, { gained: [] });
+  if (!a) return no('There is no animal there.');
+  if (a.kind !== 'sheep') return no('Only sheep need shearing.');
+  if (!countItem(state, 'clippers')) return no('You need clippers. Corran sells them.');
+  if ((a.fleece || 0) < 3) return no(`${a.name}'s fleece is still growing. ${3 - (a.fleece || 0)} more fed night${3 - (a.fleece || 0) === 1 ? '' : 's'}.`);
+  if (!a.fed) return no(`${a.name} is hungry. Feed her first; nobody likes a haircut on an empty stomach.`);
+  const id = a.love >= 67 ? 'fine_wool' : 'wool';
+  if (!addItem(state, id, 1).ok) return no(FULL);
+  a.fleece = 0; bump(a, 1);
+  return { ok: true, msg: `${a.name} stands still for the clippers and comes out half her size.`, gained: [{ id, n: 1 }] };
+}
+export function collectDuckEggs(state) {
+  const nest = ensure(state).duckNest, gained = [];
+  if (nest.eggs < 1 && nest.feathers < 1) return fail('The nest box is empty today.', { gained });
+  for (const [k, id] of [['eggs', 'duck_egg'], ['feathers', 'duck_feather']]) { const n = Math.min(nest[k], room(state, id)); if (n > 0) { addItem(state, id, n); nest[k] -= n; gained.push({ id, n }); } }
+  if (!gained.length) return fail(FULL, { gained });
+  return { ok: true, msg: nest.eggs || nest.feathers ? 'Your rucksack is full; something is still in the nest box.' : `You collected ${gained.map((g) => `${g.n} ${ITEMS[g.id].name.toLowerCase()}${g.n > 1 ? 's' : ''}`).join(' and ')}.`, gained };
+}
+// What a fed goat, sheep or duck does in the night (called before the day's flags are cleared).
+function foldNight(state, a) {
+  if (a.kind === 'sheep') a.fleece = Math.min(3, (a.fleece || 0) + 1);
+  if (a.kind === 'duck') {
+    state.duckNest.eggs++;
+    if (a.love >= 50 && rnd(state) < 0.25) state.duckNest.feathers++;
+    if (state.weather !== 'storm' && state.weather !== 'snow' && state.cal.season !== 3) bump(a, 1);   // a swim on the pond
+  }
+}
+export const swimDay = (state) => state.weather !== 'storm' && state.weather !== 'snow' && state.cal.season !== 3;
+// Market Lane's shops, and the new lines at the ranch and the workshop.
+function laneShelves(state, shopId, sell, once, out) {
+  const p = state.player, season = state.cal.season;
+  if (shopId === 'ranch') {
+    for (const [kind, price, desc, flag, room] of [['goat', 4000, 'Gives goat milk each day when fed.', 'fold', 'the fold'], ['sheep', 4500, 'Grows a fleece every three fed nights.', 'fold', 'the fold'], ['duck', 1800, 'Lays a duck egg each morning when fed.', 'duckhouse', 'the duck house']]) {
+      const h = HOUSING[kind], have = state.animals.filter((a) => a.kind === kind).length + state.pending.animals.filter((k) => k === kind).length;
+      if (!state.flags[flag]) continue;                       // Corran sells them once there is somewhere to keep them
+      out.push({ key: kind, label: kind[0].toUpperCase() + kind.slice(1), desc: `${desc} Delivered tomorrow morning.`, price,
+        stop: (n) => (have + n > h.cap ? `There is no more room in ${room}.` : null),
+        apply: (n) => { for (let i = 0; i < n; i++) state.pending.animals.push(kind); return `Corran will bring ${n > 1 ? 'them' : 'her'} round in the morning.`; } });
+    }
+    once('clippers', 900);
+  } else if (shopId === 'workshop') {
+    if (!state.flags.fold) out.push({ key: 'fold', label: 'Fold repair', desc: 'Roof, pens and a trough for the old stone fold on the east side of the farm: room for four goats and four sheep, which Corran sells.', price: 5000, lumber: 60, needs: '60 lumber', once: true,
+      apply: () => { state.flags.fold = true; return 'Ruess re-roofs the old fold and hangs a new gate. "Goats. Heaven help you. They eat bolts."'; } });
+    if (!state.flags.duckhouse) out.push({ key: 'duckhouse', label: 'Duck house', desc: 'A little house with a ramp down to the east pond: room for six ducks, which Corran sells.', price: 2000, lumber: 30, needs: '30 lumber', once: true,
+      apply: () => { state.flags.duckhouse = true; return 'Ruess fixes the duck house by the east pond. "The ramp is regulation width. For a duck."'; } });
+    if (!state.flags.eastfield) out.push({ key: 'eastfield', label: 'Clear the East Terrace', desc: 'Ruess clears the old terrace east of the farm and runs the irrigation main out to it: a second field, 12 by 10.', price: 3000, lumber: 40, needs: '40 lumber', once: true,
+      apply: () => { state.flags.eastfield = true; ensure(state); return 'By evening the East Terrace has water and a gate. "The rocks are yours. I only moved the big ones."'; } });
+  } else if (shopId === 'bakery') {
+    sell('bread', 55); sell('sun_bun', 90); sell('seed_loaf', 100); sell('honey_cake', 320);
+  } else if (shopId === 'tailor') {
+    for (const [id, price, k] of [['wool', 80, 1], ['fine_wool', 120, 2]]) out.push({ key: 'spin_' + id, label: `Spin your ${ITEMS[id].name.toLowerCase()} into yarn`, desc: `Pia spins one fleece on her own wheel while you wait: ${k} skein${k > 1 ? 's' : ''} of yarn.`, price, req: [[id, 1]], needs: `1 ${lower(id)}`, once: true,
+      stop: () => (room(state, 'yarn') < k ? FULL : null), apply: () => { addItem(state, 'yarn', k); return `Pia spins it without looking at the wheel. "${k > 1 ? 'Now that is a fleece. Two skeins.' : 'Clean. Good. Bring more.'}"`; } });
+    sell('yarn_scarf', 150, { key: 'knit_scarf', label: 'Knit a scarf from your yarn', desc: 'Pia knits three skeins of your yarn into a striped scarf, by the time you are back from lunch.', req: [['yarn', 3]], needs: '3 yarn', once: true });
+    sell('yarn', 560);
+  } else if (shopId === 'florist') {
+    for (const c of Object.values(CROPS)) if (c.shop === 'florist' && c.seasons.includes(season)) sell(`seed_${c.id}`, c.bag);
+    sell('beehive', 1800);
+    sell('bouquet', 450);
+    const fl = ['tulip', 'sunflower', 'cosmos', 'snowbell'][season];
+    sell('bouquet', 40, { key: 'tie_bouquet', label: `Tie a bouquet from your ${CROPS[fl].plural}`, desc: 'Noor ties three of your own flowers with a ribbon. She will tell you which stem is crooked.', req: [[fl, 3]], needs: `3 ${CROPS[fl].plural}`, once: true });
+  } else if (shopId === 'garage') {
+    sell('cheese_press', 2000, { lumber: 20, needs: '20 lumber' });
+    sell('spinning_wheel', 2400, { lumber: 30, needs: '30 lumber' });
+    sell('battery', 210);
+  } else if (shopId === 'radio') {
+    sell('record', 300);
+    const last = state.flags.songAt;
+    out.push({ key: 'song', label: 'Request a song', desc: 'Vesna plays your request on tomorrow\'s morning show: everyone in Willowfall starts the day a little fonder of you (+1 each).', price: SONG_PRICE, once: true,
+      stop: () => (state.flags.songNext ? 'Your request is already on tomorrow\'s list.' : Number.isInteger(last) && absDay(state) - last < 7 ? 'One request a week, says Vesna. "Scarcity is what makes it romantic."' : null),
+      apply: () => { state.flags.songNext = true; state.flags.songAt = absDay(state); return 'Vesna writes your request on the back of her hand. "Tomorrow, seven sharp. Do not oversleep your own song."'; } });
+  }
+}
+const LANE_SHOPS = new Set(['bakery', 'tailor', 'florist', 'garage', 'radio']);
+function laneEnsure(s) {
+  if (!Array.isArray(s.machines)) s.machines = [];
+  if (!s.duckNest || typeof s.duckNest !== 'object') s.duckNest = { eggs: 0, feathers: 0 };
+  if (!s.fields.east) {                                   // the East Terrace: rubble until Ruess clears it (its own generator: the game's dice are untouched)
+    const [w, h] = EAST_FIELD, f = { w, h, tiles: Array.from({ length: w * h }, blankTile) };
+    let a = ((s.seed || 1) ^ 0xEA57) >>> 0; const r = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    for (const t of f.tiles) if (r() < 0.5) setObj(t, ['weed', 'rock', 'branch', 'stump', 'boulder'][Math.min(4, Math.floor(r() * r() * 5.4))]);
+    s.fields.east = f;
+  }
+  for (const a of s.animals || []) if (a.kind === 'sheep' && !Number.isFinite(a.fleece)) a.fleece = 0;
+}
+function laneOvernight(state, notes, seasonChanged) {
+  machinesOvernight(state, notes);
+  const east = state.fields.east, rain = state.weather === 'rain' || state.weather === 'storm', died = new Set();
+  if (east && state.flags.eastfield) for (const t of east.tiles) {
+    if (seasonChanged && t.crop && !t.crop.dead && !CROPS[t.crop.id].seasons.includes(state.cal.season)) { t.crop.dead = true; died.add(t.crop.id); }
+    if (rain && t.till) t.wet = true;
+  }
+  for (const id of died) notes.push(`On the East Terrace the ${CROPS[id].plural} died with the season.`);
+  if (state.flags.songNext) {
+    state.flags.songNext = false;
+    for (const id of NPC_IDS) addLove(state, id, 1);
+    notes.push('Vesna played your request on the morning show. Half of Willowfall was humming it by breakfast.');
+  }
 }
 
 // ---------------------------------------------------------------- goals
@@ -1750,4 +2001,129 @@ export function claimGoals(state) {
     out.push({ id: g.id, title: g.title, reward: g.reward });
   }
   return out;
+}
+
+// ---------------------------------------------------------------- the Lower deck, "the Undercroft" (2026-11-19, release 1)
+// Restoration projects, funded at Tobias Venn's terminal by the lift landing, open the deck a part at a time (one at a
+// time, finished overnight: flags ld_<id>). Pump parts fitted to the old pumps drain more tunnels at once (ld_pump2,
+// ld_pump3). The catacombs grow mushrooms in beds (state.lower.beds), terminals and Moth's pages give the logs
+// (state.lower.logs), and the last project moves the enclave's families up to Eden Central (ld_rehoused).
+export const LOWER_PROJECTS = [
+  { id: 'lights', name: 'Work lights at the landing', price: 1200, req: [['scrap', 8], ['lamp_kit', 2]], lumber: 0, desc: 'String work lamps from the lift out through the old gallery, and clear the barrier.' },
+  { id: 'pumps', name: 'The Pump Halls', after: 'lights', price: 3500, req: [['pump_part', 2], ['copper', 3], ['nickel_iron', 4]], lumber: 20, desc: 'Restart the first great pump: the flooded tunnel west of the gallery drains, and the basins open for fishing.' },
+  { id: 'catacombs', name: 'The Mushroom Catacombs', after: 'pumps', price: 6000, req: [['lamp_kit', 4], ['silica', 3]], lumber: 40, desc: 'Light the old crypts east of the gallery and rebuild the growing beds: mushrooms, all year, in the dark.' },
+  { id: 'enclave', name: 'The Survivors\' Enclave', after: 'catacombs', price: 8000, req: [['lamp_kit', 3], ['copper', 4], ['alloy', 2]], lumber: 60, desc: 'Run power and light through the north arch to the shelters, for the families who live there.' },
+  { id: 'rehouse', name: 'Homes on the Main deck', after: 'enclave', trust: true, price: 15000, req: [['alloy', 4], ['titanium', 2]], lumber: 120, desc: 'Open, mend and furnish the empty houses in Eden Central, and move the enclave\'s families up the lift.' },
+];
+export const PUMP_REPAIRS = [{ id: 'pump2', name: 'The north pump', parts: 3, after: 'pumps' }, { id: 'pump3', name: 'The cistern pump', parts: 5, after: 'pump2' }];
+export const MUSHROOM_BEDS = 8, SPORE_PRICE = 240, TRUST_FAVOURS = 4, TRUST_HEARTS = 5, ENCLAVE_PEOPLE = ['thorne', 'moth', 'wick'];
+// The families who move up, the houses they take (maps.CENTRAL_HOUSES) and the children who start school.
+export const FAMILIES = [
+  { id: 'thorne', name: 'the Thornes', house: 'central.house_1', kids: ['moth'] },
+  { id: 'okafor', name: 'the Okafors', house: 'central.house_2', kids: ['Juno', 'Ade'] },
+  { id: 'lind', name: 'the Linds', house: 'central.house_5', kids: ['Tove'] },
+  { id: 'barros', name: 'the Barroses', house: 'central.house_6', kids: ['Rafa', 'Bea'] },
+];
+export const MUSHROOM_CROPS = BED_CROPS, LOWER_LOG_COUNT = LOWER_LOGS.length;
+export const lowerDone = (state, id) => !!(state.flags && state.flags['ld_' + id]);
+function lowerOf(state) {
+  ensure(state); const L = state.lower && typeof state.lower === 'object' && !Array.isArray(state.lower) ? state.lower : (state.lower = {});
+  if (!Array.isArray(L.beds)) L.beds = []; if (!L.logs || typeof L.logs !== 'object') L.logs = {}; if (L.pending === undefined) L.pending = null;
+  return L;
+}
+export function enclaveTrust(state) {
+  const favours = ENCLAVE_PEOPLE.reduce((a, id) => a + (state.flags['favours_' + id] || 0), 0), h = hearts(state, 'thorne');
+  return { favours, hearts: h, needFavours: TRUST_FAVOURS, needHearts: TRUST_HEARTS, ok: favours >= TRUST_FAVOURS && h >= TRUST_HEARTS };
+}
+function projectWhy(state, p) {
+  const L = lowerOf(state);
+  if (lowerDone(state, p.id)) return 'Done.';
+  if (L.pending === p.id) return 'Venn and the bots are on it tonight.';
+  if (p.after && !lowerDone(state, p.after)) return `First: ${LOWER_PROJECTS.find((q) => q.id === p.after).name}.`;
+  if (L.pending) return 'One project at a time. Venn has only so many hands, and two of them are his.';
+  if (p.trust) { const t = enclaveTrust(state); if (!t.ok) return `The families must trust you first: ${t.favours}/${t.needFavours} favours for the enclave, ${t.hearts}/${t.needHearts} hearts with Agnes.`; }
+  if (state.player.money < p.price) return `You need ${p.price} cr.`;
+  for (const [id, n] of p.req) if (countItem(state, id) < n) return `You need ${n} ${lower(id)}${n > 1 && /(part|kit)$/.test(id) ? 's' : ''} in your rucksack.`;
+  if (p.lumber && state.stock.lumber < p.lumber) return `You need ${p.lumber} lumber.`;
+  return null;
+}
+export function projectList(state) {
+  const L = lowerOf(state);
+  return LOWER_PROJECTS.map((p) => { const why = projectWhy(state, p); return { id: p.id, name: p.name, desc: p.desc, price: p.price, needs: [...p.req.map(([id, n]) => `${n} ${lower(id)}${n > 1 && /(part|kit)$/.test(id) ? 's' : ''}`), ...(p.lumber ? [`${p.lumber} lumber`] : [])].join(', '), done: lowerDone(state, p.id), pending: L.pending === p.id, open: !p.after || lowerDone(state, p.after), can: !why, why: why || undefined }; });
+}
+export function fundProject(state, id) {
+  const p = LOWER_PROJECTS.find((q) => q.id === id); if (!p) return fail('There is no such project.');
+  const why = projectWhy(state, p); if (why) return fail(why);
+  state.player.money -= p.price; for (const [k, n] of p.req) removeItem(state, k, n); if (p.lumber) state.stock.lumber -= p.lumber;
+  lowerOf(state).pending = p.id;
+  return { ok: true, msg: `${p.name}: funded. Venn will have it done by morning.` };
+}
+export function repairPump(state, id) {
+  const r = PUMP_REPAIRS.find((q) => q.id === id); if (!r) return fail('There is no such pump.');
+  if (lowerDone(state, id)) return fail('It is running. Listen to it.');
+  if (!lowerDone(state, r.after)) return fail(r.after === 'pumps' ? 'The halls must be restored first.' : 'The north pump has to run before this one can draw.');
+  if (countItem(state, 'pump_part') < r.parts) return fail(`It needs ${r.parts} pump parts. You have ${countItem(state, 'pump_part')}.`);
+  removeItem(state, 'pump_part', r.parts); state.flags['ld_' + id] = true;
+  return { ok: true, msg: `${r.name} coughs, shudders and runs. Somewhere, water starts to go down a drain.` };
+}
+// Overnight: the funded project is finished; the beds grow a day.
+function lowerOvernight(state, notes) {
+  if (!state.lower) return;
+  const L = lowerOf(state);
+  if (L.pending) { const p = LOWER_PROJECTS.find((q) => q.id === L.pending); state.flags['ld_' + L.pending] = true; L.pending = null; if (p && p.id === 'rehouse') { state.flags.ld_rehoused = true; L.movedDay = absDay(state); } if (p) notes.push(`Undercroft: ${p.name} is done. Venn left a note: "${p.id === 'rehouse' ? 'They are up. Go and see.' : 'Lights on. Mind the step.'}"`); }
+  for (const b of L.beds) if (own(BED_CROPS, b.id)) b.age = Math.min(BED_CROPS[b.id].days, b.age + 1);
+}
+export const bedAt = (state, i) => lowerOf(state).beds.findIndex((b) => b.bed === i);
+export const bedRipe = (b) => !!b && own(BED_CROPS, b.id) && b.age >= BED_CROPS[b.id].days;
+export function plantBed(state, i) {
+  if (!int(i) || i < 0 || i >= MUSHROOM_BEDS) return fail('There is no bed there.');
+  if (!lowerDone(state, 'catacombs')) return fail('The beds are rotten through. The catacombs need restoring first.');
+  if (bedAt(state, i) >= 0) return fail('Something is already growing in this bed.');
+  const s = selected(state); if (!s || s.id !== 'spore_bag') return fail('Hold a spore bag to plant this bed.');
+  const kinds = Object.values(BED_CROPS), id = kinds[pick(state, kinds.map((k) => k.weight))].id;
+  takeFromSlot(state, state.player.sel, 1); lowerOf(state).beds.push({ bed: i, id, age: 0, flush: 0 });
+  return { ok: true, msg: 'You crumble the spawn into the bed and pat it down. Now the dark does the rest.' };
+}
+export function harvestBed(state, i) {
+  const L = lowerOf(state), k = bedAt(state, i), b = k >= 0 ? L.beds[k] : null;
+  if (!bedRipe(b)) return fail(b ? 'Not yet. The spawn is still running.' : 'This bed is empty.', { gained: [] });
+  const c = BED_CROPS[b.id], put = stash(state, b.id, c.yield); if (!put.ok) return fail(FULL, { gained: [] });
+  state.stats.harvested = (state.stats.harvested || 0) + 1; ensure(state).foraged[b.id] = (state.foraged[b.id] || 0) + c.yield;
+  b.flush++; if (c.regrow && b.flush < c.flushes) b.age = c.days - c.regrow; else L.beds.splice(k, 1);
+  return { ok: true, msg: `You picked ${c.yield > 1 ? c.yield + ' × ' + ITEMS[b.id].name.toLowerCase() : 'a ' + lower(b.id)}${put.basket ? ' into the basket' : ''}.${L.beds.includes(b) ? '' : ' The bed is spent.'}`, gained: [{ id: b.id, n: c.yield }], basket: put.basket, spent: !L.beds.includes(b) };
+}
+// The logs: terminals give a tape, Moth gives pages. Each log is kept once (state.lower.logs: id -> day found).
+export const logsFound = (state) => LOWER_LOGS.filter((l) => lowerOf(state).logs[l.id] != null).map((l) => l.id);
+export function recoverLog(state, id) {
+  const l = LOWER_LOGS.find((x) => x.id === id); if (!l) return fail('The screen is blank.');
+  const L = lowerOf(state); if (L.logs[id] != null) return { ok: true, again: true, msg: 'You have this log already. It is in your journal.' };
+  const thing = l.src === 'page' ? 'diary_page' : l.src === 'terminal' ? 'log_tape' : null;
+  if (thing && !addItem(state, thing, 1).ok) return fail('Your rucksack is full. Make room for the tape first.');
+  L.logs[id] = absDay(state);
+  return { ok: true, first: true, id, msg: thing === 'log_tape' ? 'The terminal whirs and spits out a tape. Logged in your journal.' : 'Logged in your journal.' };
+}
+// Moth's pages: one a day at most, the next one her hearts allow.
+export function diaryPage(state) {
+  if (state.flags.moth_page === absDay(state)) return fail('');
+  const next = LOWER_LOGS.find((l) => l.src === 'page' && lowerOf(state).logs[l.id] == null);
+  if (!next || hearts(state, 'moth') < next.hearts) return fail('');
+  const r = recoverLog(state, next.id); if (r.ok) state.flags.moth_page = absDay(state);
+  return r;
+}
+// The school after the rehousing: lessons on weekdays 8:30 to 15:00 (not festival days).
+export const PUPILS = FAMILIES.flatMap((f) => f.kids);
+export function schoolDay(state) {
+  const m = state.cal.minute;
+  return !!state.flags.ld_rehoused && weekday(state) < 5 && !FESTIVAL_DAYS.some(([s, d]) => s === state.cal.season && d === state.cal.day) && m >= 510 && m < 900;
+}
+// The pump hall basins ('lower') and the deep Sump ('sump'): no weather down here; eels come out after six, the koi after eight.
+function underFish(state, place) {
+  const level = state.player.toolLevel.rod, m = state.cal.minute, eve = m >= 1080, sump = place === 'sump';
+  const koi = sump && level >= 2 && m >= 1200 && rnd(state) < (level >= 3 ? 0.06 : 0.035);
+  const ids = ['cave_fish', 'glowfish', 'pipe_eel', 'pump_part'];
+  const w = [(sump ? 40 : 62) * (1 - 0.2 * (level - 1)), (sump ? 34 : 22) * (1 + 0.3 * (level - 1)), (eve ? 22 : 5) * (1 + 0.3 * (level - 1)), sump ? 3 : 6];
+  const id = koi ? 'abyss_koi' : ids[pick(state, w)];
+  if (!addItem(state, id, 1).ok) return fail('Your rucksack is full, so you let it go.', { gained: [] });
+  if (id !== 'pump_part') { state.stats.fishCaught++; state.fishLog[id] = (state.fishLog[id] || 0) + 1; }
+  return spend(state, toolCost(state, 1), { ok: true, msg: koi ? 'The abyss koi! The whole hall seems to hold its breath.' : id === 'pump_part' ? 'Not a fish: a pump part, green with age. Venn will be pleased.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
 }

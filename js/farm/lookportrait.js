@@ -1,0 +1,13 @@
+// Sato's Harvest: a portrait drawn from an NPC's look (an SVG string; no DOM), for villagers who have no portrait picture yet
+// (NPCS[id].portrait 'look:<id>'). Used by the dialogue box (ui.js) and the wiki.
+export function lookPortrait(n) {
+  const L = n.look || {}, h = L.hair || '#333', sk = L.skin || '#f3d3b8', top = L.top || '#888', st = L.style || 'short', eye = { pia: '#4a6a3a', lark: '#3f7aa8', noor: '#5a3a2a', tika: '#2f8f5a', vesna: '#8a3a6a' }[n.id] || '#6a4a2a';
+  const back = { braid: '<path d="M70 38 q14 30 6 62" stroke="HC" stroke-width="13" fill="none" stroke-linecap="round"/><circle cx="76" cy="100" r="5" fill="#e8c45a"/>', ponytail: '<path d="M62 18 q26 6 22 40" stroke="HC" stroke-width="14" fill="none" stroke-linecap="round"/>',
+    odango: '<circle cx="28" cy="16" r="12" fill="HC"/><circle cx="72" cy="16" r="12" fill="HC"/>', twintails: '<path d="M20 30 q-14 30 -6 64" stroke="HC" stroke-width="13" fill="none" stroke-linecap="round"/><path d="M80 30 q14 30 6 64" stroke="HC" stroke-width="13" fill="none" stroke-linecap="round"/>',
+    long: '<rect x="22" y="30" width="56" height="50" rx="20" fill="HC"/>' }[st] || '';
+  const extra = { lark: '<path d="M24 26 q26 -22 52 0 q-26 -8 -52 0z" fill="#d9534f"/>', noor: '<circle cx="26" cy="34" r="5" fill="#f2a0c0"/><circle cx="26" cy="34" r="2" fill="#fff4c0"/>', tika: '<rect x="28" y="18" width="44" height="9" rx="4" fill="#c9a14a"/><ellipse cx="66" cy="62" rx="6" ry="2.5" fill="rgba(50,46,44,.5)"/>', vesna: '<path d="M20 46 q30 -48 60 0" stroke="#ece6f0" stroke-width="5" fill="none"/><rect x="14" y="42" width="10" height="16" rx="4" fill="#e05c8a"/><rect x="76" y="42" width="10" height="16" rx="4" fill="#e05c8a"/>' }[n.id] || '';
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#f4ecdc"/>${back.replace(/HC/g, h)}<path d="M18 100 q0 -26 32 -26 q32 0 32 26z" fill="${top}"/>`
+    + `<ellipse cx="50" cy="50" rx="27" ry="28" fill="${sk}"/><path d="M22 46 q2 -30 28 -30 q26 0 28 30 q-8 -14 -22 -16 q-4 8 -14 8 q-6 -6 -8 -8 q-8 6 -12 16z" fill="${h}"/>`
+    + `<ellipse cx="40" cy="54" rx="4.5" ry="6" fill="${eye}"/><ellipse cx="60" cy="54" rx="4.5" ry="6" fill="${eye}"/><circle cx="41.5" cy="51.5" r="1.6" fill="#fff"/><circle cx="61.5" cy="51.5" r="1.6" fill="#fff"/>`
+    + `<ellipse cx="33" cy="63" rx="5" ry="2.5" fill="rgba(255,110,120,.35)"/><ellipse cx="67" cy="63" rx="5" ry="2.5" fill="rgba(255,110,120,.35)"/><path d="M45 67 q5 4 10 0" stroke="#b0503f" stroke-width="2" fill="none" stroke-linecap="round"/>${extra}</svg>`;
+}

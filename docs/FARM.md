@@ -39,6 +39,15 @@ Cast (all canon to this project; portraits in `art/colony/portrait/`):
 | `moraine` | Queen Moraine of the Ashfall Cartel; trader now, still a queen. | Her barge is at the village dock on **Saturdays** (rare seeds, tonic) | `svg:moraine` (js/expansion/portraits.js) |
 | `calloway` | Pastor Ines Calloway, once a field chaplain on the gates; silvering bun, round glasses, teal stole. Gentle, wry. | **Second Dawn Church**, Eden Central (§10) | `art/farm/people/calloway_front.webp` |
 | `fenn` | Constable Aldo Fenn, a siege cadet turned peacetime constable; navy uniform, peaked cap, badge. Dutiful, stiff, soft-hearted. | **Safety depot**, Eden Central (§10) | `art/farm/people/fenn_front.webp` |
+| `venn` | Tobias Venn, the Directorate engineer who stayed to seal what he built; oil-dark coat, goggles, greying early. Gruff, decent. | **Restoration terminal** at the Lower deck lift landing; Venn's bench (§12) | built figure (`art/farm/people/venn_front.webp` when rendered) |
+| `thorne` | Agnes Thorne, once Eden's cistern supervisor; white bun, glasses, plum cardigan. Keeps the enclave's rota. | The Survivors' Enclave; after the rehousing, the school's teacher (§12) | built figure |
+| `moth` | Moth Thorne, eight, Agnes's granddaughter; mustard raincoat, overalls, a little lantern. Collects lamps and diary pages. | The catacombs and the enclave; after the rehousing, the school's first pupil (§12) | built figure |
+| `wick` | Ansel Wick, keeper of the pump halls; oilskin, cap, white moustache. Knows every fish by name. | The pump halls and the Sump (§12) | built figure |
+| `pia` | Pia Varga, tailor and dressmaker; once ran the siege parachute loft. Plum side braid, teal waistcoat, tape measure. Brisk, exacting, secretly sentimental. | **Varga's Mend & Make**, Market Lane (§13) | drawn (`look:pia`) |
+| `lark` | Lark Penhallow, baker; fed the shelters from a field oven in the siege. Honey-blonde ponytail, red kerchief, freckles. Loud, warm, up at four. **Romance.** | **The Sunrise Oven**, Market Lane (§13) | drawn (`look:lark`) |
+| `noor` | Noor Asante, seed botanist; revives the founders' Earth seeds. Lilac hair in two buns, sage coat, a flower pin. Blunt, absorbed, kind by accident. | **The Seedhouse**, Market Lane (§13) | drawn (`look:noor`) |
+| `tika` | Tika Brandt, Ruess's apprentice mechanic; fixed rescue drones in a cupboard at fourteen. Red-orange crop, teal coveralls, goggles, grease on her cheek. | Mornings at the Workshop; **Brandt's Garage**, Market Lane (§13) | drawn (`look:tika`) |
+| `vesna` | Vesna Kade, voice of Radio Willowfall; read the siege lists and then the all-clear. Rose twin tails, headphones, dark top. Wry, teasing, a night owl. **Romance.** | **Radio Willowfall**, Market Lane; plays the Hangar Fri and Sat (§13) | drawn (`look:vesna`) |
 
 Do not use Lt. Arkin (he may have died in the player's campaign) or name the General.
 
@@ -400,16 +409,8 @@ every new item id.
   crop in any season (`hydroPlant`), it grows a day each night without watering, E harvests
   (`hydroHarvest`, regrowing crops regrow). Rentals end at the change of season.
 
-## 9. The belt and the Old World (owner, 2026-11-18, later)
+## 9. The Old World (owner, 2026-11-18, later; the belt is in §11, the orbital elevator in §10)
 
-* *(Superseded by §11: the belt is one open map now, flown in a space suit.)* **The Descent** on Terrace Hill is now the hull lift up to **Vashti's hangar** (interior `hangar`,
-  spot `hangar.floor`: Vashti by day). E at the **launch cradle** flies the Pallas to a **belt sector**:
-  `enterBelt(state, depth)` = `enterMine(state, depth, 'belt')` (`state.mine.mode`), drawn by
-  `ruinsMap` with `map.belt` (ground `v`, the dust lane; `asteroid` rocks, `asteroid_big` walls, a
-  `buoy`; a space backdrop: stars, the Earth, Eden's hull drum). E drills a rock (1 stamina): scrap,
-  comet ice (`comet_ice`, 60 cr), alloy from sector 5, crystal from 10, rare `star_metal` from 3. One rock
-  hides the jump buoy. No creatures; drifting debris only nudges the Pallas. `stats.deepestBelt`.
-  Music track `belt` (else `night`).
 * **The Old World** on Earth: Maris's courier shuttle from the space dock in Eden Central (act
   `shuttle`, `takeShuttle(state, depth)`: 200 cr, free once Maris is at 5 hearts). Rubble, relics,
   creatures and the way down as before; Earth rubble now gives scrap only (ore comes from the belt).
@@ -420,7 +421,7 @@ every new item id.
 
 Art slots added: models `observatory`, `gov_office`, `exchange`, `arrivals`, `apartment`, `townhouse`,
 `vending`, `feed_sacks`, `feed_mill`, `charge_terminal`, `dock_crane`, `cartel_ship`, `shuttle`,
-`shuttle_gate`, `launch_cradle`, `asteroid`, `asteroid_big`, `jump_buoy`; facades `buildings/<kind>`
+`launch_cradle`, `asteroid`, `asteroid_big`, `jump_buoy` (sector buoys); facades `buildings/<kind>`
 for those buildings; icons `icons/star_plum`, `icons/colony_feast`, `icons/founders_cake`,
 `icons/comet_ice`, `icons/star_metal`; music `music/belt`.
 
@@ -480,12 +481,16 @@ batteries, air as the cost of distance; a start at sector 1, 5, 10, 15 or 20 onc
 * **One big map** (`sim.beltLayout(seed)`, pure and cached; `state.belt = { seed, gone, reached }`): `BELT_W` 34 ×
   `BELT_H` 286 cells: the launch apron (6 rows, the pad at `BELT_PAD`) at the south edge, then `BELT_SECTORS` 20 bands of
   `SECTOR_H` 14 rows, sector 1 just north of the apron, sector 20 at the far north (`beltSector(y)`, `sectorTop(s)`).
-  Cells: 0 open, 1 rock, 3 great asteroid (never breaks), 4 comet ice, 5 rich vein, 6 pickup pod, 7 landmark. Per sector:
-  1 + s/4 great-asteroid clumps, 4–6 rock fields with gaps (about 55 rocks), scattered singles, 1–2 comet-ice clusters
-  (from sector 2), rich veins from sector 3 (1.2% of rocks a sector further out, to 20%), one pickup pod, and landmarks
+  Cells: 0 open, 1 small rock, 2 medium boulder, 3 great asteroid (never breaks), 4 comet ice, 5 large boulder, 6 pickup
+  pod, 7 landmark, 8 huge boulder. Per sector: 1 + s/4 great-asteroid clumps, 4–6 rock fields with gaps (about 70 rocks),
+  scattered singles, 1–2 comet-ice clusters (from sector 2), one pickup pod, and landmarks
   (`BELT_LANDMARKS`: a derelict nav buoy in 3, a sleeping comet with an ice field in 8, the wreck of the Hesper in 13, the far
   marker in 20; their words in `story.BELT.marks`). Nothing is walled off from the pad (the generator carves through
-  great asteroids). About 1,400 breakable rocks and 370 great asteroids in all.
+  great asteroids). About 1,400 breakable rocks and 370 great asteroids in all. The rocks of a sector are sized by chance,
+  bigger further north: medium 12% + 1.2% a sector, large 0.8% (2% + 0.8% a sector from sector 3), huge 0.4% (1% + 0.7% a
+  sector from sector 6), the rest small. On average a sector holds small / medium / large / huge: sector 1 61/10/1.4/0.2,
+  10 41/16/3.6/3.2, 20 22/25/11/6.4. `BELT_GOALS` puts a large boulder in sector 1, a large and a huge in 2 and a huge in 3:
+  goals for a better hammer.
 * **Trips**: `enterBelt(state, start)` builds `state.mine` (mode `belt`) from the layout minus the rocks still drifting
   back; `start` is 1 or a milestone she has reached (`beltStarts`: 5, 10, 15, 20 ≤ `belt.reached`), beside that sector's
   pod. `enterMine(state, n, 'belt')` is the same call. The UI reports her position (`beltMove(state, x, y)`, at most 3
@@ -494,31 +499,41 @@ batteries, air as the cost of distance; a start at sector 1, 5, 10, 15 or 20 onc
   updates `belt.reached` and `stats.deepestBelt` (old layered saves turn their record into milestones). `beltHome(state,
   how)`: `pad` (the launch pad, 10 min), `pod` (within 2.6 tiles of a pod, 15 min) or `tow` (air at 0: Vashti reels her
   in, 60 min and −20 stamina). There is no fly-home-from-anywhere: the pods are the way back.
-* **The hammer** (Space or E facing a rock; `hitRock` → the belt branch): 1 stamina a hit. `rockHardness`: plain rock and
-  ice 1, rich vein 2, and 3 from sector 10; `hammerHits(hard, level)`: 0 if the hammer is softer (refused, with the tier
-  it needs), 2 at an equal tier, 1 when the hammer is a tier above. Plain rock: `beltOdds(sector)`; ice: comet ice 72%,
-  silica 14%; a rich vein always gives one of titanium, star-metal, platinum, crystal, alloy or copper (weighted, by the
-  sector's first-sector rules). The rock-splitter head adds a 30% second ore. A broken rock is in `belt.gone` until a day
+* **The hammer and rock sizes** (owner: "Upgrading the hammer should make more sense. You can have bigger rocks with better
+  chance for good ore that requires higher levels hammer."). Space or E facing a rock (`hitRock` → the belt branch), 1
+  stamina a hit. `ROCK_SIZES[cell] = { name, tier, hits }`; `rockHits(kind, level)` (0: too soft, refused with a message
+  naming the hammer needed and the one she has; the prompt shows the size and the hits or the tier):
+
+  | Size | Hammer | Hits (Field / Alloy / Starsteel) | Ore (`rockOdds(kind, sector)`) |
+  |---|---|---|---|
+  | small rock, comet ice | any | 1 / 1 / 1 | small: scrap 18%, nickel-iron 26%, silica 16%, ice 8%, copper 4% from sector 2; ice: comet ice 72%, silica 14% |
+  | medium boulder | any | 3 / 2 / 1 | the sector's odds (`beltOdds`, below) |
+  | large boulder (gold flecks) | Alloy | – / 3 / 2 | always one: titanium, alloy, copper, platinum, crystal, star-metal (sector 3: 30/30/12/14/10/4%; sector 20: 20/20/8/25/19/8%) |
+  | huge boulder (warm, four glints) | Starsteel | – / – / 3 | two, or three (35%), of platinum, crystal, star-metal, titanium (sector 20: 31/31/28/10%) |
+
+  For 400 rocks in sector 16 (tested): small about 8,000 cr, medium 31,000, large 63,000; a huge boulder averages about 640
+  cr. The rock-splitter head adds a 30% chance of one more roll. A broken rock is in `belt.gone` until a day
   2–5 days later (hash of the seed, cell and day), then a new rock drifts in.
-* **Ore odds of a plain rock** (sector 1 / 5 / 10 / 15 / 20): scrap 14/12/9/6/3%, nickel-iron 20/18/16/14/12%, silica
+* **Ore odds of a medium boulder** (`beltOdds`, sector 1 / 5 / 10 / 15 / 20): scrap 14/12/9/6/3%, nickel-iron 20/18/16/14/12%, silica
   12/11/10/9/8%, comet ice 16/15/14/13/12%, copper –/10/11/11/12%, titanium –/7/8/9/10%, alloy –/10/11/12/13%, platinum
   –/–/4/5/6%, crystal –/–/6/8/9%, star-metal –/3/4/4/5% (the rest is bare rock).
 * **The mining unit** (`state.miner = { name, charge }`, Ruess, `MINER_PRICE` 1,200 cr, once): F in the belt sets it down
   on open ground beside her (`minerDeploy`; at under `MINER_RUN` charge it takes a charged battery from her rucksack, the
-  flat one back; with none it will not go). Every 4.5 s of play it breaks the nearest plain rock or ice within
-  `MINER_REACH` 4 tiles (`minerWork`, `MINER_RUN` 10 charge a rock: ten rocks a battery, swapping in another charged battery
+  flat one back; with none it will not go). Every 4.5 s of play it breaks the nearest small rock, ice or medium boulder
+  within `MINER_REACH` 4 tiles (`minerWork`, `MINER_RUN` 10 charge a small rock, 20 a medium one: ten small rocks a battery, swapping in another charged battery
   when flat), into its hopper (`MINER_HOLD` 12); walking up empties it (`minerCollect`), F again recalls it (`minerRecall`).
-  It never breaks rich veins and costs Sato no stamina. At home `chargeMiner` gives it a battery; the battery keeper tops it up.
+  It never breaks large or huge boulders and costs Sato no stamina. At home `chargeMiner` gives it a battery; the battery keeper tops it up.
 * **Drawing**: Sato is the built figure in a suit (`look.suit`: white suit, orange trim, a glass helmet, a pack) holding the
   hammer. world.js `BeltRocks` draws the rocks as one `InstancedMesh` per kind (models `asteroid`, `asteroid_big`,
   `comet_ice`, procedural fallback), only within 21 tiles of Sato, rebuilt when she has moved 3 tiles or a rock breaks,
-  plus glints on the rich veins. Props: `sector_buoy` (model `jump_buoy`) at both ends of every sector line,
+  scaled by size (small 0.62, medium 0.95, large 1.28, huge 1.75), the large ones gold-flecked with two glints and the
+  huge ones warm with four; the great asteroids are darker and use the `asteroid_big` model. Props: `sector_buoy` (model `jump_buoy`) at both ends of every sector line,
   `sector_sign` (floating "▲ SECTOR n", facing the camera), `pickup_pod` (lit pad, capsule, blinking mast), the four
   landmarks, `mining_bot` (model slot, built stand-in: an orange unit on treads with a drill arm). `spaceBackdrop` tints
   each sector's dust (blue-grey near home, through green, to gold far out) with a glowing line between sectors; Earth
   lies far north, Eden's drum behind the apron. In headless Chromium (SwiftShader, 1280×800) a belt frame took about 0.5 s
   against 1.1 s on the farm.
-* **Map**: the minimap shows the belt (sectors numbered down the side, pods pulsing green, rich veins gold, landmarks ✦,
+* **Map**: the minimap shows the belt (sectors numbered down the side, pods pulsing green, rocks sized and coloured by size (large gold, huge orange), landmarks ✦,
   the mining unit); M opens the belt chart, the whole map with the cradle's milestones. The HUD place reads
   "The belt, sector 7 · air 63/100"; a new sector, a first visit and a milestone each get a toast; the suit chimes at 30
   and 10 air.
@@ -536,3 +551,121 @@ batteries, air as the cost of distance; a start at sector 1, 5, 10, 15 or 20 onc
   The Today tab has the crew line too.
 * Old saves: `ensure` adds `miner: null`; `state.belt` is made on first use, with `reached` from `stats.deepestBelt`.
 
+## 12. The Lower deck, "the Undercroft" (owner, 2026-11-19): release 1
+
+Background (docs/COLONY.md D21–D22, COLONY-V4 §2): in the war's last months the Directorate took Eden's Lower deck as a black
+site ("Site Ninefold") under a "quarantine"; a Quantum Decimator test went wrong and gutted it. The colony was told it was a
+Galt attack and evacuated; Warden Marrow kept sixty-one survivors alive in the crypts, and Tobias Venn sealed the core. Some
+families never came up. Tone: cozy and mysterious, never grim; **no combat on the Lower deck**.
+
+**Release 1 (built):**
+
+* **The lift's third stop.** Every lift kiosk (act `liftdown` in Willowfall, `liftup` in Eden Central, `lift` on the Lower deck
+  landing: `rideLift(map.id)`, `LIFT_STOPS` in main.js) offers the two other stops; 15 minutes a deck, plus 5. The first arrival
+  plays `story.LOWER.arrive` (`flags.ld_visited`). Map `lower` (maps.js `lower()`, 56×44, `under: true`, walls are rock tiles
+  drawn as hull-plate walls only where they face a room; no sky, no weather, no surroundings: `World.setTime` has an `under`
+  branch, and `lightUnder()` moves five real point lights to the nearest lit lamps, with a soft one on Sato).
+* **Restoration projects** (`sim.LOWER_PROJECTS`, funded at the **restoration terminal** by the lift, act `restore`, window
+  `ui.projectWindow`; one at a time, `state.lower.pending`, finished overnight in `sleep()` → `flags.ld_<id>` and a note):
+  1. **Work lights at the landing**: 1,200 cr, 8 scrap, 2 lamp kits. Clears the barrier; the gallery's lamps.
+  2. **The Pump Halls**: 3,500 cr, 2 pump parts, 3 copper ore, 4 nickel-iron, 20 lumber. Drains the west tunnel; pump one runs.
+  3. **The Mushroom Catacombs**: 6,000 cr, 4 lamp kits, 3 silica, 40 lumber. Opens the crypt door; the beds can be planted.
+  4. **The Survivors' Enclave**: 8,000 cr, 3 lamp kits, 4 copper ore, 2 alloy, 60 lumber. Opens the tarpaulined north arch.
+  5. **Homes on the Main deck**: 15,000 cr, 4 alloy, 2 titanium ore, 120 lumber, and the families' trust (`enclaveTrust`: 4 favours
+     done for Agnes, Moth and Wick together, 5 hearts with Agnes). Sets `ld_rehoused` (the payoff, below).
+  **Venn's bench** (shop `undercroft`, keeper `venn` at `undercroft.counter`): lamp kit (4 scrap, 1 copper, 120 cr), pump part
+  (3 nickel-iron, 1 copper, 180 cr), spore bags (240 cr) once the catacombs open; Seln sells spore bags too (260).
+* **The map changes with the state** (`maps.lowerState(m, flags)`, called by main.js `go()` and the minimap): `m.floods`
+  (tunnels that are water until their pump runs), `m.gates` (blocked until the project), props with `unless: flag` (the barrier,
+  the bulkheads, the tarpaulins) drawn until then, `glow_lamp` props with a `zone` lit once `ld_<zone>` is set (`landing`
+  always). Pump parts at the silent pumps drain more at once (`sim.PUMP_REPAIRS`, `repairPump`): **the north pump** (3 parts,
+  `ld_pump2`: the tunnel to the Sump) and **the cistern pump** (5 parts, `ld_pump3`: the way to the old pump room and its log).
+* **Fishing** (`sim.fish(state, 'lower' | 'sump')`, the water body from `maps.waterPlace`): no weather; cave fish (70 cr,
+  common), glowfish (150, uncommon, more in the Sump), pipe eel (210, mostly after 18:00), a pump part now and then in the basins,
+  and the legendary **abyss koi** (1,800): only in the Sump, after 20:00, Alloy rod or better, about 3.5% (6% Starsteel).
+* **Mushrooms** (`data.MUSHROOMS`, `state.lower.beds`, `plantBed` / `harvestBed`, 8 beds, act `bed`): a spore bag rolls the kind
+  (shiitake 36, pale oyster 36, glowcap 22, deep truffle 6). No watering, no seasons, a day a night.
+  | Mushroom | first flush | then every | flushes | per flush | sells |
+  |---|---|---|---|---|---|
+  | shiitake | 6 | 3 | 4 | 2 | 90 |
+  | pale oyster | 4 | 2 | 4 | 2 | 60 |
+  | glowcap | 8 | 4 | 3 | 2 | 160 |
+  | deep truffle | 12 | – | 1 | 1 | 900 |
+  Recipes (group "From the Undercroft"): shiitake skewer, oyster fry, glowcap broth, Undercroft stew, truffle omelette. Cave fish
+  count as fish in the old recipes.
+* **The people below** (story.js `UNDERFOLK`, full villagers, not romance candidates; first meetings `story.MEETINGS` play
+  instead of TALK.first; talk can vary with progress, `TALK[id].flag`; heart events at 3 and 7, some needing a flag, `e.flag`;
+  favours; their whereIs ignores weather and festivals while below decks): Tobias Venn (terminal, pumps, the gallery at night,
+  Friday evenings at Ruess's door), Agnes Thorne, Moth (first seen in the catacombs, before the enclave opens), Ansel Wick.
+  Built figures: `LOOKS` in main.js, with `goggles` and `lantern` drawn in actors.js.
+* **The rehousing**: `sim.FAMILIES` (the Thornes, Okafors, Linds and Barroses) take `central.house_1`, `_2`, `_5`, `_6` (new door
+  texts `story.LOWER.houses`). **The school** (`sim.schoolDay`: weekdays 8:30–15:00, not festival days) fills: Agnes at
+  `school.teacher`, Moth at `school.pupil`, five more pupils (`sim.PUPILS`) at the other desks (main.js `spawnPupils`, E says
+  hello); the blackboard lists their names. `story.LOWER_SCENES`: Fenn's box of crayons finds its first child (`fenn_pupils`, 8:00
+  at the school), Pastor Ines's first assembly on a Wednesday (`calloway_pupils`), and Marrow hears about Agnes (`marrow_under`).
+* **Logs** (`data.LOWER_LOGS`, texts `story.LOGS`, `recoverLog`, `state.lower.logs`): 11 in this release: the quarantine
+  notice, two of Warden Marrow's logs, a Directorate memo, a Galt prisoner's words on a crypt wall, Venn's sixty per cent test,
+  the stencil on the sealed round door, three of Pim's war diary pages and one of Moth's own (`diaryPage`: Moth gives the next
+  page on a first talk, one a day, by hearts 0/2/4/6). Terminals give a `log_tape`, pages a `diary_page`. Read in the farm
+  journal's new **Logs** tab, with the restoration's progress.
+* **The vault door** stands in the gallery's north wall, sealed (act `vault`: a teaser and the `ninefold` log).
+* Music `music/undercroft` (sfx.js `trackFor`, day and night); minimap tab "The Undercroft"; wiki section; How to play page.
+* Art slots used (docs/LOWER-DECK-ART.md): items and icons for all thirteen ids; props `lower_lift`, `pump_station`,
+  `mushroom_bed`, `catacomb_arch`, `shelter`, `glow_lamp`, `terminal`, `vault_door` (and the `works_hall` slot), each with a
+  built stand-in in `js/farm/lowerworld.js` (plus `work_barrier`, `bulkhead`, `tarp`, `crypt_wall`, `stove`, `shrooms`).
+* Old saves: `state.lower` is made on first use; the four newcomers get their records from `ensure`.
+* Tests: `node tests/farm-lower.mjs`.
+
+**Planned for release 2:** the **Works** (Venn's recycling and fabrication hall, model `works_hall`), the **Thermal Vents**,
+the **Zero-G Arena**, and **the vault** behind the round door (the rest of the logs; what Site Ninefold was).
+
+## 13. Market Lane, the fold and the hives (owner, 2026-11-19: "additional content ... new items, farm animals, larger maps, new buildings and characters ... more young ladies")
+
+* **Five young women** (`story.js`, block "Market Lane"; `VILLAGERS`, `sim.NPC_IDS`, `ensure()` gives old saves their records): Pia
+  Varga (`pia`, the tailor's, closed Sun), Lark Penhallow (`lark`, the bakery: counter 7-15, back 16:30-18, in bed by 19:30, closed
+  Mon), Noor Asante (`noor`, the Seedhouse 9-17, closed Tue: the hill terraces, the library, then she looks in at the farm's East
+  Terrace), Tika Brandt (`tika`, Ruess's bench 8-12, her garage 13-18; Wed up the hill with Ruess; Sun off) and Vesna Kade (`vesna`,
+  the radio: morning show 7-9, asleep till noon, the booth 13:30-17, night show 19-22 or the Hangar stage `cafe.stage` on Fri and
+  Sat; Sun off). Each has ~27 conversations, gifts and gift lines, 6-7 favours, events at 3 and 7 hearts (`pia3`, `pia7`, `noor3`,
+  `noor7`, `tika3`, `tika7`), festival places and a birthday (Pia Autumn 23, Lark Spring 4, Noor Spring 27, Tika Winter 24, Vesna
+  Summer 19). **Lark and Vesna are romance candidates** (`ROMANCE.candidates` now eight): a third event at 5 hearts (`lark5`,
+  `vesna5`), the confession, the pendant, the wedding (Pastor Ines blesses it; the Lane speaks), partner, morning and sweetheart lines.
+* **Their look**: new hair styles in actors.js (`braid`, `ponytail`, `odango`, `twintails`, ties in `look.ribbon`) and accessories
+  (`kerchief`, `headphones`, `flowerPin`, `skirt`, `measure`, face `freckles` and `smudge`; Tika uses the engineer's `goggles`). With no
+  portrait picture yet, `portrait: 'look:<id>'` draws an SVG bust from the look (`js/farm/lookportrait.js`, used by ui.js and the wiki).
+* **Willowfall grows east** (64×52 → 96×52; `MapDef.grow` keeps every old tile, prop index, door and spot; `clearProps` turns the props
+  in a gap into `'nothing'` so prop indices, and the saves that use them, keep their meaning). **Market Lane** north of the river:
+  the Sunrise Oven, Varga's Mend & Make, the Seedhouse (a glasshouse shop), Brandt's Garage, Radio Willowfall with its mast, and Lane
+  Square (noticeboard `village.lane`, flower stalls). The river runs on east under the **Mill Bridge** to the **Lane cottages** (homes;
+  E at the door reads a note, `CENTRAL_HOUSES.home_<id>`) and Noor's trial beds. Interiors `bakery`, `tailor`, `florist`, `garage`,
+  `radio`. Built stand-ins: `js/farm/laneworld.js` (model slots in `LANE_PROPS` / `LANE_BUILDINGS`).
+* **The farm grows east** (44×34 → 64×34, old coordinates unchanged; a gap in the old tree line just south of the hill road): the
+  **East Terrace** field (`state.fields.east`, 12×10 at `FIELD_ORIGINS.east` [48, 13], rubble until Ruess clears it: 3,000 cr + 40
+  lumber, `flags.eastfield`; the robots work it too), the old **fold** (Ruess: 5,000 cr + 60 lumber, `flags.fold`; interior `fold`,
+  trough act `feedfold`) and the **duck house** by the new east pond (2,000 cr + 30 lumber, `flags.duckhouse`; interior `duckhouse`,
+  nest act `duckeggs`, feeder `feedduck`), with a meadow for hives. Locked doors say why.
+* **Animals** (`HOUSING`, Corran sells them once there is a home): goats (4,000; 4 in the fold; fodder; the milker gives goat milk,
+  rich goat milk at affection ≥ 67; the brush works on them), sheep (4,500; 4; fodder; a fleece every three fed nights, `a.fleece`;
+  `shear()` with **clippers** (900) gives wool, fine wool when fond), ducks (1,800; 6; feed; a duck egg each morning in
+  `state.duckNest`, now and then a feather when fond; they swim on the east pond on fair days 8-17 for +1 affection, `swimDay`).
+* **Machines** (kind `placeable`, set down on the farm like chests; `state.machines`, `MACHINES`, `useMachine`, `machineLabel`, the
+  axe picks an empty one up): the **cheese press** (Tika, 2,000 + 20 lumber: milk → farm cheese, goat milk → goat cheese), the
+  **spinning wheel** (2,400 + 30 lumber: wool → yarn, fine wool → 2 yarn) and **beehives** (the Seedhouse, 1,800: honey every 3 days,
+  every 2 with ≥ 3 flower crops within 6 tiles, `hiveFlowers`; none in winter; up to 3 jars wait). Honey also stands in for honeycomb.
+* **Crops**: 12 Earth crops from the Seedhouse only (`CROPS[id].shop = 'florist'`): spring cabbage, snap pea (regrows), tulip;
+  summer bell pepper (regrows), melon, sunflower; autumn beet, cranberry (regrows), cosmos; winter kale, frost leek (regrows),
+  snowbell: the first outdoor winter crops. Flowers (`FLOWER_CROPS`) feed the hives and draw as flowers. **Forage**: wild violet,
+  elderflower, rosehip, snowdrop (one a season).
+* **Shops**: the bakery (bread, sunrise bun, seeded loaf, honey cake), the tailor's (Pia spins a fleece into yarn, knits three
+  skeins into a **yarn scarf**, sells yarn), the Seedhouse (seeds, beehives, **bouquets**, or a bouquet tied from three of your
+  flowers), the garage (machines, batteries), the radio (a salvaged **record**; a **song request** once a week: +1 friendship with
+  everyone next morning). **Eleven recipes** (`LANE_RECIPES`, kitchen group "From the fold and the hives"): goat cheese salad, cheese
+  omelette, duck egg custard, honey cake, blossom tea, cheese toast, stuffed peppers, cabbage rolls, honeyed melon, ruby beet soup,
+  green frittata.
+* **The Bloom Fair** (Summer 10, Lane Square, 10-16; `FESTIVAL_DAYS` has it, so it is always fair): Noor judges the flowers, Pia
+  the wool and cheese, Lark bakes, Tika runs Vesna's broadcast cable, the Constable guards the cake. 500 cr.
+* Art slots (all optional): models `goat`, `sheep`, `duck`, `cheese_press`, `spinning_wheel`, `beehive`, `bakery_oven`,
+  `bread_shelf`, `flour_sacks`, `dress_form`, `bolt_shelf`, `sewing_table`, `flower_bed`, `seed_drawers`, `tool_wall`,
+  `engine_block`, `radio_desk`, `record_shelf`, `speaker`, `sofa`, `mic_stand`, `radio_mast`; buildings `bakery`, `tailor`,
+  `seedhouse`, `garage`, `radio_station`, `fold`, `duckhouse`; people `people/<id>_front` for the five; icons `icons/<id>` for every
+  new item.

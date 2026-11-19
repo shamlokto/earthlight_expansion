@@ -1,5 +1,7 @@
 # Pallas art redone with generated pictures (2026-10-28)
 
+> Superseded 2026-11-18: the Pallas was redesigned (concept 81, `tools/art/pallas/redesign/`; see docs/EXPANSION.md). The old hand-placed scripts `tools/art/pallas.mjs`, `pallas-pics.mjs` and `pallas-pixels.mjs` were removed 2026-11-19 (they are in git history); `tools/art/pallas-xai.mjs` builds `js/art/pallas.js` now.
+
 The owner asked for the expansion's new units to be redrawn with xAI's image model, including the
 map icons and the fight scenes. This covers the Pallas (types 62-65; `js/art/pallas.js`).
 

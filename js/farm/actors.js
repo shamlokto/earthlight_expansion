@@ -39,6 +39,8 @@ function faceTexture(look, blink) {
   for (const f of [-1, 1]) { g.beginPath(); g.moveTo(N / 2 + f * (ex - 34), ey - ry - 26); g.quadraticCurveTo(N / 2 + f * ex, ey - ry - 40, N / 2 + f * (ex + 38), ey - ry - 22); g.stroke(); }
   const bl = (x) => { const r = g.createRadialGradient(x, ey + 82, 2, x, ey + 82, 44); r.addColorStop(0, 'rgba(255,110,120,.6)'); r.addColorStop(1, 'rgba(255,110,120,0)'); g.fillStyle = r; g.fillRect(x - 50, ey + 36, 100, 92); };
   bl(N / 2 - ex - 22); bl(N / 2 + ex + 22);
+  if (look.freckles) { g.fillStyle = 'rgba(170,100,60,.55)'; for (const f of [-1, 1]) for (let k = 0; k < 5; k++) { g.beginPath(); g.arc(N / 2 + f * (ex + 4 + (k % 3) * 16), ey + 70 + (k >> 1) * 13 - (k % 3) * 3, 4.5, 0, 7); g.fill(); } }   // Lark's freckles
+  if (look.smudge) { g.fillStyle = 'rgba(50,46,44,.55)'; g.beginPath(); g.ellipse(N / 2 + ex + 30, ey + 96, 30, 12, -0.4, 0, 7); g.fill(); g.beginPath(); g.ellipse(N / 2 + ex + 8, ey + 112, 14, 6, -0.3, 0, 7); g.fill(); }   // grease on her cheek (Tika)
   g.strokeStyle = '#b0503f'; g.lineWidth = 6; g.beginPath(); g.arc(N / 2, ey + 100, 17, 0.12 * Math.PI, 0.88 * Math.PI); g.stroke();
   if (look.moustache) { g.fillStyle = look.moustache; g.beginPath(); g.ellipse(N / 2 - 30, ey + 98, 36, 14, -0.25, 0, 7); g.ellipse(N / 2 + 30, ey + 98, 36, 14, 0.25, 0, 7); g.fill(); }
   if (look.age === 'old') { g.strokeStyle = 'rgba(120,80,60,.4)'; g.lineWidth = 3; for (const f of [-1, 1]) { g.beginPath(); g.moveTo(N / 2 + f * (ex + 50), ey + 30); g.lineTo(N / 2 + f * (ex + 64), ey + 40); g.stroke(); } }
@@ -77,7 +79,7 @@ function figure(look, tall = 1.62) {
   if (st !== 'bald') {
     const hc = st === 'bandana' ? '#c8402f' : (look.hair || '#222'), hm = toon(hc, { side: THREE.DoubleSide }), R2 = HR * 1.09;
     const shell = (phi0, phiL, th0, thL, ink = 0) => shape(part(new THREE.SphereGeometry(R2, 24, 14, phi0, phiL, th0, thL), hm, 0, 0.005, -0.004, ink, head));
-    const longish = st === 'bob' || st === 'long' || st === 'bun';
+    const longish = st === 'bob' || st === 'long' || st === 'bun' || st === 'braid' || st === 'twintails' || st === 'odango';
     shell(0, Math.PI * 2, 0, Math.PI * 0.3, 0.035);                                                  // cap
     shell(Math.PI, Math.PI, Math.PI * 0.28, Math.PI * (longish ? 0.5 : 0.32));                       // back
     if (st !== 'bandana') {
@@ -88,6 +90,14 @@ function figure(look, tall = 1.62) {
     if (st === 'bob') for (const f of [-1, 1]) part(new THREE.SphereGeometry(0.075, 10, 8), toon(hc), f * HR * 0.93, -HR * 0.62, 0.08, 0.05, head).scale.set(0.7, 1.1, 1.3);   // curled-in tips
     if (st === 'long' || st === 'bandana') part(new THREE.CapsuleGeometry(0.07, 0.34, 3, 8), toon(hc === '#c8402f' ? look.hair : hc), 0, -0.36, -0.26, 0.06, head).rotation.x = 0.18;
     if (st === 'bun') part(new THREE.SphereGeometry(0.11, 10, 8), toon(hc), 0, 0.3, -0.16, 0.06, head);
+    // Market Lane's styles (2026-11-19): a side braid, a high ponytail, two buns, twin tails; ties in look.ribbon
+    const tie = toon(look.ribbon || '#f2f0ea');
+    if (st === 'braid') { for (let k = 0; k < 6; k++) part(new THREE.SphereGeometry(0.075 - k * 0.006, 10, 8), toon(hc), 0.2 + k * 0.012, -0.22 - k * 0.1, 0.12 + k * 0.025, 0.05, head); part(new THREE.SphereGeometry(0.04, 8, 6), tie, 0.27, -0.8, 0.26, 0.04, head); }
+    if (st === 'ponytail') { part(new THREE.TorusGeometry(0.06, 0.025, 6, 12), tie, 0, 0.22, -0.29, 0, head); const t = part(new THREE.CapsuleGeometry(0.085, 0.34, 4, 10), toon(hc), 0, -0.04, -0.4, 0.05, head); t.rotation.x = 0.5; part(new THREE.SphereGeometry(0.07, 8, 6), toon(hc), 0, -0.3, -0.48, 0.04, head); }
+    if (st === 'odango') for (const f of [-1, 1]) { part(new THREE.SphereGeometry(0.105, 12, 10), toon(hc), f * 0.21, 0.27, -0.05, 0.06, head); part(new THREE.TorusGeometry(0.07, 0.02, 6, 12), tie, f * 0.17, 0.2, -0.04, 0, head).rotation.z = f * 0.9; }
+    if (st === 'twintails') for (const f of [-1, 1]) { part(new THREE.SphereGeometry(0.05, 8, 6), tie, f * 0.3, 0.12, -0.08, 0.04, head); const t = part(new THREE.CapsuleGeometry(0.08, 0.5, 4, 10), toon(hc), f * 0.4, -0.2, -0.12, 0.05, head); t.rotation.z = f * 0.28; t.rotation.x = 0.12; part(new THREE.SphereGeometry(0.065, 8, 6), toon(hc), f * 0.48, -0.5, -0.07, 0.04, head); }
+    if (look.kerchief) { shape(part(new THREE.SphereGeometry(R2 * 1.03, 22, 10, 0, Math.PI * 2, 0, Math.PI * 0.2), toon(look.kerchief), 0, 0.01, -0.01, 0.03, head)); part(new THREE.SphereGeometry(0.05, 8, 6), toon(look.kerchief), 0.05, 0.18, -0.31, 0.03, head); }
+    if (look.flowerPin) { const fp = new THREE.Group(); fp.position.set(-0.27, 0.12, 0.17); head.add(fp); for (let k = 0; k < 5; k++) part(new THREE.SphereGeometry(0.035, 6, 5), toon(look.flowerPin), Math.cos(k * 1.26) * 0.045, Math.sin(k * 1.26) * 0.045, 0, 0, fp); part(new THREE.SphereGeometry(0.025, 6, 5), toon('#fff4c0'), 0, 0, 0.02, 0, fp); }
     if (st === 'cap') { part(new THREE.SphereGeometry(HR * 1.13, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.4), toon(look.cap || look.top), 0, 0.03, 0, 0.04, head); part(new THREE.CylinderGeometry(0.17, 0.17, 0.025, 14), toon(look.cap || look.top), 0, 0.15, 0.29, 0, head); }
     if (st === 'cap' && look.capBadge) { part(new THREE.CylinderGeometry(HR * 1.1, HR * 1.1, 0.06, 20), toon('#111827'), 0, 0.13, 0, 0, head); part(new THREE.BoxGeometry(0.07, 0.08, 0.02), toon('#e8c45a', { emissive: 0x3a2a00 }), 0, 0.22, HR * 1.06, 0, head); const vis = part(new THREE.CylinderGeometry(0.24, 0.24, 0.03, 18, 1, false, -Math.PI / 2, Math.PI), toon('#0d1424'), 0, 0.12, HR * 0.86, 0.08, head); vis.rotation.x = 0.25; }
   }
@@ -114,6 +124,11 @@ function figure(look, tall = 1.62) {
     part(new THREE.SphereGeometry(0.2, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), straw, 0, 0, 0, 0.05, hat);
     part(new THREE.CylinderGeometry(0.203, 0.205, 0.045, 20), toon(look.band || '#d94a4a'), 0, 0.03, 0, 0, hat);
   }
+  if (look.goggles) { part(new THREE.TorusGeometry(HR * 1.02, 0.025, 6, 24), toon('#3a3a3a'), 0, 0.17, 0, 0, head).rotation.x = Math.PI / 2 - 0.25; for (const x of [-0.11, 0.11]) part(new THREE.CylinderGeometry(0.075, 0.075, 0.05, 14), toon('#c9a14a', { emissive: 0x2a2010 }), x, 0.2, HR * 0.95, 0, head).rotation.x = Math.PI / 2 - 0.3; }   // an engineer's goggles, pushed up
+  if (look.lantern) { const l = new THREE.Group(); l.position.set(0.3, 0.42, 0.08); g.add(l); part(new THREE.CylinderGeometry(0.005, 0.005, 0.18, 4), toon('#3a3a3a'), 0, 0.1, 0, 0, l); const b = part(new THREE.SphereGeometry(0.06, 10, 8), new THREE.MeshBasicMaterial({ color: '#ffd98a' }), 0, -0.02, 0, 0, l); b.castShadow = false; part(new THREE.CylinderGeometry(0.045, 0.06, 0.03, 8), toon('#c9a14a'), 0, 0.045, 0, 0, l); }   // a little lantern on a string (Moth)
+  if (look.headphones) { const hp = toon(look.headphones); const band = part(new THREE.TorusGeometry(HR * 1.12, 0.03, 6, 24, Math.PI), hp, 0, 0.02, 0, 0, head); band.rotation.z = 0; for (const f of [-1, 1]) { part(new THREE.CylinderGeometry(0.09, 0.09, 0.07, 14), hp, f * HR * 1.1, 0, 0, 0.05, head).rotation.z = Math.PI / 2; part(new THREE.CylinderGeometry(0.06, 0.06, 0.075, 12), toon(look.headphonesTrim || '#e05c8a'), f * HR * 1.12, 0, 0, 0, head).rotation.z = Math.PI / 2; } }
+  if (look.skirt) { const sk = part(new THREE.CylinderGeometry(0.2, 0.31, 0.28, 16), toon(look.skirt), 0, 0.37, 0, 0.05); sk.scale.z = 0.92; }
+  if (look.measure) for (const x of [-0.07, 0.07]) part(new THREE.BoxGeometry(0.035, 0.3, 0.012), toon('#e8c840'), x, 0.68, 0.19);   // a tailor's tape round the neck
   if (look.glasses) for (const x of [-0.12, 0.12]) part(new THREE.TorusGeometry(0.075, 0.012, 6, 16), toon('#3a3a3a'), x, -0.03, HR * 0.97, 0, head);
   g.scale.setScalar(tall / 1.52);
   g.userData.limbs = { L, R, A, B, head };

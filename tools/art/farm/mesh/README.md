@@ -113,11 +113,9 @@ with its front on +Z even from a 3/4 picture; `YAW=auto` only removes a small re
 
 ## Paused run (2026-11-17)
 
-The second pod run was paused by the owner a few minutes in, before any mesh was made. Ready for the
-next run: `pod-setup.sh` (the pod set-up used), `concepts-pending/` (approved concept pictures for
-mori, clinic, library, bookshelf, display_case, plantpot, fish_float, cow_brown, reeds,
-greenhouse_ruin and ruin_tower) and updated prompts for yui, clinic_bed, egg, pendant and a
-navy-haired sato in `prompts.json`. Start pods with `../sandbox/sandbox.sh` running.
+Later runs (2026-11-18/19) made every model those concepts were for, so `concepts-pending/` was removed.
+Start pods with `../sandbox/launch.py` (it arms `sandbox.sh` on the pod; add `--network-volume 9zhqq8f4mh
+--datacenter EU-RO-1` to use the owner's models). Batches 3 and 4: `previews/batch3.png`, `previews/batch4.png`.
 * **Glass** reconstructs as an opaque white box. Ask for open frames (see `display_case`) and add a transparent
   box in code if needed.
 * **Braids**: Qwen-Image put a braid forward over the shoulder in every one of 8 tries, whatever the wording.

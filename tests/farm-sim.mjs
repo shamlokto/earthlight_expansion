@@ -27,10 +27,10 @@ const wipe = (s, f = 'farm') => { for (const t of s.fields[f].tiles) Object.assi
 const setObj = (s, x, y, obj) => Object.assign(tile(s, x, y), { obj, hp: obj === 'stump' || obj === 'boulder' ? 3 : 1 });
 const rich = (seed = 5) => { const s = newGame({ seed }); s.player.money = 1e6; s.stock.lumber = 500; while (s.player.inv.length < 16) s.player.inv.push(null); s.player.slots = 16; addItem(s, 'scrap', 20); addItem(s, 'alloy', 20); addItem(s, 'crystal', 5); addItem(s, 'star_metal', 2); return s; };
 // rich, with belt ore for Ruess's ore jobs and room to carry it
-const richer = (seed = 5) => { const s = rich(seed); while (s.player.inv.length < 24) s.player.inv.push(null); s.player.slots = 24; for (const o of ['nickel_iron', 'silica', 'copper', 'titanium', 'platinum']) addItem(s, o, 12); return s; };
+const richer = (seed = 5) => { const s = rich(seed); while (s.player.inv.length < 24) s.player.inv.push(null); s.player.slots = 24; for (const o of ['nickel_iron', 'silica', 'copper', 'titanium', 'platinum']) addItem(s, o, 12); for (const o of ['wool', 'fine_wool', 'yarn', 'tulip', 'sunflower', 'cosmos', 'snowbell']) addItem(s, o, 6); return s; };
 // break belt rocks of the given kinds in one sector, over and over, with the given hammer; tally the finds
-const beltTally = (sector, kinds = [1], hammer = 3, n0 = 2500, seed = 310) => { const g = rich(seed + sector), got = {}; g.player.toolLevel.hammer = hammer; let n = 0; sim.enterBelt(g, 1); const m = g.mine, y0 = sim.sectorTop(sector);
-  while (n < n0) { for (let y = y0; y < y0 + sim.SECTOR_H && n < n0; y++) for (let x = 0; x < m.w && n < n0; x++) { const i = y * m.w + x; if (!kinds.includes(sim.beltLayout(g.belt.seed).cells[i])) continue; m.cells[i] = sim.beltLayout(g.belt.seed).cells[i]; delete m.hp[i]; g.player.stamina = 100; n++; let r; do r = sim.hitRock(g, x, y); while (r.ok && !r.broke); for (const f of r.gained || []) got[f.id] = (got[f.id] || 0) + f.n; }
+const beltTally = (sector, kinds = [2], hammer = 3, n0 = 2500, seed = 310) => { const g = rich(seed + sector), got = {}; g.player.toolLevel.hammer = hammer; let n = 0; sim.enterBelt(g, 1); const m = g.mine, y0 = sim.sectorTop(sector);
+  for (let pass = 0, n1 = -1; n < n0 && n1 !== n; pass++) { n1 = n; for (let y = y0; y < y0 + sim.SECTOR_H && n < n0; y++) for (let x = 0; x < m.w && n < n0; x++) { const i = y * m.w + x; if (!kinds.includes(sim.beltLayout(g.belt.seed).cells[i])) continue; m.cells[i] = sim.beltLayout(g.belt.seed).cells[i]; delete m.hp[i]; g.player.stamina = 100; n++; let r; do r = sim.hitRock(g, x, y); while (r.ok && !r.broke); for (const f of r.gained || []) got[f.id] = (got[f.id] || 0) + f.n; }
     for (let i = 0; i < g.player.inv.length; i++) if (g.player.inv[i] && ITEMS[g.player.inv[i].id].kind === 'ore') g.player.inv[i] = null; }
   return got; };
 const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
@@ -40,7 +40,7 @@ const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
 {
   check(SEASONS.length === 4 && WEEKDAYS.length === 7 && DAYS_PER_SEASON === 30 && DAY_START === 360 && DAY_END === 1440 && TOOL_LEVELS[2] === 'Alloy', 'calendar constants');
   check(FIELD_SIZES.farm[0] === 16 && FIELD_SIZES.farm[1] === 18 && FIELD_SIZES.greenhouse[0] === 10 && PASTURE_SIZE[1] === 7, 'field sizes');
-  check(Object.keys(CROPS).length === 13, '13 crops');
+  check(Object.keys(CROPS).length >= 25, `at least 25 crops (${Object.keys(CROPS).length})`);
   for (const c of Object.values(CROPS)) check(ITEMS[c.id]?.kind === 'crop' && ITEMS[c.id].sell === c.sell && ITEMS[`seed_${c.id}`]?.crop === c.id, `crop ${c.id} has an item and a seed bag`);
   for (const [id, it] of Object.entries(ITEMS)) check(it.id === id && it.name && it.kind && typeof it.desc === 'string' && it.desc, `item ${id} is complete`);
   for (const id of ['hoe', 'can', 'sickle', 'hammer', 'axe', 'rod', 'milker', 'brush']) check(ITEMS[id]?.kind === 'tool', `tool ${id}`);
@@ -69,7 +69,7 @@ const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
   check(s.pasture.w === 12 && s.pasture.h === 7 && s.pasture.grass.length === 84 && s.pasture.grass.every((v) => v === 0), 'pasture empty');
   check(s.animals.length === 0 && s.eggs === 0 && s.bin.length === 0 && s.mine === null && s.pending.upgrade === null && s.pending.animals.length === 0, 'nothing else yet');
   check(s.forage.length >= 3 && s.forage.length <= 6 && s.forage.every((x) => ['herb', 'bamboo_shoot', 'wild_mint', 'fiddlehead'].includes(x.id) && x.spot >= 0 && x.spot < sim.FORAGE_SPOT_COUNT), 'spring forage');
-  check(Object.keys(s.npc).length === 14 && s.npc.ruess.love === 0 && sim.hearts(s, 'ruess') === 0, 'npc records');
+  check(Object.keys(s.npc).length === sim.NPC_IDS.length && sim.NPC_IDS.length >= 19 && s.npc.ruess.love === 0 && sim.hearts(s, 'ruess') === 0, 'npc records');
   check(sim.weekday(s) === 0 && sim.absDay(s) === 0 && sim.dateLabel(s) === 'Spring 1 (Mon), Year 1' && sim.timeLabel(s) === '6:00 AM', 'calendar labels');
   s.cal.day = 3; s.cal.minute = 580;
   check(sim.dateLabel(s) === 'Spring 3 (Wed), Year 1' && sim.timeLabel(s) === '9:40 AM', 'labels from the contract');
@@ -669,7 +669,7 @@ function script(s, days = 12) {
   }
   check(Object.keys(counts).sort().join() === '3,4,5,6', 'three to six spots');
   check(stars === 16, `the star-plum spot shows once a season until found (${stars} in 16 seasons)`);
-  check(Object.keys(kinds[0]).sort().join() === 'bamboo_shoot,fiddlehead,herb,wild_mint' && Object.keys(kinds[1]).sort().join() === 'berry,herb,honeycomb,wild_grape' && Object.keys(kinds[2]).sort().join() === 'chestnut,matsutake,mushroom,wild_apple' && Object.keys(kinds[3]).sort().join() === 'frostcap,pine_nut,winter_root', `forage by season: ${kinds.map((k) => Object.keys(k).sort().join('/')).join(' | ')}`);
+  check(Object.keys(kinds[0]).sort().join() === 'bamboo_shoot,fiddlehead,herb,wild_mint,wild_violet' && Object.keys(kinds[1]).sort().join() === 'berry,elderflower,herb,honeycomb,wild_grape' && Object.keys(kinds[2]).sort().join() === 'chestnut,matsutake,mushroom,rosehip,wild_apple' && Object.keys(kinds[3]).sort().join() === 'frostcap,pine_nut,snowdrop,winter_root', `forage by season: ${kinds.map((k) => Object.keys(k).sort().join('/')).join(' | ')}`);
   const f = s.forage[0], n = s.forage.length;
   const r = sim.pickForage(s, f.spot);
   check(r.ok && r.gained[0].id === f.id && countItem(s, f.id) === 1 && s.forage.length === n - 1 && !act(sim.pickForage(s, f.spot)).ok, 'pick it once');
@@ -1144,7 +1144,7 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   check(!sim.beltOdds(1).copper && sim.beltOdds(2).copper && !sim.beltOdds(3).titanium && sim.beltOdds(4).titanium && !sim.beltOdds(7).platinum && sim.beltOdds(8).platinum, 'copper from 2, titanium from 4, platinum from 8');
   check(sim.beltOdds(20).star_metal > sim.beltOdds(3).star_metal && sim.beltOdds(20).scrap < sim.beltOdds(1).scrap, 'further out: more star-metal, less scrap');
   check(JSON.stringify(sim.beltOdds(40)) === JSON.stringify(sim.beltOdds(20)), 'the odds stop changing at sector 20');
-  const t1 = beltTally(1, [1], 3, 1500, 410), t9 = beltTally(9, [1], 3, 1500, 410);
+  const t1 = beltTally(1, [2], 3, 1500, 410), t9 = beltTally(9, [2], 3, 1500, 410);
   check(t1.nickel_iron > 0 && t1.silica > 0 && !t1.copper && !t1.titanium && !t1.platinum, 'sector 1: nickel-iron, silica, ice and scrap');
   check(t9.copper > 0 && t9.titanium > 0 && t9.platinum > 0 && !t9.crystal && t9.platinum < t9.nickel_iron, 'sector 9: copper, titanium, a little platinum, no crystal yet');
   const sum = (o) => Object.values(o).reduce((a, b) => a + b, 0);
@@ -1179,8 +1179,10 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   check(L.pods.every((p) => beltSector(p.y) === p.sector && L.cells[p.y * BELT_W + p.x] === 6), 'each pod sits in its own sector');
   check(Object.keys(sim.BELT_LANDMARKS).every((s) => L.marks.some((m) => m.sector === +s && L.cells[m.y * BELT_W + m.x] === 7)), 'the landmarks: the derelict, the comet, the wreck, the far marker');
   const kinds = (s) => { const o = {}; for (let y = sectorTop(s); y < sectorTop(s) + SECTOR_H; y++) for (let x = 0; x < BELT_W; x++) { const c = L.cells[y * BELT_W + x]; o[c] = (o[c] || 0) + 1; } return o; };
-  check(!kinds(1)[5] && !kinds(2)[5] && kinds(18)[5] > 0 && (kinds(18)[5] + kinds(19)[5] + kinds(20)[5]) > (kinds(3)[5] || 0) + (kinds(4)[5] || 0) + (kinds(5)[5] || 0), 'rich veins: none near home, most far out');
-  check(Array.from({ length: 20 }, (_, i) => kinds(i + 1)[1] || 0).every((n) => n > 25) && Array.from({ length: 20 }, (_, i) => kinds(i + 1)[3] || 0).every((n) => n > 0), 'every sector has rock fields and great asteroids');
+  const sum3 = (a, k) => [a, a + 1, a + 2].reduce((t, s) => t + (kinds(s)[k] || 0), 0);
+  check(sum3(18, 5) > sum3(3, 5) * 2 && sum3(18, 8) > sum3(3, 8) * 2 && sum3(18, 2) > sum3(1, 2), `bigger rocks further north (large ${sum3(3, 5)} → ${sum3(18, 5)}, huge ${sum3(3, 8)} → ${sum3(18, 8)})`);
+  check(sum3(1, 5) >= 1 && sum3(1, 8) >= 1, 'a few big ones near home already: goals for a better hammer');
+  check(Array.from({ length: 20 }, (_, i) => [1, 2, 5, 8].reduce((t, k) => t + (kinds(i + 1)[k] || 0), 0)).every((n) => n > 25) && Array.from({ length: 20 }, (_, i) => kinds(i + 1)[3] || 0).every((n) => n > 0), 'every sector has rock fields and great asteroids');
   for (const seed of [1, 2, 3, 99, 4242]) {           // nothing is walled off from the pad: every rock, pod and landmark can be reached
     const C = beltLayout(seed).cells, seen = new Uint8Array(C.length), q = [BELT_PAD[1] * BELT_W + BELT_PAD[0]]; seen[q[0]] = 1; let bad = 0;
     while (q.length) { const i = q.pop(), x = i % BELT_W, y = (i - x) / BELT_W; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, j = ny * BELT_W + nx; if (nx < 0 || ny < 0 || nx >= BELT_W || ny >= BELT_H || seen[j]) continue; seen[j] = 1; if (C[j] !== 3 && C[j] !== 6 && C[j] !== 7) q.push(j); } }
@@ -1204,23 +1206,29 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   B.flags.tank = true; check(sim.enterBelt(B, 1).air === 150, 'the big air tank: 150');
   // the hammer: tiers set what breaks and how fast
   const H = rich(502); sim.enterBelt(H, 1); const HM = H.mine, cellOf = (k, s) => { for (let yy = sectorTop(s); yy < sectorTop(s) + SECTOR_H; yy++) for (let x = 0; x < BELT_W; x++) if (HM.cells[yy * BELT_W + x] === k) return [x, yy]; };
-  check(sim.hammerHits(1, 1) === 2 && sim.hammerHits(1, 2) === 1 && sim.hammerHits(2, 1) === 0 && sim.hammerHits(2, 2) === 2 && sim.hammerHits(3, 2) === 0 && sim.hammerHits(3, 3) === 2, 'hammer hits: a better hammer, fewer hits; too soft a hammer, none');
-  check(sim.rockHardness(1, 20) === 1 && sim.rockHardness(5, 4) === 2 && sim.rockHardness(5, 12) === 3 && sim.rockHardness(3, 5) === 0, 'hardness: rock 1, rich veins 2, and 3 from sector 10');
-  const [rx, ry] = cellOf(1, 1); H.player.stamina = 50;
-  r = sim.hitRock(H, rx, ry); check(r.ok && !r.broke && r.left === 1 && H.player.stamina === 49, 'a field hammer: the first hit cracks it');
-  r = sim.hitRock(H, rx, ry); check(r.ok && r.broke && HM.cells[ry * BELT_W + rx] === 0 && H.player.stamina === 48 && H.belt.gone[ry * BELT_W + rx] > sim.absDay(H), 'the second breaks it; it will drift back');
-  const [vx, vy] = cellOf(5, 12); check(!act(sim.hitRock(H, vx, vy)).ok && /Starsteel/.test(sim.hitRock(H, vx, vy).msg), 'a far rich vein needs a Starsteel hammer');
-  H.player.toolLevel.hammer = 3; r = sim.hitRock(H, vx, vy); r = r.broke ? r : sim.hitRock(H, vx, vy); check(r.broke && r.gained.length && ['titanium', 'star_metal', 'platinum', 'crystal', 'alloy', 'copper'].includes(r.gained[0].id), `a rich vein always gives something good (${r.gained.map((g) => g.id)})`);
+  const Z = sim.ROCK_SIZES; check(Z[1].tier === 1 && Z[2].tier === 1 && Z[5].tier === 2 && Z[8].tier === 3 && sim.isRock(4) && !sim.isRock(3) && !sim.isRock(0), 'sizes: small and medium for any hammer, large needs Alloy, huge Starsteel; great asteroids are no rock');
+  for (const k of [1, 2, 4, 5, 8]) for (let lv = 1; lv < 3; lv++) check(sim.rockHits(k, lv + 1) <= sim.rockHits(k, lv) || !sim.rockHits(k, lv), `a better hammer never takes more hits (${Z[k].name}, level ${lv + 1})`);
+  check(sim.rockHits(1, 1) === 1 && sim.rockHits(2, 1) === 3 && sim.rockHits(2, 3) === 1 && sim.rockHits(5, 1) === 0 && sim.rockHits(5, 2) === 3 && sim.rockHits(5, 3) === 2 && sim.rockHits(8, 2) === 0 && sim.rockHits(8, 3) === 3, 'hits by hammer level');
+  const [sx, sy] = cellOf(1, 1); H.player.stamina = 50;
+  r = sim.hitRock(H, sx, sy); check(r.ok && r.broke && H.player.stamina === 49, 'a small rock: one hit with any hammer');
+  const [rx, ry] = cellOf(2, 2), mk = HM.cells[ry * BELT_W + rx];
+  r = sim.hitRock(H, rx, ry); check(r.ok && !r.broke && r.left === 2 && H.player.stamina === 48 && /2 more/.test(r.msg), 'a medium boulder with a field hammer: crack, two more');
+  sim.hitRock(H, rx, ry); r = sim.hitRock(H, rx, ry); check(r.ok && r.broke && HM.cells[ry * BELT_W + rx] === 0 && H.player.stamina === 46 && H.belt.gone[ry * BELT_W + rx] > sim.absDay(H), 'the third hit breaks it; it will drift back');
+  const [lx, ly] = cellOf(5, 15), [vx, vy] = cellOf(8, 18);
+  r = act(sim.hitRock(H, lx, ly)); check(!r.ok && r.need === 2 && /large boulder: it needs an Alloy hammer, and yours is Field/.test(r.msg), `a large boulder names the hammer it needs (${r.msg})`);
+  H.player.toolLevel.hammer = 2; r = act(sim.hitRock(H, vx, vy)); check(!r.ok && r.need === 3 && /huge boulder: it needs a Starsteel hammer/.test(r.msg), 'a huge boulder needs Starsteel');
+  r = sim.hitRock(H, lx, ly); r = sim.hitRock(H, lx, ly); r = sim.hitRock(H, lx, ly); check(r.broke && r.gained.length === 1 && ['titanium', 'star_metal', 'platinum', 'crystal', 'alloy', 'copper'].includes(r.gained[0].id), `an Alloy hammer: a large boulder in three hits, always one good ore (${r.gained.map((g) => g.id)})`);
+  H.player.toolLevel.hammer = 3; for (let k = 0; k < 3; k++) r = sim.hitRock(H, vx, vy); check(r.broke && r.gained.length >= 2 && r.gained.length <= 3 && r.gained.every((g) => ['titanium', 'star_metal', 'platinum', 'crystal'].includes(g.id)), `a huge boulder: two or three of the best (${r.gained.map((g) => g.id)})`);
   const [bx, by] = cellOf(3, 3); check(!act(sim.hitRock(H, bx, by)).ok, 'great asteroids do not break');
-  const rich20 = beltTally(16, [5], 3, 400, 520), plain20 = beltTally(16, [1], 3, 400, 520), val = (o) => Object.entries(o).reduce((a, [id, n]) => a + ITEMS[id].sell * n, 0);
-  check(val(rich20) > val(plain20) * 2.5, `rich veins are worth far more (${val(rich20)} against ${val(plain20)} cr for 400 rocks)`);
+  const rich20 = beltTally(16, [5], 3, 400, 520), plain20 = beltTally(16, [2], 3, 400, 520), huge20 = beltTally(18, [8], 3, 200, 520), small20 = beltTally(16, [1], 3, 400, 520), val = (o) => Object.entries(o).reduce((a, [id, n]) => a + ITEMS[id].sell * n, 0);
+  check(val(rich20) > val(plain20) * 1.8 && val(plain20) > val(small20) * 1.3 && val(huge20) / 200 > val(rich20) / 400 * 1.8, `bigger is richer: small ${val(small20)}, medium ${val(plain20)}, large ${val(rich20)} cr for 400 rocks; huge ${val(huge20)} for 200`);
   const ice = beltTally(8, [4], 3, 400, 521); check(ice.comet_ice > 250 && !ice.star_metal, 'comet ice clusters give ice');
-  const far = beltTally(18, [1], 3, 2000, 522), near = beltTally(2, [1], 3, 2000, 522); check(val(far) > val(near) * 1.5, `far rock is worth more than near rock (${val(far)} against ${val(near)} cr)`);
+  const far = beltTally(18, [2], 3, 2000, 522), near = beltTally(2, [2], 3, 2000, 522); check(val(far) > val(near) * 1.5, `far rock is worth more than near rock (${val(far)} against ${val(near)} cr)`);
   // respawn: broken rocks are gone for 2–5 days, then back
   const day0 = sim.absDay(H), back = H.belt.gone[ry * BELT_W + rx];
   check(back >= day0 + 2 && back <= day0 + 5, `the rock returns in 2 to 5 days (day ${back - day0})`);
   sleep(H); sim.enterBelt(H, 1); check(H.mine.cells[ry * BELT_W + rx] === 0, 'next morning it is still gone');
-  for (let d = 0; d < 5; d++) sleep(H); sim.enterBelt(H, 1); check(H.mine.cells[ry * BELT_W + rx] === 1 && !(ry * BELT_W + rx in H.belt.gone), 'a few days later a new rock has drifted in');
+  for (let d = 0; d < 5; d++) sleep(H); sim.enterBelt(H, 1); check(H.mine.cells[ry * BELT_W + rx] === mk && !(ry * BELT_W + rx in H.belt.gone), 'a few days later a new rock has drifted in');
   // saves: the belt's record and the drifting rocks survive; an old layered save keeps its depth as milestones
   const back2 = loadState(saveState(B)); check(back2 && back2.belt.reached === 6 && back2.mine === null && back2.flags.tank, 'the belt record survives a save');
   const old = JSON.parse(saveState(newGame({ seed: 503 }))); delete old.belt; delete old.miner; old.stats.deepestBelt = 11;
@@ -1230,6 +1238,7 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   check(!act(sim.minerDeploy(M, 5, 5)).ok, 'it only works in the belt');
   sim.enterBelt(M, 1); const MM = M.mine; let spot = null;
   for (let yy = sectorTop(3); yy < sectorTop(1) + SECTOR_H && !spot; yy++) for (let x = 2; x < BELT_W - 2 && !spot; x++) { if (MM.cells[yy * BELT_W + x]) continue; let n = 0; for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) if (Math.hypot(i, j) <= 3.5 && (MM.cells[(yy + j) * BELT_W + x + i] === 1 || MM.cells[(yy + j) * BELT_W + x + i] === 4)) n++; if (n >= 15) spot = [x, yy]; }
+  for (let j = -5; j <= 5; j++) for (let i = -5; i <= 5; i++) { const q = (spot[1] + j) * BELT_W + spot[0] + i; if (MM.cells[q] === 2) MM.cells[q] = 1; }   // small rocks only, so a run is ten rocks
   r = sim.minerDeploy(M, spot[0], spot[1]); check(r.ok && MM.miner && !r.swapped, 'F sets it down on open ground');
   check(!act(sim.minerDeploy(M, spot[0], spot[1])).ok, 'only one out at a time');
   const st0 = M.player.stamina; let works = 0, full = false; for (let k = 0; k < 12; k++) { const w = sim.minerWork(M); if (w.ok) works++; else if (w.full) { full = true; sim.minerCollect(M); k--; } else break; }
@@ -1238,9 +1247,9 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   addItem(M, 'battery_full', 1); r = sim.minerWork(M); check(r.ok && r.swapped && countItem(M, 'battery_full') === 0 && countItem(M, 'battery') === 1 && M.miner.charge === 90, 'with a charged battery it swaps one in and carries on; the flat one comes back');
   const held = MM.miner.hold.reduce((a, g) => a + g.n, 0); r = sim.minerCollect(M); check(r.ok && r.gained.reduce((a, g) => a + g.n, 0) === held && !MM.miner.hold.length, 'Sato empties its hopper');
   { const T = rich(505); T.miner = { name: 'Gravel', charge: 100 }; sim.enterBelt(T, 1); const TM = T.mine, L5 = []; for (let i = 0; i < TM.cells.length; i++) if (TM.cells[i] === 5) L5.push(i);
-    const c = L5[0], cx = c % BELT_W, cy = Math.floor(c / BELT_W); for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) { const q = (cy + j) * BELT_W + cx + i; if (TM.cells[q] === 1 || TM.cells[q] === 4) TM.cells[q] = 0; }
+    const c = L5[0], cx = c % BELT_W, cy = Math.floor(c / BELT_W); for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) { const q = (cy + j) * BELT_W + cx + i; if (TM.cells[q] === 1 || TM.cells[q] === 2 || TM.cells[q] === 4) TM.cells[q] = 0; }
     let free = null; for (let j = -2; j <= 2 && !free; j++) for (let i = -2; i <= 2 && !free; i++) if (!TM.cells[(cy + j) * BELT_W + cx + i]) free = [cx + i, cy + j];
-    if (free) { sim.minerDeploy(T, free[0], free[1]); r = sim.minerWork(T); check(!r.ok && r.idle && TM.cells[c] === 5, 'the mining unit will not touch a rich vein'); } }
+    if (free) { sim.minerDeploy(T, free[0], free[1]); r = sim.minerWork(T); check(!r.ok && r.idle && TM.cells[c] === 5, 'the mining unit will not touch a large boulder'); } }
   r = sim.minerRecall(M); check(r.ok && !MM.miner && /folds up/.test(r.msg), 'F again recalls it');
   M.miner.charge = 0; check(!act(sim.minerDeploy(M, spot[0], spot[1])).ok && /charged battery/.test(sim.minerDeploy(M, spot[0], spot[1]).msg), 'a flat unit cannot be set down without a charged battery');
   addItem(M, 'battery_full', 1); r = sim.minerDeploy(M, spot[0], spot[1]); check(r.ok && r.swapped && M.miner.charge === 100, 'a charged battery from the rucksack: a full run');
@@ -1269,6 +1278,105 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   // jobs through the sim API (the pause screen calls these)
   check(sim.setRobotJob(K, 3, 'harvest').ok && K.robots[3].job === 'harvest' && sim.setRobotJob(K, 3, 'harvest').same && !act(sim.setRobotJob(K, 3, 'dance')).ok && !act(sim.setRobotJob(K, 12, 'water')).ok, 'set a job by index; the same job again is fine; nonsense is refused');
   check(Object.keys(sim.crewBatteries(newGame({ seed: 507 }))).length > 5 && sim.crewBatteries(newGame({ seed: 507 })).units === 0, 'crewBatteries on a new farm');
+}
+// ---------------------------------------------------------------- 2026-11-19: Market Lane, the fold, the duck house, the hives
+{
+  const LANE = ['pia', 'lark', 'noor', 'tika', 'vesna'];
+  const g = newGame({ seed: 611 });
+  check(LANE.every((id) => sim.NPC_IDS.includes(id) && g.npc[id] && g.npc[id].love === 0), 'the five Market Lane villagers have records');
+  check(g.fields.east && g.fields.east.w === 12 && g.fields.east.h === 10 && g.fields.east.tiles.some((t) => t.obj) && Array.isArray(g.machines) && g.duckNest.eggs === 0, 'a new game has the East Terrace (rubble), no machines, an empty nest');
+  // an old save gets everything new, and the game's dice are untouched by the new field
+  const old = JSON.parse(saveState(newGame({ seed: 612 }))); delete old.fields.east; delete old.machines; delete old.duckNest; for (const id of LANE) delete old.npc[id];
+  const back = loadState(JSON.stringify(old));
+  check(back && back.fields.east && back.fields.east.tiles.length === 120 && Array.isArray(back.machines) && back.duckNest && LANE.every((id) => back.npc[id]), 'an old save loads with the new field, machines, nest and villagers');
+  check(JSON.stringify(newGame({ seed: 77 }).forage) === JSON.stringify(newGame({ seed: 77 }).forage) && newGame({ seed: 77 }).rng === newGame({ seed: 77 }).rng, 'same seed, same game');
+  check(JSON.stringify(newGame({ seed: 613 }).fields.east) === JSON.stringify(loadState(JSON.stringify((() => { const o = JSON.parse(saveState(newGame({ seed: 613 }))); delete o.fields.east; return o; })())).fields.east), 'the East Terrace rubble is the same whether made new or for an old save');
+  // the East Terrace is locked until Ruess clears it
+  const e = rich(614); e.player.inv[0] = { id: 'hoe', n: 1 }; e.player.sel = 0;
+  const t0 = e.fields.east.tiles.findIndex((t) => !t.obj);
+  check(!act(useTool(e, 'east', t0 % 12, Math.floor(t0 / 12), 0)).ok && /Ruess/.test(useTool(e, 'east', t0 % 12, Math.floor(t0 / 12), 0).msg), 'the East Terrace is rubble until Ruess clears it');
+  check(buy(e, 'workshop', 'eastfield').ok && e.flags.eastfield && e.stock.lumber === 460, 'Ruess clears the East Terrace (3,000 cr, 40 lumber)');
+  check(useTool(e, 'east', t0 % 12, Math.floor(t0 / 12), 0).ok && e.fields.east.tiles[t0].till, 'then the hoe tills it');
+  // Noor's seeds are sold at the Seedhouse, not at Seln's; they grow, regrow and die with the season like any crop
+  for (let season = 0; season < 4; season++) {
+    const s = rich(615); s.cal.season = season; const fl = shopStock(s, 'florist').filter((x) => /^seed_/.test(x.key)), st = shopStock(s, 'store').filter((x) => /^seed_/.test(x.key));
+    check(fl.length === 3 && fl.every((x) => CROPS[x.key.slice(5)].shop === 'florist' && CROPS[x.key.slice(5)].seasons.includes(season)) && !st.some((x) => CROPS[x.key.slice(5)] && CROPS[x.key.slice(5)].shop), `three Earth crops at the Seedhouse in ${SEASONS[season]}, none at Seln's`);
+    check(Object.values(CROPS).filter((c) => c.seasons.length === 1 && c.seasons[0] === season && (c.shop || c.id !== 'moonflower')).length >= (season === 3 ? 3 : 7), `at least two new crops in ${SEASONS[season]}`);
+  }
+  check(['snap_pea', 'bell_pepper', 'cranberry', 'frost_leek'].every((id) => CROPS[id].regrow > 0) && ['tulip', 'sunflower', 'cosmos', 'snowbell'].every((id) => CROPS[id].flower), 'four new crops regrow, four are flowers');
+  const k = rich(616); k.cal.season = 3; k.flags.eastfield = true; const tile = k.fields.east.tiles[5]; Object.assign(tile, { obj: null, hp: 0, till: true });
+  k.player.inv[0] = { id: 'seed_kale', n: 1 }; k.player.sel = 0;
+  check(useTool(k, 'east', 5, 0, 0).ok && tile.crop && tile.crop.id === 'kale', 'kale sows outdoors in winter');
+  for (let d = 0; d < 6; d++) { tile.wet = true; sleep(k); }
+  check(sim.cropStage(tile.crop) === 3 && harvest(k, 'east', 5, 0).ok && countItem(k, 'kale') === 1, 'and is ripe in six days on the East Terrace');
+  // animals: the fold and the duck house first, then Corran sells them
+  const a = rich(617); a.stock.fodder = 50; a.stock.feed = 50; while (a.player.inv.length < 30) a.player.inv.push(null); a.player.slots = 30;
+  check(!shopStock(a, 'ranch').some((x) => ['goat', 'sheep', 'duck'].includes(x.key)), 'no goats, sheep or ducks before there is a home for them');
+  check(buy(a, 'workshop', 'fold').ok && buy(a, 'workshop', 'duckhouse').ok && a.flags.fold && a.flags.duckhouse, 'Ruess mends the fold and the duck house');
+  check(['goat', 'sheep', 'duck'].every((kd) => shopStock(a, 'ranch').some((x) => x.key === kd && x.can)), 'then Corran sells them');
+  check(buy(a, 'ranch', 'goat', 2).ok && buy(a, 'ranch', 'sheep', 2).ok && buy(a, 'ranch', 'duck', 3).ok && buy(a, 'ranch', 'clippers').ok && !act(buy(a, 'ranch', 'goat', 3)).ok, 'two goats, two sheep, three ducks and clippers; the fold holds four goats');
+  addItem(a, 'milker', 1); addItem(a, 'brush', 1); sleep(a);
+  const idx = (kd) => a.animals.map((x, i) => (x.kind === kd ? i : -1)).filter((i) => i >= 0);
+  check(idx('goat').length === 2 && idx('sheep').length === 2 && idx('duck').length === 3 && a.animals.every((x) => x.name), 'delivered and named');
+  check(!act(sim.milk(a, idx('goat')[0])).ok, 'a hungry goat gives no milk');
+  check(sim.feedAll(a, 'goat').ok && sim.feedAll(a, 'sheep').ok && sim.feedAll(a, 'duck').ok, 'the troughs are filled');
+  let r = sim.milk(a, idx('goat')[0]); check(r.ok && r.gained[0].id === 'goat_milk' && countItem(a, 'goat_milk') === 1 && !act(sim.milk(a, idx('goat')[0])).ok, 'a fed goat gives goat milk once a day');
+  check(sim.brush(a, idx('sheep')[0]).ok && sim.brush(a, idx('goat')[1]).ok && !act(sim.brush(a, idx('duck')[0])).ok, 'goats and sheep like the brush; ducks do not');
+  check(!act(sim.shear(a, idx('sheep')[0])).ok && /growing/.test(sim.shear(a, idx('sheep')[0]).msg), 'a new sheep has no fleece yet');
+  for (let d = 0; d < 3; d++) { sim.feedAll(a, 'sheep'); sim.feedAll(a, 'goat'); sim.feedAll(a, 'duck'); sleep(a); }
+  check(a.duckNest.eggs >= 9, `fed ducks lay (${a.duckNest.eggs} eggs)`);
+  sim.feedAll(a, 'sheep'); r = sim.shear(a, idx('sheep')[0]); check(r.ok && r.gained[0].id === 'wool' && a.animals[idx('sheep')[0]].fleece === 0, 'three fed nights: shear a fleece with the clippers');
+  a.animals[idx('sheep')[1]].love = 90; r = sim.shear(a, idx('sheep')[1]); check(r.ok && r.gained[0].id === 'fine_wool', 'a fond sheep gives fine wool');
+  a.animals[idx('goat')[1]].love = 90; sim.feedAll(a, 'goat'); r = sim.milk(a, idx('goat')[1]); check(r.ok && r.gained[0].id === 'goat_milk_l', 'a fond goat gives rich milk');
+  r = sim.collectDuckEggs(a); check(r.ok && countItem(a, 'duck_egg') >= 9 && a.duckNest.eggs === 0, 'collect the duck eggs');
+  check(!act(sim.collectDuckEggs(a)).ok, 'an empty nest box');
+  const sw = newGame({ seed: 618 }); sw.weather = 'sun'; sw.flags.duckhouse = true; sw.animals.push({ kind: 'duck', name: 'Q', love: 10, fed: true, milked: false, brushed: false, talked: false }); sleep(sw);
+  check(sw.animals[0].love === 13, 'a fed duck that swam on the pond: +2 fed, +1 swim');
+  // machines: placed on the farm like chests; cheese and yarn by morning; honey every few days, faster with flowers
+  const m = rich(619); m.player.money = 1e6; while (m.player.inv.length < 30) m.player.inv.push(null); m.player.slots = 30;
+  check(buy(m, 'garage', 'cheese_press').ok && buy(m, 'garage', 'spinning_wheel').ok && buy(m, 'florist', 'beehive').ok && countItem(m, 'cheese_press') === 1, 'the garage builds the press and the wheel; the Seedhouse sells hives');
+  const place = (id, x, y) => { m.player.sel = slotOf(m, id); return sim.placeItem(m, 'farm', x, y); };
+  check(place('cheese_press', 56, 9).ok && place('spinning_wheel', 58, 9).ok && place('beehive', 60, 9).ok && m.machines.length === 3 && sim.occupied(m, 'farm', 56, 9), 'set down on the farm');
+  check(!act(place.call(null, 'beehive', 60, 9)).ok, 'not on top of each other');
+  check(!sim.placeItem((() => { const q = rich(620); addItem(q, 'beehive', 1); q.player.sel = slotOf(q, 'beehive'); return q; })(), 'hill', 5, 5).ok, 'machines stay on the farm');
+  const press = sim.machineAt(m, 'farm', 56, 9), wheel = sim.machineAt(m, 'farm', 58, 9), hive = sim.machineAt(m, 'farm', 60, 9);
+  check(!act(sim.useMachine(m, press)).ok, 'the press wants milk');
+  addItem(m, 'goat_milk', 1); m.player.sel = slotOf(m, 'goat_milk'); check(sim.useMachine(m, press).ok && m.machines[press].item === 'goat_milk' && !countItem(m, 'goat_milk'), 'goat milk goes in the press');
+  addItem(m, 'fine_wool', 1); m.player.sel = slotOf(m, 'fine_wool'); check(sim.useMachine(m, wheel).ok, 'fine wool goes on the wheel');
+  check(/Take|working/.test(sim.machineLabel(m, press)) && /working/.test(sim.machineLabel(m, press)), 'the prompt says it is working');
+  check(!act(sim.pickUpPlaced((m.player.inv[m.player.sel] = { id: 'axe', n: 1 }, m), 'farm', 56, 9)).ok, 'a busy machine cannot be picked up');
+  m.cal.season = 0; sleep(m);
+  r = sim.useMachine(m, press); check(r.ok && r.gained[0].id === 'goat_cheese' && countItem(m, 'goat_cheese') === 1, 'goat cheese by morning');
+  r = sim.useMachine(m, wheel); check(r.ok && r.gained[0].id === 'yarn' && r.gained[0].n === 2, 'two skeins from fine wool');
+  check(!act(sim.useMachine(m, hive)).ok && m.machines[hive].days === 1, 'no honey after one night');
+  sleep(m); sleep(m); r = sim.useMachine(m, hive); check(r.ok && r.gained[0].id === 'honey', 'honey on the third day');
+  m.flags.eastfield = true; const ef = m.fields.east; for (let i = 6; i < 12; i++) Object.assign(ef.tiles[i], { obj: null, till: true, crop: { id: 'tulip', age: 2, dead: false } });
+  check(sim.hiveFlowers(m, m.machines[hive]) >= 3, 'tulips on the East Terrace are within the hive\'s reach');
+  sleep(m); sleep(m); check(m.machines[hive].out === 'honey', 'with flowers close by: honey every two days');
+  m.player.inv[m.player.sel] = { id: 'axe', n: 1 }; sim.useMachine(m, hive);
+  check(sim.pickUpPlaced(m, 'farm', 56, 9).ok && countItem(m, 'cheese_press') === 1 && m.machines.length === 2, 'the axe picks up an empty machine');
+  const w = rich(621); w.cal.season = 3; w.machines.push({ kind: 'beehive', map: 'farm', x: 57, y: 6, item: null, out: null, n: 0, days: 0 }); for (let d = 0; d < 5; d++) sleep(w);
+  check(!w.machines[0].out && w.cal.season === 3, 'the bees sleep in winter');
+  // the Lane shops
+  const shop = rich(622);
+  check(['bread', 'sun_bun', 'seed_loaf', 'honey_cake'].every((id) => shopStock(shop, 'bakery').some((x) => x.key === id)), 'the bakery bakes');
+  addItem(shop, 'yarn', 3); check(buy(shop, 'tailor', 'knit_scarf').ok && countItem(shop, 'yarn_scarf') === 1, 'Pia knits a scarf from three skeins');
+  addItem(shop, 'wool', 1); const y0 = countItem(shop, 'yarn'); check(buy(shop, 'tailor', 'spin_wool').ok && countItem(shop, 'yarn') === y0 + 1, 'Pia spins a fleece');
+  check(buy(shop, 'radio', 'song').ok && !act(buy(shop, 'radio', 'song')).ok, 'one song request at a time');
+  const before = sim.NPC_IDS.map((id) => shop.npc[id].love); sleep(shop);
+  check(sim.NPC_IDS.every((id, i) => shop.npc[id].love === before[i] + 1) && !shop.flags.songNext, 'the request plays: +1 with everyone');
+  shop.cal.day += 3; check(!act(buy(shop, 'radio', 'song')).ok && /week/.test(buy(shop, 'radio', 'song').msg), 'one a week');
+  // recipes from the new goods
+  const c = rich(623); c.flags.kitchen = true; while (c.player.inv.length < 30) c.player.inv.push(null); c.player.slots = 30;
+  for (const id of ['honey', 'duck_egg', 'seed_loaf']) addItem(c, id, 1);
+  r = sim.cook(c, 'honey_cake'); check(r.ok && countItem(c, 'honey_cake') === 1, 'honey cake from honey, a duck egg and a seeded loaf');
+  for (const id of ['tulip', 'herb']) addItem(c, id, 1); check(sim.cook(c, 'blossom_tea').ok, 'blossom tea from a tulip and a herb');
+  for (const id of ['honey', 'bread']) addItem(c, id, 1); check(sim.cook(c, 'honey_toast').ok, 'honey stands in for honeycomb on toast');
+  check(sim.LANE_RECIPES.length >= 10 && sim.RECIPE_GROUPS.some(([n, ids]) => /fold/.test(n) && ids.length === sim.LANE_RECIPES.length), `${sim.LANE_RECIPES.length} new recipes in their own kitchen group`);
+  check(['yarn_scarf', 'bouquet', 'honey_cake', 'record'].every((id) => ITEMS[id] && ITEMS[id].sell > 0), 'gift-worthy crafted things');
+  // the forage: one new find each season
+  const f = newGame({ seed: 624 }), seen = new Set(); for (let d = 0; d < 480; d++) { sleep(f); for (const x of f.forage) seen.add(x.id); }
+  check(['wild_violet', 'elderflower', 'rosehip', 'snowdrop'].every((id) => seen.has(id)), 'violets, elderflower, rosehips and snowdrops turn up on the hill');
 }
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

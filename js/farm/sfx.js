@@ -46,6 +46,7 @@ export function trackFor(m) {
   if (m.festival) return 'festival';
   if (m.belt || m.map === 'belt') return art.has('music/belt') ? 'belt' : 'night';   // calm, for the asteroid belt
   if (m.ruins || m.map === 'ruins') return 'ruins';
+  if (m.map === 'lower') return art.has('music/undercroft') ? 'undercroft' : 'night';   // the Undercroft: no day or night down there
   if (m.night) return 'night';
   if (m.map === 'village') return 'village';
   if (m.map === 'central') return 'central';

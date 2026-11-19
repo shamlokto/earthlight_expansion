@@ -4,23 +4,26 @@
 // that map now. The map screen has a tab for each outdoor map; indoors it opens on the map whose door
 // Sato is behind. Art: scenes/townmap (optional), shown as a header picture.
 import { allMaps, outsideOf, findSpot } from './maps.js';
+import { lowerState } from './maps.js';
 import * as story from './story.js';
 import * as art from './art.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const OUTDOOR = [['farm', 'The Hollin field'], ['village', 'Willowfall'], ['hill', 'Terrace Hill'], ['central', 'Eden Central']];
+const OUTDOOR = [['farm', 'The Hollin field'], ['village', 'Willowfall'], ['hill', 'Terrace Hill'], ['central', 'Eden Central'], ['lower', 'The Undercroft']];
 const GROUND = { g: '#93c870', f: '#a8805a', p: '#e6d3a4', c: '#ddd5c4', s: '#ecdfb2', w: '#72b9de', k: '#bb8c5a', r: '#8c877f', o: '#c4c0b6', h: '#dcc06c', b: '#b48a5c', d: '#c6d0d6', a: '#8c877e', x: '#33302c' };
 const ROOF = { gov_office: '#8ea3b8', exchange: '#9a5ab0', arrivals: '#a3b0ba', apartment: '#9fb0bf', townhouse: '#d98a6a', observatory: '#eef1f3', onsen_house: '#c9583a', house: '#e0905a', barn: '#c8553e', coop: '#dca85e', silo: '#a3b0ba', greenhouse: '#c3eaee', store: '#ea8762', cafe: '#8299b4', workshop: '#cba36c', hall: '#c45c4a', ranch: '#bc543f', clinic: '#f2efe8', library: '#9378b4', pumphouse: '#93a7b4', post: '#e6c454', guard: '#7393ac', lift: '#8c7c6c', orbital_elevator: '#5fb3b0', school: '#f2c230', church: '#3fa7a3', safety_depot: '#e0782a' };
+Object.assign(ROOF, { bakery: '#d9534f', tailor: '#5a8f92', seedhouse: '#cfeee0', garage: '#8a98a2', radio_station: '#5b4a7a', fold: '#9a8a70', duckhouse: '#7ab0d8' });   // Market Lane, the fold, the duck house
 const TILE = 12;                                                  // pixels per tile in the cached base picture
 let hooks = null, base = new Map(), mini = null, open = null, lastMini = 0;
 
 // ---------------------------------------------------------------- the base picture of a map (cached)
 function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 function baseOf(m, season) {
-  const key = m.id + ':' + season; if (base.has(key)) return base.get(key);
+  if (m.under && hooks && hooks.get().S) lowerState(m, hooks.get().S.flags);   // the Undercroft as restored so far
+  const key = m.id + ':' + season + ':' + (m.ver || ''); if (base.has(key)) return base.get(key);
   const c = document.createElement('canvas'); c.width = m.w * TILE; c.height = m.h * TILE; const g = c.getContext('2d'), T = TILE;
-  for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { const k = m.at(x, y); g.fillStyle = k === 'g' && season === 3 ? '#e9eff3' : GROUND[k] || '#999'; g.fillRect(x * T, y * T, T + 0.5, T + 0.5); }
+  for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { const k = m.at(x, y); g.fillStyle = k === 'g' && season === 3 ? '#e9eff3' : m.under && k === 'r' ? '#1d2126' : GROUND[k] || '#999'; g.fillRect(x * T, y * T, T + 0.5, T + 0.5); }
   // soft edges: water gets a lighter rim and ripples, deck plating a seam grid
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
     const k = m.at(x, y);
@@ -63,8 +66,8 @@ function beltOf(m, mine) {
   const sh = m.sectorH, top = (k) => (m.sectors - k) * sh + 1;
   for (let k = 1; k <= m.sectors; k++) { g.globalAlpha = 0.16 + (k % 2) * 0.06; g.fillStyle = SECT(k); g.fillRect(T, top(k) * T, (m.w - 2) * T, sh * T); }
   g.globalAlpha = 1; g.fillStyle = '#262a36'; g.fillRect(T, top(1) * T + sh * T, (m.w - 2) * T, (m.h - 2 - m.sectors * sh) * T);
-  const COL = { 1: '#8f857a', 3: '#4a4440', 4: '#cfeefa', 5: '#ffd36a' };
-  for (let y = 0; y < mine.h; y++) for (let x = 0; x < mine.w; x++) { const k = mine.cells[y * mine.w + x], col = COL[k]; if (!col) continue; g.fillStyle = col; if (k === 3) g.fillRect((x + 1) * T, (y + 1) * T, T, T); else { g.beginPath(); g.arc((x + 1.5) * T, (y + 1.5) * T, T * (k === 5 ? 0.45 : 0.38), 0, 7); g.fill(); } }
+  const COL = { 1: '#8f857a', 2: '#b0a596', 3: '#4a4440', 4: '#cfeefa', 5: '#ffd36a', 8: '#ff9f5a' }, RAD = { 1: 0.3, 2: 0.4, 4: 0.36, 5: 0.48, 8: 0.62 };
+  for (let y = 0; y < mine.h; y++) for (let x = 0; x < mine.w; x++) { const k = mine.cells[y * mine.w + x], col = COL[k]; if (!col) continue; g.fillStyle = col; if (k === 3) g.fillRect((x + 1) * T, (y + 1) * T, T, T); else { g.beginPath(); g.arc((x + 1.5) * T, (y + 1.5) * T, T * RAD[k], 0, 7); g.fill(); } }
   for (let k = 2; k <= m.sectors; k++) { const y = (top(k) + sh) * T; g.strokeStyle = SECT(k); g.lineWidth = 2; g.beginPath(); g.moveTo(T, y); g.lineTo((m.w - 1) * T, y); g.stroke(); }
   beltBase = { mine, ver: mine.ver, c }; return c;
 }
@@ -80,7 +83,7 @@ function beltMarks(g, m, mine, s, ox, oy, t, big) {
 }
 function openBeltChart() {
   const { map: m, S } = hooks.get(), mine = S.mine; if (!mine) return;
-  const html = `<canvas class="fm-mapcv" id="mapCv"></canvas><p class="fm-dim fm-maplegend"><i style="background:#e8483a"></i>Sato <i style="background:#5fffd2"></i>Pickup pods (home in 15 min) <i style="background:#ffd36a"></i>Rich veins and landmarks <i style="background:#cfeefa"></i>Comet ice · sector numbers down the side; the launch cradle can start you at ${S.belt.reached >= 5 ? [1, 5, 10, 15, 20].filter((k) => k <= S.belt.reached).join(', ') : 'sector 1 (reach 5 for more)'} · M or Esc to close</p>`;
+  const html = `<canvas class="fm-mapcv" id="mapCv"></canvas><p class="fm-dim fm-maplegend"><i style="background:#e8483a"></i>Sato <i style="background:#5fffd2"></i>Pickup pods (home in 15 min) <i style="background:#ffd36a"></i>Large boulders and landmarks <i style="background:#ff9f5a"></i>Huge boulders <i style="background:#cfeefa"></i>Comet ice · sector numbers down the side; the launch cradle can start you at ${S.belt.reached >= 5 ? [1, 5, 10, 15, 20].filter((k) => k <= S.belt.reached).join(', ') : 'sector 1 (reach 5 for more)'} · M or Esc to close</p>`;
   hooks.openWin(`The belt chart · farthest: sector ${S.belt.reached}`, html, () => { if (open) cancelAnimationFrame(open.raf); open = null; }, 'map');
   const cv = $('mapCv'); open = { tab: 'belt', cv, dots: [], hover: null, raf: 0 };
   const draw = (t) => {
@@ -167,7 +170,7 @@ function drawMini(t) {
   const cv = mini.cv, dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth || 160;
   if (cv.width !== Math.round(W * dpr)) { cv.width = cv.height = Math.round(W * dpr); }
   const bt = m.belt, g = cv.getContext('2d'), s = bt ? 2.4 : 4.2, cx = st.me.x, cy = st.me.y; g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.fillStyle = bt ? '#05070d' : '#5f7f55'; g.fillRect(0, 0, W, W);
+  g.fillStyle = bt ? '#05070d' : m.under ? '#1d2126' : '#5f7f55'; g.fillRect(0, 0, W, W);
   const TL = bt ? 6 : TILE, b = bt ? beltOf(m, st.S.mine) : baseOf(m, st.S ? st.S.cal.season : 0), sx = (cx - W / 2 / s) * TL, sy = (cy - W / 2 / s) * TL, sw = (W / s) * TL;
   g.drawImage(b, sx, sy, sw, sw, 0, 0, W, W);
   if (bt) beltMarks(g, m, st.S.mine, s, W / 2 - cx * s, W / 2 - cy * s, t, false);
