@@ -83,7 +83,7 @@ export function model(name) {
   if (!models[name]) return Promise.resolve(null);
   if (!modelCache.has(name)) {
     modelCache.set(name, new Promise((res) => gltf.load(BASE + 'models/' + models[name].file, (g) => {
-      g.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if (o.material && o.material.map) o.material.map.anisotropy = 4; if (o.material) { o.material.metalness = Math.min(o.material.metalness ?? 0, 0.1); o.material.roughness = Math.max(o.material.roughness ?? 1, 0.75); } } });
+      g.scene.traverse((o) => { if (o.isMesh) { o.geometry.userData.keep = true; o.castShadow = true; o.receiveShadow = true; if (o.material && o.material.map) o.material.map.anisotropy = 4; if (o.material) { o.material.metalness = Math.min(o.material.metalness ?? 0, 0.1); o.material.roughness = Math.max(o.material.roughness ?? 1, 0.75); } } });
       res(g.scene);
     }, undefined, () => res(null))));
   }

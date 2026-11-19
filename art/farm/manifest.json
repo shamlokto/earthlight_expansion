@@ -176,6 +176,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/copper": {
+   "file": "icons/copper.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/corn": {
    "file": "icons/corn.webp",
    "w": 256,
@@ -356,8 +361,18 @@
    "w": 256,
    "h": 256
   },
+  "icons/gear_brooch": {
+   "file": "icons/gear_brooch.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/glowcap": {
    "file": "icons/glowcap.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/glowcap_broth": {
+   "file": "icons/glowcap_broth.webp",
    "w": 256,
    "h": 256
   },
@@ -433,6 +448,11 @@
   },
   "icons/honeyed_nuts": {
    "file": "icons/honeyed_nuts.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/hub_cup": {
+   "file": "icons/hub_cup.webp",
    "w": 256,
    "h": 256
   },
@@ -526,6 +546,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/mushroom_skewer": {
+   "file": "icons/mushroom_skewer.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/mushroom_soup": {
    "file": "icons/mushroom_soup.webp",
    "w": 256,
@@ -536,6 +561,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/nickel_iron": {
+   "file": "icons/nickel_iron.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/omelette": {
    "file": "icons/omelette.webp",
    "w": 256,
@@ -543,6 +573,11 @@
   },
   "icons/onion": {
    "file": "icons/onion.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/oyster_fry": {
+   "file": "icons/oyster_fry.webp",
    "w": 256,
    "h": 256
   },
@@ -591,6 +626,16 @@
    "w": 256,
    "h": 256
   },
+  "icons/pipe_whistle": {
+   "file": "icons/pipe_whistle.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/platinum": {
+   "file": "icons/platinum.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/plum": {
    "file": "icons/plum.webp",
    "w": 256,
@@ -618,6 +663,11 @@
   },
   "icons/ring": {
    "file": "icons/ring.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/ring_shard": {
+   "file": "icons/ring_shard.webp",
    "w": 256,
    "h": 256
   },
@@ -693,6 +743,11 @@
   },
   "icons/sickle": {
    "file": "icons/sickle.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/silica": {
+   "file": "icons/silica.webp",
    "w": 256,
    "h": 256
   },
@@ -786,6 +841,16 @@
    "w": 256,
    "h": 256
   },
+  "icons/tin_lantern": {
+   "file": "icons/tin_lantern.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/titanium": {
+   "file": "icons/titanium.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/tomato": {
    "file": "icons/tomato.webp",
    "w": 256,
@@ -801,6 +866,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/truffle_omelette": {
+   "file": "icons/truffle_omelette.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/tulip": {
    "file": "icons/tulip.webp",
    "w": 256,
@@ -808,6 +878,11 @@
   },
   "icons/turnip": {
    "file": "icons/turnip.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/undercroft_stew": {
+   "file": "icons/undercroft_stew.webp",
    "w": 256,
    "h": 256
   },
@@ -969,6 +1044,15 @@
    "h": 768,
    "anchor": [
     135,
+    766
+   ]
+  },
+  "people/hana_front": {
+   "file": "people/hana_front.webp",
+   "w": 266,
+   "h": 768,
+   "anchor": [
+    131,
     766
    ]
   },

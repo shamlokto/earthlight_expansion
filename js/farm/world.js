@@ -440,10 +440,8 @@ export class World {
       case 'shuttle_gate': {                             // the boarding gate: an orange arch, a lit SHUTTLE TO EARTH board, a beacon
         const gm = std({ color: 0x5d6a77, metalness: 0.4 }), or = std({ color: 0xe0782a });
         g.add(box(0.22, 2.9, 0.22, gm, -0.8), box(0.22, 2.9, 0.22, gm, 0.8), box(2.0, 0.3, 0.3, or, 0, 2.9));
-        const c = document.createElement('canvas'); c.width = 256; c.height = 96; const x = c.getContext('2d');
-        x.fillStyle = '#0d2a33'; x.fillRect(0, 0, 256, 96); x.strokeStyle = '#7dffe0'; x.lineWidth = 4; x.strokeRect(4, 4, 248, 88);
-        x.fillStyle = '#9ff4ff'; x.font = 'bold 30px sans-serif'; x.textAlign = 'center'; x.fillText('SHUTTLE', 128, 40); x.fillStyle = '#ffd36a'; x.fillText('TO EARTH', 128, 78);
-        const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+        const t = panelTex('shuttle_gate', 256, 96, (x) => {x.fillStyle = '#0d2a33'; x.fillRect(0, 0, 256, 96); x.strokeStyle = '#7dffe0'; x.lineWidth = 4; x.strokeRect(4, 4, 248, 88);
+        x.fillStyle = '#9ff4ff'; x.font = 'bold 30px sans-serif'; x.textAlign = 'center'; x.fillText('SHUTTLE', 128, 40); x.fillStyle = '#ffd36a'; x.fillText('TO EARTH', 128, 78); });
         for (const sd of [1, -1]) { const b = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.64), new THREE.MeshBasicMaterial({ map: t })); b.position.set(0, 3.45, 0.045 * sd); if (sd < 0) b.rotation.y = Math.PI; g.add(b); }
         g.add(box(1.8, 0.7, 0.05, gm, 0, 3.1, 0));
         const bc = ball(0.13, new THREE.MeshBasicMaterial({ color: 0xffb347 }), 0, 3.95, 0, 1); bc.castShadow = false; g.add(bc);
@@ -845,7 +843,7 @@ export class World {
   // ------------------------------------------------------------ the map
   setMap(map, state) {
     this.map = map; this.state = state; this.season = state.cal.season; this.flags = state.flags || {};
-    this.root.clear(); this.facers.length = 0; this.spriteMats.length = 0; this.anims.length = 0; this.tileObjs.clear();
+    freeGeometry(this.root); for (const m of this.waterMats || []) if (m.map && m.map.userData.ownWater) m.map.dispose(); this.root.clear(); this.facers.length = 0; this.spriteMats.length = 0; this.anims.length = 0; this.tileObjs.clear();
     for (const a of this.actors.values()) a.dispose && a.dispose(); this.actors.clear();
     this.lamps = []; this.waterMats = []; this.tallProps = []; this.steam = [];
     const R = this.root, W = map.w, H = map.h;
@@ -865,7 +863,7 @@ export class World {
         const bed = new THREE.Mesh(tiles(cells, -0.5), std({ color: 0x2a3a34 })); R.add(bed);
         // the surface sits just above the colony's surrounding ground sheet (y -0.07), which runs under the whole map
         const wm = new THREE.MeshStandardMaterial({ map: art.tex('water', { repeat: 1 }).clone(), color: map.under ? 0x4a8a9a : 0xb8dce6, transparent: true, opacity: 0.94, roughness: 0.12, metalness: 0.1 });
-        wm.map.wrapS = wm.map.wrapT = THREE.RepeatWrapping; wm.map.needsUpdate = true; this.waterMats.push(wm);
+        wm.map.wrapS = wm.map.wrapT = THREE.RepeatWrapping; wm.map.needsUpdate = true; wm.map.userData.ownWater = true; this.waterMats.push(wm);
         const m = new THREE.Mesh(tiles(cells, -0.04), wm); m.receiveShadow = true; R.add(m); continue;
       }
       const cp = c === 'c' && !map.indoor && art.has('textures/colony_path');   // colony art, when the pack has it
@@ -1148,9 +1146,15 @@ export function stoneMaterial(mat) {
 }
 // Stone-shade every mesh of an object (a model can arrive later: call again; it returns true once something was shaded).
 export function stoneShade(o) { let n = 0; o.traverse((q) => { if (q.isMesh && q.material && !q.material.userData.stone) { q.material = stoneMaterial(q.material); n++; } else if (q.isMesh) n++; }); return n > 0; }
+// Free the GPU buffers of a map being unloaded. Shared geometry (loaded models, the rock shapes, the colony's
+// cached shapes) carries userData.keep and is left alone; everything built fresh for this map is disposed.
+export function freeGeometry(root) {
+  root.traverse((o) => { const g = o.geometry; if (g && !g.userData.keep && g.dispose) g.dispose(); });
+}
 const ROCK_GEO = new Map();
 function rockGeo(name, big) {
   if (ROCK_GEO.has(name)) return ROCK_GEO.get(name);
+  const keep = (r) => { if (r && r.geo) r.geo.userData.keep = true; return r; };   // shared by every belt visit: never freed
   const proc = () => { const geo = new THREE.DodecahedronGeometry(big ? 0.62 : 0.42, 1), p = geo.attributes.position; for (let i = 0; i < p.count; i++) { const k = 0.82 + (((i * 37 + (big ? 5 : 11)) % 17) / 17) * 0.35; p.setXYZ(i, p.getX(i) * k, p.getY(i) * k * 0.85, p.getZ(i) * k); } geo.computeVertexNormals(); return { geo, mat: std({ color: 0xffffff, flatShading: true }), model: false }; };
   const pr = art.model(name).then((m) => {
     if (!m) return proc();
@@ -1160,7 +1164,7 @@ function rockGeo(name, big) {
     geo.translate(-(bb.min.x + bb.max.x) / 2, -(bb.min.y + bb.max.y) / 2, -(bb.min.z + bb.max.z) / 2); geo.scale(0.9 / sz, 0.9 / sz, 0.9 / sz);
     const mat = mesh.material.clone(); return { geo, mat, model: true };
   });
-  ROCK_GEO.set(name, pr); return pr;
+  const kp = pr.then(keep); ROCK_GEO.set(name, kp); return kp;
 }
 // Rock sizes (sim.ROCK_SIZES): small, medium, large (gold-flecked, two glints), huge (warm, four glints); great asteroids are the walls.
 const ROCK_KIND = { 1: { model: 'asteroid', s: 0.62, y: 0.32, tint: [0xffe2c0, 0xf2cfa8, 0xffecd8] }, 2: { model: 'asteroid', s: 0.95, y: 0.45, tint: [0xe8dccb, 0xd9cbb8, 0xf0e4d4] }, 3: { model: 'asteroid_big', s: 1.5, y: 0.6, big: true, tint: [0x8f8880, 0x7c766f] }, 4: { model: 'comet_ice', s: 0.85, y: 0.32, tint: [0xe8f6ff, 0xd2ecff] }, 5: { model: 'asteroid', s: 1.28, y: 0.6, glints: 2, tint: [0xffe2a0, 0xf5d090, 0xffd8b0] }, 8: { model: 'asteroid', s: 1.75, y: 0.8, glints: 4, tint: [0xffc890, 0xffb880, 0xf0c0a0] } };

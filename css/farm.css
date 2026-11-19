@@ -56,6 +56,8 @@ button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outl
 .fm-trow { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; } .fm-trow button, .fm-trow a, .fm-file { padding: 12px 22px; border-radius: 10px; border: 1px solid rgba(255, 240, 200, .5); background: rgba(20, 16, 10, .55); color: #f6eeda; font: 600 16px var(--f-display); text-decoration: none; cursor: pointer; }
 .fm-trow button.primary { background: var(--gold); border-color: var(--gold); color: #1c1408; } .fm-trow.small button, .fm-trow.small a, .fm-trow.small .fm-file { padding: 7px 14px; font-size: 13px; } .fm-sub { font: 400 13px var(--f-body) !important; color: #cdbf9f; }
 #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .35s; } #fade.on { opacity: 1; pointer-events: auto; }
+/* the black fade sits under what must stay readable on it: narration, choices, the standing portrait, toasts */
+#fade { z-index: 40; } #dialog, #choice, #dStand { z-index: 50; } #toasts, .fm-toasts, #celebrate { z-index: 60; }
 /* touch */
 #touch { position: absolute; inset: 0; pointer-events: none !important; } #touch > * { pointer-events: auto; position: absolute; }
 #stick { left: 22px; bottom: 96px; width: 120px; height: 120px; border-radius: 50%; background: rgba(250, 243, 226, .28); border: 2px solid rgba(250, 243, 226, .6); } #stick i { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(250, 243, 226, .8); }
