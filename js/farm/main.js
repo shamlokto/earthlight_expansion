@@ -507,7 +507,7 @@ function probe() {                                   // → { label, run } for E
   const nb = nearestBot(1.4);
   if (nb && S.robots[nb.i]) { const r = S.robots[nb.i], held = sim.selected(S); if (held && held.id === 'battery_full') return { label: `Give ${r.name} a charged battery`, run: () => { const q = sim.chargeRobot(S, nb.i); ui.toast(q.msg); if (q.ok) { sfx('good'); bubble(nb.o, 'Bzzt! ♥'); } refreshHud(); } }; return { label: `Talk to ${r.name} (battery ${r.charge}%)`, run: () => talkBot(nb) }; }
   const pl = placedProbe(tx, ty); if (pl) return pl;
-  if (map.id === 'farm' && S.flags.feed_mill && map.millAt) { const [mx, my, mw, md] = map.millAt; if (tx >= mx && tx < mx + mw && ty >= my && ty < my + md) return { label: `Put crops in the feed mill (${sim.millCount(S)}/${sim.MILL_DAY})`, run: () => ui.siloWindow(S, refreshHud) }; }
+  if (map.id === 'farm' && S.flags.feed_mill && map.millAt) { const [mx, my, mw, md] = map.millAt; if (tx >= mx && tx < mx + mw && ty >= my && ty < my + md) return { label: `Put crops in the feed mill (${sim.millCount(S)}/${sim.millCap(S)})`, run: () => ui.siloWindow(S, refreshHud) }; }
   const p = propAt(tx, ty);
   if (p) {
     if (p.act === 'counter' && p.shop) return { label: 'Use the Grand Market terminal', run: () => ui.marketWindow(S, refreshHud) };

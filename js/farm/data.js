@@ -115,9 +115,21 @@ item('battery_full', 'Battery (charged)', 'part', 'A charged robot battery. Give
 
 item('scrap', 'Scrap', 'ore', 'Scrap metal from the ruins.', { sell: 15 });
 item('comet_ice', 'Comet ice', 'ore', 'Dirty ice from the belt, full of useful volatiles. Ruess always wants some.', { sell: 60, detail: 'Drilled out of belt rocks in Vashti\'s sector runs, at every depth. It sells, the Workshop uses it for coolant, and Ruess is fond of a gift of it.' });
-item('star_metal', 'Star-metal', 'ore', 'A rare nickel-iron from deep in the belt, bright as a mirror.', { sell: 500, detail: 'Found only in the asteroid belt, from sector 3 down, and not often. Ruess needs one to fit the Pallas with air filters for the Old World.' });
+item('star_metal', 'Star-metal', 'ore', 'A rare meteoric metal from deep in the belt, bright as a mirror.', { sell: 500, detail: 'Found only in the asteroid belt, from sector 3 out, and not often (a little more often the further out you fly). Ruess needs one to fit the Pallas with air filters for the Old World.' });
 item('alloy', 'Alloy', 'ore', 'Good alloy, drilled from belt rocks from sector 5 out.', { sell: 40 });
 item('crystal', 'Crystal', 'ore', 'A drive crystal, drilled from belt rocks from sector 10 out.', { sell: 150 });
+// The belt's other ores (2026-11-19): common nickel-iron and silica near the colony, copper and titanium a little
+// further out, platinum-group nuggets deep. sim.BELT_ORES has the odds; Ruess turns most of them into something.
+item('nickel_iron', 'Nickel-iron', 'ore', 'Grey, heavy ore that makes up most of the belt. Ruess smelts four into one alloy.', { sell: 25,
+  detail: 'The commonest rock in the belt, from sector 1 out: iron and nickel, much as it came from the birth of the sun. Ruess smelts four of them into a bar of alloy for 100 cr, which saves you waiting for sector 5.' });
+item('silica', 'Silica', 'ore', 'Glassy belt sand. The colony melts it into panes and solar cells.', { sell: 30,
+  detail: 'Drifting grit and glassy nodules from the belt, from sector 1 out. Every window on Eden began as something like this. Ruess wants four, with two copper, to build more charging racks in the Willowfall solar yard.' });
+item('copper', 'Copper ore', 'ore', 'Green-streaked ore from sector 2 out. Wiring, motors and batteries.', { sell: 45,
+  detail: 'A streak of copper green in a darker rock, from belt sector 2 out. Ruess winds two into a new robot battery for 80 cr, and it goes into the solar yard racks and the Pallas drill head.' });
+item('titanium', 'Titanium ore', 'ore', 'Light, stubborn ore from sector 4 out. Ruess uses it where things wear.', { sell: 90,
+  detail: 'Pale, light and very hard to break, drilled from belt sector 4 out. Ruess casts two into steel rollers for the feed mill (it grinds twice as much), and three go into the Pallas drill head.' });
+item('platinum', 'Platinum nugget', 'ore', 'A heavy, soft-shining nugget of the platinum metals, deep in the belt.', { sell: 260,
+  detail: 'Platinum, iridium and osmium, fused into a nugget the size of a thumb, from belt sector 8 out. It sells very well, Moraine adores it, and one tips the Pallas drill head.' });
 
 // Old-world artefacts from the ruins, cheapest first. `depth` is the shallowest site they turn up in.
 export const RELICS = [
@@ -238,7 +250,7 @@ const DETAIL = {
   solar_panel: 'A small solar charger from Ruess\'s workshop. Set it on the farm, put empty robot batteries in with E, and they are charged by morning: two on a bright day, one in rain or snow, none in a storm.',
   battery: 'A flat Field-unit battery. Charge it overnight in a solar charger. Ruess sells them, and they turn up in the ruins.',
   battery_full: 'A charged Field-unit battery. Give it to one of your robots with E for 60 charge; you get the empty one back.',
-  scrap: 'Twisted metal from the Old World ruins and the belt rocks. Ruess wants five for every Alloy upgrade, and he never says no to more.',
+  scrap: 'Twisted metal from the Old World ruins and the near belt. Ruess wants five for every Alloy upgrade, and he never says no to more.',
   alloy: 'Good structural alloy, drilled from asteroid rocks from belt sector 5 out. Five go into a Starsteel upgrade; three into the Pallas filters.',
   crystal: 'A drive crystal, drilled from the belt from sector 10 out. Starsteel tools need one.',
   photo: 'Strangers smiling under a blue sky, faded to sepia. Found in the shallowest ruins; the Memory Room keeps one.',

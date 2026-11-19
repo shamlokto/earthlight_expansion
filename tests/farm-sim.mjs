@@ -26,6 +26,8 @@ const slotOf = (s, id) => s.player.inv.findIndex((i) => i && i.id === id);
 const wipe = (s, f = 'farm') => { for (const t of s.fields[f].tiles) Object.assign(t, { till: false, wet: false, crop: null, obj: null, hp: 0 }); };
 const setObj = (s, x, y, obj) => Object.assign(tile(s, x, y), { obj, hp: obj === 'stump' || obj === 'boulder' ? 3 : 1 });
 const rich = (seed = 5) => { const s = newGame({ seed }); s.player.money = 1e6; s.stock.lumber = 500; while (s.player.inv.length < 16) s.player.inv.push(null); s.player.slots = 16; addItem(s, 'scrap', 20); addItem(s, 'alloy', 20); addItem(s, 'crystal', 5); addItem(s, 'star_metal', 2); return s; };
+// rich, with belt ore for Ruess's ore jobs and room to carry it
+const richer = (seed = 5) => { const s = rich(seed); while (s.player.inv.length < 24) s.player.inv.push(null); s.player.slots = 24; for (const o of ['nickel_iron', 'silica', 'copper', 'titanium', 'platinum']) addItem(s, o, 12); return s; };
 const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
 
 // ---------------------------------------------------------------- data
@@ -62,7 +64,7 @@ const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
   check(s.pasture.w === 12 && s.pasture.h === 7 && s.pasture.grass.length === 84 && s.pasture.grass.every((v) => v === 0), 'pasture empty');
   check(s.animals.length === 0 && s.eggs === 0 && s.bin.length === 0 && s.mine === null && s.pending.upgrade === null && s.pending.animals.length === 0, 'nothing else yet');
   check(s.forage.length >= 3 && s.forage.length <= 6 && s.forage.every((x) => ['herb', 'bamboo_shoot', 'wild_mint', 'fiddlehead'].includes(x.id) && x.spot >= 0 && x.spot < sim.FORAGE_SPOT_COUNT), 'spring forage');
-  check(Object.keys(s.npc).length === 12 && s.npc.ruess.love === 0 && sim.hearts(s, 'ruess') === 0, 'npc records');
+  check(Object.keys(s.npc).length === 14 && s.npc.ruess.love === 0 && sim.hearts(s, 'ruess') === 0, 'npc records');
   check(sim.weekday(s) === 0 && sim.absDay(s) === 0 && sim.dateLabel(s) === 'Spring 1 (Mon), Year 1' && sim.timeLabel(s) === '6:00 AM', 'calendar labels');
   s.cal.day = 3; s.cal.minute = 580;
   check(sim.dateLabel(s) === 'Spring 3 (Wed), Year 1' && sim.timeLabel(s) === '9:40 AM', 'labels from the contract');
@@ -345,16 +347,16 @@ function script(s, days = 12) {
   const seenKeys = new Set();
   for (let season = 0; season < 4; season++) {
     for (const shop of SHOP_IDS) {
-      const base = rich(); setDate(base, season, 2); base.player.stamina = 40;      // tired, so the clinic's check-up is on offer
+      const base = richer(); setDate(base, season, 2); base.player.stamina = 40;      // tired, so the clinic's check-up is on offer
       const stock = shopStock(base, shop);
       check(stock.length > 0, `${shop} sells something in ${SEASONS[season]}`);
       for (const e of stock) {
         seenKeys.add(e.key);
         check(typeof e.key === 'string' && e.label && e.desc && e.price > 0 && e.can === true && e.why === undefined, `${shop}/${e.key} is a full entry a rich player can buy`);
-        const s = rich(); setDate(s, season, 2); s.player.stamina = 40;
+        const s = richer(); setDate(s, season, 2); s.player.stamina = 40;
         const r = buy(s, shop, e.key);
         check(r.ok && r.msg && s.player.money === 1e6 - e.price, `${shop}/${e.key} bought for its price`);
-        const p = rich(); setDate(p, season, 2); p.player.money = e.price - 1; p.player.stamina = 40;
+        const p = richer(); setDate(p, season, 2); p.player.money = e.price - 1; p.player.stamina = 40;
         const pe = shopStock(p, shop).find((x) => x.key === e.key), before = saveState(p), pr = act(buy(p, shop, e.key));
         check(pe.can === false && typeof pe.why === 'string' && pe.why && !pr.ok && pr.msg === pe.why && saveState(p) === before, `${shop}/${e.key} refused when poor, nothing changed`);
       }
