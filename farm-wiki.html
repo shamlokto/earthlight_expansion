@@ -97,7 +97,8 @@
     // ---- pictures
     const SHOTS = [['title', 'The title screen'], ['intro', 'The opening'], ['farm', 'The Hollin field'], ['pasture', 'The pasture and pond'], ['farm_dusk', 'Dusk on the Upper deck'],
       ['village_market', 'Market Street, Willowfall'], ['village_square', 'Lantern Square'], ['colony_overhead', 'Look up: the colony curves overhead'], ['village_night', 'Willowfall at night'],
-      ['house', 'The farmhouse'], ['barn', 'The barn'], ['cafe', 'The Hangar canteen'], ['clinic', "Dr. Mori's clinic"], ['hill', 'Terrace Hill'], ['ruins_fight', 'The Old World: the Pallas at work'], ['map', 'The town map']];
+      ['house', 'The farmhouse'], ['barn', 'The barn'], ['cafe', 'The Hangar canteen'], ['clinic', "Dr. Mori's clinic"], ['hill', 'Terrace Hill'], ['orbital_elevator', 'The orbital elevator on Terrace Hill'], ['belt_run', 'A belt sector: drilling for ore'], ['ruins_fight', 'The Old World: the Pallas at work'], ['map', 'The town map'],
+      ['central_arrivals', 'Eden Central: the Arrivals hall and the safety depot'], ['central_school', 'Eden Central school'], ['school_inside', 'The empty classroom'], ['central_church', 'Second Dawn Church'], ['church_inside', 'Inside the church: the memorial candles'], ['central_depot', 'The safety depot'], ['depot_inside', 'Inside the safety depot'], ['arrivals_hall', 'The Arrivals hall'], ['people_new', 'Pastor Ines and Constable Fenn']];
     const scenes = Object.keys(art).filter((k) => k.startsWith('scenes/') && k !== 'scenes/title').map((k) => [url(k), k.slice(7).replace(/_/g, ' ')]);
     add('gallery', 'Pictures', `<p class="lead">Screenshots from the game, then the story pictures.</p>
       <div class="gallery">${SHOTS.map(([f, c]) => `<figure><img src="art/farm/wiki/${f}.webp" alt="${esc(c)}" loading="lazy"><figcaption>${esc(c)}</figcaption></figure>`).join('')}</div>
@@ -115,7 +116,7 @@
         ${n.likes && n.likes.length ? `<div class="g">Likes ${n.likes.slice(0, 6).map((x) => esc(name(x))).join(', ')}</div>` : ''}
         ${n.dislikes && n.dislikes.length ? `<div class="g">Dislikes ${n.dislikes.map((x) => esc(name(x))).join(', ')}</div>` : ''}</div></div>`; };
     const ids = Object.keys(story.NPCS).filter((k) => k !== 'sato');
-    add('people', 'People of Willowfall', `<p class="lead">Talk every day, bring gifts and do favours. Six of them can become more than friends.</p>
+    add('people', 'People of Willowfall and Eden Central', `<p class="lead">Talk every day, bring gifts and do favours. Six of them can become more than friends. Pastor Ines and Constable Fenn live and work in Eden Central, down the lift.</p>
       <div class="cards">${person('sato')}${ids.map(person).join('')}</div>`);
 
     // ---- love
@@ -148,7 +149,34 @@
     // ---- fishing and the Old World
     add('fishing', 'Fishing', `<p class="lead">Face water, Space to cast, wait for the float to dip, Space again. Rain and the hill lake are best; Ruess can upgrade the rod.</p>
       <div class="tw"><table><tr><th>Fish</th><th>About</th><th class="n">Sells</th></tr>${(story.FISH || []).map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc((story.FISHING && story.FISHING.caught && story.FISHING.caught[id]) || (ITEMS[id] && ITEMS[id].desc) || '')}</td><td class="n">${ITEMS[id] && ITEMS[id].sell ? ITEMS[id].sell + ' cr' : ''}</td></tr>`).join('')}</table></div>`);
-    add('ruins', 'The Old World', `<p>On Terrace Hill, Nell Vashti keeps the <b>Descent</b>, an old cargo lift down to the ruins of human civilisation on Earth's surface. Sato goes down in her <b>Pallas</b>. <b>Space</b> fires its rifle, and up close swings the beam sabre. <b>F</b> sets down the <b>Hydra</b> autoturret, <b>Shift</b> boosts, and <b>E</b> searches rubble. Creatures wind up before they lunge; a hit costs a little stamina, never more. One pile on every level hides the way down, and deeper levels hold rarer finds.</p>
+    // ---- Eden Central
+    const PLACES = [
+      ['The lift', 'Willowfall\'s lift plaza drops down the spoke to the Main deck in 20 minutes; the terminal is at the south end of the avenue.'],
+      ['The Governor\'s office', 'On the plaza. The General is at his desk on weekdays, 9 to 5.'],
+      ['The Ashfall Exchange', 'Queen Moraine\'s trading house on the plaza, 10 to 6 every day but Saturday (on Saturdays she trades from her ship at the dock).'],
+      ['The Grand Market', 'Vending terminals with no keeper: imported seeds of the season at +25%, every sapling in any season, batteries, honeycomb, chestnuts, tonic. They also buy fine food and produce worth 300 cr or more at a fifth above bin prices.'],
+      ['The Arrivals hall', 'A clean transit hall with a window band onto the stars, the departures screen and the courier desk, which books Maris\'s shuttle to Earth. Maris lands here on Tuesday and Friday mornings.'],
+      ['The space dock', 'North-west, at the hull: landing pads, cranes, Moraine\'s cartel trader and Maris\'s courier shuttle beside the lit <b>SHUTTLE TO EARTH</b> gate.'],
+      ['The shuttle to Earth', 'Any day, any hour: ' + sim.SHUTTLE_FARE + ' cr a trip, free once Maris is at 5 hearts. Board at the gate or book at the Arrivals desk.'],
+      ['Sato\'s Watch', 'The observatory and beacon named for Sato (to her dismay). After 7 in the evening the dome opens for stargazing: +20 stamina once a night.'],
+      ['The viewing gallery', 'Benches along the great window. After 7 in the evening a sit restores 20 stamina once a day.'],
+      ['Second Dawn Church', 'Pastor Ines Calloway\'s church, open day and night, with 312 memorial candles for those lost in the siege (light one with E), a stained-glass window and her tomato garden beside it.'],
+      ['The safety depot', 'Constable Aldo Fenn\'s peacekeeping and rescue post: front desk, lockers, rescue drones and a deck map that is all green. Lost hens are returned on Thursdays.'],
+      ['The school', 'Small desks, a blackboard and cubbies with no names on them yet. It waits, ready and quiet, for its first pupils.'],
+      ['Empty houses', 'Six locked houses on the side streets. Try the doors; each has a story, and a future.'],
+    ];
+    add('central', 'Eden Central', `<p class="lead">The Main deck city under the glass roof, down the spoke lift from Willowfall. It never rains here.</p>
+      <div class="cards">${PLACES.map(([t, d]) => `<div class="card"><div><b>${esc(t)}</b><div class="g">${d}</div></div></div>`).join('')}</div>`);
+
+    // ---- the belt
+    const ORES = sim.BELT_ORES || [], at = (d) => (sim.beltOdds ? sim.beltOdds(d) : {}), pct = (p) => (p ? Math.round(p * 100) + '%' : '–');
+    add('belt', 'The belt and the orbital elevator', `<p>On Terrace Hill the <b>orbital elevator</b> rides its cable up to the colony's axis, where Nell Vashti keeps her <b>hangar</b>. At the launch cradle Sato climbs into her <b>Pallas</b> and flies out to a sector of the asteroid belt. <b>E</b> drills a rock (1 stamina). One rock in each sector hides the <b>jump buoy</b> to the next; further out, the rocks are richer. No creatures: drifting debris only nudges you.</p>
+      <h3>What the rocks give</h3><div class="tw"><table><tr><th>Ore</th><th class="n">From sector</th><th class="n">Sector 1</th><th class="n">5</th><th class="n">10</th><th class="n">20</th><th class="n">Sells</th><th>Used for</th></tr>
+      ${ORES.slice().sort((a, b) => a[1] - b[1] || (ITEMS[a[0]].sell - ITEMS[b[0]].sell)).map(([id, from]) => `<tr><td>${ico(id)}${esc(name(id))}</td><td class="n">${from}</td><td class="n">${pct(at(1)[id])}</td><td class="n">${pct(at(5)[id])}</td><td class="n">${pct(at(10)[id])}</td><td class="n">${pct(at(20)[id])}</td><td class="n">${ITEMS[id].sell} cr</td><td>${esc(ITEMS[id].detail || ITEMS[id].desc)}</td></tr>`).join('')}
+      </table></div>
+      <h3>What Ruess makes from it</h3><p>Smelt alloy (4 nickel-iron + 100 cr) · wind a robot battery (2 copper ore + 80 cr) · four more solar yard racks (4 silica + 2 copper + 1,200 cr) · titanium mill rollers, the feed mill grinds forty a night (2 titanium + 800 cr) · the Pallas drill head, sometimes a second ore per rock (3 titanium + 2 copper + 1 platinum + 2,500 cr) · Alloy and Starsteel tool upgrades (scrap, alloy, crystal) · the Pallas air filters (3 alloy + 1 star-metal).</p>`);
+
+    add('ruins', 'The Old World', `<p>Juno Maris's courier shuttle flies from the Eden Central space dock (or book at the Arrivals desk) down to the ruins of human civilisation on Earth's surface: ${sim.SHUTTLE_FARE} cr a trip, free once she is at 5 hearts. Sato goes down in her <b>Pallas</b>. <b>Space</b> fires its rifle, and up close swings the beam sabre. <b>F</b> sets down the <b>Hydra</b> autoturret, <b>Shift</b> boosts, and <b>E</b> searches rubble. Creatures wind up before they lunge; a hit costs a little stamina, never more. One pile on every level hides the way down, and deeper levels hold rarer finds. Green and yellow haze drains stamina until Ruess fits the Pallas air filters. Earth rubble gives scrap, batteries and relics; ore comes from the belt.</p>
       <h3>Finds for the Memory Room</h3><div class="tw"><table><tr><th>Find</th><th>About</th><th class="n">Sells</th></tr>${(story.RELICS || []).map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc((story.RUINS && story.RUINS.relic && story.RUINS.relic[id]) || '')}</td><td class="n">${ITEMS[id] && ITEMS[id].sell ? ITEMS[id].sell + ' cr' : ''}</td></tr>`).join('')}</table></div>`);
 
     // ---- festivals and places

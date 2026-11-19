@@ -24,7 +24,7 @@
 //    Finds that do not fit in a full rucksack are left behind (the result says so).
 import { SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, ITEMS, CROPS, TOOL_LEVELS, FIELD_SIZES, PASTURE_SIZE, RELICS, FESTIVAL_DAYS, FRUIT_TREES, TREE_DAYS, WILD_TREES, SATO_BIRTHDAY, ROBOT_NAMES, ROBOT_JOBS, ROBOT_MOODS } from './data.js';
 
-export const NPC_IDS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui'];
+export const NPC_IDS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui', 'calloway', 'fenn'];
 export const CAN_CAPACITY = [0, 20, 40, 80];
 export const STORAGE_SIZE = 40, FRIDGE_SIZE = 30;
 // What goes in the fridge: anything you can eat or cook with.
@@ -32,7 +32,7 @@ const FRIDGE_KINDS = new Set(['crop', 'animal', 'fish', 'forage', 'food', 'fruit
 // The basket takes farm produce: crops, forage, fruit, eggs and milk.
 const PRODUCE = new Set(['crop', 'forage', 'fruit', 'animal']);
 export const BASKET_CAP = 30, CHEST_SIZE = 20, MAX_ROBOTS = 7, FORAGE_SPOT_COUNT = 14, ONSEN_PRICE = 100;
-export const MAX_STAMINA_CAP = 200, STAR_SPOT = 99, COLLECTOR_KINDS = 75, HYDRO_TOWERS = 8, HYDRO_MAX = 4, YARD_SLOTS = 6, YARD_PRICE = 30, MILL_DAY = 20;
+export const MAX_STAMINA_CAP = 200, STAR_SPOT = 99, COLLECTOR_KINDS = 75, HYDRO_TOWERS = 8, HYDRO_MAX = 4, YARD_SLOTS = 6, YARD_PRICE = 30, MILL_DAY = 20, YARD_SLOTS_BIG = 10, MILL_DAY_FAST = 40, DRILL_BONUS = 0.3;
 // The ten one-time star-plum sources (flags plum_<id>).
 export const STAR_PLUM_SOURCES = ['hill', 'ruins10', 'ruins20', 'harvest', 'lantern', 'seln7', 'marrow7', 'moraine', 'mori', 'collector'];
 export const RUCKSACK_TIERS = [[15, 1500], [20, 4000], [25, 8000], [30, 15000]];
@@ -207,6 +207,7 @@ export function ensure(s) {
   arr(s, 'mill'); arr(s, 'hydro'); obj(s, 'solarYard'); arr(s.solarYard, 'slots'); obj(s, 'stats');
   if (!Array.isArray(s.storage)) s.storage = new Array(STORAGE_SIZE).fill(null);
   if (!Array.isArray(s.fridge)) s.fridge = new Array(FRIDGE_SIZE).fill(null);
+  obj(s, 'npc'); for (const id of NPC_IDS) if (!s.npc[id] || typeof s.npc[id] !== 'object') s.npc[id] = { love: 0, talked: false, gifted: false, met: false };   // people who moved in after the save
   return s;
 }
 
@@ -686,6 +687,15 @@ function shelves(state, shopId) {
     if (!state.flags.feed_mill) out.push({ key: 'feed_mill', label: 'Feed mill', desc: 'A little mill beside your silo. Put crops in by day; by morning they are hen feed.', price: 1500, lumber: 40, needs: '40 lumber', once: true,
       apply: () => { state.flags.feed_mill = true; ensure(state); return 'Ruess will have the feed mill standing beside your silo by tonight. "It grinds. It does not judge."'; } });
     sell('battery', 200);
+    // What Ruess makes from belt ore (2026-11-19).
+    sell('battery', 80, { key: 'wind_battery', label: 'Wind a battery from copper', desc: 'Ruess winds a new robot battery from two copper ore. Cheaper than a bought one.', req: [['copper', 2]], needs: '2 copper ore', once: true });
+    sell('alloy', 100, { key: 'smelt_alloy', label: 'Smelt alloy', desc: 'Four nickel-iron into the workshop furnace; one bar of good alloy out.', req: [['nickel_iron', 4]], needs: '4 nickel-iron', once: true });
+    if (!state.flags.yard_big) out.push({ key: 'yard_racks', label: 'Solar yard racks', desc: 'Four more charging racks in the Willowfall solar yard, glazed with belt glass: ten batteries a night.', price: 1200, req: [['silica', 4], ['copper', 2]], needs: '4 silica, 2 copper ore', once: true,
+      apply: () => { state.flags.yard_big = true; return 'Ruess glazes four new racks in the solar yard. "Belt glass. Better than anything we pour up here."'; } });
+    if (state.flags.feed_mill && !state.flags.mill_rollers) out.push({ key: 'mill_rollers', label: 'Titanium mill rollers', desc: 'Steel-and-titanium rollers for your feed mill: it grinds forty crops a night instead of twenty.', price: 800, req: [['titanium', 2]], needs: '2 titanium ore', once: true,
+      apply: () => { state.flags.mill_rollers = true; return 'Ruess fits the new rollers. The mill sounds less like it is complaining.'; } });
+    if (!state.flags.drill) out.push({ key: 'up_drill', label: 'Pallas drill head', desc: 'A titanium drill head with a platinum tip: now and then a belt rock gives up a second ore.', price: 2500, req: [['titanium', 3], ['copper', 2], ['platinum', 1]], needs: '3 titanium ore, 2 copper ore, 1 platinum nugget', once: true,
+      apply: () => { state.flags.drill = true; return 'Ruess bolts a new drill head onto the Pallas. "Do not drill anything I am standing on."'; } });
     if (!state.flags.kitchen) {
       out.push({ key: 'kitchen', label: 'Kitchen refit', desc: 'A stove, a sink and a cold-locker fridge for the farmhouse. Cook meals from your own harvest.', price: 2500, lumber: 60, needs: '60 lumber', once: true,
         apply: () => { state.flags.kitchen = true; boxes(state); return 'Ruess refitted your kitchen. The fridge hums like a small engine.'; } });
@@ -836,15 +846,26 @@ export function enterMine(state, depth = 1, mode = 'earth') {
   state.mine = { mode: belt ? 'belt' : 'earth', depth, floor: depth, w, h, cells, monsters, hatch, star, haz };
   return state.mine;
 }
+// The belt's ores: [id, first sector, weight there, weight gained a sector further out (to sector 20)].
+// Near the colony it is scrap, nickel-iron, silica and comet ice; copper, titanium, alloy, platinum and
+// crystal come in further out, and star-metal a little more often the deeper you go. The rest is bare rock.
+export const BELT_ORES = [
+  ['scrap', 1, 0.14, -0.006], ['nickel_iron', 1, 0.2, -0.004], ['silica', 1, 0.12, -0.002], ['comet_ice', 1, 0.16, -0.002],
+  ['copper', 2, 0.1, 0.001], ['titanium', 4, 0.07, 0.002], ['alloy', 5, 0.1, 0.002], ['platinum', 8, 0.035, 0.002],
+  ['crystal', 10, 0.06, 0.003], ['star_metal', 3, 0.025, 0.0015],
+];
+// The chance of each ore from one rock in a sector (they sum to under 1; the rest is nothing).
+export function beltOdds(depth) {
+  const d = Math.max(1, Math.min(20, int(depth) ? depth : 1)), out = {};
+  for (const [id, from, w, step] of BELT_ORES) if (d >= from) out[id] = Math.max(0.01, w + step * (d - from));
+  return out;
+}
 // What a pile or a monster gives up at this depth.
 function find(state, depth, mode = 'earth') {
   const r = rnd(state);
-  if (mode === 'belt') {                             // ore by sector depth, comet ice, and now and then star-metal
-    if (r < 0.04 && depth >= 3) return 'star_metal';
-    if (r < 0.14) return depth >= 10 ? 'crystal' : depth >= 5 ? 'alloy' : 'scrap';
-    if (r < 0.30) return depth >= 5 ? 'alloy' : 'scrap';
-    if (r < 0.48) return 'comet_ice';
-    return r < 0.75 ? 'scrap' : null;
+  if (mode === 'belt') {                             // ore by sector depth: one roll against the odds table
+    let acc = 0; for (const [id, p] of Object.entries(beltOdds(depth))) { acc += p; if (r < acc) return id; }
+    return null;
   }
   if (r < 0.11) {
     const pool = RELICS.filter((x) => x.depth <= depth);
@@ -864,9 +885,10 @@ export function hitRock(state, x, y) {
   m.cells[i] = hatch ? 2 : 0;
   state.stats.searched++;
   const starHere = i === m.star && !state.flags['plum_ruins' + m.depth];
-  const res = take(state, [...(id ? [[id, 1]] : []), ...(starHere ? [['star_plum', 1]] : [])], { ok: true, broke: true, gained: [], hatch });
+  const extra = m.mode === 'belt' && state.flags.drill && rnd(state) < DRILL_BONUS ? find(state, m.depth, 'belt') : null;   // the drill head pulls a second core now and then
+  const res = take(state, [...(id ? [[id, 1]] : []), ...(extra ? [[extra, 1]] : []), ...(starHere ? [['star_plum', 1]] : [])], { ok: true, broke: true, gained: [], hatch });
   if (starHere && res.gained.some((g) => g.id === 'star_plum')) { state.flags['plum_ruins' + m.depth] = true; m.star = -1; res.star = true; res.msg = 'Under the rubble, in a sealed seed tin, a small fruit glowing violet: a star-plum.'; }
-  if (hatch) res.msg = m.mode === 'belt' ? (res.gained.length ? `You drilled out ${lower(id)}, and behind the rock a jump buoy blinks.` : 'Behind the rock, a jump buoy blinks: the way to the next sector.') : res.gained.length ? `You found ${lower(id)}, and a way down.` : 'Under the rubble is a way down.';
+  if (hatch) res.msg = m.mode === 'belt' ? (res.gained.length ? `You drilled out ${lower(res.gained[0].id)}, and behind the rock a jump buoy blinks.` : 'Behind the rock, a jump buoy blinks: the way to the next sector.') : res.gained.length ? `You found ${lower(res.gained[0].id)}, and a way down.` : 'Under the rubble is a way down.';
   return spend(state, 1, res);
 }
 export function defeatMonster(state, index) {
@@ -1279,6 +1301,9 @@ export function siloAdd(state, slot, n) {
   return { ok: true, msg: `${n} × ${ITEMS[id].name} into the silo: +${2 * n} fodder.` };
 }
 export const millCount = (state) => ensure(state).mill.reduce((a, b) => a + b.n, 0);
+// Ruess's titanium rollers double what the mill grinds in a night; his belt-glass racks grow the solar yard.
+export const millCap = (state) => (state.flags.mill_rollers ? MILL_DAY_FAST : MILL_DAY);
+export const yardSlots = (state) => (state.flags.yard_big ? YARD_SLOTS_BIG : YARD_SLOTS);
 // Crops into the mill's hopper (up to 20 a day); ground overnight into hen feed.
 export function millAdd(state, slot, n) {
   if (!state.flags.feed_mill) return fail('There is no feed mill yet. Ruess can build one.');
@@ -1286,8 +1311,8 @@ export function millAdd(state, slot, n) {
   if (!MILLABLE.has(s.id)) return fail('The mill grinds vegetables, chestnuts and pine nuts.');
   if (n === undefined || n === null) n = s.n;
   if (!int(n) || n < 1) return fail('Choose how many.');
-  n = Math.min(n, s.n, MILL_DAY - millCount(state));
-  if (n < 1) return fail('The hopper is full for today: twenty is all it grinds in a night.');
+  n = Math.min(n, s.n, millCap(state) - millCount(state));
+  if (n < 1) return fail(`The hopper is full for today: ${millCap(state) === MILL_DAY ? 'twenty' : 'forty'} is all it grinds in a night.`);
   const id = s.id; takeFromSlot(state, slot, n);
   const line = state.mill.find((x) => x.id === id); if (line) line.n += n; else state.mill.push({ id, n });
   return { ok: true, msg: `${n} × ${ITEMS[id].name} in the hopper. Hen feed by morning.` };
@@ -1308,10 +1333,10 @@ function millOvernight(state, notes) {
 // ---------------------------------------------------------------- the solar yard (village)
 // Leave empty batteries (30 cr each, up to 6); collect them charged: sun all, rain or snow half, storm none.
 export function yardDeposit(state) {
-  const y = ensure(state).solarYard, free = YARD_SLOTS - y.slots.length, have = countItem(state, 'battery');
+  const y = ensure(state).solarYard, free = yardSlots(state) - y.slots.length, have = countItem(state, 'battery');
   if (y.slots.some((b) => b === 'battery_full')) return yardCollect(state);
   if (!have) return fail(y.slots.length ? `${y.slots.length} of your batteries are charging. Come back in the morning.` : 'Bring empty batteries: the yard charges them overnight for 30 cr each.');
-  if (!free) return fail('Your six racks are full. Come back in the morning.');
+  if (!free) return fail(`Your ${state.flags.yard_big ? 'ten' : 'six'} racks are full. Come back in the morning.`);
   const n = Math.min(free, have, Math.floor(state.player.money / YARD_PRICE));
   if (n < 1) return fail(`Charging costs ${YARD_PRICE} cr a battery.`);
   removeItem(state, 'battery', n); state.player.money -= n * YARD_PRICE;

@@ -11,7 +11,7 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const OUTDOOR = [['farm', 'The Hollin field'], ['village', 'Willowfall'], ['hill', 'Terrace Hill'], ['central', 'Eden Central']];
 const GROUND = { g: '#93c870', f: '#a8805a', p: '#e6d3a4', c: '#ddd5c4', s: '#ecdfb2', w: '#72b9de', k: '#bb8c5a', r: '#8c877f', o: '#c4c0b6', h: '#dcc06c', b: '#b48a5c', d: '#c6d0d6', a: '#8c877e', x: '#33302c' };
-const ROOF = { gov_office: '#8ea3b8', exchange: '#9a5ab0', arrivals: '#a3b0ba', apartment: '#9fb0bf', townhouse: '#d98a6a', observatory: '#eef1f3', onsen_house: '#c9583a', house: '#e0905a', barn: '#c8553e', coop: '#dca85e', silo: '#a3b0ba', greenhouse: '#c3eaee', store: '#ea8762', cafe: '#8299b4', workshop: '#cba36c', hall: '#c45c4a', ranch: '#bc543f', clinic: '#f2efe8', library: '#9378b4', pumphouse: '#93a7b4', post: '#e6c454', guard: '#7393ac', lift: '#8c7c6c' };
+const ROOF = { gov_office: '#8ea3b8', exchange: '#9a5ab0', arrivals: '#a3b0ba', apartment: '#9fb0bf', townhouse: '#d98a6a', observatory: '#eef1f3', onsen_house: '#c9583a', house: '#e0905a', barn: '#c8553e', coop: '#dca85e', silo: '#a3b0ba', greenhouse: '#c3eaee', store: '#ea8762', cafe: '#8299b4', workshop: '#cba36c', hall: '#c45c4a', ranch: '#bc543f', clinic: '#f2efe8', library: '#9378b4', pumphouse: '#93a7b4', post: '#e6c454', guard: '#7393ac', lift: '#8c7c6c', orbital_elevator: '#5fb3b0', school: '#f2c230', church: '#3fa7a3', safety_depot: '#e0782a' };
 const TILE = 12;                                                  // pixels per tile in the cached base picture
 let hooks = null, base = new Map(), mini = null, open = null, lastMini = 0;
 

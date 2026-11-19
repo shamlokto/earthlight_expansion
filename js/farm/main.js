@@ -23,7 +23,7 @@ let npcs = new Map(), beasts = [], bots = [], monsters = [], hydra = null, fishi
 let clock = 0, lastPlaced = -1, hurtT = 0, doorHold = 0;
 const keys = new Set(), stick = { x: 0, y: 0 };
 // Small touches to the built figures, on top of the colours in story.js.
-const LOOKS = { sato: { top: '#f4eddc', bottom: '#2f4488', eye: '#7a4a22', skin: '#f8dcc4', bib: true, hat: true }, seln: { apron: '#4f8a3a' }, mori: { glasses: true, top: '#f4f6f8' }, yui: { glasses: true }, kestrel: {}, corran: { moustache: '#f2f2f2', age: 'old', bib: true }, marrow: { age: 'old' }, ruess: { age: 'old', glasses: true }, oduya: { bib: true }, vashti: {}, maris: {}, general: {}, moraine: {} };
+const LOOKS = { sato: { top: '#f4eddc', bottom: '#2f4488', eye: '#7a4a22', skin: '#f8dcc4', bib: true, hat: true }, seln: { apron: '#4f8a3a' }, mori: { glasses: true, top: '#f4f6f8' }, yui: { glasses: true }, kestrel: {}, corran: { moustache: '#f2f2f2', age: 'old', bib: true }, marrow: { age: 'old' }, ruess: { age: 'old', glasses: true }, oduya: { bib: true }, vashti: {}, maris: {}, general: {}, moraine: {}, calloway: { collar: true, stole: '#3fa7a3', glasses: true }, fenn: { cap: '#1a2b4c', badge: true, capBadge: true, belt: true } };
 const lookOf = (id) => ({ ...NPCS[id].look, ...(LOOKS[id] || {}) });
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
@@ -507,13 +507,13 @@ function probe() {                                   // → { label, run } for E
   const nb = nearestBot(1.4);
   if (nb && S.robots[nb.i]) { const r = S.robots[nb.i], held = sim.selected(S); if (held && held.id === 'battery_full') return { label: `Give ${r.name} a charged battery`, run: () => { const q = sim.chargeRobot(S, nb.i); ui.toast(q.msg); if (q.ok) { sfx('good'); bubble(nb.o, 'Bzzt! ♥'); } refreshHud(); } }; return { label: `Talk to ${r.name} (battery ${r.charge}%)`, run: () => talkBot(nb) }; }
   const pl = placedProbe(tx, ty); if (pl) return pl;
-  if (map.id === 'farm' && S.flags.feed_mill && map.millAt) { const [mx, my, mw, md] = map.millAt; if (tx >= mx && tx < mx + mw && ty >= my && ty < my + md) return { label: `Put crops in the feed mill (${sim.millCount(S)}/${sim.MILL_DAY})`, run: () => ui.siloWindow(S, refreshHud) }; }
+  if (map.id === 'farm' && S.flags.feed_mill && map.millAt) { const [mx, my, mw, md] = map.millAt; if (tx >= mx && tx < mx + mw && ty >= my && ty < my + md) return { label: `Put crops in the feed mill (${sim.millCount(S)}/${sim.millCap(S)})`, run: () => ui.siloWindow(S, refreshHud) }; }
   const p = propAt(tx, ty);
   if (p) {
     if (p.act === 'counter' && p.shop) return { label: 'Use the Grand Market terminal', run: () => ui.marketWindow(S, refreshHud) };
     if (p.act === 'hydro') return hydroProbe(p);
     if (p.act === 'counter') { const k = nearestNpc(3.2); if (k) return { label: `Talk to ${NPCS[k].short || NPCS[k].name}`, run: () => talkTo(k) }; if (map.id === 'hall') return { label: 'Nobody is at the desk', run: () => ui.toast('Nobody is at the desk just now.') }; return { label: 'Nobody is at the counter', run: () => ui.toast('Nobody is here to serve just now.') }; }
-    const L = { launch: 'Climb into the Pallas: fly to the belt', shuttle: `Board Maris's shuttle to the Old World (${sim.shuttleFare(S) ? sim.shuttleFare(S) + ' cr' : 'free'})`, liftdown: 'Ride the lift down to the Main deck', liftup: 'Ride the lift up to Willowfall', gallery: 'Sit and look out of the great window', house: 'Try the door', silo: 'Open the silo', solaryard: 'Use the solar yard terminal', stargaze: 'Stargaze in the dome', onsen: 'Soak in the onsen', bin: sim.basketHeld(S) ? `Tip the basket into the bin (${sim.basketTotal(S)})` : 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Watch the colony forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', lift: 'Ride the Descent', museum: 'Look at the Memory Room', books: 'Read a book', storage: 'Open the storage box', fridge: 'Open the fridge', kitchen: 'Cook something', calendar: 'Read the noticeboard' }[p.act];
+    const L = { launch: 'Climb into the Pallas: fly to the belt', shuttle: `Board Maris's shuttle to the Old World (${sim.shuttleFare(S) ? sim.shuttleFare(S) + ' cr' : 'free'})`, liftdown: 'Ride the lift down to the Main deck', liftup: 'Ride the lift up to Willowfall', gallery: 'Sit and look out of the great window', house: 'Try the door', silo: 'Open the silo', solaryard: 'Use the solar yard terminal', stargaze: 'Stargaze in the dome', onsen: 'Soak in the onsen', bin: sim.basketHeld(S) ? `Tip the basket into the bin (${sim.basketTotal(S)})` : 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Watch the colony forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', lift: 'Ride the orbital elevator', candles: 'Light a memorial candle', museum: 'Look at the Memory Room', books: 'Read a book', storage: 'Open the storage box', fridge: 'Open the fridge', kitchen: 'Cook something', calendar: 'Read the noticeboard' }[p.act];
     return { label: L, run: () => act(p) };
   }
   const fa = fieldAt(tx, ty) || fieldAt(Math.floor(me.x), Math.floor(me.y));
@@ -523,12 +523,13 @@ function probe() {                                   // → { label, run } for E
   const bush = !map.indoor && plantAhead(['bush']); if (bush && sim.bushReady(S, bush.key)) return { label: 'Pick berries', run: () => { const r = sim.pickBush(S, bush.key); if (r.ok) { sfx('pick'); pickedToast(r); } else ui.toast(r.msg); refreshHud(); } };
   const b = nearestBeast(1.4); if (b) return { label: `Pet ${S.animals[b.i].name}`, run: () => { const r = sim.petAnimal(S, b.i); ui.toast(r.msg || `${S.animals[b.i].name} seems pleased.`); floatText(b.o.position.x, b.o.position.z, '♥'); } };
   if (map.id === 'hill') for (const f of S.forage || []) { const [x, y] = spotXY(f.spot); if (Math.hypot(x + 0.5 - me.x, y + 0.5 - me.y) < 1.2) return { label: `Pick the ${ITEMS[f.id].name.toLowerCase()}`, run: () => { const r = sim.pickForage(S, f.spot); if (r.ok) { sfx('pick'); pickedToast(r); drawForage(); } else ui.toast(r.msg); refreshHud(); } }; }
-  const d = map.doors.find((q) => q.x === Math.floor(me.x) && q.y === Math.floor(me.y)); if (d) return { label: 'Go in', run: () => enterDoor(d) };
+  const d = map.doors.find((q) => q.x === Math.floor(me.x) && q.y === Math.floor(me.y)); if (d) return { label: d.kind === 'orbital_elevator' ? 'Ride the orbital elevator up to the hangar' : 'Go in', run: () => enterDoor(d) };
   return null;
 }
 function enterDoor(d) {
   if (d.lock && !S.flags[d.lock]) return ui.toast('The old greenhouse is a wreck of broken frames. Prof. Ruess could repair it.');
   sfx('door'); go(doorTarget(d.to.map));
+  if (d.kind === 'orbital_elevator') ui.toast(story.ELEVATOR.up, 4200);
 }
 async function act(p) {
   const s = sim.selected(S);
@@ -536,6 +537,7 @@ async function act(p) {
     case 'onsen': await soakOnsen(); break;
     case 'liftdown': case 'liftup': await rideLift(p.act === 'liftdown'); break;
     case 'gallery': { const r = sim.gallerySit(S); mode = 'talk'; const G = story.CENTRAL; await ui.say([{ who: 'narrator', text: r.night ? G.gallery[sim.absDay(S) % G.gallery.length] : G.galleryDay }]); mode = 'play'; if (r.restored) { sfx('good'); ui.toast(`You sit a while. +${r.restored} stamina.`); } break; }
+    case 'candles': { const c = story.CHURCH.candles; ui.say([{ who: 'narrator', text: c[(sim.absDay(S) + Math.floor(S.cal.minute / 120)) % c.length] }]); break; }
     case 'house': ui.say([{ who: 'narrator', text: CENTRAL_HOUSES[p.house] || 'The door is locked.' }]); break;
     case 'stargaze': await stargaze(); break;
     case 'silo': ui.siloWindow(S, refreshHud); break;
@@ -557,7 +559,7 @@ async function act(p) {
     case 'shuttle': await boardShuttle(); break;
     case 'lift': {
       const deep = (S.stats && S.stats.deepest) || 0, opts = ['Level 1'], lv = [1]; for (let d = 5; d <= deep; d += 5) { opts.push('Level ' + d); lv.push(d); } opts.push('Stay up here');
-      mode = 'talk'; const i = await ui.choose('The Descent: Sato climbs into her Pallas.', opts); mode = 'play'; if (i < lv.length) await descend(lv[i]); break;
+      mode = 'talk'; const i = await ui.choose('The orbital elevator: Sato climbs into her Pallas.', opts); mode = 'play'; if (i < lv.length) await descend(lv[i]); break;
     }
   }
   refreshHud();
@@ -698,7 +700,7 @@ function frame(now) {
       const tx = Math.floor(me.x), ty = Math.floor(me.y);
       const ex = map.exits.find((e) => tx >= e.x0 && tx <= e.x1 && ty >= e.y0 && ty <= e.y1);
       if (ex) { go(ex.to); return; }
-      if (map.indoor && Math.abs(tx - map.exitTile[0]) <= 1 && me.y > map.exitTile[1] + 0.45 && wy > 0.3) { sfx('door'); go(outsideOf(map.id)); return; }
+      if (map.indoor && Math.abs(tx - map.exitTile[0]) <= 1 && me.y > map.exitTile[1] + 0.45 && wy > 0.3) { sfx('door'); if (map.id === 'hangar') ui.toast(story.ELEVATOR.down, 4200); go(outsideOf(map.id)); return; }
       const d = map.doors.find((q) => q.x === tx && q.y === ty);
       if (d && wy < -0.5 && me.y < d.y + 0.45) { doorHold += dt; if (doorHold > 0.18) { doorHold = 0; enterDoor(d); return; } } else doorHold = 0;
     }

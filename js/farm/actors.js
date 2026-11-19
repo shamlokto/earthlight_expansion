@@ -56,6 +56,11 @@ function figure(look, tall = 1.62) {
   part(new THREE.CylinderGeometry(0.2, 0.215, 0.2, 14), bot, 0, 0.5, 0, 0.06);
   if (look.bib) { part(new THREE.BoxGeometry(0.2, 0.19, 0.05), bot, 0, 0.68, 0.165); for (const x of [-0.08, 0.08]) part(new THREE.BoxGeometry(0.035, 0.26, 0.4), bot, x, 0.74, 0).scale.z = 1; }
   if (look.apron) part(new THREE.BoxGeometry(0.3, 0.34, 0.04), toon(look.apron), 0, 0.56, 0.19);
+  // a pastor's stole and white collar tab; a constable's badge and duty belt
+  if (look.stole) for (const x of [-0.075, 0.075]) part(new THREE.BoxGeometry(0.06, 0.4, 0.03), toon(look.stole), x, 0.6, 0.185);
+  if (look.collar) { part(new THREE.TorusGeometry(0.105, 0.022, 6, 16), toon('#2a2d36'), 0, 0.88, 0).rotation.x = Math.PI / 2; part(new THREE.BoxGeometry(0.06, 0.045, 0.02), toon('#ffffff'), 0, 0.86, 0.11); }
+  if (look.badge) part(new THREE.BoxGeometry(0.06, 0.07, 0.02), toon('#e8c45a', { emissive: 0x3a2a00 }), 0.09, 0.71, 0.185);
+  if (look.belt) { part(new THREE.CylinderGeometry(0.205, 0.205, 0.05, 14), toon('#1a1c22'), 0, 0.47, 0); part(new THREE.BoxGeometry(0.05, 0.04, 0.02), toon('#cfd6dc'), 0, 0.47, 0.205); }
   // arms
   const arm = (x) => { const p = new THREE.Group(); p.position.set(x, 0.78, 0); p.rotation.z = x < 0 ? -0.22 : 0.22; part(new THREE.CapsuleGeometry(0.058, 0.2, 3, 8), top, 0, -0.14, 0, 0.12, p); part(new THREE.SphereGeometry(0.062, 8, 6), skin, 0, -0.31, 0, 0.12, p); g.add(p); return p; };
   const A = arm(-0.245), B = arm(0.245);
@@ -83,6 +88,7 @@ function figure(look, tall = 1.62) {
     if (st === 'long' || st === 'bandana') part(new THREE.CapsuleGeometry(0.07, 0.34, 3, 8), toon(hc === '#c8402f' ? look.hair : hc), 0, -0.36, -0.26, 0.06, head).rotation.x = 0.18;
     if (st === 'bun') part(new THREE.SphereGeometry(0.11, 10, 8), toon(hc), 0, 0.3, -0.16, 0.06, head);
     if (st === 'cap') { part(new THREE.SphereGeometry(HR * 1.13, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.4), toon(look.cap || look.top), 0, 0.03, 0, 0.04, head); part(new THREE.CylinderGeometry(0.17, 0.17, 0.025, 14), toon(look.cap || look.top), 0, 0.15, 0.29, 0, head); }
+    if (st === 'cap' && look.capBadge) { part(new THREE.CylinderGeometry(HR * 1.1, HR * 1.1, 0.06, 20), toon('#111827'), 0, 0.13, 0, 0, head); part(new THREE.BoxGeometry(0.07, 0.08, 0.02), toon('#e8c45a', { emissive: 0x3a2a00 }), 0, 0.22, HR * 1.06, 0, head); const vis = part(new THREE.CylinderGeometry(0.24, 0.24, 0.03, 18, 1, false, -Math.PI / 2, Math.PI), toon('#0d1424'), 0, 0.12, HR * 0.86, 0.08, head); vis.rotation.x = 0.25; }
   }
   if (look.hat || isSato) {            // the straw hat, hanging on her back as in her picture
     const straw = toon('#e3bf6a'), hat = new THREE.Group(); hat.position.set(0, 0.86, -0.25); hat.rotation.x = -1.32; g.add(hat);

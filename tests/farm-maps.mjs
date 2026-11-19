@@ -48,5 +48,20 @@ for (const mode of ['earth', 'belt']) for (let depth = 1; depth <= 12; depth++) 
   while (q.length) { const [x, y] = q.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (x + dx) + ',' + (y + dy); if (seen.has(k) || m.solid(x + dx, y + dy)) continue; seen.add(k); if (piles.has(k)) found++; q.push([x + dx, y + dy]); } }
   check(found === piles.size, `ruins ${depth}/${seed}: all ${piles.size} piles can be reached (${found})`);
 }
+// Eden Central's school, church and safety depot; the Arrivals hall; the orbital elevator (2026-11-19)
+for (const [kind, room] of [['school', 'school'], ['church', 'church'], ['safety_depot', 'depot'], ['arrivals', 'arrivals']]) {
+  const b = maps.central.buildings.find((x) => x.kind === kind); check(!!b && b.to && b.to.map === room && !!maps[room] && maps[room].indoor, `Eden Central has the ${kind}, with its interior ${room}`);
+}
+for (const k of ['school', 'church', 'safety_depot']) { const b = maps.central.buildings.find((x) => x.kind === k); check(b && b.d > b.w, `${k}: deeper than wide (its door is on a short end)`); }
+check(maps.central.areas.some((a) => a[0] === 'School') && maps.central.areas.some((a) => a[0] === 'Church') && maps.central.areas.some((a) => a[0] === 'Safety depot'), 'the map names the new buildings');
+const ah = maps.arrivals;
+check(ah.at(3, 3) === 'd' && ah.props.some((p) => p.act === 'shuttle') && ah.props.some((p) => p.sign === 'central.arrivals') && ah.props.some((p) => p.sign === 'central.dock'), 'the Arrivals hall: deck floor, the courier desk books the shuttle, both signs');
+check(!ah.props.some((p) => ['noticeboard', 'bench', 'desk', 'rug', 'market_stall'].includes(p.kind)), 'no village furniture in the Arrivals hall');
+check(maps.church.props.some((p) => p.act === 'candles') && maps.church.props.filter((p) => p.kind === 'pew').length >= 4 && maps.church.props.some((p) => p.kind === 'stained_glass'), 'the church: candles, pews, stained glass');
+check(maps.depot.props.some((p) => p.kind === 'lockers') && maps.depot.props.some((p) => p.kind === 'rescue_drone') && maps.depot.props.some((p) => p.sign === 'depot.map'), 'the depot: lockers, drones, the deck map');
+check(maps.school.props.filter((p) => p.kind === 'school_desk').length >= 6 && maps.school.props.some((p) => p.kind === 'blackboard') && maps.school.props.some((p) => p.kind === 'cubbies'), 'the school: small desks, a blackboard, cubbies');
+const el = maps.hill.buildings.find((b) => b.kind === 'orbital_elevator');
+check(el && el.to.map === 'hangar' && el.height >= 8 && !maps.hill.buildings.some((b) => b.kind === 'lift'), 'the orbital elevator replaces the Descent and goes to the hangar');
+for (const s of ['central.school', 'central.church', 'central.depot', 'school.board', 'school.cubbies', 'depot.map']) check(typeof story.SIGNS[s] === 'string' && story.SIGNS[s].length > 40, `sign ${s} has words`);
 console.log(failures ? `${failures} of ${checks} checks failed` : `farm-maps: all ${checks} checks passed`);
 process.exit(failures ? 1 : 0);
