@@ -669,7 +669,7 @@ function script(s, days = 12) {
   }
   check(Object.keys(counts).sort().join() === '3,4,5,6', 'three to six spots');
   check(stars === 16, `the star-plum spot shows once a season until found (${stars} in 16 seasons)`);
-  check(Object.keys(kinds[0]).sort().join() === 'bamboo_shoot,fiddlehead,herb,wild_mint' && Object.keys(kinds[1]).sort().join() === 'berry,herb,honeycomb,wild_grape' && Object.keys(kinds[2]).sort().join() === 'chestnut,matsutake,mushroom,wild_apple' && Object.keys(kinds[3]).sort().join() === 'frostcap,pine_nut,winter_root', `forage by season: ${kinds.map((k) => Object.keys(k).sort().join('/')).join(' | ')}`);
+  check(Object.keys(kinds[0]).sort().join() === 'bamboo_shoot,fiddlehead,herb,wild_mint,wild_violet' && Object.keys(kinds[1]).sort().join() === 'berry,elderflower,herb,honeycomb,wild_grape' && Object.keys(kinds[2]).sort().join() === 'chestnut,matsutake,mushroom,rosehip,wild_apple' && Object.keys(kinds[3]).sort().join() === 'frostcap,pine_nut,snowdrop,winter_root', `forage by season: ${kinds.map((k) => Object.keys(k).sort().join('/')).join(' | ')}`);
   const f = s.forage[0], n = s.forage.length;
   const r = sim.pickForage(s, f.spot);
   check(r.ok && r.gained[0].id === f.id && countItem(s, f.id) === 1 && s.forage.length === n - 1 && !act(sim.pickForage(s, f.spot)).ok, 'pick it once');
@@ -1278,6 +1278,105 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   // jobs through the sim API (the pause screen calls these)
   check(sim.setRobotJob(K, 3, 'harvest').ok && K.robots[3].job === 'harvest' && sim.setRobotJob(K, 3, 'harvest').same && !act(sim.setRobotJob(K, 3, 'dance')).ok && !act(sim.setRobotJob(K, 12, 'water')).ok, 'set a job by index; the same job again is fine; nonsense is refused');
   check(Object.keys(sim.crewBatteries(newGame({ seed: 507 }))).length > 5 && sim.crewBatteries(newGame({ seed: 507 })).units === 0, 'crewBatteries on a new farm');
+}
+// ---------------------------------------------------------------- 2026-11-19: Market Lane, the fold, the duck house, the hives
+{
+  const LANE = ['pia', 'lark', 'noor', 'tika', 'vesna'];
+  const g = newGame({ seed: 611 });
+  check(LANE.every((id) => sim.NPC_IDS.includes(id) && g.npc[id] && g.npc[id].love === 0), 'the five Market Lane villagers have records');
+  check(g.fields.east && g.fields.east.w === 12 && g.fields.east.h === 10 && g.fields.east.tiles.some((t) => t.obj) && Array.isArray(g.machines) && g.duckNest.eggs === 0, 'a new game has the East Terrace (rubble), no machines, an empty nest');
+  // an old save gets everything new, and the game's dice are untouched by the new field
+  const old = JSON.parse(saveState(newGame({ seed: 612 }))); delete old.fields.east; delete old.machines; delete old.duckNest; for (const id of LANE) delete old.npc[id];
+  const back = loadState(JSON.stringify(old));
+  check(back && back.fields.east && back.fields.east.tiles.length === 120 && Array.isArray(back.machines) && back.duckNest && LANE.every((id) => back.npc[id]), 'an old save loads with the new field, machines, nest and villagers');
+  check(JSON.stringify(newGame({ seed: 77 }).forage) === JSON.stringify(newGame({ seed: 77 }).forage) && newGame({ seed: 77 }).rng === newGame({ seed: 77 }).rng, 'same seed, same game');
+  check(JSON.stringify(newGame({ seed: 613 }).fields.east) === JSON.stringify(loadState(JSON.stringify((() => { const o = JSON.parse(saveState(newGame({ seed: 613 }))); delete o.fields.east; return o; })())).fields.east), 'the East Terrace rubble is the same whether made new or for an old save');
+  // the East Terrace is locked until Ruess clears it
+  const e = rich(614); e.player.inv[0] = { id: 'hoe', n: 1 }; e.player.sel = 0;
+  const t0 = e.fields.east.tiles.findIndex((t) => !t.obj);
+  check(!act(useTool(e, 'east', t0 % 12, Math.floor(t0 / 12), 0)).ok && /Ruess/.test(useTool(e, 'east', t0 % 12, Math.floor(t0 / 12), 0).msg), 'the East Terrace is rubble until Ruess clears it');
+  check(buy(e, 'workshop', 'eastfield').ok && e.flags.eastfield && e.stock.lumber === 460, 'Ruess clears the East Terrace (3,000 cr, 40 lumber)');
+  check(useTool(e, 'east', t0 % 12, Math.floor(t0 / 12), 0).ok && e.fields.east.tiles[t0].till, 'then the hoe tills it');
+  // Noor's seeds are sold at the Seedhouse, not at Seln's; they grow, regrow and die with the season like any crop
+  for (let season = 0; season < 4; season++) {
+    const s = rich(615); s.cal.season = season; const fl = shopStock(s, 'florist').filter((x) => /^seed_/.test(x.key)), st = shopStock(s, 'store').filter((x) => /^seed_/.test(x.key));
+    check(fl.length === 3 && fl.every((x) => CROPS[x.key.slice(5)].shop === 'florist' && CROPS[x.key.slice(5)].seasons.includes(season)) && !st.some((x) => CROPS[x.key.slice(5)] && CROPS[x.key.slice(5)].shop), `three Earth crops at the Seedhouse in ${SEASONS[season]}, none at Seln's`);
+    check(Object.values(CROPS).filter((c) => c.seasons.length === 1 && c.seasons[0] === season && (c.shop || c.id !== 'moonflower')).length >= (season === 3 ? 3 : 7), `at least two new crops in ${SEASONS[season]}`);
+  }
+  check(['snap_pea', 'bell_pepper', 'cranberry', 'frost_leek'].every((id) => CROPS[id].regrow > 0) && ['tulip', 'sunflower', 'cosmos', 'snowbell'].every((id) => CROPS[id].flower), 'four new crops regrow, four are flowers');
+  const k = rich(616); k.cal.season = 3; k.flags.eastfield = true; const tile = k.fields.east.tiles[5]; Object.assign(tile, { obj: null, hp: 0, till: true });
+  k.player.inv[0] = { id: 'seed_kale', n: 1 }; k.player.sel = 0;
+  check(useTool(k, 'east', 5, 0, 0).ok && tile.crop && tile.crop.id === 'kale', 'kale sows outdoors in winter');
+  for (let d = 0; d < 6; d++) { tile.wet = true; sleep(k); }
+  check(sim.cropStage(tile.crop) === 3 && harvest(k, 'east', 5, 0).ok && countItem(k, 'kale') === 1, 'and is ripe in six days on the East Terrace');
+  // animals: the fold and the duck house first, then Corran sells them
+  const a = rich(617); a.stock.fodder = 50; a.stock.feed = 50; while (a.player.inv.length < 30) a.player.inv.push(null); a.player.slots = 30;
+  check(!shopStock(a, 'ranch').some((x) => ['goat', 'sheep', 'duck'].includes(x.key)), 'no goats, sheep or ducks before there is a home for them');
+  check(buy(a, 'workshop', 'fold').ok && buy(a, 'workshop', 'duckhouse').ok && a.flags.fold && a.flags.duckhouse, 'Ruess mends the fold and the duck house');
+  check(['goat', 'sheep', 'duck'].every((kd) => shopStock(a, 'ranch').some((x) => x.key === kd && x.can)), 'then Corran sells them');
+  check(buy(a, 'ranch', 'goat', 2).ok && buy(a, 'ranch', 'sheep', 2).ok && buy(a, 'ranch', 'duck', 3).ok && buy(a, 'ranch', 'clippers').ok && !act(buy(a, 'ranch', 'goat', 3)).ok, 'two goats, two sheep, three ducks and clippers; the fold holds four goats');
+  addItem(a, 'milker', 1); addItem(a, 'brush', 1); sleep(a);
+  const idx = (kd) => a.animals.map((x, i) => (x.kind === kd ? i : -1)).filter((i) => i >= 0);
+  check(idx('goat').length === 2 && idx('sheep').length === 2 && idx('duck').length === 3 && a.animals.every((x) => x.name), 'delivered and named');
+  check(!act(sim.milk(a, idx('goat')[0])).ok, 'a hungry goat gives no milk');
+  check(sim.feedAll(a, 'goat').ok && sim.feedAll(a, 'sheep').ok && sim.feedAll(a, 'duck').ok, 'the troughs are filled');
+  let r = sim.milk(a, idx('goat')[0]); check(r.ok && r.gained[0].id === 'goat_milk' && countItem(a, 'goat_milk') === 1 && !act(sim.milk(a, idx('goat')[0])).ok, 'a fed goat gives goat milk once a day');
+  check(sim.brush(a, idx('sheep')[0]).ok && sim.brush(a, idx('goat')[1]).ok && !act(sim.brush(a, idx('duck')[0])).ok, 'goats and sheep like the brush; ducks do not');
+  check(!act(sim.shear(a, idx('sheep')[0])).ok && /growing/.test(sim.shear(a, idx('sheep')[0]).msg), 'a new sheep has no fleece yet');
+  for (let d = 0; d < 3; d++) { sim.feedAll(a, 'sheep'); sim.feedAll(a, 'goat'); sim.feedAll(a, 'duck'); sleep(a); }
+  check(a.duckNest.eggs >= 9, `fed ducks lay (${a.duckNest.eggs} eggs)`);
+  sim.feedAll(a, 'sheep'); r = sim.shear(a, idx('sheep')[0]); check(r.ok && r.gained[0].id === 'wool' && a.animals[idx('sheep')[0]].fleece === 0, 'three fed nights: shear a fleece with the clippers');
+  a.animals[idx('sheep')[1]].love = 90; r = sim.shear(a, idx('sheep')[1]); check(r.ok && r.gained[0].id === 'fine_wool', 'a fond sheep gives fine wool');
+  a.animals[idx('goat')[1]].love = 90; sim.feedAll(a, 'goat'); r = sim.milk(a, idx('goat')[1]); check(r.ok && r.gained[0].id === 'goat_milk_l', 'a fond goat gives rich milk');
+  r = sim.collectDuckEggs(a); check(r.ok && countItem(a, 'duck_egg') >= 9 && a.duckNest.eggs === 0, 'collect the duck eggs');
+  check(!act(sim.collectDuckEggs(a)).ok, 'an empty nest box');
+  const sw = newGame({ seed: 618 }); sw.weather = 'sun'; sw.flags.duckhouse = true; sw.animals.push({ kind: 'duck', name: 'Q', love: 10, fed: true, milked: false, brushed: false, talked: false }); sleep(sw);
+  check(sw.animals[0].love === 13, 'a fed duck that swam on the pond: +2 fed, +1 swim');
+  // machines: placed on the farm like chests; cheese and yarn by morning; honey every few days, faster with flowers
+  const m = rich(619); m.player.money = 1e6; while (m.player.inv.length < 30) m.player.inv.push(null); m.player.slots = 30;
+  check(buy(m, 'garage', 'cheese_press').ok && buy(m, 'garage', 'spinning_wheel').ok && buy(m, 'florist', 'beehive').ok && countItem(m, 'cheese_press') === 1, 'the garage builds the press and the wheel; the Seedhouse sells hives');
+  const place = (id, x, y) => { m.player.sel = slotOf(m, id); return sim.placeItem(m, 'farm', x, y); };
+  check(place('cheese_press', 56, 9).ok && place('spinning_wheel', 58, 9).ok && place('beehive', 60, 9).ok && m.machines.length === 3 && sim.occupied(m, 'farm', 56, 9), 'set down on the farm');
+  check(!act(place.call(null, 'beehive', 60, 9)).ok, 'not on top of each other');
+  check(!sim.placeItem((() => { const q = rich(620); addItem(q, 'beehive', 1); q.player.sel = slotOf(q, 'beehive'); return q; })(), 'hill', 5, 5).ok, 'machines stay on the farm');
+  const press = sim.machineAt(m, 'farm', 56, 9), wheel = sim.machineAt(m, 'farm', 58, 9), hive = sim.machineAt(m, 'farm', 60, 9);
+  check(!act(sim.useMachine(m, press)).ok, 'the press wants milk');
+  addItem(m, 'goat_milk', 1); m.player.sel = slotOf(m, 'goat_milk'); check(sim.useMachine(m, press).ok && m.machines[press].item === 'goat_milk' && !countItem(m, 'goat_milk'), 'goat milk goes in the press');
+  addItem(m, 'fine_wool', 1); m.player.sel = slotOf(m, 'fine_wool'); check(sim.useMachine(m, wheel).ok, 'fine wool goes on the wheel');
+  check(/Take|working/.test(sim.machineLabel(m, press)) && /working/.test(sim.machineLabel(m, press)), 'the prompt says it is working');
+  check(!act(sim.pickUpPlaced((m.player.inv[m.player.sel] = { id: 'axe', n: 1 }, m), 'farm', 56, 9)).ok, 'a busy machine cannot be picked up');
+  m.cal.season = 0; sleep(m);
+  r = sim.useMachine(m, press); check(r.ok && r.gained[0].id === 'goat_cheese' && countItem(m, 'goat_cheese') === 1, 'goat cheese by morning');
+  r = sim.useMachine(m, wheel); check(r.ok && r.gained[0].id === 'yarn' && r.gained[0].n === 2, 'two skeins from fine wool');
+  check(!act(sim.useMachine(m, hive)).ok && m.machines[hive].days === 1, 'no honey after one night');
+  sleep(m); sleep(m); r = sim.useMachine(m, hive); check(r.ok && r.gained[0].id === 'honey', 'honey on the third day');
+  m.flags.eastfield = true; const ef = m.fields.east; for (let i = 6; i < 12; i++) Object.assign(ef.tiles[i], { obj: null, till: true, crop: { id: 'tulip', age: 2, dead: false } });
+  check(sim.hiveFlowers(m, m.machines[hive]) >= 3, 'tulips on the East Terrace are within the hive\'s reach');
+  sleep(m); sleep(m); check(m.machines[hive].out === 'honey', 'with flowers close by: honey every two days');
+  m.player.inv[m.player.sel] = { id: 'axe', n: 1 }; sim.useMachine(m, hive);
+  check(sim.pickUpPlaced(m, 'farm', 56, 9).ok && countItem(m, 'cheese_press') === 1 && m.machines.length === 2, 'the axe picks up an empty machine');
+  const w = rich(621); w.cal.season = 3; w.machines.push({ kind: 'beehive', map: 'farm', x: 57, y: 6, item: null, out: null, n: 0, days: 0 }); for (let d = 0; d < 5; d++) sleep(w);
+  check(!w.machines[0].out && w.cal.season === 3, 'the bees sleep in winter');
+  // the Lane shops
+  const shop = rich(622);
+  check(['bread', 'sun_bun', 'seed_loaf', 'honey_cake'].every((id) => shopStock(shop, 'bakery').some((x) => x.key === id)), 'the bakery bakes');
+  addItem(shop, 'yarn', 3); check(buy(shop, 'tailor', 'knit_scarf').ok && countItem(shop, 'yarn_scarf') === 1, 'Pia knits a scarf from three skeins');
+  addItem(shop, 'wool', 1); const y0 = countItem(shop, 'yarn'); check(buy(shop, 'tailor', 'spin_wool').ok && countItem(shop, 'yarn') === y0 + 1, 'Pia spins a fleece');
+  check(buy(shop, 'radio', 'song').ok && !act(buy(shop, 'radio', 'song')).ok, 'one song request at a time');
+  const before = sim.NPC_IDS.map((id) => shop.npc[id].love); sleep(shop);
+  check(sim.NPC_IDS.every((id, i) => shop.npc[id].love === before[i] + 1) && !shop.flags.songNext, 'the request plays: +1 with everyone');
+  shop.cal.day += 3; check(!act(buy(shop, 'radio', 'song')).ok && /week/.test(buy(shop, 'radio', 'song').msg), 'one a week');
+  // recipes from the new goods
+  const c = rich(623); c.flags.kitchen = true; while (c.player.inv.length < 30) c.player.inv.push(null); c.player.slots = 30;
+  for (const id of ['honey', 'duck_egg', 'seed_loaf']) addItem(c, id, 1);
+  r = sim.cook(c, 'honey_cake'); check(r.ok && countItem(c, 'honey_cake') === 1, 'honey cake from honey, a duck egg and a seeded loaf');
+  for (const id of ['tulip', 'herb']) addItem(c, id, 1); check(sim.cook(c, 'blossom_tea').ok, 'blossom tea from a tulip and a herb');
+  for (const id of ['honey', 'bread']) addItem(c, id, 1); check(sim.cook(c, 'honey_toast').ok, 'honey stands in for honeycomb on toast');
+  check(sim.LANE_RECIPES.length >= 10 && sim.RECIPE_GROUPS.some(([n, ids]) => /fold/.test(n) && ids.length === sim.LANE_RECIPES.length), `${sim.LANE_RECIPES.length} new recipes in their own kitchen group`);
+  check(['yarn_scarf', 'bouquet', 'honey_cake', 'record'].every((id) => ITEMS[id] && ITEMS[id].sell > 0), 'gift-worthy crafted things');
+  // the forage: one new find each season
+  const f = newGame({ seed: 624 }), seen = new Set(); for (let d = 0; d < 480; d++) { sleep(f); for (const x of f.forage) seen.add(x.id); }
+  check(['wild_violet', 'elderflower', 'rosehip', 'snowdrop'].every((id) => seen.has(id)), 'violets, elderflower, rosehips and snowdrops turn up on the hill');
 }
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

@@ -43,6 +43,11 @@ Cast (all canon to this project; portraits in `art/colony/portrait/`):
 | `thorne` | Agnes Thorne, once Eden's cistern supervisor; white bun, glasses, plum cardigan. Keeps the enclave's rota. | The Survivors' Enclave; after the rehousing, the school's teacher (§12) | built figure |
 | `moth` | Moth Thorne, eight, Agnes's granddaughter; mustard raincoat, overalls, a little lantern. Collects lamps and diary pages. | The catacombs and the enclave; after the rehousing, the school's first pupil (§12) | built figure |
 | `wick` | Ansel Wick, keeper of the pump halls; oilskin, cap, white moustache. Knows every fish by name. | The pump halls and the Sump (§12) | built figure |
+| `pia` | Pia Varga, tailor and dressmaker; once ran the siege parachute loft. Plum side braid, teal waistcoat, tape measure. Brisk, exacting, secretly sentimental. | **Varga's Mend & Make**, Market Lane (§13) | drawn (`look:pia`) |
+| `lark` | Lark Penhallow, baker; fed the shelters from a field oven in the siege. Honey-blonde ponytail, red kerchief, freckles. Loud, warm, up at four. **Romance.** | **The Sunrise Oven**, Market Lane (§13) | drawn (`look:lark`) |
+| `noor` | Noor Asante, seed botanist; revives the founders' Earth seeds. Lilac hair in two buns, sage coat, a flower pin. Blunt, absorbed, kind by accident. | **The Seedhouse**, Market Lane (§13) | drawn (`look:noor`) |
+| `tika` | Tika Brandt, Ruess's apprentice mechanic; fixed rescue drones in a cupboard at fourteen. Red-orange crop, teal coveralls, goggles, grease on her cheek. | Mornings at the Workshop; **Brandt's Garage**, Market Lane (§13) | drawn (`look:tika`) |
+| `vesna` | Vesna Kade, voice of Radio Willowfall; read the siege lists and then the all-clear. Rose twin tails, headphones, dark top. Wry, teasing, a night owl. **Romance.** | **Radio Willowfall**, Market Lane; plays the Hangar Fri and Sat (§13) | drawn (`look:vesna`) |
 
 Do not use Lt. Arkin (he may have died in the player's campaign) or name the General.
 
@@ -621,3 +626,54 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
 
 **Planned for release 2:** the **Works** (Venn's recycling and fabrication hall, model `works_hall`), the **Thermal Vents**,
 the **Zero-G Arena**, and **the vault** behind the round door (the rest of the logs; what Site Ninefold was).
+
+## 13. Market Lane, the fold and the hives (owner, 2026-11-19: "additional content ... new items, farm animals, larger maps, new buildings and characters ... more young ladies")
+
+* **Five young women** (`story.js`, block "Market Lane"; `VILLAGERS`, `sim.NPC_IDS`, `ensure()` gives old saves their records): Pia
+  Varga (`pia`, the tailor's, closed Sun), Lark Penhallow (`lark`, the bakery: counter 7-15, back 16:30-18, in bed by 19:30, closed
+  Mon), Noor Asante (`noor`, the Seedhouse 9-17, closed Tue: the hill terraces, the library, then she looks in at the farm's East
+  Terrace), Tika Brandt (`tika`, Ruess's bench 8-12, her garage 13-18; Wed up the hill with Ruess; Sun off) and Vesna Kade (`vesna`,
+  the radio: morning show 7-9, asleep till noon, the booth 13:30-17, night show 19-22 or the Hangar stage `cafe.stage` on Fri and
+  Sat; Sun off). Each has ~27 conversations, gifts and gift lines, 6-7 favours, events at 3 and 7 hearts (`pia3`, `pia7`, `noor3`,
+  `noor7`, `tika3`, `tika7`), festival places and a birthday (Pia Autumn 23, Lark Spring 4, Noor Spring 27, Tika Winter 24, Vesna
+  Summer 19). **Lark and Vesna are romance candidates** (`ROMANCE.candidates` now eight): a third event at 5 hearts (`lark5`,
+  `vesna5`), the confession, the pendant, the wedding (Pastor Ines blesses it; the Lane speaks), partner, morning and sweetheart lines.
+* **Their look**: new hair styles in actors.js (`braid`, `ponytail`, `odango`, `twintails`, ties in `look.ribbon`) and accessories
+  (`kerchief`, `headphones`, `flowerPin`, `skirt`, `measure`, face `freckles` and `smudge`; Tika uses the engineer's `goggles`). With no
+  portrait picture yet, `portrait: 'look:<id>'` draws an SVG bust from the look (`js/farm/lookportrait.js`, used by ui.js and the wiki).
+* **Willowfall grows east** (64×52 → 96×52; `MapDef.grow` keeps every old tile, prop index, door and spot; `clearProps` turns the props
+  in a gap into `'nothing'` so prop indices, and the saves that use them, keep their meaning). **Market Lane** north of the river:
+  the Sunrise Oven, Varga's Mend & Make, the Seedhouse (a glasshouse shop), Brandt's Garage, Radio Willowfall with its mast, and Lane
+  Square (noticeboard `village.lane`, flower stalls). The river runs on east under the **Mill Bridge** to the **Lane cottages** (homes;
+  E at the door reads a note, `CENTRAL_HOUSES.home_<id>`) and Noor's trial beds. Interiors `bakery`, `tailor`, `florist`, `garage`,
+  `radio`. Built stand-ins: `js/farm/laneworld.js` (model slots in `LANE_PROPS` / `LANE_BUILDINGS`).
+* **The farm grows east** (44×34 → 64×34, old coordinates unchanged; a gap in the old tree line just south of the hill road): the
+  **East Terrace** field (`state.fields.east`, 12×10 at `FIELD_ORIGINS.east` [48, 13], rubble until Ruess clears it: 3,000 cr + 40
+  lumber, `flags.eastfield`; the robots work it too), the old **fold** (Ruess: 5,000 cr + 60 lumber, `flags.fold`; interior `fold`,
+  trough act `feedfold`) and the **duck house** by the new east pond (2,000 cr + 30 lumber, `flags.duckhouse`; interior `duckhouse`,
+  nest act `duckeggs`, feeder `feedduck`), with a meadow for hives. Locked doors say why.
+* **Animals** (`HOUSING`, Corran sells them once there is a home): goats (4,000; 4 in the fold; fodder; the milker gives goat milk,
+  rich goat milk at affection ≥ 67; the brush works on them), sheep (4,500; 4; fodder; a fleece every three fed nights, `a.fleece`;
+  `shear()` with **clippers** (900) gives wool, fine wool when fond), ducks (1,800; 6; feed; a duck egg each morning in
+  `state.duckNest`, now and then a feather when fond; they swim on the east pond on fair days 8-17 for +1 affection, `swimDay`).
+* **Machines** (kind `placeable`, set down on the farm like chests; `state.machines`, `MACHINES`, `useMachine`, `machineLabel`, the
+  axe picks an empty one up): the **cheese press** (Tika, 2,000 + 20 lumber: milk → farm cheese, goat milk → goat cheese), the
+  **spinning wheel** (2,400 + 30 lumber: wool → yarn, fine wool → 2 yarn) and **beehives** (the Seedhouse, 1,800: honey every 3 days,
+  every 2 with ≥ 3 flower crops within 6 tiles, `hiveFlowers`; none in winter; up to 3 jars wait). Honey also stands in for honeycomb.
+* **Crops**: 12 Earth crops from the Seedhouse only (`CROPS[id].shop = 'florist'`): spring cabbage, snap pea (regrows), tulip;
+  summer bell pepper (regrows), melon, sunflower; autumn beet, cranberry (regrows), cosmos; winter kale, frost leek (regrows),
+  snowbell: the first outdoor winter crops. Flowers (`FLOWER_CROPS`) feed the hives and draw as flowers. **Forage**: wild violet,
+  elderflower, rosehip, snowdrop (one a season).
+* **Shops**: the bakery (bread, sunrise bun, seeded loaf, honey cake), the tailor's (Pia spins a fleece into yarn, knits three
+  skeins into a **yarn scarf**, sells yarn), the Seedhouse (seeds, beehives, **bouquets**, or a bouquet tied from three of your
+  flowers), the garage (machines, batteries), the radio (a salvaged **record**; a **song request** once a week: +1 friendship with
+  everyone next morning). **Eleven recipes** (`LANE_RECIPES`, kitchen group "From the fold and the hives"): goat cheese salad, cheese
+  omelette, duck egg custard, honey cake, blossom tea, cheese toast, stuffed peppers, cabbage rolls, honeyed melon, ruby beet soup,
+  green frittata.
+* **The Bloom Fair** (Summer 10, Lane Square, 10-16; `FESTIVAL_DAYS` has it, so it is always fair): Noor judges the flowers, Pia
+  the wool and cheese, Lark bakes, Tika runs Vesna's broadcast cable, the Constable guards the cake. 500 cr.
+* Art slots (all optional): models `goat`, `sheep`, `duck`, `cheese_press`, `spinning_wheel`, `beehive`, `bakery_oven`,
+  `bread_shelf`, `flour_sacks`, `dress_form`, `bolt_shelf`, `sewing_table`, `flower_bed`, `seed_drawers`, `tool_wall`,
+  `engine_block`, `radio_desk`, `record_shelf`, `speaker`, `sofa`, `mic_stand`, `radio_mast`; buildings `bakery`, `tailor`,
+  `seedhouse`, `garage`, `radio_station`, `fold`, `duckhouse`; people `people/<id>_front` for the five; icons `icons/<id>` for every
+  new item.

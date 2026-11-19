@@ -663,7 +663,7 @@ function villageLane(m) {
   m.prop('signpost', 64, 7, { act: 'sign', sign: 'village.bakeryfront' }); m.prop('signpost', 75, 19, { act: 'sign', sign: 'village.millbridge' });
   for (const [x, y] of [[66, 10], [82, 10], [70, 19], [88, 19], [66, 41], [74, 41], [86, 41], [80, 48], [92, 48], [79, 25], [74, 31]]) m.prop('colony_lamp', x, y);
   // across the Mill Bridge: the Lane cottages (homes, not open to callers), and Noor's trial beds
-  const homes = [['cottage_c', 65, 'lark', "Lark's cottage"], ['cottage_a', 71, 'vesna', "Vesna's flat"], ['cottage_d', 79, 'pia', "Pia's cottage"], ['cottage_b', 85, 'tika', "Tika's place"], ['cottage_c', 90, 'noor', "Noor's cottage"]];
+  const homes = [['cottage_c', 64, 'lark', "Lark's"], ['cottage_a', 70, 'vesna', "Vesna's"], ['cottage_d', 79, 'pia', "Pia's"], ['cottage_b', 84, 'tika', "Tika's"], ['cottage_c', 90, 'noor', "Noor's"]];
   for (const [kind, x, who, label] of homes) { m.building(kind, x, 42, 5, 4, { label }); m.prop('house_door', x + 2, 46, { act: 'house', house: 'home_' + who, solid: false }); m.prop('flowers', x, 48, { solid: false }); }
   m.fill(66, 32, 74, 36, 'f');
   for (const [x, y] of [[66, 32], [68, 33], [70, 32], [72, 34], [67, 35], [71, 36], [73, 32]]) m.prop('flowers', x, y, { solid: false });
@@ -674,7 +674,7 @@ function villageLane(m) {
   m.areas.push(['Market Lane', 77, 10.2], ['Mill Bridge', 81, 28.5], ['Lane cottages', 78, 50.3], ['Trial beds', 70, 37.6]);
   m.bots.push([[61, 8.5], [93, 8.5]], [[76.5, 19], [76.5, 38.5], [93, 39.5]]);
   edgeTrees(m, 64, 23, (x, y) => (x === 95 && y >= 26 && y <= 30));
-  m.scatter(78, 30, ['tree', 'tree', 'pine', 'bush', 'flowers'], (x, y) => x >= 64 && (y >= 20 && y <= 24 || y >= 31 && y <= 37 && x >= 79) && !(x >= 75 && x <= 78));
+  m.scatter(78, 22, ['tree', 'pine', 'bush', 'flowers', 'flowers'], (x, y) => x >= 64 && (y >= 21 && y <= 24 && (x <= 70 || x >= 84) || y >= 31 && y <= 37 && x >= 79) && !(x >= 75 && x <= 78));
   return m;
 }
 // The interiors of Market Lane and the farm's new buildings.

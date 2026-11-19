@@ -851,7 +851,12 @@ export class World {
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const c = map.at(x, y); (byKind[c] ||= []).push(x, y); }
     for (const [c, cells] of Object.entries(byKind)) {
       if (c === 'x') continue;
-      if (c === 'r' && map.under) { const edge = []; for (let i = 0; i < cells.length; i += 2) { const x = cells[i], y = cells[i + 1]; if ([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]].some(([a, b]) => { const k = map.at(x + a, y + b); return k !== 'r' && k !== 'x'; })) edge.push(x, y); } const m = new THREE.Mesh(tiles(edge, 1.5, true), std({ map: art.tex('hull_plate', { repeat: 1 }), color: 0x7d8790 })); m.castShadow = m.receiveShadow = true; R.add(m); continue; }   // only the walls that face a room
+      if (c === 'r' && map.under) {                    // the Undercroft: only the walls that face a room; those south of a room are cut low, so the camera sees in
+        const room = (x, y) => { const k = map.at(x, y); return k !== 'r' && k !== 'x'; }, hi = [], lo = [];
+        for (let i = 0; i < cells.length; i += 2) { const x = cells[i], y = cells[i + 1]; if (![[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]].some(([a, b]) => room(x + a, y + b))) continue; (room(x, y - 1) || room(x - 1, y - 1) || room(x + 1, y - 1) ? lo : hi).push(x, y); }
+        for (const [list, h] of [[hi, 1.5], [lo, 0.35]]) { if (!list.length) continue; const m = new THREE.Mesh(tiles(list, h, true), std({ map: art.tex('hull_plate', { repeat: 1 }), color: 0x7d8790 })); m.castShadow = m.receiveShadow = true; R.add(m); }
+        continue;
+      }
       if (c === 'r') { const m = new THREE.Mesh(tiles(cells, 1.7, true), std({ map: art.tex('cliff_rock', { repeat: 1 }) })); m.castShadow = m.receiveShadow = true; R.add(m); continue; }
       if (c === 'w') {
         const bed = new THREE.Mesh(tiles(cells, -0.5), std({ color: 0x2a3a34 })); R.add(bed);
@@ -867,7 +872,8 @@ export class World {
     this.colony.setCentre(H / 2); this.spinners = []; this.beacons = []; this.cars = []; this.bots = null; this.pools = null; this.rocks = null; this.earthSky = null;
     if (!map.indoor && !map.ruins && !map.under) R.add(buildSurroundings(map, this.season));   // terraces rising into the cylinder's curve
     else if (map.belt) { const bd = spaceBackdrop(W, H, map); R.add(bd); this.earthSky = bd.userData.earth; }  // the belt: stars, the Earth, Eden's hull, sector bands
-    else if (!map.indoor && !map.under) {                // the Old World: ash plains and broken towers (the Undercroft has only the dark)
+    else if (map.under) { /* the Undercroft: nothing beyond its walls but the dark */ }
+    else if (!map.indoor) {                              // the Old World: ash plains and broken towers
       const slot = map.ruins ? 'ash_ground' : 'grass_' + SEASON_KEY[this.season];
       const t = art.tex(slot, { repeat: 1 }).clone(); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(60, 60); t.needsUpdate = true;
       const far = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), std({ map: t })); far.rotation.x = -Math.PI / 2; far.position.set(W / 2, -0.04, H / 2); far.receiveShadow = true; R.add(far);

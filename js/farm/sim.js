@@ -1798,6 +1798,7 @@ Object.assign(SHOPS, {
   radio: { id: 'radio', name: 'Radio Willowfall', keeper: 'vesna' },
 });
 Object.assign(PLACE_MAPS, { cheese_press: ['farm'], spinning_wheel: ['farm'], beehive: ['farm'] });
+FORAGE[0].push(['wild_violet', 2]); FORAGE[1].push(['elderflower', 2]); FORAGE[2].push(['rosehip', 2]); FORAGE[3].push(['snowdrop', 2]);
 VEG.push('cabbage', 'snap_pea', 'bell_pepper', 'beet', 'kale', 'frost_leek'); FRUITS.push('cranberry', 'rosehip'); MILK.push('goat_milk', 'goat_milk_l');
 for (const id of ['honey_toast', 'honeyed_nuts', 'founders_cake']) RECIPES.find((r) => r.id === id).needs.find((s) => s.includes('honeycomb')).push('honey');
 const LANE_FLOWERS = ['tulip', 'sunflower', 'cosmos', 'snowbell', 'wild_violet', 'elderflower', 'snowdrop'], CHEESES = ['cheese', 'goat_cheese'], EGGS = ['egg', 'duck_egg'], LOAVES = ['bread', 'seed_loaf'];
@@ -1822,7 +1823,7 @@ export const MACHINES = {
   spinning_wheel: { name: 'Spinning wheel', takes: { wool: ['yarn', 1], fine_wool: ['yarn', 2] }, hint: 'Hold a fleece to put it on the wheel.' },
   beehive: { name: 'Beehive', takes: {}, hint: 'The bees are busy. Honey every three days, spring to autumn; flowers close by make it two.' },
 };
-export const HIVE_DAYS = 3, HIVE_DAYS_FLOWERS = 2, HIVE_FLOWERS = 3, HIVE_REACH = 5, HIVE_MAX = 3, SONG_PRICE = 150, MAX_MACHINES = 12;
+export const HIVE_DAYS = 3, HIVE_DAYS_FLOWERS = 2, HIVE_FLOWERS = 3, HIVE_REACH = 6, HIVE_MAX = 3, SONG_PRICE = 150, MAX_MACHINES = 12;
 const EAST_LOCKED = 'The East Terrace is rubble and dry ground. Ruess could clear it and run water out to it.';
 export const machineAt = (state, map, x, y) => ensure(state).machines.findIndex((m) => m.map === map && m.x === x && m.y === y);
 function placeMachine(state, id, map, x, y) {

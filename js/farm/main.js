@@ -218,7 +218,7 @@ async function checkEvents() {
   if (f) {
     const at = findSpot(f.spot), key = `fest_${f.id}_${S.cal.year}`;
     if (at && at.map === map.id && c.minute >= f.from && c.minute <= f.to && !S.flags[key]) {
-      sim.setFlag(S, key); mode = 'talk'; ui.scene('festival_' + (f.id === 'yearsend' ? 'yearend' : f.id)); sfx('good'); setMood({ festival: f.id });
+      sim.setFlag(S, key); mode = 'talk'; ui.scene('festival_' + ({ yearsend: 'yearend', bloom: 'harvest' }[f.id] || f.id)); sfx('good'); setMood({ festival: f.id });
       await ui.say(f.lines); setMood({ festival: null }); reward(f.reward); if (f.id === 'harvest' || f.id === 'lantern') await plumGift(f.id); sim.tick(S, 120); for (const k of Object.keys(NPCS)) if (k !== 'sato' && S.npc[k]) S.npc[k].met = true;
       mode = 'play'; placeNpcs(true); refreshHud(); return;
     }
@@ -236,7 +236,7 @@ async function checkEvents() {
 // ---------------------------------------------------------------- animals, forage, eggs
 function spawnBeasts() {
   const kinds = map.beasts || [map.id === 'barn' ? 'cow' : 'chicken'], pen = map.pen;
-  S.animals.forEach((a, i) => { if (!kinds.includes(a.kind) || (a.kind === 'duck' && duckSwim())) return; const o = W.place('beast' + i, kind, pen[0] + 1 + Math.random() * (pen[2] - pen[0] - 1), pen[1] + 1 + Math.random() * (pen[3] - pen[1] - 1)); beasts.push({ i, o, tx: o.position.x, ty: o.position.z, wait: Math.random() * 3 }); });
+  S.animals.forEach((a, i) => { if (!kinds.includes(a.kind) || (a.kind === 'duck' && duckSwim())) return; const o = W.place('beast' + i, a.kind, pen[0] + 1 + Math.random() * (pen[2] - pen[0] - 1), pen[1] + 1 + Math.random() * (pen[3] - pen[1] - 1)); beasts.push({ i, o, tx: o.position.x, ty: o.position.z, wait: Math.random() * 3 }); });
 }
 // Ducks swim on the east pond by day in fair weather once the duck house is mended (sim.swimDay); otherwise they stay in.
 const duckSwim = () => !!S.flags.duckhouse && sim.swimDay(S) && S.cal.minute >= 480 && S.cal.minute < 1020;
@@ -247,7 +247,7 @@ function spawnPondDucks() {
 function drawDuckEggs() { const n = S.duckNest || { eggs: 0, feathers: 0 }; for (let i = 0; i < 6; i++) W.unplace('degg' + i); for (let i = 0; i < Math.min(6, n.eggs + n.feathers); i++) W.place('degg' + i, null, 1.3 + (i % 3) * 0.9, 0.5 + Math.floor(i / 3) * 0.3, { procKind: i < n.eggs ? 'duck_egg' : 'feather', h0: 0.55 }); }
 function nearestBeast(maxD) { let best = null, bd = maxD; for (const b of beasts) { const d = Math.hypot(b.o.position.x - me.x, b.o.position.z - me.y); if (d < bd) { bd = d; best = b; } } return best; }
 function drawEggs() { for (let i = 0; i < 6; i++) W.unplace('egg' + i); for (let i = 0; i < Math.min(6, S.eggs || 0); i++) W.place('egg' + i, null, 1.3 + (i % 3) * 0.9, 0.5 + Math.floor(i / 3) * 0.3, { procKind: 'egg', h0: 0.55 }); }
-const FORAGE_COLOR = { herb: 0x6fbf5a, berry: 0xc23a6a, mushroom: 0xb0825a, frostcap: 0xbfe0f5, bamboo_shoot: 0xc9d27a, wild_mint: 0x58c08a, fiddlehead: 0x7a9a3a, wild_grape: 0x5a2f7a, honeycomb: 0xf0b32a, chestnut: 0x7a4a2a, wild_apple: 0xd8a03a, matsutake: 0xe8d8b8, pine_nut: 0xa07a4a, winter_root: 0xefe2c8 };
+const FORAGE_COLOR = { herb: 0x6fbf5a, berry: 0xc23a6a, mushroom: 0xb0825a, frostcap: 0xbfe0f5, bamboo_shoot: 0xc9d27a, wild_mint: 0x58c08a, fiddlehead: 0x7a9a3a, wild_grape: 0x5a2f7a, honeycomb: 0xf0b32a, chestnut: 0x7a4a2a, wild_apple: 0xd8a03a, matsutake: 0xe8d8b8, pine_nut: 0xa07a4a, winter_root: 0xefe2c8, wild_violet: 0x8a5ad0, elderflower: 0xf4eed0, rosehip: 0xd8302a, snowdrop: 0xffffff };
 
 // ---------------------------------------------------------------- chests, chargers, fruit trees, robots (2026-11-18)
 function drawPlaced() {

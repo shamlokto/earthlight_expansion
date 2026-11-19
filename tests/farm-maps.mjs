@@ -1,6 +1,6 @@
 // Sato's Harvest maps (js/farm/maps.js): every spot the story uses exists and can be stood on, and
 // every door, exit, spot and working prop can be walked to.   node tests/farm-maps.mjs
-import { allMaps, ruinsMap, doorTarget, outsideOf, findSpot, FORAGE_SPOTS } from '../js/farm/maps.js';
+import { allMaps, ruinsMap, doorTarget, outsideOf, findSpot, FORAGE_SPOTS, CENTRAL_HOUSES } from '../js/farm/maps.js';
 import * as story from '../js/farm/story.js';
 import { newGame, enterMine, FORAGE_SPOT_COUNT } from '../js/farm/sim.js';
 
@@ -72,5 +72,34 @@ check(maps.school.props.filter((p) => p.kind === 'school_desk').length >= 6 && m
 const el = maps.hill.buildings.find((b) => b.kind === 'orbital_elevator');
 check(el && el.to.map === 'hangar' && el.height >= 8 && !maps.hill.buildings.some((b) => b.kind === 'lift'), 'the orbital elevator replaces the Descent and goes to the hangar');
 for (const s of ['central.school', 'central.church', 'central.depot', 'school.board', 'school.cubbies', 'depot.map']) check(typeof story.SIGNS[s] === 'string' && story.SIGNS[s].length > 40, `sign ${s} has words`);
+// Market Lane and the bigger farm (2026-11-19): both maps grew east; everything from before keeps its place
+{
+  const F = maps.farm, V = maps.village;
+  check(F.w === 64 && F.h === 34 && V.w === 96 && V.h === 52, `the farm is 64×34 and Willowfall 96×52 (${F.w}×${F.h}, ${V.w}×${V.h})`);
+  check(F.field.x === 3 && F.field.y === 11 && F.pasture.x === 26 && F.pasture.y === 12 && F.at(28, 24) === 'w' && F.at(3, 11) === 'f', 'the old field, pasture and pond are where they were');
+  const door = (m, map) => m.doors.find((d) => d.to.map === map);
+  check(door(F, 'house').x === 6 && door(F, 'house').y === 7 && door(F, 'coop').x === 16 && door(F, 'barn').x === 24 && door(F, 'greenhouse').x === 37, 'the farm doors are where they were');
+  check(F.exits.some((e) => e.x0 === 21 && e.y0 === 33 && e.to.map === 'village') && F.exits.some((e) => e.x0 === 43 && e.y0 === 8 && e.to.map === 'hill'), 'the farm exits are where they were');
+  check(JSON.stringify(F.spots['farm.porch']) === '[7.5,8.4]' && JSON.stringify(F.spots['farm.pond']) === '[26.4,25.5]' && JSON.stringify(V.spots['village.square']) === '[31.5,19.6]' && JSON.stringify(V.spots['village.lift']) === '[56.5,13.7]', 'old spots keep their coordinates');
+  check(door(V, 'store').x === 17 && door(V, 'store').y === 7 && door(V, 'cafe').x === 45 && door(V, 'ranch').x === 7 && door(V, 'library').x === 49 && V.exits.some((e) => e.x0 === 31 && e.y0 === 0), 'the village doors and exit are where they were');
+  check(F.props.filter((p) => p.kind === 'nothing').every((p) => !p.solid) && V.props.filter((p) => p.kind === 'nothing').every((p) => !p.solid), 'cleared props stay in the list as harmless placeholders (prop indices keep their meaning)');
+  const E = F.eastField;
+  check(E && E.id === 'east' && E.w === 12 && E.h === 10 && F.fields.length === 2 && [...Array(E.h).keys()].every((y) => [...Array(E.w).keys()].every((x) => F.at(E.x + x, E.y + y) === 'f')), 'the East Terrace field is soil, 12 by 10');
+  check(!(E.x < F.field.x + F.field.w && E.x + E.w > F.field.x && E.y < F.field.y + F.field.h && E.y + E.h > F.field.y), 'the two fields do not overlap');
+  const fs = reach(F, 6.5, 8.5); check(near(fs, E.x, E.y) && near(fs, E.x + E.w - 1, E.y + E.h - 1), 'the East Terrace can be reached from the farmhouse');
+  check(door(F, 'fold') && door(F, 'fold').lock === 'fold' && maps.fold.props.some((p) => p.act === 'feedfold') && maps.fold.beasts.join() === 'goat,sheep', 'the fold: locked until mended, a trough, goats and sheep');
+  check(door(F, 'duckhouse') && door(F, 'duckhouse').lock === 'duckhouse' && maps.duckhouse.props.some((p) => p.act === 'duckeggs') && maps.duckhouse.props.some((p) => p.act === 'feedduck'), 'the duck house: a nest box and a feeder');
+  const P = F.duckPond; check(P && F.at(P[0], P[1]) === 'w' && F.at(P[2], P[3]) === 'w', 'the duck pond is water');
+  for (const [kind, room, shop] of [['bakery', 'bakery', 'bakery'], ['tailor', 'tailor', 'tailor'], ['seedhouse', 'florist', 'florist'], ['garage', 'garage', 'garage'], ['radio_station', 'radio', 'radio']]) {
+    const b = V.buildings.find((x) => x.kind === kind);
+    check(b && b.x >= 64 && b.to.map === room && maps[room] && maps[room].indoor && maps[room].spots[room + '.counter'] && maps[room].props.some((p) => p.act === 'counter'), `Market Lane has the ${kind}, with ${room}.counter behind a counter`);
+    check(story.NPCS[Object.keys(story.NPCS).find((id) => story.NPCS[id].shop === shop)], `somebody keeps the ${shop}`);
+  }
+  check(V.buildings.filter((b) => b.x >= 64 && b.kind.startsWith('cottage')).length === 5 && V.props.filter((p) => p.act === 'house' && /^home_/.test(p.house)).every((p) => typeof CENTRAL_HOUSES[p.house] === 'string'), 'five Lane cottages, each with a note on the door');
+  check(V.at(80, 27) === 'w' && V.at(76, 28) === 'k' && V.at(70, 8) === 'c' && V.at(70, 17) === 'p', 'the river runs on east under the Mill Bridge; Market Street and the cross street run on into the Lane');
+  check(V.areas.some((a) => a[0] === 'Market Lane') && F.areas.some((a) => a[0] === 'East Terrace'), 'the map names the new districts');
+  check(maps.cafe.spots['cafe.stage'] && !maps.cafe.solid(...maps.cafe.spots['cafe.stage']), 'the Hangar has a corner stage for Vesna');
+  for (const s of ['village.lane', 'village.bakeryfront', 'village.millbridge', 'village.trialbeds', 'farm.east']) check(typeof story.SIGNS[s] === 'string' && story.SIGNS[s].length > 40, `sign ${s} has words`);
+}
 console.log(failures ? `${failures} of ${checks} checks failed` : `farm-maps: all ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

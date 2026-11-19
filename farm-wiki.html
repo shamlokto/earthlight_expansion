@@ -80,6 +80,7 @@
     import { ITEMS, CROPS, SEASONS } from './js/farm/data.js';
     import * as sim from './js/farm/sim.js';
     import * as story from './js/farm/story.js';
+    import { lookPortrait } from './js/farm/lookportrait.js';
     const $ = (s) => document.querySelector(s);
     const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const get = async (u) => { try { const r = await fetch(u); return r.ok ? r.json() : null; } catch { return null; } };
@@ -89,7 +90,7 @@
     const name = (id) => (ITEMS[id] ? ITEMS[id].name : id);
     const ico = (id) => { const u = url('icons/' + id) || (ITEMS[id] && ITEMS[id].kind === 'seed' && url('icons/seedbag')); return u ? `<img class="ico" src="${u}" alt="" loading="lazy">` : `<span class="fake">${esc(name(id).slice(0, 2))}</span>`; };
     const seasonName = (s) => (typeof s === 'number' ? SEASONS[s] : s);
-    const face = (id) => { const n = story.NPCS[id]; const u = url(`people/${id}_portrait`) || url(`people/${id}_front`) || (n && n.portrait && !n.portrait.startsWith('svg:') && !(story.UNDERFOLK || []).includes(id) ? n.portrait : ''); return u ? `<img class="face" src="${u}" alt="" loading="lazy">` : '<div class="face"></div>'; };
+    const face = (id) => { const n = story.NPCS[id]; const u = url(`people/${id}_portrait`) || url(`people/${id}_front`) || (n && n.portrait && !n.portrait.startsWith('svg:') && !n.portrait.startsWith('look:') && !(story.UNDERFOLK || []).includes(id) ? n.portrait : ''); return u ? `<img class="face" src="${u}" alt="" loading="lazy">` : n && n.portrait && n.portrait.startsWith('look:') ? `<div class="face" style="overflow:hidden">${lookPortrait(n)}</div>` : '<div class="face"></div>'; };
     const sections = [];
     const add = (id, title, html) => sections.push({ id, title, html });
     if (url('scenes/title')) $('#hero').style.backgroundImage = `url(${url('scenes/title')})`;
@@ -116,7 +117,7 @@
         ${n.likes && n.likes.length ? `<div class="g">Likes ${n.likes.slice(0, 6).map((x) => esc(name(x))).join(', ')}</div>` : ''}
         ${n.dislikes && n.dislikes.length ? `<div class="g">Dislikes ${n.dislikes.map((x) => esc(name(x))).join(', ')}</div>` : ''}</div></div>`; };
     const ids = Object.keys(story.NPCS).filter((k) => k !== 'sato');
-    add('people', 'People of Willowfall and Eden Central', `<p class="lead">Talk every day, bring gifts and do favours. Six of them can become more than friends. Pastor Ines and Constable Fenn live and work in Eden Central, down the lift; Tobias Venn, Agnes Thorne, Moth and Ansel Wick live further down still, on the Lower deck.</p>
+    add('people', 'People of Willowfall and Eden Central', `<p class="lead">Talk every day, bring gifts and do favours. ${(story.ROMANCE || { candidates: [] }).candidates.length} of them can become more than friends. Market Lane, Willowfall's new east end, is home to Pia the tailor, Lark the baker, Noor of the Seedhouse, Tika the mechanic and Vesna of Radio Willowfall. Pastor Ines and Constable Fenn live and work in Eden Central, down the lift; Tobias Venn, Agnes Thorne, Moth and Ansel Wick live further down still, on the Lower deck.</p>
       <div class="cards">${person('sato')}${ids.map(person).join('')}</div>`);
 
     // ---- love
@@ -140,7 +141,7 @@
       </table></div>`);
 
     // ---- items
-    const KIND = { tool: 'Tools', seed: 'Seeds', crop: 'Crops', animal: 'Animal goods', fish: 'Fish', forage: 'Forage', ore: 'Materials', relic: 'Old-world finds', food: 'Food', keepsake: 'Keepsakes', stock: 'Farm stock' };
+    const KIND = { tool: 'Tools', seed: 'Seeds', crop: 'Crops', animal: 'Animal goods', fish: 'Fish', forage: 'Forage', ore: 'Materials', relic: 'Old-world finds', food: 'Food', keepsake: 'Keepsakes', stock: 'Farm stock', material: 'Wool and yarn', artisan: 'Artisan goods', craft: 'Crafted gifts' };
     const kinds = [...new Set(Object.values(ITEMS).map((i) => i.kind))];
     const itemRows = Object.values(ITEMS).map((i) => `<tr data-k="${i.kind}" data-n="${esc(i.name.toLowerCase())}"><td>${ico(i.id)}${esc(i.name)}</td><td>${esc(KIND[i.kind] || i.kind)}</td><td>${esc(i.detail || i.desc || '')}</td><td class="n">${i.sell ? i.sell + ' cr' : ''}</td><td class="n">${i.stamina ? '+' + i.stamina : ''}</td></tr>`).join('');
     add('items', 'Items', `<div class="filter" id="kf"><input id="q" placeholder="Search…" size="14"><button class="on" data-k="">All</button>${kinds.map((k) => `<button data-k="${k}">${esc(KIND[k] || k)}</button>`).join('')}</div>
@@ -209,6 +210,16 @@
       <h3>Finds for the Memory Room</h3><div class="tw"><table><tr><th>Find</th><th>About</th><th class="n">Sells</th></tr>${(story.RELICS || []).map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc((story.RUINS && story.RUINS.relic && story.RUINS.relic[id]) || '')}</td><td class="n">${ITEMS[id] && ITEMS[id].sell ? ITEMS[id].sell + ' cr' : ''}</td></tr>`).join('')}</table></div>`);
 
     // ---- festivals and places
+    // ---- Market Lane, the fold and the hives (2026-11-19)
+    {
+      const MA = sim.MACHINES || {}, row = (a) => `<tr>${a.map((c) => `<td>${c}</td>`).join('')}</tr>`, lane = ['pia', 'lark', 'noor', 'tika', 'vesna'].filter((k) => story.NPCS[k]);
+      add('lane', 'Market Lane, the fold and the hives', `<p class="lead">Willowfall grew east: Market Lane, past the lift plaza, with its shops and, over the Mill Bridge, the Lane cottages. On the farm, Prof. Ruess clears the East Terrace (a second field, 12 by 10) and mends the old fold and the duck house by the east pond.</p>
+        <div class="cards">${lane.map((k) => `<div class="card">${face(k)}<div><b>${esc(story.NPCS[k].name)}${(story.ROMANCE || { candidates: [] }).candidates.includes(k) ? '<span class="tag">♥ romance</span>' : ''}</b><div class="t">${esc(story.NPCS[k].title)}</div><div class="g">${esc((sim.SHOPS[story.NPCS[k].shop] || {}).name || '')}</div></div></div>`).join('')}</div>
+        <h3>Animals</h3><table><tr><th>Animal</th><th>Price</th><th>Home</th><th>Eats</th><th>Gives</th></tr>
+        ${row(['Goat', '4,000 cr', 'the fold (4)', 'fodder', `${ico('goat_milk')} goat milk with the milker (rich when fond)`])}${row(['Sheep', '4,500 cr', 'the fold (4)', 'fodder', `${ico('wool')} a fleece every three fed nights, with clippers (fine wool when fond)`])}${row(['Duck', '1,800 cr', 'the duck house (6)', 'feed', `${ico('duck_egg')} a duck egg a day; now and then a feather; swims on the east pond on fair days`])}</table>
+        <h3>Machines</h3><table><tr><th>Machine</th><th>From</th><th>Takes</th><th>Makes by morning</th></tr>
+        ${Object.entries(MA).map(([id, m]) => row([`${ico(id)} ${esc(m.name)}`, id === 'beehive' ? 'the Seedhouse' : "Brandt's Garage", Object.keys(m.takes).length ? [...new Set(Object.keys(m.takes))].map((x) => esc(name(x))).join(', ') : 'nothing', id === 'beehive' ? 'honey every 3 days (2 with flowers near), spring to autumn' : [...new Set(Object.values(m.takes).map(([o]) => o))].map((x) => esc(name(x))).join(', ')])).join('')}</table>`);
+    }
     add('festivals', 'Festivals', `<div class="cards">${story.FESTIVALS.map((f) => `<div class="card">${url('scenes/festival_' + (f.id === 'yearsend' ? 'yearend' : f.id)) ? `<img class="face" style="width:110px;height:70px;object-position:center" src="${url('scenes/festival_' + (f.id === 'yearsend' ? 'yearend' : f.id))}" alt="">` : ''}<div><b>${esc(f.name)}</b><div class="t">${esc(seasonName(f.season))} ${f.day}</div><div class="g">${esc(f.blurb)}</div></div></div>`).join('')}</div>`);
     add('help', 'How to play', `<div class="help">${story.HELP.map((h) => `<div><h3>${esc(h.title)}</h3><p>${esc(h.body)}</p></div>`).join('')}</div>`);
     add('art', 'About the art', `<p>Everything in Sato's Harvest is original. The 3D models (${Object.keys(models).length} of them) were made by turning anime-style concept pictures into textured meshes. The story pictures, film clips, skies and icons were generated from our own prompts. The cast's look comes from the colony game's portraits. Prompts and scripts are in <code>tools/art/farm/</code>.</p>`);
