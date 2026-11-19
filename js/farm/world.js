@@ -602,7 +602,8 @@ export class World {
       const mat = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.6), std({ color: 0x6f5a3a })); mat.rotation.x = -Math.PI / 2; mat.position.set(map.exitTile[0] + 0.5, 0.02, map.exitTile[1] + 0.6); R.add(mat);
       const lamp = new THREE.PointLight(0xffd9a0, 30, 30, 1.6); lamp.position.set(W / 2, 3.4, H / 2); R.add(lamp);
     }
-    for (const b of map.buildings) R.add(this.makeBuilding(b));
+    this.occluders = [];
+    for (const b of map.buildings) { const o = this.makeBuilding(b); R.add(o); if (!map.indoor) this.occluders.push({ o, x0: b.x - 0.3, x1: b.x + b.w + 0.3, z0: b.y - 0.3, z1: b.y + b.d + 0.3, h: (b.height || 4) + 1.5 }); }
     const built = [], pools = [];
     map.props.forEach((p, pi) => { p.index = pi; });
     for (const p of map.props) {
@@ -723,13 +724,24 @@ export class World {
     // trees standing between the camera and Sato step aside
     const cx = Math.sin(this.yaw), cz = Math.cos(this.yaw);
     // trees between the camera and Sato turn see-through (about 8% opaque) instead of collapsing
-    for (const o of this.tallProps || []) {
-      const rx = o.position.x - px, rz = o.position.z - py, along = rx * cx + rz * cz, lat = Math.abs(rx * cz - rz * cx);
-      const hide = along > 0.3 && along < 9 && lat < 2.2, k0 = o.userData.k ?? 1;
-      const k = Math.max(0.08, Math.min(1, k0 + (hide ? -dt : dt) * 4)); if (k === k0) continue; o.userData.k = k;
-      if (!o.userData.ownMats) { o.userData.ownMats = []; o.traverse((q) => { if (q.isMesh && q.material) { q.material = q.material.clone(); q.material.transparent = true; o.userData.ownMats.push(q.material); } }); }
+    const fade = (o, hide, low) => {
+      const k0 = o.userData.k ?? 1, k = Math.max(low, Math.min(1, k0 + (hide ? -dt : dt) * 4));
+      if (k === k0 && (k === 1 || (o.userData.ownMats && o.userData.ownMats.length && o.userData.nKids === o.children[0]?.children.length))) return;   // a model that loads later is caught too
+      o.userData.k = k; o.userData.nKids = o.children[0]?.children.length;
+      if (!o.userData.ownMats) o.userData.ownMats = [];
+      o.traverse((q) => { if (q.isMesh && q.material && !q.userData.own) { q.material = q.material.clone(); q.material.transparent = true; q.userData.own = true; o.userData.ownMats.push(q.material); } });   // also models that arrived late
       for (const m of o.userData.ownMats) { m.opacity = k; m.depthWrite = k > 0.97; m.alphaTest = k > 0.97 ? (m.alphaTest || 0) : 0; }
       o.traverse((q) => { if (q.isMesh) q.castShadow = k > 0.5; });
+    };
+    for (const o of this.tallProps || []) {
+      const rx = o.position.x - px, rz = o.position.z - py, along = rx * cx + rz * cz, lat = Math.abs(rx * cz - rz * cx);
+      fade(o, along > 0.3 && along < 9 && lat < 2.2, 0.08);
+    }
+    // so do buildings that cut the line from the camera to Sato (Eden Central's tall blocks, the observatory)
+    for (const b of this.occluders || []) {
+      let hide = false;
+      for (let i = 1; i <= 14 && !hide; i++) { const t = i / 14, x = this.focus.x + (c.position.x - this.focus.x) * t, y = this.focus.y + (c.position.y - this.focus.y) * t, z = this.focus.z + (c.position.z - this.focus.z) * t; hide = x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1 && y < b.h; }
+      fade(b.o, hide, 0.22);
     }
     for (const [k, o] of this.tileObjs) if (o.userData.hover || (o.children[0] && o.children[0].userData.hover)) o.position.y = Math.sin(this.t * 2 + k.length) * 0.08;
     if (this.weather.visible) {
