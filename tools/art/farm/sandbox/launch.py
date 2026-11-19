@@ -40,7 +40,7 @@ def arm(pod, pw, max_minutes, idle):
     """Upload sandbox.sh through the pod's Jupyter server and start it. Returns its first log line."""
     import base64, uuid, ssl
     base = f'https://{pod}-8888.proxy.runpod.net'
-    for _ in range(80):                                    # wait for Jupyter (about a minute)
+    for _ in range(180):                                   # wait for Jupyter (a minute, or up to 15 when the image is not cached)
         try:
             with urllib.request.urlopen(urllib.request.Request(f'{base}/api/status?token={pw}', headers=UA), timeout=10) as r:
                 if r.status == 200: break
