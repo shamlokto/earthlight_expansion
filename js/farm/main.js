@@ -75,6 +75,7 @@ async function go(to, { quick = false } = {}) {
   if (map.id === 'barn' || map.id === 'coop') spawnBeasts();
   if (map.id === 'hill') drawForage();
   if (map.ruins) drawRuins();
+  if (map.id === 'central') { const pal = new Actor(W, 'pallas_parked', lookOf('sato'), { pallas: true, tall: 2.5 }); [pal.x, pal.y] = map.spots['central.pallas']; pal.dir = 0; W.actors.set('pallas_parked', pal); }   // her Pallas waits at the dock
   if (map.id === 'hangar') { const pal = new Actor(W, 'pallas_parked', lookOf('sato'), { pallas: true, tall: 2.5 }); pal.x = 8; pal.y = 4; pal.dir = 0; W.actors.set('pallas_parked', pal); }
   if (map.id === 'coop') drawEggs();
   drawPlaced(); spawnBots();

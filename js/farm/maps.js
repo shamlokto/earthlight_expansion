@@ -227,10 +227,10 @@ function village() {
 // The lift kiosk's notice lives here with the map that has the kiosk (story.js owns the other signs).
 const MAP_SIGNS = {
   'central.board': 'EDEN CENTRAL, Main deck. Governor\'s office: weekdays 9 to 5 (the General). The Ashfall Exchange: Her Majesty receives traders daily but Saturdays. Arrivals: courier runs Tuesdays and Fridays. Viewing gallery open all night; please do not tap the glass.',
-  'central.dock': 'SPACE DOCK, BAY ONE. Courier shuttles, cargo lighters and the Ashfall trader. Her Majesty trades from her ship on Saturdays and from the Exchange on the plaza the rest of the week. Stay behind the yellow lines when the bay doors cycle.',
+  'central.dock': 'SPACE DOCK, BAY ONE. SHUTTLE TO EARTH (the Old World): J. Maris\'s courier, any day, any hour; board at the lit gate beside her shuttle, or book at the Arrivals hall desk. Courier shuttles, cargo lighters and the Ashfall trader. Her Majesty trades from her ship on Saturdays and from the Exchange on the plaza the rest of the week. Stay behind the yellow lines when the bay doors cycle.',
   'central.watch': 'SATO\'S WATCH. Observatory and beacon of the Main deck, named by the Colony Council for Captain M. Sato, who kept watch. Dome open to the public from 7 in the evening. (The Captain has asked twice for the name to be changed. The Council has declined twice.)',
-  'central.plaza': 'THE PLAZA. Laid out by the founders, rebuilt after the siege. Avenue north to the great window; south to the lift terminal. Canal walks east and west.',
-  'central.arrivals': 'ARRIVALS. Courier and supply runs from the Middle and Lower decks. J. Maris lands at 8 on Tuesdays and Fridays and asks that nobody wave at her during docking.',
+  'central.plaza': 'THE PLAZA. Laid out by the founders, rebuilt after the siege. Avenue north to the great window; south to the lift terminal. Canal walks east and west. SPACE DOCK (shuttle to Earth): north-west corner, past the Grand Market and the gardens.',
+  'central.arrivals': 'ARRIVALS. The courier desk inside books J. Maris\'s shuttle to Earth (it leaves from the space dock). Courier and supply runs from the Middle and Lower decks. J. Maris lands at 8 on Tuesdays and Fridays and asks that nobody wave at her during docking.',
   'central.market': 'GRAND MARKET. Imported seeds, saplings in any season, batteries. The terminals also BUY fine food at a fifth above bin prices. No haggling with the machines.',
   'hill.onsen': 'THE TERRACE ONSEN. Hot spring, warmed by the colony\'s heat exchangers (Ruess says the pipes were "spare"). Open 6 till midnight. 100 cr a soak; free on your birthday. Please rinse before you get in. No towels in the water.',
   'village.lift': 'LANTERN RING LIFT. Spoke cars to the Middle deck and the hub, every twenty minutes. The climb takes nine; you get lighter as you go, so hold the rail near the top. Hesk\'s barricade stood here. The scorch marks are being kept, on purpose.',
@@ -315,7 +315,7 @@ function central() {
   for (const [x, y] of [[26, 26], [42, 26]]) m.prop('bench', x, y, { w: 2 });
   m.spot('central.plaza', 29.5, 27.5);
   // the Arrivals hall and its apron
-  m.building('arrivals', 50, 21, 12, 7, { height: 5, label: 'Arrivals hall' });
+  m.building('arrivals', 50, 21, 12, 7, { height: 5, to: { map: 'arrivals' }, label: 'Arrivals hall' });
   m.prop('liftpad', 52, 29, { solid: false }); m.prop('cargo_crate', 63, 29); m.prop('cargo_crate', 64, 29, { scale: 0.8 }); m.prop('cargo_crate', 63, 30, { scale: 0.9 });
   m.spot('central.arrivals', 56.5, 29.5);
   m.prop('signpost', 49, 31, { act: 'sign', sign: 'central.arrivals' });
@@ -327,14 +327,15 @@ function central() {
   // landing pads, Moraine's cartel trader, a shuttle, cranes, crates, fuel lines and hazard paint
   m.fill(1, 6, 15, 18, 'o').fill(12, 19, 14, 20, 'c');
   m.prop('bay_window', 0, 6, { d: 13, tileSolid: true, label: 'Pressure window' });
-  m.prop('landing_pad', 2, 7, { w: 5, d: 5, solid: false }); m.prop('landing_pad', 2, 13, { w: 4, d: 4, solid: false });
-  m.prop('trader_ship', 2, 7, { w: 5, d: 5, label: "Moraine's ship" });
-  m.prop('shuttle', 2, 13, { w: 4, d: 4, label: 'Courier shuttle' });
-  m.prop('crane', 9, 6, { label: 'Dock crane' }); m.prop('crane', 9, 17, { label: 'Dock crane' });
-  m.prop('cargo_crate', 10, 11); m.prop('cargo_crate', 10, 12, { scale: 0.8 }); m.prop('cargo_crate', 14, 16, { scale: 0.9 }); m.prop('cargo_crate', 15, 6);
-  m.prop('pipe_run', 7, 6, { d: 12 }); m.prop('hazard_stripes', 1, 12, { w: 6, solid: false }); m.prop('hazard_stripes', 7, 18, { w: 7, solid: false });
+  m.prop('landing_pad', 1, 6, { w: 6, d: 6, solid: false }); m.prop('landing_pad', 1, 12, { w: 6, d: 6, solid: false });
+  m.prop('trader_ship', 1, 6, { w: 6, d: 6, big: 1.45, label: "Moraine's ship" });
+  m.prop('shuttle', 1, 12, { w: 6, d: 6, big: 1.6, act: 'shuttle', label: 'Maris\'s shuttle to Earth' });
+  m.prop('crane', 9, 6, { label: 'Dock crane' }); m.prop('crane', 13, 17, { label: 'Dock crane' });
+  m.prop('cargo_crate', 10, 11); m.prop('cargo_crate', 10, 12, { scale: 0.8 }); m.prop('cargo_crate', 14, 13, { scale: 0.9 }); m.prop('cargo_crate', 15, 6);
+  m.prop('pipe_run', 7, 6, { d: 5 }); m.prop('hazard_stripes', 7, 18, { w: 7, solid: false });
   m.prop('signpost', 12, 18, { act: 'sign', sign: 'central.dock' });
-  m.prop('shuttle_gate', 6, 15, { act: 'shuttle', label: 'Shuttle gate' });   // Maris's courier shuttle to the Old World
+  m.prop('shuttle_gate', 8, 15, { act: 'shuttle', label: 'Shuttle to Earth' });   // Maris's courier shuttle to the Old World
+  m.spot('central.pallas', 10.5, 14.5);                       // Sato's Pallas waits beside it, ready to ride down with her
   m.spot('central.dock', 8.6, 9.5);
   for (const x of [16, 18]) m.prop('hydro_tower', x, 10); for (const x of [16, 18]) m.prop('hydro_tower', x, 13);
   // the north-east cargo yard
@@ -367,8 +368,9 @@ function central() {
   // the lift terminal at the south end of the avenue
   m.prop('lift_kiosk', 33, 52, { w: 3, d: 2, act: 'liftup', label: 'Lift to the Lantern Ring' });
   m.spot('central.lift', 34.5, 50.5);
+  m.prop('signpost', 31, 49, { act: 'sign', sign: 'central.plaza' });
   m.start = [34.5, 50.5];
-  m.areas = [['The great window', 34.5, 2.5], ['The plaza', 34.5, 31.5], ['Grand Market', 11.5, 32], ['Arrivals', 56, 32.3], ['Canal', 22, 38.4], ['Lift terminal', 34.5, 54.3], ['Gardens', 9, 18.5]];
+  m.areas = [['The great window', 34.5, 2.5], ['The plaza', 34.5, 31.5], ['Grand Market', 11.5, 32], ['Arrivals', 56, 32.3], ['Canal', 22, 38.4], ['Lift terminal', 34.5, 54.3], ['Gardens', 9, 18.5], ['Space dock: shuttle to Earth', 8, 4.6]];
   m.bots = [[[34.5, 6], [34.5, 49]], [[3, 33.5], [66, 33.5]], [[3, 43.5], [66, 43.5]], [[3, 2.5], [66, 2.5]], [[5, 50.5], [64, 50.5]]];
   // inside: the Governor's office and the Exchange
   const o = room('office', 12, 8, "Governor's office");
@@ -384,7 +386,13 @@ function central() {
   const x = room('exchange', 12, 9, 'The Ashfall Exchange');
   x.prop('counter', 4, 2, { w: 5, act: 'counter' }); x.spot('central.exchange', 6.5, 1.5);
   x.prop('crate', 0, 4); x.prop('crate', 0, 5); x.prop('crate', 11, 6); x.prop('shelf', 0, 0, { w: 2 }); x.prop('shelf', 10, 0, { w: 2 }); x.prop('rug', 5, 5, { solid: false, w: 2, d: 2 }); x.prop('plantpot', 11, 3);
-  return { central: m, office: o, exchange: x, hangar: hg };
+  // the Arrivals hall: benches, the departures board, the courier desk (it books Maris's shuttle too)
+  const ah = room('arrivals', 14, 9, 'Arrivals hall', 'o');
+  ah.prop('desk', 5, 1, { w: 4, act: 'shuttle', label: 'Courier desk: book the shuttle to Earth' }); ah.spot('arrivals.desk', 7, 0.6);
+  ah.prop('noticeboard', 1, 0, { w: 2, act: 'sign', sign: 'central.arrivals' }); ah.prop('noticeboard', 11, 0, { w: 2, act: 'sign', sign: 'central.dock' });
+  for (const y of [4, 6]) { ah.prop('bench', 2, y, { w: 2 }); ah.prop('bench', 10, y, { w: 2 }); }
+  ah.prop('vending', 0, 4); ah.prop('vending', 13, 4); ah.prop('plantpot', 0, 7); ah.prop('plantpot', 13, 7); ah.prop('cargo_crate', 12, 2, { scale: 0.8 }); ah.prop('rug', 6, 4, { solid: false, w: 2, d: 3 });
+  return { central: m, office: o, exchange: x, hangar: hg, arrivals: ah };
 }
 
 // ---------------------------------------------------------------- indoors

@@ -89,10 +89,10 @@ const PROPS = {
   charger: { model: () => (art.hasModel('solar_charger') ? 'solar_charger' : 'solar_panel'), h: 1.2, fit: 'foot' },
   farm_bot: { model: 'farm_bot', h: 0.8, fit: 'foot', turn: true },
   asteroid: { model: 'asteroid', h: 0.9, face: true, maxW: 0.95 }, asteroid_big: { model: 'asteroid_big', h: 1.6, fit: 'foot' }, buoy: { model: 'jump_buoy', h: 1.4, fit: 'foot' },
-  launch_pad: { h: 0.1 }, shuttle_pad: { h: 0.1 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, shuttle_gate: { model: 'shuttle_gate', h: 2.2, fit: 'foot' },
+  launch_pad: { h: 0.1 }, shuttle_pad: { h: 0.1 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, shuttle_gate: { h: 3.4 },
   hull_window: { h: 12 }, hull_wall: { h: 10 }, glass_roof: { h: 16 }, vending: { model: 'vending', h: 1.9, fit: 'foot' }, feed_sacks: { model: 'feed_sacks', h: 0.8, fit: 'foot' },
   crane: { model: 'dock_crane', h: 5.5, fit: 'foot' },
-  bay_window: { h: 10 }, landing_pad: { h: 0.1 }, hazard_stripes: { h: 0.05 }, trader_ship: { model: 'cartel_ship', h: 3.4, fit: 'foot' }, shuttle: { model: 'shuttle', h: 2.4, fit: 'foot' },
+  bay_window: { h: 10 }, landing_pad: { h: 0.1 }, hazard_stripes: { h: 0.05 }, trader_ship: { model: 'cartel_ship', h: 5.2, fit: 'foot' }, shuttle: { model: 'shuttle', h: 3.8, fit: 'foot' },
   feed_mill: { model: 'feed_mill', h: 2.6, fit: 'foot' }, charge_terminal: { model: 'charge_terminal', h: 1.6, fit: 'foot' }, house_door: { h: 1 }, starglow: { h: 0.5 },
   fruit_tree: { h: 3.4 }, fruit_tree_young: { h: 2.1 }, sapling: { model: 'sapling', h: 1.0 },
 };
@@ -339,7 +339,20 @@ export class World {
         for (const [x, z] of [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]]) g.add(box(0.25, 1.1, 0.25, m, x, 0.2, z));
         for (const c of g.children) { c.position.x += (w - 1) / 2; c.position.z += (d - 1) / 2; } break;
       }
-      case 'shuttle_gate': g.add(box(0.15, 2, 0.15, std({ color: 0x5d6a77 }), -0.4), box(0.15, 2, 0.15, std({ color: 0x5d6a77 }), 0.4), box(1.0, 0.35, 0.2, std({ color: 0xe0782a }), 0, 1.9), box(0.6, 0.35, 0.03, new THREE.MeshBasicMaterial({ color: 0x9ff4ff }), 0, 1.2, 0.1)); break;
+      case 'shuttle_gate': {                             // the boarding gate: an orange arch, a lit SHUTTLE TO EARTH board, a beacon
+        const gm = std({ color: 0x5d6a77, metalness: 0.4 }), or = std({ color: 0xe0782a });
+        g.add(box(0.22, 2.9, 0.22, gm, -0.8), box(0.22, 2.9, 0.22, gm, 0.8), box(2.0, 0.3, 0.3, or, 0, 2.9));
+        const c = document.createElement('canvas'); c.width = 256; c.height = 96; const x = c.getContext('2d');
+        x.fillStyle = '#0d2a33'; x.fillRect(0, 0, 256, 96); x.strokeStyle = '#7dffe0'; x.lineWidth = 4; x.strokeRect(4, 4, 248, 88);
+        x.fillStyle = '#9ff4ff'; x.font = 'bold 30px sans-serif'; x.textAlign = 'center'; x.fillText('SHUTTLE', 128, 40); x.fillStyle = '#ffd36a'; x.fillText('TO EARTH', 128, 78);
+        const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+        for (const sd of [1, -1]) { const b = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.64), new THREE.MeshBasicMaterial({ map: t })); b.position.set(0, 3.45, 0.045 * sd); if (sd < 0) b.rotation.y = Math.PI; g.add(b); }
+        g.add(box(1.8, 0.7, 0.05, gm, 0, 3.1, 0));
+        const bc = ball(0.13, new THREE.MeshBasicMaterial({ color: 0xffb347 }), 0, 3.95, 0, 1); bc.castShadow = false; g.add(bc);
+        const ln = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2.4), new THREE.MeshBasicMaterial({ color: 0x7dffe0, transparent: true, opacity: 0.18, side: THREE.DoubleSide })); ln.position.y = 1.3; g.add(ln);
+        const arrow = new THREE.Mesh(new THREE.CircleGeometry(0.55, 3), new THREE.MeshBasicMaterial({ color: 0x7dffe0 })); arrow.rotation.set(-Math.PI / 2, 0, Math.PI / 2); arrow.position.set(0, 0.04, 0.9); g.add(arrow);
+        break;
+      }
       case 'hull_window': {                              // the great window: a long band onto Earth and the stars, mullions, hull above and below
         const w = o.w || 10, hull = std({ map: art.tex('hull_plate', { repeat: 0.5 }).clone() }); hull.map.repeat.set(w / 2, 1); hull.map.needsUpdate = true;
         const view = new THREE.Mesh(new THREE.PlaneGeometry(w, 8), new THREE.MeshBasicMaterial({ map: earthBand(), fog: false })); view.position.set(0, 5.4, -0.1); g.add(view);
@@ -393,7 +406,7 @@ export class World {
         for (const x of [-0.6, 0.6]) { const e = cyl(0.35, 0.45, 0.6, dk, x, 0.25, -2.2, 12); e.rotation.x = Math.PI / 2; s0.add(e); const f = ball(0.25, new THREE.MeshBasicMaterial({ color: 0x9fd8ff }), x, 0.55, -2.5, 1); f.castShadow = false; s0.add(f); }
         s0.add(box(0.12, 0.9, 0.12, dk, 0, 1.6, -1)); g.add(s0);
         for (const [x, z] of [[-0.9, -1.4], [0.9, -1.4], [-0.9, 1.4], [0.9, 1.4]]) g.add(box(0.12, 0.6, 0.12, dk, x, 0, z), box(0.4, 0.06, 0.4, dk, x, 0, z));
-        for (const c of g.children) { c.position.x += (w - 1) / 2; c.position.z += ((o.d || 5) - 1) / 2; }
+        const k = o.big || 1; for (const c of g.children) { c.position.multiplyScalar(k); c.scale.multiplyScalar(k); c.position.x += (w - 1) / 2; c.position.z += ((o.d || 5) - 1) / 2; }
         g.rotation.y = 0; break;
       }
       case 'shuttle': {                                  // Juno Maris's courier shuttle: white and orange, swept wings
@@ -403,7 +416,7 @@ export class World {
         const nose = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.9, 14), wh); nose.rotation.x = Math.PI / 2; nose.position.set(0, 0.6, 1.85); nose.castShadow = true; s0.add(nose);
         s0.add(box(3.0, 0.08, 1.0, or, 0, 0.35, -0.4), box(0.08, 0.8, 0.8, or, 0, 1.0, -1.2), box(0.8, 0.25, 0.05, new THREE.MeshBasicMaterial({ color: 0x9ff4ff }), 0, 0.9, 1.45));
         g.add(s0); for (const [x, z] of [[-0.5, -0.8], [0.5, -0.8], [0, 1.0]]) g.add(box(0.08, 0.6, 0.08, dk, x, 0, z));
-        for (const c of g.children) { c.position.x += (w - 1) / 2; c.position.z += ((o.d || 4) - 1) / 2; }
+        const k = o.big || 1; for (const c of g.children) { c.position.multiplyScalar(k); c.scale.multiplyScalar(k); c.position.x += (w - 1) / 2; c.position.z += ((o.d || 4) - 1) / 2; }
         break;
       }
       case 'crane': {                                    // a dock crane: a yellow lattice tower, a jib over the water, a hook
@@ -501,16 +514,21 @@ export class World {
   // Sato's Watch: a tower with a split dome and a telescope, and a radar mast with a turning dish and a beacon.
   buildObservatory(b, g) {
     const hull = std({ map: art.tex('hull_plate', { repeat: 0.5 }) }), white = std({ color: 0xeef1f3, roughness: 0.5, metalness: 0.2 }), dark = std({ color: 0x3c4650, metalness: 0.4 });
-    const R = Math.min(b.w, b.d) * 0.36, H = b.height * 0.55;
-    g.add(cyl(R + 0.4, R + 0.6, 0.6, hull, -0.8, 0, 0, 24), cyl(R, R + 0.2, H, hull, -0.8, 0.6, 0, 24));
+    const R = Math.min(b.w, b.d) * 0.36, H = b.height * 0.55, ox = Math.floor(b.w / 2) + 0.5 - b.w / 2, oz = b.d / 2 - R - 0.25;   // the drum sits right behind the door tile
+    g.add(cyl(R + 0.4, R + 0.6, 0.6, hull, ox, 0, oz, 24), cyl(R, R + 0.2, H, hull, ox, 0.6, oz, 24));
     for (const side of [-1, 1]) {                       // the dome, split open along its ridge
       const half = new THREE.Mesh(new THREE.SphereGeometry(R, 24, 12, side < 0 ? Math.PI / 2 : -Math.PI / 2, Math.PI, 0, Math.PI / 2), white);
-      half.position.set(-0.8 + side * 0.35, H + 0.6, 0); half.castShadow = true; g.add(half);
+      half.position.set(ox + side * 0.35, H + 0.6, oz); half.castShadow = true; g.add(half);
     }
-    const tel = cyl(0.35, 0.45, R * 1.9, dark, 0, 0, 0, 14); tel.rotation.z = -0.75; tel.position.set(-0.8 + 0.6, H + 0.6 + R * 0.55, 0); g.add(tel);
-    g.add(box(1.2, 1.9, 0.08, std({ color: 0x4a3626 }), 0.2 - 0.8 + 0.8, 0.6, b.d / 2 - 0.05));       // the door
-    g.add(box(0.9, 0.35, 0.04, std({ color: 0xc9a14a, metalness: 0.7, roughness: 0.3 }), 1.35, 1.4, b.d / 2 - 0.03));   // the plaque
-    const mx = b.w / 2 - 1.1, mz = -b.d / 2 + 1.3, mh = b.height + 1.5;                                  // the watch tower
+    const tel = cyl(0.35, 0.45, R * 1.9, dark, 0, 0, 0, 14); tel.rotation.z = -0.75; tel.position.set(ox + 0.6, H + 0.6 + R * 0.55, oz); g.add(tel);
+    // the entrance, on the face of the drum: steps, a porch with a lit arch, a door and the brass plaque
+    const fz = oz + R + 0.05, wood = std({ color: 0x4a3626 }), brass = std({ color: 0xc9a14a, metalness: 0.7, roughness: 0.3 });
+    g.add(box(2.2, 0.2, 0.9, hull, ox, 0, fz + 0.35), box(1.8, 0.2, 0.6, hull, ox, 0.2, fz + 0.2), box(1.6, 0.2, 0.4, hull, ox, 0.4, fz + 0.05));
+    g.add(box(0.25, 2.5, 0.5, white, ox - 0.95, 0.6, fz), box(0.25, 2.5, 0.5, white, ox + 0.95, 0.6, fz), box(2.15, 0.35, 0.6, white, ox, 3.0, fz));
+    g.add(box(1.4, 2.2, 0.1, wood, ox, 0.6, fz - 0.05), box(0.08, 0.08, 0.08, brass, ox + 0.5, 1.7, fz + 0.03));
+    g.add(box(1.1, 0.4, 0.04, brass, ox, 3.45, fz + 0.3));
+    const arch = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.06, 6, 20, Math.PI), new THREE.MeshBasicMaterial({ color: 0x9ff4ff })); arch.position.set(ox, 2.8, fz + 0.06); g.add(arch);
+    const mx = -b.w / 2 + 1.1, mz = -b.d / 2 + 1.1, mh = b.height + 1.5;                                 // the watch tower, behind to the left
     for (const [x, z] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) g.add(box(0.14, mh, 0.14, dark, mx + x, 0, mz + z));
     for (let y = 1.5; y < mh; y += 1.8) g.add(box(0.95, 0.08, 0.95, dark, mx, y, mz));
     const dish = new THREE.Group(); dish.position.set(mx, mh + 0.2, mz);
