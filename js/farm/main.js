@@ -9,7 +9,8 @@ import * as story from './story.js';
 import { NPCS } from './story.js';
 import * as art from './art.js';
 import { allMaps, ruinsMap, doorTarget, outsideOf, findSpot, FORAGE_SPOTS, STAR_SPOT_XY, CENTRAL_HOUSES } from './maps.js';
-import { lowerState, waterPlace } from './maps.js';
+import { lowerState, waterPlace, homeAt } from './maps.js';
+import * as paths from './paths.js';
 import { World } from './world.js';
 import { initMap, toggleMap, isOpen as mapOpen } from './minimap.js';
 import { Actor, DIRV } from './actors.js';
@@ -50,7 +51,7 @@ const blocked = (x, y) => map.solid(x, y) || dynSolid(Math.floor(x), Math.floor(
 function canStand(x, y) {
   const r = 0.26;
   if (blocked(x - r, y - r) || blocked(x + r, y - r) || blocked(x - r, y + r) || blocked(x + r, y + r)) return false;
-  for (const n of npcs.values()) if (Math.hypot(n.actor.x - x, n.actor.y - y) < 0.55) return false;
+  for (const n of npcs.values()) { if (n.walking) continue; const d = Math.hypot(n.actor.x - x, n.actor.y - y); if (d < 0.55 && d < Math.hypot(n.actor.x - me.x, n.actor.y - me.y)) return false; }   // walkers pass by; never trapped inside someone
   for (const [px, py, pr, pi] of map.posts || []) if (Math.hypot(px - x, py - y) < pr + 0.22 && !felledAt(pi)) return false;
   for (const o of placedHere()) if (Math.hypot(o.x + 0.5 - x, o.y + 0.5 - y) < 0.62) return false;
   if (map.id === 'farm' && S.flags.feed_mill && map.millAt) { const [mx, my, mw, md] = map.millAt; if (x > mx - 0.2 && x < mx + mw + 0.2 && y > my - 0.2 && y < my + md + 0.1) return false; }
@@ -94,6 +95,7 @@ async function goInner(to, { quick = false } = {}) {
   placeNpcs(true); refreshHud();
   if (!quick) await ui.fade(false, 220);
   busy = false;
+  if (map.home && !S.flags['seen_' + map.id] && mode === 'play') { const id = residents(map.home)[0], t = id && story.HOME_LINES[id] && story.HOME_LINES[id].in; if (t) { sim.setFlag(S, 'seen_' + map.id); mode = 'talk'; await ui.say([{ who: 'narrator', text: t }]); mode = 'play'; } }   // the first look round someone's home
   await checkEvents();
 }
 // Something threw mid-transition: never leave the player on a black screen with the controls locked.
@@ -114,25 +116,43 @@ function refreshHud() { const q = S.flags.quest, bm = map && map.belt && S.mine;
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
 // ---------------------------------------------------------------- people
+// Everybody's day is planned at once (paths.planDay, docs/FARM.md §15): where each stands and the walks between, through doors,
+// exits and the lift, so people walk to their next place and anyone met mid-walk is somewhere sensible along the way.
+const PEOPLE = Object.keys(NPCS).filter((k) => k !== 'sato');
+let plan = null, planKey = '', lag = {};
+function schedAt(id, c) { const w = story.whereIs(id, c); if (w) return { spot: w.spot, vis: true }; const h = story.homeSpot(id, c); return h ? { spot: h, vis: story.presence(id, c) === 'home' } : null; }
+function ensurePlan() {
+  const c = ctx(), key = [sim.absDay(S), c.weather, c.festival, c.partner, c.sweetheart, c.year, Object.keys(S.flags).filter((k) => /^ld_/.test(k) && S.flags[k]).join(), paths.blockVersion()].join('|');
+  if (plan && key === planKey) return;
+  planKey = key; lag = {}; lowerState(allMaps().lower, S.flags);
+  plan = paths.planDay(PEOPLE, (id, m) => schedAt(id, { ...c, minute: m }));
+}
+const nowT = () => S.cal.minute + Math.min(clock, MIN_SECONDS) / MIN_SECONDS;
 function placeNpcs(force) {
-  const slot = Math.floor(S.cal.minute / 10); if (!force && slot === lastPlaced) return; lastPlaced = slot;
-  if (map.ruins) return;
-  const c = ctx(), used = {};
-  for (const id of Object.keys(NPCS)) {
-    if (id === 'sato') continue;
-    const w = story.whereIs(id, c), at = w && findSpot(w.spot), have = npcs.get(id);
-    if (!at || at.map !== map.id) { if (have) { have.actor.dispose(); W.actors.delete(id); npcs.delete(id); } continue; }
-    const k = used[w.spot] = (used[w.spot] || 0) + 1, off = k === 1 ? [0, 0] : [Math.cos(k * 2.2) * 1.1, Math.sin(k * 2.2) * 0.9 + 0.3];
-    let x = at.x + off[0], y = at.y + off[1]; if (map.solid(x, y)) { x = at.x; y = at.y; }
-    if (have && have.spot === w.spot) continue;
-    if (have) { have.actor.dispose(); W.actors.delete(id); }
-    if (Math.hypot(x - me.x, y - me.y) < 0.7) y += 0.9;
-    const a = new Actor(W, id, lookOf(id), { tall: id === 'corran' || id === 'general' ? 1.62 : id === 'moth' ? 1.12 : 1.5 }); a.x = x; a.y = y; a.dir = 0;
-    W.actors.set(id, a); npcs.set(id, { actor: a, spot: w.spot });
+  if (!map || !S) return; ensurePlan(); if (force) lag = {};
+  if (map.ruins) { for (const [id, n] of npcs) { n.actor.dispose(); W.actors.delete(id); } npcs.clear(); return; }
+  moveNpcs(0);
+}
+// Each frame: where the plan puts everybody now. A walker passing a Sato who stands still stops a moment to let her talk.
+function moveNpcs(dt) {
+  if (!plan || !map || map.ruins) return;
+  const t = nowT();
+  for (const id of PEOPLE) {
+    let L = paths.locate(plan, id, t - (lag[id] || 0));
+    if (lag[id] && !(L && L.moving)) { lag[id] = 0; L = paths.locate(plan, id, t); }
+    let n = npcs.get(id);
+    if (!L || L.map !== map.id || !L.vis) { if (n) { n.actor.dispose(); W.actors.delete(id); npcs.delete(id); } continue; }
+    if (!n) { const a = new Actor(W, id, lookOf(id), { tall: id === 'corran' || id === 'general' ? 1.62 : id === 'moth' ? 1.12 : 1.5 }); a.x = L.x; a.y = L.y; a.dir = L.moving ? L.dir : 0; W.actors.set(id, a); n = { actor: a, spot: null }; npcs.set(id, n); }
+    const a = n.actor;
+    if (L.moving && dt > 0 && me && !me.moving && mode === 'play' && Math.hypot(L.x - me.x, L.y - me.y) < 1.25 && (lag[id] || 0) < 5) { lag[id] = (lag[id] || 0) + dt / MIN_SECONDS; a.moving = false; a.face(me.x, me.y); n.spot = null; n.walking = false; continue; }
+    if (!L.moving && n.spot !== L.spot) a.dir = 0;            // arrived: turn round to face the room
+    a.x = L.x; a.y = L.y; a.moving = L.moving; if (L.moving) a.dir = L.dir;
+    n.spot = L.spot; n.walking = L.moving;
   }
 }
+const whereNow = () => (plan && S ? PEOPLE.map((id) => ({ id, ...(paths.locate(plan, id, nowT()) || {}) })).filter((p) => p.map && p.vis) : []);
 function nearestNpc(maxD) { let best = null, bd = maxD; for (const [id, n] of npcs) { const d = Math.hypot(n.actor.x - me.x, n.actor.y - me.y); if (d < bd) { bd = d; best = id; } } return best; }
-const shopOf = (id) => { const n = npcs.get(id), s = NPCS[id].shop; if (!n || !s) return null; return n.spot === s + '.counter' || (id === 'moraine' && (n.spot === 'central.dock' || n.spot === 'central.exchange')) ? s : null; };
+const shopOf = (id) => { const n = npcs.get(id), s = NPCS[id].shop; if (!n || !s || n.walking) return null; return n.spot === s + '.counter' || (id === 'moraine' && (n.spot === 'central.dock' || n.spot === 'central.exchange')) ? s : null; };
 
 async function talkTo(id) {
   const n = npcs.get(id); n.actor.face(me.x, me.y); me.face(n.actor.x, n.actor.y); mode = 'talk';
@@ -140,8 +160,9 @@ async function talkTo(id) {
   let what = 0;
   if (sh || desk) { const opts = ['Talk']; if (sh) opts.push('Buy'); if (desk) opts.push('Give a find to the Memory Room'); opts.push('Leave'); const i = await ui.choose(NPCS[id].name, opts); what = opts[i] === 'Talk' ? 0 : opts[i] === 'Buy' ? 1 : opts[i] === 'Leave' ? 3 : 2; }
   if (what === 0) {
-    const rec = S.npc[id] || {}, met = !!rec.met;
-    const lines = story.talkLines(id, ctx({ hearts: sim.hearts(S, id), met, isBirthday: isBirthday(id) }));
+    const rec = S.npc[id] || {}, met = !!rec.met, home = map.home && story.homeKey(id, S.flags) === map.home && story.HOME_LINES[id];
+    let lines = story.talkLines(id, ctx({ hearts: sim.hearts(S, id), met, isBirthday: isBirthday(id) }));
+    if (home && met) { const v = home.visit[(sim.absDay(S) + hash(id)) % home.visit.length]; lines = Array.isArray(v) ? v : [v]; if (sim.homeVisit(S, id).first) { floatText(n.actor.x, n.actor.y - 0.4, '♥'); ui.toast(`A visit at home: ${NPCS[id].short || NPCS[id].name} is glad you came.`, 2600); } }   // at home: their own lines, and a little extra once a day
     const r = sim.talk(S, id); if (S.npc[id]) S.npc[id].met = true;
     await ui.say(!met && story.MEETINGS && story.MEETINGS[id] ? story.MEETINGS[id] : lines.map((t) => ({ who: id, text: t })));   // the Undercroft folk: a first meeting
     if (id === 'moth') await mothPage();
@@ -276,6 +297,7 @@ function drawPlaced() {
   W.unplace('mill'); for (let k = 0; k < 8; k++) W.unplace('hydro' + k);
   if (map.id === 'farm' && S.flags.feed_mill && map.millAt) { const [mx, my, mw, md] = map.millAt; W.place('mill', 'feed_mill', mx + mw / 2, my + md / 2, { rot: 0 }); }
   if (map.id === 'village') for (const h of S.hydro || []) { const t = map.props.find((p) => p.act === 'hydro' && p.tower === h.tower); if (!t) continue; const g = W.place('hydro' + h.tower, null, t.x + 0.5, t.y + 0.5, { h0: 2.15 }); g.add(W.proc('starglow')); g.children[0].scale.setScalar(0.6); g.children[0].children.forEach((q) => { if (q.material) q.material = q.material.clone(), q.material.color && q.material.color.set(0x7dffb0); }); if (h.crop) { const c = W.makeCrop(h.crop, h.tower); c.scale.setScalar(0.7); c.position.y = 0.05; g.add(c); } }
+  paths.setBlockers(map.id, placedHere().map((o) => o.x + ',' + o.y));   // people walk round what Sato sets down
   S.chests.forEach((c, i) => { if (c.map === map.id) W.place('chest' + i, 'field_chest', c.x + 0.5, c.y + 0.5); });
   (S.machines || []).forEach((m, i) => { if (m.map === map.id) W.place('machine' + i, m.kind, m.x + 0.5, m.y + 0.5, { ready: !!(m.out && m.n), busy: !!m.item, rot: 0 }); });
   S.panels.forEach((p, i) => { if (p.map === map.id) W.place('charger' + i, 'charger', p.x + 0.5, p.y + 0.5, { procKind: 'charge_lights', slots: p.slots }); });
@@ -391,7 +413,7 @@ async function rideLift(from) {
   const first = to === 'lower' && !S.flags.ld_visited;
   if (first) { sim.setFlag(S, 'ld_visited'); busy = true; await ui.fade(true, 500); busy = false; mode = 'talk'; await ui.say(story.LOWER.arrive.map((t) => ({ who: 'narrator', text: t }))); mode = 'play'; }
   await go(s.to);
-  ui.toast(to === 'lower' ? (first ? 'The lift landing. Venn\'s restoration terminal is beside it.' : story.LOWER.down) : from === 'lower' ? story.LOWER.up : to === 'central' ? story.CENTRAL.down : story.CENTRAL.up, 4200);
+  ui.toast(to === 'lower' ? (first ? 'The lift landing. The restoration terminal is the green screen just north-east of the lift, beside a sign: face it and press E to fund projects. Venn stands at his bench further east.' : story.LOWER.down) : from === 'lower' ? story.LOWER.up : to === 'central' ? story.CENTRAL.down : story.CENTRAL.up, 4200);
 }
 // ---------------------------------------------------------------- the Undercroft (2026-11-19): projects, pumps, beds, logs, pupils
 async function restoreTerminal() {
@@ -759,6 +781,7 @@ function probe() {                                   // → { label, run } for E
     const p = propAt(tx, ty) || propAt(Math.floor(me.x), Math.floor(me.y)); if (p && p.act === 'liftup') return { label: map.belt ? 'Fly back to the hangar' : 'Board the shuttle home', run: leaveRuins };
     return null;
   }
+  { const tp = propAt(tx, ty); if (tp && tp.act === 'restore') return { label: 'Use the restoration terminal (fund projects)', run: () => act(tp) }; }   // the terminal wins over anyone standing near it
   const near = nearestNpc(1.5);
   if (near) return { label: `Talk to ${S.npc[near] && S.npc[near].met ? NPCS[near].short || NPCS[near].name : 'the stranger'}`, run: () => talkTo(near) };
   const pu = pupils.find((q) => Math.hypot(q.a.x - me.x, q.a.y - me.y) < 1.3);
@@ -772,6 +795,7 @@ function probe() {                                   // → { label, run } for E
     if (p.act === 'counter' && p.shop) return { label: 'Use the Grand Market terminal', run: () => ui.marketWindow(S, refreshHud) };
     if (p.act === 'hydro') return hydroProbe(p);
     if (p.act === 'counter') { const k = nearestNpc(3.2); if (k) return { label: `Talk to ${NPCS[k].short || NPCS[k].name}`, run: () => talkTo(k) }; if (map.id === 'hall') return { label: 'Nobody is at the desk', run: () => ui.toast('Nobody is at the desk just now.') }; return { label: 'Nobody is at the counter', run: () => ui.toast('Nobody is here to serve just now.') }; }
+    if (p.act === 'home' || (p.act === 'house' && p.home)) return homeProbe(p.home) || { label: 'Knock', run: () => act(p) };
     if (p.act === 'pump') return pumpProbe(p);
     if (p.act === 'bed' && p.bed != null) return bedProbe(p);   // a catacomb growing bed (the farmhouse bed has no bed number: it is for sleeping)
     if (p.act === 'terminal') return { label: S.lower && S.lower.logs && S.lower.logs[p.log] != null ? `${p.label} (log recovered)` : p.kind === 'crypt_wall' ? 'Read the scratches on the wall' : `Recover the log from the ${p.label.toLowerCase()}`, run: () => act(p) };
@@ -785,10 +809,35 @@ function probe() {                                   // → { label, run } for E
   const bush = !map.indoor && plantAhead(['bush']); if (bush && sim.bushReady(S, bush.key)) return { label: 'Pick berries', run: () => { const r = sim.pickBush(S, bush.key); if (r.ok) { sfx('pick'); pickedToast(r); } else ui.toast(r.msg); refreshHud(); } };
   const b = nearestBeast(1.4); if (b) return { label: `Pet ${S.animals[b.i].name}`, run: () => { const r = sim.petAnimal(S, b.i); ui.toast(r.msg || `${S.animals[b.i].name} seems pleased.`); floatText(b.o.position.x, b.o.position.z, '♥'); } };
   if (map.id === 'hill') for (const f of S.forage || []) { const [x, y] = spotXY(f.spot); if (Math.hypot(x + 0.5 - me.x, y + 0.5 - me.y) < 1.2) return { label: `Pick the ${ITEMS[f.id].name.toLowerCase()}`, run: () => { const r = sim.pickForage(S, f.spot); if (r.ok) { sfx('pick'); pickedToast(r); drawForage(); } else ui.toast(r.msg); refreshHud(); } }; }
-  const d = map.doors.find((q) => q.x === Math.floor(me.x) && q.y === Math.floor(me.y)); if (d) return { label: d.kind === 'orbital_elevator' ? 'Ride the orbital elevator up to the hangar' : 'Go in', run: () => enterDoor(d) };
+  const hd = map.doors.find((q) => q.kind === 'home' && q.x === tx && q.y === ty); if (hd) return homeProbe(hd.home);   // facing someone's front door
+  const d = map.doors.find((q) => q.x === Math.floor(me.x) && q.y === Math.floor(me.y)); if (d && d.kind === 'home') return homeProbe(d.home); if (d) return { label: d.kind === 'orbital_elevator' ? 'Ride the orbital elevator up to the hangar' : 'Go in', run: () => enterDoor(d) };
   return null;
 }
+// Homes (§15): a knock opens the door when they are in and awake, it is not late, and Sato is close enough (sim.visitRule).
+const WHY_RANK = { shy: 0, late: 1, asleep: 2, out: 3, moved: 4 };
+const residents = (key) => PEOPLE.filter((id) => story.homeKey(id, S.flags) === key && S.flags.partner !== id);
+function homeAnswer(key) {
+  const c = ctx(); let best = null;
+  for (const id of residents(key)) { const r = sim.visitRule(S, id, story.presence(id, c)); if (r.ok) return { id, ...r }; if (!best || WHY_RANK[r.why] < WHY_RANK[best.why]) best = { id, ...r }; }
+  if (best) return best;
+  const moved = S.flags.partner && story.homeKey(S.flags.partner, S.flags) === key;
+  return { id: null, ok: false, why: moved ? 'moved' : 'empty' };
+}
+const nameOf = (id) => NPCS[id].short || NPCS[id].name;
+function homeProbe(key) {
+  const H = homeAt(key); if (!H) return null; const r = homeAnswer(key);
+  return { label: r.ok ? `Visit ${nameOf(r.id)} at home` : r.id ? `Knock at ${H.label.replace(/^The /, 'the ')}` : 'Read the note on the door', run: () => knock(key) };
+}
+let knockT = 0;
+async function knock(key, walkedIn = false) {
+  const r = homeAnswer(key), L = (r.id && story.HOME_LINES[r.id]) || {}, N = story.HOME_NOTES;
+  if (r.ok) { sfx('door'); return go(doorTarget('home_' + key)); }
+  const line = r.why === 'shy' ? { who: r.id, text: L.shy } : { who: 'narrator', text: r.why === 'out' ? L.note : r.why === 'asleep' ? L.asleep : r.why === 'late' ? N.late : r.why === 'moved' ? N.moved : N[key] || 'Nobody answers.' };
+  if (walkedIn) { if (knockT > performance.now()) return; knockT = performance.now() + 3000; return ui.toast(line.who === 'narrator' ? line.text : `${nameOf(line.who)}: “${line.text}”`, 4200); }
+  mode = 'talk'; if (r.id && r.why !== 'moved') sfx('door'); await ui.say([line]); mode = 'play';
+}
 function enterDoor(d) {
+  if (d.kind === 'home') return knock(d.home, true);
   if (d.lock && !S.flags[d.lock]) return ui.toast({ fold: 'The old stone fold has no roof, and the gate hangs by one hinge. Prof. Ruess could mend it.', duckhouse: 'The duck house is a tumble of planks by the pond. Prof. Ruess could rebuild it.' }[d.lock] || 'The old greenhouse is a wreck of broken frames. Prof. Ruess could repair it.');
   sfx('door'); go(doorTarget(d.to.map));
   if (d.kind === 'orbital_elevator') ui.toast(story.ELEVATOR.up, 4200);
@@ -808,7 +857,8 @@ async function act(p) {
     case 'arena': await hubCup(); break;
     case 'gallery': { const r = sim.gallerySit(S); mode = 'talk'; const G = story.CENTRAL; await ui.say([{ who: 'narrator', text: r.night ? G.gallery[sim.absDay(S) % G.gallery.length] : G.galleryDay }]); mode = 'play'; if (r.restored) { sfx('good'); ui.toast(`You sit a while. +${r.restored} stamina.`); } break; }
     case 'candles': { const c = story.CHURCH.candles; ui.say([{ who: 'narrator', text: c[(sim.absDay(S) + Math.floor(S.cal.minute / 120)) % c.length] }]); break; }
-    case 'house': ui.say([{ who: 'narrator', text: (S.flags.ld_rehoused && story.LOWER.houses[p.house]) || CENTRAL_HOUSES[p.house] || 'The door is locked.' }]); break;
+    case 'home': await knock(p.home); break;
+    case 'house': if (p.home) { await knock(p.home); break; } ui.say([{ who: 'narrator', text: (S.flags.ld_rehoused && story.LOWER.houses[p.house]) || CENTRAL_HOUSES[p.house] || 'The door is locked.' }]); break;
     case 'stargaze': await stargaze(); break;
     case 'silo': ui.siloWindow(S, refreshHud); break;
     case 'solaryard': { const r = sim.yardDeposit(S); ui.toast(r.msg); if (r.ok) sfx('drop'); break; }
@@ -986,7 +1036,7 @@ function frame(now) {
     while (clock >= MIN_SECONDS) { clock -= MIN_SECONDS; const r = sim.tick(S, 1); if (S.cal.minute % 10 === 0) { refreshHud(); placeNpcs(); W.setTime(S.cal.minute, S.weather, map); setMood({ night: S.cal.minute > 1170 }); checkEvents(); } if (r.collapsed) { night(true); break; } }
     if (map.ruins) ruinsTick(dt);
     if (fishing) fishTick(dt);
-    botsTick(dt);
+    botsTick(dt); moveNpcs(dt);
     for (const b of beasts) { b.wait -= dt; if (b.wait <= 0) { const pen = b.pen || map.pen; b.tx = pen[0] + 0.6 + Math.random() * (pen[2] - pen[0]); b.ty = pen[1] + 0.6 + Math.random() * (pen[3] - pen[1]); b.wait = 3 + Math.random() * 6; } const dx = b.tx - b.o.position.x, dy = b.ty - b.o.position.z, d = Math.hypot(dx, dy); if (d > 0.1) { b.o.position.x += dx / d * dt * 0.6; b.o.position.z += dy / d * dt * 0.6; if (!W.facers.includes(b.o.children[0])) b.o.rotation.y = Math.atan2(dx, dy); } }
     // prompt and cursor
     if ((promptT -= dt) <= 0) {
@@ -1065,7 +1115,7 @@ async function boot() {
     cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); console.warn('[webgl] context lost'); try { ui.toast('The 3D view was interrupted. Restoring…', 3000); } catch {} });
     cv.addEventListener('webglcontextrestored', () => { console.warn('[webgl] context restored'); if (S && map) { const at = { map: map.id === 'ruins' ? 'ruins' : map.id, x: me.x, y: me.y, dir: me.dir }; go(at, { quick: true }); } }); }
   W.isFelled = (key) => !!S && sim.treeFelled(S, key); W.wildFruitShown = (m, p) => !!S && sim.wildReady(S, m.id + ':' + p.index, p.fruit, !!m.wildShared); bindInput();
-  initMap({ get: () => ({ S, map, me, npcs, W }), ctx: () => (S ? ctx() : null), openWin: ui.openWindow, closeWin: ui.closeWin, canOpen: () => mode === 'play' && !busy && !ui.talking() && !ui.windowOpen(), toast: ui.toast });
+  initMap({ get: () => ({ S, map, me, npcs, W, people: whereNow }), ctx: () => (S ? ctx() : null), openWin: ui.openWindow, closeWin: ui.closeWin, canOpen: () => mode === 'play' && !busy && !ui.talking() && !ui.windowOpen(), toast: ui.toast });
   const tv = art.url('video/title'), tp = art.url('scenes/title');
   $('titleArt').innerHTML = (tp ? `<img src="${tp}" alt="">` : '') + (tv ? `<video src="${tv}" autoplay loop muted playsinline></video>` : '');
   const old = loadSaved();
@@ -1080,6 +1130,6 @@ async function boot() {
   const firstGesture = () => { removeEventListener('pointerdown', firstGesture, true); removeEventListener('keydown', firstGesture, true); if (mode === 'title') startMusic(); };
   addEventListener('pointerdown', firstGesture, true); addEventListener('keydown', firstGesture, true);
   requestAnimationFrame(frame);
-  window.__farm = { get S() { return S; }, get W() { return W; }, get me() { return me; }, get map() { return map; }, go, sim, night, get mode() { return mode; }, ui, drawPlaced, get bots() { return bots; }, probe: () => probe(), use: () => use(), toggleJournal, talkBot };
+  window.__farm = { get plan() { return plan; }, whereNow, paths, get npcs() { return npcs; }, get S() { return S; }, get W() { return W; }, get me() { return me; }, get map() { return map; }, go, sim, night, get mode() { return mode; }, ui, drawPlaced, get bots() { return bots; }, probe: () => probe(), use: () => use(), toggleJournal, talkBot };
 }
 boot();

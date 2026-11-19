@@ -273,7 +273,7 @@ const SCHEDULE = {
     if (wd === 3) return pick(m, [H(9), H(11), 'village.memorial'], [H(11), H(13), 'workshop.bench'], [H(13), H(16), 'village.riverside'], [H(16), H(20), 'cafe.table2']);
     const pint = wd === 0 || wd === 2 || wd === 4 || wd === 5;
     return pick(m, [H(7), H(9), 'village.ranchyard'], [H(9), H(17), 'ranch.counter'], [H(17), H(18), 'village.ranchyard'],
-      [H(18), H(21), pint ? 'cafe.table2' : (wd === 6 ? 'hill.onsen' : 'village.bridge')]);   // Sunday evenings: a soak at the Terrace Onsen
+      [H(18), H(21), pint ? 'cafe.table2' : (wd === 6 ? 'hill.onsen' : null)]);   // Sunday evenings: a soak at the Terrace Onsen; Tuesdays at home with the radio   // Sunday evenings: a soak at the Terrace Onsen
   },
   // Workshop: closed Wednesday.
   ruess(wd, m) {
@@ -392,7 +392,7 @@ export function whereIs(npcId, ctx) {
   const wd = (((Number(ctx.weekday) || 0) % 7) + 7) % 7;
   const storm = ctx.weather === 'storm';
   // The Undercroft folk keep their own hours below decks: no weather, no festivals (until the Thornes move up).
-  if (UNDERFOLK.includes(npcId) && !(ctx.flags && ctx.flags.ld_rehoused && (npcId === 'thorne' || npcId === 'moth'))) { const fe = festivalOf(ctx); if (fe && fe.spot.startsWith('lower.') && m >= fe.from - 60 && m < fe.to) return { spot: (FESTIVAL_SPOTS[fe.spot] || {})[npcId] || fe.spot }; const s = plan(wd, m, ctx); return s ? { spot: festivalOf(ctx) && s.endsWith('.counter') ? 'lower.landing' : s } : null; }   // festival days: the bench is shut
+  if (UNDERFOLK.includes(npcId) && !(ctx.flags && ctx.flags.ld_rehoused && (npcId === 'thorne' || npcId === 'moth'))) { const fe = festivalOf(ctx); if (fe && fe.spot.startsWith('lower.') && m >= fe.from - 60 && m < fe.to) return { spot: (FESTIVAL_SPOTS[fe.spot] || {})[npcId] || fe.spot }; const s = plan(wd, m, ctx); if (s) return { spot: festivalOf(ctx) && s.endsWith('.counter') ? 'lower.landing' : s }; const hs = awake(npcId, wd, m) && homeSpot(npcId, ctx); return hs ? { spot: hs } : null; }   // festival days: the bench is shut
   let spot = null;
   const fest = festivalOf(ctx);
   // Sato's partner lives at the farm: on the porch at dawn and in the evening (unless a festival is on).
@@ -410,6 +410,8 @@ export function whereIs(npcId, ctx) {
     // Nobody but Vashti climbs the hill in the wet.
     else if ((ctx.weather === 'rain' || ctx.weather === 'snow') && spot && spot.startsWith('hill.') && npcId !== 'vashti') spot = npcId === 'ruess' ? 'village.workshopfront' : 'village.bench';
   }
+  // Free time between waking and bed is spent at home (docs/FARM.md §15); a storm keeps them in too, but out of sight.
+  if (!spot && !storm && awake(npcId, wd, m)) spot = homeSpot(npcId, ctx);
   return spot ? { spot } : null;
 }
 
@@ -2535,7 +2537,7 @@ Object.assign(SCHEDULE, {
   // The Sunrise Oven: open seven till three and again for the afternoon bake; closed Mondays. In bed by half past seven.
   lark(wd, m) {
     if (wd === 0) return pick(m, [H(9), H(11), 'village.river'], [H(11), H(13), 'hill.lake'], [H(13), H(16), 'village.millbridge'], [H(16), H(18), 'village.lane'], [H(18), H(19, 30), 'village.bench']);
-    return pick(m, [H(7), H(15), 'bakery.counter'], [H(15), H(16, 30), wd % 2 ? 'village.riverside' : 'village.bakeryfront'], [H(16, 30), H(18), 'bakery.floor'], [H(18), H(19, 30), 'village.lane']);
+    return pick(m, [H(7), H(15), 'bakery.counter'], [H(15), H(16, 30), wd % 2 ? 'village.riverside' : 'village.bakeryfront'], [H(16, 30), H(18), 'bakery.floor'], [H(18), H(19, 30), wd === 2 || wd === 5 ? 'village.lane' : null]);   // most evenings: home, feet up, by half past six
   },
   // The Seedhouse: closed Tuesdays, for the hill terraces and a look at the farmer's hives.
   noor(wd, m) {
@@ -3568,7 +3570,7 @@ export const MEETINGS = {
       L('venn', 'You got off. Nobody gets off.'),
       L('sato', 'Mira Sato. I was told the Lower deck was sealed.'),
       L('venn', 'It is. By me. The pumps keep the water out, I keep the pumps in, and the dark keeps everyone else away.'),
-      L('venn', 'Tobias Venn. Engineer. ...If you are here to help, the terminal takes credits and parts. Work lights first. Then we will see what the dark has kept.'),
+      L('venn', 'Tobias Venn. Engineer. ...If you are here to help, the terminal takes credits and parts. That one: the green screen by the sign, not me. Face it and press E. Work lights first. Then we will see what the dark has kept.'),
     ],
   moth: [
       L('narrator', 'Between two of the old crypt arches, a small girl in a mustard raincoat is crouched over a mushroom bed, talking to the glowcaps.'),
@@ -3694,8 +3696,8 @@ export const LOWER = {
   ],
   down: 'The lift sinks into the dark. The Lower deck: warm, damp, humming.',
   up: 'The lift climbs out of the dark, and the light comes back a deck at a time.',
-  dark: 'It is too dark to go on. The work lights would let you through. (Fund them at the terminal by the lift.)',
-  terminal: 'The restoration terminal. Its green screen lists every project Venn has wanted to do for three years.',
+  dark: 'It is too dark to go on. The work lights would let you through. (Fund them at the restoration terminal: the green screen just north-east of the lift, beside the sign. Face it and press E.)',
+  terminal: 'The restoration terminal. Its green screen lists every project Venn has wanted to do for three years. Pick one, pay its credits and parts, and Venn has it done by morning.',
   funded: 'The terminal prints a ticket with a satisfied little chirp. Venn will work through the night.',
   bulkhead: 'Sealed. The terminal by the lift can tell you what it would take.',
   bedEmpty: 'An empty catacomb bed, dark and damp. Plant a spore bag here.',
@@ -3965,3 +3967,121 @@ EVENTS.push(
     ],
     reward: { love: 5, item: ['tin_lantern', 1] } },
 );
+
+// ------------------------------------------------------------------ homes (2026-11-19: "every main character has a home ... you can visit")
+// Whose home is which (maps.js HOMES builds the rooms and doors; a person stands at `home_<key>.<id>` inside). Hours awake:
+// whereIs fills their free time with home between waking and bed (not in a storm: then it stays null and they are indoors at home,
+// and not in a lie-in). `when`: the flag before which they are not on the deck at all. Partners live at the farm.
+export const HOMES = {
+  general: { home: 'general', wake: H(7), bed: H(22) }, ruess: { home: 'ruess', wake: H(7), bed: H(22) }, marrow: { home: 'marrow', wake: H(7), bed: H(21, 30) },
+  seln: { home: 'seln', wake: H(7), bed: H(21, 30) }, corran: { home: 'corran', wake: H(7), bed: H(21, 30) }, oduya: { home: 'oduya', wake: H(7, 30), bed: H(23) },
+  maris: { home: 'maris', wake: H(7), bed: H(21, 30) }, vashti: { home: 'vashti', wake: H(7), bed: H(21, 30) }, moraine: { home: 'moraine', wake: H(8), bed: H(22) },
+  kestrel: { home: 'kestrel', wake: H(7), bed: H(22) }, mori: { home: 'mori', wake: H(7), bed: H(22) }, yui: { home: 'yui', wake: H(7, 30), bed: H(22) },
+  calloway: { home: 'calloway', wake: H(7), bed: H(21, 30) }, fenn: { home: 'fenn', wake: H(7), bed: H(21, 30) },
+  pia: { home: 'pia', wake: H(7), bed: H(21, 30) }, lark: { home: 'lark', wake: H(7), bed: H(19, 30) }, noor: { home: 'noor', wake: H(7), bed: H(21, 30) },
+  tika: { home: 'tika', wake: H(7), bed: H(22) }, vesna: { home: 'vesna', wake: H(7), bed: H(23), nap: (wd) => (wd === 6 ? [H(7), H(11)] : [H(9), H(12)]) },
+  venn: { home: 'venn', wake: H(7), bed: H(22) }, wick: { home: 'wick', wake: H(7), bed: H(23), when: 'ld_pumps' }, hana: { home: 'hana', wake: H(7), bed: H(22), when: 'ld_works' },
+  thorne: { home: (f) => (f.ld_rehoused ? 'thornes' : 'shelter'), wake: H(7), bed: H(21, 30), when: 'ld_enclave' },
+  moth: { home: (f) => (f.ld_rehoused ? 'thornes' : 'shelter'), wake: H(7), bed: H(20), when: 'ld_catacombs' },
+};
+export function homeKey(npcId, flags = {}) { const h = HOMES[npcId]; if (!h || (h.when && !flags[h.when])) return null; return typeof h.home === 'function' ? h.home(flags) : h.home; }
+export function homeSpot(npcId, ctx = {}) {
+  if (ctx.partner === npcId) return HOMES[npcId] ? 'farm.porch' : null;       // a partner lives at the farm
+  const k = homeKey(npcId, ctx.flags || {}); return k ? `home_${k}.${npcId}` : null;
+}
+export function awake(npcId, wd, m) { const h = HOMES[npcId]; if (!h || m < h.wake || m >= h.bed) return false; const n = h.nap && h.nap(wd); return !(n && m >= n[0] && m < n[1]); }
+// 'home' (in, awake), 'out' (somewhere else), 'asleep' (in bed, or a lie-in) or 'away' (not on the deck yet).
+export function presence(npcId, ctx) {
+  const hs = homeSpot(npcId, ctx); if (!hs || !ctx) return 'away';
+  const w = whereIs(npcId, ctx); if (w) return w.spot === hs ? 'home' : 'out';
+  const m = Number(ctx.minute) || 0, wd = (((Number(ctx.weekday) || 0) % 7) + 7) % 7;
+  return !awake(npcId, wd, m) ? 'asleep' : ctx.weather === 'storm' ? 'home' : 'away';
+}
+// Knocking and visiting. note: pinned to the door when they are out; asleep: through the door; shy: not close enough yet;
+// visit: talk at home (1-2 lines each); in: what Sato sees as she comes in.
+export const HOME_LINES = {
+  general: { in: 'Dust sheets on most of it. A piano, half uncovered. Two cups by the kettle, as if he had expected company and lost his nerve.',
+    note: 'A card in the window, in a very tidy hand: AT THE OFFICE. (OR, IF IT IS SUNDAY, AT A FARM.)', asleep: 'A lamp goes on upstairs, and then, decisively, off again. The Governor is asleep, and intends to stay so.', shy: '...Sato? I am afraid the house is not fit to be seen. Another time. I mean that.',
+    visit: [['I bought this house the week the fleet was sold. I have slept in it eleven times.', 'The office has a perfectly good couch. That is not an excuse. It is a confession.'], ['The piano came with the house. I can play one tune, badly.', 'You may not hear it yet. I am saving it for a day that deserves it.'], 'Sit anywhere that is not under a sheet. I am told that is how homes work.'] },
+  ruess: { in: 'Upstairs over the Workshop: a bed, a lamp, and every flat surface covered in drawings of things that do not exist yet.',
+    note: 'Chalked on the door: DOWNSTAIRS. OR OUT. OR THINKING. KNOCK LOUDER.', asleep: 'Snoring, through the door. Rhythmic. Possibly calibrated.', shy: 'Up here is private, Captain. The Workshop is open. Bring me something broken and we will talk.',
+    visit: [['This is the drawing for the irrigation pump. This is the drawing for the better one.', 'This is the drawing of you falling off the first one. For the archive.'], 'Mind the lamp. It is a prototype. Everything in here is a prototype, including me.', ['I keep a bed up here so I do not have to walk home.', 'I have not walked home in nine years. Do not tell Marrow.']] },
+  marrow: { in: 'A neat cottage that smells of soap and old paper. Photographs of the village crowd one wall: every year since before the war.',
+    note: 'A slate on the door: AT THE HALL, OR ABOUT. IF IT IS URGENT, IT IS NOT, DEAR. I.M.', asleep: 'A voice through the door: "Whoever that is, it is gone nine. Come back with daylight."', shy: 'Mira? How kind. Not today, dear. Come and see me at the Hall and we will get to know each other properly.',
+    visit: [['Every face on that wall is somebody I counted through the siege.', 'The ones who are still here, I count twice. Sit down, you are on it now.'], 'Tea is in the pot. Biscuits are in the tin. Gossip is free and I am not passing on anything I have not checked.', ['I was going to retire, you know. Before all of it.', 'I do not regret staying. I regret the knees.']] },
+  seln: { in: 'Two rooms behind the shop, green with cuttings: a shoot on every sill, a tower humming in the corner, a kettle that never quite cools.',
+    note: 'On the door, in pencil: IN THE SHOP OR OUT IN THE GREEN. RING THE BELL ON THE COUNTER. A.S.', asleep: 'Seln, through the door, half asleep: "Mira? The shop opens at nine, love. So do I."', shy: 'Oh, the back rooms are just a mess of pots, Mira. Come through the shop and we can talk at the counter.',
+    visit: [['Everything on these sills is a cutting from something somebody nearly lost.', 'Bring me a slip of anything you love and it will have a sill here too.'], 'Sit, sit. The kettle is always on. I have never once caught it off.', ['I sleep better in the back of the shop.', 'If anyone comes at night for seed, it is because something needs planting. I like to be near when it does.']] },
+  corran: { in: 'The ranch house: boots by the door, a radio tuned to the weather, and on the wall a gun crew of twelve grinning in their shirtsleeves.',
+    note: 'A board nailed to the door: OUT WITH THE GIRLS. BACK FOR SUPPER. A.C.', asleep: 'Through the door, a roar of a snore, and a cow somewhere answering it.', shy: 'Ha! The house? It is all boots and old photographs. Come by the counter, lass, I will show you a proper cow.',
+    visit: [['That is number two battery. Every one of them. I kept the photograph and lost the rest.', 'Do not look sad about it. They would have hated sad. They would have liked you.'], 'Kettle on! Biscuits in the tin! Mind the dog bed, there is no dog, I keep meaning to get one.', ['My Duchess was born in that corner. Snowstorm. I slept on the floor beside her.', 'Best night of my life, and I have had some nights.']] },
+  oduya: { in: 'Oduya\'s cottage is mostly kitchen. Pans hang from every beam, onions sit in crates, and something on the stove is always being tasted.',
+    note: 'A chalk menu on the door, with one item: OUT. BACK BY TEN. T.O.', asleep: 'A tired voice through the door: "Kitchen\'s closed, friend. Even mine."', shy: 'You are welcome at the Hangar any hour, friend. My own kitchen is a little more private. Give it time.',
+    visit: [['This is where I try things before they are allowed near the Hangar.', 'Tonight it is soup. It is always soup at first. Taste.'], ['On the dock I cooked for four hundred. Here I cook for one, and I keep making four hundred.', 'Take some home. Take all of it home.'], 'Sit at the table. No, the other chair; that one has opinions.'] },
+  maris: { in: 'A little flat over the post room: a bed under the eaves, crates of parcels nobody has claimed yet, and a wall of postcards from every deck.',
+    note: 'A luggage tag tied to the knocker: OUT ON THE ROUND. BACK BEFORE DARK, PROBABLY. J.M.', asleep: 'A thump, a muffled "Ow", and then silence. Maris has gone back to sleep on the floor, apparently.', shy: 'Oh! Hi! The flat is, um, a lot of parcels right now. Catch me on the round? I will be about.',
+    visit: [['Every postcard is a run I came back from.', 'In the war I stopped putting them up. I started again in spring. Yours is the one with the turnip.'], 'Mind the crates. Undelivered. I will find every one of their people if it takes me ten years.', ['Up here I can hear the whole village wake up.', 'Your rooster is first. Then Lark. Then Corran shouting at the rooster.']] },
+  vashti: { in: 'A bunk behind a curtain at the back of the hangar. A crate for a table, a tool roll, and one photograph of a street, half its name torn away.',
+    note: 'Nothing on the door. It is a hangar. She is somewhere in it, or on the hill.', asleep: 'Through the curtain, flatly: "Asleep. Go away. Politely."', shy: 'This is where I sleep. Not where I talk. The hangar floor is for talking.',
+    visit: [['That is the photograph. Half a street sign, a door, a window box.', 'When I find the other half I will need someone to tell. You will do.'], 'Sit on the crate. It is the guest crate. I have one now.', ['I sleep next to the Pallas cradle.', 'In case it needs me in the night. It does not. I like the sound of the cradle cooling.']] },
+  moraine: { in: 'The reserved corner house: crimson hangings, a bed fit for a queen in exile, two glass cases of things she will not say where she got, and the stock.',
+    note: 'A card on brass: HER MAJESTY IS AT HER EXCHANGE. HER MAJESTY DOES NOT RECEIVE ON THE STEP.', asleep: 'Nothing. Then, very clearly: "It is the middle of the night, Captain. Even queens close."', shy: 'My house is not a shop, Captain. You may visit my shop. When you have earned a chair, I will tell you.',
+    visit: [['Everything in those cases was once traded against me.', 'I bought it all back. A queen keeps her receipts.'], 'Sit. The red chair. No one else is allowed in the red chair. That is a compliment; take it.', ['They reserved this house for me before I agreed to stay.', 'The General is a cunning man. I have never forgiven him. I have never moved out.']] },
+  kestrel: { in: 'Commander\'s quarters at the Guardians\' Post: a bunk made with corners you could cut bread with, a window onto the stars, and a telescope pointed straight up.',
+    note: 'A duty slip under the knocker: CDR KESTREL — ABOUT THE VILLAGE. ANY ALARM, RING THE POST BELL.', asleep: 'A muffled "Stand down, whoever you are. Oh-six-hundred."', shy: 'Quarters are quarters, Sato. I will see you out on the square. That is where I am human.',
+    visit: [['I aim the telescope at the hub every night.', 'Not for anything. A pilot likes to know where up is.'], 'Tea? It is ration tea. I have the good stuff hidden. ...I will get the good stuff.', ['My wing gave me that photograph when we stood down.', 'Fourteen of us. We all look terrible. It is the happiest I have ever looked.']] },
+  mori: { in: 'A quiet house with a doctor\'s desk, a bonsai older than the colony, books in three languages, and an armchair that has clearly seen a great many late nights.',
+    note: 'A card in a neat hand: AT THE CLINIC. IF THIS IS AN EMERGENCY, YOU ARE AT THE WRONG DOOR. H.M.', asleep: 'A soft voice: "If someone is hurt, the clinic bell rings here. If not, sleep. Doctor\'s orders."', shy: 'Sato. I keep my house very quiet; it is the only thing I keep for myself. Come to the clinic, I would like that.',
+    visit: [['The tree came up from Earth in my grandfather\'s coat pocket.', 'I prune it on Sundays. It is the only patient who never argues.'], 'Sit in the armchair. It has heard every worry in Willowfall, and kept all of them.', ['I read in three languages so I can be tired in three languages.', 'Tonight I am only tired in one. That is your doing.']] },
+  yui: { in: 'Yui\'s cottage is a library that someone also sleeps in. Shelves to the ceiling, books in stacks on the floor, and one chair by the lamp with a blanket over it.',
+    note: 'A bookmark tucked in the door: AT THE LIBRARY (THE OTHER ONE). Y.H.', asleep: 'A pause, a page turning, the lamp going out. She is asleep, or pretending, with a book on her face.', shy: 'Oh. Um. My cottage is just more books, really. I would rather show you the library first. It has better chairs.',
+    visit: [['These are the books I do not lend.', 'Not because they are precious. Because I have written in all the margins and I am embarrassed.'], 'You can take the chair. I will sit on the stack of encyclopaedias. They are very comfortable from A to F.', ['I read in bed until the words swim.', 'Then I read one more page so the day ends on something good.']] },
+  calloway: { in: 'Two rooms behind the church: books, a kettle, a candle for every friend she has buried and one more, and a pot of the famous tomatoes on the sill.',
+    note: 'A card pinned to the vestry door: IN THE CHURCH OR THE GARDEN. THE DOOR IS ALWAYS OPEN. (THIS ONE IS NOT. THE BIG ONE IS.) I.C.', asleep: 'A gentle voice through the door: "Not now, my dear. Even I sleep. Light a candle on your way out."', shy: 'The church is open to you any hour, Sato. My rooms are where I keep my tiredness. Soon, I think.',
+    visit: [['People think a pastor\'s house is very holy.', 'Mine is mostly tea and seed catalogues. God has never complained.'], 'That candle has no name. It is for whoever needs it tonight. Sometimes it is me.', ['The tomatoes are a scandal. Fenn thinks I am growing them for profit.', 'I am growing them for him. He does not know yet.']] },
+  fenn: { in: 'A flat on the canal, kept as a barracks: the bed squared off, boots in a line, framed commendations, and a crate of lost property with a list on its lid.',
+    note: 'A typed slip in a plastic sleeve: CONSTABLE A. FENN IS ON DUTY. THE DEPOT IS ALWAYS STAFFED. THANK YOU FOR CALLING.', asleep: 'A crisp "Off duty! Sorry. Off duty. Goodnight, citizen." Then, smaller: "...Goodnight."', shy: 'I am afraid my flat is not open to the public, Captain. It is not regulations. It is just very tidy and I would worry.',
+    visit: [['These are the things nobody has come for. Gloves, a doll, one very good spanner.', 'I keep them here so they are not alone at the depot at night. That is not in any manual.'], 'Please, sit. I have a second chair now. I requisitioned it. From myself.', ['That is a commendation for holding the east lock in the siege.', 'I was fifteen. I mostly remember being cold. I am warm now. I mention it.']] },
+  pia: { in: 'Pia\'s cottage is a workroom in disguise: a dress form wearing a half-made coat, bolts of cloth by the window, pins in everything, and a very good armchair.',
+    note: 'A paper tag pinned to the door: AT THE SHOP. IF YOUR HEM HAS FALLEN, IT WILL KEEP. P.V.', asleep: 'A sharp "We are closed," through the letterbox, then softer: "Oh, it is you. Still closed. Goodnight, farmer."', shy: 'My house is where the unfinished things live. You may come in when you are finished being a stranger. Shop hours, please.',
+    visit: [['That coat on the form is for nobody yet.', 'I make one every winter in case somebody arrives who needs it. Somebody always does.'], 'Sit down. No, not there, there are pins. There, also pins. Here. I have moved the pins.', ['I kept the parachute loft\'s last canopy.', 'It is in the cushions. You are sitting on the siege. It is very comfortable now.']] },
+  lark: { in: 'Lark\'s cottage smells of yeast and burnt sugar. There is flour on every surface, a loaf proving on the sill, and a bed that has clearly been leapt out of at four.',
+    note: 'A floury note on the door: AT THE OVEN! OR ASLEEP! OR BOTH! L.', asleep: 'A snore, a mumble about buns, and nothing more. Lark has been up since four and is not getting up again.', shy: 'Oh, Mira, the house is a flour bomb! Come to the bakery, there are chairs there and they are not sticky.',
+    visit: [['This is my test oven. If it works here it goes in the big one.', 'If it does not work here, Corran eats it.'], ['I am always in bed by half seven.', 'Then I lie there and think about tomorrow\'s bake until about eight. It is my favourite hour.'], 'Sit! Have a bun! Not that one, that one is an experiment. Fine, have the experiment.'] },
+  noor: { in: 'Noor\'s cottage is a greenhouse with a bed in it. Seed trays on every sill, labelled drawers to the ceiling, beds of seedlings along the walls, and soil on the pillow.',
+    note: 'A plant label pushed into the door frame: ASANTE — OUT (IN THE FIELD). DO NOT WATER THE PORCH.', asleep: 'A sleepy voice: "The seedlings are asleep. I am the seedlings. Go away."', shy: 'My house is mostly seeds that are not ready to be looked at. I am also not ready to be looked at. The Seedhouse, please.',
+    visit: [['Every drawer is a plant the founders brought up from Earth.', 'Some have not grown in eighty years. I talk to them. They do not answer. Yet.'], 'Sit on the bed, the chair has a tray of beans on it. They are in a very important phase.', ['I sleep better when something is germinating in the room.', 'It is like having company that is busy and does not need anything from me.']] },
+  tika: { in: 'Tika\'s place is half bedroom and half workshop, and the workshop is winning: a tool wall, an engine block on the floor, and a bed with a spanner on it.',
+    note: 'Taped to the door: AT THE GARAGE OR THE WORKSHOP OR UNDER SOMETHING. SHOUT. T.', asleep: 'From inside, a clatter and a sleepy "Who is fixing what? Oh. Nobody. Goodnight."', shy: 'Uh, the house is not for visitors yet. It is for engines. Come to the garage, it is basically the same but with a sign.',
+    visit: [['That engine is from a lifeboat. I am going to make it into a kettle.', 'The biggest kettle in the colony. Ruess says no. Ruess said no to the garage, too.'], 'Sit on the crate. Not the blue crate, the blue crate is live.', ['I sleep with a torch under the pillow.', 'Habit from the drone cupboard. Sometimes I take it apart in my sleep. I wake up and it is in bits.']] },
+  vesna: { in: 'Vesna\'s flat is a nest: records floor to ceiling, two speakers taller than she is, posters, fairy lights, and a sofa built for falling asleep on after the night show.',
+    note: 'A record sleeve wedged in the door: ON AIR, OR ON MY WAY THERE. TUNE IN. V.', asleep: 'From inside, very faintly, the static between stations, and someone breathing slow and even. Vesna does not do mornings.', shy: 'Ooh, you want to see where the magic happens? It is mostly laundry. Come by the station, I will put you on air instead.',
+    visit: [['These are all the records I have played since the all-clear.', 'And this shelf is the ones I could not play. Not yet. One day I will do a whole night of them.'], 'Sit on the sofa. Everyone falls asleep on that sofa. It is famous. It has a fan club.', ['I read the siege lists from that chair. Every night for two years.', 'I moved it to the window after. It deserved a view.']] },
+  venn: { in: 'A cabin cut into the rock by the lift: a bunk, a kettle, a terminal that has never been switched off, and the pumps humming through the wall like a cat.',
+    note: 'Chalk on the hatch: AT THE BENCH. OR THE PUMPS. OR SHOUTING AT ONE OF THEM. T.V.', asleep: 'Through the hatch, the pumps, and under them someone sleeping very lightly. One knock more would wake him. You let him be.', shy: 'This is where I sleep, when I sleep. Not a place for company. The terminal is open, Sato.',
+    visit: [['I can hear every pump on the deck from this bunk.', 'If one changes its note at night, I wake. I have not slept through since the war. I am getting closer.'], 'Kettle is on. It is always on. The pumps keep it warm. Everything down here is somebody\'s spare heat.', ['I built this cabin the week after the seal.', 'I needed to be near the lift. In case anyone came down. You were the first who stayed.']] },
+  wick: { in: 'Wick\'s hut, tucked into the pump hall: a tank of tiny glowfish, a radio murmuring the weather from a deck with no weather, and the names of fish chalked on every wall.',
+    note: 'Chalked on the hatch: AT THE BASINS. FISH BITING. A.W.', asleep: 'Inside, a slow, contented snore, and the gentle bubbling of the tank.', shy: 'My hut is small and smells of fish, Sato. Come and fish with me first. The basins are friendlier.',
+    visit: [['Those in the tank are the little ones. I keep them till they are big enough for the basins.', 'Like a school. Agnes says I am soft. Agnes is right.'], 'Every name on the wall is a fish I have known. Some of them I knew for years. Some of them I ate. Respectfully.', ['I listen to the weather from up top.', 'No weather here. I like to know if you are getting wet.']] },
+  hana: { in: 'Hana\'s loft is up a ladder over the Works: a bunk wedged between beams, hinge sketches pinned everywhere, and a little bed of glowcaps for a night light.',
+    note: 'A gear on a string, tied to the hatch, with a tag: AT THE PRESS. PULL GEAR TO RING. (IT DOES NOT RING. I AM WORKING ON IT.)', asleep: 'A muffled giggle in a dream about gears, and then silence. Hana sleeps like someone who finally can.', shy: 'Oh! You found the loft. It is very small and very mine and I am not used to visitors yet. The press, maybe? Hi.',
+    visit: [['I came out of the ducts, and then I built a duct of my own.', 'It has a window now. It looks at the press. Aunt Doris looks back.'], 'Sit on the bunk. Mind the beam. Everybody hits the beam. I hit the beam this morning.', ['These are the hinges for Moth\'s lantern.', 'Forty-one drawings. Thirty-nine do not work. The fortieth is very nearly a hinge.']] },
+  thorne: { in: 'The Thornes\' home is the rota made into a room: everything with its place, chalk on the board, a stove with the kettle on, and a child\'s drawings of lamps along the wall.',
+    note: 'A chalk slate on the door: OUT. BACK FOR TEA. WIPE YOUR FEET WHEN WE ARE IN. A.T.', asleep: 'Agnes, low through the door: "The child is asleep. So am I, nearly. Tomorrow, Sato."', shy: 'You are kind to call. The house is a little shy of visitors yet; so am I. Help us a while longer.',
+    visit: [['I keep the rota on the wall still.', 'Water, cooking, washing, lessons. Nobody needs it now. It is how I know the day is real.'], 'Sit, sit. The kettle is the same kettle. It came up the lift in my lap.', ['Moth draws a lamp every night before bed.', 'She says it is so the dark knows we are still here. I have never corrected her.']] },
+  moth: { in: '', note: '', asleep: '', shy: 'Gran says not yet. Gran says I have to wait to be asked first. ...You are asking. I will ask Gran.',
+    visit: [['This is my drawing wall! This one is a lamp. This one is a lamp. This one is Wick.', 'He is also a lamp.'], ['I have a bed with a blanket that is just mine.', 'In the enclave I had half of Gran. That was nice too. This is nicer.'], 'Do you want to see my crayons? Mr Fenn gave them. I have named all of them. This one is called Sato.'] },
+};
+HOME_LINES.moth.in = HOME_LINES.thorne.in; HOME_LINES.moth.note = HOME_LINES.thorne.note; HOME_LINES.moth.asleep = HOME_LINES.thorne.asleep;
+// Notes on doors whose people are not living there (after a move, or before one).
+export const HOME_NOTES = {
+  shelter: 'The shelter is swept and empty. A chalk note on the frame: GONE UP. BACK FOR CARDS ON SUNDAYS. A.T. (AND M.)',
+  thornes: 'A neat townhouse with a brass knocker. A card in the window: TO LET. THE HOUSING OFFICE WILL DECIDE.',
+  moved: 'The door is locked and the curtains are drawn. A card on the step: MOVED TO THE HOLLIN FIELD. FORWARD EVERYTHING, ESPECIALLY CAKE.',
+  late: 'A light behind the curtain, and then it goes out. It is late to be knocking.',
+};
+SPOTS.push(...Object.entries(HOMES).flatMap(([id, h]) => (typeof h.home === 'function' ? [h.home({}), h.home({ ld_rehoused: true })] : [h.home]).map((k) => `home_${k}.${id}`)));
+HELP.push({
+  title: 'People walk, and visiting homes',
+  body: 'Everyone has a home and walks where they are going next, through doors, the farm gate and the lift. Stand still near a walker and they stop for a word.\n\nThe map marks whose home is whose. Knock (E at the door): if they are in, awake and fond enough, they let you in. Most want 4 hearts; the open-house sort (Marrow, Seln, Corran, Oduya, Lark, Pastor Ines, Agnes, Moth) 3. From nine at night only a sweetheart gets in. Otherwise: a note on the door, a sleepy voice, or a kind "not yet".\n\nThe first chat of the day at someone\'s home is worth a little extra. A partner lives at the farm.',
+});

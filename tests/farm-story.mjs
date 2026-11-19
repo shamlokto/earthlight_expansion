@@ -71,6 +71,9 @@ const GIFTABLE = [...CROPS, 'egg', 'milk_s', 'milk_m', 'milk_l', ...FISH, 'herb'
 for (const x of ('village.lane village.bakeryfront village.tailorfront village.floristfront village.garagefront village.radiofront village.millbridge village.trialbeds ' +
   'bakery.counter bakery.table bakery.floor tailor.counter florist.counter garage.counter garage.bench radio.counter cafe.stage hill.terraces farm.east').split(' ')) SPOTS.add(x);
 for (const x of ['bakery', 'tailor', 'florist', 'garage', 'radio']) MAPS.add(x);
+// 2026-11-19: homes (docs/FARM.md §15): everybody's spot at home
+for (const x of story.SPOTS.filter((q) => q.startsWith('home_'))) SPOTS.add(x);
+const HOME = (id, flags = {}) => story.homeSpot(id, { flags });
 GIFTABLE.push('cabbage', 'snap_pea', 'tulip', 'bell_pepper', 'melon', 'sunflower', 'beet', 'cranberry', 'cosmos', 'kale', 'frost_leek', 'snowbell', 'wool', 'fine_wool', 'yarn', 'duck_egg', 'duck_feather',
   'goat_milk', 'goat_milk_l', 'cheese', 'goat_cheese', 'honey', 'honey_cake', 'yarn_scarf', 'bouquet', 'record', 'sun_bun', 'seed_loaf', 'wild_violet', 'elderflower', 'rosehip', 'snowdrop', 'yuzu', 'ring', 'datachip', 'watch', 'toy', 'seedtin');
 const NEUTRAL = ['pendant', 'weed', 'weeds', 'lumber', 'fodder', 'feed', 'seed_turnip', 'seed_grass', 'seed_moonflower', 'hoe', 'no_such_thing', '', 'toString', '__proto__', 'constructor'];
@@ -180,7 +183,7 @@ for (const year of [1, 2]) for (let season = 0; season < 4; season++) for (let w
       if (!spot) continue;
       seen.add(spot); seenBy[id].add(spot);
       (here[spot] ||= []).push(id);
-      if (weather === 'storm') check(spot.startsWith('cafe.') || (UNDER.includes(id) && spot.startsWith('lower.')) || spot === 'undercroft.counter', `storm: ${id} is out at ${spot}`);   // no weather below decks
+      if (weather === 'storm') check(spot.startsWith('cafe.') || (UNDER.includes(id) && (spot.startsWith('lower.') || spot.startsWith('home_'))) || spot === 'undercroft.counter', `storm: ${id} is out at ${spot}`);   // no weather below decks
       if (minute >= 1380 || minute < 420) check(false, `${id} is up at ${minute} (${spot})`);
     }
     for (const spot of Object.keys(here)) {
@@ -220,13 +223,14 @@ for (let wd = 0; wd < 7; wd++) {
   for (const m of [540, 700, 950]) check((at('marrow', wd, m) === 'hall.desk') === (wd < 5), `Marrow's desk hours (wd ${wd}, ${m})`);
   check(at('marrow', wd, 960) !== 'hall.desk', 'Marrow leaves the desk at four');
   for (const m of [540, 720, 1010]) check((at('moraine', wd, m) === 'central.dock') === (wd === 5), `Moraine's ship is at the Central dock on Saturdays only (wd ${wd}, ${m})`);
-  for (const m of [480, 1020]) check(wd === 5 ? at('moraine', wd, m) === null : at('moraine', wd, m) === (m < 1080 && m >= 600 ? 'central.exchange' : null), `Moraine: the dock 9-17 on Saturdays, the Exchange 10-18 other days (wd ${wd}, ${m})`);
-  if (wd !== 5) check(at('moraine', wd, 700) === 'central.exchange' && at('moraine', wd, 550) === 'central.plaza' && at('moraine', wd, 1090) === null, `Moraine keeps the Ashfall Exchange in Eden Central (wd ${wd})`);
+  const mo = (wd2, m, more) => { const x = at('moraine', wd2, m, more); return x === HOME('moraine') ? null : x; };   // at home counts as away from trade (§15)
+  for (const m of [480, 1020]) check(wd === 5 ? mo(wd, m) === null : mo(wd, m) === (m < 1080 && m >= 600 ? 'central.exchange' : null), `Moraine: the dock 9-17 on Saturdays, the Exchange 10-18 other days (wd ${wd}, ${m})`);
+  if (wd !== 5) check(at('moraine', wd, 700) === 'central.exchange' && at('moraine', wd, 550) === 'central.plaza' && mo(wd, 1090) === null, `Moraine keeps the Ashfall Exchange in Eden Central (wd ${wd})`);
   for (const m of [1020, 1040, 1055]) check(at('maris', wd, m) === 'farm.bin', `Maris is at the bin at five (wd ${wd}, ${m})`);
   check(at('maris', wd, 1060) !== 'farm.bin' && at('maris', wd, 1010) !== 'farm.bin', 'Maris is at the bin only 17:00-17:40');
   // The General.
   for (let m = 360; m <= 1440; m += 10) {
-    const g = at('general', wd, m), g2 = at('general', wd, m, { year: 2 });
+    const hg = HOME('general'), un = (x) => (x === hg ? null : x), g = un(at('general', wd, m)), g2 = un(at('general', wd, m, { year: 2 }));   // at home counts as off duty (§15)
     if (wd === 5) check((g !== null) === (m >= 600 && m < 1080) && (!g || g.startsWith('village.') || g.startsWith('cafe.')), `the General's Saturday (${m}: ${g})`);
     else if (wd === 6) check((g !== null) === (m >= 660 && m < 960) && (!g || g.startsWith('farm.')), `the General's Sunday (${m}: ${g})`);
     else check(g === (m >= 540 && m < 1020 ? 'central.office' : null), `the General is at his office on the Main deck on weekday ${wd}, 9 to 5 (${m}: ${g})`);
@@ -486,7 +490,7 @@ for (const id of LOVERS) {
     const home = (m >= 360 && m < 480) || (m >= 1200 && m < 1320);
     const mine = where(id, { ...ctx, partner: id }), usual = where(id, ctx), other = where(id, { ...ctx, partner: 'nobody' });
     if (home) check(mine === 'farm.porch', `${id} as partner is on the porch at ${m}`);
-    else check(mine === usual, `${id} as partner keeps the usual day at ${m}`);
+    else check(mine === usual || (usual === HOME(id) && mine === 'farm.porch'), `${id} as partner keeps the usual day at ${m} (free time at the farm, not the old home)`);
     check(other === usual, `${id}: somebody else's partner changes nothing`);
   }
   for (const f of FESTIVALS) for (let m = f.from; m < f.to; m += 10) {
@@ -599,6 +603,30 @@ check(LANE.every((id) => FESTIVALS.filter((f) => f.id !== 'bloom').every((f) => 
 check(/Bloom Fair/.test(SIGNS['village.square']) && isText(SIGNS['village.lane']) && HELP.some((p) => /Market Lane/.test(p.title)) && /Lark/.test(HELP.find((p) => p.title === 'Love').body), 'the noticeboard, the Lane sign and the guide know about Market Lane');
 for (const id of ['lark', 'vesna']) check(EVENTS.filter((e) => e.npc === id).length === 3 && ROMANCE.people[id].wedding.some((l) => LANE.includes(l.who) && l.who !== id), `${id}: three heart events, and the Lane at the wedding`);
 
+// ---------------------------------------------------------------- homes (2026-11-19, docs/FARM.md §15)
+{
+  const ALL = { ld_lights: 1, ld_pumps: 1, ld_catacombs: 1, ld_enclave: 1, ld_works: 1 };
+  for (const id of VILLAGERS) {
+    check(story.HOMES[id] && story.homeKey(id, ALL), `${id} has a home`);
+    const L = story.HOME_LINES[id];
+    check(L && Array.isArray(L.visit) && L.visit.length >= 2 && L.visit.length <= 4 && isText(L.shy) && (id === 'moth' || (isText(L.note) && isText(L.asleep) && isText(L.in))), `${id}: knock, door-note, asleep and 2-4 home-visit lines`);
+    for (const t of [L.in, L.note, L.asleep, L.shy, ...L.visit.flat()]) { check(isText(t, 220) && !/\b(color|honor|neighbor|gray|favorite|center|realize|apologize)\b/i.test(t), `${id} home line: ${t}`); count(t); }
+    for (const flags of id === 'thorne' || id === 'moth' ? [ALL, { ...ALL, ld_rehoused: 1 }] : [ALL]) {
+      const hs = HOME(id, flags); let seen = 0, sleptIn = true;
+      for (let wd = 0; wd < 7; wd++) for (let m = 360; m < 1440; m += 10) { const c = { season: 1, day: dayFor(1, wd), weekday: wd, minute: m, weather: 'sun', festival: null, year: 1, flags }, w = whereIs(id, c);
+        if (w && w.spot === hs) { seen++; check(story.presence(id, c) === 'home', `${id} at home is home (${wd} ${m})`); }
+        if ((m < 420 || m >= 1380) && story.presence(id, c) !== 'asleep') sleptIn = false; }
+      check(seen >= 7, `${id}'s home is in the schedule (${seen} slots, ${hs})`); check(sleptIn, `${id} sleeps at home`);
+    }
+  }
+  const sc = (id, m, more = {}) => ({ season: 1, day: dayFor(1, 2), weekday: 2, minute: m, weather: 'sun', festival: null, year: 1, flags: ALL, ...more });
+  check(story.presence('mori', sc('mori', 700)) === 'out' && story.presence('mori', sc('mori', 1300)) === 'home' && story.presence('mori', sc('mori', 1400)) === 'asleep', 'Dr. Mori: out at the clinic, home in the evening, asleep at night');
+  check(story.presence('vesna', sc('vesna', 630)) === 'asleep', 'Vesna sleeps in after the morning show');
+  check(story.presence('seln', sc('seln', 700, { weather: 'storm' })) === 'home' && whereIs('seln', sc('seln', 700, { weather: 'storm' })) === null, 'a storm keeps people in at home');
+  check(whereIs('lark', sc('lark', 1230, { partner: 'lark' })).spot === 'farm.porch' && story.homeSpot('lark', { partner: 'lark' }) === 'farm.porch', 'a partner\'s home is the farm');
+  check(HOME('thorne') === null && HOME('thorne', { ld_enclave: 1 }) === 'home_shelter.thorne' && HOME('thorne', { ld_enclave: 1, ld_rehoused: 1 }) === 'home_thornes.thorne', 'the Thornes: the enclave shelter, then a house up top');
+  check(HOME('wick') === null && HOME('hana') === null, 'nobody is home before they are on the deck');
+}
 console.log(`conversations: ${VILLAGERS.map((id) => `${id} ${convs[id].size}`).join(', ')}`);
 console.log(`requests: ${questCount}, love stories: ${LOVERS.length}`);
 console.log(`events: ${EVENTS.length}, festivals: ${FESTIVALS.length}, intro lines: ${INTRO.length}, help pages: ${HELP.length}, words: about ${totalWords}`);

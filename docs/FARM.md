@@ -728,3 +728,45 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   (`portrait: 'look:hana'`, LOOKS in main.js); a portrait `people/hana_front` can replace it.
 * The status board in the Governor's office follows the deck: UNDERCROFT SEALED, then RESTORING (work lights), then OPEN (`ld_vault`).
 
+
+## 15. People walk, and everybody has a home (owner, 2026-11-19: "People should walk to their next destination instead of just magically appearing ... every main character has a home ... when the relationship is good, you can visit")
+
+* **Walking** (`js/farm/paths.js`, pure, tested in node): a walk grid per map that mirrors Sato's collision (solid ground, buildings,
+  solid props, posts with her clearance; people also keep off soil, `f`, and round chests, machines and trees Sato sets down:
+  `setBlockers`), 8-way distance fields to any point (Dijkstra, cached per map and target tile), walks pulled straight where the way
+  is clear (`walkPath`), and **portals** between maps: exits, doors, back doors into shop quarters, room exits (`outsideOf`), the
+  orbital elevator (6 min) and the spoke lift between any two stops (`LIFT_AT`, 15 min a deck + 5). `route()` is a Dijkstra over
+  portals (cached). People walk at 2.3 tiles a second (Sato 3.9), 1.38 tiles a game minute.
+* **The day plan** (`planDay(ids, sched)`): main.js samples each person's place every 10 minutes from 6:00 to midnight (`whereIs`,
+  else their home), with the old offsets for shared spots, and plans every move: leaving a post (`DUTY`: counters, desks, the altar,
+  the classroom, the stage, the office, the Exchange, the press, the dock, the hangar) at the end of its hours, otherwise setting off
+  early so as to arrive on time; chained when a walk runs into the next. `locate(plan, id, t)` gives where anybody is at any
+  fractional minute (standing, walking with a direction, or out of sight between maps), so entering a map mid-walk shows them
+  part-way along, and off-screen they are simply where the plan says. Replanned when the day, weather, festival, partner,
+  sweetheart, Lower deck progress or Sato's set-down things change (about 200 ms cold, 3 ms warm; `locate` is ~0.1 µs).
+  No way there: they simply arrive, as before. Shop counters only open once the keeper is standing at them (`shopOf`).
+* **Talking**: a walker near a Sato who is standing still stops (up to 5 game minutes, facing her) so she can talk; dialogs stop the
+  clock as always. Walkers do not block Sato, and nobody standing can trap her (she can always step away).
+* **Homes** (`maps.HOMES`, rooms `home_<key>` built by `homeRooms` after every map, so no old tile, spot, door or prop index moves;
+  `story.HOMES`, `homeKey`, `homeSpot`; spot `home_<key>.<npc>`):
+  Lark, Vesna, Pia, Tika, Noor: their Lane cottages · Marrow, Dr. Mori, Yui, Oduya: the four Willow Lane cottages · Maris: the flat
+  over the Courier Post · Kestrel: quarters at the Guardians' Post · Seln, Corran, Ruess, Pastor Ines, Vashti: rooms behind or above
+  the store, the ranch, the Workshop, the church and the hangar (a door at the back of each; `backTo`) · the General: central house 3
+  (the piano under dust sheets) · Moraine: house 4 (the reserved corner house) · Constable Fenn: a flat on the canal · Agnes and
+  Moth: the Thornes' shelter in the enclave, then house 1 once rehoused (houses 2, 5 and 6 stay the other families') · Venn: a cabin
+  by the lift landing · Wick: a hut in the pump hall · Hana: a loft over the Works (hatches in the rock, prop `home_door`).
+  Built props (`homeworld.js`, model slots `HOME_PROPS`): `quilt_bed`, `bunk`, `armchair`, `tea_table`, `bookstack`, `wall_frames`,
+  `piano`, `fish_tank`, `home_door`, tinted in each owner's colour.
+* **Schedules**: `whereIs` fills free time between waking and bed (`HOMES[id].wake/bed`, Vesna's lie-ins `nap`) with home; nights
+  stay null (asleep at home); a storm keeps the null (in at home, out of sight); a partner's home is the farm porch.
+  `story.presence(id, ctx)`: `home` · `out` · `asleep` · `away`.
+* **Visiting** (`sim.visitRule`): the door opens if they are home and awake, it is before 21:00 and Sato has 4 hearts, or 3 with the
+  open-house sort (`VISIT_FRIENDLY`: Marrow, Seln, Corran, Oduya, Lark, Pastor Ines, Agnes, Moth). A sweetheart is always let in;
+  a partner has moved to the farm (`HOME_NOTES.moved`). Otherwise `story.HOME_LINES[id]`: a note on the door (out), a sleepy voice
+  (asleep), a kind refusal in their voice (shy), or "it is late". Inside: a first look (`in`, once, `flags.seen_home_<key>`), and
+  talking gives 2-3 home lines (`visit`); the first chat at home each day is +2 (`sim.homeVisit`, `state.visits`).
+* Map: building labels (`homeLabel` under shops and posts), lower-deck hatches labelled; walkers drawn on every tab. Help page
+  "People walk, and visiting homes"; wiki people cards list each home.
+* Old saves: `ensure()` adds `state.visits`. Tests: farm-maps (every spot pair, spot to every portal, a full day planned for
+  everybody each weekday, early and late in the story, counters on time), farm-story (homes in every schedule, lines, presence),
+  farm-sim (door rules, the daily bonus, old saves).

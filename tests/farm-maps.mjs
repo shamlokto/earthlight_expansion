@@ -8,6 +8,7 @@ import { newGame, enterMine, FORAGE_SPOT_COUNT } from '../js/farm/sim.js';
 let failures = 0, checks = 0;
 const check = (cond, what) => { checks++; if (!cond) { failures++; console.log('FAIL', what); } };
 const maps = allMaps();
+const NPCSHOP = Object.fromEntries(Object.entries(story.NPCS).filter(([, n]) => n.shop).map(([id, n]) => [id, n.shop + '.counter']));
 
 function reach(m, sx, sy) {                       // flood fill over walkable tiles
   const seen = new Set(), q = [[Math.floor(sx), Math.floor(sy)]]; seen.add(q[0].join());
@@ -109,5 +110,36 @@ for (const s of ['central.school', 'central.church', 'central.depot', 'school.bo
   check(all.lower.props.filter((p) => p.act === 'bed').every((p) => Number.isInteger(p.bed)), 'every catacomb growing bed is numbered');
   check(/p\.act === 'bed' && p\.bed != null\) return bedProbe/.test(readFileSync(new URL('../js/farm/main.js', import.meta.url), 'utf8')), 'only numbered beds go to the mushroom-bed prompt'); }
 
+// people walk (2026-11-19, docs/FARM.md §15): every spot on a map can be walked to from every other, and to every door and exit
+{
+  const paths = await import('../js/farm/paths.js'); const { lowerState, HOMES } = await import('../js/farm/maps.js');
+  const FULL = Object.fromEntries(['ld_lights', 'ld_pumps', 'ld_pump2', 'ld_pump3', 'ld_catacombs', 'ld_enclave', 'ld_rehoused', 'ld_works', 'ld_arena', 'ld_vents', 'ld_vault'].map((k) => [k, true]));
+  lowerState(maps.lower, FULL);
+  const P = paths.portals(); let pairs = 0;
+  for (const m of Object.values(maps)) {
+    const spots = (story.SPOTS || []).map((n) => [n, findSpot(n)]).filter(([, a]) => a && a.map === m.id);
+    for (const [a, A] of spots) {
+      for (const [b, B] of spots) if (a < b) { pairs++; check(paths.distance(m, A.x, A.y, B.x, B.y) < Infinity, `${m.id}: a walk from ${a} to ${b}`); }
+      for (const p of P[m.id] || []) check(paths.distance(m, A.x, A.y, p.x, p.y) < Infinity, `${m.id}: a walk from ${a} to the way to ${p.to}`);
+    }
+  }
+  check(pairs > 400, `spot pairs walked (${pairs})`);
+  const wp = paths.walkPath(maps.village, 31.5, 19.6, 18.6, 8.6); check(wp && wp.length >= 2 && wp.every(([x, y]) => !maps.village.solid(x, y)), 'a walk across the square keeps to open ground');
+  check(Object.keys(HOMES).length >= 24 && Object.values(HOMES).every((h) => maps[h.room] && maps[h.room].indoor && (h.back ? maps[h.room].backTo : maps[h.map].doors.some((d) => d.home === h.key))), 'every home has a room and a way in');
+  check(Object.values(HOMES).every((h) => (P[h.room] || []).some((p) => p.to === h.map) && (P[h.map] || []).some((p) => p.to === h.room)), 'people can walk in and out of every home');
+  // a whole day for everybody, each weekday, early and late in the story: every move between two places has a walk
+  const ids = Object.keys(story.NPCS).filter((k) => k !== 'sato');
+  for (const flags of [{}, FULL]) {
+    lowerState(maps.lower, flags);
+    for (let wd = 0; wd < 7; wd++) for (const weather of ['sun', 'rain']) {
+      const sched = (id, m) => { const c = { season: 1, day: 1 + wd, weekday: wd, minute: m, weather, festival: null, year: 2, flags }; const w = story.whereIs(id, c); if (w) return { spot: w.spot, vis: true }; const h = story.homeSpot(id, c); return h ? { spot: h, vis: false } : null; };
+      const plan = paths.planDay(ids, sched); let moves = 0, walked = 0;
+      for (const id of ids) plan[id].stops.forEach((st, i) => { const pr = plan[id].stops[i - 1]; if (!pr || !pr.at || !st.at || pr.spot === st.spot) return; moves++; if (st.route) walked++; else check(false, `no walk for ${id}: ${pr.spot} → ${st.spot} (wd ${wd}, ${weather}, ${flags.ld_vault ? 'late' : 'early'})`); });
+      check(walked === moves && moves > 60, `wd ${wd} ${weather}: ${walked}/${moves} moves walked`);
+      for (const id of ids) for (let t = 360; t < 1440; t += 7) { const L = paths.locate(plan, id, t); if (L) check(maps[L.map] && Number.isFinite(L.x) && Number.isFinite(L.y), `${id} is somewhere real at ${t}`); }
+      for (const id of ['seln', 'corran', 'ruess', 'mori', 'lark', 'pia', 'noor']) { const c = NPCSHOP[id]; for (const st of plan[id].stops) if (st.spot === c && st.route) check(st.A <= st.T + 0.01, `${id} reaches the counter on time (${st.T}, arrives ${st.A.toFixed(0)})`); }
+    }
+  }
+}
 console.log(failures ? `${failures} of ${checks} checks failed` : `farm-maps: all ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

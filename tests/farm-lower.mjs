@@ -93,6 +93,10 @@ check(P.every((p, i) => !i || p.price > P[i - 1].price), 'each project costs mor
   check(['lights', 'pumps', 'pump2', 'catacombs', 'enclave'].every((z) => lamps.some((p) => p.zone === z)), 'every restored part has its own lamps');
   check(lamps.every((p) => lampLit(p.zone, all)), 'with everything restored every lamp is lit');
   check(m.props.filter((p) => p.act === 'bed').length === sim.MUSHROOM_BEDS, 'eight mushroom beds');
+  { const t = m.props.find((p) => p.act === 'restore'), v = findSpot('undercroft.counter');   // E on the terminal must not grab Venn instead
+    const vs = v && (v.x != null ? v : { x: v[1], y: v[2] });
+    check(t && vs && Math.hypot(t.x + 0.5 - vs.x, t.y + 1.5 - vs.y) > 2 && Math.hypot(t.x + 0.5 - vs.x, t.y + 0.5 - vs.y) > 2.5, 'the restoration terminal stands well clear of Venn');
+    check(/act === 'restore'\) return \{ label: 'Use the restoration terminal/.test(readFileSync(new URL('../js/farm/main.js', import.meta.url), 'utf8')), 'facing the terminal uses it, even with Venn nearby'); }
   check(m.props.some((p) => p.kind === 'vault_door' && p.act === 'vault'), 'the sealed round door is in the gallery');
   for (const l of LOWER_LOGS.filter((x) => x.src === 'terminal' || x.src === 'wall')) check(m.props.some((p) => p.act === 'terminal' && p.log === l.id), `the log ${l.id} is on the map`);
   for (const k of ['lower_lift', 'pump_station', 'mushroom_bed', 'catacomb_arch', 'shelter', 'glow_lamp', 'terminal', 'vault_door']) check(m.props.some((p) => p.kind === k), `the map uses the ${k} slot`);
