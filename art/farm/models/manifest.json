@@ -2493,5 +2493,225 @@
    0.5325
   ],
   "note": "slim tower up Y on a round platform; elevator car at the base facing +Z"
+ },
+ "lower_lift": {
+  "file": "lower_lift.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.7621,
+   0.9981
+  ],
+  "note": "Lower deck lift landing (3x3); open cage, control post at the back"
+ },
+ "pump_station": {
+  "file": "pump_station.glb",
+  "tris": 8000,
+  "size": [
+   0.9983,
+   0.9642,
+   1.0
+  ],
+  "note": "Lower deck water pump (4x3); gauge and red valves on +Z"
+ },
+ "shelter": {
+  "file": "shelter.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.9995,
+   0.9661
+  ],
+  "note": "Undercroft survivors' home (4x4); curtained door and porch on +Z"
+ },
+ "vault_door": {
+  "file": "vault_door.glb",
+  "tris": 8000,
+  "size": [
+   0.9024,
+   1.0,
+   0.2686
+  ],
+  "note": "round sealed vault door in a frame (3x1); door face on +Z, plain back"
+ },
+ "catacomb_arch": {
+  "file": "catacomb_arch.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.8619,
+   0.7303
+  ],
+  "note": "stone-and-steel tunnel arch (3x1), walk-through along Z; arch is fairly deep (z 0.73)"
+ },
+ "mushroom_bed": {
+  "file": "mushroom_bed.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.5418,
+   0.6532
+  ],
+  "note": "raised log-and-soil mushroom bed (2x1), mushrooms on top; tag on +Z"
+ },
+ "terminal": {
+  "file": "terminal.glb",
+  "tris": 5000,
+  "size": [
+   0.659,
+   1.0,
+   0.8881
+  ],
+  "note": "old green-screen story terminal (1x1); screen and keyboard on +Z"
+ },
+ "glow_lamp": {
+  "file": "glow_lamp.glb",
+  "tris": 4000,
+  "size": [
+   0.5511,
+   1.0,
+   0.9474
+  ],
+  "note": "standing caged work lamp (1x1), warm bulb; lamp head toward +Z"
+ },
+ "works_hall": {
+  "file": "works_hall.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.4712,
+   0.5159
+  ],
+  "note": "Tobias Venn's recycling and fabrication hall (8x6); roll-up door on the long +Z side, length along X (depth only 0.52, stretch Z for 8x6)"
+ },
+ "cave_fish": {
+  "file": "cave_fish.glb",
+  "tris": 3500,
+  "size": [
+   1.0,
+   0.6389,
+   0.341
+  ],
+  "note": "item: blind white cave fish, side-on along X"
+ },
+ "glowfish": {
+  "file": "glowfish.glb",
+  "tris": 3500,
+  "size": [
+   1.0,
+   0.9027,
+   0.7367
+  ],
+  "note": "item: round cyan glowfish, side-on along X"
+ },
+ "pipe_eel": {
+  "file": "pipe_eel.glb",
+  "tris": 3500,
+  "size": [
+   0.8649,
+   0.227,
+   1.0
+  ],
+  "note": "item: grey eel lying coiled flat"
+ },
+ "abyss_koi": {
+  "file": "abyss_koi.glb",
+  "tris": 3500,
+  "size": [
+   1.0,
+   0.9776,
+   0.439
+  ],
+  "note": "item: legendary deep-blue koi, side-on along X"
+ },
+ "shiitake": {
+  "file": "shiitake.glb",
+  "tris": 3500,
+  "size": [
+   1.0,
+   0.776,
+   0.6852
+  ],
+  "note": "item: two shiitake mushrooms"
+ },
+ "glowcap": {
+  "file": "glowcap.glb",
+  "tris": 3500,
+  "size": [
+   0.8178,
+   1.0,
+   0.5738
+  ],
+  "note": "item: three glowing teal mushrooms"
+ },
+ "pale_oyster": {
+  "file": "pale_oyster.glb",
+  "tris": 3500,
+  "size": [
+   1.0,
+   0.9478,
+   0.8427
+  ],
+  "note": "item: pale oyster mushroom cluster"
+ },
+ "deep_truffle": {
+  "file": "deep_truffle.glb",
+  "tris": 3500,
+  "size": [
+   1.0,
+   0.9887,
+   0.9182
+  ],
+  "note": "item: dark truffle with a cut face on +Z"
+ },
+ "spore_bag": {
+  "file": "spore_bag.glb",
+  "tris": 3500,
+  "size": [
+   0.9714,
+   1.0,
+   0.805
+  ],
+  "note": "item: cloth bag of mushroom spawn"
+ },
+ "log_tape": {
+  "file": "log_tape.glb",
+  "tris": 3500,
+  "size": [
+   1.0,
+   0.7708,
+   0.4045
+  ],
+  "note": "item: old colony tape recorder, cassette window on +Z"
+ },
+ "pump_part": {
+  "file": "pump_part.glb",
+  "tris": 3500,
+  "size": [
+   1.0,
+   0.8455,
+   0.5219
+  ],
+  "note": "item: brass pump valve with red handwheel, pipe along X"
+ },
+ "lamp_kit": {
+  "file": "lamp_kit.glb",
+  "tris": 3500,
+  "size": [
+   1.0,
+   0.8516,
+   0.9943
+  ],
+  "note": "item: open box with a caged work lamp"
+ },
+ "diary_page": {
+  "file": "diary_page.glb",
+  "tris": 3500,
+  "size": [
+   1.0,
+   0.9963,
+   0.943
+  ],
+  "note": "item: folded diary page standing like a tent card, crayon drawing on +Z (back side less clean)"
  }
 }

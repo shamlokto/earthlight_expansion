@@ -32,9 +32,11 @@ TRACKS = {
                  "happy, heartfelt, gentle waltz, instrumental only"),
     "belt":     ("calm space ambient, drifting, warm synth pads, soft piano notes, gentle sparkling arpeggio, slow pulse, "
                  "wonder, peaceful, starlight, 76 bpm, major key"),
+    "undercroft": ("gentle mysterious underground ambient, soft warm synth pads, delicate music box melody, sparse dripping water "
+                   "plinks, soft marimba, warm low drone, slow, 72 bpm, curious, cosy, calm wonder, not scary"),
 }
 
-SECONDS = {"night": 80, "ruins": 90, "lantern": 80, "wedding": 70, "festival": 80}
+SECONDS = {"undercroft": 95, "night": 80, "ruins": 90, "lantern": 80, "wedding": 70, "festival": 80}
 DEFAULT_SECONDS = 95
 TWO = ("title", "spring", "village")   # two candidates each, the better one is kept
 
