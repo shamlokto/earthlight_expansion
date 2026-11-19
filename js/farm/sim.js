@@ -2042,13 +2042,13 @@ function projectWhy(state, p) {
   if (L.pending) return 'One project at a time. Venn has only so many hands, and two of them are his.';
   if (p.trust) { const t = enclaveTrust(state); if (!t.ok) return `The families must trust you first: ${t.favours}/${t.needFavours} favours for the enclave, ${t.hearts}/${t.needHearts} hearts with Agnes.`; }
   if (state.player.money < p.price) return `You need ${p.price} cr.`;
-  for (const [id, n] of p.req) if (countItem(state, id) < n) return `You need ${n} ${lower(id)} in your rucksack.`;
+  for (const [id, n] of p.req) if (countItem(state, id) < n) return `You need ${n} ${lower(id)}${n > 1 && /(part|kit)$/.test(id) ? 's' : ''} in your rucksack.`;
   if (p.lumber && state.stock.lumber < p.lumber) return `You need ${p.lumber} lumber.`;
   return null;
 }
 export function projectList(state) {
   const L = lowerOf(state);
-  return LOWER_PROJECTS.map((p) => { const why = projectWhy(state, p); return { id: p.id, name: p.name, desc: p.desc, price: p.price, needs: [...p.req.map(([id, n]) => `${n} ${lower(id)}`), ...(p.lumber ? [`${p.lumber} lumber`] : [])].join(', '), done: lowerDone(state, p.id), pending: L.pending === p.id, open: !p.after || lowerDone(state, p.after), can: !why, why: why || undefined }; });
+  return LOWER_PROJECTS.map((p) => { const why = projectWhy(state, p); return { id: p.id, name: p.name, desc: p.desc, price: p.price, needs: [...p.req.map(([id, n]) => `${n} ${lower(id)}${n > 1 && /(part|kit)$/.test(id) ? 's' : ''}`), ...(p.lumber ? [`${p.lumber} lumber`] : [])].join(', '), done: lowerDone(state, p.id), pending: L.pending === p.id, open: !p.after || lowerDone(state, p.after), can: !why, why: why || undefined }; });
 }
 export function fundProject(state, id) {
   const p = LOWER_PROJECTS.find((q) => q.id === id); if (!p) return fail('There is no such project.');

@@ -48,7 +48,7 @@ const DRAWN = {
   sapling: `<path d="M14 54h36l-4-10H18Z" fill="#a8783f" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/><path d="M32 44V20" stroke="#6b4a2a" stroke-width="3"/><path d="M32 30c-12 0-14-12-14-12 10 0 14 6 14 12Zm0-6c10 0 14-10 14-10-10 0-14 4-14 10Z" fill="#6fbf5a" stroke="${INK}" stroke-width="1.5"/>`,
   fodder: `<rect x="10" y="22" width="44" height="30" rx="6" fill="#e0c060" stroke="${INK}" stroke-width="2"/><path d="M10 32h44M10 42h44" stroke="#b08a2e" stroke-width="2"/><path d="M22 22v30M42 22v30" stroke="#a3402e" stroke-width="3"/>`,
 };
-const KIND_COLOR = { fruit: '#d8564a', sapling: '#5f9a3a', placeable: '#5f7f8f', part: '#8a98a6', keepsake: '#c98ab0', tool: '#6f7f95', seed: '#8a6f3d', crop: '#4f9a3a', animal: '#d9c79a', fish: '#3f7fa8', forage: '#7a9a4a', ore: '#77736d', relic: '#b08d3c', food: '#c9853a', stock: '#a37a4f' };
+const KIND_COLOR = { material: '#c9b28a', artisan: '#e0a83a', craft: '#c96a9a', fruit: '#d8564a', sapling: '#5f9a3a', placeable: '#5f7f8f', part: '#8a98a6', keepsake: '#c98ab0', tool: '#6f7f95', seed: '#8a6f3d', crop: '#4f9a3a', animal: '#d9c79a', fish: '#3f7fa8', forage: '#7a9a4a', ore: '#77736d', relic: '#b08d3c', food: '#c9853a', stock: '#a37a4f' };
 // Round fruit and forage drawn in their own colour when the art pack has no picture yet.
 const ROUND = { star_plum: '#9a5ad8', comet_ice: '#cfeefa', star_metal: '#c9d2dc', colony_feast: '#e0782a', founders_cake: '#e8c46a', cherry: '#c8102e', peach: '#ffa48a', apple: '#d8362a', persimmon: '#f07a1a', wild_apple: '#d8a03a', wild_grape: '#5a2f7a', chestnut: '#7a4a2a', pine_nut: '#a07a4a', honeycomb: '#f0b32a', winter_root: '#efe2c8', bamboo_shoot: '#c9d27a', wild_mint: '#58c08a', fiddlehead: '#7a9a3a', matsutake: '#e8d8b8' };
 const roundIcon = (c, id) => id === 'honeycomb' ? `<path d="M20 18h12l6 10-6 10H20l-6-10Z M38 28h12l6 10-6 10H38l-6-10Z M20 38h12l6 10-6 10H20l-6-10Z" fill="${c}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`
@@ -66,11 +66,24 @@ export function icon(id) {
   const ab = it.name.replace(/[^A-Za-z ]/g, '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || it.name.slice(0, 2);
   return `<span class="fm-ico fm-fake" style="background:${KIND_COLOR[it.kind] || '#666'}">${it.kind === 'seed' ? '✿' : esc(ab)}</span>`;
 }
+// A drawn bust from an NPC's look (hair colour and style, skin, top): Market Lane's villagers have no portrait pictures yet.
+export function lookPortrait(n) {
+  const L = n.look || {}, h = L.hair || '#333', sk = L.skin || '#f3d3b8', top = L.top || '#888', st = L.style || 'short', eye = { pia: '#4a6a3a', lark: '#3f7aa8', noor: '#5a3a2a', tika: '#2f8f5a', vesna: '#8a3a6a' }[n.id] || '#6a4a2a';
+  const back = { braid: '<path d="M70 38 q14 30 6 62" stroke="HC" stroke-width="13" fill="none" stroke-linecap="round"/><circle cx="76" cy="100" r="5" fill="#e8c45a"/>', ponytail: '<path d="M62 18 q26 6 22 40" stroke="HC" stroke-width="14" fill="none" stroke-linecap="round"/>',
+    odango: '<circle cx="28" cy="16" r="12" fill="HC"/><circle cx="72" cy="16" r="12" fill="HC"/>', twintails: '<path d="M20 30 q-14 30 -6 64" stroke="HC" stroke-width="13" fill="none" stroke-linecap="round"/><path d="M80 30 q14 30 6 64" stroke="HC" stroke-width="13" fill="none" stroke-linecap="round"/>',
+    long: '<rect x="22" y="30" width="56" height="50" rx="20" fill="HC"/>' }[st] || '';
+  const extra = { lark: '<path d="M24 26 q26 -22 52 0 q-26 -8 -52 0z" fill="#d9534f"/>', noor: '<circle cx="26" cy="34" r="5" fill="#f2a0c0"/><circle cx="26" cy="34" r="2" fill="#fff4c0"/>', tika: '<rect x="28" y="18" width="44" height="9" rx="4" fill="#c9a14a"/><ellipse cx="66" cy="62" rx="6" ry="2.5" fill="rgba(50,46,44,.5)"/>', vesna: '<path d="M20 46 q30 -48 60 0" stroke="#ece6f0" stroke-width="5" fill="none"/><rect x="14" y="42" width="10" height="16" rx="4" fill="#e05c8a"/><rect x="76" y="42" width="10" height="16" rx="4" fill="#e05c8a"/>' }[n.id] || '';
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#f4ecdc"/>${back.replace(/HC/g, h)}<path d="M18 100 q0 -26 32 -26 q32 0 32 26z" fill="${top}"/>`
+    + `<ellipse cx="50" cy="50" rx="27" ry="28" fill="${sk}"/><path d="M22 46 q2 -30 28 -30 q26 0 28 30 q-8 -14 -22 -16 q-4 8 -14 8 q-6 -6 -8 -8 q-8 6 -12 16z" fill="${h}"/>`
+    + `<ellipse cx="40" cy="54" rx="4.5" ry="6" fill="${eye}"/><ellipse cx="60" cy="54" rx="4.5" ry="6" fill="${eye}"/><circle cx="41.5" cy="51.5" r="1.6" fill="#fff"/><circle cx="61.5" cy="51.5" r="1.6" fill="#fff"/>`
+    + `<ellipse cx="33" cy="63" rx="5" ry="2.5" fill="rgba(255,110,120,.35)"/><ellipse cx="67" cy="63" rx="5" ry="2.5" fill="rgba(255,110,120,.35)"/><path d="M45 67 q5 4 10 0" stroke="#b0503f" stroke-width="2" fill="none" stroke-linecap="round"/>${extra}</svg>`;
+}
 export function face(who) {
   const n = NPCS[who]; if (!n) return '';
   const own = art.url(`people/${who}_portrait`) || art.url(`people/${who}_front`); if (own) return `<div class="fm-face"><img src="${own}" alt=""></div>`;
   if (n.portrait && n.portrait.startsWith('art/farm/people/') && !art.has(`people/${who}_front`)) return `<div class="fm-face" style="display:grid;place-items:center;background:${n.look.top};color:#fff;font:700 26px var(--f-display)">${esc((n.short || n.name)[0])}</div>`;   // no portrait yet: an initial in their colours
   if (n.portrait && n.portrait.startsWith('svg:')) return `<div class="fm-face">${svgPortrait(n.portrait.slice(4))}</div>`;
+  if (n.portrait && n.portrait.startsWith('look:')) return `<div class="fm-face">${lookPortrait(n)}</div>`;
   return `<div class="fm-face"><img src="${n.portrait}" alt=""></div>`;
 }
 
@@ -300,7 +313,7 @@ function todayTab(state, extra) {
   h += `<h3>Greenhouse</h3>${state.flags.greenhouse ? fieldSummary(state, 'greenhouse') : '<p class="fm-dim">Still a wreck. Ruess can repair it (4,000 cr and 120 lumber).</p>'}`;
   const g = state.pasture.grass, sown = g.filter(Boolean).length, rg = g.filter((x) => x === 3).length;
   h += `<h3>Pasture</h3><p>${sown ? `${sown} patches of grass, <b>${rg}</b> ripe to cut for fodder.` : 'No grass sown yet.'} Stores: ${state.stock.fodder} fodder · ${state.stock.feed} hen feed · ${state.stock.lumber} lumber.</p>`;
-  h += `<h3>Animals</h3>` + (state.animals.length ? state.animals.map((a) => `<div class="fm-row"><div><b>${a.kind === 'cow' ? '🐄' : '🐔'} ${esc(a.name)}</b><span>fed ${yes(a.fed)} · ${a.kind === 'cow' ? `milked ${yes(a.milked)} · brushed ${yes(a.brushed)}` : 'lays an egg tomorrow if fed'} · said hello ${yes(a.talked)}</span></div>${hearts(a.love)}</div>`).join('') + (state.eggs ? `<p>${state.eggs} egg${state.eggs > 1 ? 's' : ''} waiting in the coop.</p>` : '') : '<p class="fm-dim">No animals yet. Corran sells chickens and cows.</p>');
+  h += `<h3>Animals</h3>` + (state.animals.length ? state.animals.map((a) => `<div class="fm-row"><div><b>${{ cow: '🐄', goat: '🐐', sheep: '🐑', duck: '🦆' }[a.kind] || '🐔'} ${esc(a.name)}</b><span>fed ${yes(a.fed)} · ${a.kind === 'cow' || a.kind === 'goat' ? `milked ${yes(a.milked)} · brushed ${yes(a.brushed)}` : a.kind === 'sheep' ? `fleece ${a.fleece >= 3 ? 'ready to shear' : `${a.fleece || 0}/3`} · brushed ${yes(a.brushed)}` : a.kind === 'duck' ? 'lays a duck egg tomorrow if fed' : 'lays an egg tomorrow if fed'} · said hello ${yes(a.talked)}</span></div>${hearts(a.love)}</div>`).join('') + (state.eggs ? `<p>${state.eggs} egg${state.eggs > 1 ? 's' : ''} waiting in the coop.</p>` : '') : '<p class="fm-dim">No animals yet. Corran sells chickens and cows.</p>');
   const R = state.robots || [];
   h += `<h3>Field-units</h3>` + (R.length ? R.map((r, i) => `<div class="fm-row"><div><b>🤖 ${esc(r.name)} · ${esc(ROBOT_JOBS[r.job] || r.job)}</b><span>skill ${sim.robotLevel(r)} (${r.job === 'animals' ? 'tends every animal' : r.job === 'rest' ? 'resting' : 'reaches ' + sim.robotReach(r) + ' tiles'}) · “${esc(sim.robotMood(state, i))}”${r.done ? ` · did ${r.done} this morning` : ''}</span></div><span class="fm-batt"><i style="width:${r.charge}%" class="${r.charge < 30 ? 'low' : ''}"></i><u>${r.charge}%</u></span></div>`).join('') : '<p class="fm-dim">None yet. Ruess leases them at the Workshop (300 cr).</p>');
   if (R.length) h += `<p>${crewLine(state)} <a class="fm-link" data-tab="robots">Robots tab ›</a></p>`;

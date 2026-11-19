@@ -89,7 +89,7 @@
     const name = (id) => (ITEMS[id] ? ITEMS[id].name : id);
     const ico = (id) => { const u = url('icons/' + id) || (ITEMS[id] && ITEMS[id].kind === 'seed' && url('icons/seedbag')); return u ? `<img class="ico" src="${u}" alt="" loading="lazy">` : `<span class="fake">${esc(name(id).slice(0, 2))}</span>`; };
     const seasonName = (s) => (typeof s === 'number' ? SEASONS[s] : s);
-    const face = (id) => { const n = story.NPCS[id]; const u = url(`people/${id}_portrait`) || url(`people/${id}_front`) || (n && n.portrait && !n.portrait.startsWith('svg:') ? n.portrait : ''); return u ? `<img class="face" src="${u}" alt="" loading="lazy">` : '<div class="face"></div>'; };
+    const face = (id) => { const n = story.NPCS[id]; const u = url(`people/${id}_portrait`) || url(`people/${id}_front`) || (n && n.portrait && !n.portrait.startsWith('svg:') && !(story.UNDERFOLK || []).includes(id) ? n.portrait : ''); return u ? `<img class="face" src="${u}" alt="" loading="lazy">` : '<div class="face"></div>'; };
     const sections = [];
     const add = (id, title, html) => sections.push({ id, title, html });
     if (url('scenes/title')) $('#hero').style.backgroundImage = `url(${url('scenes/title')})`;
@@ -116,7 +116,7 @@
         ${n.likes && n.likes.length ? `<div class="g">Likes ${n.likes.slice(0, 6).map((x) => esc(name(x))).join(', ')}</div>` : ''}
         ${n.dislikes && n.dislikes.length ? `<div class="g">Dislikes ${n.dislikes.map((x) => esc(name(x))).join(', ')}</div>` : ''}</div></div>`; };
     const ids = Object.keys(story.NPCS).filter((k) => k !== 'sato');
-    add('people', 'People of Willowfall and Eden Central', `<p class="lead">Talk every day, bring gifts and do favours. Six of them can become more than friends. Pastor Ines and Constable Fenn live and work in Eden Central, down the lift.</p>
+    add('people', 'People of Willowfall and Eden Central', `<p class="lead">Talk every day, bring gifts and do favours. Six of them can become more than friends. Pastor Ines and Constable Fenn live and work in Eden Central, down the lift; Tobias Venn, Agnes Thorne, Moth and Ansel Wick live further down still, on the Lower deck.</p>
       <div class="cards">${person('sato')}${ids.map(person).join('')}</div>`);
 
     // ---- love
@@ -167,6 +167,23 @@
     ];
     add('central', 'Eden Central', `<p class="lead">The Main deck city under the glass roof, down the spoke lift from Willowfall. It never rains here.</p>
       <div class="cards">${PLACES.map(([t, d]) => `<div class="card"><div><b>${esc(t)}</b><div class="g">${d}</div></div></div>`).join('')}</div>`);
+
+    // ---- the Lower deck (release 1)
+    if (sim.LOWER_PROJECTS) {
+      const MU = Object.values((await import('./js/farm/data.js')).MUSHROOMS || {}), LL = (await import('./js/farm/data.js')).LOWER_LOGS || [];
+      add('lower', 'The Lower deck: the Undercroft', `<p class="lead">The spoke lift goes all the way down: past Eden Central to the Lower deck, the colony's machinery, cisterns and old crypts. In the war the Directorate closed it as a "quarantine"; something went wrong down there, and the colony was told it was a Galt attack. Now it is dark, damp and humming, and a few people never left. Release 1: no combat, just lamps, pumps, mushrooms, fish and neighbours.</p>
+        <h3>Restoration projects</h3><p>Fund them at <b>Tobias Venn's terminal</b> by the lift landing, one at a time; each is done by the next morning, and the deck changes: lamps come on, tunnels drain, doors open. Venn's bench makes lamp kits (4 scrap, 1 copper ore, 120 cr) and pump parts (3 nickel-iron, 1 copper ore, 180 cr).</p>
+        <div class="tw"><table><tr><th>Project</th><th>Needs</th><th class="n">Credits</th><th>Opens</th></tr>${sim.LOWER_PROJECTS.map((p) => `<tr><td>${esc(p.name)}</td><td>${p.req.map(([id, n]) => `${n} ${esc(name(id).toLowerCase())}`).join(', ')}${p.lumber ? `, ${p.lumber} lumber` : ''}${p.trust ? '; the families\' trust (4 favours for the enclave, 5 hearts with Agnes)' : ''}</td><td class="n">${p.price.toLocaleString()}</td><td>${esc(p.desc)}</td></tr>`).join('')}</table></div>
+        <p>Pumps: ${sim.PUMP_REPAIRS.map((r) => `<b>${esc(r.name)}</b> (fit ${r.parts} pump parts: drains ${r.id === 'pump2' ? 'the north tunnel to the Sump' : 'the way to the old pump room'})`).join(' · ')}.</p>
+        <h3>Fishing in the pump halls</h3><p>No weather below decks. Cave fish all day; glowfish if you are patient (more in the Sump); pipe eels come out after six in the evening. The basins sometimes give up a pump part. The legendary <b>abyss koi</b> rises only in the deep Sump, after eight at night, to an Alloy rod or better.</p>
+        <div class="tw"><table><tr><th>Fish</th><th>About</th><th class="n">Sells</th></tr>${['cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi'].map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc(ITEMS[id].detail)}</td><td class="n">${ITEMS[id].sell}</td></tr>`).join('')}</table></div>
+        <h3>The mushroom catacombs</h3><p>Eight beds in the old crypts. E with a <b>spore bag</b> (${sim.SPORE_PRICE} cr at Venn's bench, ${sim.SPORE_PRICE + 20} at Seln's store once the catacombs are open) plants mixed spawn. No watering, no seasons: what comes up is a surprise.</p>
+        <div class="tw"><table><tr><th>Mushroom</th><th class="n">First flush</th><th class="n">Then every</th><th class="n">Flushes</th><th class="n">Each flush</th><th class="n">Sells</th><th class="n">Chance</th></tr>${MU.map((m) => `<tr><td>${ico(m.id)}${esc(m.name)}</td><td class="n">${m.days} days</td><td class="n">${m.regrow ? m.regrow + ' days' : '–'}</td><td class="n">${m.flushes}</td><td class="n">${m.yield}</td><td class="n">${m.sell}</td><td class="n">${Math.round(m.weight / MU.reduce((a, b) => a + b.weight, 0) * 100)}%</td></tr>`).join('')}</table></div>
+        <h3>The people below</h3><div class="cards">${(story.UNDERFOLK || []).map(person).join('')}</div>
+        <p>Help the enclave (favours and gifts), and the last project moves its families up to Eden Central's empty houses. Their children become <b>the school's first pupils</b>: on school days (weekdays, 8:30 to 3) the desks are full, Agnes Thorne teaches, and Moth sits at the front, then the back, then every desk in turn.</p>
+        <h3>Logs</h3><p>${LL.length} logs in this release: copied from old terminals, read off a crypt wall and the sealed round door, and the diary pages Moth brings you as she gets to know you. The farm journal (P) keeps them under <b>Logs</b>. The round door in the gallery stays shut for now.</p>
+        <p class="g"><b>Planned for release 2:</b> the Works (Venn's recycling and fabrication hall), the Thermal Vents, the Zero-G Arena, and the vault behind the round door.</p>`);
+    }
 
     // ---- the belt
     const ORES = sim.BELT_ORES || [], at = (d) => (sim.beltOdds ? sim.beltOdds(d) : {}), pct = (p) => (p ? Math.round(p * 100) + '%' : '–');

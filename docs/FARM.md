@@ -39,6 +39,10 @@ Cast (all canon to this project; portraits in `art/colony/portrait/`):
 | `moraine` | Queen Moraine of the Ashfall Cartel; trader now, still a queen. | Her barge is at the village dock on **Saturdays** (rare seeds, tonic) | `svg:moraine` (js/expansion/portraits.js) |
 | `calloway` | Pastor Ines Calloway, once a field chaplain on the gates; silvering bun, round glasses, teal stole. Gentle, wry. | **Second Dawn Church**, Eden Central (§10) | `art/farm/people/calloway_front.webp` |
 | `fenn` | Constable Aldo Fenn, a siege cadet turned peacetime constable; navy uniform, peaked cap, badge. Dutiful, stiff, soft-hearted. | **Safety depot**, Eden Central (§10) | `art/farm/people/fenn_front.webp` |
+| `venn` | Tobias Venn, the Directorate engineer who stayed to seal what he built; oil-dark coat, goggles, greying early. Gruff, decent. | **Restoration terminal** at the Lower deck lift landing; Venn's bench (§12) | built figure (`art/farm/people/venn_front.webp` when rendered) |
+| `thorne` | Agnes Thorne, once Eden's cistern supervisor; white bun, glasses, plum cardigan. Keeps the enclave's rota. | The Survivors' Enclave; after the rehousing, the school's teacher (§12) | built figure |
+| `moth` | Moth Thorne, eight, Agnes's granddaughter; mustard raincoat, overalls, a little lantern. Collects lamps and diary pages. | The catacombs and the enclave; after the rehousing, the school's first pupil (§12) | built figure |
+| `wick` | Ansel Wick, keeper of the pump halls; oilskin, cap, white moustache. Knows every fish by name. | The pump halls and the Sump (§12) | built figure |
 
 Do not use Lt. Arkin (he may have died in the player's campaign) or name the General.
 
@@ -550,3 +554,70 @@ batteries, air as the cost of distance; a start at sector 1, 5, 10, 15 or 20 onc
   The Today tab has the crew line too.
 * Old saves: `ensure` adds `miner: null`; `state.belt` is made on first use, with `reached` from `stats.deepestBelt`.
 
+## 12. The Lower deck, "the Undercroft" (owner, 2026-11-19): release 1
+
+Background (docs/COLONY.md D21–D22, COLONY-V4 §2): in the war's last months the Directorate took Eden's Lower deck as a black
+site ("Site Ninefold") under a "quarantine"; a Quantum Decimator test went wrong and gutted it. The colony was told it was a
+Galt attack and evacuated; Warden Marrow kept sixty-one survivors alive in the crypts, and Tobias Venn sealed the core. Some
+families never came up. Tone: cozy and mysterious, never grim; **no combat on the Lower deck**.
+
+**Release 1 (built):**
+
+* **The lift's third stop.** Every lift kiosk (act `liftdown` in Willowfall, `liftup` in Eden Central, `lift` on the Lower deck
+  landing: `rideLift(map.id)`, `LIFT_STOPS` in main.js) offers the two other stops; 15 minutes a deck, plus 5. The first arrival
+  plays `story.LOWER.arrive` (`flags.ld_visited`). Map `lower` (maps.js `lower()`, 56×44, `under: true`, walls are rock tiles
+  drawn as hull-plate walls only where they face a room; no sky, no weather, no surroundings: `World.setTime` has an `under`
+  branch, and `lightUnder()` moves five real point lights to the nearest lit lamps, with a soft one on Sato).
+* **Restoration projects** (`sim.LOWER_PROJECTS`, funded at the **restoration terminal** by the lift, act `restore`, window
+  `ui.projectWindow`; one at a time, `state.lower.pending`, finished overnight in `sleep()` → `flags.ld_<id>` and a note):
+  1. **Work lights at the landing**: 1,200 cr, 8 scrap, 2 lamp kits. Clears the barrier; the gallery's lamps.
+  2. **The Pump Halls**: 3,500 cr, 2 pump parts, 3 copper ore, 4 nickel-iron, 20 lumber. Drains the west tunnel; pump one runs.
+  3. **The Mushroom Catacombs**: 6,000 cr, 4 lamp kits, 3 silica, 40 lumber. Opens the crypt door; the beds can be planted.
+  4. **The Survivors' Enclave**: 8,000 cr, 3 lamp kits, 4 copper ore, 2 alloy, 60 lumber. Opens the tarpaulined north arch.
+  5. **Homes on the Main deck**: 15,000 cr, 4 alloy, 2 titanium ore, 120 lumber, and the families' trust (`enclaveTrust`: 4 favours
+     done for Agnes, Moth and Wick together, 5 hearts with Agnes). Sets `ld_rehoused` (the payoff, below).
+  **Venn's bench** (shop `undercroft`, keeper `venn` at `undercroft.counter`): lamp kit (4 scrap, 1 copper, 120 cr), pump part
+  (3 nickel-iron, 1 copper, 180 cr), spore bags (240 cr) once the catacombs open; Seln sells spore bags too (260).
+* **The map changes with the state** (`maps.lowerState(m, flags)`, called by main.js `go()` and the minimap): `m.floods`
+  (tunnels that are water until their pump runs), `m.gates` (blocked until the project), props with `unless: flag` (the barrier,
+  the bulkheads, the tarpaulins) drawn until then, `glow_lamp` props with a `zone` lit once `ld_<zone>` is set (`landing`
+  always). Pump parts at the silent pumps drain more at once (`sim.PUMP_REPAIRS`, `repairPump`): **the north pump** (3 parts,
+  `ld_pump2`: the tunnel to the Sump) and **the cistern pump** (5 parts, `ld_pump3`: the way to the old pump room and its log).
+* **Fishing** (`sim.fish(state, 'lower' | 'sump')`, the water body from `maps.waterPlace`): no weather; cave fish (70 cr,
+  common), glowfish (150, uncommon, more in the Sump), pipe eel (210, mostly after 18:00), a pump part now and then in the basins,
+  and the legendary **abyss koi** (1,800): only in the Sump, after 20:00, Alloy rod or better, about 3.5% (6% Starsteel).
+* **Mushrooms** (`data.MUSHROOMS`, `state.lower.beds`, `plantBed` / `harvestBed`, 8 beds, act `bed`): a spore bag rolls the kind
+  (shiitake 36, pale oyster 36, glowcap 22, deep truffle 6). No watering, no seasons, a day a night.
+  | Mushroom | first flush | then every | flushes | per flush | sells |
+  |---|---|---|---|---|---|
+  | shiitake | 6 | 3 | 4 | 2 | 90 |
+  | pale oyster | 4 | 2 | 4 | 2 | 60 |
+  | glowcap | 8 | 4 | 3 | 2 | 160 |
+  | deep truffle | 12 | – | 1 | 1 | 900 |
+  Recipes (group "From the Undercroft"): shiitake skewer, oyster fry, glowcap broth, Undercroft stew, truffle omelette. Cave fish
+  count as fish in the old recipes.
+* **The people below** (story.js `UNDERFOLK`, full villagers, not romance candidates; first meetings `story.MEETINGS` play
+  instead of TALK.first; talk can vary with progress, `TALK[id].flag`; heart events at 3 and 7, some needing a flag, `e.flag`;
+  favours; their whereIs ignores weather and festivals while below decks): Tobias Venn (terminal, pumps, the gallery at night,
+  Friday evenings at Ruess's door), Agnes Thorne, Moth (first seen in the catacombs, before the enclave opens), Ansel Wick.
+  Built figures: `LOOKS` in main.js, with `goggles` and `lantern` drawn in actors.js.
+* **The rehousing**: `sim.FAMILIES` (the Thornes, Okafors, Linds and Barroses) take `central.house_1`, `_2`, `_5`, `_6` (new door
+  texts `story.LOWER.houses`). **The school** (`sim.schoolDay`: weekdays 8:30–15:00, not festival days) fills: Agnes at
+  `school.teacher`, Moth at `school.pupil`, five more pupils (`sim.PUPILS`) at the other desks (main.js `spawnPupils`, E says
+  hello); the blackboard lists their names. `story.LOWER_SCENES`: Fenn's box of crayons finds its first child (`fenn_pupils`, 8:00
+  at the school), Pastor Ines's first assembly on a Wednesday (`calloway_pupils`), and Marrow hears about Agnes (`marrow_under`).
+* **Logs** (`data.LOWER_LOGS`, texts `story.LOGS`, `recoverLog`, `state.lower.logs`): 11 in this release: the quarantine
+  notice, two of Warden Marrow's logs, a Directorate memo, a Galt prisoner's words on a crypt wall, Venn's sixty per cent test,
+  the stencil on the sealed round door, three of Pim's war diary pages and one of Moth's own (`diaryPage`: Moth gives the next
+  page on a first talk, one a day, by hearts 0/2/4/6). Terminals give a `log_tape`, pages a `diary_page`. Read in the farm
+  journal's new **Logs** tab, with the restoration's progress.
+* **The vault door** stands in the gallery's north wall, sealed (act `vault`: a teaser and the `ninefold` log).
+* Music `music/undercroft` (sfx.js `trackFor`, day and night); minimap tab "The Undercroft"; wiki section; How to play page.
+* Art slots used (docs/LOWER-DECK-ART.md): items and icons for all thirteen ids; props `lower_lift`, `pump_station`,
+  `mushroom_bed`, `catacomb_arch`, `shelter`, `glow_lamp`, `terminal`, `vault_door` (and the `works_hall` slot), each with a
+  built stand-in in `js/farm/lowerworld.js` (plus `work_barrier`, `bulkhead`, `tarp`, `crypt_wall`, `stove`, `shrooms`).
+* Old saves: `state.lower` is made on first use; the four newcomers get their records from `ensure`.
+* Tests: `node tests/farm-lower.mjs`.
+
+**Planned for release 2:** the **Works** (Venn's recycling and fabrication hall, model `works_hall`), the **Thermal Vents**,
+the **Zero-G Arena**, and **the vault** behind the round door (the rest of the logs; what Site Ninefold was).

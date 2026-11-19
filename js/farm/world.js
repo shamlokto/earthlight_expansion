@@ -6,6 +6,7 @@ import * as art from './art.js';
 import { CROPS } from './data.js';
 import { cropStage } from './sim.js';
 import { lowerProp } from './lowerworld.js';
+import { laneProp, laneBuilding, flowerHead, LANE_PROPS, LANE_BUILDINGS, LANE_CROP_COLOR, LANE_CROP_H } from './laneworld.js';
 import { ColonySky, buildSurroundings, colonyProp, buildingExtras, COLONY_KINDS, Bots, mergeStatic, lightPools, setColonyTime, U as HAZE } from './colony.js';
 
 const GROUND_TEX = { v: 'dust_lane', f: 'soil_dry', p: 'path_dirt', c: 'cobble', s: 'sand', k: 'wood_floor', a: 'ash_ground', o: 'stone_floor', h: 'hay', b: 'wood_floor', d: 'deck_floor' };
@@ -145,6 +146,8 @@ const BUILDING = {
   safety_depot: { model: ['safety_depot'], facade: 'buildings/safety_depot', civic: 'depot', uniform: true },
   orbital_elevator: { model: ['orbital_elevator'], facade: 'buildings/orbital_elevator', elevator: true, uniform: true, tall: true },
 };
+// Market Lane, the fold and the hives (2026-11-19): built stand-ins in laneworld.js until their models arrive.
+Object.assign(PROPS, LANE_PROPS); Object.assign(BUILDING, LANE_BUILDINGS); Object.assign(CROP_COLOR, LANE_CROP_COLOR); Object.assign(CROP_H, LANE_CROP_H);
 const FRUIT_COLOR = { apple: 0xd8362a, peach: 0xffa48a, cherry: 0xc8102e, persimmon: 0xf07a1a };
 const BLOSSOM = { apple: 0xfbe3ea, peach: 0xf7a8c0, cherry: 0xffc6d9, persimmon: 0xf3f0d6 };
 
@@ -640,7 +643,7 @@ export class World {
         for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const arm = box(0.32, 0.03, 0.04, SLATE(), x * 0.16, 0.02, z * 0.16); arm.rotation.y = x * z * 0.78; d0.add(arm, cyl(0.12, 0.12, 0.02, std({ color: 0xdfe6ea, transparent: true, opacity: 0.6 }), x * 0.28, 0.04, z * 0.28, 12)); }
         g.add(d0); break;
       }
-      default: { const c = lowerProp(kind, o) || colonyProp(kind, o, this.colonyFx || undefined); g.add(c || box(0.6, 0.6, 0.6, std({ color: 0x999999 }))); }
+      default: { const c = lowerProp(kind, o) || laneProp(kind, o) || colonyProp(kind, o, this.colonyFx || undefined); g.add(c || box(0.6, 0.6, 0.6, std({ color: 0x999999 }))); }
     }
     if (kind === 'memorial' || kind === 'bench') for (const c of g.children) c.position.x += 0.5;
     return g;
@@ -801,6 +804,7 @@ export class World {
       if (def.observatory) { this.buildObservatory(b, g); return; }
       if (def.civic) { this.buildCivic(b, g, def.civic); return; }
       if (def.elevator) { this.buildElevator(b, g); return; }
+      if (def.lane && laneBuilding(b, g, def, this.flags || {})) return;
       if (def.flat) {                                    // a block of flats: hull-plate walls, rows of lit windows, a flat roof with a rail
         const wm2 = std({ map: art.tex(def.wall, { repeat: 0.5 }) }), win = new THREE.MeshStandardMaterial({ color: 0x9fd0e0, emissive: 0x6a5a30, emissiveIntensity: 0.35, roughness: 0.2 });
         g.add(box(b.w - 0.1, H, b.d - 0.1, wm2), box(b.w + 0.1, 0.25, b.d + 0.1, std({ color: 0x7b878e }), 0, H));
@@ -847,7 +851,7 @@ export class World {
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const c = map.at(x, y); (byKind[c] ||= []).push(x, y); }
     for (const [c, cells] of Object.entries(byKind)) {
       if (c === 'x') continue;
-      if (c === 'r' && map.under) { const edge = []; for (let i = 0; i < cells.length; i += 2) { const x = cells[i], y = cells[i + 1]; if ([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]].some(([a, b]) => { const k = map.at(x + a, y + b); return k !== 'r' && k !== 'x'; })) edge.push(x, y); } const m = new THREE.Mesh(tiles(edge, 2.2, true), std({ map: art.tex('hull_plate', { repeat: 1 }), color: 0x7d8790 })); m.castShadow = m.receiveShadow = true; R.add(m); continue; }   // only the walls that face a room
+      if (c === 'r' && map.under) { const edge = []; for (let i = 0; i < cells.length; i += 2) { const x = cells[i], y = cells[i + 1]; if ([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]].some(([a, b]) => { const k = map.at(x + a, y + b); return k !== 'r' && k !== 'x'; })) edge.push(x, y); } const m = new THREE.Mesh(tiles(edge, 1.5, true), std({ map: art.tex('hull_plate', { repeat: 1 }), color: 0x7d8790 })); m.castShadow = m.receiveShadow = true; R.add(m); continue; }   // only the walls that face a room
       if (c === 'r') { const m = new THREE.Mesh(tiles(cells, 1.7, true), std({ map: art.tex('cliff_rock', { repeat: 1 }) })); m.castShadow = m.receiveShadow = true; R.add(m); continue; }
       if (c === 'w') {
         const bed = new THREE.Mesh(tiles(cells, -0.5), std({ color: 0x2a3a34 })); R.add(bed);
@@ -860,9 +864,9 @@ export class World {
       const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : cp ? 'colony_path' : GROUND_TEX[c] || 'soil_dry';
       const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : c === 'd' ? 0.015 : 0, false, c === 'c' ? 0.34 : c === 'k' || c === 'b' || c === 'd' ? 0.5 : 0.25), std({ map: art.tex(slot, { repeat: 1 }), color: c === 'f' ? 0xb48a66 : c === 'c' ? 0xd8d2c8 : 0xffffff })); m.receiveShadow = true; R.add(m);
     }
-    this.colony.setCentre(H / 2); this.spinners = []; this.beacons = []; this.cars = []; this.bots = null; this.pools = null; this.rocks = null;
+    this.colony.setCentre(H / 2); this.spinners = []; this.beacons = []; this.cars = []; this.bots = null; this.pools = null; this.rocks = null; this.earthSky = null;
     if (!map.indoor && !map.ruins && !map.under) R.add(buildSurroundings(map, this.season));   // terraces rising into the cylinder's curve
-    else if (map.belt) R.add(spaceBackdrop(W, H, map));  // the belt: stars, the Earth, Eden's hull, sector bands
+    else if (map.belt) { const bd = spaceBackdrop(W, H, map); R.add(bd); this.earthSky = bd.userData.earth; }  // the belt: stars, the Earth, Eden's hull, sector bands
     else if (!map.indoor && !map.under) {                // the Old World: ash plains and broken towers (the Undercroft has only the dark)
       const slot = map.ruins ? 'ash_ground' : 'grass_' + SEASON_KEY[this.season];
       const t = art.tex(slot, { repeat: 1 }).clone(); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(60, 60); t.needsUpdate = true;
@@ -913,15 +917,15 @@ export class World {
     if (pools.length) { this.pools = lightPools(pools); R.add(this.pools); }
     if (map.bots) this.bots = new Bots(map.bots, R, () => this.makeProp('maint_bot', {}));
     this.dyn = new THREE.Group(); R.add(this.dyn);
-    if (map.field) this.buildField(map.field);
+    for (const f of map.fields || (map.field ? [map.field] : [])) this.buildField(f);
     if (map.pasture) this.buildPasture();
   }
 
   // ------------------------------------------------------------ field and pasture
   buildField(f) { const fd = this.state.fields[f.id]; if (!fd) return; for (let i = 0; i < fd.tiles.length; i++) this.refreshTile(f.id, i); }
   refreshTile(fieldId, i) {
-    const f = this.map.field; if (!f || f.id !== fieldId) return;
-    const fd = this.state.fields[fieldId], t = fd.tiles[i], x = f.x + (i % fd.w) + 0.5, z = f.y + Math.floor(i / fd.w) + 0.5, key = 'f' + i;
+    const f = (this.map.fields || [this.map.field]).find((q) => q && q.id === fieldId); if (!f) return;
+    const fd = this.state.fields[fieldId], t = fd.tiles[i], x = f.x + (i % fd.w) + 0.5, z = f.y + Math.floor(i / fd.w) + 0.5, key = (f === this.map.field ? 'f' : f.id) + i;
     const old = this.tileObjs.get(key); if (old) { this.dyn.remove(old); this.unface(old); }
     const g = new THREE.Group(); g.position.set(x, 0, z);
     if (t.till) { const q = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 0.96), std({ map: art.tex(t.wet ? 'soil_wet' : 'soil_tilled', { repeat: 1, wrap: false }) })); q.rotation.x = -Math.PI / 2; q.position.y = 0.025; q.receiveShadow = true; g.add(q); }
@@ -943,7 +947,8 @@ export class World {
     if (p) { const b = this.billboard(p, Math.max(0.2, h), { cross: true }); b.rotation.y = (i * 0.7) % 1.5; return b; }
     const g = new THREE.Group(), green = std({ color: st < 0 ? 0x7a6a4a : 0x4f9a3a });
     const n = st <= 0 ? 2 : 4; for (let k = 0; k < n; k++) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.1 + h * 0.12, h, 5), green); c.position.set(Math.sin(k * 1.6) * 0.14, h / 2, Math.cos(k * 1.6) * 0.14); c.castShadow = true; g.add(c); }
-    if (st === 3) g.add(ball(0.13, std({ color: CROP_COLOR[id] || 0xffffff }), 0, Math.min(h * 0.6, 0.5), 0.12, 1), ball(0.1, std({ color: CROP_COLOR[id] || 0xffffff }), -0.12, Math.min(h * 0.45, 0.4), -0.08, 1));
+    if (st === 3 && CROPS[id] && CROPS[id].flower) g.add(flowerHead(id, h));
+    else if (st === 3) g.add(ball(0.13, std({ color: CROP_COLOR[id] || 0xffffff }), 0, Math.min(h * 0.6, 0.5), 0.12, 1), ball(0.1, std({ color: CROP_COLOR[id] || 0xffffff }), -0.12, Math.min(h * 0.45, 0.4), -0.08, 1));
     return g;
   }
   buildPasture() { const P = this.state.pasture; for (let i = 0; i < P.grass.length; i++) this.refreshPasture(i); }
@@ -965,6 +970,7 @@ export class World {
     g.position.set(x, o.h0 || 0, y); this.tileObjs.set(key, g); this.dyn.add(g); return g;
   }
   // The belt's rocks, drawn instanced from the sim's grid (state.mine.cells), only those near Sato (see BeltRocks).
+  stoneShade(o) { return stoneShade(o); }
   beltField(mine) { if (this.rocks) this.rocks.dispose(); this.rocks = new BeltRocks(this.root, mine); return this.rocks; }
   unplace(key) { const old = this.tileObjs.get(key); if (old) { this.dyn.remove(old); this.unface(old); this.tileObjs.delete(key); } }
 
@@ -1006,6 +1012,7 @@ export class World {
     for (const g of this.steam || []) for (const m of g.children) { const k = ((this.t * 0.25 + m.userData.seed) % 1); m.position.set(m.userData.x + Math.sin(this.t + m.userData.seed) * 0.15, 0.3 + k * 1.7, m.userData.z); m.scale.setScalar(0.7 + k * 1.6); m.material.opacity = 0.42 * Math.sin(k * Math.PI); }
     if (this.bots) this.bots.update(dt, this.t);
     if (this.rocks) this.rocks.update(px, py);
+    if (this.earthSky) this.earthSky.position.copy(c.position).addScaledVector(EARTH_DIR, 1500);   // always as far away, low over the lane's east side
     for (const f of this.facers) f.rotation.y = this.yaw;
     for (const m of this.waterMats || []) m.map.offset.set(this.t * 0.015, this.t * 0.01);
     for (const l of this.lamps || []) l.intensity = (this.night || 0) * 14;
@@ -1105,8 +1112,7 @@ function spaceBackdrop(W, H, map = {}) {
   const n = 1800, pos = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const u = Math.random() * 2 - 1, a = Math.random() * 6.283, r = 700; pos[i * 3] = Math.sqrt(1 - u * u) * Math.cos(a) * r + cx; pos[i * 3 + 1] = Math.abs(u) * r * 0.9 + 20; pos[i * 3 + 2] = Math.sqrt(1 - u * u) * Math.sin(a) * r + cz; }
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.add(new THREE.Points(pg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false })));
-  const earth = new THREE.Mesh(new THREE.SphereGeometry(140, 48, 32), new THREE.MeshBasicMaterial({ map: earthGlobe(), fog: false })); earth.position.set(cx + 120, -260, -460); earth.rotation.set(0.4, 2.2, 0); g.add(earth);
-  const glow2 = new THREE.Mesh(new THREE.SphereGeometry(172, 32, 16), new THREE.MeshBasicMaterial({ color: 0x6fb4ff, transparent: true, opacity: 0.18, side: THREE.BackSide, fog: false })); glow2.position.copy(earth.position); g.add(glow2);
+  g.userData.earth = earthPlanet(); g.add(g.userData.earth);
   const hull = new THREE.Mesh(new THREE.CylinderGeometry(60, 60, 520, 40, 1, true), std({ map: art.tex('hull_plate', { repeat: 0.5 }), side: THREE.DoubleSide })); hull.rotation.z = Math.PI / 2; hull.position.set(cx - 40, -95, H + 110); hull.material.fog = false; g.add(hull);
   for (let i = 0; i < 6; i++) { const ring = cyl(61, 61, 2, std({ color: 0x9fb0bf }), 0, 0, 0, 40); ring.rotation.z = Math.PI / 2; ring.position.set(cx - 280 + i * 100, -95, H + 110); g.add(ring); }
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(W + 60, H + 30), new THREE.MeshStandardMaterial({ color: 0x1a1c26, transparent: true, opacity: 0.55, roughness: 1 })); floor.rotation.x = -Math.PI / 2; floor.position.set(cx, -0.06, cz); floor.receiveShadow = true; g.add(floor);
@@ -1125,6 +1131,13 @@ function spaceBackdrop(W, H, map = {}) {
 // The belt's rocks: an InstancedMesh for each kind (small, medium, large and huge rocks, great asteroids, comet ice,
 // and the glints on the big ones), using the art pack's rock models when there are any. Only the rocks within REACH tiles of Sato are
 // instanced (several hundred stay off the GPU); the list is rebuilt when she has moved a few tiles or a rock breaks.
+// The asteroid model paints its rocks purple: this takes a material to stone grey (the belt's rocks and drifting debris).
+export function stoneMaterial(mat) {
+  const m = mat.clone(); m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  { float lum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.18 + lum * 0.9) * vec3(1.06, 0.98, 0.9), 0.82); }'); };
+  m.customProgramCacheKey = () => 'stone-rock'; m.userData.stone = true; return m;
+}
+// Stone-shade every mesh of an object (a model can arrive later: call again; it returns true once something was shaded).
+export function stoneShade(o) { let n = 0; o.traverse((q) => { if (q.isMesh && q.material && !q.material.userData.stone) { q.material = stoneMaterial(q.material); n++; } else if (q.isMesh) n++; }); return n > 0; }
 const ROCK_GEO = new Map();
 function rockGeo(name, big) {
   if (ROCK_GEO.has(name)) return ROCK_GEO.get(name);
@@ -1150,7 +1163,7 @@ class BeltRocks {
       const d = ROCK_KIND[k], cap = Math.min(count[k] || 0, k === 3 ? 520 : 420) + 4;
       rockGeo(d.model, d.big).then(({ geo, mat }) => {
         if (!this.alive) return;
-        if (k !== 4) { mat = mat.clone(); mat.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  { float lum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.18 + lum * 0.9) * vec3(1.06, 0.98, 0.9), 0.82); }'); }; mat.customProgramCacheKey = () => 'stone-rock'; }   // the model paints them purple: take it to stone grey
+        if (k !== 4) mat = stoneMaterial(mat);   // the model paints them purple: take it to stone grey
         const im = new THREE.InstancedMesh(geo, mat, cap); im.castShadow = true; im.frustumCulled = false; im.count = 0;
         im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); this.meshes[k] = im; this.root.add(im); this.ver = -1;
       });
@@ -1175,6 +1188,18 @@ class BeltRocks {
     }
     for (const [k, im] of Object.entries(this.meshes)) { im.count = n[k]; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
   }
+}
+// The Earth from the belt: a lit sphere (day side to the sun, a dark terminator) with a soft blue rim of atmosphere. It
+// rides with the camera at a fixed direction and distance, so it never meets the dust lane at any sector.
+const EARTH_DIR = new THREE.Vector3(0.62, -0.3, -0.72).normalize();
+function earthPlanet() {
+  const g = new THREE.Group(), R = 330;
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 40), new THREE.MeshStandardMaterial({ map: earthGlobe(), roughness: 0.85, metalness: 0, fog: false, emissive: 0x0a1a33, emissiveIntensity: 0.6 }));
+  ball.rotation.set(0.35, 2.2, 0.15); g.add(ball);
+  const rim = new THREE.Mesh(new THREE.SphereGeometry(R * 1.045, 64, 40), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+    vertexShader: 'varying vec3 vN; varying vec3 vV; void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'varying vec3 vN; varying vec3 vV; void main() { float r = 1.0 - max(dot(vN, vV), 0.0); gl_FragColor = vec4(vec3(0.42, 0.68, 1.0) * pow(r, 2.6) * 1.6, 1.0); }' }));
+  g.add(rim); g.renderOrder = -5; return g;
 }
 let GLOBE = null;
 function earthGlobe() {
