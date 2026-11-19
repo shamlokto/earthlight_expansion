@@ -1266,6 +1266,11 @@
    "w": 1344,
    "h": 768
   },
+  "scenes/festival_hubcup": {
+   "file": "scenes/festival_hubcup.webp",
+   "w": 1344,
+   "h": 768
+  },
   "scenes/festival_lantern": {
    "file": "scenes/festival_lantern.webp",
    "w": 1344,
@@ -1278,6 +1283,11 @@
   },
   "scenes/festival_yearend": {
    "file": "scenes/festival_yearend.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/hall_memory": {
+   "file": "scenes/hall_memory.webp",
    "w": 1344,
    "h": 768
   },
@@ -1346,13 +1356,78 @@
    "w": 1344,
    "h": 768
   },
+  "scenes/shop_bakery": {
+   "file": "scenes/shop_bakery.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/shop_barge": {
+   "file": "scenes/shop_barge.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/shop_cafe": {
+   "file": "scenes/shop_cafe.webp",
+   "w": 1344,
+   "h": 768
+  },
   "scenes/shop_clinic": {
    "file": "scenes/shop_clinic.webp",
    "w": 1344,
    "h": 768
   },
+  "scenes/shop_florist": {
+   "file": "scenes/shop_florist.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/shop_garage": {
+   "file": "scenes/shop_garage.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/shop_grandmarket": {
+   "file": "scenes/shop_grandmarket.webp",
+   "w": 1344,
+   "h": 768
+  },
   "scenes/shop_library": {
    "file": "scenes/shop_library.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/shop_radio": {
+   "file": "scenes/shop_radio.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/shop_ranch": {
+   "file": "scenes/shop_ranch.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/shop_store": {
+   "file": "scenes/shop_store.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/shop_tailor": {
+   "file": "scenes/shop_tailor.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/shop_undercroft": {
+   "file": "scenes/shop_undercroft.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/shop_works": {
+   "file": "scenes/shop_works.webp",
+   "w": 1344,
+   "h": 768
+  },
+  "scenes/shop_workshop": {
+   "file": "scenes/shop_workshop.webp",
    "w": 1344,
    "h": 768
   },
