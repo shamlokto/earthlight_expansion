@@ -649,13 +649,16 @@ campaigns (index `unlocks` of mission 6). Fighter forms: beam 48 at 1 (Mars leve
 on 62, evasion 64 (50%), move 10. Hunter forms: railgun 102 at 1–3 (min 1, so it is the slot-0
 counter against adjacent craft), beamsaber 140 at 1 (the slot-2 counter in melee), evasion 90 (70%;
 the General aboard caps at 96), move 5. Fights with the Athena's moves (`look` 4-7, `keepSlots` so
-each weapon keeps its slot's choreography). Own art, `tools/art/pallas.mjs` → `js/art/pallas.js`:
-three sets (jet, spent jet, robot), each with a picture, map icon and fight poses for the Athena
-sheet tiles its choreography draws (jet 0; spent jet 0, 64; robot 0/4/8/12/64 on the slot-0 sheet
-and, as `poses2`, 0-12/64/68/72/76/128 on the sabre sheet the other slots load). The robot's poses, picture and icon are placed pixel by pixel
-(`tools/art/pallas-pixels.mjs`: hand-drawn parts composed per pose, real-robot proportions). The jet's fight poses, both unit pictures
-(painted at 48x48, Scale2x to 96; the jet's from its 32x32 sprite, Scale3x) and both map icons are
-hand-placed too (`tools/art/pallas-pics.mjs`).
+each weapon keeps its slot's choreography). Own look, redesigned 2026-11-18 (owner's pick: concept 81 in `tools/art/pallas/redesign/`) so it no longer
+reads as a Gundam: the Athena Kai's white, crimson and gold, a rounded helmet with one swept crest and a
+cyan visor band (no V-fin, no face grille), and round shoulder thruster binders instead of wings.
+`tools/art/pallas-xai.mjs` → `js/art/pallas.js`: three sets (jet, spent jet, robot), each with a
+picture, map icon and fight poses for the Athena sheet tiles its choreography draws (jet 0; spent jet
+0, 64; robot 0/4/8/12/64 on the slot-0 sheet and, as `poses2`, 0-12/64/68/72/76/128 on the sabre sheet
+the other slots load). Pictures and side views come from `tools/art/pallas/*-src.jpg` and `*-side.jpg`
+(generated from the redesign concept, prompts in `tools/art/pallas/prompts.txt`), converted with
+`tools/art/kai-convert.py` and `tools/art/pallas-poses.py`; the map icons are drawn from shapes and
+pixels in the script. The farm game's figurine (`art/farm/models/pallas.glb`) follows the same design.
 
 **Leviathan and Directorate Talos** (owner, 2026-10-24; the new campaign's Union units, docs/STORY.md).
 Both are `unionOnly` (never in the market) and have their own art, drawn the same way:
@@ -743,7 +746,7 @@ and `tools/art/<unit>-xai.*`; details in `docs/notes/art-*.md`.
   modern renderer adds a glow and a swing trail (`fightfx.js` `drawSabre`). It now has `keepSlots`,
   so its sabre plays the melee recording; before, it played as a ranged beam.
 * **Pallas**: the jet, spent jet and robot, every pose including nine sabre frames, all from one
-  master design. `own.js ownPoseSet` carries `posesArt2`, so the modern renderer shows the sabre
+  master design (redesigned 2026-11-18, see the Pallas entry above). `own.js ownPoseSet` carries `posesArt2`, so the modern renderer shows the sabre
   sheet in full colour.
 * **Leviathan**: a black and red dreadnought with a violet spinal cannon. Its main cannon (slot 1)
   charges a violet orb with lightning, then fires a thick pulsing beam with shock rings and a

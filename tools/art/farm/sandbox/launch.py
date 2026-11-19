@@ -2,6 +2,11 @@
 """Start a sandbox GPU pod and arm its self-destruct before anything else happens.
 
     python3 launch.py --hours 3 [--idle 15] [--gpu "NVIDIA L40S" ...] [--volume 100]
+    python3 launch.py --hours 2 --network-volume 9zhqq8f4mh --datacenter EU-RO-1   # the owner's comfyui-models volume
+
+With --network-volume the pod is placed in that volume's data centre and the volume is mounted at /workspace
+(Qwen-Image, Qwen-Image-Edit and WAN are already on it, so nothing needs downloading). The watchdog's own
+files go in /workspace/sandbox; nothing else on the volume is touched, and deleting the pod keeps the volume.
 
 1. Creates the pod (Runpod GraphQL API). Its name carries its deadline: sandbox-u<unix time>.
 2. Waits for the pod's Jupyter server (about a minute) and immediately starts sandbox.sh ON THE POD.
@@ -93,6 +98,8 @@ def main():
     ap.add_argument('--volume', type=int, default=100, help='pod volume at /workspace in GB (0 = none)')
     ap.add_argument('--disk', type=int, default=60, help='container disk in GB')
     ap.add_argument('--tries', type=int, default=4)
+    ap.add_argument('--network-volume', help='id of a network volume to mount at /workspace (e.g. 9zhqq8f4mh)')
+    ap.add_argument('--datacenter', help='data centre of that volume (e.g. EU-RO-1)')
     a = ap.parse_args()
     gpus = a.gpu or ['NVIDIA L40S', 'NVIDIA RTX A6000', 'NVIDIA RTX 6000 Ada Generation']
     secs = max(60, int(a.hours * 3600))
@@ -104,7 +111,10 @@ def main():
             inp = {'cloudType': 'SECURE', 'gpuCount': 1, 'gpuTypeId': g, 'name': f'{a.name}-u{deadline}', 'imageName': IMAGE,
                    'containerDiskInGb': a.disk, 'volumeInGb': a.volume, 'ports': '8188/http,8888/http,22/tcp',
                    'env': [{'key': 'JUPYTER_PASSWORD', 'value': pw}]}
-            if a.volume: inp['volumeMountPath'] = '/workspace'
+            if a.network_volume:                           # the volume decides where the pod can run
+                inp.update(networkVolumeId=a.network_volume, volumeInGb=0, volumeMountPath='/workspace')
+                if a.datacenter: inp['dataCenterId'] = a.datacenter
+            elif a.volume: inp['volumeMountPath'] = '/workspace'
             r = gql(q, {'i': inp})
             p = (r.get('data') or {}).get('podFindAndDeployOnDemand')
             if p:

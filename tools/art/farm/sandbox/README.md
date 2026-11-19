@@ -60,3 +60,15 @@ Start every pod with `python3 tools/art/farm/sandbox/launch.py --hours 3` (add `
 
 (A timer in the pod's start command does not work with Runpod's ComfyUI image, which passes any start
 command to its own /start.sh as arguments; Runpod's GraphQL API cannot override the entrypoint.)
+
+## Using the owner's model volume
+
+The owner keeps ComfyUI with the Qwen-Image, Qwen-Image-Edit and WAN models on the network volume
+`comfyui-models` (id `9zhqq8f4mh`, data centre EU-RO-1). Mount it instead of a fresh pod volume so
+nothing has to be downloaded:
+
+    python3 tools/art/farm/sandbox/launch.py --hours 2 --network-volume 9zhqq8f4mh --datacenter EU-RO-1
+
+The pod must run in the volume's data centre, so if no GPU is free there the launch fails and has to be
+tried again later or with another `--gpu`. Deleting the pod (by the watchdog or the reaper) keeps the
+volume and its files; only `/workspace/sandbox` is written by the watchdog.
