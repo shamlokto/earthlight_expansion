@@ -409,16 +409,8 @@ every new item id.
   crop in any season (`hydroPlant`), it grows a day each night without watering, E harvests
   (`hydroHarvest`, regrowing crops regrow). Rentals end at the change of season.
 
-## 9. The belt and the Old World (owner, 2026-11-18, later)
+## 9. The Old World (owner, 2026-11-18, later; the belt is in §11, the orbital elevator in §10)
 
-* *(Superseded by §11: the belt is one open map now, flown in a space suit.)* **The Descent** on Terrace Hill is now the hull lift up to **Vashti's hangar** (interior `hangar`,
-  spot `hangar.floor`: Vashti by day). E at the **launch cradle** flies the Pallas to a **belt sector**:
-  `enterBelt(state, depth)` = `enterMine(state, depth, 'belt')` (`state.mine.mode`), drawn by
-  `ruinsMap` with `map.belt` (ground `v`, the dust lane; `asteroid` rocks, `asteroid_big` walls, a
-  `buoy`; a space backdrop: stars, the Earth, Eden's hull drum). E drills a rock (1 stamina): scrap,
-  comet ice (`comet_ice`, 60 cr), alloy from sector 5, crystal from 10, rare `star_metal` from 3. One rock
-  hides the jump buoy. No creatures; drifting debris only nudges the Pallas. `stats.deepestBelt`.
-  Music track `belt` (else `night`).
 * **The Old World** on Earth: Maris's courier shuttle from the space dock in Eden Central (act
   `shuttle`, `takeShuttle(state, depth)`: 200 cr, free once Maris is at 5 hearts). Rubble, relics,
   creatures and the way down as before; Earth rubble now gives scrap only (ore comes from the belt).
@@ -429,7 +421,7 @@ every new item id.
 
 Art slots added: models `observatory`, `gov_office`, `exchange`, `arrivals`, `apartment`, `townhouse`,
 `vending`, `feed_sacks`, `feed_mill`, `charge_terminal`, `dock_crane`, `cartel_ship`, `shuttle`,
-`shuttle_gate`, `launch_cradle`, `asteroid`, `asteroid_big`, `jump_buoy`; facades `buildings/<kind>`
+`launch_cradle`, `asteroid`, `asteroid_big`, `jump_buoy` (sector buoys); facades `buildings/<kind>`
 for those buildings; icons `icons/star_plum`, `icons/colony_feast`, `icons/founders_cake`,
 `icons/comet_ice`, `icons/star_metal`; music `music/belt`.
 
