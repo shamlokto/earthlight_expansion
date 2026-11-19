@@ -26,7 +26,8 @@ const keys = new Set(), stick = { x: 0, y: 0 };
 // Small touches to the built figures, on top of the colours in story.js.
 const LOOKS = { sato: { top: '#f4eddc', bottom: '#2f4488', eye: '#7a4a22', skin: '#f8dcc4', bib: true, hat: true }, seln: { apron: '#4f8a3a' }, mori: { glasses: true, top: '#f4f6f8' }, yui: { glasses: true }, kestrel: {}, corran: { moustache: '#f2f2f2', age: 'old', bib: true }, marrow: { age: 'old' }, ruess: { age: 'old', glasses: true }, oduya: { bib: true }, vashti: {}, maris: {}, general: {}, moraine: {}, calloway: { collar: true, stole: '#3fa7a3', glasses: true }, venn: { goggles: true, belt: true }, thorne: { age: 'old', glasses: true, apron: '#c9b48a' }, moth: { bib: true, lantern: true, eye: '#5a3a7a' }, wick: { age: 'old', moustache: '#c8ccd0', cap: '#2f4a5a' }, fenn: { cap: '#1a2b4c', badge: true, capBadge: true, belt: true },
   pia: { skirt: '#3b3040', measure: true, ribbon: '#e8c45a', eye: '#4a6a3a' }, lark: { apron: '#d9534f', kerchief: '#d9534f', freckles: true, ribbon: '#d9534f', eye: '#3f7aa8' }, noor: { flowerPin: '#f2a0c0', ribbon: '#9bb07a', eye: '#5a3a2a' },
-  tika: { goggles: true, smudge: true, bib: true, eye: '#2f8f5a' }, vesna: { headphones: '#ece6f0', headphonesTrim: '#e05c8a', skirt: '#5b4a7a', ribbon: '#2b2533', eye: '#8a3a6a' } };
+  tika: { goggles: true, smudge: true, bib: true, eye: '#2f8f5a' }, vesna: { headphones: '#ece6f0', headphonesTrim: '#e05c8a', skirt: '#5b4a7a', ribbon: '#2b2533', eye: '#8a3a6a' },
+  hana: { ribbon: '#e0403a', kerchief: '#e0403a', smudge: true, bib: true, freckles: true, eye: '#3f7a8a' } };
 const lookOf = (id) => ({ ...NPCS[id].look, ...(LOOKS[id] || {}) });
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 

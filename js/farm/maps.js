@@ -864,7 +864,7 @@ function lowerTwo(m) {
   m.prop('decimator_ring', 25, 13, { w: 6, d: 4, label: 'Ring three' });
   m.prop('terminal', 22, 15, { act: 'terminal', log: 'ninefold_report', label: 'Site Ninefold terminal' }); m.prop('crypt_wall', 33, 15, { act: 'terminal', log: 'the_roll', label: 'The roll' });
   for (const [x, y] of [[23, 17], [32, 17], [22, 13], [33, 13]]) lamp(x, y, 'vault');
-  m.spot('lower.works', 10.2, 58.6).spot('lower.vents', 42, 57.6).spot('lower.reactor', 49.5, 52.6).spot('lower.vault', 27.5, 17.6);
+  m.spot('lower.works', 10.2, 58.6).spot('lower.press', 15, 58.7).spot('lower.vents', 42, 57.6).spot('lower.reactor', 49.5, 52.6).spot('lower.vault', 27.5, 17.6);
 }
 // Fits the Lower deck to how far it has been restored: drained tunnels become floor, open gates stop blocking.
 export function lowerState(m, flags = {}) {

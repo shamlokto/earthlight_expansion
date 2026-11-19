@@ -1788,6 +1788,7 @@ import { EAST_FIELD, FIELD_ORIGINS } from './data.js';
 // flags.fold, flags.duckhouse); the East Terrace field (flags.eastfield); artisan machines set down on the farm like chests
 // (state.machines = [ { kind, map, x, y, item, out, n, days } ]); the shops of Market Lane; a song request on the radio.
 NPC_IDS.push('pia', 'lark', 'noor', 'tika', 'vesna');
+NPC_IDS.push('hana');                   // the Undercroft, release 2: Venn's apprentice, back from the ducts
 Object.assign(HOUSING, { goat: { cap: 4, home: 'fold', food: 'fodder' }, sheep: { cap: 4, home: 'fold', food: 'fodder' }, duck: { cap: 6, home: 'duck house', food: 'feed' } });
 Object.assign(NAMES, {
   goat: ['Clementine', 'Pickle', 'Sorrel', 'Barnaby', 'Tuppence', 'Quince', 'Fennel', 'Hazelnut'],

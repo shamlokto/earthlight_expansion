@@ -3861,3 +3861,107 @@ export const HUB_CUP_LINES = {
   arenaShut: 'The drum is quiet, its balls tethered. The Hub Cup is on Autumn 19, from ten.',
   played: 'You have had your five throws this year. The stands are still cheering someone.',
 };
+// ---- Hana Corvel (release 2): Venn's apprentice before the war, who hid in the ducts above the Works for three years and
+// comes back down the day the press wakes. A friend, not a romance candidate; she lives below, so she is one of the UNDERFOLK.
+UNDERFOLK.push('hana'); VILLAGERS.push('hana'); SPOTS.push('lower.press');
+NPCS.hana = {
+  id: 'hana', name: 'Hana Corvel', short: 'Hana', title: 'Venn\'s apprentice at the Works; back from the ducts', portrait: 'look:hana',
+  look: { skin: '#f3d2b8', hair: '#2f3354', top: '#c8553d', bottom: '#3d4f6a', style: 'odango' },
+  birthday: { season: 3, day: 19 },
+  loves: ['copper', 'honey_toast', 'strawberry', 'glowcap'],
+  likes: ['scrap', 'tea', 'bread', 'pie', 'nickel_iron', 'cave_fish', 'mushroom_skewer'],
+  dislikes: ['tonic', 'pipe_eel', 'onion'],
+};
+tierOf.hana = { ...Object.fromEntries(NPCS.hana.dislikes.map((x) => [x, 'disliked'])), ...Object.fromEntries(NPCS.hana.likes.map((x) => [x, 'liked'])), ...Object.fromEntries(NPCS.hana.loves.map((x) => [x, 'loved'])), gear_brooch: 'loved', pipe_whistle: 'liked', tin_lantern: 'liked' };
+FESTIVAL_SPOTS['lower.arena'].hana = 'lower.arenagate';
+// The press all day, lunch at the kettle, the bath after work; Sundays in the drum and the warm tiles.
+SCHEDULE.hana = (wd, m, c) => {
+  const f = (c && c.flags) || {}; if (!f.ld_works) return null;
+  if (wd === 6) return pick(m, [H(9), H(13), f.ld_arena ? 'lower.arena' : 'lower.gallery'], [H(13), H(17), f.ld_vents ? 'lower.vents' : 'lower.pumps'], [H(17), H(21), 'lower.gallery']);
+  return pick(m, [H(7, 30), H(12), 'lower.press'], [H(12), H(13), f.ld_enclave ? 'lower.kettle' : 'lower.landing'], [H(13), H(17), 'lower.press'], [H(17), H(19), f.ld_vents ? 'lower.vents' : 'lower.gallery'], [H(19), H(22), 'lower.landing']);
+};
+TALK.hana = {
+  first: ['Oh! A person. A whole one. Sorry. I am Hana. I used to work here.', 'I still work here, apparently. The press woke up and so did I.'],
+  bday: ['You remembered! Nobody has had my birthday on a list for three years. I was starting to think I had stopped having them.', 'Thank you. I am going to be insufferable all day.'],
+  b0: [
+    ['I was Venn\'s apprentice. Then the shaking, and I hid in the ducts above the press.', 'Three years. I came out for mushrooms and water and went back in. I am very good at ducts now.'],
+    'The press takes scrap and ore and gives back lamps. It is the nicest machine in the colony. Do not tell the reactor.',
+    ['Venn cried when I came down the ladder.', 'He says it was dust. There is a lot of dust in here. I cried too, and that was also dust.'],
+  ],
+  b1: [
+    'Bring me copper and I will make you anything. Within reason. Within slightly unreasonable reason.',
+    ['I heard the families singing through the vents, all three years.', 'I sang back, very quietly. Agnes says she always thought it was the pipes.'],
+    'Moth wants a lantern with a door that opens. I am designing hinges. I have never been so happy about hinges.',
+  ],
+  b2: [
+    ['People up top think the Lower deck is sad.', 'It is warm and it hums and everybody knows your name. It is the least sad place I know.'],
+    'You have soot on your nose. ...There. Gone. Now I have soot on my thumb. That is fair.',
+    ['Tika came down to see the press.', 'We talked about gear ratios for four hours. Venn went to bed. It was the best night I have had in years.'],
+  ],
+  b3: [
+    'If I ever have a workshop of my own, there will be a stool in it with your name on it. Painted. Badly. With love.',
+    ['I was so frightened in the ducts.', 'Then a farmer came down the lift and started lighting lamps. I watched you from the grille for a week before I was brave enough.'],
+    'You are my favourite person who is not a machine. That is the highest honour I can give. Ask anyone.',
+  ],
+  s0: 'Spring up top? Down here it means the cistern water warms and the press runs sweeter. Same thing, really.',
+  s1: 'Summer. The vent bath is too hot by noon. I go anyway. I am stubborn and pink.',
+  s2: 'Autumn means the Hub Cup. I am not competing. I am in charge of the ball pump. It is a position of great power.',
+  s3: 'Winter. Everyone from up top comes down for the warm tiles. I charge them nothing and judge them silently.',
+  sun: 'No weather down here. I miss weather. Is that silly? I miss being rained on.',
+  rain: 'Raining up top? Tell me about it. Every drop. I want details.',
+  snow: 'Snow! Up top! I am going up to look at it after work. Do not let me make a snow-Venn. I will make a snow-Venn.',
+  storm: 'A storm up top. The lift hums differently in a storm. I can feel it in my teeth.',
+  morning: 'Morning! The press has its coffee first, which is oil, and then I have mine, which is also nearly oil.',
+  evening: 'End of the shift. My hands smell of copper and my hair smells of steam. A perfect day.',
+  year2: ['A whole year of you coming down the lift.', 'I keep a tally on the press, like the one by the round door. Yours is the happy kind.'],
+  flag: {
+    ld_vents: ['The vent bath! I sit on the warm tiles and the glowcaps steam and I do not think about the ducts at all.'],
+    ld_reactor: [['Ruess said my rivets were acceptable.', 'Acceptable! From Ruess! I am having it engraved.']],
+    ld_vault: [['The round door is open.', 'I always wondered what Venn was guarding. It was names. Mine is on the wall, under the Works. I did not know he had written it.']],
+  },
+};
+GIFT.hana = {
+  loved: 'For me? Oh, this is wonderful. I am going to put it somewhere the press can see it. It gets jealous.',
+  liked: 'Thank you! That is going straight in my pocket, with the screws and the good bolts.',
+  neutral: 'Ooh, a thing. Thank you. I will find out what it is for. I always do, eventually.',
+  disliked: 'Ah. No. Duct food, that. I have had enough to last me. Thank you anyway, truly.',
+  bday: 'On my birthday! ',
+};
+MEETINGS.hana = [
+  L('narrator', 'A clang from inside the Works, and a young woman drops out of a ceiling hatch onto a stack of crates, soot on her cheeks, two dark buns of hair tied up with red cloth.'),
+  L('hana', 'Ow. Fine. I am fine. Hello! You are the farmer. The one with the lamps.'),
+  L('sato', 'Mira Sato. Were you... in the ceiling?'),
+  L('hana', 'In the ducts. Since the shaking. Three years. I am Hana Corvel, Venn\'s apprentice, and I heard the press start this morning and I thought: oh, I miss that noise.'),
+  L('hana', 'So I came down. Venn sat on a crate and did not say anything for a long time. Then he gave me my old gloves. He had kept them on a hook.'),
+  L('hana', 'Anyway! If you want something made, tell me. If you want it made well, tell Venn. If you want it made fast, definitely tell me.'),
+];
+QUESTS.hana = [
+  Q('hana_copper', 'copper', 3, 'Three copper ore? I am rewinding the crane motor and I refuse to ask Venn for his. He labels them.', 'Copper! Lovely and green. The crane says thank you. It says it by not falling on me.'),
+  Q('hana_bread', 'bread', 2, 'Two loaves from up top. I lived on duct mushrooms for three years. I am making up for it one loaf at a time.', 'Still warm from the lift! I am going to eat one now and the other one also now.'),
+  Q('hana_tea', 'tea', 1, 'A tea from the Hangar? Venn\'s kettle tastes of valve and so, by now, does Venn.', 'Real tea. I am going to drink it very slowly in front of him.'),
+  Q('hana_scrap', 'scrap', 6, 'Six scrap for the press. Moth has requested a lantern with a door that opens. She has drawn the hinges.', 'Perfect. The hinges will be exactly as drawn. They will not work, but they will be exactly as drawn.', { minHearts: 2 }),
+  Q('hana_strawberry', 'strawberry', 3, 'Three strawberries. I have never had one. Everybody up top talks about them like a religion.', 'Oh. Oh no. Now I understand. I am converted. I am a strawberry person now.', { season: 0 }),
+  Q('hana_glowcap', 'glowcap', 2, 'Two glowcaps for the ledge in the vent bath. They steam so prettily in the warm. It is my favourite thing on the deck.', 'There. Look at them glow. Thank you, Sato. Come and soak some evening; I will save you the warm end.', { minHearts: 3 }),
+];
+EVENTS.push(
+  { id: 'hana3', npc: 'hana', hearts: 3, map: 'lower', flag: 'ld_works', from: H(13), to: H(17),
+    lines: [
+      L('narrator', 'Hana is lying on her back under the press with only her boots showing. A spanner is singing a tune against a bolt.'),
+      L('hana', 'Sato? Hand me the thin one. No, the other thin one. Thank you.'),
+      L('hana', 'Up in the ducts I kept a list of every machine I could hear. Pumps, fans, the lift. I gave them names so I would have someone to talk to.'),
+      L('hana', 'The press was Aunt Doris. Do not tell Venn. He would never recover.'),
+      L('sato', 'I think Aunt Doris is a very good name for a press.'),
+      L('hana', 'You see? This is why I came out. Here. I pressed you a brooch from a gauge gear. It still turns if you breathe on it.'),
+    ],
+    reward: { love: 4, item: ['gear_brooch', 1] } },
+  { id: 'hana7', npc: 'hana', hearts: 7, map: 'lower', flag: 'ld_vents', from: H(17), to: H(19),
+    lines: [
+      L('narrator', 'The vent bath after the shift. Hana sits on the warm tiles with her feet in the water and her buns coming undone, lining glowcaps up along the ledge.'),
+      L('hana', 'I used to watch you through the grille, you know. Lighting lamps. One a day, sometimes two.'),
+      L('hana', 'I thought: if she keeps going, one day she will light the Works, and I can come down. I counted the lamps like Wick counts fish.'),
+      L('sato', 'Why did you not just call out?'),
+      L('hana', 'I forgot how. Three years is a long time to be quiet. You taught me again, a lamp at a time.'),
+      L('hana', 'So. Thank you. That is all. Now get in, the water is perfect, and if you splash my glowcaps I will never forgive you.'),
+    ],
+    reward: { love: 5, item: ['tin_lantern', 1] } },
+);

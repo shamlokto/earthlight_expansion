@@ -37,9 +37,11 @@ const CAST = {
   // 2026-11-19: Market Lane (portraits drawn from their looks)
   pia: { portrait: 'look:pia', shop: 'tailor' }, lark: { portrait: 'look:lark', shop: 'bakery' }, noor: { portrait: 'look:noor', shop: 'florist' },
   tika: { portrait: 'look:tika', shop: 'garage' }, vesna: { portrait: 'look:vesna', shop: 'radio' },
+  // 2026-11-19: the Undercroft, release 2
+  hana: { portrait: 'look:hana' },
 };
 const LANE = ['pia', 'lark', 'noor', 'tika', 'vesna'];
-const NEWCOMERS = [...LANE, 'kestrel', 'mori', 'yui', 'calloway', 'fenn', 'venn', 'thorne', 'moth', 'wick'];
+const NEWCOMERS = [...LANE, 'kestrel', 'mori', 'yui', 'calloway', 'fenn', 'venn', 'thorne', 'moth', 'wick', 'hana'];
 const UNDER = story.UNDERFOLK || [];
 // The Undercroft's progress flags in order: year 2 schedules are checked with the deck half restored (spring, summer), then all of it.
 const LD = ['ld_lights', 'ld_pumps', 'ld_pump2', 'ld_pump3', 'ld_catacombs', 'ld_enclave', 'ld_rehoused', 'ld_works', 'ld_arena', 'ld_vents', 'ld_reactor', 'ld_vault'];
@@ -54,7 +56,7 @@ const SPOTS = new Set(('farm.porch farm.bin farm.gate farm.pond farm.field villa
   'cafe.counter cafe.table1 cafe.table2 cafe.table3 hall.desk hall.floor ' +
   'clinic.counter clinic.floor library.counter library.floor village.clinicfront village.libraryfront ' +
   'church.altar church.pew central.churchgarden central.schoolyard school.floor depot.desk depot.floor central.depotfront ' +
-  'central.gallery undercroft.counter lower.landing lower.gallery lower.pumps lower.pumphouse lower.sump lower.catacombs lower.beds lower.enclave lower.kettle school.teacher school.pupil central.homes lower.works lower.vents lower.reactor lower.vault lower.arena lower.stands lower.stands2 lower.arenagate').split(' '));
+  'central.gallery undercroft.counter lower.landing lower.gallery lower.pumps lower.pumphouse lower.sump lower.catacombs lower.beds lower.enclave lower.kettle school.teacher school.pupil central.homes lower.works lower.vents lower.reactor lower.vault lower.arena lower.stands lower.stands2 lower.arenagate lower.press').split(' '));
 const STYLES = new Set(['bob', 'short', 'long', 'bald', 'bun', 'bandana', 'cap', 'braid', 'ponytail', 'odango', 'twintails']);
 const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', 'cafe', 'hall', 'clinic', 'library', 'central', 'hangar', 'church', 'depot', 'school', 'lower']);
 const TIERS = new Set(['loved', 'liked', 'neutral', 'disliked']);
@@ -64,7 +66,7 @@ const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_
 const CROPS = ['turnip', 'potato', 'cucumber', 'strawberry', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach', 'moonflower'];
 const GIFTABLE = [...CROPS, 'egg', 'milk_s', 'milk_m', 'milk_l', ...FISH, 'herb', 'berry', 'mushroom', 'frostcap', 'comet_ice', 'nickel_iron', 'silica', 'copper', 'titanium', 'platinum',
   'scrap', 'alloy', 'crystal', ...RELICS, 'bread', 'soup', 'pie', 'tea', 'tonic',
-  'cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi', 'shiitake', 'pale_oyster', 'glowcap', 'deep_truffle', 'pump_part', 'lamp_kit', 'diary_page', 'undercroft_stew', 'fish_grill', 'honey_toast', 'wild_apple', 'cherry', 'peach', 'pine_nut', 'mushroom_skewer'];
+  'tin_lantern', 'gear_brooch', 'pipe_whistle', 'cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi', 'shiitake', 'pale_oyster', 'glowcap', 'deep_truffle', 'pump_part', 'lamp_kit', 'diary_page', 'undercroft_stew', 'fish_grill', 'honey_toast', 'wild_apple', 'cherry', 'peach', 'pine_nut', 'mushroom_skewer'];
 // 2026-11-19: Market Lane's spots, rooms and goods
 for (const x of ('village.lane village.bakeryfront village.tailorfront village.floristfront village.garagefront village.radiofront village.millbridge village.trialbeds ' +
   'bakery.counter bakery.table bakery.floor tailor.counter florist.counter garage.counter garage.bench radio.counter cafe.stage hill.terraces farm.east').split(' ')) SPOTS.add(x);
