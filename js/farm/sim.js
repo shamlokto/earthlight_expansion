@@ -801,12 +801,12 @@ export function setFlag(state, key, value = true) {
 // ---------------------------------------------------------------- the ruins (state.mine)
 
 // A site on Earth's surface: 0 open, 1 rubble pile, 2 the way down (found), 3 wall. One pile hides the way down.
-// Two kinds of site share this machinery: mode 'earth' (the Old World, reached by Maris's shuttle: rubble,
-// relics, creatures, hazard haze) and mode 'belt' (the asteroid belt, flown from Vashti's hangar: rocks to
-// drill for ore, a jump buoy to go deeper, no creatures, no haze).
+// The Old World (mode 'earth', reached by Maris's shuttle: rubble, relics, creatures, hazard haze). Since the
+// belt became one open map (below), enterMine(state, n, 'belt') is enterBelt(state, n).
 export function enterMine(state, depth = 1, mode = 'earth') {
+  if (mode === 'belt') return enterBelt(state, depth);
   depth = int(depth) && depth > 0 ? Math.min(depth, 999) : 1;
-  const belt = mode === 'belt';
+  const belt = false;
   const w = MINE_W, h = MINE_H, at = (x, y) => y * w + x, entry = at(...ENTRY);
   const cells = Array.from({ length: w * h }, () => { const r = rnd(state); return r < 0.12 ? 3 : r < 0.40 ? 1 : 0; });
   cells[entry] = 0;
@@ -837,13 +837,13 @@ export function enterMine(state, depth = 1, mode = 'earth') {
       for (let y = cy - 1; y <= cy + 1; y++) for (let x = cx - 1; x <= cx + 1; x++) if (x >= 0 && y >= 0 && x < w && y < h && cells[at(x, y)] === 0 && Math.abs(x - ENTRY[0]) + Math.abs(y - ENTRY[1]) > 2) haz[at(x, y)] = kind;
     }
   }
-  if (belt) state.stats.deepestBelt = Math.max(state.stats.deepestBelt || 0, depth); else state.stats.deepest = Math.max(state.stats.deepest, depth);
+  state.stats.deepest = Math.max(state.stats.deepest, depth);
   // Depth 10 and 20 of the Old World each hide a star-plum in the pile farthest from the landing (once ever).
   let star = -1;
   if (!belt && (depth === 10 || depth === 20) && !state.flags['plum_ruins' + depth]) {
     let bd = -1; for (const i of piles) { const d = Math.abs((i % w) - ENTRY[0]) + Math.abs(Math.floor(i / w) - ENTRY[1]); if (d > bd) { bd = d; star = i; } }
   }
-  state.mine = { mode: belt ? 'belt' : 'earth', depth, floor: depth, w, h, cells, monsters, hatch, star, haz };
+  state.mine = { mode: 'earth', depth, floor: depth, w, h, cells, monsters, hatch, star, haz };
   return state.mine;
 }
 // The belt's ores: [id, first sector, weight there, weight gained a sector further out (to sector 20)].
@@ -878,6 +878,7 @@ function find(state, depth, mode = 'earth') {
 export function hitRock(state, x, y) {
   const m = state.mine, no = (msg) => fail(msg, { broke: false, gained: [], hatch: false });
   if (!m) return no('You are not in the ruins.');
+  if (m.mode === 'belt') return beltHit(state, x, y);
   const c = int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? m.cells[y * m.w + x] : -1;
   if (c === 2) return no('The way down is open.');
   if (c !== 1) return no('There is nothing to search here.');
@@ -885,10 +886,9 @@ export function hitRock(state, x, y) {
   m.cells[i] = hatch ? 2 : 0;
   state.stats.searched++;
   const starHere = i === m.star && !state.flags['plum_ruins' + m.depth];
-  const extra = m.mode === 'belt' && state.flags.drill && rnd(state) < DRILL_BONUS ? find(state, m.depth, 'belt') : null;   // the drill head pulls a second core now and then
-  const res = take(state, [...(id ? [[id, 1]] : []), ...(extra ? [[extra, 1]] : []), ...(starHere ? [['star_plum', 1]] : [])], { ok: true, broke: true, gained: [], hatch });
+  const res = take(state, [...(id ? [[id, 1]] : []), ...(starHere ? [['star_plum', 1]] : [])], { ok: true, broke: true, gained: [], hatch });
   if (starHere && res.gained.some((g) => g.id === 'star_plum')) { state.flags['plum_ruins' + m.depth] = true; m.star = -1; res.star = true; res.msg = 'Under the rubble, in a sealed seed tin, a small fruit glowing violet: a star-plum.'; }
-  if (hatch) res.msg = m.mode === 'belt' ? (res.gained.length ? `You drilled out ${lower(res.gained[0].id)}, and behind the rock a jump buoy blinks.` : 'Behind the rock, a jump buoy blinks: the way to the next sector.') : res.gained.length ? `You found ${lower(res.gained[0].id)}, and a way down.` : 'Under the rubble is a way down.';
+  if (hatch) res.msg = res.gained.length ? `You found ${lower(res.gained[0].id)}, and a way down.` : 'Under the rubble is a way down.';
   return spend(state, 1, res);
 }
 export function defeatMonster(state, index) {
@@ -904,7 +904,197 @@ export function monsterHit(state) {
   return { ok: true, msg: 'Something clipped the Pallas. You lost a little stamina.' };
 }
 export function leaveMine(state) { state.mine = null; return { ok: true }; }
-export const enterBelt = (state, depth = 1) => enterMine(state, depth, 'belt');
+// ---------------------------------------------------------------- the asteroid belt (one big open map, 2026-11-19)
+// Sato flies out of Vashti's hangar in a space suit with a thruster pack and breaks rocks with her hammer.
+// The belt is one map BELT_W wide, running north from the launch apron (the south edge) through BELT_SECTORS
+// bands of SECTOR_H rows: sector 1 near home, sector 20 at the far north, richer the further out. The layout
+// (rock fields, great unbreakable asteroids, comet ice, rich veins, a pickup pod in every sector, landmarks)
+// comes from state.belt.seed and never changes; the rocks she breaks drift back 2–5 days later
+// (state.belt.gone: cell → the day it returns). The suit's air is the price of distance: AIR_PER_TILE a tile
+// flown. Every sector has a pickup pod that flies her home; the launch cradle starts a trip at sector 1, or at
+// sector 5, 10, 15, 20 once she has reached it (state.belt.reached, the milestones).
+// Cells: 0 open, 1 rock, 3 great asteroid (solid), 4 comet ice, 5 rich vein, 6 pickup pod, 7 landmark.
+export const BELT_W = 34, SECTOR_H = 14, BELT_SECTORS = 20, BELT_APRON = 6, BELT_H = BELT_APRON + BELT_SECTORS * SECTOR_H;
+export const BELT_PAD = [17, BELT_H - 3], AIR_TANK = 100, AIR_TANK_BIG = 150, AIR_PER_TILE = 0.3, BELT_MILESTONE = 5;
+export const BELT_LANDMARKS = { 3: 'derelict', 8: 'comet', 13: 'wreck', 20: 'far_marker' };
+export const MINER_REACH = 4, MINER_RUN = 10, MINER_HOLD = 12, MINER_PRICE = 1200;
+// The sector of a belt row (cell y): the apron and sector 1 are home; sector 20 is the far north.
+export const beltSector = (y) => (y >= BELT_H - BELT_APRON ? 1 : clamp(BELT_SECTORS - Math.floor(y / SECTOR_H), 1, BELT_SECTORS));
+export const sectorTop = (s) => (BELT_SECTORS - s) * SECTOR_H;          // the northmost row of a sector
+const hash32 = (...a) => { let h = 2166136261; for (const v of a) h = Math.imul(h ^ (v | 0), 16777619) >>> 0; return h; };
+function seeded(seed) { let a = seed | 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), a | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const LAYOUTS = new Map();
+// The belt's fixed layout for a seed (cached; pure): { w, h, cells, pods: [{ sector, x, y }], marks: [{ kind, sector, x, y }] }.
+export function beltLayout(seed) {
+  seed >>>= 0; if (LAYOUTS.has(seed)) return LAYOUTS.get(seed);
+  const w = BELT_W, h = BELT_H, r = seeded(seed ^ 0x5eed), ri = (n) => Math.floor(r() * n), cells = new Array(w * h).fill(0), at = (x, y) => y * w + x;
+  const inside = (x, y) => x >= 0 && y >= 0 && x < w && y < BELT_H - BELT_APRON;
+  const blob = (cx, cy, rx, ry, kind, p, onlyEmpty = true) => { for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - rx); x <= cx + rx; x++) { if (!inside(x, y)) continue; const d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2; if (d <= 1 && r() < p * (1.15 - d * 0.4) && (!onlyEmpty || !cells[at(x, y)])) cells[at(x, y)] = kind; } };
+  const clear = (cx, cy, rad) => { for (let y = cy - rad; y <= cy + rad; y++) for (let x = cx - rad; x <= cx + rad; x++) if (inside(x, y)) cells[at(x, y)] = 0; };
+  const pods = [], marks = [];
+  for (let s = 1; s <= BELT_SECTORS; s++) {
+    const y0 = sectorTop(s), Y = () => y0 + 1 + r() * (SECTOR_H - 2);
+    for (let n = 1 + Math.floor(s / 4) + ri(2); n > 0; n--) blob(2 + r() * (w - 4), Y(), 0.8 + r() * 1.6, 0.8 + r() * 1.3, 3, 1.1);   // great asteroids
+    for (let n = 3 + ri(3); n > 0; n--) blob(2 + r() * (w - 4), Y(), 2 + r() * 2.6, 1.4 + r() * 1.6, 1, 0.58);                      // rock fields with gaps between
+    if (s >= 2) for (let n = s >= 6 && s <= 14 ? 2 : 1; n > 0; n--) blob(2 + r() * (w - 4), Y(), 1.2 + r(), 1 + r() * 0.8, 4, 0.8); // comet ice clusters
+    for (let y = y0; y < y0 + SECTOR_H; y++) for (let x = 0; x < w; x++) if (!cells[at(x, y)] && r() < 0.022) cells[at(x, y)] = 1;
+    const pr = s < 3 ? 0 : Math.min(0.2, 0.012 * (s - 2));                // rich veins: only further out, and more of them
+    for (let y = y0; y < y0 + SECTOR_H; y++) for (let x = 0; x < w; x++) if (cells[at(x, y)] === 1 && r() < pr) cells[at(x, y)] = 5;
+    const lm = BELT_LANDMARKS[s];
+    if (lm) { const x = 5 + ri(w - 10), y = y0 + 4 + ri(SECTOR_H - 8); if (lm === 'comet') blob(x, y, 3.5, 2.6, 4, 0.75, false); clear(x, y, 1); cells[at(x, y)] = 7; marks.push({ kind: lm, sector: s, x, y }); }
+    let px, py; do { px = 4 + ri(w - 8); py = y0 + 3 + ri(SECTOR_H - 6); } while (marks.some((m) => Math.abs(m.x - px) < 5 && Math.abs(m.y - py) < 4));
+    clear(px, py, 2); cells[at(px, py)] = 6; pods.push({ sector: s, x: px, y: py });
+  }
+  // Nothing is walled off from the launch pad: carve a way through the great asteroids to any cut-off pocket.
+  const passable = (c) => c !== 3 && c !== 6 && c !== 7, start = at(...BELT_PAD);
+  for (let guard = 0; guard < 400; guard++) {
+    const seen = new Uint8Array(w * h), todo = [start]; seen[start] = 1;
+    while (todo.length) { const i = todo.pop(), x = i % w, y = (i - x) / w; for (const [dx, dy] of DIRS) { const nx = x + dx, ny = y + dy, j = at(nx, ny); if (nx < 0 || ny < 0 || nx >= w || ny >= h || seen[j] || !passable(cells[j])) continue; seen[j] = 1; todo.push(j); } }
+    const lost = cells.findIndex((c, i) => passable(c) && !seen[i]); if (lost < 0) break;
+    const back = new Int32Array(w * h).fill(-1), q = [lost]; back[lost] = lost; let hit = -1;
+    for (let k = 0; k < q.length && hit < 0; k++) { const i = q[k], x = i % w, y = (i - x) / w; for (const [dx, dy] of DIRS) { const nx = x + dx, ny = y + dy, j = at(nx, ny); if (nx < 0 || ny < 0 || nx >= w || ny >= h || back[j] >= 0 || cells[j] === 6 || cells[j] === 7) continue; back[j] = i; if (seen[j]) { hit = j; break; } q.push(j); } }
+    if (hit < 0) { cells[lost] = 3; continue; }
+    for (let i = hit; i !== lost; i = back[i]) if (cells[i] === 3) cells[i] = 0;
+    if (cells[lost] === 3) cells[lost] = 0;
+  }
+  const out = { w, h, cells, pods, marks }; LAYOUTS.set(seed, out); return out;
+}
+// The belt's lasting state: the layout seed, the rocks still drifting back, the farthest sector reached.
+function beltOf(state) {
+  const s = ensure(state);
+  if (!s.belt || typeof s.belt !== 'object') s.belt = {};
+  const b = s.belt; if (!Number.isInteger(b.seed)) b.seed = hash32(s.seed || 1, 77) % 1000000007;
+  if (!b.gone || typeof b.gone !== 'object') b.gone = {};
+  if (!int(b.reached) || b.reached < 1) b.reached = clamp(int(s.stats.deepestBelt) ? s.stats.deepestBelt : 1, 1, BELT_SECTORS);   // old layered saves keep their record
+  return b;
+}
+export const beltAirMax = (state) => (state.flags.tank ? AIR_TANK_BIG : AIR_TANK);
+// Where the launch cradle can start a trip: sector 1, and every fifth sector she has reached.
+export const beltStarts = (state) => { const top = beltOf(state).reached; return [1, ...[5, 10, 15, 20].filter((s) => s <= top)]; };
+// The hardness of a rock: plain rock and ice 1; a rich vein 2, and 3 from sector 10. The hammer's level must be at
+// least the hardness; a hammer one level harder than the rock breaks it in one hit, an equal one takes two.
+export const rockHardness = (kind, sector) => (kind === 5 ? (sector >= 10 ? 3 : 2) : kind === 1 || kind === 4 ? 1 : 0);
+export const hammerHits = (hard, level) => (!hard || level < hard ? 0 : level > hard ? 1 : 2);
+export function enterBelt(state, start = 1) {
+  const b = beltOf(state), L = beltLayout(b.seed), today = absDay(state);
+  start = beltStarts(state).includes(start) ? start : 1;
+  for (const k of Object.keys(b.gone)) if (!(b.gone[k] > today)) delete b.gone[k];
+  const cells = L.cells.slice(); for (const k of Object.keys(b.gone)) if (cells[+k] === 1 || cells[+k] === 4 || cells[+k] === 5) cells[+k] = 0;
+  const pod = L.pods.find((p) => p.sector === start), pos = start > 1 && pod ? [pod.x + 0.5, pod.y + 2.5] : [BELT_PAD[0] + 0.5, BELT_PAD[1] + 0.5];
+  const air = beltAirMax(state);
+  state.mine = { mode: 'belt', depth: start, floor: start, sector: start, start, w: L.w, h: L.h, cells, hp: {}, pods: L.pods, marks: L.marks, pos, air, airMax: air, monsters: [], haz: [], hatch: -1, star: -1, miner: null, ver: 0 };
+  state.stats.deepestBelt = Math.max(state.stats.deepestBelt || 0, start);
+  return state.mine;
+}
+const inBelt = (state) => state.mine && state.mine.mode === 'belt' ? state.mine : null;
+// The UI reports where Sato is (cell coordinates) as she flies: air goes with distance; a new sector is noted.
+export function beltMove(state, x, y) {
+  const m = inBelt(state); if (!m || !Number.isFinite(x) || !Number.isFinite(y)) return fail('You are not in the belt.');
+  const d = Math.min(3, Math.hypot(x - m.pos[0], y - m.pos[1])); m.pos = [x, y];
+  m.air = Math.max(0, Math.round((m.air - d * AIR_PER_TILE) * 1000) / 1000);
+  const s = beltSector(Math.floor(y)), res = { ok: true, air: m.air, sector: s, changed: s !== m.sector, first: false, milestone: false, out: m.air <= 0 };
+  if (res.changed) {
+    m.sector = m.depth = s; const b = beltOf(state);
+    if (s > b.reached) { b.reached = s; res.first = true; res.milestone = s % BELT_MILESTONE === 0; }
+    state.stats.deepestBelt = Math.max(state.stats.deepestBelt || 0, s);
+  }
+  return res;
+}
+const nearPod = (m) => m.pods.find((p) => Math.hypot(p.x + 0.5 - m.pos[0], p.y + 0.5 - m.pos[1]) < 2.6) || null;
+// Home to the hangar: 'pad' (the launch pad on the apron, 10 min), 'pod' (a sector's pickup pod, beside it: 15 min),
+// or 'tow' (the air ran out: Vashti reels her in on the tow line, an hour, and it takes it out of her).
+export function beltHome(state, how = 'pad') {
+  const m = inBelt(state); if (!m) return fail('You are not in the belt.');
+  if (how === 'pod' && !nearPod(m)) return fail('There is no pickup pod here.');
+  if (how === 'pad' && Math.hypot(m.pos[0] - BELT_PAD[0] - 0.5, m.pos[1] - BELT_PAD[1] - 0.5) > 3) return fail('The launch pad is back on the apron.');
+  const minutes = how === 'tow' ? 60 : how === 'pod' ? 15 : 10;
+  if (how === 'tow') state.player.stamina = Math.max(Math.min(1, state.player.stamina), state.player.stamina - 20);
+  state.mine = null; tick(state, minutes);
+  return { ok: true, minutes, how, msg: how === 'tow' ? 'The air alarm, then the tug of the tow line: Vashti reels you in. It takes an hour, and it takes it out of you.' : how === 'pod' ? 'The pickup pod seals, hums, and flies you home on its own. Fifteen minutes of stars.' : 'Back through the hangar mouth.' };
+}
+// What a rock gives up: plain rock by the sector's odds; comet ice mostly ice; a rich vein always something good.
+function richFind(state, s) {
+  const pool = [['titanium', 4, 3], ['star_metal', 3, 2.5], ['platinum', 8, 2.5], ['crystal', 10, 2], ['alloy', 1, s < 5 ? 3 : 1], ['copper', 1, s < 4 ? 3 : 0.5]].filter(([, from]) => s >= from);
+  return pool[pick(state, pool.map((p) => p[2]))][0];
+}
+function beltFind(state, kind, s) {
+  if (kind === 5) return richFind(state, s);
+  if (kind === 4) { const r = rnd(state); return r < 0.72 ? 'comet_ice' : r < 0.86 ? 'silica' : null; }
+  return find(state, s, 'belt');
+}
+function breakCell(state, m, i, by) {
+  const kind = m.cells[i], s = beltSector(Math.floor(i / m.w)), b = beltOf(state);
+  m.cells[i] = 0; delete m.hp[i]; m.ver++; state.stats.searched++;
+  b.gone[i] = absDay(state) + 2 + (hash32(b.seed, i, absDay(state)) % 4);   // a fresh rock drifts in 2–5 days later
+  const id = beltFind(state, kind, s), extra = by === 'sato' && state.flags.drill && rnd(state) < DRILL_BONUS ? beltFind(state, kind === 5 ? 1 : kind, s) : null;
+  return [...(id ? [id] : []), ...(extra ? [extra] : [])];
+}
+// Space with the hammer (or E): one hit on a belt rock. 1 stamina a hit.
+function beltHit(state, x, y) {
+  const m = state.mine, no = (msg) => fail(msg, { broke: false, gained: [] });
+  const i = int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? y * m.w + x : -1, kind = i >= 0 ? m.cells[i] : 0, s = i >= 0 ? beltSector(y) : 1;
+  const hard = rockHardness(kind, s);
+  if (!hard) return no(kind === 3 ? 'Too big to break: a whole asteroid. Fly round it.' : 'There is nothing to break here.');
+  if (!countItem(state, 'hammer')) return no(state.pending.upgrade && state.pending.upgrade.tool === 'hammer' ? 'Your hammer is at Ruess\'s workshop.' : 'You need your hammer to break rocks.');
+  const lv = state.player.toolLevel.hammer || 1, hits = hammerHits(hard, lv);
+  if (!hits) return no(`A ${hard >= 3 ? 'starsteel-hard' : 'hard'} vein: it needs ${hard >= 3 ? 'a Starsteel' : 'an Alloy'} hammer. Ruess can rework yours.`);
+  const left = (m.hp[i] ?? hits) - 1;
+  if (left > 0) { m.hp[i] = left; return spend(state, 1, { ok: true, broke: false, gained: [], left, msg: 'Crack. One more.' }); }
+  const res = take(state, breakCell(state, m, i, 'sato').map((id) => [id, 1]), { ok: true, broke: true, gained: [], left: 0, kind });
+  if (!res.gained.length && !res.msg) res.msg = kind === 4 ? 'The ice shatters into glitter. Nothing worth keeping.' : 'The rock splits. Nothing inside but more rock.';
+  return spend(state, 1, res);
+}
+// The mining unit (Ruess leases one, MINER_PRICE): F sets it down near Sato in the belt and it breaks plain rocks and
+// ice within MINER_REACH tiles of where it stands, one at a time (the UI calls minerWork every few seconds), MINER_RUN
+// charge a rock. A run is a charged battery from her rucksack (the flat one comes back); it keeps what it breaks in
+// its hopper (MINER_HOLD) until she comes close or recalls it. It will not touch the rich veins: those are hers.
+export function minerDeploy(state, x, y) {
+  const m = inBelt(state), u = ensure(state).miner;
+  if (!u) return fail('You have no mining unit. Ruess leases them at the Workshop.');
+  if (!m) return fail('The mining unit only works out in the belt.');
+  if (m.miner) return fail(`${u.name} is already out.`);
+  const cx = Math.floor(x), cy = Math.floor(y);
+  if (!int(cx) || cx < 0 || cy < 0 || cx >= m.w || cy >= m.h || m.cells[cy * m.w + cx]) return fail('There is no room to set it down there.');
+  let swapped = false;
+  if (u.charge < MINER_RUN) { if (!countItem(state, 'battery_full')) return fail(`${u.name} is flat. It needs a charged battery from your rucksack.`); removeItem(state, 'battery_full', 1); addItem(state, 'battery', 1); u.charge = 100; swapped = true; }
+  m.miner = { x: cx + 0.5, y: cy + 0.5, hold: [] };
+  return { ok: true, swapped, msg: `${u.name} unfolds its drill arm${swapped ? ' on a fresh battery' : ''}. Charge ${u.charge}%.` };
+}
+export function minerWork(state) {
+  const m = inBelt(state), u = state.miner, d = m && m.miner;
+  if (!d || !u) return fail('The mining unit is not out.', { idle: true });
+  if (d.hold.reduce((a, g) => a + g.n, 0) >= MINER_HOLD) return fail(`${u.name}'s hopper is full. Come and empty it.`, { full: true });
+  let best = -1, bd = MINER_REACH + 0.01;
+  for (let y = Math.max(0, Math.floor(d.y - MINER_REACH)); y <= Math.min(m.h - 1, d.y + MINER_REACH); y++) for (let x = Math.max(0, Math.floor(d.x - MINER_REACH)); x <= Math.min(m.w - 1, d.x + MINER_REACH); x++) {
+    const c = m.cells[y * m.w + x]; if (c !== 1 && c !== 4) continue; const dd = Math.hypot(x + 0.5 - d.x, y + 0.5 - d.y); if (dd < bd) { bd = dd; best = y * m.w + x; }
+  }
+  if (best < 0) return fail(`${u.name} has broken everything in reach. Set it down somewhere new.`, { idle: true });
+  let swapped = false;
+  if (u.charge < MINER_RUN) { if (!countItem(state, 'battery_full')) return fail(`${u.name}'s battery is flat. Give it a charged one (F to recall it, then set it down again).`, { flat: true }); removeItem(state, 'battery_full', 1); addItem(state, 'battery', 1); u.charge = 100; swapped = true; }
+  u.charge -= MINER_RUN; const got = breakCell(state, m, best, 'miner');
+  for (const id of got) { const l = d.hold.find((g) => g.id === id); if (l) l.n++; else d.hold.push({ id, n: 1 }); }
+  return { ok: true, x: best % m.w, y: Math.floor(best / m.w), got, charge: u.charge, swapped };
+}
+export function minerCollect(state) {
+  const m = inBelt(state), d = m && m.miner; if (!d || !d.hold.length) return fail('The hopper is empty.', { gained: [] });
+  const res = take(state, d.hold.map((g) => [g.id, g.n]), { ok: true, gained: [] });
+  d.hold = d.hold.filter((g) => !res.gained.some((x) => x.id === g.id));
+  return res;
+}
+export function minerRecall(state) {
+  const m = inBelt(state); if (!m || !m.miner) return fail('The mining unit is not out.', { gained: [] });
+  const res = m.miner.hold.length ? minerCollect(state) : { ok: true, gained: [] };
+  m.miner = null; res.ok = true; res.msg = `${state.miner.name} folds up and clamps onto your pack. Charge ${state.miner.charge}%.`;
+  return res;
+}
+// A charged battery for the mining unit at home (+60, the flat one comes back).
+export function chargeMiner(state) {
+  const u = ensure(state).miner; if (!u) return fail('You have no mining unit.');
+  if (!countItem(state, 'battery_full')) return fail('You need a charged battery.');
+  if (u.charge >= 100) return fail(`${u.name} is fully charged already.`);
+  removeItem(state, 'battery_full', 1); addItem(state, 'battery', 1); u.charge = Math.min(100, u.charge + 60);
+  return { ok: true, msg: `${u.name} beeps twice. Charge ${u.charge}%.` };
+}
 // Juno Maris's courier shuttle to the Old World: 200 cr a trip, free once she is a good friend (5 hearts).
 export const SHUTTLE_FARE = 200;
 export const shuttleFare = (state) => (hearts(state, 'maris') >= 5 ? 0 : SHUTTLE_FARE);
@@ -915,7 +1105,7 @@ export function takeShuttle(state, depth = 1) {
   return { ok: true, fare, msg: fare ? `You paid Maris ${fare} cr. Strap in.` : 'Maris waves away your money. "Friends fly free."' };
 }
 // Haze on the Old World: standing in it costs 1 stamina a tick (the UI ticks every few seconds), unless the Pallas has filters.
-export function hazardAt(state, x, y) { const m = state.mine; return m && m.mode !== 'belt' && Array.isArray(m.haz) && int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? m.haz[y * m.w + x] || 0 : 0; }
+export function hazardAt(state, x, y) { const m = state.mine; return m && m.mode === 'earth' && Array.isArray(m.haz) && int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? m.haz[y * m.w + x] || 0 : 0; }
 export function hazardTick(state, x, y) {
   const h = hazardAt(state, x, y);
   if (!h) return { ok: true, drained: 0, hazard: 0 };
