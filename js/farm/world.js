@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import * as art from './art.js';
 import { CROPS } from './data.js';
 import { cropStage } from './sim.js';
+import { lowerProp } from './lowerworld.js';
 import { ColonySky, buildSurroundings, colonyProp, buildingExtras, COLONY_KINDS, Bots, mergeStatic, lightPools, setColonyTime, U as HAZE } from './colony.js';
 
 const GROUND_TEX = { v: 'dust_lane', f: 'soil_dry', p: 'path_dirt', c: 'cobble', s: 'sand', k: 'wood_floor', a: 'ash_ground', o: 'stone_floor', h: 'hay', b: 'wood_floor', d: 'deck_floor' };
@@ -102,6 +103,10 @@ const PROPS = {
   star_window: { h: 2.6 }, courier_desk: { h: 1.1 }, departures_board: { h: 2.4 }, info_kiosk: { h: 1.8 }, transit_seats: { h: 0.9 }, colony_planter: { h: 1.2 },
   cubbies: { h: 1.3 }, blackboard: { h: 2.2 }, teacher_desk: { h: 0.9 }, school_desk: { h: 0.7 }, stained_glass: { h: 2.8 }, altar: { h: 1.1 }, candle_stand: { h: 1.2 },
   pew: { h: 0.9 }, lectern: { h: 1.2 }, map_screen: { h: 2.4 }, front_desk: { h: 1.1 }, lockers: { h: 2.0 }, rescue_drone: { h: 1.0 },
+  // 2026-11-19: the Lower deck, the Undercroft (models from docs/LOWER-DECK-ART.md; built stand-ins in lowerworld.js)
+  lower_lift: { model: 'lower_lift', h: 3.0, fit: 'foot' }, pump_station: { model: 'pump_station', h: 3.0, fit: 'foot' }, mushroom_bed: { model: 'mushroom_bed', h: 0.9, fit: 'foot' }, catacomb_arch: { model: 'catacomb_arch', h: 3.0, fit: 'stretch' },
+  shelter: { model: 'shelter', h: 3.4, fit: 'foot' }, glow_lamp: { model: 'glow_lamp', h: 1.8 }, terminal: { model: 'terminal', h: 1.3 }, vault_door: { model: 'vault_door', h: 3.2, fit: 'foot' }, works_hall: { model: 'works_hall', h: 4, fit: 'stretch' },
+  work_barrier: { h: 0.9 }, bulkhead: { h: 2.6 }, tarp: { h: 2.4 }, crypt_wall: { h: 2.2 }, stove: { h: 1.6 }, shrooms: { h: 0.3 },
 };
 const BUILDING = {
   house: { model: 'farmhouse', facade: 'buildings/house', wall: 'plank_wall', roof: 'roof_tin' },
@@ -244,6 +249,12 @@ export class World {
     this.weather.material.size = snow ? 0.16 : 0.07; this.weather.material.color.set(snow ? 0xffffff : 0xa9c6e6);
     this.weatherSpeed = snow ? 2.2 : 19;
     this.night = 1 - day;
+    if (map && map.under) {                              // the Undercroft: no sky, no weather; the lamps do the work
+      for (const k in sk) set(k, 0); this.scene.background = col(0x05070a); this.colony.group.visible = false;
+      this.scene.fog.color.set(0x05070a); this.scene.fog.near = 14; this.scene.fog.far = 52; HAZE.haze.value.set(0x05070a); HAZE.hazeNear.value = 14; HAZE.hazeFar.value = 52; HAZE.hazeCap.value = 0.9;
+      this.sun.color.set(0x9fb4d0); this.sun.intensity = 0.18; this.hemi.intensity = 0.5; this.hemi.color.set(0x7a8fb0); this.hemi.groundColor.set(0x2a241c);
+      this.spriteTint.setRGB(0.7, 0.7, 0.75); for (const m of this.spriteMats) m.color.copy(this.spriteTint); this.weather.visible = false; this.night = 1; if (this.pools) this.pools.material.opacity = 0.9;
+    }
     if (map && map.belt) {                               // space: black sky, a hard white sun, no weather
       for (const k in sk) set(k, 0); this.scene.background = col(0x02030a); this.colony.group.visible = false;
       this.scene.fog.color.set(0x04060e); this.scene.fog.near = 40; this.scene.fog.far = 400; HAZE.haze.value.set(0x04060e); HAZE.hazeNear.value = 40; HAZE.hazeFar.value = 400; HAZE.hazeCap.value = 0.2;
@@ -589,8 +600,9 @@ export class World {
         break;
       }
       case 'blackboard': {
-        const w = o.w || 4, cx = (w - 1) / 2, t = panelTex('blackboard', 512, 200, (x, W, H) => { x.fillStyle = '#244a3a'; x.fillRect(0, 0, W, H); x.strokeStyle = 'rgba(255,255,255,.12)'; for (let i = 0; i < 9; i++) { x.beginPath(); x.moveTo(i * 60, 0); x.lineTo(i * 60 + 40, H); x.stroke(); }
-          x.fillStyle = '#f4f1e6'; x.font = '34px cursive, sans-serif'; x.fillText('WELCOME TO SCHOOL!', 40, 56); x.font = '24px cursive, sans-serif'; x.fillText('OUR CLASS:', 40, 110); x.fillStyle = '#ffd36a'; x.beginPath(); x.arc(430, 140, 26, 0, 7); x.fill(); x.strokeStyle = '#ffd36a'; x.lineWidth = 4; for (let a = 0; a < 6.28; a += 0.79) { x.beginPath(); x.moveTo(430 + Math.cos(a) * 34, 140 + Math.sin(a) * 34); x.lineTo(430 + Math.cos(a) * 48, 140 + Math.sin(a) * 48); x.stroke(); } });
+        const w = o.w || 4, cx = (w - 1) / 2, pupils = !!this.flags.ld_rehoused, t = panelTex(pupils ? 'blackboard:class' : 'blackboard', 512, 200, (x, W, H) => { x.fillStyle = '#244a3a'; x.fillRect(0, 0, W, H); x.strokeStyle = 'rgba(255,255,255,.12)'; for (let i = 0; i < 9; i++) { x.beginPath(); x.moveTo(i * 60, 0); x.lineTo(i * 60 + 40, H); x.stroke(); }
+          x.fillStyle = '#f4f1e6'; x.font = '34px cursive, sans-serif'; x.fillText('WELCOME TO SCHOOL!', 40, 56); x.font = '24px cursive, sans-serif'; x.fillText('OUR CLASS:', 40, 110); if (pupils) { x.font = '20px cursive, sans-serif'; x.fillText('MOTH  JUNO  ADE  TOVE  RAFA  BEA', 40, 150); }   // the first pupils (sim.FAMILIES)
+           x.fillStyle = '#ffd36a'; x.beginPath(); x.arc(430, 140, 26, 0, 7); x.fill(); x.strokeStyle = '#ffd36a'; x.lineWidth = 4; for (let a = 0; a < 6.28; a += 0.79) { x.beginPath(); x.moveTo(430 + Math.cos(a) * 34, 140 + Math.sin(a) * 34); x.lineTo(430 + Math.cos(a) * 48, 140 + Math.sin(a) * 48); x.stroke(); } });
         const bd = quad(w - 0.3, 1.15, new THREE.MeshBasicMaterial({ map: t })); bd.position.set(cx, 1.55, -0.38); g.add(bd, box(w - 0.1, 1.3, 0.06, std({ color: 0x9a6a45 }), cx, 0.9, -0.44), box(w - 0.2, 0.05, 0.12, std({ color: 0x9a6a45 }), cx, 0.92, -0.36)); break;
       }
       case 'teacher_desk': { const w = o.w || 2, cx = (w - 1) / 2; g.add(box(w - 0.1, 0.75, 0.7, std({ color: 0xc9a877 }), cx), box(w, 0.06, 0.78, std({ color: 0x9a6a45 }), cx, 0.75), ball(0.12, std({ color: 0xd8362a }), cx + 0.5, 0.9, 0), box(0.3, 0.06, 0.22, std({ color: 0xf2f0ea }), cx - 0.3, 0.81, 0)); break; }
@@ -628,7 +640,7 @@ export class World {
         for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const arm = box(0.32, 0.03, 0.04, SLATE(), x * 0.16, 0.02, z * 0.16); arm.rotation.y = x * z * 0.78; d0.add(arm, cyl(0.12, 0.12, 0.02, std({ color: 0xdfe6ea, transparent: true, opacity: 0.6 }), x * 0.28, 0.04, z * 0.28, 12)); }
         g.add(d0); break;
       }
-      default: { const c = colonyProp(kind, o, this.colonyFx || undefined); g.add(c || box(0.6, 0.6, 0.6, std({ color: 0x999999 }))); }
+      default: { const c = lowerProp(kind, o) || colonyProp(kind, o, this.colonyFx || undefined); g.add(c || box(0.6, 0.6, 0.6, std({ color: 0x999999 }))); }
     }
     if (kind === 'memorial' || kind === 'bench') for (const c of g.children) c.position.x += 0.5;
     return g;
@@ -835,11 +847,12 @@ export class World {
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const c = map.at(x, y); (byKind[c] ||= []).push(x, y); }
     for (const [c, cells] of Object.entries(byKind)) {
       if (c === 'x') continue;
+      if (c === 'r' && map.under) { const edge = []; for (let i = 0; i < cells.length; i += 2) { const x = cells[i], y = cells[i + 1]; if ([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]].some(([a, b]) => { const k = map.at(x + a, y + b); return k !== 'r' && k !== 'x'; })) edge.push(x, y); } const m = new THREE.Mesh(tiles(edge, 2.2, true), std({ map: art.tex('hull_plate', { repeat: 1 }), color: 0x7d8790 })); m.castShadow = m.receiveShadow = true; R.add(m); continue; }   // only the walls that face a room
       if (c === 'r') { const m = new THREE.Mesh(tiles(cells, 1.7, true), std({ map: art.tex('cliff_rock', { repeat: 1 }) })); m.castShadow = m.receiveShadow = true; R.add(m); continue; }
       if (c === 'w') {
         const bed = new THREE.Mesh(tiles(cells, -0.5), std({ color: 0x2a3a34 })); R.add(bed);
         // the surface sits just above the colony's surrounding ground sheet (y -0.07), which runs under the whole map
-        const wm = new THREE.MeshStandardMaterial({ map: art.tex('water', { repeat: 1 }).clone(), color: 0xb8dce6, transparent: true, opacity: 0.94, roughness: 0.12, metalness: 0.1 });
+        const wm = new THREE.MeshStandardMaterial({ map: art.tex('water', { repeat: 1 }).clone(), color: map.under ? 0x4a8a9a : 0xb8dce6, transparent: true, opacity: 0.94, roughness: 0.12, metalness: 0.1 });
         wm.map.wrapS = wm.map.wrapT = THREE.RepeatWrapping; wm.map.needsUpdate = true; this.waterMats.push(wm);
         const m = new THREE.Mesh(tiles(cells, -0.04), wm); m.receiveShadow = true; R.add(m); continue;
       }
@@ -848,7 +861,7 @@ export class World {
       const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : c === 'd' ? 0.015 : 0, false, c === 'c' ? 0.34 : c === 'k' || c === 'b' || c === 'd' ? 0.5 : 0.25), std({ map: art.tex(slot, { repeat: 1 }), color: c === 'f' ? 0xb48a66 : c === 'c' ? 0xd8d2c8 : 0xffffff })); m.receiveShadow = true; R.add(m);
     }
     this.colony.setCentre(H / 2); this.spinners = []; this.beacons = []; this.cars = []; this.bots = null; this.pools = null; this.rocks = null;
-    if (!map.indoor && !map.ruins) R.add(buildSurroundings(map, this.season));   // terraces rising into the cylinder's curve
+    if (!map.indoor && !map.ruins && !map.under) R.add(buildSurroundings(map, this.season));   // terraces rising into the cylinder's curve
     else if (map.belt) R.add(spaceBackdrop(W, H, map));  // the belt: stars, the Earth, Eden's hull, sector bands
     else if (!map.indoor) {                              // the Old World: ash plains and broken towers
       const slot = map.ruins ? 'ash_ground' : 'grass_' + SEASON_KEY[this.season];
@@ -867,7 +880,11 @@ export class World {
     for (const b of map.buildings) { const o = this.makeBuilding(b); R.add(o); if (!map.indoor) this.occluders.push({ o, x0: b.x - 0.3, x1: b.x + b.w + 0.3, z0: b.y - 0.3, z1: b.y + b.d + 0.3, h: (b.height || 4) + 1.5 }); }
     const built = [], pools = [];
     map.props.forEach((p, pi) => { p.index = pi; });
+    this.underLamps = [];
     for (const p of map.props) {
+      if ((p.unless && this.flags[p.unless]) || (p.when && !this.flags[p.when])) { p.obj = null; continue; }   // the Undercroft's barriers, until restored
+      if (p.zone) { p.lit = p.zone === 'landing' || !!this.flags['ld_' + p.zone]; if (p.lit) { this.underLamps.push({ x: p.x + 0.5, z: p.y + 0.5 }); pools.push({ x: p.x + 0.5, z: p.y + 0.5, warm: true, r: 2.8 }); } }
+      if (p.pump) p.running = !!this.flags['ld_' + p.pump]; if (p.bed != null) p.rotten = !this.flags.ld_catacombs;
       let kind = p.kind === 'tree' && p.y >= H - 1 ? 'bush' : p.kind;
       if ((kind === 'tree' || kind === 'pine') && this.isFelled && this.isFelled(map.id + ':' + p.index)) kind = 'stump';
       this.colonyFx = { spin: this.spinners, glow: [] };
@@ -959,6 +976,13 @@ export class World {
     const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x0, h0, y0), new THREE.Vector3(x1, h1, y1)]);
     const m = new THREE.Line(g, new THREE.LineBasicMaterial({ color, transparent: true })); this.scene.add(m); this.fx.push({ m, v: null, life: 0.16 });
   }
+  // The Undercroft: five real lights follow the nearest lit lamps (the rest glow by their pools), and a soft one follows Sato.
+  lightUnder() {
+    if (!this.uLights || this.uLights[0].parent !== this.root) { this.uLights = []; for (let i = 0; i < 6; i++) { const l = new THREE.PointLight(i ? 0xffc27a : 0xbfd8ff, 0, i ? 11 : 7, 1.3); this.root.add(l); this.uLights.push(l); } }
+    const f = this.focus, near = (this.underLamps || []).slice().sort((a, b) => Math.hypot(a.x - f.x, a.z - f.z) - Math.hypot(b.x - f.x, b.z - f.z));
+    const [me, ...rest] = this.uLights; me.position.set(f.x, 2.4, f.z + 0.4); me.intensity = 2.2;
+    rest.forEach((l, i) => { const p = near[i]; l.intensity = p ? 7 + Math.sin(this.t * 2.3 + i) * 0.25 : 0; if (p) l.position.set(p.x, 1.75, p.z); });
+  }
   setCursor(x, y, on) { this.cursor.visible = on; if (on) this.cursor.position.set(x + 0.5, 0.05, y + 0.5); }
   // world tile position → screen pixels (for floating labels)
   project(x, y, h = 0) { const v = new THREE.Vector3(x, h, y).project(this.camera), c = this.renderer.domElement; return { x: (v.x * 0.5 + 0.5) * c.clientWidth, y: (-v.y * 0.5 + 0.5) * c.clientHeight, behind: v.z > 1 }; }
@@ -985,6 +1009,7 @@ export class World {
     for (const f of this.facers) f.rotation.y = this.yaw;
     for (const m of this.waterMats || []) m.map.offset.set(this.t * 0.015, this.t * 0.01);
     for (const l of this.lamps || []) l.intensity = (this.night || 0) * 14;
+    if (this.map && this.map.under) this.lightUnder();
     for (const a of this.actors.values()) a.update(dt, this);
     // trees standing between the camera and Sato step aside
     const cx = Math.sin(this.yaw), cz = Math.cos(this.yaw);

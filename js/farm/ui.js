@@ -5,6 +5,8 @@ import * as art from './art.js';
 import { ITEMS, CROPS, SEASONS, TOOL_LEVELS, FRUIT_TREES, TREE_DAYS, ROBOT_JOBS, RELICS } from './data.js';
 import * as sim from './sim.js';
 import { NPCS, HELP, FESTIVALS, RADIO } from './story.js';
+import { LOGS as LOG_TEXT } from './story.js';
+import { LOWER_LOGS } from './data.js';
 import { portrait as svgPortrait } from '../expansion/portraits.js';
 
 const $ = (id) => document.getElementById(id);
@@ -376,7 +378,7 @@ function collectionsTab(state) {
   const L = state.ledger, chip = (id, n, have = true) => `<span class="fm-chip${have ? '' : ' no'}">${have ? icon(id) : '<span class="fm-ico fm-fake" style="background:#bbb">?</span>'} ${have ? esc(ITEMS[id].name) : '???'}${n ? ` × ${n}` : ''}</span>`;
   const sh = Object.entries(L.shipped || {}).filter(([id]) => ITEMS[id]);
   let h = `<h3>Shipped (${sh.length} kinds · ${(L.earned || 0).toLocaleString()} cr earned)</h3><div class="fm-chips">${sh.length ? sh.map(([id, n]) => chip(id, n)).join('') : '<p class="fm-dim">Nothing yet.</p>'}</div>`;
-  const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king'], fl = state.fishLog || {};
+  const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king', 'cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi'], fl = state.fishLog || {};
   h += `<h3>Fish log (${FISH.filter((f) => fl[f]).length}/${FISH.length})</h3><div class="fm-chips">${FISH.map((f) => chip(f, fl[f], !!fl[f])).join('')}</div>`;
   h += `<h3>Memory Room (${sim.museumCount(state)}/${RELICS.length})</h3><div class="fm-chips">${RELICS.map((r) => chip(r.id, 0, !!(state.museum || {})[r.id])).join('')}</div>`;
   const ck = state.cooked || {};
@@ -385,15 +387,38 @@ function collectionsTab(state) {
   h += `<h3>Forage found (${all.filter((x) => fg[x]).length}/${all.length})</h3><div class="fm-chips">${all.map((x) => chip(x, fg[x], !!fg[x])).join('')}</div>`;
   return h;
 }
+// The Logs tab: what the Undercroft's terminals, walls and Moth's pages have told Sato, in story order; and the restoration.
+function logsTab(state) {
+  const got = (state.lower && state.lower.logs) || {}, n = LOWER_LOGS.filter((l) => got[l.id] != null).length;
+  let h = `<h3>Recovered logs (${n}/${LOWER_LOGS.length})</h3><p class="fm-dim">From the terminals and walls of the Lower deck, and the diary pages Moth brings you. More are still down there, and something behind the round door.</p>`;
+  h += LOWER_LOGS.map((l) => { const t = LOG_TEXT[l.id] || {}; return got[l.id] != null ? `<div class="fm-log"><b>${l.src === 'page' ? '📄' : l.src === 'terminal' ? '📼' : '✎'} ${esc(t.title)}</b><span class="fm-dim">${esc(t.author)} · found ${esc(sim.dateLabel({ cal: { ...dayToCal(got[l.id]) } }).replace(/ \(.*\)/, ''))}</span><p>${esc(t.text)}</p></div>` : `<div class="fm-log no"><b>${l.src === 'page' ? '📄' : '📼'} ???</b><span class="fm-dim">${l.src === 'page' ? 'A diary page Moth has not found yet.' : 'Not recovered yet.'}</span></div>`; }).join('');
+  const P = sim.projectList(state);
+  h += `<h3>The Undercroft</h3>` + P.map((p) => `<p>${p.done ? '<span class="fm-ok">✓</span>' : p.pending ? '⏳' : '○'} <b>${esc(p.name)}</b> <span class="fm-dim">${p.done ? 'done' : p.pending ? 'tonight' : esc(p.why || 'ready to fund at the terminal')}</span></p>`).join('');
+  return h;
+}
+const dayToCal = (d) => ({ year: Math.floor(d / 120) + 1, season: Math.floor(d / 30) % 4, day: (d % 30) + 1, minute: 360 });
+// Venn's restoration terminal on the Lower deck: every project, what it needs, and Fund.
+export function projectWindow(state, onChange) {
+  const draw = (msg = '') => {
+    const P = sim.projectList(state), t = sim.enclaveTrust(state);
+    let h = `<div class="fm-shop"><div class="fm-shophead"><div class="fm-face fm-terminal">◈</div><div><b>Restoration terminal · Lower deck</b><span>${state.player.money.toLocaleString()} cr · ${state.stock.lumber} lumber in the wood store</span></div></div>`;
+    if (msg) h += `<p class="fm-kready">${esc(msg)}</p>`;
+    h += P.map((p) => `<div class="fm-row${p.can ? '' : ' no'}"><div><b>${p.done ? '✓ ' : p.pending ? '⏳ ' : ''}${esc(p.name)}</b><span>${esc(p.desc)} · needs ${esc(p.needs)}${!p.can && p.why && !p.done ? ` · <em>${esc(p.why)}</em>` : ''}</span></div><button data-proj="${p.id}" ${p.can ? '' : 'disabled'}>${p.done ? 'Done' : p.price.toLocaleString() + ' cr'}</button></div>`).join('');
+    h += `<p class="fm-dim">Pumps: ${sim.PUMP_REPAIRS.map((r) => `${esc(r.name)} ${sim.lowerDone(state, r.id) ? '<span class="fm-ok">running</span>' : `(fit ${r.parts} pump parts at the pump)`}`).join(' · ')}. The enclave's trust: ${t.favours}/${t.needFavours} favours, ${t.hearts}/${t.needHearts} hearts with Agnes. Lamp kits and pump parts: Venn's bench (talk to him).</p></div>`;
+    const body = openWin('Restoration terminal', h, null, 'shopwin');
+    body.onclick = (e) => { const b = e.target.closest('button[data-proj]'); if (!b) return; const r = sim.fundProject(state, b.dataset.proj); onChange && onChange(r); draw(r.msg); };
+  };
+  draw();
+}
 export function journal(state, opts = {}) {
   let tab = opts.tab || 'today', sel = null;
-  const tabs = [['today', 'Today'], ['robots', 'Robots'], ['items', 'Items'], ['collections', 'Collections']];
+  const tabs = [['today', 'Today'], ['robots', 'Robots'], ['items', 'Items'], ['collections', 'Collections'], ['logs', 'Logs']];
   let msg = '';
   journalIsOpen = true;
   const draw = () => {
     stopViewer();
     const h = `<nav class="fm-tabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('')}<span class="fm-paused">⏸ Paused · P or Esc to go back</span></nav>` +
-      (tab === 'today' ? todayTab(state, opts) : tab === 'robots' ? robotsTab(state, msg) : tab === 'items' ? itemsTab(state, sel) : collectionsTab(state));
+      (tab === 'today' ? todayTab(state, opts) : tab === 'robots' ? robotsTab(state, msg) : tab === 'items' ? itemsTab(state, sel) : tab === 'logs' ? logsTab(state) : collectionsTab(state));
     msg = '';
     const body = openWin('Farm journal', h, () => { journalIsOpen = false; stopViewer(); }, 'journal');
     body.onclick = (e) => {

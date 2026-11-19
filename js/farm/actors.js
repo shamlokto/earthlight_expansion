@@ -114,6 +114,8 @@ function figure(look, tall = 1.62) {
     part(new THREE.SphereGeometry(0.2, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), straw, 0, 0, 0, 0.05, hat);
     part(new THREE.CylinderGeometry(0.203, 0.205, 0.045, 20), toon(look.band || '#d94a4a'), 0, 0.03, 0, 0, hat);
   }
+  if (look.goggles) { part(new THREE.TorusGeometry(HR * 1.02, 0.025, 6, 24), toon('#3a3a3a'), 0, 0.17, 0, 0, head).rotation.x = Math.PI / 2 - 0.25; for (const x of [-0.11, 0.11]) part(new THREE.CylinderGeometry(0.075, 0.075, 0.05, 14), toon('#c9a14a', { emissive: 0x2a2010 }), x, 0.2, HR * 0.95, 0, head).rotation.x = Math.PI / 2 - 0.3; }   // an engineer's goggles, pushed up
+  if (look.lantern) { const l = new THREE.Group(); l.position.set(0.3, 0.42, 0.08); g.add(l); part(new THREE.CylinderGeometry(0.005, 0.005, 0.18, 4), toon('#3a3a3a'), 0, 0.1, 0, 0, l); const b = part(new THREE.SphereGeometry(0.06, 10, 8), new THREE.MeshBasicMaterial({ color: '#ffd98a' }), 0, -0.02, 0, 0, l); b.castShadow = false; part(new THREE.CylinderGeometry(0.045, 0.06, 0.03, 8), toon('#c9a14a'), 0, 0.045, 0, 0, l); }   // a little lantern on a string (Moth)
   if (look.glasses) for (const x of [-0.12, 0.12]) part(new THREE.TorusGeometry(0.075, 0.012, 6, 16), toon('#3a3a3a'), x, -0.03, HR * 0.97, 0, head);
   g.scale.setScalar(tall / 1.52);
   g.userData.limbs = { L, R, A, B, head };

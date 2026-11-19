@@ -27,7 +27,7 @@ const wipe = (s, f = 'farm') => { for (const t of s.fields[f].tiles) Object.assi
 const setObj = (s, x, y, obj) => Object.assign(tile(s, x, y), { obj, hp: obj === 'stump' || obj === 'boulder' ? 3 : 1 });
 const rich = (seed = 5) => { const s = newGame({ seed }); s.player.money = 1e6; s.stock.lumber = 500; while (s.player.inv.length < 16) s.player.inv.push(null); s.player.slots = 16; addItem(s, 'scrap', 20); addItem(s, 'alloy', 20); addItem(s, 'crystal', 5); addItem(s, 'star_metal', 2); return s; };
 // rich, with belt ore for Ruess's ore jobs and room to carry it
-const richer = (seed = 5) => { const s = rich(seed); while (s.player.inv.length < 24) s.player.inv.push(null); s.player.slots = 24; for (const o of ['nickel_iron', 'silica', 'copper', 'titanium', 'platinum']) addItem(s, o, 12); return s; };
+const richer = (seed = 5) => { const s = rich(seed); while (s.player.inv.length < 24) s.player.inv.push(null); s.player.slots = 24; for (const o of ['nickel_iron', 'silica', 'copper', 'titanium', 'platinum']) addItem(s, o, 12); for (const o of ['wool', 'fine_wool', 'yarn', 'tulip', 'sunflower', 'cosmos', 'snowbell']) addItem(s, o, 6); return s; };
 // break belt rocks of the given kinds in one sector, over and over, with the given hammer; tally the finds
 const beltTally = (sector, kinds = [1], hammer = 3, n0 = 2500, seed = 310) => { const g = rich(seed + sector), got = {}; g.player.toolLevel.hammer = hammer; let n = 0; sim.enterBelt(g, 1); const m = g.mine, y0 = sim.sectorTop(sector);
   while (n < n0) { for (let y = y0; y < y0 + sim.SECTOR_H && n < n0; y++) for (let x = 0; x < m.w && n < n0; x++) { const i = y * m.w + x; if (!kinds.includes(sim.beltLayout(g.belt.seed).cells[i])) continue; m.cells[i] = sim.beltLayout(g.belt.seed).cells[i]; delete m.hp[i]; g.player.stamina = 100; n++; let r; do r = sim.hitRock(g, x, y); while (r.ok && !r.broke); for (const f of r.gained || []) got[f.id] = (got[f.id] || 0) + f.n; }
@@ -40,7 +40,7 @@ const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
 {
   check(SEASONS.length === 4 && WEEKDAYS.length === 7 && DAYS_PER_SEASON === 30 && DAY_START === 360 && DAY_END === 1440 && TOOL_LEVELS[2] === 'Alloy', 'calendar constants');
   check(FIELD_SIZES.farm[0] === 16 && FIELD_SIZES.farm[1] === 18 && FIELD_SIZES.greenhouse[0] === 10 && PASTURE_SIZE[1] === 7, 'field sizes');
-  check(Object.keys(CROPS).length === 13, '13 crops');
+  check(Object.keys(CROPS).length >= 25, `at least 25 crops (${Object.keys(CROPS).length})`);
   for (const c of Object.values(CROPS)) check(ITEMS[c.id]?.kind === 'crop' && ITEMS[c.id].sell === c.sell && ITEMS[`seed_${c.id}`]?.crop === c.id, `crop ${c.id} has an item and a seed bag`);
   for (const [id, it] of Object.entries(ITEMS)) check(it.id === id && it.name && it.kind && typeof it.desc === 'string' && it.desc, `item ${id} is complete`);
   for (const id of ['hoe', 'can', 'sickle', 'hammer', 'axe', 'rod', 'milker', 'brush']) check(ITEMS[id]?.kind === 'tool', `tool ${id}`);
@@ -69,7 +69,7 @@ const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
   check(s.pasture.w === 12 && s.pasture.h === 7 && s.pasture.grass.length === 84 && s.pasture.grass.every((v) => v === 0), 'pasture empty');
   check(s.animals.length === 0 && s.eggs === 0 && s.bin.length === 0 && s.mine === null && s.pending.upgrade === null && s.pending.animals.length === 0, 'nothing else yet');
   check(s.forage.length >= 3 && s.forage.length <= 6 && s.forage.every((x) => ['herb', 'bamboo_shoot', 'wild_mint', 'fiddlehead'].includes(x.id) && x.spot >= 0 && x.spot < sim.FORAGE_SPOT_COUNT), 'spring forage');
-  check(Object.keys(s.npc).length === 14 && s.npc.ruess.love === 0 && sim.hearts(s, 'ruess') === 0, 'npc records');
+  check(Object.keys(s.npc).length === sim.NPC_IDS.length && sim.NPC_IDS.length >= 19 && s.npc.ruess.love === 0 && sim.hearts(s, 'ruess') === 0, 'npc records');
   check(sim.weekday(s) === 0 && sim.absDay(s) === 0 && sim.dateLabel(s) === 'Spring 1 (Mon), Year 1' && sim.timeLabel(s) === '6:00 AM', 'calendar labels');
   s.cal.day = 3; s.cal.minute = 580;
   check(sim.dateLabel(s) === 'Spring 3 (Wed), Year 1' && sim.timeLabel(s) === '9:40 AM', 'labels from the contract');

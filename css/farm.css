@@ -112,3 +112,5 @@ button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outl
 .fm-jobs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; } .fm-row .fm-jobs button { min-width: 0; padding: 4px 9px; font-size: 12px; } .fm-row .fm-jobs button.on { background: #3fa7a3; color: #fff; border-color: #2c7d7a; }
 .fm-row .fm-botside button { min-width: 0; padding: 5px 10px; font-size: 12px; } .fm-link { color: #24565a; text-decoration: underline; cursor: pointer; }
 @media (max-width: 560px) { .fm-bot { flex-direction: column; } .fm-botside { align-items: flex-start; } }
+/* the journal's Logs tab (the Undercroft, 2026-11-19) */
+.fm-log { padding: 8px 10px; margin: 6px 0; border-radius: 8px; background: #f3ead2; border-left: 4px solid #3fa7a3; } .fm-log b { display: block; } .fm-log p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.45; } .fm-log.no { opacity: .55; border-left-color: #b9ab8a; }
