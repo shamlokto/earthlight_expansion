@@ -15,7 +15,11 @@ function toon(color, o = {}) {
   return new THREE.MeshToonMaterial({ color, gradientMap: ramp, ...o });
 }
 const INK = new THREE.MeshBasicMaterial({ color: 0x3a2a22, side: THREE.BackSide });
+const FACES = new Map();   // one painted face per look and eyelid, shared by every appearance (not re-painted on each map)
 function faceTexture(look, blink) {
+  const key = JSON.stringify(look) + '|' + !!blink; if (!FACES.has(key)) FACES.set(key, paintFace(look, blink)); return FACES.get(key);
+}
+function paintFace(look, blink) {
   const N = 512, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d');
   g.fillStyle = look.skin || '#f8dcc4'; g.fillRect(0, 0, N, N);
   const ink = '#3a2620', iris = look.eye || '#8a5a2e', ex = 100, ey = 268, rx = look.age === 'old' ? 36 : 54, ry = look.age === 'old' ? 42 : 68;
@@ -147,7 +151,7 @@ export function rigFigurine(model) {
   const ss = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
   const meshes = []; model.traverse((o) => { if (o.isMesh) meshes.push(o); });
   for (const o of meshes) {
-    const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld);
+    const g = o.geometry.clone(); g.userData.keep = false; g.applyMatrix4(o.matrixWorld);
     const pos = g.attributes.position, n = pos.count, idx = new Uint16Array(n * 4), wt = new Float32Array(n * 4);
     for (let i = 0; i < n; i++) {
       const x = (pos.getX(i) - cx) / H, y = (pos.getY(i) - y0) / H, ax = Math.abs(x);
@@ -226,7 +230,7 @@ export class Actor {
     } else { this.mode = 'figure'; this.body = o.pallas ? robot() : figure(look, this.tall); if (o.pallas) this.body.scale.setScalar(this.tall / 2.4); this.group.add(this.body); }
     this.frame = 0;
   }
-  dispose() { this.world.dyn.remove(this.group); const k = this.world.facers.indexOf(this.body); if (k >= 0) this.world.facers.splice(k, 1); }
+  dispose() { this.world.dyn.remove(this.group); this.group.traverse((o) => { const g = o.geometry; if (g && !g.userData.keep && g.dispose) g.dispose(); }); const k = this.world.facers.indexOf(this.body); if (k >= 0) this.world.facers.splice(k, 1); }
   // Play an action loop (hoe, water, fish) for `secs`, if there is art for it.
   play(action, secs = 0.9) { if (this.acts && this.acts[action]) { this.act = action; this.actT = secs; } }
   // Show the held tool (or nothing) in her hand.

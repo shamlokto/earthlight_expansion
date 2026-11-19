@@ -25,7 +25,7 @@ export const GLOW = { cyan: new THREE.MeshBasicMaterial({ color: 0x7fe9ff }), wa
 const matCache = new Map(), geoCache = new Map(), texCache = new Map();
 function M(color, o = {}) { const k = color + '|' + JSON.stringify(o); let m = matCache.get(k); if (!m) { m = new THREE.MeshStandardMaterial({ color, roughness: 0.75, metalness: 0, ...o }); matCache.set(k, m); } return m; }
 function TM(key, make) { let m = matCache.get(key); if (!m) { m = make(); matCache.set(key, m); } return m; }
-function G(key, make) { let g = geoCache.get(key); if (!g) { g = make(); geoCache.set(key, g); } return g; }
+function G(key, make) { let g = geoCache.get(key); if (!g) { g = make(); g.userData.keep = true; geoCache.set(key, g); } return g; }
 const CREAM = () => M(0xf3ecdc), TEAL = () => M(0x5fb3b0), CORAL = () => M(0xf08a6c), SLATE = () => M(0x4a5a66, { metalness: 0.3, roughness: 0.55 }), STEEL = () => M(0xa9b8c0, { metalness: 0.35, roughness: 0.5 });
 const GLASS = () => TM('glass', () => new THREE.MeshStandardMaterial({ color: 0xcff3f6, transparent: true, opacity: 0.28, roughness: 0.08, metalness: 0.1, depthWrite: false }));
 function mesh(geo, mat, x = 0, y = 0, z = 0, cast = true) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = cast; m.receiveShadow = true; return m; }

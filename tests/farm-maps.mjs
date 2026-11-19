@@ -79,7 +79,9 @@ for (const s of ['central.school', 'central.church', 'central.depot', 'school.bo
   check(F.field.x === 3 && F.field.y === 11 && F.pasture.x === 26 && F.pasture.y === 12 && F.at(28, 24) === 'w' && F.at(3, 11) === 'f', 'the old field, pasture and pond are where they were');
   const door = (m, map) => m.doors.find((d) => d.to.map === map);
   check(door(F, 'house').x === 6 && door(F, 'house').y === 7 && door(F, 'coop').x === 16 && door(F, 'barn').x === 24 && door(F, 'greenhouse').x === 37, 'the farm doors are where they were');
-  check(F.exits.some((e) => e.x0 === 21 && e.y0 === 33 && e.to.map === 'village') && F.exits.some((e) => e.x0 === 43 && e.y0 === 8 && e.to.map === 'hill'), 'the farm exits are where they were');
+  check(F.exits.some((e) => e.x0 === 21 && e.y0 === 33 && e.to.map === 'village') && F.exits.some((e) => e.x0 === F.w - 1 && e.y0 === 8 && e.to.map === 'hill'), 'the farm exits: the village gate where it was, the hill road at the east edge');
+  check(F.at(F.w - 1, 8) === 'p' && F.at(F.w - 1, 9) === 'p' && !F.props.some((p) => p.kind !== 'nothing' && p.x >= 43 && p.y >= 8 && p.y <= 9), 'the hill road runs clear to the farm\'s east edge');
+  { const H = maps.hill; check(H.exits.some((e) => e.to.map === 'farm' && e.to.x > F.w - 3), 'coming back from the hill lands at the farm\'s east edge'); }
   check(JSON.stringify(F.spots['farm.porch']) === '[7.5,8.4]' && JSON.stringify(F.spots['farm.pond']) === '[26.4,25.5]' && JSON.stringify(V.spots['village.square']) === '[31.5,19.6]' && JSON.stringify(V.spots['village.lift']) === '[56.5,13.7]', 'old spots keep their coordinates');
   check(door(V, 'store').x === 17 && door(V, 'store').y === 7 && door(V, 'cafe').x === 45 && door(V, 'ranch').x === 7 && door(V, 'library').x === 49 && V.exits.some((e) => e.x0 === 31 && e.y0 === 0), 'the village doors and exit are where they were');
   check(F.props.filter((p) => p.kind === 'nothing').every((p) => !p.solid) && V.props.filter((p) => p.kind === 'nothing').every((p) => !p.solid), 'cleared props stay in the list as harmless placeholders (prop indices keep their meaning)');

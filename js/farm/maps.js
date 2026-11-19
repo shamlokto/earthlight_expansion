@@ -116,7 +116,7 @@ function farm() {
   for (let x = P.x - 1; x <= P.x + P.w; x++) { if (x !== P.x + 5 && x !== P.x + 6) m.prop('fence', x, P.y - 1, { rot: 0 }); m.prop('fence', x, P.y + P.h, { rot: 0 }); }
   for (let y = P.y; y < P.y + P.h; y++) { m.prop('fence', P.x - 1, y, { rot: Math.PI / 2 }); m.prop('fence', P.x + P.w, y, { rot: Math.PI / 2 }); }
   m.exit(21, 33, 22, 33, { map: 'village', x: 31.5, y: 1.6, dir: 0 });
-  m.exit(43, 8, 43, 9, { map: 'hill', x: 1.6, y: 13, dir: 3 });
+  m.exit(63, 8, 63, 9, { map: 'hill', x: 1.6, y: 13, dir: 3 });   // at the farm's east edge (it moved out when the farm grew)
   m.spot('farm.porch', 7.5, 8.4).spot('farm.bin', 11.4, 7.5).spot('farm.gate', 20.3, 31).spot('farm.pond', 26.4, 25.5).spot('farm.field', 19.6, 15);
   m.start = [6.5, 8.5];
   m.border('tree', 11, (x, y) => (y === 33 && (x === 21 || x === 22)) || (x === 43 && (y === 8 || y === 9)));
@@ -307,7 +307,7 @@ function hill() {
   m.prop('pipe_run', 2, 3, { d: 3 }); m.prop('vent', 2, 6);
   m.prop('lantern', 3, 6); m.prop('lantern', 9, 6);
   m.prop('signpost', 8, 7, { act: 'sign', sign: 'hill.onsen' });
-  m.exit(0, 11, 0, 14, { map: 'farm', x: 42.2, y: 9, dir: 2 });
+  m.exit(0, 11, 0, 14, { map: 'farm', x: 62.2, y: 9, dir: 2 });
   m.spot('hill.wreck', 24.4, 9.4).spot('hill.lake', 11, 16.4).spot('hill.overlook', 31, 20.4).spot('hill.onsen', 6, 6.5).spot('hill.summit', 57, 6.5).spot('hill.falls', 44, 29).spot('hill.terraces', 52, 15);
   m.water = 'hill'; m.start = [1.6, 13];
   m.forage = FORAGE_SPOTS;
@@ -619,7 +619,7 @@ function farmEast(m) {
   edgeTrees(m, 44, 13);
   m.clearProps(40, 10, 44, 12);                                         // a gap in the old east tree line, just south of the hill road
   m.fill(42, 10, 47, 11, 'p').fill(46, 6, 47, 31, 'p').fill(47, 6, 53, 7, 'p');
-  for (const [x, y] of [[44, 7], [45, 7], [44, 8], [45, 8], [44, 9], [45, 9]]) m.prop('pine', x, y, { scale: 1.1, rot: x * y, tileSolid: true });   // the hill road stays a gate in the trees
+  for (const [x, y] of [[44, 7], [45, 7], [44, 8], [45, 8], [44, 9], [45, 9]]) m.prop('pine', x, y, { scale: 1.1, rot: x * y, tileSolid: true });   // (cleared again below; kept so later prop indices in saves line up)
   const [ew, eh] = EAST_FIELD, [ex, ey] = FIELD_ORIGINS.east;
   m.eastField = { id: 'east', x: ex, y: ey, w: ew, h: eh, lock: 'eastfield' };
   m.fields = [m.field, m.eastField];
@@ -638,6 +638,9 @@ function farmEast(m) {
   m.prop('reeds', 53, 26, { solid: false }); m.prop('reeds', 59, 31, { solid: false }); m.prop('reeds', 60, 27, { solid: false });
   m.spot('farm.east', 46.5, 12.5).spot('farm.fold', 50.5, 7.4).spot('farm.ducks', 50.5, 29);
   m.duckPond = [52, 26, 60, 31];
+  // the hill road runs straight on to the farm's east edge, through a gap in the tree line
+  m.fill(43, 8, 63, 9, 'p');
+  m.clearProps(43, 7, 63, 9);
   m.areas = [['East Terrace', 54, 24.4], ['The fold', 51, 1.6], ['Duck pond', 56, 33]];
   m.scatter(41, 10, ['tree', 'bush', 'flowers', 'flowers'], (x, y) => x >= 55 && y >= 9 && y <= 12);
   return m;

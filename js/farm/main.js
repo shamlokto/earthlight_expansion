@@ -67,7 +67,11 @@ function plantAhead(kinds) {
 }
 function target() { const [dx, dy] = DIRV[me.dir]; return [Math.floor(me.x + dx * 0.85), Math.floor(me.y + dy * 0.85)]; }
 
-async function go(to, { quick = false } = {}) {
+async function go(to, opts = {}) {
+  try { await goInner(to, opts); }
+  catch (e) { recover(e, 'go ' + (to && to.map)); }
+}
+async function goInner(to, { quick = false } = {}) {
   busy = true; if (!quick) await ui.fade(true, 220);
   fishing = null; hydra = null; monsters = []; for (const b of bolts) W.scene.remove(b.m); bolts = []; beasts = []; npcs = new Map(); lastPlaced = -1;
   map = to.map === 'ruins' ? ruinsMap(S.mine) : allMaps()[to.map];
@@ -92,6 +96,20 @@ async function go(to, { quick = false } = {}) {
   busy = false;
   await checkEvents();
 }
+// Something threw mid-transition: never leave the player on a black screen with the controls locked.
+let recovering = false;
+function recover(e, where) {
+  console.error('[recovered]', where || '', e);
+  if (recovering) return; recovering = true;
+  busy = false; if (mode !== 'title') mode = 'play';
+  try { ui.fade(false, 200); } catch {}
+  try { const d = document.getElementById('dialog'); if (d && !d.hidden && !ui.talking?.()) d.hidden = true; } catch {}
+  if (!map || !W.map) { try { const at = allMaps().farm; map = null; goInner({ map: 'farm', x: at.start ? at.start[0] : 10, y: at.start ? at.start[1] : 9 }, { quick: true }).catch(() => {}); } catch {} }
+  try { ui.toast('Something went wrong there; the game recovered. (Details are in the browser console.)', 3500); } catch {}
+  setTimeout(() => { recovering = false; }, 1500);
+}
+window.addEventListener('error', (ev) => recover(ev.error || ev.message, 'error'));
+window.addEventListener('unhandledrejection', (ev) => recover(ev.reason, 'promise'));
 function refreshHud() { const q = S.flags.quest, bm = map && map.belt && S.mine; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : map.name, quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
@@ -1040,7 +1058,11 @@ async function begin(state, fresh) {
 }
 async function boot() {
   const info = await art.loadArt();
-  W = new World($('view')); W.isFelled = (key) => !!S && sim.treeFelled(S, key); W.wildFruitShown = (m, p) => !!S && sim.wildReady(S, m.id + ':' + p.index, p.fruit, !!m.wildShared); bindInput();
+  W = new World($('view'));
+  { const cv = W.renderer.domElement;   // the GPU dropped the 3D view (memory pressure, a GPU switch, a phone in the background): get it back
+    cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); console.warn('[webgl] context lost'); try { ui.toast('The 3D view was interrupted. Restoring…', 3000); } catch {} });
+    cv.addEventListener('webglcontextrestored', () => { console.warn('[webgl] context restored'); if (S && map) { const at = { map: map.id === 'ruins' ? 'ruins' : map.id, x: me.x, y: me.y, dir: me.dir }; go(at, { quick: true }); } }); }
+  W.isFelled = (key) => !!S && sim.treeFelled(S, key); W.wildFruitShown = (m, p) => !!S && sim.wildReady(S, m.id + ':' + p.index, p.fruit, !!m.wildShared); bindInput();
   initMap({ get: () => ({ S, map, me, npcs, W }), ctx: () => (S ? ctx() : null), openWin: ui.openWindow, closeWin: ui.closeWin, canOpen: () => mode === 'play' && !busy && !ui.talking() && !ui.windowOpen(), toast: ui.toast });
   const tv = art.url('video/title'), tp = art.url('scenes/title');
   $('titleArt').innerHTML = (tp ? `<img src="${tp}" alt="">` : '') + (tv ? `<video src="${tv}" autoplay loop muted playsinline></video>` : '');
