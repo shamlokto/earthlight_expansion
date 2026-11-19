@@ -39,7 +39,7 @@ const isBirthday = (id) => { const b = NPCS[id].birthday; return !!b && b.season
 // ---------------------------------------------------------------- maps and movement
 function dynSolid(tx, ty) {
   if (map.field) { const f = map.field, x = tx - f.x, y = ty - f.y, fd = S.fields[f.id]; if (x >= 0 && y >= 0 && x < fd.w && y < fd.h) { const o = fd.tiles[y * fd.w + x].obj; if (o && o !== 'weed' && o !== 'branch') return true; } }
-  if (map.ruins && S.mine) { const x = tx - 1, y = ty - 1; if (x >= 0 && y >= 0 && x < S.mine.w && y < S.mine.h && S.mine.cells[y * S.mine.w + x] === 1) return true; }
+  if (map.ruins && S.mine) { const x = tx - 1, y = ty - 1; if (x >= 0 && y >= 0 && x < S.mine.w && y < S.mine.h) { const c = S.mine.cells[y * S.mine.w + x]; if (map.belt ? c !== 0 : c === 1) return true; } }
   return false;
 }
 const blocked = (x, y) => map.solid(x, y) || dynSolid(Math.floor(x), Math.floor(y));
@@ -68,13 +68,13 @@ async function go(to, { quick = false } = {}) {
   fishing = null; hydra = null; monsters = []; for (const b of bolts) W.scene.remove(b.m); bolts = []; beasts = []; npcs = new Map(); lastPlaced = -1;
   map = to.map === 'ruins' ? ruinsMap(S.mine) : allMaps()[to.map];
   W.setMap(map, S);
-  me = new Actor(W, 'sato', lookOf('sato'), map.ruins ? { pallas: true, tall: 2.5 } : {});
+  me = map.belt ? new Actor(W, 'sato', { ...lookOf('sato'), suit: true }, { suit: true, tall: 1.6 }) : new Actor(W, 'sato', lookOf('sato'), map.ruins ? { pallas: true, tall: 2.5 } : {});   // the belt: a space suit
   me.x = to.x ?? map.start[0]; me.y = to.y ?? map.start[1]; me.dir = to.dir ?? 0;
   W.actors.set('sato', me); W.focus.set(me.x, 0.8, me.y);
   W.setTime(S.cal.minute, S.weather, map); setMood({ title: false, season: S.cal.season, night: S.cal.minute > 1170, ruins: !!map.ruins && !map.belt, belt: !!map.belt, map: map.belt ? 'belt' : map.id });
   if (map.id === 'barn' || map.id === 'coop') spawnBeasts();
   if (map.id === 'hill') drawForage();
-  if (map.ruins) drawRuins();
+  if (map.belt) drawBelt(); else if (map.ruins) drawRuins();
   if (map.id === 'central') { const pal = new Actor(W, 'pallas_parked', lookOf('sato'), { pallas: true, tall: 2.5 }); [pal.x, pal.y] = map.spots['central.pallas']; pal.dir = 0; W.actors.set('pallas_parked', pal); }   // her Pallas waits at the dock
   if (map.id === 'hangar') { const pal = new Actor(W, 'pallas_parked', lookOf('sato'), { pallas: true, tall: 2.5 }); pal.x = 8; pal.y = 4; pal.dir = 0; W.actors.set('pallas_parked', pal); }
   if (map.id === 'coop') drawEggs();
@@ -84,7 +84,7 @@ async function go(to, { quick = false } = {}) {
   busy = false;
   await checkEvents();
 }
-function refreshHud() { const q = S.flags.quest; ui.hud(S, { place: map ? map.name : '', quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); const s = sim.selected(S); if (me && !map.ruins) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
+function refreshHud() { const q = S.flags.quest, bm = map && map.belt && S.mine; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : map.name, quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
 // ---------------------------------------------------------------- people
@@ -253,14 +253,28 @@ const BOT_LOOK = [{ color: 0xf2efe6, trim: 0x5fb3b0 }, { color: 0xfde6c8, trim: 
 const botHome = (r, i) => (r.job === 'rest' || r.charge <= 0 ? [10.5 + i * 1.2, 7.4] : r.job === 'animals' ? [16 + i, 7.6] : [5 + i * 5 + Math.random() * 3, 12 + Math.random() * 14]);
 function spawnBots() {
   bots = []; if (!map || map.id !== 'farm') return;
-  (S.robots || []).forEach((r, i) => { const [x, y] = botHome(r, i), o = W.place('bot' + i, 'farm_bot', x, y, BOT_LOOK[i % 3]); bots.push({ i, o, tx: x, ty: y, wait: Math.random() * 2, talk: 0 }); });
+  (S.robots || []).forEach((r, i) => { const [x, y] = botHome(r, i), o = W.place('bot' + i, 'farm_bot', x, y, BOT_LOOK[i % 3]); bots.push({ i, o, tx: x, ty: y, wait: Math.random() * 2, talk: 0, leg: 0 }); });
+}
+// The battery keeper's round: to a solar charger (or the house) for a charged battery, then out to whichever unit is
+// lowest, carrying it on its head, and back. It goes nowhere when it is flat itself.
+function batteryCell(b) {
+  if (!b.cell) { const c = new THREE.Group(), m = (w, h, d, col, y, glow) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color: col, roughness: 0.5, emissive: glow ? col : 0, emissiveIntensity: glow ? 0.6 : 0 })); q.position.y = y; c.add(q); return q; }; m(0.34, 0.4, 0.24, 0xe8ecef, 0); m(0.28, 0.3, 0.245, 0x5fd08a, -0.02, true); m(0.12, 0.07, 0.1, 0x9fb0bf, 0.235); c.position.y = 1.05; c.rotation.z = 0.12; b.o.add(c); b.cell = c; }
+  return b.cell;
+}
+function keeperTarget(b) {
+  const panels = (S.panels || []).filter((p) => p.map === 'farm'), others = bots.filter((o) => o !== b && S.robots[o.i]);
+  b.leg = (b.leg + 1) % 2;
+  if (b.leg === 0 || !others.length) { const p = panels[(b.i + Math.floor(W.t / 20)) % Math.max(1, panels.length)]; return p ? [p.x + 0.5, p.y + 1.3] : [10.5, 7.6]; }
+  const low = others.slice().sort((x, y) => S.robots[x.i].charge - S.robots[y.i].charge)[Math.floor(Math.random() * Math.min(2, others.length))];
+  return [low.o.position.x + 0.7, low.o.position.z + 0.2];
 }
 function botsTick(dt) {
   for (const b of bots) {
     const r = S.robots[b.i]; if (!r) continue; b.wait -= dt;
     if (b.talk > 0) { b.talk -= dt; continue; }
-    if (b.wait <= 0) { const [x, y] = botHome(r, b.i); b.tx = x + (Math.random() - 0.5) * 3; b.ty = y + (Math.random() - 0.5) * 2; b.wait = 2.5 + Math.random() * 5; }
-    const dx = b.tx - b.o.position.x, dy = b.ty - b.o.position.z, d = Math.hypot(dx, dy), sp = r.charge > 0 ? 0.9 : 0;
+    const keeper = r.job === 'batteries' && r.charge > 0; if (keeper || b.cell) batteryCell(b).visible = keeper && b.leg === 1;
+    if (b.wait <= 0) { if (keeper) { [b.tx, b.ty] = keeperTarget(b); b.wait = 5 + Math.random() * 3; } else { const [x, y] = botHome(r, b.i); b.tx = x + (Math.random() - 0.5) * 3; b.ty = y + (Math.random() - 0.5) * 2; b.wait = 2.5 + Math.random() * 5; } }
+    const dx = b.tx - b.o.position.x, dy = b.ty - b.o.position.z, d = Math.hypot(dx, dy), sp = r.charge > 0 ? (keeper ? 1.5 : 0.9) : 0;
     if (d > 0.1 && sp) { b.o.position.x += dx / d * dt * sp; b.o.position.z += dy / d * dt * sp; b.o.rotation.y = Math.atan2(dx, dy); }
     b.o.position.y = sp && d > 0.1 ? Math.abs(Math.sin(performance.now() / 120 + b.i)) * 0.04 : 0;
   }
@@ -377,7 +391,6 @@ function drawRuins() {
   });
 }
 async function descend(depth) {
-  if (S.mine && S.mine.mode === 'belt') return jumpSector(depth);
   const first = !S.flags.descended; sim.setFlag(S, 'descended');
   sim.enterMine(S, depth, 'earth');
   if (first) { mode = 'talk'; ui.scene('descent'); await ui.say(story.RUINS.arrive.map((t) => ({ who: 'narrator', text: t }))); mode = 'play'; }
@@ -443,12 +456,7 @@ function satoHit(fromX, fromY) {
 function pallasDash() { if (dashCd > 0) return; dashCd = 0.9; dashT = 0.2; W.puff(me.x, me.y, 0x9fd8ee, 10, 0.3); sfx('zap'); }
 let debris = [], hazT = 0, hazWarned = false;
 function ruinsTick(dt) {
-  if (map.belt) for (const d of debris) {                 // drifting debris: it nudges the Pallas aside, no harm done
-    d.o.position.x += d.vx * dt; d.o.position.z += d.vy * dt; d.o.rotation.y += dt * 0.4;
-    if (d.o.position.x < 1.5 || d.o.position.x > map.w - 1.5) d.vx = -d.vx; if (d.o.position.z < 1.5 || d.o.position.z > map.h - 2) d.vy = -d.vy;
-    const ex = me.x - d.o.position.x, ey = me.y - d.o.position.z, dd = Math.hypot(ex, ey);
-    if (dd < 0.75) { for (let k = 0; k < 6; k++) { const nx = me.x + ex / (dd || 1) * 0.12, ny = me.y + ey / (dd || 1) * 0.12; if (canStand(nx, ny)) { me.x = nx; me.y = ny; } } d.vx = -d.vx; d.vy = -d.vy; if (Math.random() < 0.3) ui.toast(story.BELT.debris, 1800); }
-  }
+  if (map.belt) return beltTick(dt);
   if (map.earth && S.mine) {                              // haze: a tick of stamina every three seconds while she stands in it
     const hz = sim.hazardAt(S, Math.floor(me.x) - 1, Math.floor(me.y) - 1);
     if (hz) { hazT -= dt; if (hazT <= 0) { hazT = 3; const r = sim.hazardTick(S, Math.floor(me.x) - 1, Math.floor(me.y) - 1); if (r.drained) { sfx('geiger'); floatText(me.x, me.y, '−1'); refreshHud(); if (!hazWarned) { hazWarned = true; ui.toast(story.SHUTTLE.haze, 4200); } if (r.fainted) night(true); } } }
@@ -487,6 +495,82 @@ function ruinsTick(dt) {
   }
 }
 
+// ---------------------------------------------------------------- the belt (one big open map, in a space suit)
+// No creatures out here: Sato flies in a suit, breaks rocks with her hammer (Space or E), and the suit's air runs
+// down with distance. Every sector has a lit pickup pod home. F sets down her mining unit (sim.minerDeploy).
+let minerT = 0, minerSaid = '', airWarned = 0, lastAt = null;
+function drawBelt() {
+  const m = S.mine; W.beltField(m); monsters = []; bolts = []; debris = []; minerSaid = ''; airWarned = 0; lastAt = [me.x, me.y];
+  for (const p of m.pods) W.place('pod' + p.sector, 'pickup_pod', p.x + 1.5, p.y + 1.5);
+  for (let k = 0; k < 5; k++) debris.push({ o: W.place('debris' + k, 'asteroid', me.x, me.y - 40, { seed: 50 + k, scale: 0.55 }), vx: 0, vy: 0, far: true });
+  drawMiner();
+}
+function drawMiner() { W.unplace('miner'); const d = S.mine && S.mine.miner; if (d) { const o = W.place('miner', 'mining_bot', d.x + 1, d.y + 1); o.rotation.y = Math.random() * 6; } }
+function beltProbe(tx, ty) {
+  const m = S.mine, cx = tx - 1, cy = ty - 1, i = cy * m.w + cx, c = cx >= 0 && cy >= 0 && cx < m.w && cy < m.h ? m.cells[i] : 0;
+  const d = m.miner; if (d && d.hold.length && Math.hypot(d.x + 1 - me.x, d.y + 1 - me.y) < 1.8) return { label: `Empty ${S.miner.name}'s hopper (${d.hold.reduce((a, g) => a + g.n, 0)})`, run: () => { const r = sim.minerCollect(S); ui.gainedToast(r.gained); if (r.msg) ui.toast(r.msg); sfx('pick'); refreshHud(); } };
+  if (c === 1 || c === 4 || c === 5) {
+    const hard = sim.rockHardness(c, sim.beltSector(cy)), hits = sim.hammerHits(hard, S.player.toolLevel.hammer || 1), left = m.hp[i] ?? hits, what = c === 5 ? 'the rich vein' : c === 4 ? 'the comet ice' : 'the rock';
+    return { label: hits ? `Break ${what} with the hammer${left > 1 ? ` (${left} hits)` : ''}` : `A ${hard >= 3 ? 'starsteel-hard' : 'hard'} vein: it needs ${hard >= 3 ? 'a Starsteel' : 'an Alloy'} hammer`, run: () => hammerRock(cx, cy) };
+  }
+  const pod = m.pods.find((p) => Math.hypot(p.x + 1.5 - me.x, p.y + 1.5 - me.y) < 2.4) || (c === 6 ? m.pods.find((p) => p.x === cx && p.y === cy) : null);
+  if (pod) return { label: `Board the sector ${pod.sector} pickup pod home (15 min)`, run: () => leaveBelt('pod') };
+  const p = propAt(tx, ty) || propAt(Math.floor(me.x), Math.floor(me.y));
+  if (p && p.act === 'liftup') return { label: 'Fly back into the hangar', run: () => leaveBelt('pad') };
+  if (p && p.act === 'sign') return { label: `Look at ${p.label ? p.label.replace(/^A /, 'the ') : 'it'}`, run: () => ui.say([{ who: 'narrator', text: story.BELT.marks[p.mark] || '…' }]) };
+  return null;
+}
+function hammerRock(cx, cy) {
+  const r = sim.hitRock(S, cx, cy); me.swing = 1; if (!r.ok) return ui.toast(r.msg);
+  sfx(r.broke ? 'dig' : 'chop'); W.puff(cx + 1.5, cy + 1.5, r.kind === 4 ? 0xdff4ff : 0xb9b0a4, r.broke ? 14 : 5, 0.5); W.shake = Math.max(W.shake || 0, r.broke ? 0.06 : 0.03);
+  if (r.broke) { ui.gainedToast(r.gained); if (r.msg && !(r.gained || []).length) ui.toast(r.msg); else if (Math.random() < 0.08) ui.toast(pick(story.BELT.hammer), 2200); } else floatText(cx + 1.5, cy + 1.5, 'crack');
+  refreshHud(); if (r.fainted) night(true);
+}
+function minerToggle() {
+  if (!S.miner) return ui.toast('You have no mining unit yet. Ruess leases them at the Workshop (1,200 cr).');
+  if (S.mine.miner) { const r = sim.minerRecall(S); W.unplace('miner'); W.puff(me.x, me.y, 0xe0782a, 6, 0.4); ui.gainedToast(r.gained); ui.toast(r.msg); sfx('drop'); return refreshHud(); }
+  const [dx, dy] = DIRV[me.dir];
+  for (const [ax, ay] of [[dx, dy], [dy, dx], [-dy, -dx], [-dx, -dy], [0, 0]]) {
+    const x = Math.floor(me.x + ax * 1.1) - 1, y = Math.floor(me.y + ay * 1.1) - 1; if (S.mine.cells[y * S.mine.w + x] !== 0) continue;
+    const r = sim.minerDeploy(S, x, y); ui.toast(r.msg); if (r.ok) { drawMiner(); sfx('drop'); minerT = 2.5; minerSaid = ''; } return refreshHud();
+  }
+  ui.toast('There is no room to set it down here.');
+}
+function beltTick(dt) {
+  const m = S.mine; if (!m) return;
+  // the suit's air goes with distance; a new sector changes the map name, and the first visit is news
+  if (Math.hypot(me.x - lastAt[0], me.y - lastAt[1]) > 0.5) {
+    lastAt = [me.x, me.y]; const before = Math.ceil(m.air), r = sim.beltMove(S, me.x - 1, me.y - 1);
+    if (r.changed) { map.name = `The belt, sector ${r.sector}`; ui.toast(r.milestone ? story.BELT.milestone(r.sector) : r.first ? story.BELT.first(r.sector) : pick(story.BELT.sector), r.first ? 4200 : 2400); if (r.first) sfx('good'); }
+    for (const k of [30, 10]) if (r.air <= k && airWarned < 40 - k) { airWarned = 40 - k; ui.toast(story.BELT.air[k], 4200); sfx('bad'); }
+    if (r.out) { leaveBelt('tow'); return; }
+    if (r.changed || Math.ceil(r.air) !== before) refreshHud();
+  }
+  for (const d of debris) {                                  // drifting debris near Sato: it nudges her aside, no harm done
+    const ex = me.x - d.o.position.x, ey = me.y - d.o.position.z, dd = Math.hypot(ex, ey);
+    if (d.far || dd > 20) { const a = Math.random() * 6.28, r = 9 + Math.random() * 7; d.o.position.set(Math.max(2, Math.min(map.w - 2, me.x + Math.cos(a) * r)), 0.4, Math.max(2, Math.min(map.h - 3, me.y + Math.sin(a) * r))); d.vx = (Math.random() - 0.5) * 0.9; d.vy = (Math.random() - 0.5) * 0.9; d.far = false; continue; }
+    d.o.position.x += d.vx * dt; d.o.position.z += d.vy * dt; d.o.rotation.y += dt * 0.4; d.o.position.y = 0.4 + Math.sin(W.t + d.vx * 9) * 0.12;
+    if (dd < 0.75) { for (let k = 0; k < 6; k++) { const nx = me.x + ex / (dd || 1) * 0.12, ny = me.y + ey / (dd || 1) * 0.12; if (canStand(nx, ny)) { me.x = nx; me.y = ny; } } d.vx = -d.vx; d.vy = -d.vy; if (Math.random() < 0.3) ui.toast(story.BELT.debris, 1800); }
+  }
+  const md = m.miner, mo = W.tileObjs.get('miner');
+  if (md && mo) {                                            // the mining unit: one rock every few seconds, then it waits for her
+    minerT -= dt; const arm = mo.children[0] && mo.children[0].userData.arm;
+    if (arm) arm.rotation.x = minerT > 3.6 ? Math.sin(W.t * 40) * 0.15 : 0;
+    if (minerT <= 0) {
+      minerT = 4.5; const r = sim.minerWork(S);
+      if (r.ok) { mo.rotation.y = Math.atan2(r.x + 1.5 - mo.position.x, r.y + 1.5 - mo.position.z); W.puff(r.x + 1.5, r.y + 1.5, 0xb9b0a4, 10, 0.4); sfx('dig'); floatText(mo.position.x, mo.position.z, r.got.length ? '+' + r.got.map((id) => ITEMS[id].name).join(', ') : 'dust'); if (r.swapped) ui.toast(`${S.miner.name} swapped in a charged battery from your rucksack.`, 2400); minerSaid = ''; }
+      else if (r.msg !== minerSaid) { minerSaid = r.msg; bubble(mo, r.full ? 'Hopper full! Beep.' : r.flat ? 'Battery flat…' : 'Nothing left in reach.', 3.6); if (r.flat || r.full) ui.toast(r.msg, 3200); }
+    }
+    if (md.hold.length && Math.hypot(md.x + 1 - me.x, md.y + 1 - me.y) < 1.4) { const r = sim.minerCollect(S); if (r.gained.length) { ui.gainedToast(r.gained); sfx('pick'); refreshHud(); } }
+  }
+}
+async function leaveBelt(how) {
+  const r = sim.beltHome(S, how); if (!r.ok) return ui.toast(r.msg);
+  sfx('door'); W.unplace('miner');
+  if (how !== 'pad') { busy = true; await ui.fade(true, 500); busy = false; mode = 'talk'; await ui.say([{ who: 'narrator', text: how === 'tow' ? story.BELT.tow : story.BELT.pod }]); mode = 'play'; }
+  await go({ map: 'hangar', x: 8, y: 7.6, dir: 0 });
+}
+
 // ---------------------------------------------------------------- what E and Space would do here
 function propAt(tx, ty) { return map.props.find((p) => p.act && tx >= Math.floor(p.x) && tx < Math.floor(p.x) + p.w && ty >= Math.floor(p.y) && ty < Math.floor(p.y) + p.d); }
 function fieldAt(tx, ty) { const f = map.field; if (!f) return null; const x = tx - f.x, y = ty - f.y, fd = S.fields[f.id]; return x >= 0 && y >= 0 && x < fd.w && y < fd.h ? { f, x, y, tile: fd.tiles[y * fd.w + x] } : null; }
@@ -495,6 +579,7 @@ const waterAt = (tx, ty) => map.at(tx, ty) === 'w';
 
 function probe() {                                   // → { label, run } for E
   const [tx, ty] = target();
+  if (map.belt) return beltProbe(tx, ty);
   if (map.ruins) {
     const cx = tx - 1, cy = ty - 1, m = S.mine, c = cx >= 0 && cy >= 0 && cx < m.w && cy < m.h ? m.cells[cy * m.w + cx] : 0;
     if (c === 1) return { label: map.belt ? 'Drill the rock' : 'Search the rubble', run: () => search(cx, cy) };
@@ -513,7 +598,7 @@ function probe() {                                   // → { label, run } for E
     if (p.act === 'counter' && p.shop) return { label: 'Use the Grand Market terminal', run: () => ui.marketWindow(S, refreshHud) };
     if (p.act === 'hydro') return hydroProbe(p);
     if (p.act === 'counter') { const k = nearestNpc(3.2); if (k) return { label: `Talk to ${NPCS[k].short || NPCS[k].name}`, run: () => talkTo(k) }; if (map.id === 'hall') return { label: 'Nobody is at the desk', run: () => ui.toast('Nobody is at the desk just now.') }; return { label: 'Nobody is at the counter', run: () => ui.toast('Nobody is here to serve just now.') }; }
-    const L = { launch: 'Climb into the Pallas: fly to the belt', shuttle: `Board Maris's shuttle to the Old World (${sim.shuttleFare(S) ? sim.shuttleFare(S) + ' cr' : 'free'})`, liftdown: 'Ride the lift down to the Main deck', liftup: 'Ride the lift up to Willowfall', gallery: 'Sit and look out of the great window', house: 'Try the door', silo: 'Open the silo', solaryard: 'Use the solar yard terminal', stargaze: 'Stargaze in the dome', onsen: 'Soak in the onsen', bin: sim.basketHeld(S) ? `Tip the basket into the bin (${sim.basketTotal(S)})` : 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Watch the colony forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', lift: 'Ride the orbital elevator', candles: 'Light a memorial candle', museum: 'Look at the Memory Room', books: 'Read a book', storage: 'Open the storage box', fridge: 'Open the fridge', kitchen: 'Cook something', calendar: 'Read the noticeboard' }[p.act];
+    const L = { launch: 'Suit up at the launch cradle: fly out to the belt', shuttle: `Board Maris's shuttle to the Old World (${sim.shuttleFare(S) ? sim.shuttleFare(S) + ' cr' : 'free'})`, liftdown: 'Ride the lift down to the Main deck', liftup: 'Ride the lift up to Willowfall', gallery: 'Sit and look out of the great window', house: 'Try the door', silo: 'Open the silo', solaryard: 'Use the solar yard terminal', stargaze: 'Stargaze in the dome', onsen: 'Soak in the onsen', bin: sim.basketHeld(S) ? `Tip the basket into the bin (${sim.basketTotal(S)})` : 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Watch the colony forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', lift: 'Ride the orbital elevator', candles: 'Light a memorial candle', museum: 'Look at the Memory Room', books: 'Read a book', storage: 'Open the storage box', fridge: 'Open the fridge', kitchen: 'Cook something', calendar: 'Read the noticeboard' }[p.act];
     return { label: L, run: () => act(p) };
   }
   const fa = fieldAt(tx, ty) || fieldAt(Math.floor(me.x), Math.floor(me.y));
@@ -574,20 +659,23 @@ function search(cx, cy) {
   refreshHud(); if (r.fainted) night(true);
 }
 async function leaveRuins() {
-  const bt = map.belt; sim.leaveMine(S); sfx('door');
-  if (!bt) { busy = true; await ui.fade(true, 400); busy = false; mode = 'talk'; await ui.say([{ who: 'narrator', text: story.SHUTTLE.home }]); mode = 'play'; }
-  await go(bt ? { map: 'hangar', x: 8, y: 7.6, dir: 0 } : { map: 'central', x: 7.5, y: 16.5, dir: 0 });
+  if (map.belt) return leaveBelt('pad');
+  sim.leaveMine(S); sfx('door');
+  busy = true; await ui.fade(true, 400); busy = false; mode = 'talk'; await ui.say([{ who: 'narrator', text: story.SHUTTLE.home }]); mode = 'play';
+  await go({ map: 'central', x: 7.5, y: 16.5, dir: 0 });
 }
-// Vashti's hangar: the launch cradle flies the Pallas out to a belt sector.
+// Vashti's hangar: Sato suits up at the launch cradle, which flings her out to sector 1, or to a milestone sector
+// (5, 10, 15, 20) she has reached before.
 async function launchBelt() {
-  const deep = (S.stats && S.stats.deepestBelt) || 0, opts = ['Sector 1'], lv = [1]; for (let d = 5; d <= deep; d += 5) { opts.push('Sector ' + d); lv.push(d); } opts.push('Stay in the hangar');
-  mode = 'talk'; const i = await ui.choose('The launch cradle: Sato climbs into her Pallas.', opts); mode = 'play'; if (i >= lv.length) return;
-  sim.enterBelt(S, lv[i]); const first = !S.flags.flewBelt; sim.setFlag(S, 'flewBelt');
-  if (first) { mode = 'talk'; await ui.say(story.BELT.arrive.slice(0, 2).map((t) => ({ who: 'narrator', text: t }))); mode = 'play'; }
-  await go({ map: 'ruins' });
-  ui.toast(first ? 'E drills a rock. One rock in each sector hides the jump buoy to the next. Drifting debris only nudges you.' : pick(story.BELT.arrive), 5200);
+  const starts = sim.beltStarts(S), opts = starts.map((n) => (n === 1 ? 'Sector 1: the launch apron' : `Sector ${n}`)); opts.push('Stay in the hangar');
+  mode = 'talk'; const i = await ui.choose(`The launch cradle: Sato suits up. Air ${sim.beltAirMax(S)} · hammer: ${['', 'Field', 'Alloy', 'Starsteel'][S.player.toolLevel.hammer || 1]}${S.miner ? ` · ${S.miner.name} rides on her pack (${S.miner.charge}%)` : ''}`, opts); mode = 'play'; if (i >= starts.length) return;
+  if (!sim.countItem(S, 'hammer')) return ui.toast('Vashti holds out a hand. "Hammer?" You do not have it with you.');
+  const first = !S.flags.flewBelt; sim.enterBelt(S, starts[i]); sim.setFlag(S, 'flewBelt');
+  if (first) { mode = 'talk'; await ui.say(story.BELT.suitUp.map((t) => ({ who: 'narrator', text: t }))); mode = 'play'; }
+  const hs = S.player.inv.findIndex((x) => x && x.id === 'hammer'); if (hs >= 0) S.player.sel = hs;      // the hammer in hand
+  await go({ map: 'ruins', x: S.mine.pos[0] + 1, y: S.mine.pos[1] + 1, dir: 1 });
+  ui.toast(first ? 'Space (or E) with the hammer breaks a rock; better hammers break the glinting veins. Flying uses air: every sector has a lit pickup pod home. F sets down a mining unit, if Ruess has leased you one.' : starts[i] > 1 ? story.BELT.start(starts[i]) : pick(story.BELT.arrive), 5200);
 }
-async function jumpSector(depth) { sim.enterBelt(S, depth); await go({ map: 'ruins' }); ui.toast(pick(story.BELT.deeper), 4200); }
 // Maris's courier shuttle from the space dock down to the Old World.
 async function boardShuttle() {
   const fare = sim.shuttleFare(S), deep = (S.stats && S.stats.deepest) || 0, opts = ['Level 1'], lv = [1]; for (let d = 5; d <= deep; d += 5) { opts.push('Level ' + d); lv.push(d); } opts.push('Not today');
@@ -601,6 +689,7 @@ async function boardShuttle() {
 
 function use() {                                     // Space: the held tool or item
   if (fishing) return pullLine();
+  if (map.belt) { const [tx, ty] = target(), c = S.mine.cells[(ty - 1) * S.mine.w + tx - 1]; if (c === 1 || c === 4 || c === 5) return hammerRock(tx - 1, ty - 1); return; }
   if (map.ruins) return pallasFire();
   const s = sim.selected(S); if (!s) return; const it = ITEMS[s.id], [tx, ty] = target();
   const near = nearestNpc(1.5); if (near && it.kind !== 'tool' && it.kind !== 'seed') return giveTo(near);
@@ -609,7 +698,7 @@ function use() {                                     // Space: the held tool or 
     if (sim.chestAt(S, map.id, tx, ty) >= 0 || sim.panelAt(S, map.id, tx, ty) >= 0) { me.swing = 1; const r = sim.pickUpPlaced(S, map.id, tx, ty); ui.toast(r.msg); if (r.ok) { sfx('chop'); drawPlaced(); } return refreshHud(); }
     const fi = sim.fruitTreeAt(S, map.id, tx, ty); if (fi >= 0) { me.swing = 1; const r = sim.removeTree(S, fi); ui.toast(r.msg); if (r.ok) { sfx('chop'); W.puff(tx + 0.5, ty + 0.5, 0x6fbf5a, 10, 0.6); drawPlaced(); } return refreshHud(); }
   }
-  if (it.kind === 'food' || it.maxUp || (it.stamina && it.kind !== 'tool')) { if (it.kind === 'food' || it.maxUp) { const r = sim.eat(S, S.player.sel); if (r.celebrate) { sfx('good'); ui.celebrate(r.msg); floatText(me.x, me.y, '★'); } else ui.toast(r.msg || 'That was good.'); if (r.ok) sfx('pick'); refreshHud(); } return; }
+  if (it.kind === 'food' || it.maxUp || (it.stamina && it.kind !== 'tool')) { if (it.kind === 'food' || it.maxUp) ui.toast(`Press R to eat the ${it.name.toLowerCase()} (or eat it from the rucksack).`); return; }   // no eating by accident on the use key
   if (it.kind !== 'tool' && it.kind !== 'seed') return;
   me.swing = 1;
   if (s.id === 'can' && (waterAt(tx, ty) || (propAt(tx, ty) || {}).act === 'well')) { const r = sim.refillCan(S); ui.toast(r.msg || 'Filled.'); if (r.ok) sfx('water'); return refreshHud(); }
@@ -694,7 +783,7 @@ function frame(now) {
       if (fishing) endFishing();
       ix /= Math.max(1, len); iy /= Math.max(1, len);
       const c = Math.cos(W.yaw), s = Math.sin(W.yaw), wx = ix * c + iy * s, wy = -ix * s + iy * c;
-      const tired = S.player.stamina < 15 ? 0.7 : 1, sp = (map.ruins ? (dashT > 0 ? 13 : 4.6) : keys.has('ShiftLeft') || keys.has('ShiftRight') ? 5.6 : 3.9) * tired * dt;
+      const tired = S.player.stamina < 15 ? 0.7 : 1, sp = (map.belt ? (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 6.2 : 4.4) : map.ruins ? (dashT > 0 ? 13 : 4.6) : keys.has('ShiftLeft') || keys.has('ShiftRight') ? 5.6 : 3.9) * tired * dt;
       me.dir = Math.abs(wx) > Math.abs(wy) ? (wx < 0 ? 2 : 3) : (wy < 0 ? 1 : 0);
       if (canStand(me.x + wx * sp, me.y)) me.x += wx * sp; if (canStand(me.x, me.y + wy * sp)) me.y += wy * sp;
       const tx = Math.floor(me.x), ty = Math.floor(me.y);
@@ -716,7 +805,7 @@ function frame(now) {
       promptT = 0.12; current = probe();
       const s = sim.selected(S), [tx, ty] = target(), it = s && ITEMS[s.id];
       const onField = !map.ruins && (fieldAt(tx, ty) || pastureAt(tx, ty)) && it && (it.kind === 'tool' || it.kind === 'seed');
-      W.setCursor(tx, ty, !!onField || (map.ruins && current && current.label.startsWith('Search')));
+      W.setCursor(tx, ty, !!onField || (map.ruins && current && /^(Search|Break)/.test(current.label)));
       ui.prompt(current && current.label ? `<kbd>E</kbd>${current.label}` : '');
     }
   } else { me.moving = false; W.setCursor(0, 0, false); if (mode !== 'play') ui.prompt(''); }
@@ -746,9 +835,9 @@ function bindInput() {
     if (ui.windowOpen() || ui.talking()) return;
     keys.add(e.code);
     if (/^Digit\d$/.test(e.code)) selectSlot(e.code === 'Digit0' ? 9 : +e.code.slice(5) - 1);
-    if (e.code === 'KeyR') { const s = sim.selected(S); if (s && (ITEMS[s.id].stamina || ITEMS[s.id].maxUp)) { const r = sim.eat(S, S.player.sel); if (r.celebrate) { sfx('good'); ui.celebrate(r.msg); } else ui.toast(r.msg || 'That was good.'); refreshHud(); } }
-    if (map && map.ruins && e.code === 'KeyF') placeHydra();
-    if (map && map.ruins && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) pallasDash();
+    if (e.code === 'KeyR') { const s = sim.selected(S); if (s && (ITEMS[s.id].stamina || ITEMS[s.id].maxUp)) { const r = sim.eat(S, S.player.sel); if (r.celebrate) { sfx('good'); ui.celebrate(r.msg); floatText(me.x, me.y, '★'); } else ui.toast(r.msg || 'That was good.'); if (r.ok) sfx('pick'); refreshHud(); } }
+    if (map && map.belt && e.code === 'KeyF') minerToggle(); else if (map && map.ruins && e.code === 'KeyF') placeHydra();
+    if (map && map.earth && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) pallasDash();
     if (e.code === 'KeyQ') W.yaw -= Math.PI / 4; if (e.code === 'KeyC') W.yaw += Math.PI / 4;
   });
   addEventListener('keyup', (e) => keys.delete(e.code)); addEventListener('blur', () => keys.clear());
@@ -768,7 +857,7 @@ function bindInput() {
     const mv = (e) => { const r = st.getBoundingClientRect(), x = (e.clientX - r.left - 60) / 50, y = (e.clientY - r.top - 60) / 50, l = Math.max(1, Math.hypot(x, y)); stick.x = x / l; stick.y = y / l; knob.style.transform = `translate(${stick.x * 34}px, ${stick.y * 34}px)`; };
     st.addEventListener('pointerdown', (e) => { st.setPointerCapture(e.pointerId); mv(e); }); st.addEventListener('pointermove', (e) => { if (e.buttons || e.pressure) mv(e); });
     const up = () => { stick.x = stick.y = 0; knob.style.transform = ''; }; st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
-    $('tUse').addEventListener('pointerdown', (e) => { e.preventDefault(); pressUse(); }); $('tAct').addEventListener('pointerdown', (e) => { e.preventDefault(); if (map && map.ruins && mode === 'play' && !ui.talking() && !probe()) placeHydra(); else pressE(); });
+    $('tUse').addEventListener('pointerdown', (e) => { e.preventDefault(); pressUse(); }); $('tAct').addEventListener('pointerdown', (e) => { e.preventDefault(); if (map && map.ruins && mode === 'play' && !ui.talking() && !probe()) { if (map.belt) minerToggle(); else placeHydra(); } else pressE(); });
   }
 }
 

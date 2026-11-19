@@ -75,7 +75,7 @@ def main():
     a = ap.parse_args()
     if not URL:
         sys.exit("set COMFY_URL")
-    s = requests.Session()
+    s = requests.Session(); s.headers["User-Agent"] = "Mozilla/5.0 farm-music"
     names = [n for n in (a.only.split(",") if a.only else TRACKS)]
     jobs = []
     for n in names:

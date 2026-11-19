@@ -292,7 +292,7 @@ the robots' moods and every item's long text are in `data.js`. Old saves load: `
   storage box window, generalised; `sim.boxOf(state, where)` resolves 'storage', 'fridge', 'chest:i';
   `storeItem`/`takeItem` accept all three). The axe on an empty chest picks it up (`pickUpPlaced`).
   Drawn with model `field_chest` (built stand-in: a hull-plate chest).
-* **Field-units** (Ruess leases up to 3, 300 cr each; `state.robots = [ { name, job, days, charge,
+* **Field-units** (Ruess leases up to 7 (`MAX_ROBOTS`), 300 cr each; the Batteries job and the journal's Robots tab are in §11; `state.robots = [ { name, job, days, charge,
   mood, done } ]`): jobs `water` (24 dry crop tiles), `harvest` (12 ripe crops into the bin; regrowing
   plants stay), `animals` (feeds every animal from the stock, eggs into the bin), `rest`. Skill level
   `robotLevel(r) = min(5, 1 + days worked / 5)`; each level adds 4 tiles (`robotReach`). The work runs
@@ -402,7 +402,7 @@ every new item id.
 
 ## 9. The belt and the Old World (owner, 2026-11-18, later)
 
-* **The Descent** on Terrace Hill is now the hull lift up to **Vashti's hangar** (interior `hangar`,
+* *(Superseded by §11: the belt is one open map now, flown in a space suit.)* **The Descent** on Terrace Hill is now the hull lift up to **Vashti's hangar** (interior `hangar`,
   spot `hangar.floor`: Vashti by day). E at the **launch cradle** flies the Pallas to a **belt sector**:
   `enterBelt(state, depth)` = `enterMine(state, depth, 'belt')` (`state.mine.mode`), drawn by
   `ruinsMap` with `map.belt` (ground `v`, the dust lane; `asteroid` rocks, `asteroid_big` walls, a
@@ -455,16 +455,84 @@ for those buildings; icons `icons/star_plum`, `icons/colony_feast`, `icons/found
   * Both are full villagers (`story.VILLAGERS`, `sim.NPC_IDS`; `ensure()` gives old saves their records), not
     romance candidates. Their built figures: `LOOKS` in main.js (`collar`, `stole`, `badge`, `capBadge`, `belt`,
     drawn in actors.js). Portraits: renders of the figures in `art/farm/people/<id>_front.webp`.
-* **Belt ores** (`sim.BELT_ORES`, `sim.beltOdds(depth)`: one roll a rock, odds by sector to 20): scrap (15),
+* **Belt ores** (`sim.BELT_ORES`, `sim.beltOdds(sector)`: one roll a plain rock, odds by sector to 20; §11 has the open map): scrap (15),
   nickel-iron (25), silica (30), comet ice (60) from sector 1; copper ore (45) from 2; star-metal (500) from 3, a little
   more often further out; titanium ore (90) from 4; alloy (40) from 5; platinum nugget (260) from 8; crystal (150)
   from 10. Ruess's ore jobs: **smelt alloy** (4 nickel-iron + 100 cr), **wind a battery** (2 copper + 80 cr), **solar
   yard racks** (4 silica + 2 copper + 1,200 cr: 10 racks, `flags.yard_big`, `yardSlots`), **titanium mill rollers**
-  (2 titanium + 800 cr: the mill grinds 40 a night, `flags.mill_rollers`, `millCap`), **Pallas drill head** (3 titanium
-  + 2 copper + 1 platinum + 2,500 cr: a 30% chance of a second ore per rock, `flags.drill`). The Old World keeps its
+  (2 titanium + 800 cr: the mill grinds 40 a night, `flags.mill_rollers`, `millCap`), **rock-splitter hammer head** (was the Pallas drill
+  head; 3 titanium + 2 copper + 1 platinum + 2,500 cr: a 30% chance of a second ore per rock, `flags.drill`). The Old World keeps its
   scrap and relics.
 * **The orbital elevator** replaces the Descent on Terrace Hill (building kind and model slot `orbital_elevator`, 4×4,
   height 9; built stand-in `World.buildElevator`: a base station, a lattice tower, the waiting car; `elevatorCable`
   adds the cable rising out of sight with a second car riding it, model or not). Its door goes to Vashti's hangar at
   the axis; the prompt reads "Ride the orbital elevator up to the hangar" (`story.ELEVATOR.up` / `.down` toasts). The
   spot and sign id stay `hill.wreck` (save compatible).
+
+## 11. The open belt, the mining unit, the battery job and the Robots tab (owner, 2026-11-19)
+
+Owner: "The asteroid belt should not be layered, but a big map. I like sectors. The farther it is from the starting point
+(probably move north), the better. The robots can help each other to change and charge batteries as an assigned job, so
+we can make the most use of the seven. The pause screen can also allow me to assign jobs, rather than catching them one by
+one." Then: no Pallas in the belt (no monsters there): a space suit and the hammer, a mining robot on F that runs on
+batteries, air as the cost of distance; a start at sector 1, 5, 10, 15 or 20 once reached; a shuttle home in every sector.
+
+* **One big map** (`sim.beltLayout(seed)`, pure and cached; `state.belt = { seed, gone, reached }`): `BELT_W` 34 ×
+  `BELT_H` 286 cells: the launch apron (6 rows, the pad at `BELT_PAD`) at the south edge, then `BELT_SECTORS` 20 bands of
+  `SECTOR_H` 14 rows, sector 1 just north of the apron, sector 20 at the far north (`beltSector(y)`, `sectorTop(s)`).
+  Cells: 0 open, 1 rock, 3 great asteroid (never breaks), 4 comet ice, 5 rich vein, 6 pickup pod, 7 landmark. Per sector:
+  1 + s/4 great-asteroid clumps, 4–6 rock fields with gaps (about 55 rocks), scattered singles, 1–2 comet-ice clusters
+  (from sector 2), rich veins from sector 3 (1.2% of rocks a sector further out, to 20%), one pickup pod, and landmarks
+  (`BELT_LANDMARKS`: a derelict nav buoy in 3, a sleeping comet with an ice field in 8, the wreck of the Hesper in 13, the far
+  marker in 20; their words in `story.BELT.marks`). Nothing is walled off from the pad (the generator carves through
+  great asteroids). About 1,400 breakable rocks and 370 great asteroids in all.
+* **Trips**: `enterBelt(state, start)` builds `state.mine` (mode `belt`) from the layout minus the rocks still drifting
+  back; `start` is 1 or a milestone she has reached (`beltStarts`: 5, 10, 15, 20 ≤ `belt.reached`), beside that sector's
+  pod. `enterMine(state, n, 'belt')` is the same call. The UI reports her position (`beltMove(state, x, y)`, at most 3
+  tiles a call): air falls `AIR_PER_TILE` 0.3 a tile from `AIR_TANK` 100 (`AIR_TANK_BIG` 150 with Ruess's big tank,
+  `up_tank`: 2 titanium + 2 silica + 1,800 cr, `flags.tank`); sector 1 to 20 is about 280 tiles, 84 air. A new sector
+  updates `belt.reached` and `stats.deepestBelt` (old layered saves turn their record into milestones). `beltHome(state,
+  how)`: `pad` (the launch pad, 10 min), `pod` (within 2.6 tiles of a pod, 15 min) or `tow` (air at 0: Vashti reels her
+  in, 60 min and −20 stamina). There is no fly-home-from-anywhere: the pods are the way back.
+* **The hammer** (Space or E facing a rock; `hitRock` → the belt branch): 1 stamina a hit. `rockHardness`: plain rock and
+  ice 1, rich vein 2, and 3 from sector 10; `hammerHits(hard, level)`: 0 if the hammer is softer (refused, with the tier
+  it needs), 2 at an equal tier, 1 when the hammer is a tier above. Plain rock: `beltOdds(sector)`; ice: comet ice 72%,
+  silica 14%; a rich vein always gives one of titanium, star-metal, platinum, crystal, alloy or copper (weighted, by the
+  sector's first-sector rules). The rock-splitter head adds a 30% second ore. A broken rock is in `belt.gone` until a day
+  2–5 days later (hash of the seed, cell and day), then a new rock drifts in.
+* **Ore odds of a plain rock** (sector 1 / 5 / 10 / 15 / 20): scrap 14/12/9/6/3%, nickel-iron 20/18/16/14/12%, silica
+  12/11/10/9/8%, comet ice 16/15/14/13/12%, copper –/10/11/11/12%, titanium –/7/8/9/10%, alloy –/10/11/12/13%, platinum
+  –/–/4/5/6%, crystal –/–/6/8/9%, star-metal –/3/4/4/5% (the rest is bare rock).
+* **The mining unit** (`state.miner = { name, charge }`, Ruess, `MINER_PRICE` 1,200 cr, once): F in the belt sets it down
+  on open ground beside her (`minerDeploy`; at under `MINER_RUN` charge it takes a charged battery from her rucksack, the
+  flat one back; with none it will not go). Every 4.5 s of play it breaks the nearest plain rock or ice within
+  `MINER_REACH` 4 tiles (`minerWork`, `MINER_RUN` 10 charge a rock: ten rocks a battery, swapping in another charged battery
+  when flat), into its hopper (`MINER_HOLD` 12); walking up empties it (`minerCollect`), F again recalls it (`minerRecall`).
+  It never breaks rich veins and costs Sato no stamina. At home `chargeMiner` gives it a battery; the battery keeper tops it up.
+* **Drawing**: Sato is the built figure in a suit (`look.suit`: white suit, orange trim, a glass helmet, a pack) holding the
+  hammer. world.js `BeltRocks` draws the rocks as one `InstancedMesh` per kind (models `asteroid`, `asteroid_big`,
+  `comet_ice`, procedural fallback), only within 21 tiles of Sato, rebuilt when she has moved 3 tiles or a rock breaks,
+  plus glints on the rich veins. Props: `sector_buoy` (model `jump_buoy`) at both ends of every sector line,
+  `sector_sign` (floating "▲ SECTOR n", facing the camera), `pickup_pod` (lit pad, capsule, blinking mast), the four
+  landmarks, `mining_bot` (model slot, built stand-in: an orange unit on treads with a drill arm). `spaceBackdrop` tints
+  each sector's dust (blue-grey near home, through green, to gold far out) with a glowing line between sectors; Earth
+  lies far north, Eden's drum behind the apron. In headless Chromium (SwiftShader, 1280×800) a belt frame took about 0.5 s
+  against 1.1 s on the farm.
+* **Map**: the minimap shows the belt (sectors numbered down the side, pods pulsing green, rich veins gold, landmarks ✦,
+  the mining unit); M opens the belt chart, the whole map with the cradle's milestones. The HUD place reads
+  "The belt, sector 7 · air 63/100"; a new sector, a first visit and a milestone each get a toast; the suit chimes at 30
+  and 10 air.
+* **The Batteries job** (`ROBOT_JOBS.batteries`): the keepers work first each morning (`keeperWork`). If its own charge is
+  ≤ `KEEP_BELOW` 60 it swaps a charged battery into itself (free of its count); then, lowest first, every unit at ≤ 60
+  (and the mining unit) up to `robotReach` = 2 + skill level (3 at skill 1, 7 at skill 5), +60 each. Charged batteries
+  come from the farm's solar chargers, then the storage box; each flat one goes where the charged one was (a charger slot
+  charges it again that night), then flat batteries in the storage box go into empty charger slots. Cost 15 + 2 a level,
+  scaled to the work done. Notes say who got a battery, or that there were none. `crewBatteries(state)` sums the crew:
+  units, average, low, flat, charged / flat / charging batteries, how many a keeper can reach, keepers and their cover.
+  In the world the keeper drives between a charger and the lowest units with a battery on its head.
+* **The Robots tab** in the farm journal (P): the crew line, then every unit with its skill, job note, mood, battery bar,
+  five job buttons (`setRobotJob`), Give battery (`chargeRobot`) and Rename (`renameRobot`); the mining unit with its own
+  Give battery (`chargeMiner`). Changes apply at once and the HUD refreshes; talking to a unit on the farm still works.
+  The Today tab has the crew line too.
+* Old saves: `ensure` adds `miner: null`; `state.belt` is made on first use, with `reached` from `stats.deepestBelt`.
+

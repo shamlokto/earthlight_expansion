@@ -1,6 +1,11 @@
 {
  "version": 1,
  "files": {
+  "icons/abyss_koi": {
+   "file": "icons/abyss_koi.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/alloy": {
    "file": "icons/alloy.webp",
    "w": 256,
@@ -76,6 +81,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/cave_fish": {
+   "file": "icons/cave_fish.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/cherry": {
    "file": "icons/cherry.webp",
    "w": 256,
@@ -123,6 +133,16 @@
   },
   "icons/datachip": {
    "file": "icons/datachip.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/deep_truffle": {
+   "file": "icons/deep_truffle.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/diary_page": {
+   "file": "icons/diary_page.webp",
    "w": 256,
    "h": 256
   },
@@ -236,6 +256,16 @@
    "w": 256,
    "h": 256
   },
+  "icons/glowcap": {
+   "file": "icons/glowcap.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/glowfish": {
+   "file": "icons/glowfish.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/grape_juice": {
    "file": "icons/grape_juice.webp",
    "w": 256,
@@ -268,6 +298,16 @@
   },
   "icons/honeyed_nuts": {
    "file": "icons/honeyed_nuts.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/lamp_kit": {
+   "file": "icons/lamp_kit.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/log_tape": {
+   "file": "icons/log_tape.webp",
    "w": 256,
    "h": 256
   },
@@ -356,6 +396,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/pale_oyster": {
+   "file": "icons/pale_oyster.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/peach": {
    "file": "icons/peach.webp",
    "w": 256,
@@ -391,6 +436,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/pipe_eel": {
+   "file": "icons/pipe_eel.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/plum": {
    "file": "icons/plum.webp",
    "w": 256,
@@ -398,6 +448,11 @@
   },
   "icons/potato": {
    "file": "icons/potato.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/pump_part": {
+   "file": "icons/pump_part.webp",
    "w": 256,
    "h": 256
   },
@@ -461,6 +516,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/shiitake": {
+   "file": "icons/shiitake.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/sickle": {
    "file": "icons/sickle.webp",
    "w": 256,
@@ -478,6 +538,11 @@
   },
   "icons/spinach": {
    "file": "icons/spinach.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/spore_bag": {
+   "file": "icons/spore_bag.webp",
    "w": 256,
    "h": 256
   },
@@ -1193,6 +1258,11 @@
    "file": "music/belt.mp3",
    "ogg": "music/belt.ogg",
    "seconds": 93.12
+  },
+  "music/undercroft": {
+   "file": "music/undercroft.mp3",
+   "ogg": "music/undercroft.ogg",
+   "seconds": 94.31
   }
  }
 }

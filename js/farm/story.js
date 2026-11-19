@@ -740,15 +740,19 @@ export const TALK = {
   },
 
   vashti: {
-    first: ['...You are the one with the Pallas.', 'Vashti. I run the elevator and the hangar at the top of it. The Pallas goes out to the belt and it comes back. I see to the second part.'],
+    first: ['...You are the one with the Pallas.', 'Vashti. I run the elevator and the hangar at the top of it. You go out to the belt in a suit, not that walking tank. Nothing out there to shoot. You go out and you come back. I see to the second part.'],
     bday: ['...How did you know.', 'Nobody has given me anything in a long time. I do not know what my face is doing. Ignore it.'],
     b0: [
       'Elevator runs eight till six. Be back in the car by six or sleep in the hangar. The hangar is cold.',
       'Search the rubble. Set your Hydra down first. The crawlers scatter. It is not difficult.',
       'Nickel-iron near the colony. Copper and titanium further out. Platinum if you are patient. Everything has a price or a place. Learn which.',
+      ['Twenty sectors, south to north. One is the apron. Twenty is the far marker. Further is richer.', 'Further is also further. Watch your air.'],
+      ['Every sector has a pickup pod. Green light, lit pad. Get in, it flies you home.', 'I put them there. Somebody has to think about the coming back.'],
+      'Reach sector five and the cradle can fling you straight there next time. Ten, fifteen, twenty, the same. Earn it first.',
     ],
     b1: [
       'You keep that salvage arm clean. Most do not. ...Good.',
+      ['The hard veins want a better hammer. Ruess knows. Do not hit a starsteel vein with a field hammer.', 'I did, once. My wrist still talks about it.'],
       ['Down there was a city. Shops. A school. A place that only sold hats.', 'I think about the hat shop more than I should.'],
       'The drones still patrol a car park. Eleven years. Nobody told them it was over. I know the feeling.',
     ],
@@ -1798,7 +1802,7 @@ export const SIGNS = {
   'village.hallfront': 'VILLAGE HALL. Warden E. Marrow. Desk hours 9 to 4, Monday to Friday. The Memory Room is open to all: things from the Old World, kept so we know what was good.',
   'village.workshopfront': 'RUESS: WORKSHOP. Tools upgraded overnight. Greenhouses mended. Clocks, prams and rods considered. Open 9 to 5. Closed Wednesdays. Do not touch the carousel.',
   'village.ranchyard': "CORRAN'S RANCH. Chickens, cows, feed and fodder, milkers and brushes. Open 9 to 5. Closed Thursdays (gone fishing). The shouting is normal.",
-  'hill.wreck': 'THE ORBITAL ELEVATOR. Cable car up to the axis and N. Vashti\'s hangar; Pallas runs to the asteroid belt, 8 to 6. You get lighter as you rise; hold the rail. The Old World is by shuttle from the Eden Central space dock.',
+  'hill.wreck': 'THE ORBITAL ELEVATOR. Cable car up to the axis and N. Vashti\'s hangar; suited runs to the asteroid belt, 8 to 6. You get lighter as you rise; hold the rail. The Old World is by shuttle from the Eden Central space dock.',
   'hill.lake': 'HILL LAKE. Best fishing on the Upper deck. Home of "Old Hollin", a carp of great age and poor manners. Rods lost to him so far: 14.',
   'hill.overlook': 'THE OVERLOOK. From here the whole Lantern Ring curves up and over. At dusk the great window opens, and you can see the Earth. Give it time. So are we.',
 };
@@ -1842,7 +1846,7 @@ export const HELP = [
   },
   {
     title: 'The Old World, fishing and forage',
-    body: 'On the hill, the orbital elevator rides its cable up to Vashti\'s hangar at the axis; from there the Pallas flies sector runs into the asteroid belt. Drill rocks with E for ore (nickel-iron and silica near home, copper, titanium and platinum further out), comet ice and rare star-metal; one hides the jump buoy. The Old World is Maris\'s shuttle from Eden Central: search rubble for relics for the Memory Room, set the Hydra down with F, mind the haze.\n\nFishing: face water, Space to cast, Space when the float dips; rain and the hill lake are best. Forage grows on the hill daily.',
+    body: 'The orbital elevator on the hill rides up to Vashti\'s hangar; there Sato suits up for the asteroid belt: twenty sectors from the launch apron north to the far marker, richer further out. Space or E with the hammer breaks rocks; glinting rich veins need an Alloy or Starsteel hammer. Flying uses the suit\'s air: every sector has a lit pickup pod home, and the cradle can start you at sector 5, 10, 15 or 20 once reached. F sets down a mining unit. The Old World is Maris\'s shuttle: relics for the Memory Room, the Hydra on F.\n\nFishing: face water, Space to cast, Space when the float dips; the hill lake is best.',
   },
   {
     title: 'Eden Central',
@@ -2474,11 +2478,24 @@ export const WATCH = {
 
 // The asteroid belt (from Vashti's hangar) and Maris's shuttle to Earth.
 export const BELT = {
-  arrive: ['The cradle flings the Pallas out of the hangar mouth. Eden turns behind you, a great slow drum; ahead, the belt glitters.', 'Sector run. Rocks drift in the dust lane, slow as thought. The Earth hangs enormous over your shoulder.', 'The belt. No air, no wind, no sound but your own breathing and the drill.'],
-  deeper: ['The jump buoy flashes you through to the next sector. The rocks here are darker, and richer.', 'Further out. The colony is a bright coin behind you now.'],
-  drill: ['The drill bites. Dust sparkles away into the dark.', 'A clean core. Vashti will be pleased.'],
-  debris: 'A tumbling scrap of old hull bumps the Pallas aside. No harm done.',
-  hangar: 'Vashti\'s hangar: the launch cradle, the Pallas on its gantry, and through the hangar mouth, the stars.',
+  suitUp: ['Vashti checks every seal on the suit twice, taps the helmet glass, and steps back. "Air is distance. Spend it like money."', 'The cradle clamps your boots, counts down from three, and throws you out of the hangar mouth. Eden turns behind you, a great slow drum; ahead, the belt glitters.'],
+  arrive: ['Out of the hangar mouth on a puff of thrusters. Rocks drift in the dust lane, slow as thought.', 'The belt. No wind, no sound but your own breathing and the hiss of the pack.', 'The cradle lets go. For a moment you are the only moving thing for a thousand miles.'],
+  start: (n) => `The cradle flings you far out, straight to sector ${n}. The colony is a bright coin behind you.`,
+  sector: ['The dust changes colour under you. A new sector.', 'Past the marker buoys: further out, darker rock, better ore.', 'The numbers on the marker roll over. Further out.'],
+  first: (n) => `Sector ${n}. Nobody from Willowfall has logged a run this far before. Vashti will pretend not to be impressed.`,
+  milestone: (n) => `Sector ${n}! From now on the launch cradle can fling you straight here.`,
+  air: { 30: 'The suit chimes: air at 30. Time to think about a pickup pod.', 10: 'The suit chimes urgently: air at 10. Find a pod. Now.' },
+  pod: 'The pickup pod seals, hums, and flies you home on its own. Fifteen minutes of stars and then the hangar lights.',
+  tow: 'The air alarm, then the hard tug of the tow line: Vashti reels you in across the whole belt. It takes an hour, and it takes it out of you.',
+  hammer: ['The hammer rings through your glove. Dust sparkles away into the dark.', 'A clean break. Vashti will be pleased.'],
+  debris: 'A tumbling scrap of old hull bumps you aside. No harm done; the suit is tougher than it looks.',
+  marks: {
+    derelict: 'An old navigation buoy from before the war, knocked crooked. One red light still blinks, very patiently, for ships that stopped coming. Someone has stuck a Willowfall seed-packet sticker on it.',
+    comet: 'A comet asleep in the dust lane, a dirty snowball the size of a barn. Its tail is only a faint breath of ice. The ice around it is the best in the belt.',
+    wreck: 'Half a freighter hull, ribs open to the stars. HESP... is all that is left of her name. Vashti says she was the Hesper, and that her crew got off. Vashti says it firmly.',
+    far_marker: 'THE FAR MARKER. The last buoy the colony ever set, at the edge of charted rock. A gold ring turns at the top for nobody in particular. You have come a very long way for a farmer.',
+  },
+  hangar: 'Vashti\'s hangar: the launch cradle, a rack of space suits, the Pallas parked on its gantry, and through the hangar mouth, the stars.',
 };
 // The orbital elevator on Terrace Hill (it replaced the old hull lift, the Descent), and the church candles.
 export const ELEVATOR = {
