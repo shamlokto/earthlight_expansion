@@ -38,7 +38,7 @@ export const MAX_STAMINA_CAP = 200, STAR_SPOT = 99, COLLECTOR_KINDS = 75, HYDRO_
 export const STAR_PLUM_SOURCES = ['hill', 'ruins10', 'ruins20', 'harvest', 'lantern', 'seln7', 'marrow7', 'moraine', 'mori', 'collector'];
 export const RUCKSACK_TIERS = [[15, 1500], [20, 4000], [25, 8000], [30, 15000]];
 const FRUITS = ['cherry', 'peach', 'apple', 'persimmon', 'wild_apple', 'wild_grape', 'berry', 'plum', 'loquat', 'mulberry', 'yuzu'];
-const MUSHROOMS = ['mushroom', 'frostcap'];
+const MUSHROOMS = ['mushroom', 'frostcap', 'shiitake', 'pale_oyster'];
 const CAVE_SHROOMS = ['shiitake', 'pale_oyster', 'glowcap'], CAVE_FISH = ['cave_fish', 'glowfish', 'pipe_eel'];
 const VEG = ['turnip', 'potato', 'cucumber', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach'];
 const FISH_IDS = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'cave_fish', 'glowfish', 'pipe_eel'];
@@ -374,7 +374,7 @@ export function useTool(state, fieldId, x, y, dir) {
   if (def.kind === 'seed') return sow(state, fieldId, f, it.id, x, y);
   if (!TOOL_FX[it.id]) return nothing(def.kind === 'tool' ? `The ${def.name.toLowerCase()} is no use on the field.` : 'You cannot use that on the field.');
   const level = state.player.toolLevel[it.id], ctx = { lumber: 0, hint: null };
-  const res = { ok: true, cost: toolCost(state, 2), changed: [], gained: [], fx: TOOL_FX[it.id] };
+  const res = { ok: true, cost: toolCost(state, it.id === 'can' ? 1 : 2), changed: [], gained: [], fx: TOOL_FX[it.id] };
   for (const [tx, ty] of reach(x, y, dir, level, WIDE[it.id])) {
     if (inside(f, tx, ty) && work(state, it.id, level, f.tiles[ty * f.w + tx], ctx)) res.changed.push({ x: tx, y: ty });
   }
@@ -599,7 +599,7 @@ function pantry(state) {
 function planRecipe(state, r) {
   const have = pantry(state), used = {}, picks = [];
   for (const slot of r.needs) {
-    const id = slot.find((x) => (have[x] || 0) - (used[x] || 0) > 0 && (r.same || !picks.includes(x)));
+    const id = slot.filter((x) => (have[x] || 0) - (used[x] || 0) > 0 && (r.same || !picks.includes(x))).sort((a, b) => (ITEMS[a].sell || 0) - (ITEMS[b].sell || 0))[0];
     if (!id) return null;
     used[id] = (used[id] || 0) + 1; picks.push(id);
   }
@@ -674,7 +674,7 @@ function shelves(state, shopId) {
     if (!state.flags.basket) sell('basket', 800, { once: true, apply: () => { addItem(state, 'basket', 1); state.flags.basket = true; ensure(state); return 'A harvest basket. Hold it while you pick, and the crops go in the basket.'; } });
     if (state.cal.season < 3) for (const k of Object.keys(FRUIT_TREES)) sell(`sapling_${k}`, 2500);
     const rented = ensure(state).hydro.length;
-    out.push({ key: 'hydro_tower', label: 'Rent a hydroponic tower', desc: `One tower in the village garden for the rest of this season (${rented}/${HYDRO_MAX}). Any seed, any season, no watering.`, price: 600, once: true,
+    out.push({ key: 'hydro_tower', label: 'Rent a hydroponic tower', desc: `One tower in the village garden for the rest of this season (${rented}/${HYDRO_MAX}). Any seed, any season, no watering.`, price: 300, once: true,
       stop: () => (rented >= HYDRO_MAX ? 'Four towers is all Seln can spare.' : null),
       apply: () => { const used = new Set(state.hydro.map((h) => h.tower)); const tower = [...Array(HYDRO_TOWERS).keys()].find((k) => !used.has(k)); state.hydro.push({ tower, crop: null, planted: 0, season: state.cal.season }); return `Tower ${tower + 1} in the hydroponics garden is yours until the season turns.`; } });
   } else if (shopId === 'ranch') {
@@ -697,7 +697,7 @@ function shelves(state, shopId) {
     }
     sell('field_chest', 1200, { lumber: 20, needs: '20 lumber' });
     const robots = ensure(state).robots.length;
-    out.push({ key: 'robot', label: 'Lease a Field-unit', desc: `A little farm robot (${robots}/${MAX_ROBOTS}). It waters, harvests or tends animals each morning on a battery. Talk to it on the farm to give it a job.`, price: 300, once: true,
+    out.push({ key: 'robot', label: 'Lease a Field-unit', desc: `A little farm robot (${robots}/${MAX_ROBOTS}). It waters, harvests or tends animals each morning on a battery. Talk to it on the farm to give it a job.`, price: 1000, once: true,
       stop: () => (robots >= MAX_ROBOTS ? 'Ruess has no more Field-units to spare. Seven is a whole crew, he says.' : null),
       apply: () => { const name = ROBOT_NAMES.find((n) => !state.robots.some((r) => r.name === n)) || `Unit ${state.robots.length + 1}`; state.robots.push({ name, job: 'water', days: 0, charge: 100, mood: 'happy', done: 0 }); ensure(state); return `${name} rolls out of the workshop, fully charged, and follows you home.`; } });
     sell('solar_panel', 1500, { lumber: 10, needs: '10 lumber' });
@@ -743,8 +743,8 @@ function shelves(state, shopId) {
     if (!countItem(state, 'pendant') && !state.flags.partner) sell('pendant', 3000, { once: true });
   } else if (shopId === 'clinic') {
     out.push({ key: 'checkup', label: 'Check-up and a rest', desc: 'Dr. Mori looks you over. Restores all stamina.', price: 150, once: true,
-      stop: () => (p.stamina >= p.maxStamina ? 'You are in fine shape. Doctor\'s orders: go outside.' : null),
-      apply: () => { p.stamina = p.maxStamina; return 'You feel rested and well.'; } });
+      stop: () => (state.flags.clinicDay === absDay(state) ? 'Dr. Mori sees each patient once a day. Come back tomorrow.' : p.stamina >= p.maxStamina ? 'You are in fine shape. Doctor\'s orders: go outside.' : null),
+      apply: () => { p.stamina = p.maxStamina; state.flags.clinicDay = absDay(state); return 'You feel rested and well.'; } });
     sell('tonic', 500);
   }
   if (shopId === 'ranch' || shopId === 'workshop') laneShelves(state, shopId, sell, once, out);
@@ -1184,12 +1184,12 @@ export function fish(state, place) {
   const [s, m, l] = FISH_ODDS[place], seasonal = SEASON_FISH[state.cal.season];
   // Better rods and rain move the odds from small fish to large and seasonal ones.
   const weights = [s * (1 - 0.25 * (level - 1)) * (wet ? 0.7 : 1), m, l * (1 + 0.5 * (level - 1)), (6 + 7 * (level - 1)) * (place === 'hill' ? 1.5 : 1) * (wet ? 1.5 : 1)];
-  const king = rnd(state) < (wet ? 0.025 : 0.015) && place === 'hill' && level >= 2;
+  const king = rnd(state) < (wet ? 0.006 : 0.003) && place === 'hill' && level >= 2;
   const id = king ? 'fish_king' : ['fish_s', 'fish_m', 'fish_l', seasonal][pick(state, weights)];
   if (!addItem(state, id, 1).ok) return no('Your rucksack is full, so you let it go.');
   state.stats.fishCaught++;
   state.fishLog[id] = (state.fishLog[id] || 0) + 1;
-  return spend(state, toolCost(state, 1), { ok: true, msg: king ? 'Old Hollin himself! The whole village will hear of this.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
+  return spend(state, toolCost(state, 2), { ok: true, msg: king ? 'Old Hollin himself! The whole village will hear of this.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
 }
 
 // Three to six things a day, on 14 spots; rarer kinds turn up less often.
@@ -1488,7 +1488,7 @@ function robotsWork(state, notes) {
     rec.charge = r.charge;
     if (r.job === 'rest' || !own(ROBOT_JOBS, r.job)) { r.mood = 'bored'; r.done = 0; continue; }
     if (r.charge <= 0) { r.mood = 'flat'; r.done = 0; rec.short = true; notes.push(`${r.name} has a flat battery and did no work. Give it a charged battery.`); continue; }
-    let full = r.job === 'animals' ? state.animals.length + (state.eggs > 0 ? 1 : 0) : robotReach(r);
+    let full = r.job === 'animals' ? state.animals.length + (state.eggs > 0 ? 1 : 0) + (state.duckNest && (state.duckNest.eggs > 0 || state.duckNest.feathers > 0) ? 1 : 0) : robotReach(r);
     const cap = r.charge >= cost ? full : Math.floor(full * r.charge / cost);
     let done = 0, extra = '';
     if (r.job === 'water') {
@@ -1514,6 +1514,8 @@ function robotsWork(state, notes) {
         a.fed = true; state.stock[food]--; fed++; done++;
       }
       if (state.eggs > 0 && done < cap) { eggs = state.eggs; const line = state.bin.find((b) => b.id === 'egg'); if (line) line.n += eggs; else state.bin.push({ id: 'egg', n: eggs }); state.eggs = 0; done++; }
+      const nest = state.duckNest;
+      if (nest && (nest.eggs > 0 || nest.feathers > 0) && done < cap) { for (const [k, id] of [['eggs', 'duck_egg'], ['feathers', 'duck_feather']]) { const n = nest[k]; if (n > 0) { const l = state.bin.find((b) => b.id === id); if (l) l.n += n; else state.bin.push({ id, n }); if (k === 'eggs') eggs += n; nest[k] = 0; } } done++; }
       extra = `fed ${fed} animal${fed === 1 ? '' : 's'}${eggs ? ` and put ${eggs} egg${eggs > 1 ? 's' : ''} in the bin` : ''}${out ? ' (the feed or fodder ran out; Corran sells more)' : ''}`;
       if (!state.animals.length) extra = 'found no animals to tend';
     }
@@ -1595,14 +1597,14 @@ export function stargaze(state) {
 // ---------------------------------------------------------------- the silo and the feed mill
 export const isVeg = (id) => VEG.includes(id);
 const MILLABLE = new Set([...VEG, 'chestnut', 'pine_nut']);
-// Spare vegetables in the silo: 1 crop = 2 fodder.
+// Spare vegetables in the silo: 1 crop = 3 fodder.
 export function siloAdd(state, slot, n) {
   const s = slotItem(state, slot); if (!s) return fail('That slot is empty.');
   if (!isVeg(s.id)) return fail('The silo takes vegetables for fodder.');
   if (n === undefined || n === null) n = s.n;
   if (!int(n) || n < 1) return fail('Choose how many.');
-  n = Math.min(n, s.n); const id = s.id; takeFromSlot(state, slot, n); state.stock.fodder += 2 * n;
-  return { ok: true, msg: `${n} × ${ITEMS[id].name} into the silo: +${2 * n} fodder.` };
+  n = Math.min(n, s.n); const id = s.id; takeFromSlot(state, slot, n); state.stock.fodder += 3 * n;
+  return { ok: true, msg: `${n} × ${ITEMS[id].name} into the silo: +${3 * n} fodder.` };
 }
 export const millCount = (state) => ensure(state).mill.reduce((a, b) => a + b.n, 0);
 // Ruess's titanium rollers double what the mill grinds in a night; his belt-glass racks grow the solar yard.
@@ -1621,14 +1623,12 @@ export function millAdd(state, slot, n) {
   const line = state.mill.find((x) => x.id === id); if (line) line.n += n; else state.mill.push({ id, n });
   return { ok: true, msg: `${n} × ${ITEMS[id].name} in the hopper. Hen feed by morning.` };
 }
-// Corn 1 → 5 feed; any other vegetable, chestnut or pine nut 2 → 3 (an odd one waits for tomorrow).
+// Corn 1 → 10 feed; any other vegetable, chestnut or pine nut 1 → 4.
 function millOvernight(state, notes) {
   const m = ensure(state).mill; if (!m.length || !state.flags.feed_mill) return 0;
   let feed = 0, ground = 0, other = 0;
-  for (const x of m) { if (x.id === 'corn') { feed += 5 * x.n; ground += x.n; } else other += x.n; }
-  const pairs = Math.floor(other / 2); feed += 3 * pairs; ground += 2 * pairs;
-  let left = other - 2 * pairs; state.mill = [];
-  if (left) { const odd = m.find((x) => x.id !== 'corn'); state.mill.push({ id: odd.id, n: 1 }); }
+  for (const x of m) { feed += (x.id === 'corn' ? 10 : 4) * x.n; ground += x.n; }
+  state.mill = [];
   state.stock.feed += feed;
   if (feed) notes.push(`The feed mill ground ${ground} crop${ground > 1 ? 's' : ''} into ${feed} hen feed.`);
   return feed;
@@ -1677,10 +1677,10 @@ export function hydroHarvest(state, tower) {
   const h = state.hydro[k], c = h.crop && CROPS[h.crop.id];
   if (!c) return fail('The tower is empty. Plant a seed bag in it.', { gained: [] });
   if (h.crop.age < c.days) return fail(`The ${c.plural} need ${c.days - h.crop.age} more day${c.days - h.crop.age > 1 ? 's' : ''}.`, { gained: [] });
-  const put = stash(state, c.id, 1); if (!put.ok) return fail(FULL, { gained: [] });
+  const put = stash(state, c.id, 3); if (!put.ok) return fail(FULL, { gained: [] });
   if (c.regrow) h.crop.age = c.days - c.regrow; else h.crop = null;
   state.stats.harvested++;
-  return { ok: true, msg: `You picked ${c.name.toLowerCase()} from tower ${tower + 1}.`, gained: [{ id: c.id, n: 1 }], basket: put.basket };
+  return { ok: true, msg: `You picked three ${c.plural} from tower ${tower + 1}.`, gained: [{ id: c.id, n: 3 }], basket: put.basket };
 }
 
 // ---------------------------------------------------------------- the night
@@ -1805,6 +1805,7 @@ Object.assign(PLACE_MAPS, { cheese_press: ['farm'], spinning_wheel: ['farm'], be
 FORAGE[0].push(['wild_violet', 2]); FORAGE[1].push(['elderflower', 2]); FORAGE[2].push(['rosehip', 2]); FORAGE[3].push(['snowdrop', 2]);
 VEG.push('cabbage', 'snap_pea', 'bell_pepper', 'beet', 'kale', 'frost_leek'); FRUITS.push('cranberry', 'rosehip'); MILK.push('goat_milk', 'goat_milk_l');
 for (const id of ['honey_toast', 'honeyed_nuts', 'founders_cake']) RECIPES.find((r) => r.id === id).needs.find((s) => s.includes('honeycomb')).push('honey');
+for (const r of RECIPES) for (const s of r.needs) { if (s.length === 1 && s[0] === 'egg') s.push('duck_egg'); else if (s.length === 1 && s[0] === 'bread') s.push('seed_loaf'); }
 const LANE_FLOWERS = ['tulip', 'sunflower', 'cosmos', 'snowbell', 'wild_violet', 'elderflower', 'snowdrop'], CHEESES = ['cheese', 'goat_cheese'], EGGS = ['egg', 'duck_egg'], LOAVES = ['bread', 'seed_loaf'];
 export const LANE_RECIPES = [
   { id: 'goat_cheese_salad', name: 'Goat cheese salad', needs: [['goat_cheese'], VEG] },
@@ -1935,7 +1936,7 @@ function laneShelves(state, shopId, sell, once, out) {
     if (!state.flags.eastfield) out.push({ key: 'eastfield', label: 'Clear the East Terrace', desc: 'Ruess clears the old terrace east of the farm and runs the irrigation main out to it: a second field, 12 by 10.', price: 3000, lumber: 40, needs: '40 lumber', once: true,
       apply: () => { state.flags.eastfield = true; ensure(state); return 'By evening the East Terrace has water and a gate. "The rocks are yours. I only moved the big ones."'; } });
   } else if (shopId === 'bakery') {
-    sell('bread', 55); sell('sun_bun', 90); sell('seed_loaf', 100); sell('honey_cake', 320);
+    sell('bread', 55); sell('sun_bun', 90); sell('seed_loaf', 100); sell('honey_cake', 650);
   } else if (shopId === 'tailor') {
     for (const [id, price, k] of [['wool', 80, 1], ['fine_wool', 120, 2]]) out.push({ key: 'spin_' + id, label: `Spin your ${ITEMS[id].name.toLowerCase()} into yarn`, desc: `Pia spins one fleece on her own wheel while you wait: ${k} skein${k > 1 ? 's' : ''} of yarn.`, price, req: [[id, 1]], needs: `1 ${lower(id)}`, once: true,
       stop: () => (room(state, 'yarn') < k ? FULL : null), apply: () => { addItem(state, 'yarn', k); return `Pia spins it without looking at the wheel. "${k > 1 ? 'Now that is a fleece. Two skeins.' : 'Clean. Good. Bring more.'}"`; } });
@@ -1944,7 +1945,7 @@ function laneShelves(state, shopId, sell, once, out) {
   } else if (shopId === 'florist') {
     for (const c of Object.values(CROPS)) if (c.shop === 'florist' && c.seasons.includes(season)) sell(`seed_${c.id}`, c.bag);
     sell('beehive', 1800);
-    sell('bouquet', 450);
+    sell('bouquet', 560);
     const fl = ['tulip', 'sunflower', 'cosmos', 'snowbell'][season];
     sell('bouquet', 40, { key: 'tie_bouquet', label: `Tie a bouquet from your ${CROPS[fl].plural}`, desc: 'Noor ties three of your own flowers with a ribbon. She will tell you which stem is crooked.', req: [[fl, 3]], needs: `3 ${CROPS[fl].plural}`, once: true });
   } else if (shopId === 'garage') {
@@ -2126,13 +2127,13 @@ export function schoolDay(state) {
 // The pump hall basins ('lower') and the deep Sump ('sump'): no weather down here; eels come out after six, the koi after eight.
 function underFish(state, place) {
   const level = state.player.toolLevel.rod, m = state.cal.minute, eve = m >= 1080, sump = place === 'sump';
-  const koi = sump && level >= 2 && m >= 1200 && rnd(state) < (level >= 3 ? 0.06 : 0.035);
+  const koi = sump && level >= 2 && m >= 1200 && rnd(state) < (level >= 3 ? 0.015 : 0.008);
   const ids = ['cave_fish', 'glowfish', 'pipe_eel', 'pump_part'];
   const w = [(sump ? 40 : 62) * (1 - 0.2 * (level - 1)), (sump ? 34 : 22) * (1 + 0.3 * (level - 1)), (eve ? 22 : 5) * (1 + 0.3 * (level - 1)), sump ? 3 : 6];
   const id = koi ? 'abyss_koi' : ids[pick(state, w)];
   if (!addItem(state, id, 1).ok) return fail('Your rucksack is full, so you let it go.', { gained: [] });
   if (id !== 'pump_part') { state.stats.fishCaught++; state.fishLog[id] = (state.fishLog[id] || 0) + 1; }
-  return spend(state, toolCost(state, 1), { ok: true, msg: koi ? 'The abyss koi! The whole hall seems to hold its breath.' : id === 'pump_part' ? 'Not a fish: a pump part, green with age. Venn will be pleased.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
+  return spend(state, toolCost(state, 2), { ok: true, msg: koi ? 'The abyss koi! The whole hall seems to hold its breath.' : id === 'pump_part' ? 'Not a fish: a pump part, green with age. Venn will be pleased.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
 }
 
 // ---------------------------------------------------------------- the Undercroft, release 2 (docs/FARM.md §14)

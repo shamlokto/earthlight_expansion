@@ -44,7 +44,7 @@ const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
   for (const c of Object.values(CROPS)) check(ITEMS[c.id]?.kind === 'crop' && ITEMS[c.id].sell === c.sell && ITEMS[`seed_${c.id}`]?.crop === c.id, `crop ${c.id} has an item and a seed bag`);
   for (const [id, it] of Object.entries(ITEMS)) check(it.id === id && it.name && it.kind && typeof it.desc === 'string' && it.desc, `item ${id} is complete`);
   for (const id of ['hoe', 'can', 'sickle', 'hammer', 'axe', 'rod', 'milker', 'brush']) check(ITEMS[id]?.kind === 'tool', `tool ${id}`);
-  const price = { turnip: 60, pumpkin: 250, moonflower: 500, egg: 50, milk_l: 200, fish_s: 50, fish_king: 1200, fish_winter: 260, herb: 40, frostcap: 60, scrap: 15, crystal: 150, photo: 80, ring: 600, datachip: 500 };
+  const price = { turnip: 60, pumpkin: 250, moonflower: 420, egg: 50, milk_l: 200, fish_s: 35, fish_king: 1200, fish_winter: 180, herb: 40, frostcap: 60, scrap: 15, crystal: 150, photo: 80, ring: 600, datachip: 500 };
   for (const [id, v] of Object.entries(price)) check(ITEMS[id]?.sell === v, `${id} sells for ${v}`);
   check(ITEMS.bread.stamina === 20 && ITEMS.tonic.stamina === 100 && ITEMS.berry.stamina === 5 && ITEMS.tea.stamina === 10, 'food stamina');
   check(RELICS.length === 10 && RELICS.every((r) => ITEMS[r.id].kind === 'relic'), 'ten relics');
@@ -622,11 +622,11 @@ function script(s, days = 12) {
   select(s, 'rod');
   check(!act(sim.fish(s, 'moon')).ok && !act(sim.fish(s)).ok && !act(sim.fish(s, 'toString')).ok, 'no water there');
   r = sim.fish(s, 'farm');
-  check(r.ok && r.msg && r.gained.length === 1 && ITEMS[r.gained[0].id].kind === 'fish' && countItem(s, r.gained[0].id) === 1 && s.player.stamina === 99 && s.stats.fishCaught === 1 && s.fishLog[r.gained[0].id] === 1, 'a fish: one stamina, logged');
+  check(r.ok && r.msg && r.gained.length === 1 && ITEMS[r.gained[0].id].kind === 'fish' && countItem(s, r.gained[0].id) === 1 && s.player.stamina === 98 && s.stats.fishCaught === 1 && s.fishLog[r.gained[0].id] === 1, 'a fish: two stamina, logged');
   for (let i = 0; i < 10; i++) if (!s.player.inv[i]) s.player.inv[i] = { id: 'herb', n: 99 };
   s.player.inv[slotOf(s, r.gained[0].id)] = { id: 'herb', n: 99 };
   r = act(sim.fish(s, 'farm'));
-  check(!r.ok && s.player.stamina === 99 && s.stats.fishCaught === 1, 'a full rucksack: it got away, no cost');
+  check(!r.ok && s.player.stamina === 98 && s.stats.fishCaught === 1, 'a full rucksack: it got away, no cost');
   s.player.inv[9] = null; s.player.stamina = 1; r = sim.fish(s, 'farm');
   check(r.ok && r.fainted === true, 'fishing can wear her out too');
 
@@ -644,7 +644,7 @@ function script(s, days = 12) {
   const hill2 = cast('hill', 2, 'sun'), hill3 = cast('hill', 3, 'sun'), farm3 = cast('farm', 3, 'sun');
   check(hill.value < hill2.value && hill2.value < hill3.value && farm.value < farm3.value, `better rods, better fish: ${hill.value.toFixed(0)} < ${hill2.value.toFixed(0)} < ${hill3.value.toFixed(0)}`);
   check(hill3.share('fish_l') > hill.share('fish_l') && hill3.share('fish_spring') > hill.share('fish_spring') && hill3.share('fish_s') < hill.share('fish_s'), 'the odds shift to large and seasonal fish');
-  check(hill2.share('fish_king') > 0.006 && hill2.share('fish_king') < 0.03 && hill3.got.fish_king > 0 && !farm3.got.fish_king && !cast('village', 3, 'rain').got.fish_king, `Old Hollin: hill lake only, about 1.5% (${hill2.share('fish_king').toFixed(3)})`);
+  check(hill2.share('fish_king') > 0.001 && hill2.share('fish_king') < 0.008 && hill3.got.fish_king > 0 && !farm3.got.fish_king && !cast('village', 3, 'rain').got.fish_king, `Old Hollin: hill lake only, about 0.3% (${hill2.share('fish_king').toFixed(3)})`);
   const rain = cast('hill', 1, 'rain');
   check(rain.value > hill.value && rain.share('fish_s') < hill.share('fish_s'), `rain helps: ${hill.value.toFixed(0)} -> ${rain.value.toFixed(0)}`);
   for (let q = 0; q < 4; q++) { const c2 = cast('village', 2, 'sun', q, 1500), want = ['fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'][q]; check(c2.got[want] > 0 && Object.keys(c2.got).every((id) => ['fish_s', 'fish_m', 'fish_l', want].includes(id)), `${SEASONS[q]}: ${ITEMS[want].name}`); }
@@ -960,7 +960,7 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
 
   // robots
   const R = rich(61); wipe(R);
-  check(shopStock(R, 'workshop').find((e) => e.key === 'robot').price === 300, 'a Field-unit lease costs 300');
+  check(shopStock(R, 'workshop').find((e) => e.key === 'robot').price === 1000, 'a Field-unit costs 1000');
   for (let i = 0; i < sim.MAX_ROBOTS; i++) check(buy(R, 'workshop', 'robot').ok, `lease robot ${i + 1}`);
   check(sim.MAX_ROBOTS === 7 && R.robots.length === 7 && new Set(R.robots.map((x) => x.name)).size === 7 && R.robots.every((x) => x.charge === 100 && x.job === 'water'), 'seven robots, named, charged');
   check(!shopStock(R, 'workshop').find((e) => e.key === 'robot').can && !act(buy(R, 'workshop', 'robot')).ok, 'no more than seven');
@@ -1064,22 +1064,22 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   const gs = shopStock(g, 'grandmarket'); check(gs.find((e) => e.key === 'gm_seed_turnip').price === 150 && gs.find((e) => e.key === 'gm_sapling_apple').price === 2800 && gs.some((e) => e.key === 'gm_battery'), 'the market sells imports at a premium');
   setDate(g, 3, 4); check(shopStock(g, 'grandmarket').some((e) => e.key === 'gm_sapling_cherry'), 'saplings even in winter');
   check(buy(g, 'grandmarket', 'gm_battery').ok && countItem(g, 'battery') === 1, 'buy a battery');
-  check(sim.marketPrice('fruit_tart') === 456 && sim.marketPrice('matsutake') === 480 && sim.marketPrice('turnip') === 0 && sim.marketPrice('ring') === 0, 'it buys fine food at +20%');
-  addItem(g, 'fruit_tart', 2); const before = g.player.money; r = sim.sellToMarket(g, slotOf(g, 'fruit_tart')); check(r.ok && g.player.money === before + 912 && !countItem(g, 'fruit_tart') && g.ledger.shipped.fruit_tart === 2, 'sell two fruit tarts');
+  check(sim.marketPrice('fruit_tart') === 324 && sim.marketPrice('matsutake') === 480 && sim.marketPrice('turnip') === 0 && sim.marketPrice('ring') === 0, 'it buys fine food at +20%');
+  addItem(g, 'fruit_tart', 2); const before = g.player.money; r = sim.sellToMarket(g, slotOf(g, 'fruit_tart')); check(r.ok && g.player.money === before + 648 && !countItem(g, 'fruit_tart') && g.ledger.shipped.fruit_tart === 2, 'sell two fruit tarts');
   addItem(g, 'turnip', 1); check(!act(sim.sellToMarket(g, slotOf(g, 'turnip'))).ok, 'not turnips');
   g.cal.minute = 700; r = sim.gallerySit(g); check(r.ok && !r.restored && !r.night, 'the gallery by day: just the view');
   g.cal.minute = 1200; g.player.stamina = 50; r = sim.gallerySit(g); check(r.ok && r.restored === 20 && g.player.stamina === 70, 'after dark: +20');
   r = sim.gallerySit(g); check(r.ok && !r.restored && r.again, 'once a day');
   // the silo and the feed mill
   const f = rich(207); addItem(f, 'carrot', 5); f.stock.fodder = 0;
-  r = sim.siloAdd(f, slotOf(f, 'carrot'), 3); check(r.ok && f.stock.fodder === 6 && countItem(f, 'carrot') === 2, 'silo: 1 crop = 2 fodder');
+  r = sim.siloAdd(f, slotOf(f, 'carrot'), 3); check(r.ok && f.stock.fodder === 9 && countItem(f, 'carrot') === 2, 'silo: 1 crop = 3 fodder');
   addItem(f, 'egg', 1); check(!act(sim.siloAdd(f, slotOf(f, 'egg'))).ok, 'no eggs in the silo');
   check(!act(sim.millAdd(f, slotOf(f, 'carrot'))).ok, 'no mill yet');
   check(buy(f, 'workshop', 'feed_mill').ok && f.flags.feed_mill && !shopStock(f, 'workshop').some((e) => e.key === 'feed_mill'), 'Ruess builds the feed mill, once');
   addItem(f, 'corn', 2); addItem(f, 'chestnut', 3); f.stock.feed = 0;
   check(sim.millAdd(f, slotOf(f, 'corn')).ok && sim.millAdd(f, slotOf(f, 'carrot')).ok && sim.millAdd(f, slotOf(f, 'chestnut')).ok && sim.millCount(f) === 7, 'seven crops in the hopper');
   addItem(f, 'potato', 30); r = sim.millAdd(f, slotOf(f, 'potato')); check(r.ok && sim.millCount(f) === 20 && countItem(f, 'potato') === 17, 'twenty a day');
-  rep = sleep(f); check(f.stock.feed === 10 + Math.floor(18 / 2) * 3 && sim.millCount(f) === 0 && rep.notes.some((n) => /feed mill ground/.test(n)), `milled overnight: ${f.stock.feed} feed`);
+  rep = sleep(f); check(f.stock.feed === 2 * 10 + 18 * 4 && sim.millCount(f) === 0 && rep.notes.some((n) => /feed mill ground/.test(n)), `milled overnight: ${f.stock.feed} feed`);
   // the solar yard
   const y = rich(208); addItem(y, 'battery', 8); const m0 = y.player.money;
   r = sim.yardDeposit(y); check(r.ok && y.solarYard.slots.length === 6 && y.player.money === m0 - 180 && countItem(y, 'battery') === 2, 'six batteries racked for 30 cr each');
@@ -1094,7 +1094,7 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   addItem(h, 'seed_strawberry', 1); select(h, 'seed_strawberry'); r = sim.hydroPlant(h, 0); check(r.ok && h.hydro[0].crop.id === 'strawberry', 'strawberries in winter, in a tower');
   check(!act(sim.hydroHarvest(h, 0)).ok, 'not ripe yet');
   for (let i = 0; i < 8; i++) sleep(h);
-  r = sim.hydroHarvest(h, 0); check(r.ok && countItem(h, 'strawberry') === 1 && h.hydro[0].crop.age === 6, 'ripe in 8 days without watering, and it regrows');
+  r = sim.hydroHarvest(h, 0); check(r.ok && countItem(h, 'strawberry') === 3 && h.hydro[0].crop.age === 6, 'ripe in 8 days without watering, three a pick, and it regrows');
   setDate(h, 3, 30); rep = sleep(h); check(!h.hydro.length && rep.notes.some((n) => /rentals ended/.test(n)), 'rentals end at the season change');
   // Sato's Watch
   const w = newGame({ seed: 211 }); w.cal.minute = 700; check(!act(sim.stargaze(w)).ok, 'the dome opens at seven');
@@ -1377,6 +1377,25 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   // the forage: one new find each season
   const f = newGame({ seed: 624 }), seen = new Set(); for (let d = 0; d < 480; d++) { sleep(f); for (const x of f.forage) seen.add(x.id); }
   check(['wild_violet', 'elderflower', 'rosehip', 'snowdrop'].every((id) => seen.has(id)), 'violets, elderflower, rosehips and snowdrops turn up on the hill');
+}
+{ // the balance pass (2026-11-19): exploits closed, ingredients chosen sensibly
+  const b = rich(901);
+  const cake = shopStock(b, 'bakery').find((e) => e.key === 'honey_cake');
+  check(cake && cake.price > ITEMS.honey_cake.sell && cake.price > sim.marketPrice('honey_cake'), `the bakery's honey cake (${cake && cake.price}) costs more than the bin (${ITEMS.honey_cake.sell}) or the Grand Market pays`);
+  for (const sh of Object.keys(sim.SHOPS)) for (const e of shopStock(b, sh)) { const id = e.key.replace(/^gm_/, ''); if (ITEMS[id] && ITEMS[id].sell && !e.needs) check(e.price > Math.max(ITEMS[id].sell, sim.marketPrice(id)), `${sh} sells ${id} (${e.price}) for more than it fetches`); }
+  b.player.stamina = 10; check(buy(b, 'clinic', 'checkup').ok && b.player.stamina === b.player.maxStamina, 'a check-up restores you');
+  b.player.stamina = 10; check(!act(buy(b, 'clinic', 'checkup')).ok && b.player.stamina === 10, 'but only once a day');
+  sleep(b); b.player.stamina = 10; check(buy(b, 'clinic', 'checkup').ok && b.player.stamina === b.player.maxStamina, 'and again tomorrow');
+  const k = rich(902); k.flags.kitchen = true;
+  for (const id of ['duck_egg', 'milk_s']) addItem(k, id, 1); check(sim.cook(k, 'omelette').ok && !countItem(k, 'duck_egg'), 'a duck egg makes an omelette');
+  for (const id of ['honeycomb', 'seed_loaf']) addItem(k, id, 1); check(sim.cook(k, 'honey_toast').ok && !countItem(k, 'seed_loaf'), 'a seeded loaf makes honey toast');
+  for (const id of ['berry', 'duck_egg', 'seed_loaf']) addItem(k, id, 1); check(sim.cook(k, 'fruit_tart').ok && !countItem(k, 'duck_egg') && !countItem(k, 'seed_loaf'), 'a fruit tart from a duck egg and a seeded loaf');
+  const v = rich(904); v.flags.kitchen = true; for (const id of ['pumpkin', 'melon', 'turnip', 'snap_pea']) addItem(v, id, 1);
+  check(sim.cook(v, 'salad').ok && countItem(v, 'pumpkin') === 1 && countItem(v, 'melon') === 1 && !countItem(v, 'turnip') && !countItem(v, 'snap_pea'), 'a salad takes the cheapest vegetables, not the pumpkin');
+  const d = rich(903); d.flags.duckhouse = true; d.stock.feed = 20;
+  check(buy(d, 'workshop', 'robot').ok && sim.setRobotJob(d, 0, 'animals').ok && buy(d, 'ranch', 'duck', 2).ok, 'a robot on animals, and two ducks');
+  sleep(d); sleep(d);
+  check(d.duckNest.eggs === 0 && d.bin.some((x) => x.id === 'duck_egg' && x.n === 2), 'the animals robot empties the duck nest into the bin');
 }
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

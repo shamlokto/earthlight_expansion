@@ -56,7 +56,7 @@ Do not use Lt. Arkin (he may have died in the player's campaign) or name the Gen
 * **Calendar**: 4 seasons (Spring, Summer, Autumn, Winter) × 30 days; week Mon–Sun, Spring 1 of
   year 1 is a Monday. A day runs 06:00–24:00; one game minute is 0.6 s of real time (stopped in
   dialogs and menus). At 24:00 Sato collapses and wakes at 06:00 with half stamina.
-* **Stamina** 100. Tools cost 2 each use (fishing 1, nothing when a tool does nothing). At 0 she
+* **Stamina** 100. Tools cost 2 each use, the watering can 1 (a fishing cast 2; nothing when a tool does nothing). At 0 she
   faints: next day, half stamina. Food restores stamina. Sleeping in bed restores all.
 * **Weather**, rolled a day ahead (the radio tells): sun, rain (waters every outdoor tile), storm
   (summer; rain, and shops shut), snow (winter).
@@ -74,10 +74,10 @@ Do not use Lt. Arkin (he may have died in the player's campaign) or name the Gen
 
   | Season | Crop (days, regrow, sale) | bag price |
   |---|---|---|
-  | Spring | turnip (4, –, 60) · potato (7, –, 80) · cucumber (9, 5, 60) · strawberry (8, 2, 30) | 120 · 150 · 200 · 150 |
-  | Summer | tomato (9, 3, 60) · corn (13, 4, 100) · onion (7, –, 80) · pumpkin (14, –, 250) | 200 · 300 · 150 · 500 |
-  | Autumn | carrot (7, –, 120) · eggplant (9, 3, 80) · sweetpotato (6, 2, 60) · spinach (5, –, 80) | 300 · 120 · 300 · 200 |
-  | Any but winter outdoors | moonflower (18, –, 500), Moraine only | 1000 |
+  | Spring | turnip (4, –, 60) · potato (7, –, 100) · cucumber (9, 5, 60) · strawberry (8, 2, 30) | 120 · 150 · 200 · 150 |
+  | Summer | tomato (9, 3, 60) · corn (13, 4, 100) · onion (7, –, 100) · pumpkin (14, –, 250) | 200 · 300 · 150 · 500 |
+  | Autumn | carrot (7, –, 120) · eggplant (9, 3, 80) · sweetpotato (6, 3, 60) · spinach (5, –, 80) | 300 · 120 · 300 · 200 |
+  | Any but winter outdoors | moonflower (18, –, 420), Moraine only | 1000 |
 
 * **Pasture** 12×7: grass seed (500) sows 3×3; grass grows in 3 stages over 9 days (not in
   winter); the sickle cuts ripe grass to fodder (1 each, regrows from stage 1).
@@ -98,7 +98,7 @@ Do not use Lt. Arkin (he may have died in the player's campaign) or name the Gen
   deal with them easily (a creature that reaches her costs 5 stamina, never more). Relics can be
   sold, given, or donated to the **Memory Room** in the Village Hall (10 kinds to collect).
 * **Fishing**, her other great love: the rod (600; Ruess upgrades it) at any water. Cast, wait for
-  the float to dip, pull. Silverfin, river trout, chamber carp (50/120/200), a special fish for
+  the float to dip, pull. Silverfin, river trout, chamber carp (35/75/130), a special fish for
   each season, and the legendary **Old Hollin** in the hill lake. Rain and the lake are best.
 * **Forage** on the hill, new each day: herb (spring, summer; 40), berry (summer; 30, edible),
   mushroom (autumn; 70), frostcap (winter; 60).
@@ -247,7 +247,7 @@ existing game is used.
 * **Setting**: Eden's **Upper deck**, on the Lantern Ring, **after Major Hesk's defeat** (the colony
   game's Reckoning). Willowfall, the Hollin field on its terrace, and Terrace Hill (with the Descent, now the orbital elevator, §10).
 * **Three more villagers**: Commander Rell Kestrel (Guardians' wing), Dr. Haruto Mori (the
-  **clinic**: a check-up restores stamina for 150 cr) and Yui Hoshino (the **library**: the shelves
+  **clinic**: a check-up restores stamina for 150 cr, once a day) and Yui Hoshino (the **library**: the shelves
   hold the how-to pages as books).
 * **Favours** (`story.QUESTS`, 66 of them): on some days the first talk with a villager ends in a
   request ("four herbs for the clinic"). One favour at a time; bringing it gives +6 friendship and
@@ -301,7 +301,7 @@ the robots' moods and every item's long text are in `data.js`. Old saves load: `
   storage box window, generalised; `sim.boxOf(state, where)` resolves 'storage', 'fridge', 'chest:i';
   `storeItem`/`takeItem` accept all three). The axe on an empty chest picks it up (`pickUpPlaced`).
   Drawn with model `field_chest` (built stand-in: a hull-plate chest).
-* **Field-units** (Ruess leases up to 7 (`MAX_ROBOTS`), 300 cr each; the Batteries job and the journal's Robots tab are in §11; `state.robots = [ { name, job, days, charge,
+* **Field-units** (Ruess builds up to 7 (`MAX_ROBOTS`), 1,000 cr each, paid once with no upkeep; units bought earlier are kept; the Batteries job and the journal's Robots tab are in §11; `state.robots = [ { name, job, days, charge,
   mood, done } ]`): jobs `water` (24 dry crop tiles), `harvest` (12 ripe crops into the bin; regrowing
   plants stay), `animals` (feeds every animal from the stock, eggs into the bin), `rest`. Skill level
   `robotLevel(r) = min(5, 1 + days worked / 5)`; each level adds 4 tiles (`robotReach`). The work runs
@@ -336,7 +336,8 @@ the robots' moods and every item's long text are in `data.js`. Old saves load: `
   `sapling`, `fruit_tree_<kind>` (built stand-in: a ball tree with blossom or fruit).
 * **Cooking**: 14 new recipes (mint tea, grape juice, bamboo stir-fry, honey toast, fiddlehead tempura,
   fruit tart, fruit salad, persimmon jam, roast chestnuts, mushroom soup, root stew, honeyed nuts,
-  grilled matsutake, forest bento), each worth more than its dearest ingredients. `RECIPE_GROUPS`
+  grilled matsutake, forest bento), each worth more than its dearest ingredients. The kitchen takes the cheapest ingredient that fits each slot (`planRecipe`); a duck egg
+  does wherever an egg does, and a seeded loaf wherever bread does. `RECIPE_GROUPS`
   groups the kitchen window; `recipeBook` adds `group`, `needs` and `cooked`; `state.cooked = { id: n }`.
 * **Farm journal** (P or the ⏸ button; the clock stops while it is open; P or Esc closes it):
   **Today** (date, weather and forecast, money, stamina, the onsen glow, field and greenhouse summary,
@@ -397,17 +398,17 @@ every new item id.
   4. a Memory Room annex for the larger Old World finds;
   5. a festival hall for a new Main deck festival.
 * **Silo and feed mill** (farm): E at the silo's hatch (`feed_sacks`, act `silo`) opens a window:
-  vegetables in for fodder (`siloAdd`: 1 crop = 2 fodder). Ruess builds the **feed mill** (`feed_mill`,
+  vegetables in for fodder (`siloAdd`: 1 crop = 3 fodder). Ruess builds the **feed mill** (`feed_mill`,
   1,500 cr + 40 lumber, once, `flags.feed_mill`; drawn beside the silo at `farm.millAt`, model slot
   `feed_mill`): up to 20 crops a day in the hopper (`millAdd`, `state.mill`), ground overnight into hen
-  feed (corn 1 → 5; any other vegetable, chestnut or pine nut 2 → 3).
+  feed (corn 1 → 10; any other vegetable, chestnut or pine nut 1 → 4).
 * **Solar yard** (village, act `solaryard`): leave empty batteries, 30 cr each, up to 6
   (`state.solarYard.slots`, `yardDeposit`/`yardCollect`); by morning: sun all, rain or snow half, storm
   none.
 * **Hydroponic towers** (village garden, act `hydro`, `tower` 0–7): Seln rents them (`hydro_tower`,
-  600 cr, up to 4, `state.hydro = [{ tower, crop, planted, season }]`); E with a seed bag plants any
+  300 cr, up to 4, `state.hydro = [{ tower, crop, planted, season }]`); E with a seed bag plants any
   crop in any season (`hydroPlant`), it grows a day each night without watering, E harvests
-  (`hydroHarvest`, regrowing crops regrow). Rentals end at the change of season.
+  (`hydroHarvest`, three a pick; regrowing crops regrow). Rentals end at the change of season.
 
 ## 9. The Old World (owner, 2026-11-18, later; the belt is in §11, the orbital elevator in §10)
 
@@ -580,9 +581,9 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   the bulkheads, the tarpaulins) drawn until then, `glow_lamp` props with a `zone` lit once `ld_<zone>` is set (`landing`
   always). Pump parts at the silent pumps drain more at once (`sim.PUMP_REPAIRS`, `repairPump`): **the north pump** (3 parts,
   `ld_pump2`: the tunnel to the Sump) and **the cistern pump** (5 parts, `ld_pump3`: the way to the old pump room and its log).
-* **Fishing** (`sim.fish(state, 'lower' | 'sump')`, the water body from `maps.waterPlace`): no weather; cave fish (70 cr,
-  common), glowfish (150, uncommon, more in the Sump), pipe eel (210, mostly after 18:00), a pump part now and then in the basins,
-  and the legendary **abyss koi** (1,800): only in the Sump, after 20:00, Alloy rod or better, about 3.5% (6% Starsteel).
+* **Fishing** (`sim.fish(state, 'lower' | 'sump')`, the water body from `maps.waterPlace`): no weather; cave fish (45 cr,
+  common), glowfish (100, uncommon, more in the Sump), pipe eel (140, mostly after 18:00), a pump part now and then in the basins,
+  and the legendary **abyss koi** (1,800): only in the Sump, after 20:00, Alloy rod or better, about 0.8% a cast (1.5% Starsteel).
 * **Mushrooms** (`data.MUSHROOMS`, `state.lower.beds`, `plantBed` / `harvestBed`, 8 beds, act `bed`): a spore bag rolls the kind
   (shiitake 36, pale oyster 36, glowcap 22, deep truffle 6). No watering, no seasons, a day a night.
   | Mushroom | first flush | then every | flushes | per flush | sells |
@@ -616,8 +617,7 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
 * Old saves: `state.lower` is made on first use; the four newcomers get their records from `ensure`.
 * Tests: `node tests/farm-lower.mjs`.
 
-**Planned for release 2:** the **Works** (Venn's recycling and fabrication hall, model `works_hall`), the **Thermal Vents**,
-the **Zero-G Arena**, and **the vault** behind the round door (the rest of the logs; what Site Ninefold was).
+**Release 2** is built: see §14.
 
 ## 13. Market Lane, the fold and the hives (owner, 2026-11-19: "additional content ... new items, farm animals, larger maps, new buildings and characters ... more young ladies")
 
@@ -669,3 +669,56 @@ the **Zero-G Arena**, and **the vault** behind the round door (the rest of the l
   `engine_block`, `radio_desk`, `record_shelf`, `speaker`, `sofa`, `mic_stand`, `radio_mast`; buildings `bakery`, `tailor`,
   `seedhouse`, `garage`, `radio_station`, `fold`, `duckhouse`; people `people/<id>_front` for the five; icons `icons/<id>` for every
   new item.
+
+## 14. The Undercroft, release 2: the Works, the Vents, the Arena and the vault (owner, 2026-11-19)
+
+* **The map grew south** (`lower` 56×44 → 56×62; nothing above row 43 moved). A shutter south of the landing (gate `ld_works`)
+  opens on a cross passage: the **Works** to the west, the **Zero-G Arena** in the middle (gate `ld_arena`), the **Thermal Vents**
+  to the east (bulkhead, gate `ld_vents`). The **vault** is north of the round door (gate `ld_vault` on the door's row; the door
+  prop is not solid, the gate is). New lamp zones `works`, `arena`, `vents`, `vault`; minimap areas; signs `lower.works`,
+  `lower.vents`, `lower.arena`, `lower.worksdoor`, `lower.ventdoor`, `lower.arenadoor`. The gallery's dead pump is now **the
+  gallery pump** (`pump4`, 6 parts, after the cistern pump): it drains the vault's sill.
+* **Three more projects** (`LOWER_PROJECTS`, still in rising price): **The Works** (after the enclave) 10,000 cr, 20 scrap, 4 copper,
+  3 alloy, 60 lumber · **The Zero-G Arena** (after the Works) 12,000 cr, 4 alloy, 2 titanium, 4 lamp kits, 40 lumber · **The Thermal
+  Vents** (after the Works; listed last) 20,000 cr, 4 pump parts, 4 alloy, 4 silica, 80 lumber.
+* **The Works** (shop `works`, keeper Venn, act `works` at the press; `sim.WORKS_RECIPES`, all `once` entries made at once):
+  | Group | Recipe | Needs | cr |
+  |---|---|---|---|
+  | Parts | five lamp kits · five pump parts · a robot battery · a bar of alloy | 16 scrap 4 copper · 12 nickel-iron 4 copper · 3 scrap 1 copper · 6 scrap 2 nickel-iron | 450 · 700 · 40 · 60 |
+  | Robots | quick-step motors (`works_fast`: +6 tiles water/harvest, +1 battery round) · deep-cell packs (`works_cell`: +80 a charge) · sturdy chassis (`works_sturdy`: −6 charge a morning) | 10 scrap 4 copper 1 titanium · 6 copper 3 silica 4 nickel-iron · 4 alloy 12 scrap | 2,400 · 2,800 · 2,200 |
+  | Tools | balanced grips (`works_grips`: a swing of 4+ stamina costs 1 less) | 2 titanium 2 alloy 6 scrap | 3,000 |
+  | Farmhouse | glowcap lamp, pump-gauge clock, model of Eden, pipe-and-crate shelf (`decor_<id>`, house props with `when`) | scrap, copper, silica, nickel-iron (shelf: 10 lumber) | 600 · 800 · 1,500 · 500 |
+  | Gifts | tin lantern, gear brooch, pipe whistle (kind `craft`; liked or loved below decks, Marrow loves the lantern) | scrap, copper, nickel-iron | 120 · 200 · 80 |
+  | The door | a feed to the round door (`vault_power`; shown once `venn_key` is found) | 6 copper 2 alloy 4 charged batteries | 1,500 |
+  Crew upgrades fit every unit, old and new (`ensure()` sets `r.fast`, `r.cell`, `r.sturdy`). **Recycling** (act `recycle`, the bin;
+  `sim.RECYCLE`, `recycle(state, id)`): ten scrap +220 cr, a flat battery +20 cr and a copper ore, a spare log tape +30 (one is kept),
+  five comet ice +360.
+* **The Thermal Vents** (act `vents`, `sim.ventSoak`): an hour in the bath, 6:00 to 23:00, 60 cr: stamina full and the onsen's buff.
+* **The reactor chain** (act `reactor`, `REACTOR_STEPS`, `reactorStep`, one job a day, `flags.reactor` = jobs done): new gauges (3
+  silica, 2 copper; log `day211`) · the coolant valves (4 pump parts, 6 nickel-iron) · Ruess's titanium jacket (4 titanium, 3 alloy;
+  log `galt_door`) · the damping rods (1 platinum, 4 comet ice) · cold shutdown (3 charged batteries; log `venn_key`). Scenes
+  `story.REACTOR`. Done: `ld_reactor`: the bath is free and the catacomb beds grow two days a night.
+* **The Hub Cup** (`FESTIVALS` id `hubcup`, Autumn 19, 10–16, spot `lower.arena`, `flag: 'ld_arena'`: `festivalToday` skips it until
+  the arena is restored; `FESTIVAL_DAYS` has the day, so it is fair). Everyone comes down (`FESTIVAL_SPOTS['lower.arena']`: the
+  stands and the gate; the Undercroft folk too). **The minigame** (`sim.hubCupThrow`, `hubCupSpeed`, `hubCupPlace`, `playHubCup`,
+  pure): five throws; a ball sweeps a bar (a little faster each throw), the hoop is at 0.5; within 0.06 scores 3, 0.15 scores 2,
+  0.28 scores 1. Tika, Kestrel and Wick throw 5–10 from the seed; a tie goes to Sato. Prizes 1,500 / 700 / 300 / 100 cr; first place
+  also wins the **Hub Cup** keepsake. Once a year (`hubcup_y<year>`). Main.js draws the bar (`hubCupThrows`); music `festival`.
+* **Logs**: ten more (21 in all): the Works' fabrication ledger, the unsent "Galt attack" bulletin, Agnes's wash-hall rota, Marrow's
+  chalk on the tiles (terminals and walls in the new halls), three from the reactor console (day 211, the Galt prisoners' note
+  inside the shielding, Venn's sealing log with the code), and three in the vault (the Marshal's final report, the roll, Agnes's
+  finished letter).
+* **The vault** (act `vault`, `vaultReady`: Venn's key log, the feed from the Works, the gallery pump; `openVault`): a quiet scene
+  (`story.VAULT.open`): Venn, Agnes and Marrow at the door, the rota said aloud, the dead ring, the report, the names; Agnes and
+  Marrow make it up. Reward: a **slice of ring three** (keepsake), max stamina +10, `ld_vault`. Afterwards Marrow's scene at the hall
+  (`marrow_vault`: the names go on the memorial), the Governor's board and the gallery sign change (`story.SIGNS_VAULT`), Vesna's
+  radio has new lines on alternate days (`story.RADIO_VAULT`), and the people below talk about it (`TALK[id].flag`).
+* **Schedules**: Venn at the Works after lunch, the reactor console at three, the open vault at night, the arena gate on Sundays;
+  Wick soaks on Sundays and eats lunch in the stands; Moth plays in the drum on Saturday afternoons.
+* **Art slots** (built stand-ins in `lowerworld.js`): `works_hall` (now `fit: 'box'`, stretched along Z to its 8×6 footprint),
+  `fabricator`, `scrap_bin`, `vent_bath`, `reactor_console`, `zero_g_arena`, `decimator_ring`, `vault_door_open`, `decor_lantern`,
+  `decor_clock`, `decor_model`, `decor_shelf`; icons for `tin_lantern`, `gear_brooch`, `pipe_whistle`, `ring_shard`, `hub_cup`.
+* Old saves: nothing new is needed; `flags.reactor` defaults to 0. Tests: `node tests/farm-lower.mjs` (release 2 blocks).
+* **Not built yet**: a new Lower deck resident (a young woman returning from hiding or working in the Works) was in scope but left
+  for a later pass; the departures board in the Governor's office still shows "LOWER · UNDERCROFT · SEALED".
+
