@@ -676,6 +676,7 @@ function drawBelt() {
 }
 function drawMiner() { W.unplace('miner'); const d = S.mine && S.mine.miner; if (d) { const o = W.place('miner', 'mining_bot', d.x + 1, d.y + 1); o.rotation.y = Math.random() * 6; } }
 function beltProbe(tx, ty) {
+  if (!S.mine) return null;                                   // between leaving the belt and the next map
   const m = S.mine, cx = tx - 1, cy = ty - 1, i = cy * m.w + cx, c = cx >= 0 && cy >= 0 && cx < m.w && cy < m.h ? m.cells[i] : 0;
   const d = m.miner; if (d && d.hold.length && Math.hypot(d.x + 1 - me.x, d.y + 1 - me.y) < 1.8) return { label: `Empty ${S.miner.name}'s hopper (${d.hold.reduce((a, g) => a + g.n, 0)})`, run: () => { const r = sim.minerCollect(S); ui.gainedToast(r.gained); if (r.msg) ui.toast(r.msg); sfx('pick'); refreshHud(); } };
   if (sim.isRock(c)) {                                       // the rock's size, and what the hammer needs
@@ -750,6 +751,7 @@ const waterAt = (tx, ty) => map.at(tx, ty) === 'w';
 function probe() {                                   // → { label, run } for E
   const [tx, ty] = target();
   if (map.belt) return beltProbe(tx, ty);
+  if (map.ruins && !S.mine) return null;
   if (map.ruins) {
     const cx = tx - 1, cy = ty - 1, m = S.mine, c = cx >= 0 && cy >= 0 && cx < m.w && cy < m.h ? m.cells[cy * m.w + cx] : 0;
     if (c === 1) return { label: map.belt ? 'Drill the rock' : 'Search the rubble', run: () => search(cx, cy) };
