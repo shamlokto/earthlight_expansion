@@ -1,5 +1,6 @@
 // Sato's Harvest maps (js/farm/maps.js): every spot the story uses exists and can be stood on, and
 // every door, exit, spot and working prop can be walked to.   node tests/farm-maps.mjs
+import { readFileSync } from 'node:fs';
 import { allMaps, ruinsMap, doorTarget, outsideOf, findSpot, FORAGE_SPOTS, CENTRAL_HOUSES } from '../js/farm/maps.js';
 import * as story from '../js/farm/story.js';
 import { newGame, enterMine, FORAGE_SPOT_COUNT } from '../js/farm/sim.js';
@@ -103,5 +104,10 @@ for (const s of ['central.school', 'central.church', 'central.depot', 'school.bo
   check(maps.cafe.spots['cafe.stage'] && !maps.cafe.solid(...maps.cafe.spots['cafe.stage']), 'the Hangar has a corner stage for Vesna');
   for (const s of ['village.lane', 'village.bakeryfront', 'village.millbridge', 'village.trialbeds', 'farm.east']) check(typeof story.SIGNS[s] === 'string' && story.SIGNS[s].length > 40, `sign ${s} has words`);
 }
+// the farmhouse bed is for sleeping; only the catacomb beds (numbered) grow mushrooms (2026-11-19: the two once got mixed up)
+{ const all = allMaps(); const hb = all.house.props.find((p) => p.act === 'bed'); check(hb && hb.bed == null, 'the farmhouse bed has no catacomb bed number');
+  check(all.lower.props.filter((p) => p.act === 'bed').every((p) => Number.isInteger(p.bed)), 'every catacomb growing bed is numbered');
+  check(/p\.act === 'bed' && p\.bed != null\) return bedProbe/.test(readFileSync(new URL('../js/farm/main.js', import.meta.url), 'utf8')), 'only numbered beds go to the mushroom-bed prompt'); }
+
 console.log(failures ? `${failures} of ${checks} checks failed` : `farm-maps: all ${checks} checks passed`);
 process.exit(failures ? 1 : 0);
