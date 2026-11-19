@@ -146,6 +146,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/fiddlehead_tempura": {
+   "file": "icons/fiddlehead_tempura.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/field_chest": {
    "file": "icons/field_chest.webp",
    "w": 256,

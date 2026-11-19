@@ -2213,5 +2213,245 @@
    0.6668
   ],
   "note": "item"
+ },
+ "star_plum": {
+  "file": "star_plum.glb",
+  "tris": 3000,
+  "size": [
+   0.964,
+   1.0,
+   0.8738
+  ],
+  "note": "item model from the icon; leaf and star on top"
+ },
+ "colony_feast": {
+  "file": "colony_feast.glb",
+  "tris": 3000,
+  "size": [
+   0.9996,
+   0.3152,
+   1.0
+  ],
+  "note": "item model; round platter, lies flat (height 0.32)"
+ },
+ "founders_cake": {
+  "file": "founders_cake.glb",
+  "tris": 3000,
+  "size": [
+   0.9963,
+   0.7842,
+   1.0
+  ],
+  "note": "item model"
+ },
+ "comet_ice": {
+  "file": "comet_ice.glb",
+  "tris": 3000,
+  "size": [
+   0.9988,
+   0.6308,
+   1.0
+  ],
+  "note": "item model"
+ },
+ "star_metal": {
+  "file": "star_metal.glb",
+  "tris": 3000,
+  "size": [
+   0.9912,
+   0.9775,
+   1.0
+  ],
+  "note": "item model; mirror shine baked as pale blotches"
+ },
+ "fiddlehead_tempura": {
+  "file": "fiddlehead_tempura.glb",
+  "tris": 3000,
+  "size": [
+   1.0,
+   0.287,
+   0.992
+  ],
+  "note": "item model; plate, lies flat (height 0.29)"
+ },
+ "hoe": {
+  "file": "hoe.glb",
+  "tris": 3000,
+  "size": [
+   0.3735,
+   1.0,
+   0.8628
+  ],
+  "note": "item model; chunky hoe standing on the end of its handle, blade at the top curving back toward -Z"
+ },
+ "observatory": {
+  "file": "observatory.glb",
+  "tris": 8000,
+  "size": [
+   0.8758,
+   1.0,
+   0.8414
+  ],
+  "note": "door on +Z; telescope slit in the dome"
+ },
+ "gov_office": {
+  "file": "gov_office.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.7766,
+   0.6357
+  ],
+  "note": "entrance porch and steps on +Z"
+ },
+ "exchange": {
+  "file": "exchange.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.7416,
+   0.8871
+  ],
+  "note": "awning and shop counter on +Z"
+ },
+ "arrivals": {
+  "file": "arrivals.glb",
+  "tris": 6655,
+  "size": [
+   1.0,
+   0.4318,
+   0.4021
+  ],
+  "note": "sliding doors and canopy on +Z; control tower at +X end; base sheet dropped"
+ },
+ "apartment": {
+  "file": "apartment.glb",
+  "tris": 8000,
+  "size": [
+   0.6756,
+   1.0,
+   0.6038
+  ],
+  "note": "front door on +Z"
+ },
+ "townhouse": {
+  "file": "townhouse.glb",
+  "tris": 8000,
+  "size": [
+   0.8649,
+   1.0,
+   0.7386
+  ],
+  "note": "front door on +Z"
+ },
+ "shuttle": {
+  "file": "shuttle.glb",
+  "tris": 8000,
+  "size": [
+   1.0,
+   0.5815,
+   0.9892
+  ],
+  "note": "nose and cockpit on +Z; wings along X"
+ },
+ "cartel_ship": {
+  "file": "cartel_ship.glb",
+  "tris": 8000,
+  "size": [
+   0.9231,
+   0.7133,
+   1.0
+  ],
+  "note": "cargo ramp on +Z"
+ },
+ "asteroid": {
+  "file": "asteroid.glb",
+  "tris": 4000,
+  "size": [
+   0.9989,
+   0.7263,
+   1.0
+  ],
+  "note": "lumpy rock, no front"
+ },
+ "asteroid_big": {
+  "file": "asteroid_big.glb",
+  "tris": 5000,
+  "size": [
+   1.0,
+   0.9457,
+   0.9981
+  ],
+  "note": "lumpy cratered rock, no front"
+ },
+ "vending": {
+  "file": "vending.glb",
+  "tris": 5000,
+  "size": [
+   0.5706,
+   1.0,
+   0.5316
+  ],
+  "note": "window and buttons on +Z"
+ },
+ "feed_sacks": {
+  "file": "feed_sacks.glb",
+  "tris": 4000,
+  "size": [
+   1.0,
+   0.5838,
+   0.4316
+  ],
+  "note": "three sacks in a row along X"
+ },
+ "feed_mill": {
+  "file": "feed_mill.glb",
+  "tris": 6000,
+  "size": [
+   0.8518,
+   1.0,
+   0.8243
+  ],
+  "note": "grinder wheel on +Z"
+ },
+ "charge_terminal": {
+  "file": "charge_terminal.glb",
+  "tris": 4000,
+  "size": [
+   0.5541,
+   1.0,
+   0.5161
+  ],
+  "note": "green screen on +Z"
+ },
+ "dock_crane": {
+  "file": "dock_crane.glb",
+  "tris": 6000,
+  "size": [
+   0.6493,
+   1.0,
+   0.4559
+  ],
+  "note": "cab on top; short jib toward +X"
+ },
+ "launch_cradle": {
+  "file": "launch_cradle.glb",
+  "tris": 6000,
+  "size": [
+   0.7707,
+   0.5798,
+   1.0
+  ],
+  "note": "rails along Z; four clamp posts"
+ },
+ "jump_buoy": {
+  "file": "jump_buoy.glb",
+  "tris": 5000,
+  "size": [
+   0.7919,
+   1.0,
+   0.7747
+  ],
+  "note": "cyan ring; antennas on top"
  }
 }
