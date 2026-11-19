@@ -1,5 +1,5 @@
 // The Pallas's own art (expansion types 62-65), redrawn with generated pictures (2026-10-28;
-// replaces tools/art/pallas.mjs, pallas-pics.mjs and pallas-pixels.mjs).
+// replaced the old hand-placed tools/art/pallas.mjs, pallas-pics.mjs and pallas-pixels.mjs, now removed).
 //   python3 tools/art/kai-convert.py tools/art/pallas/<form>-src.jpg tools/art/pallas/<form>.json 96 32
 //   python3 tools/art/pallas-poses.py
 //   node tools/art/pallas-xai.mjs
