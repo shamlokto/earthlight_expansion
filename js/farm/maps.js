@@ -247,6 +247,7 @@ const MAP_SIGNS = {
   'school.board': 'On the blackboard, in very neat chalk: WELCOME TO SCHOOL! TODAY WE WILL LEARN: Underneath, a list headed OUR CLASS, with no names on it yet, and a small drawing of a sun.',
   'school.cubbies': 'Rows of little cubbies, each with an empty name card and a hook for a coat. Somebody has put a pencil in every single one.',
   'depot.map': 'The deck map glows: every corridor, lift and hatch of the Main deck, with a green light for each. All green. Beside it, a handwritten note: "All green again today. Good." The handwriting is very stiff.',
+  'farm.hill': "TERRACE HILL →  The onsen, the hill lake, Terrace Falls and the summit; the orbital elevator up to Vashti's hangar. Mind the turbines.",
   'hill.summit': 'THE SUMMIT. Highest ground on the Lantern Ring. From here you can see the whole Ring curve up and over your head, the sun-line, and on a clear night the spokes lit end to end. Please do not feed the turbines.',
   'hill.terraces': 'ORCHARD TERRACES. Planted by the founders, gone wild in the war, still fruiting. Pick what is ripe; leave some for the next person.',
   'hill.falls': 'TERRACE FALLS. The lake\'s overflow, pumped round by the colony and let fall here because, the founders wrote, "people need somewhere to hear water". Fishing welcome. Swimming not.',
@@ -641,6 +642,8 @@ function farmEast(m) {
   // the hill road runs straight on to the farm's east edge, through a gap in the tree line
   m.fill(43, 8, 63, 9, 'p');
   m.clearProps(43, 7, 63, 9);
+  m.clearProps(62, 6, 63, 6); m.clearProps(62, 10, 63, 11);                 // and a wider mouth, so the way out reads at a glance
+  m.prop('signpost', 61, 7, { act: 'sign', sign: 'farm.hill' }); m.spot('farm.hill', 61.5, 8.4);
   m.areas = [['East Terrace', 54, 24.4], ['The fold', 51, 1.6], ['Duck pond', 56, 33]];
   m.scatter(41, 10, ['tree', 'bush', 'flowers', 'flowers'], (x, y) => x >= 55 && y >= 9 && y <= 12);
   return m;
