@@ -1685,10 +1685,12 @@ export function hydroHarvest(state, tower) {
 
 // ---------------------------------------------------------------- the night
 
+// A festival day (always fair, no school). The Hub Cup counts only once the arena is restored.
+const festivalOn = (state, season, day) => FESTIVAL_DAYS.some(([s, d]) => s === season && d === day) && !(season === HUB_CUP.season && day === HUB_CUP.day && !lowerDone(state, 'arena'));
 // Always draws once, so the generator stays in step whatever the date.
 function rollWeather(state, season, day) {
   const r = rnd(state);
-  if (day === 1 || FESTIVAL_DAYS.some(([s, d]) => s === season && d === day)) return 'sun';
+  if (day === 1 || festivalOn(state, season, day)) return 'sun';
   if (season === 0) return r < 0.25 ? 'rain' : 'sun';
   if (season === 1) return r < 0.05 ? 'storm' : r < 0.20 ? 'rain' : 'sun';
   if (season === 2) return r < 0.20 ? 'rain' : 'sun';
@@ -2123,7 +2125,7 @@ export function diaryPage(state) {
 export const PUPILS = FAMILIES.flatMap((f) => f.kids);
 export function schoolDay(state) {
   const m = state.cal.minute;
-  return !!state.flags.ld_rehoused && weekday(state) < 5 && !FESTIVAL_DAYS.some(([s, d]) => s === state.cal.season && d === state.cal.day) && m >= 510 && m < 900;
+  return !!state.flags.ld_rehoused && weekday(state) < 5 && !festivalOn(state, state.cal.season, state.cal.day) && m >= 510 && m < 900;
 }
 // The pump hall basins ('lower') and the deep Sump ('sump'): no weather down here; eels come out after six, the koi after eight.
 function underFish(state, place) {
