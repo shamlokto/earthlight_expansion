@@ -91,6 +91,16 @@
    "w": 256,
    "h": 256
   },
+  "icons/colony_feast": {
+   "file": "icons/colony_feast.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/comet_ice": {
+   "file": "icons/comet_ice.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/cooked_meal": {
    "file": "icons/cooked_meal.webp",
    "w": 256,
@@ -193,6 +203,11 @@
   },
   "icons/forest_bento": {
    "file": "icons/forest_bento.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/founders_cake": {
+   "file": "icons/founders_cake.webp",
    "w": 256,
    "h": 256
   },
@@ -458,6 +473,16 @@
   },
   "icons/spinach": {
    "file": "icons/spinach.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/star_metal": {
+   "file": "icons/star_metal.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/star_plum": {
+   "file": "icons/star_plum.webp",
    "w": 256,
    "h": 256
   },
