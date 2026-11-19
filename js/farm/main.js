@@ -467,9 +467,13 @@ async function vaultDoor() {
   }
   busy = true; await ui.fade(true, 700); busy = false;
   const r = sim.openVault(S); if (!r.ok) { ui.fade(false, 300); return ui.toast(r.msg); }
-  await refreshLower(); ui.fade(false, 700); mode = 'talk'; setMood({ festival: null });
+  await refreshLower();
+  const guests = [];   // Venn, Agnes and Marrow stand at the door with her for the opening
+  [['venn', -1.4, -0.2], ['thorne', 1.4, -0.2], ['marrow', 2.6, 0.4]].forEach(([id, dx, dy]) => { if (W.actors.has(id)) return; const a = new Actor(W, id, lookOf(id), { tall: 1.5 }); a.x = me.x + dx; a.y = me.y + dy; a.dir = 1; W.actors.set(id, a); guests.push(id); });
+  ui.fade(false, 700); mode = 'talk'; setMood({ festival: null });
   await ui.say(story.VAULT.open);
   for (const id of ['ninefold_report', 'the_roll', 'agnes_letter']) { const L = story.LOGS[id]; await ui.say([{ who: 'narrator', text: `${L.author}: “${L.title}”.` }, { who: 'narrator', text: L.text }]); }
+  for (const id of guests) { const a = W.actors.get(id); if (a && !npcs.has(id)) { a.dispose(); W.actors.delete(id); } }
   mode = 'play'; sfx('good'); ui.celebrate('The vault is open. Every log is in your journal, and a slice of ring three is yours. Max stamina +10.'); refreshHud();
 }
 async function refreshLower() { if (map && map.under) { const at = { map: 'lower', x: me.x, y: me.y, dir: me.dir }; await go(at, { quick: true }); } }
