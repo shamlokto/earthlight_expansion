@@ -129,7 +129,7 @@ function showLine() {
   const l = dlgLines[dlgIndex], n = NPCS[l.who];
   if (l.art) scene(l.art);
   $('dFace').innerHTML = n ? face(l.who) : ''; $('dFace').hidden = !n;
-  const su = n && art.url(`people/${l.who}_front`), sd = $('dStand'); sd.hidden = !su; if (su && sd.dataset.who !== l.who) { sd.dataset.who = l.who; sd.innerHTML = `<img src="${su}" alt="">`; sd.className = l.who === 'sato' ? 'left' : 'right'; }
+  const su = n && art.url(`people/${l.who}_front`), sd = $('dStand'); sd.hidden = !su; if (su && sd.dataset.who !== l.who) { sd.dataset.who = l.who; sd.innerHTML = `<img src="${su}" alt="">`; sd.className = (l.who === 'sato' ? 'left' : 'right') + (l.who === 'moth' ? ' child' : ''); }
   $('dName').textContent = n ? n.name : ''; $('dName').hidden = !n;
   $('dialog').className = 'fm-dialog' + (n ? '' : ' narr');
   const t = $('dText'); t.textContent = ''; const t0 = performance.now(); clearInterval(typing);
