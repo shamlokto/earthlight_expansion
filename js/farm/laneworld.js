@@ -22,7 +22,7 @@ export const LANE_PROPS = {
   dress_form: { model: 'dress_form', h: 1.6, fit: 'foot' }, bolt_shelf: { model: 'bolt_shelf', h: 1.9, fit: 'stretch' }, sewing_table: { model: 'sewing_table', h: 1.0, fit: 'stretch' },
   flower_bed: { model: 'flower_bed', h: 0.7, fit: 'stretch' }, seed_drawers: { model: 'seed_drawers', h: 1.7, fit: 'stretch' }, tool_wall: { model: 'tool_wall', h: 2.0, fit: 'stretch' },
   engine_block: { model: 'engine_block', h: 1.0, fit: 'stretch' }, radio_desk: { model: 'radio_desk', h: 1.1, fit: 'stretch' }, record_shelf: { model: 'record_shelf', h: 1.8, fit: 'stretch' },
-  speaker: { model: 'speaker', h: 1.2, fit: 'foot' }, sofa: { model: 'sofa', h: 0.9, fit: 'stretch' }, mic_stand: { model: 'mic_stand', h: 1.5, fit: 'foot' }, radio_mast: { model: 'radio_mast', h: 9, fit: 'foot' },
+  speaker: { model: 'speaker', h: 1.2, fit: 'foot' }, sofa: { model: 'sofa', h: 0.9, fit: 'stretch' }, mic_stand: { model: 'mic_stand', h: 1.0, fit: 'foot' }, radio_mast: { model: 'radio_mast', h: 9, fit: 'foot' },
   duck_egg: { h: 0.16, soft: true }, feather: { h: 0.1, soft: true }, nothing: { h: 0.01 },
 };
 export const LANE_BUILDINGS = {
