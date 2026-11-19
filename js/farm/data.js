@@ -115,9 +115,9 @@ item('battery_full', 'Battery (charged)', 'part', 'A charged robot battery. Give
 
 item('scrap', 'Scrap', 'ore', 'Scrap metal from the ruins.', { sell: 15 });
 item('comet_ice', 'Comet ice', 'ore', 'Dirty ice from the belt, full of useful volatiles. Ruess always wants some.', { sell: 60, detail: 'Broken out of the pale comet-ice clusters in the belt, from sector 2 out, and now and then from plain rock. It sells, the Workshop uses it for coolant, and Ruess is fond of a gift of it.' });
-item('star_metal', 'Star-metal', 'ore', 'A rare meteoric metal from deep in the belt, bright as a mirror.', { sell: 500, detail: 'Found only in the asteroid belt, from sector 3 out, and not often: a little more often the further north you fly, and most of all in the glinting rich veins. Ruess needs one to fit the Pallas with air filters for the Old World.' });
+item('star_metal', 'Star-metal', 'ore', 'A rare meteoric metal from deep in the belt, bright as a mirror.', { sell: 500, detail: 'Found only in the asteroid belt, from sector 3 out, and not often: a little more often the further north you fly, and most of all in the large and huge boulders, which want an Alloy or Starsteel hammer. Ruess needs one to fit the Pallas with air filters for the Old World.' });
 item('alloy', 'Alloy', 'ore', 'Good alloy, broken from belt rocks from sector 5 out.', { sell: 40 });
-item('crystal', 'Crystal', 'ore', 'A drive crystal, broken from belt rocks and rich veins from sector 10 out.', { sell: 150 });
+item('crystal', 'Crystal', 'ore', 'A drive crystal, from medium boulders from sector 10 out, and from large and huge boulders anywhere.', { sell: 150 });
 // The belt's other ores (2026-11-19): common nickel-iron and silica near the colony, copper and titanium a little
 // further out, platinum-group nuggets deep. sim.BELT_ORES has the odds; Ruess turns most of them into something.
 item('nickel_iron', 'Nickel-iron', 'ore', 'Grey, heavy ore that makes up most of the belt. Ruess smelts four into one alloy.', { sell: 25,

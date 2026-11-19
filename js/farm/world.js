@@ -863,7 +863,7 @@ export class World {
     this.colony.setCentre(H / 2); this.spinners = []; this.beacons = []; this.cars = []; this.bots = null; this.pools = null; this.rocks = null;
     if (!map.indoor && !map.ruins && !map.under) R.add(buildSurroundings(map, this.season));   // terraces rising into the cylinder's curve
     else if (map.belt) R.add(spaceBackdrop(W, H, map));  // the belt: stars, the Earth, Eden's hull, sector bands
-    else if (!map.indoor) {                              // the Old World: ash plains and broken towers
+    else if (!map.indoor && !map.under) {                // the Old World: ash plains and broken towers (the Undercroft has only the dark)
       const slot = map.ruins ? 'ash_ground' : 'grass_' + SEASON_KEY[this.season];
       const t = art.tex(slot, { repeat: 1 }).clone(); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(60, 60); t.needsUpdate = true;
       const far = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), std({ map: t })); far.rotation.x = -Math.PI / 2; far.position.set(W / 2, -0.04, H / 2); far.receiveShadow = true; R.add(far);
@@ -1122,8 +1122,8 @@ function spaceBackdrop(W, H, map = {}) {
   }
   return g;
 }
-// The belt's rocks: an InstancedMesh for each kind (plain rock, great asteroid, comet ice, rich vein, and the glints on
-// the veins), using the art pack's rock models when there are any. Only the rocks within REACH tiles of Sato are
+// The belt's rocks: an InstancedMesh for each kind (small, medium, large and huge rocks, great asteroids, comet ice,
+// and the glints on the big ones), using the art pack's rock models when there are any. Only the rocks within REACH tiles of Sato are
 // instanced (several hundred stay off the GPU); the list is rebuilt when she has moved a few tiles or a rock breaks.
 const ROCK_GEO = new Map();
 function rockGeo(name, big) {

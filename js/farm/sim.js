@@ -1070,7 +1070,7 @@ function breakCell(state, m, i, by) {
 }
 // Space with the hammer (or E): one hit on a belt rock. 1 stamina a hit.
 function beltHit(state, x, y) {
-  const m = state.mine, no = (msg) => fail(msg, { broke: false, gained: [] });
+  const m = state.mine, no = (msg, more) => fail(msg, { broke: false, gained: [], ...more });
   const i = int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? y * m.w + x : -1, kind = i >= 0 ? m.cells[i] : 0, s = i >= 0 ? beltSector(y) : 1;
   const size = isRock(kind) ? ROCK_SIZES[kind] : null;
   if (!size) return no(kind === 3 ? 'Too big to break: a whole asteroid. Fly round it.' : 'There is nothing to break here.');

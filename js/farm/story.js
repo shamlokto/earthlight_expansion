@@ -754,7 +754,7 @@ export const TALK = {
     ],
     b1: [
       'You keep that salvage arm clean. Most do not. ...Good.',
-      ['The hard veins want a better hammer. Ruess knows. Do not hit a starsteel vein with a field hammer.', 'I did, once. My wrist still talks about it.'],
+      ['The big boulders want a better hammer. Ruess knows. Do not hit a huge one with a field hammer.', 'I did, once. My wrist still talks about it.'],
       ['Down there was a city. Shops. A school. A place that only sold hats.', 'I think about the hat shop more than I should.'],
       'The drones still patrol a car park. Eleven years. Nobody told them it was over. I know the feeling.',
     ],
@@ -1849,7 +1849,7 @@ export const HELP = [
   },
   {
     title: 'The Old World, fishing and forage',
-    body: 'The orbital elevator on the hill rides up to Vashti\'s hangar; there Sato suits up for the asteroid belt: twenty sectors from the launch apron north to the far marker, richer further out. Space or E with the hammer breaks rocks; glinting rich veins need an Alloy or Starsteel hammer. Flying uses the suit\'s air: every sector has a lit pickup pod home, and the cradle can start you at sector 5, 10, 15 or 20 once reached. F sets down a mining unit. The Old World is Maris\'s shuttle: relics for the Memory Room, the Hydra on F.\n\nFishing: face water, Space to cast, Space when the float dips; the hill lake is best.',
+    body: 'The orbital elevator on the hill rides up to Vashti\'s hangar; there Sato suits up for the asteroid belt: twenty sectors from the launch apron north to the far marker, richer further out. Space or E with the hammer breaks rocks: small and medium for any hammer, large boulders for Alloy, huge ones for Starsteel, and the bigger the richer. Flying uses the suit\'s air: every sector has a lit pickup pod home, and the cradle can start you at sector 5, 10, 15 or 20 once reached. F sets down a mining unit. The Old World is Maris\'s shuttle: relics for the Memory Room, the Hydra on F.\n\nFishing: face water, Space to cast, Space when the float dips; the hill lake is best.',
   },
   {
     title: 'Eden Central',
@@ -2441,6 +2441,685 @@ export const QUESTS = {
   ],
 };
 
+// ------------------------------------------------------------------ Market Lane: five new villagers (2026-11-19)
+// Willowfall grew east into Market Lane. Pia Varga the tailor, Lark Penhallow the baker (romance), Noor Asante the Seedhouse
+// botanist, Tika Brandt the garage mechanic (Ruess's apprentice) and Vesna Kade of Radio Willowfall (romance). Their portraits
+// are drawn from their looks ('look:<id>', ui.js). The Bloom Fair in Lane Square, Summer 10, is their festival.
+const LANE = ['pia', 'lark', 'noor', 'tika', 'vesna'];
+Object.assign(NPCS, {
+  pia: {
+    id: 'pia', name: 'Pia Varga', short: 'Pia', title: "Tailor and dressmaker; Varga's Mend & Make", portrait: 'look:pia',
+    look: { skin: '#f0cdb0', hair: '#6b2a45', top: '#2f6f73', bottom: '#3b3040', style: 'braid' },
+    birthday: { season: 2, day: 23 },
+    loves: ['fine_wool', 'yarn', 'musicbox', 'cosmos'],
+    likes: ['wool', 'tea', 'bread', 'photo', 'goat_cheese', 'strawberry', 'duck_feather', 'honey'],
+    dislikes: ['scrap', 'mushroom', 'tonic'],
+    shop: 'tailor',
+  },
+  lark: {
+    id: 'lark', name: 'Lark Penhallow', short: 'Lark', title: 'Baker of the Sunrise Oven, Market Lane', portrait: 'look:lark',
+    look: { skin: '#f6d2b4', hair: '#e9b35a', top: '#f1d9a8', bottom: '#6b4a35', style: 'ponytail' },
+    birthday: { season: 0, day: 4 },
+    loves: ['honey', 'duck_egg', 'strawberry', 'cranberry'],
+    likes: ['egg', 'milk_m', 'milk_l', 'berry', 'cheese', 'pumpkin', 'tea', 'sunflower'],
+    dislikes: ['scrap', 'frostcap', 'tonic'],
+    shop: 'bakery',
+  },
+  noor: {
+    id: 'noor', name: 'Noor Asante', short: 'Noor', title: 'Seed botanist; the Seedhouse florist', portrait: 'look:noor',
+    look: { skin: '#8a5a3e', hair: '#b9a3d9', top: '#9bb07a', bottom: '#4a5a48', style: 'odango' },
+    birthday: { season: 0, day: 27 },
+    loves: ['seedtin', 'tulip', 'cosmos', 'moonflower'],
+    likes: ['herb', 'snowbell', 'sunflower', 'honey', 'mushroom', 'book', 'spinach', 'wild_violet'],
+    dislikes: ['bouquet', 'scrap', 'alloy'],
+    shop: 'florist',
+  },
+  tika: {
+    id: 'tika', name: 'Tika Brandt', short: 'Tika', title: "Ruess's apprentice; Brandt's Garage", portrait: 'look:tika',
+    look: { skin: '#eac2a0', hair: '#e2553a', top: '#2e8f8a', bottom: '#2a6f6b', style: 'short' },
+    birthday: { season: 3, day: 24 },
+    loves: ['copper', 'toy', 'pie', 'watch'],
+    likes: ['scrap', 'alloy', 'titanium', 'corn', 'bread', 'sun_bun', 'datachip', 'egg'],
+    dislikes: ['bouquet', 'spinach', 'teacup'],
+    shop: 'garage',
+  },
+  vesna: {
+    id: 'vesna', name: 'Vesna Kade', short: 'Vesna', title: 'Voice of Radio Willowfall; plays the Hangar', portrait: 'look:vesna',
+    look: { skin: '#f3d6c2', hair: '#d76f9c', top: '#2b2533', bottom: '#5b4a7a', style: 'twintails' },
+    birthday: { season: 1, day: 19 },
+    loves: ['record', 'musicbox', 'honey', 'elderflower'],
+    likes: ['tea', 'pie', 'berry', 'melon', 'yuzu', 'fish_summer', 'ring', 'honey_cake'],
+    dislikes: ['scrap', 'onion', 'kale'],
+    shop: 'radio',
+  },
+});
+VILLAGERS.push(...LANE);
+SPOTS.push('village.lane', 'village.bakeryfront', 'village.tailorfront', 'village.floristfront', 'village.garagefront', 'village.radiofront', 'village.millbridge', 'village.trialbeds',
+  'bakery.counter', 'bakery.table', 'bakery.floor', 'tailor.counter', 'florist.counter', 'garage.counter', 'garage.bench', 'radio.counter', 'cafe.stage', 'hill.terraces', 'farm.east');
+for (const id of LANE) {                      // their gift tiers (the table above was built before they moved in)
+  const n = NPCS[id], m = {};
+  for (const x of n.dislikes) m[x] = 'disliked';
+  for (const x of n.likes) m[x] = 'liked';
+  for (const x of n.loves) m[x] = 'loved';
+  tierOf[id] = m;
+}
+
+FESTIVALS.push({
+  id: 'bloom', name: 'The Bloom Fair', season: 1, day: 10, from: H(10), to: H(16), spot: 'village.lane',
+  blurb: 'The Bloom Fair in Lane Square from ten: flowers judged without mercy, wool and cheese judged with lunch.',
+  lines: [
+    L('narrator', 'Lane Square is strung with bunting Pia sewed from offcuts. Every table holds something grown, spun, pressed or baked, and a small card in very neat writing.'),
+    L('vesna', 'Good morning, Willowfall, and good morning to the Middle deck, who can hear us if Tika\'s cable holds. This is the Bloom Fair, live.'),
+    L('tika', 'It will hold! ...It is holding. Mostly. If you hear a pop, that was not the cable.'),
+    L('noor', 'I am judging the flowers. Marrow has asked me to be kind. I shall be accurate, and then, if there is time, kind.'),
+    L('pia', 'Wool and cheese on the long table. Touch the fleeces with clean hands or not at all. Corran, that means you.'),
+    L('corran', 'Clean as a gun barrel! And that goat cheese has my goats\' names on it, so mind how you judge it.'),
+    L('lark', 'Honey cake with real flowers on top! Noor says they are edible. Noor also says that about bark, so start with the edges.'),
+    L('fenn', 'One cake each, please. I have been asked to keep order at the cake table. I have been asked by myself.'),
+    L('noor', 'Mira. Your sunflowers lean. Every one of them, towards the sun-line, as if it owed them money. ...First prize.'),
+    L('sato', 'They lean because I never managed to tell them anything. I take no credit. I only watered them and worried.'),
+    L('marrow', 'That is all farming has ever been, my dear. Now, somebody cut that cake before the Constable arrests it.'),
+    L('narrator', 'By four the tables are bare, the bees from the farm hives have found the bouquets, and the whole Lane is humming along to the radio.'),
+  ],
+  reward: { money: 500 },
+});
+for (const t of [SIGNS]) if (t['village.square'] && !/Bloom Fair/.test(t['village.square'])) t['village.square'] = t['village.square'].replace('Lantern Night, Summer 24.', 'Bloom Fair, Summer 10 (Market Lane). Lantern Night, Summer 24.');
+
+Object.assign(SCHEDULE, {
+  // The tailor's: closed Sunday, when Pia buys fleeces at the ranch and walks the trial beds.
+  pia(wd, m) {
+    if (wd === 6) return pick(m, [H(10), H(12), 'village.ranchyard'], [H(12), H(14), 'village.lane'], [H(14), H(17), 'village.trialbeds'], [H(17), H(19), 'village.bench']);
+    return pick(m, [H(8), H(9), 'village.tailorfront'], [H(9), H(17), 'tailor.counter'], [H(17), H(18, 30), wd % 2 ? 'village.lane' : 'village.square'],
+      [H(18, 30), H(20), wd === 2 || wd === 5 ? 'bakery.table' : 'village.tailorfront']);
+  },
+  // The Sunrise Oven: open seven till three and again for the afternoon bake; closed Mondays. In bed by half past seven.
+  lark(wd, m) {
+    if (wd === 0) return pick(m, [H(9), H(11), 'village.river'], [H(11), H(13), 'hill.lake'], [H(13), H(16), 'village.millbridge'], [H(16), H(18), 'village.lane'], [H(18), H(19, 30), 'village.bench']);
+    return pick(m, [H(7), H(15), 'bakery.counter'], [H(15), H(16, 30), wd % 2 ? 'village.riverside' : 'village.bakeryfront'], [H(16, 30), H(18), 'bakery.floor'], [H(18), H(19, 30), 'village.lane']);
+  },
+  // The Seedhouse: closed Tuesdays, for the hill terraces and a look at the farmer's hives.
+  noor(wd, m) {
+    if (wd === 1) return pick(m, [H(9), H(13), 'hill.terraces'], [H(13), H(16), 'library.floor'], [H(16), H(18), 'farm.east'], [H(18), H(19, 30), 'village.trialbeds']);
+    return pick(m, [H(7), H(9), 'village.trialbeds'], [H(9), H(17), 'florist.counter'], [H(17), H(19), wd === 0 || wd === 3 || wd === 5 ? 'hill.overlook' : 'village.trialbeds'], [H(19), H(20), 'village.floristfront']);
+  },
+  // The Workshop with Ruess in the mornings, her own garage in the afternoons; Wednesdays with Ruess on the hill, Sundays off.
+  tika(wd, m) {
+    if (wd === 6) return pick(m, [H(10), H(13), 'hangar.floor'], [H(13), H(16), 'village.riverside'], [H(16), H(19), 'village.garagefront']);
+    if (wd === 2) return pick(m, [H(10), H(13), 'hill.wreck'], [H(13), H(15), 'village.river'], [H(15), H(18), 'garage.bench'], [H(18), H(20), 'village.lane']);
+    return pick(m, [H(8), H(12), 'workshop.bench'], [H(12), H(13), 'village.workshopfront'], [H(13), H(18), 'garage.counter'], [H(18), H(20), wd === 4 ? 'cafe.stage' : 'village.garagefront']);
+  },
+  // Radio Willowfall: the morning show 7-9, the booth in the afternoon, the night show from seven; Fridays and Saturdays she plays the Hangar.
+  vesna(wd, m) {
+    if (wd === 6) return pick(m, [H(11), H(14), 'village.riverside'], [H(14), H(17), 'hill.overlook'], [H(17), H(19), 'village.millbridge'], [H(19), H(21), 'village.bench']);
+    return pick(m, [H(7), H(9), 'radio.counter'], [H(12), H(13, 30), 'village.lane'], [H(13, 30), H(17), 'radio.counter'], [H(17), H(18, 30), 'village.millbridge'],
+      [H(18, 30), H(19), 'village.radiofront'], [H(19), H(22), wd === 4 || wd === 5 ? 'cafe.stage' : 'radio.counter']);
+  },
+});
+Object.assign(FESTIVAL_SPOTS['village.square'], { pia: 'village.hallfront', lark: 'village.cafefront', noor: 'village.bench', tika: 'village.square', vesna: 'village.memorial' });
+Object.assign(FESTIVAL_SPOTS['village.bridge'], { pia: 'village.bench', lark: 'village.river', noor: 'village.riverside', tika: 'village.bridge', vesna: 'village.bridge' });
+FESTIVAL_SPOTS['village.lane'] = {
+  general: 'village.lane', marrow: 'village.lane', seln: 'village.floristfront', corran: 'village.lane', ruess: 'village.garagefront', oduya: 'village.bakeryfront',
+  maris: 'village.lane', vashti: 'village.radiofront', moraine: 'village.tailorfront', kestrel: 'village.lane', mori: 'village.floristfront', yui: 'village.tailorfront',
+  calloway: 'village.lane', fenn: 'village.bakeryfront', pia: 'village.tailorfront', lark: 'village.bakeryfront', noor: 'village.floristfront', tika: 'village.radiofront', vesna: 'village.lane',
+};
+
+Object.assign(TALK, {
+  pia: {
+    first: ['Pia Varga. Mend and Make, on the Lane. You are the farmer with the coat that does not fit.', 'Do not apologise. Come in on a weekday and I will take the shoulders in. It hurts me to look at it.'],
+    bday: ['You know my birthday. Who told you? It was Lark. Lark tells everyone everything.', '...Thank you. It is well chosen. I am annoyed about how well chosen it is.'],
+    b0: [
+      'Open nine to five, closed Sundays. If you need a button before nine, you needed it yesterday.',
+      ['Every coat on this ring used to be a uniform.', 'I unpick the badges and the rank tape. People sleep better in a coat that never saluted anyone.'],
+      'If you shear a sheep, bring me the fleece. Not the sheep. I have had the sheep. Corran thought it was funny.',
+    ],
+    b1: [
+      ['In the siege I ran the parachute loft. Hull patches, stretcher slings, the odd flag.', 'Nine hundred metres of seam in eleven days. My stitches have been very straight since. It is a curse.'],
+      'Your hems are better. Somebody has been mending. Do not tell me who; I would only have opinions.',
+      'Lark brings me a bun every morning and stands in the doorway until I eat it. I have never once asked for a bun.',
+    ],
+    b2: [
+      ['I keep a quilt of the bits I could not throw away. A sleeve from every coat I unpicked.', 'It is very ugly. I sleep under it every night.'],
+      'You do not flinch when I tell you something is wrong. Most people do. It is restful.',
+      ['Tika brought me a jacket with a hole burned through both elbows.', 'I asked how. She said science. I charged her double, and then I did not.'],
+    ],
+    b3: [
+      ['I have cut you a pattern. Your measurements, on brown paper, pinned to my wall.', 'It is not sentiment. It is efficiency. ...It is a bit sentiment.'],
+      'When the Lane is quiet I listen for your boots. You walk like someone who carried a lot of things a long way. I mend for people like that.',
+    ],
+    s0: 'Spring. Everyone wants something light and nobody owns anything light. I am sewing summer out of curtains.',
+    s1: 'Summer. Nobody wants a coat, so I take the coats apart. It is my favourite season. Do not repeat that to anyone with a coat.',
+    s2: "Autumn. Wool season. Bring me your fleeces now and by Year's End half the Lane will be wearing your sheep.",
+    s3: 'Winter. I have forty scarves on order and two hands. If you can knit, lie to me and say you cannot.',
+    rain: 'Rain. Everyone comes in dripping to have something taken in. I keep a towel by the door and a list of names.',
+    snow: 'Snow. Stamp your boots. I mean it. There are pins on this floor that have been waiting for a bare foot since the war.',
+    sun: 'Bright day. Good light to thread a needle. I can see every crooked seam on the Lantern Ring, including yours.',
+    morning: 'Morning. Do not talk to me before the first cup. Lark is allowed. Lark is weather; the rules do not apply.',
+    evening: 'Evening. I am done. The needles are done. If you have a button off, it can stay off until nine.',
+    fest: 'A festival. I made half the bunting and none of the clothes are hemmed. I am trying very hard to enjoy myself.',
+    year2: ['A whole year, and you have not once come in to have anything made.', 'I have made you something anyway. It is on the peg. Do not argue.'],
+    fish: "Fishing line is only thread with ambition. I mend Corran's nets on Sundays. He loses fish through holes I could sew shut asleep.",
+    eve: { bloom: ['The Bloom Fair tomorrow. I am showing a wool coat and a cheese. The cheese is Corran\'s; I only made its little cloak.', 'Do not laugh. It is a very good cloak.'], yearsend: "Year's End tomorrow. I have let out the Warden's good dress for the twelfth time. She keeps growing an inch of dignity." },
+  },
+  lark: {
+    first: ["You're the farmer! I knew it, you've got soil in your eyebrows. Lark Penhallow, the Sunrise Oven. Hello, hello!", 'Here, take a bun. No, take two. One for now and one for when you realise how good the first one was.'],
+    bday: ["My birthday! You remembered! Nobody remembers, I'm always too busy remembering theirs!", "I'm going to cry into the dough. Don't worry, it's good for the crust. Thank you, Mira."],
+    b0: [
+      "Oven's on at four, door's open at seven, buns are gone by nine. I'd say come early, but I've seen your field. You already do.",
+      ["Closed Mondays. On Mondays I sleep until six. It's decadent. I feel like a queen.", "Don't tell Moraine I said that. She'd want royalties."],
+      "The flour comes up the lift from the Middle deck and it's always late. If you ever grow wheat, I'll marry you. That's a joke. Mostly.",
+    ],
+    b1: [
+      ['In the siege I baked for the shelters on a field oven. Burned the furniture to keep it going.', "Half the chairs on the Lantern Ring are new because of me. Nobody's ever sent a bill."],
+      "Pia pretends she doesn't want her morning bun. She's had one every day for two years. I count everything that comes out of my oven.",
+      "Your honey's in my glaze this week. Don't look so surprised. You think I wouldn't notice the best thing on the Lane?",
+    ],
+    b2: [
+      ["People think I'm always this loud.", "I'm only loud in the morning. By the afternoon I'm tired, and by the evening I'm just a person who smells of bread."],
+      ["My gran said bread's a promise. You knead it tonight and it's there in the morning.", 'In the war it was the only promise anyone could keep. So I kept it.'],
+      "You're the only person who comes in after the buns are gone. Just to talk. I've noticed. I notice you a lot, actually.",
+    ],
+    b3: [
+      ['I made a loaf with your initials scored on top. Then I panicked and sold it to Corran.', "He ate the M first. I'm choosing to read nothing into that."],
+      "When the oven's warming up at four I think about who I'll see that day. You're the first thing I think of. Second's the buns. Don't tell the buns.",
+    ],
+    s0: "Spring! Everything I bake is suddenly green. Snap peas, herbs, Noor's violets on the cakes. I'm a woman possessed.",
+    s1: 'Summer. The bakery is a furnace by noon, so I bake at three and sleep through the worst of it. Melon tart on Saturdays!',
+    s2: "Autumn's the best. Pumpkin, cranberry, honey. The whole Lane smells like my oven, which is to say, like me.",
+    s3: "Winter, and everyone wants something warm in their pocket. I make the buns a bit bigger. Don't tell Marrow, she calls it inflation.",
+    rain: "Rain! Bread loves a damp day. Rises like it's got somewhere to be. I wish I did.",
+    snow: "Snow on the Lane! I put a tray of buns out to cool and three walked off. Very small footprints. I'm not angry.",
+    sun: 'Lovely bright morning. I watched the sun-line come up over the Lane at half five. I always do. Best bit of my day, apart from the buns.',
+    morning: "Good morning! Fresh out. Mind your fingers, it's hot. Mind your heart, it's cinnamon.",
+    evening: "Evening already? I've been up since four. I'm running on crumbs and goodwill. Mostly crumbs. Bed by half seven!",
+    fest: "A festival! I've baked three hundred buns and I'm going to eat at least one of them. Possibly six.",
+    year2: ['A year since you first came in covered in mud asking whether bread could be had on credit.', "You still owe me eleven credits. I'm keeping it. It's the start of a beautiful tab."],
+    fish: "I can't fish. I talk too much and the fish leave. Vesna says I could empty a lake just by describing my morning.",
+    eve: { bloom: 'Bloom Fair tomorrow! I am doing a honey cake with real flowers on it. Noor says the flowers are edible. Noor also eats bark.', harvest: "Harvest Fair tomorrow. I'm entering a loaf shaped like Corran. It's a tribute. He doesn't know yet." },
+  },
+  noor: {
+    first: ['You are standing on a seedling. ...No, the other foot. Thank you. Noor Asante. The Seedhouse.', 'I revive Earth seeds that were sealed before the fall. Most of them are sulking. You are a farmer. You may be useful.'],
+    bday: ['This is a gift. For my birthday. I had forgotten it was my birthday. I was repotting.', '...Thank you. I shall put it where the light is good. That is the highest compliment I know how to pay.'],
+    b0: [
+      'Open nine to five. Closed Tuesdays, when I walk the hill terraces and count what survived the week. It is usually more than I expected.',
+      ['Every seed in that drawer was sealed by someone who thought they would be back for it.', 'They were not. So I am. It seemed only polite.'],
+      'Do not buy me a bouquet. I know what happens to cut flowers. I do it to them. It is my job, and I have made my peace with it.',
+    ],
+    b1: [
+      ['The cabbage line took four years. Four. It did not want to wake up.', 'I sang to it in the end. Do not tell anyone. It worked, which is worse.'],
+      'Your bees visit my trial beds. I can tell by the pollen on the tulips. I am not complaining. I am taking notes.',
+      'Lark brings me buns and I forget to eat them, and then I find them at the bottom of a seed tray and they have grown something. Science.',
+    ],
+    b2: [
+      ['I am told I am bad with people.', 'I am only bad with people who will not hold still and tell me what they need. Plants always tell you. So do you. You are easy.'],
+      ["On the founders' ship the seed vault was the one thing they never rationed.", 'They went hungry rather than eat it. I think about that whenever someone calls me fussy.'],
+      'I have named a sunflower after you. It is the one that leans furthest towards the sun-line and will not be told.',
+    ],
+    b3: [
+      ["There is a seed in my desk I have never sown. A rose, from my grandmother's garden on Earth.", 'I keep waiting for a place good enough. I think it might be your farm. I am not asking yet. I am only thinking aloud.'],
+      'You are the only person whose visits I write in the notebook. Under weather. You are a sort of weather.',
+    ],
+    s0: 'Spring. Germination season. I have four hundred trays going and I can hear every one of them thinking.',
+    s1: 'Summer. The sunflowers are taller than the Constable. He measured. He was very gracious about it.',
+    s2: 'Autumn. Seed-saving. I go through every bed with paper envelopes and the patience of a saint. I do not have it. I fake it.',
+    s3: 'Winter. Kale and snowbells and nothing else, and the bees asleep. I miss the noise. I would never say so to a bee.',
+    rain: 'Rain. Good. I can stop carrying water and start carrying notebooks.',
+    snow: 'Snow. The snowbells are out. Look at them properly. Bred on a ship that never saw winter, and they still knew what to do.',
+    sun: 'Clear sun-line. Ideal. I have opened every vent in the Seedhouse and shut my door to people. You are not people. Come in.',
+    morning: 'Morning. I have watered the trial beds, talked to the leeks and lost an argument with a tulip. A full day already.',
+    evening: 'Evening. Plants close up at dusk. So do I. Say what you came to say; I am folding.',
+    fest: 'A festival. Crowds. I have brought a seed packet to hold, so my hands have something to do.',
+    year2: ['A year of your farm. I have a page on it. Soil, yields, what you plant when.', 'You have improved. I underline improvement. You have a great deal of underlining.'],
+    fish: 'Fish are of no interest to me. Pond weed is fascinating. If you catch anything with weed on it, bring me the weed.',
+    eve: { bloom: ['The Bloom Fair tomorrow. I am judging the flowers. I have been asked to be kind.', 'I have been asked by Marrow, twice. I shall try. I shall be accurate first.'], planting: 'Planting Day tomorrow. Seln\'s seed is good. Mine is older and angrier. I bring both.' },
+  },
+  tika: {
+    first: ["Oh! Hi! You're Sato! The Sato! I'm Tika, Ruess's apprentice. I've read every report you ever filed, the boring ones too!", "Sorry. Sorry. There's grease on my hand. There's grease on yours now. That's how you know we've met."],
+    bday: ["It's my birthday and you got me something? I got myself a torque wrench. You beat a torque wrench.", "It's going on the good shelf over my bench. Thank you, Captain! Farmer! Sato!"],
+    b0: [
+      "Mornings I'm at the Workshop learning from the Professor. Afternoons I run the garage on the Lane. Closed Wednesdays and Sundays. Even geniuses sleep.",
+      ['The Professor says I talk too fast. I say he listens too slow.', "We've agreed to disagree. He's agreed. I'm still disagreeing."],
+      'I build things for farms. Cheese presses, spinning wheels. If it has a crank, I can make it worse and then better.',
+    ],
+    b1: [
+      ['I grew up on the Middle deck. In the war I was fourteen and I fixed rescue drones in a cupboard.', "Nobody knew I was fourteen. I wore a big coat. The drones didn't mind."],
+      "Your spinning wheel squeaks on the upstroke. That's not a fault, that's a personality. I'm not fixing it. Okay, I'll fix it.",
+      "Pia sewed patches on my elbows and called me a disgrace. Then she sewed little stars on the patches. She's soft. Don't tell her I know.",
+    ],
+    b2: [
+      ['The Professor gave me his old goggles. The ones from the carrier.', 'He said he did not need them. He did. He wanted me to have them. I wear them every day and pretend I do not know.'],
+      "Sometimes I take a thing apart just to see if I can put it back. When I can't, I come and look at your field. Your field always goes back together.",
+      ["Everyone thinks I'm not scared of anything.", "I'm scared of being in the way. That's why I'm always fixing things. You can't be in the way if you're useful."],
+    ],
+    b3: [
+      ["I'm building you something. I won't say what. It has gears.", "Possibly too many gears. It's friendship, but for engineering. Shush, I know what I said."],
+      'You never once told me to slow down. I noticed. I am still fast. But around you I feel like I could stop, if I wanted.',
+    ],
+    s0: "Spring! Every bot on the Lantern Ring comes in for a service at once, like they planned it. They planned it. I've read their logs.",
+    s1: "Summer. The garage is an oven. Lark keeps saying hers is hotter. It isn't. I measured. She's very competitive about ovens.",
+    s2: 'Autumn. Harvest means every machine on the deck breaks at once. My favourite. I sleep in the garage. I bring a pillow.',
+    s3: 'Winter. Cold metal bites. Two pairs of gloves and I still lose a fingertip of feeling. Worth it. Look at this carburettor.',
+    rain: "Rain! Everything rusts. Everyone needs me. I'm sorry, I'm happy about it, I'm a terrible person.",
+    snow: 'Snow! I put skis on a Field-unit. It went very fast in one direction. The Professor has asked me not to do it again.',
+    sun: "Sunny! Good light for welding. Don't look at the arc. I mean it. Don't look at it even if I do.",
+    morning: "Morning! I've been at the bench since seven. The Professor says that's late. He's been there since the war.",
+    evening: "Evening! Fridays I go and hear Vesna play at the Hangar. She's terrible at guitar. She's amazing. Both!",
+    fest: "Festival! I fixed the lights. Nobody's thanked me. That's how you know they're working.",
+    year2: ["A whole year! The Professor says I'm almost competent. That's the best thing he's ever said to anyone!", "...Except you. He says you're competent. Full stop. I'm a bit jealous."],
+    fish: "I built a fishing reel with a motor once. It caught Corran's hat. From the riverbank. While he was wearing it.",
+    eve: { bloom: "Bloom Fair tomorrow! I'm running the radio cable to the Lane so Vesna can broadcast it. If it all goes quiet, it was a squirrel.", yearsend: "Year's End tomorrow! I'm in charge of the window shutters. They'll open at midnight. Probably. Ninety percent." },
+  },
+  vesna: {
+    first: ["Well. If it isn't the captain who grows turnips. I've talked about you on air. Twice. Don't be flattered; it was a slow week.", 'Vesna Kade. The voice on your radio at seven, and the one keeping you up at ten. Pleasure, farmer.'],
+    bday: ['A present? On my birthday? Careful. I might have to dedicate a song to you, and then everyone will talk.', "...They'll talk anyway. Thank you, Mira. Really."],
+    b0: [
+      "Morning show seven till nine, the booth in the afternoon, night show from seven. Fridays and Saturdays I play the Hangar. Sundays I'm a rumour.",
+      ['You can request a song at the station. One a week.', "Scarcity is what makes it romantic. That, and my voice."],
+      "I never read bad news on air any more. If something's sad, Marrow can pin it to a board. My frequency is for weather, recipes and people in love.",
+    ],
+    b1: [
+      ['In the siege I read the lists. Every night at nine, the names.', "Then one morning I read the all-clear. Nobody remembers who read the lists. Everybody remembers the all-clear. That's right."],
+      "Lark calls the morning show every single day to say good morning. To me. On my own show. I keep her on. The listeners adore her.",
+      'Tika rewired my desk so the microphone sounds like velvet. Then she rewired it so it sounds like a duck. She is still not sure which she meant.',
+    ],
+    b2: [
+      ["I'm good at talking to everyone at once.", "One person at a time is harder. You're one person. I'm practising."],
+      'When you come into the station I stop talking. Have you noticed? Ask anyone on the Lane. Dr. Mori wants to write it up.',
+      ['My mother sang. The most beautiful voice on the Middle deck.', "I don't sing like her. I sing like somebody trying to remember how she did it."],
+    ],
+    b3: [
+      ['I wrote a song. It is about a farmer who used to be a captain and still walks like one.', "It's very bad. It's the best thing I've written. I'll play it when you're not in the room."],
+      'I leave the station light on after the night show now. In case somebody walks past and wants to say goodnight. Somebody specific.',
+    ],
+    s0: "Spring. I do the planting report on the morning show. I know nothing about planting. I read out what Noor tells me and add drama.",
+    s1: "Summer. Windows open, radio up, the whole Lane singing along to the night show. Badly. I've never been happier.",
+    s2: 'Autumn. Long dusk, low light. Best season for slow songs, and for people requesting slow songs. Hint.',
+    s3: 'Winter. I play the night show into the snow. I like to think it settles on the music. Physics disagrees. Physics can get its own show.',
+    rain: "Rain. Radio weather. Everyone's in, everyone's listening. I could say anything. I've decided to be kind.",
+    snow: "Snow. I just did the weather. I said 'snow'. Then I played four songs about snow. I am a professional.",
+    sun: "Clear sun-line. Bright. Too bright. I'm a night creature, farmer. Lend me your hat.",
+    morning: "Morning. I've been on air since seven and I've already told Willowfall three lies about the weather. Two came true.",
+    evening: "Evening. Best hours of the day. Everyone's tired and honest. Stay and listen? I'll play something with a farmer in it.",
+    fest: "Festival! I'm broadcasting live. If I go quiet, it's because I've stopped to eat something Lark made.",
+    year2: ["A year of you on my frequency. I've counted. You've been in four hundred and twelve of my sentences.", "That's more than the weather. The weather is furious."],
+    fish: "I've never caught a fish. I've caught Corran telling the same fish story on air nine times. The fish grows every time.",
+    eve: { bloom: ['Bloom Fair tomorrow. I am calling it live from Lane Square. Pray for Tika\'s cable.', "If it rains I'm calling it from under Pia's awning, and she's charging me rent."], lantern: "Lantern Night tomorrow. I go off air at six. One night a year the radio stays quiet. Some things don't need a voice." },
+  },
+});
+Object.assign(GIFT, {
+  pia: { loved: 'Oh. This is... well. This is excellent. I have no criticism. Write the date down; it will not happen again.', liked: 'Good. Useful. Thank you. I can tell you chose it, which is the main thing.', neutral: 'Thank you. I shall find a use for it. I find a use for everything. It is an affliction.', disliked: 'Ah. No. I will pass it on to someone who will not have to look at it every day.', bday: 'And on my birthday. ' },
+  lark: { loved: "Oh, Mira! That's going straight in a recipe. Or I'm keeping it forever. Both! I'm doing both!", liked: "Ooh, lovely! Thank you! I'm going to tell everyone you gave me this.", neutral: "Thank you! I'll find a use for it. Probably as a doorstop for the oven. A very honoured doorstop.", disliked: "Oh. Ha. Well. It's the thought, isn't it? I'm going to concentrate very hard on the thought.", bday: 'On my birthday! ' },
+  noor: { loved: 'This is... precisely right. I have no notes. I always have notes. Thank you, Mira.', liked: 'Good. Thank you. I will make use of it, which is how I say I like things.', neutral: 'Thank you. I will put it with the other things. I have a drawer for things.', disliked: 'You cut it, or dug it up, or ended it in some way. I appreciate the gesture. I am in mourning.', bday: 'For my birthday. ' },
+  tika: { loved: "WHAT! For me? Are you serious? This is going on the good shelf! The GOOD shelf!", liked: "Ooh, nice! I can use this. Or take it apart. Is that all right? I'll put it back.", neutral: "Thanks! I'll find a use for it. I find a use for everything. Even the Professor's old socks.", disliked: "Oh. Um. Thank you? I'll keep it somewhere safe. Somewhere a long way from me.", bday: 'And for my birthday! ' },
+  vesna: { loved: "Well, now. You've gone and done it. I'm going to have to dedicate the whole night show to you.", liked: "Thank you, farmer. That's a good one. I'll mention it on air. Anonymously. Badly anonymously.", neutral: "That's sweet. I'll put it on the console. It'll be the most interesting thing there.", disliked: "Ah. I'm going to say thank you in my radio voice, and you'll never know what I really think.", bday: 'For my birthday? ' },
+});
+
+EVENTS.push(
+  // ---- Pia: the parachute loft, and the quilt of sleeves.
+  {
+    id: 'pia3', npc: 'pia', hearts: 3, map: 'tailor', from: H(9), to: H(17),
+    lines: [
+      L('narrator', "In Varga's Mend & Make, Pia has Sato standing on a crate in her old captain's coat, with a mouthful of pins and an expression of deep professional grief."),
+      L('pia', 'Arms out. Further. Who cut this? No, do not tell me. I will only want to find them.'),
+      L('sato', 'Fleet stores. It was cut for whoever came next in the queue.'),
+      L('pia', 'It shows. You have been wearing someone else\'s shoulders for eleven years.'),
+      L('narrator', 'She unpicks the rank tape from the cuffs in two neat pulls, and rolls it, and puts it in a tin with a great many others.'),
+      L('pia', 'In the siege I ran the parachute loft. Hull patches. Stretcher slings. The flag over the gate, twice, because it kept getting shot.'),
+      L('sato', 'I remember that flag. Somebody kept sewing it back up overnight. We thought it was a sort of miracle.'),
+      L('pia', 'It was me and a lamp and very bad language. Hold still. There. Now it is a coat that belongs to a farmer.'),
+      L('pia', 'Take this as well. Yarn, from the first fleece I ever bought on the Lane. Make something crooked with it. It will be good for you.'),
+    ],
+    reward: { love: 3, item: ['yarn', 1] },
+  },
+  {
+    id: 'pia7', npc: 'pia', hearts: 7, map: 'village', weekday: 6, from: H(10), to: H(12),
+    lines: [
+      L('narrator', 'Sunday at the ranch gate. Pia is sitting on a feed sack with a quilt across her knees: a patchwork of a hundred different sleeves, every one a different uniform.'),
+      L('pia', 'Corran wanted to see it. He has found his old battery\'s colours in it, and gone to stand behind the barn for a while.'),
+      L('sato', 'Every coat you unpicked.'),
+      L('pia', 'One sleeve each. I could not throw them away. People came in wanting to forget, and I let them, and I kept the forgetting here.'),
+      L('pia', 'It is very ugly. I know. I sleep under it every night. It is the warmest thing I own.'),
+      L('narrator', 'She turns a corner of it over. In the last square, not yet sewn in, is a piece of navy cloth with a captain\'s braid.'),
+      L('sato', 'That is from my coat.'),
+      L('pia', 'I asked you whether I might keep the cuffs. You said yes without looking. I have learned that you say yes without looking to people you trust.'),
+      L('pia', 'Here. Do not make a speech. It is a scarf. I knitted it from your yarn while you were not watching, which is the only way I can give anyone anything.'),
+    ],
+    reward: { love: 5, item: ['yarn_scarf', 1] },
+  },
+  // ---- Lark: the field oven, the Monday off, the late flour.
+  {
+    id: 'lark3', npc: 'lark', hearts: 3, map: 'bakery', from: H(7), to: H(15),
+    lines: [
+      L('narrator', 'The Sunrise Oven is warm as a held breath. Lark is floured to the elbows and has, somehow, flour in one eyebrow and none in the other.'),
+      L('lark', 'Mira! Perfect timing. Hold this tray. No, flat. Flat like the deck. You were a captain, you know what flat is.'),
+      L('sato', 'You have been up since four.'),
+      L('lark', 'Three, today. There was a nice dough and it wanted company.'),
+      L('narrator', 'Over the ovens hangs a blackened iron door with a brass handle, screwed to the wall like a painting.'),
+      L('lark', 'That was my field oven, in the siege. Shelter nine. I burned the furniture to keep it lit. Chairs, mostly. One very good piano. I still feel bad about the piano.'),
+      L('sato', 'Nine fed the gate crews. I ate that bread. It was the only warm thing on the gate for a week.'),
+      L('lark', '...You ate my bread? On the gate? Oh, I am going to cry into the dough again. Take these, quick, before I do. And come back tomorrow. Every tomorrow.'),
+    ],
+    reward: { love: 3, item: ['sun_bun', 3] },
+  },
+  {
+    id: 'lark5', npc: 'lark', hearts: 5, map: 'village', weekday: 0, from: H(9), to: H(11),
+    lines: [
+      L('narrator', 'Monday, the riverbank. Lark is lying flat on the grass in a borrowed sun hat, not doing anything at all, very determinedly.'),
+      L('lark', 'Shh. I am having a day off. I am told this is what it looks like. It is very boring. I love it.'),
+      L('sato', 'May I join you?'),
+      L('lark', 'You may lie down. No talking about bread. Or flour. Or the delivery from the Middle deck, which is late, which I am not thinking about.'),
+      L('narrator', 'They lie in the grass and watch the far side of the ring turn slowly overhead. Lark lasts nearly four minutes.'),
+      L('lark', 'My gran baked in the Lower deck kitchens before the war. She said bread is a promise. You knead it tonight and it keeps its word in the morning.'),
+      L('lark', 'When everything was burning, I thought, well, I can keep one promise. So I did. Every morning. I sort of forgot how to stop.'),
+      L('sato', 'You do not have to stop. Only come and lie in the grass on Mondays. I will hold you to it.'),
+      L('lark', 'Deal. I brought a honey cake, by the way. For later. It is my day off, and I was bored.'),
+    ],
+    reward: { love: 4, item: ['honey_cake', 1] },
+  },
+  {
+    id: 'lark7', npc: 'lark', hearts: 7, map: 'bakery', from: H(16, 30), to: H(18),
+    lines: [
+      L('narrator', 'Late afternoon. The bakery is dim, the ovens ticking as they cool. Lark is sitting on a flour sack with an empty one in her lap, very quiet for once.'),
+      L('lark', 'The flour did not come. Third week. The Middle deck mill has a broken roller and nobody to fix it.'),
+      L('lark', 'I have enough for tomorrow. Then nothing. Seven hundred people on this ring have had a bun from me every morning since the war ended.'),
+      L('sato', 'Tika can fix a roller. Ruess can fix anything Tika cannot. I will ride the lift down with them at six.'),
+      L('lark', '...You would do that? For buns?'),
+      L('sato', 'For the woman who kept a promise every morning while the gate burned. The buns are a happy side effect.'),
+      L('narrator', 'Lark laughs, and wipes her face with a floury hand, and leaves a white stripe across her cheek like war paint.'),
+      L('lark', 'You are a very difficult person to stay loud around, Mira Sato. Here. Take a loaf home. It is the last of the good flour, and I want you to have it.'),
+    ],
+    reward: { love: 5, item: ['bread', 3] },
+  },
+  // ---- Noor: the cabbage that would not wake, and the rose.
+  {
+    id: 'noor3', npc: 'noor', hearts: 3, map: 'florist', from: H(9), to: H(17),
+    lines: [
+      L('narrator', 'The Seedhouse smells of wet soil and green leaves. Noor is standing over a single tray of seedlings with a hand lens, absolutely still.'),
+      L('noor', 'Do not breathe on them. You may breathe near them. Mira. Look.'),
+      L('sato', 'They are cabbages.'),
+      L('noor', 'They are an Earth cabbage line, sealed in a founders\' drawer two hundred years ago. Four years I tried. They would not wake.'),
+      L('noor', 'Last month I sang to them. I have no voice. I sang anyway. Vesna says I should never tell anyone. You are not anyone; you are a farmer.'),
+      L('sato', 'What did you sing?'),
+      L('noor', 'The only song I know. A planting song my grandmother sang on Earth. Two hundred years, and they still knew the tune.'),
+      L('narrator', 'She looks at the tray as if it might say something back. Perhaps, Sato thinks, it already has.'),
+      L('noor', 'Here. Seed from the first ones. Grow them properly. I shall be checking. I shall be checking a great deal.'),
+    ],
+    reward: { love: 3, item: ['seed_cabbage', 1] },
+  },
+  {
+    id: 'noor7', npc: 'noor', hearts: 7, map: 'hill', weekday: 1, from: H(9), to: H(13),
+    lines: [
+      L('narrator', 'Tuesday, on the orchard terraces. Noor is kneeling at the end of a row, a paper envelope in her hand, not writing anything in her notebook for once.'),
+      L('noor', 'Mira. Sit. This is the envelope I told you about. The one I have never opened.'),
+      L('noor', 'A rose. From my grandmother\'s garden, before the fall. She sent it up with my mother. My mother sent it up with me.'),
+      L('sato', 'And you have been waiting for somewhere good enough.'),
+      L('noor', 'Everywhere I find, something is wrong. The soil. The light. A Constable measuring the sunflowers.'),
+      L('noor', 'I think I have been waiting for somewhere I would not mind failing. That is harder to find than good soil.'),
+      L('sato', 'Plant it on my farm. If it fails we will dig it up and try again. Nobody will write it in a notebook.'),
+      L('noor', '...I will write it in a notebook. But I will write it kindly. Yes. Spring, by your porch. Take these meanwhile; the bees will want something to do.'),
+    ],
+    reward: { love: 5, item: ['seed_tulip', 2] },
+  },
+  // ---- Tika: the cheese press that exploded, and the goggles.
+  {
+    id: 'tika3', npc: 'tika', hearts: 3, map: 'garage', from: H(13), to: H(18),
+    lines: [
+      L('narrator', "Brandt's Garage. There is a dent in the ceiling the exact shape of a cheese press, and Tika is underneath it with a clipboard and a very bright smile."),
+      L('tika', 'Sato! Hi! Don\'t look up. There\'s nothing up there. Okay, there\'s a dent. It\'s a good dent. It\'s data.'),
+      L('sato', 'Was that my cheese press?'),
+      L('tika', 'It was the prototype of your cheese press! The real one is perfectly safe! Ninety-eight percent! I took the extra spring out!'),
+      L('narrator', 'Behind her, the wall is papered with drawings: drones, a milker that sings, and a careful sketch of Ruess with a cartoon storm cloud over his head.'),
+      L('tika', 'The Professor says I think with my hands first and my head second. I said at least I think twice. He laughed. Out loud. Nobody has ever heard him do that.'),
+      L('sato', 'I have. Once, on the carrier, when a junior engineer told him his own drive was over-built. She was right, too.'),
+      L('tika', 'He told me about her! He said she was the best he ever had. ...Wait. Wait, was that YOU? No. It was. Okay, I need to sit down. Take this for the press. Testing fee.'),
+    ],
+    reward: { love: 3, money: 150 },
+  },
+  {
+    id: 'tika7', npc: 'tika', hearts: 7, map: 'hill', weekday: 2, from: H(10), to: H(13),
+    lines: [
+      L('narrator', 'Wednesday at the foot of the orbital elevator. Ruess and Tika are under the cable car with their legs sticking out, arguing about a bolt.'),
+      L('ruess', 'Clockwise. It has been clockwise since before you were born.'),
+      L('tika', 'It is a left-hand thread, Professor. Look. LOOK. ...Ha!'),
+      L('ruess', 'Hm. So it is. Sato, you saw nothing. Tika, you will not mention this to the Warden, the canteen or the radio.'),
+      L('narrator', 'He goes off muttering to fetch a longer spanner. Tika sits up, pushes her goggles onto her forehead, and grins at nothing.'),
+      L('tika', 'These were his. From the carrier. He gave them to me on my first day and said he had a spare pair. He didn\'t. I checked. He squints now.'),
+      L('sato', 'He gave you the thing he was proudest of. He does not know how else to say it.'),
+      L('tika', 'I know. I know. I just like hearing somebody else say it out loud. ...Don\'t tell him I cried on the cable car. Here. Copper. For your machines. I owe you about a hundred.'),
+    ],
+    reward: { love: 5, item: ['copper', 2] },
+  },
+  // ---- Vesna: on air, the Hangar stage, the lists.
+  {
+    id: 'vesna3', npc: 'vesna', hearts: 3, map: 'radio', from: H(13, 30), to: H(17),
+    lines: [
+      L('narrator', 'Radio Willowfall is one warm room of records, cables and a red ON AIR lamp. Vesna waves Sato in without taking her eyes off the board.'),
+      L('vesna', '...and that was the weather, which is to say, the weather is fine. And look who has walked in. Willowfall, say hello to your farmer.'),
+      L('sato', 'Am I on the radio?'),
+      L('vesna', 'You are on the radio. Say something farmerish. The Middle deck is listening. Possibly. Tika\'s cable is a philosophy more than a fact.'),
+      L('sato', 'Water your seedlings in the morning. Shut the gate. And Corran, the hens are on the bridge again.'),
+      L('narrator', 'Somewhere outside, very faintly, there is a roar of laughter from the ranch.'),
+      L('vesna', 'A natural. You have a voice people would follow somewhere bad. Luckily you only use it for hens.'),
+      L('vesna', 'Here. A record from the crates, for your trouble. Old-world dance music. Play it in the barn. Cows like a waltz; I have it on good authority.'),
+    ],
+    reward: { love: 3, item: ['record', 1] },
+  },
+  {
+    id: 'vesna5', npc: 'vesna', hearts: 5, map: 'cafe', weekday: 4, from: H(19), to: H(22),
+    lines: [
+      L('narrator', 'Friday night at the Hangar. The tables are pushed back. Vesna sits on a stool in the corner with a battered guitar, tuning it as if it had personally wronged her.'),
+      L('vesna', 'This one is new. Be gentle. It is about a farm. Any resemblance to a real farm is entirely your own fault.'),
+      L('narrator', 'Halfway through the second verse her voice catches on a high note and does not come back. The room goes very still.'),
+      L('sato', '...Up the terrace road, where the sun-line falls.'),
+      L('narrator', 'Sato sings the line, flat and rough, from the back of the room. Vesna stares at her, and laughs, and picks it up again, and finishes it.'),
+      L('vesna', 'You were not supposed to know the words. I only played it on the night show. Once. At eleven.'),
+      L('sato', 'I listen to the night show. I listen to all of it. I have for a while.'),
+      L('vesna', '...Well. Now I have to write a better song. Thanks for nothing, farmer. Stay till close? I owe you a drink, and an apology for the high note.'),
+    ],
+    reward: { love: 4 },
+  },
+  {
+    id: 'vesna7', npc: 'vesna', hearts: 7, map: 'village', weekday: 6, from: H(17), to: H(19),
+    lines: [
+      L('narrator', 'Sunday evening on the Mill Bridge. Vesna leans on the rail without her headphones, which makes her look oddly unguarded, like a lamp without its shade.'),
+      L('vesna', 'Every night in the siege at nine, I read the names. Whoever we had lost that day. In this voice. The one that is supposed to make you feel better.'),
+      L('vesna', 'Two hundred and six nights. I never got one wrong. I practised them all afternoon so I would not.'),
+      L('sato', 'I heard you. On the gate. We used to stop for it. We took our helmets off.'),
+      L('vesna', '...You did? I always thought I was reading into nothing. Into the dark. That nobody could bear to listen.'),
+      L('sato', 'Everybody listened. It was the only time anyone said their names aloud. It mattered that it was a kind voice.'),
+      L('narrator', 'Vesna does not say anything for a long moment. Then she takes something small out of her pocket and puts it in Sato\'s hand.'),
+      L('vesna', 'My mother\'s music box. It plays the all-clear, if you wind it slowly. I want somebody who heard the lists to have it. Do not argue. I will cry on the radio.'),
+    ],
+    reward: { love: 5, item: ['musicbox', 1] },
+  },
+);
+
+ROMANCE.candidates.push('lark', 'vesna');
+Object.assign(ROMANCE.people, {
+  lark: {
+    confess: [
+      L('narrator', 'Four in the morning. The Lane is dark but for one window. Sato has come to help with the dough, as she has most mornings lately, and Lark is not kneading.'),
+      L('lark', 'I scored a loaf with your initials. Again. Then I could not sell it to Corran. So I baked another, and another.'),
+      L('narrator', 'On the board are six loaves, each one scored with an M and an S, in steadily worse handwriting.'),
+      L('sato', 'Lark.'),
+      L('lark', 'I am loud all day so nobody hears the quiet bit. The quiet bit is you. Every morning it is you. I would like to stop baking it into bread and just say it.'),
+      L('sato', 'Then say it. I have been eating my initials for a month. I am running out of room.'),
+      L('lark', 'I love you, Mira Sato. You keep showing up at four in the morning. Nobody shows up at four in the morning for buns.'),
+      L('sato', 'I do not come for the buns. I come because it is the best hour of my day, and you are in it.'),
+      L('lark', 'Oh, I am going to cry into the dough. I am actually doing it. Hold me before I ruin the batch.'),
+      L('narrator', 'The oven warms, the loaves rise, and by the time the sun-line comes up over the Lane the two of them are sitting on the step with one bun between them, not hurrying at all.'),
+    ],
+    propose: [
+      L('narrator', 'Seven sharp. The first customers are queuing outside. Sato is behind the counter, which she has never been, holding a bun with something baked into the middle.'),
+      L('lark', 'You are behind my counter. Nobody is behind my counter. What is in that bun?'),
+      L('sato', 'A pendant. Hull-glass, with Earth\'s light in it. On Eden you give it to the person you want at your table. I thought you would look in a bun before you looked anywhere else.'),
+      L('narrator', 'Lark breaks the bun open. The pendant shines through the crumb like a tiny morning.'),
+      L('lark', 'You baked it. You BAKED it. You cannot bake. You burned toast in the Hangar last week and Oduya had to open a window.'),
+      L('sato', 'I burned four. This was the fifth. I am asking whether you will have a farmer who cannot bake, every morning, for good.'),
+      L('lark', 'Yes. Yes! Every morning. I will teach you to bake and you will be terrible and I will not mind at all.'),
+      L('narrator', 'Outside, the queue has been watching through the window. Somebody starts clapping. It is Pia, who will later deny it.'),
+      L('lark', 'Free buns! Everyone! Free buns today! Mira, help me, I cannot see the till for crying.'),
+    ],
+    wedding: [
+      L('narrator', 'The square smells of warm bread. Lark has baked her own wedding cake, three tiers of honey cake with flowers on top, and is refusing to let anyone else cut it.'),
+      L('marrow', 'Lark Penhallow. You fed this village through a siege with a field oven and a stack of chairs. Today we feed you.'),
+      L('pia', 'I made the dress. If anybody spills honey on it I will know, and I will remember, and I will be at your door with a needle.'),
+      L('vesna', 'Live from Lantern Square: the baker is crying, the farmer is not, and the cake is magnificent. More at eleven.'),
+      L('lark', 'I promise you warm bread every morning, a loud house every day, and to be quiet with you whenever you need it. Mostly.'),
+      L('sato', 'I promise to be up at four with you. And to burn the toast, so you always have something to forgive me for.'),
+      L('calloway', 'A blessing, from the church: may your oven stay lit, your table stay full, and your mornings always begin with each other.'),
+      L('marrow', 'It is written. Now somebody cut that cake before she does it herself.'),
+      L('narrator', 'The whole village eats honey cake standing up in the square, and the bees from the farm come to see what all the fuss is about.'),
+    ],
+    partnerTalk: [
+      'I baked at the farm today. Your oven is terrible. I love it. It has character, and by character I mean a draught.',
+      'The hens have decided I am their queen. I fed them crusts. That is all it takes. Write that down.',
+      'You came home smelling of soil and I smelled of bread and the whole house smelled like a sandwich. Perfect.',
+      'I closed the bakery an hour early to watch you water. Do not tell the Lane. They will riot.',
+      'I tried a day off at home. I baked four things before ten. I do not think I understand days off.',
+      'Pia came for supper and said our kitchen is a disgrace. Then she stayed three hours. That means she loves us.',
+      'I put honey from your hives in the morning buns. The whole Lane asked what was different. I said love. They laughed. It is not a joke.',
+      'I sleep better here. The farm is quiet. Too quiet, so I talk. You do not seem to mind.',
+      'Your initials on every loaf, still. I could not stop if I tried. Ours, now. M and L.',
+      'Come in before the light goes. There is soup, and there is bread, and there is me, in that order of excitement.',
+    ],
+    morning: [
+      'Good morning! I have been up since four. You have been up since five. We are a terrible influence on each other.',
+      'Bun, before you go out. Not optional. Eat it on the step, I want to watch you.',
+      'Morning, Mira. The kettle is on and the oven is on and I am on. Very on.',
+      'I warmed your boots by the oven. Do not ask how long I have been up.',
+    ],
+    sweetTalk: [
+      'I keep looking at the door at four in the morning. You have ruined the best hour of my day by making it better.',
+      'I scored a little heart on your bun. Just yours. If anyone asks, it was an accident with the knife.',
+      'Pia says I smile at the dough now. I have always smiled at the dough. I smile at it differently.',
+      'Come by after close? I will save you the last loaf. I always save it now. I have stopped pretending it is for anyone else.',
+    ],
+    decline: 'Oh, Mira... not yet. Ask me again a little later, when I can look at you without dropping a tray. Soon. I promise. I keep promises.',
+  },
+  vesna: {
+    confess: [
+      L('narrator', 'Eleven at night. The night show is almost over. Sato is the only person left in Radio Willowfall, on the sofa by the record shelves, listening.'),
+      L('vesna', '...and that is the end of the night show. Except for one more. This is a request. It is from me. It is for someone who is in the room.'),
+      L('narrator', 'She takes off her headphones and picks up the guitar. It is the farm song, finished at last, and this time her voice does not catch.'),
+      L('vesna', 'I have said ten thousand words on air about everybody on this ring. I have never once said the true thing about myself. So.'),
+      L('vesna', 'I am in love with you, farmer. It is ridiculous. I talk for a living and I cannot find a better way to say it.'),
+      L('sato', 'You found the best way. You said it with the ON AIR light still lit.'),
+      L('vesna', '...Oh, no. Oh, I did. The whole Lantern Ring heard that. Lark heard that. Lark is going to be unbearable.'),
+      L('sato', 'Then we had better give them something to talk about. Turn it off. Walk me to the bridge.'),
+      L('vesna', 'Yes. Yes, all right. I am leaving the light on in the window. In case somebody wants to say goodnight. Somebody specific.'),
+      L('narrator', 'They walk to the Mill Bridge in the dark, and the radios in every window along the Lane hiss softly with nothing at all, and nobody turns them off.'),
+    ],
+    propose: [
+      L('narrator', 'Seven in the morning. The morning show. Vesna is reading the weather in her bright voice when Sato walks into the booth and sits down at the guest microphone.'),
+      L('vesna', '...and here is the farmer, without an appointment. Good morning, farmer. Have you come to tell Willowfall about turnips?'),
+      L('sato', 'No. I have brought a pendant. Hull-glass, with Earth\'s light in it. On Eden you give it to the person you want at your table, every day.'),
+      L('narrator', 'Vesna stares at the pendant, then at the ON AIR lamp, then at Sato. For the first time in her career, there is dead air.'),
+      L('sato', 'You said once that you were better at everyone than at one person. I am one person. I am asking whether you would like to practise for the rest of your life.'),
+      L('vesna', 'You are proposing to me on my own show.'),
+      L('sato', 'You confessed to me on it. I thought it only fair.'),
+      L('vesna', 'Yes. Willowfall, the answer is yes. That concludes the morning show. I am going to go and be extremely happy where none of you can hear it.'),
+      L('narrator', 'She forgets to switch the microphone off. The whole ring hears her laugh, and then cry, and then laugh again, and then a door closing.'),
+    ],
+    wedding: [
+      L('narrator', 'Lantern Square, and a radio on every windowsill. Tika has wired the whole Lane so that the wedding goes out live, to anyone on Eden who wants to hear it.'),
+      L('marrow', 'Vesna Kade. You read us the hardest words of the war, and then the best ones. Today you get to hear some.'),
+      L('tika', 'Cable holding! Microphones on! If anything pops, it was not the cable!'),
+      L('lark', 'I am not crying. I am live on air. I am crying on air. Hello, Middle deck.'),
+      L('vesna', 'I promise you a house full of music, the night show on low while you sleep, and to say the true thing to you first, before I say it to anyone else.'),
+      L('sato', 'I promise to listen to all of it. Every show. Every song. Even the bad ones at eleven.'),
+      L('calloway', 'From the church, a blessing: may your house always have a song in it, and may the quiet between them be the best part.'),
+      L('marrow', 'It is written. Somebody play something. Not you, Vesna; you are busy.'),
+      L('narrator', 'Somebody plays a waltz on a salvaged record, and the farmer and the radio host dance badly in the middle of the square while the whole ring listens.'),
+    ],
+    partnerTalk: [
+      'I did the night show from the porch. Tika ran a cable. The frogs were on air. Listeners loved them.',
+      'You hum when you water. Flat. I adore it. I am never correcting you.',
+      'I dedicated the weather to you this morning. Sunny with a chance of me.',
+      'The cows like jazz. Not waltzes. I was misinformed. I have apologised to them.',
+      'I wrote a new song on the porch at dawn. It is about mud. It is a love song. Do not laugh.',
+      'Lark calls the show every morning to say good morning to both of us now. On air. I have given up.',
+      'I sleep at midnight and you get up at five. We overlap for about four seconds. They are the best four seconds of my day.',
+      'I left the station light on, out of habit, and then remembered I was already home. I am still getting used to that.',
+      'I read the farm report on air today. Our farm. I said "our" eleven times. Somebody counted.',
+      'Come in before the light goes. I saved you the last song of the evening. It is a quiet one.',
+    ],
+    morning: [
+      'Mm. Morning. I am not a morning person, farmer. You married a night creature. Bring the kettle and nobody gets hurt.',
+      'I am up for the morning show. Tell me something true so I have one thing to say that is not the weather.',
+      'Good morning, Mira. I am going to whisper it, because it is too early for my real voice.',
+      'Kiss for luck before the show? I have never needed luck. I like the kiss.',
+    ],
+    sweetTalk: [
+      'I played your song again last night. Three people called in to ask who it was for. I said a farmer. That narrowed it down to one.',
+      'I keep the station light on until you have walked past. You always do. You think I do not notice.',
+      'Lark says I have gone soft on air. I have not. I have gone soft off air. It is a completely different problem.',
+      'Sit in the booth with me tonight? You do not have to say anything. I will talk enough for both of us.',
+    ],
+    decline: 'Not yet, farmer. Ask me again when I can answer without the whole Lantern Ring listening in. They will be. They always are.',
+  },
+});
+
+Object.assign(QUESTS, {
+  pia: [
+    Q('pia_wool', 'wool', 2, 'Two fleeces from your sheep, if you are shearing. I have twelve scarves promised and not one sheep of my own. I refuse to own a sheep.', 'Good, clean wool. You may watch me be pleased. It will not take long.'),
+    Q('pia_feather', 'duck_feather', 4, 'Four duck feathers, please. I am stuffing a quilt for the clinic beds and Dr. Mori says pillows count as medicine.', 'Soft. Very soft. The clinic will sleep better, and so shall I, knowing it.'),
+    Q('pia_tea', 'tea', 2, 'Two teas from the Hangar. I have a wedding dress pinned on the form and I cannot leave it, in case it moves.', 'Thank you. It did not move. I watched it the whole time.'),
+    Q('pia_cosmos', 'cosmos', 3, 'Three cosmos, if you are growing them. I dye with them: that soft pink nobody can name. Noor will not let me pick hers.', 'Look at that colour. I shall make something too good for anyone to wear.', { season: 2 }),
+    Q('pia_beet', 'beet', 2, 'Two beets. Not for eating. For dye. Corran asked for a red waistcoat and I fear what he will do if I refuse.', 'Deep red. He will be unbearable in it. Thank you, I suppose.', { season: 2 }),
+    Q('pia_yarn', 'yarn', 1, 'One skein of your own yarn, spun on your own wheel. I would like to make you something from your own farm. Do not ask what.', 'Perfect. Uneven in three places. That is how I know it is yours.', { minHearts: 5 }),
+  ],
+  lark: [
+    Q('lark_egg', 'egg', 6, 'Half a dozen eggs! The Middle deck sent powder again. POWDER. I will not put powder in a bun. I have standards.', 'Real eggs! I could kiss you. I could kiss the hens. Tell them I said so.'),
+    Q('lark_honey', 'honey', 2, 'Two jars of your honey for the glaze, please? Once the Lane has tasted it nobody will let me go back.', 'Look at the colour of it. I am going to make you famous, one bun at a time.'),
+    Q('lark_strawberry', 'strawberry', 4, 'Four strawberries for the Saturday tarts! The first of spring. People queue for them. I queue for them, and I made them.', 'Perfect! Come by Saturday and you get the first slice. That is the law.', { season: 0 }),
+    Q('lark_pumpkin', 'pumpkin', 1, 'One big pumpkin, please. I am making a pie the size of a hatch cover for the Lane and Oduya says I cannot. Watch me.', 'That is a magnificent pumpkin. Oduya is going to be so cross.', { season: 1 }),
+    Q('lark_cranberry', 'cranberry', 5, 'Five cranberries for the autumn buns? Sharp ones. The sharp ones are the best ones. Like Pia.', 'Ha! Do not tell her I said that. Thank you, Mira!', { season: 2 }),
+    Q('lark_milk', 'milk_m', 2, 'Two good bottles of milk. I want to try my gran\'s custard and I have only got her handwriting to go on, and it is mostly flour stains.', 'It worked! It worked first time! You are getting the first spoon. Nobody else gets the first spoon.', { minHearts: 5 }),
+    Q('lark_duck', 'duck_egg', 3, 'Three duck eggs. I want to make you a cake. A secret one. You are not allowed to ask what for.', 'Thank you. Come by on Saturday. Wear something nice. ...Not too nice. It is a cake.', { minHearts: 6 }),
+  ],
+  noor: [
+    Q('noor_violet', 'wild_violet', 4, 'Four wild violets from under the hill pines. I am pressing a reference set and the ones on my side of the hill are sulking.', 'Good specimens. You picked them low, by the root. You listen. I will remember that.', { season: 0 }),
+    Q('noor_herb', 'herb', 3, 'Three hill herbs, please. I am testing whether they grow better beside tulips. They do. I want to know why.', 'Thank you. I shall interrogate them thoroughly.', { season: 1 }),
+    Q('noor_honey', 'honey', 1, 'One jar of your honey. I want to see which flowers your bees have been visiting. Honey is a diary, if you read it properly.', 'Tulip, clover, a little moonflower. Your bees have taste. So, apparently, do you.'),
+    Q('noor_seedtin', 'seedtin', 1, 'If you find one seed tin in the Old World, bring it to me before anyone else sees it. Anyone. Seln included.', 'Oh. Oh, there is still seed in it. I am going to need to sit on the floor for a minute.'),
+    Q('noor_snowdrop', 'snowdrop', 2, 'Two snowdrops from the hill. They are the first thing up after the cold, and I like to have them on the desk when I am sulking about winter.', 'Thank you. I have stopped sulking. Partly.', { season: 3 }),
+    Q('noor_mushroom', 'mushroom', 2, 'Two hill mushrooms. Not to eat. I want to see what they do to my compost. Science is sometimes very disgusting.', 'Excellent. Do not come into the back room for a week.', { season: 2 }),
+  ],
+  tika: [
+    Q('tika_scrap', 'scrap', 5, 'Five bits of scrap! I am building a thing. A good thing. The Professor says it is a bad thing. It is a good thing.', 'Yes! Perfect! It is going to be SO good. Possibly loud.'),
+    Q('tika_copper', 'copper', 3, 'Three copper ore from the belt? I am winding a motor for Vesna\'s turntable so it stops going wobbly on the slow songs.', 'Copper! Lovely and green. Vesna\'s slow songs are saved.'),
+    Q('tika_pie', 'pie', 1, 'One pie. A whole one. I forgot lunch. And yesterday\'s lunch. The Professor says I am running on solder.', 'Pie! You are a hero. A pie hero. I am going to eat it with a spanner.'),
+    Q('tika_corn', 'corn', 2, 'Two ears of corn, please! I am testing a corn-popper for the Bloom Fair. Not the Professor\'s. Mine. Mine is better.', 'Great! If you hear a bang on the Lane, that was science.', { season: 1 }),
+    Q('tika_sweetpotato', 'sweetpotato', 3, 'Three sweet potatoes. I roast them on the welding bench. Do not tell Pia. She thinks the burn marks on my sleeves are from engines.', 'Thank you! They are also from engines. Some of them.', { season: 2 }),
+    Q('tika_watch', 'watch', 1, 'If you find one pocket watch in the Old World, could I have it? Not for me. For the Professor. His stopped years ago and he will not let me fix it.', 'I fixed this one. I am going to leave it on his bench and say nothing. Like him.', { minHearts: 5 }),
+  ],
+  vesna: [
+    Q('vesna_tea', 'tea', 2, 'Two teas, farmer, if you are passing the Hangar. A night show on dry throat is a crime against the listeners.', 'Bless you. My voice is restored. The Lantern Ring is safe.'),
+    Q('vesna_honey', 'honey', 1, 'One jar of honey. For the voice. And for the toast. Mostly the toast, if I am honest, and I am, on air.', 'Lovely. I will thank you on the show. Mysteriously.'),
+    Q('vesna_berry', 'berry', 3, 'Three wild berries. I want something to eat in the booth that is not Lark\'s buns. Do not tell Lark. She will take it personally.', 'Perfect. I will eat them during the slow songs. Nobody can see me on the radio.', { season: 1 }),
+    Q('vesna_elderflower', 'elderflower', 3, 'Three elderflowers off the hill stream. Lark makes a cordial and I am the only person she lets have the first glass.', 'You picked the good ones. I will save you the second glass. That is an honour.', { season: 1 }),
+    Q('vesna_pie', 'pie', 1, 'One pie, for a long night show. I am doing six hours of requests. Five of them will be Corran.', 'You are a lifesaver. I will play you something. Not Corran\'s request.', { minHearts: 5 }),
+    Q('vesna_musicbox', 'musicbox', 1, 'There is a song my mother sang that I cannot remember. If you ever find a music box below, one might play it. I know. It is silly.', 'It is not her song. But it is close. ...Sit with me while it plays? It is short.', { minHearts: 6 }),
+  ],
+});
+
+Object.assign(SIGNS, {
+  'village.lane': "MARKET LANE. The Sunrise Oven: from 7, not Mondays. Varga's Mend & Make: 9 to 5, not Sundays. The Seedhouse (Earth seeds, flowers, hives): not Tuesdays. Brandt's Garage: afternoons. Radio Willowfall.",
+  'village.bakeryfront': "THE SUNRISE OVEN. Bread from seven. Buns until they are gone, which is nine. Honey cake on Saturdays and whenever Lark feels like it. Closed Mondays: she is lying in the grass.",
+  'village.millbridge': 'THE MILL BRIDGE, built by the Lane crews in the first summer of peace from a siege barricade. Over it: the Lane cottages and the Seedhouse trial beds.',
+  'village.trialbeds': "SEEDHOUSE TRIAL BEDS. Earth seed, being persuaded. Please do not water, pick, sing to or step on anything. (N. Asante. The singing is my job.)",
+  'farm.east': "THE EAST TERRACE. Once the Hollin family's second field; the old fold north, the duck pond south. Ruess at the Workshop clears the terrace, mends the fold and the duck house. Corran sells goats, sheep and ducks.",
+});
+HELP.push({
+  title: 'Market Lane, the fold and the hives',
+  body: "Willowfall's Market Lane lies east of the lift plaza: the Sunrise Oven (Lark, bread and cakes), Varga's Mend & Make (Pia spins wool and knits scarves), the Seedhouse (Noor sells Earth seeds, among them winter kale, frost leeks and snowbells, plus beehives and bouquets), Brandt's Garage (Tika builds the cheese press and spinning wheel) and Radio Willowfall (Vesna; one song request a week).\n\nOn the farm, Ruess clears the East Terrace field and mends the fold and the duck house. Corran then sells goats (milk), sheep (shear with clippers for wool) and ducks. Set machines and hives down on the farm like chests; flowers near a hive make honey faster.",
+});
+{
+  const pg = (t) => HELP.find((p) => p.title === t);
+  const love = pg('Love'); if (love && !/Lark/.test(love.body)) love.body = love.body.replace(/^Six people can become more than friends: the General, Professor Ruess, Commander Kestrel, Dr\. Mori, Oduya the canteen chef and Yui the librarian\./, 'Eight people can become more than friends: the General, Professor Ruess, Commander Kestrel, Dr. Mori, Oduya, Yui the librarian, Lark the baker and Vesna of the radio.');
+  const fest = pg('Seasons and festivals'); if (fest) fest.body = fest.body.replace('Winter: nothing grows outdoors.', 'Winter: kale, frost leeks and snowbells from the Seedhouse.');
+}
+
 // ------------------------------------------------------------------ star-plums and the Main deck (2026-11-18)
 export const STAR_PLUM = {
   found: 'A star-plum! Eat it and your strength grows for good.',
@@ -2597,7 +3276,7 @@ Object.assign(SCHEDULE, {
   moth(wd, m, c) {
     const f = (c && c.flags) || {}; if (!f.ld_catacombs) return null;
     if (!f.ld_enclave) return pick(m, [H(10), H(12), 'lower.catacombs'], [H(15), H(18), 'lower.beds']);
-    if (!f.ld_rehoused) return pick(m, [H(8), H(11), 'lower.enclave'], [H(11), H(13), 'lower.pumps'], [H(13), H(17), 'lower.beds'], [H(17), H(19, 30), 'lower.kettle']);
+    if (!f.ld_rehoused) return pick(m, [H(8), H(11), 'lower.enclave'], [H(11), H(12), 'lower.pumps'], [H(12), H(13), 'lower.kettle'], [H(13), H(17), 'lower.beds'], [H(17), H(19, 30), 'lower.kettle']);
     if (wd === 5) return pick(m, [H(9), H(17), 'lower.pumps']);
     if (wd === 6) return pick(m, [H(9), H(12), 'church.pew'], [H(13), H(17), 'central.gallery'], [H(17), H(19), 'central.homes']);
     return pick(m, [H(8), H(15), 'school.pupil'], [H(15), H(17), 'central.schoolyard'], [H(17), H(19), 'central.homes']);

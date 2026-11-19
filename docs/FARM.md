@@ -480,12 +480,16 @@ batteries, air as the cost of distance; a start at sector 1, 5, 10, 15 or 20 onc
 * **One big map** (`sim.beltLayout(seed)`, pure and cached; `state.belt = { seed, gone, reached }`): `BELT_W` 34 ×
   `BELT_H` 286 cells: the launch apron (6 rows, the pad at `BELT_PAD`) at the south edge, then `BELT_SECTORS` 20 bands of
   `SECTOR_H` 14 rows, sector 1 just north of the apron, sector 20 at the far north (`beltSector(y)`, `sectorTop(s)`).
-  Cells: 0 open, 1 rock, 3 great asteroid (never breaks), 4 comet ice, 5 rich vein, 6 pickup pod, 7 landmark. Per sector:
-  1 + s/4 great-asteroid clumps, 4–6 rock fields with gaps (about 55 rocks), scattered singles, 1–2 comet-ice clusters
-  (from sector 2), rich veins from sector 3 (1.2% of rocks a sector further out, to 20%), one pickup pod, and landmarks
+  Cells: 0 open, 1 small rock, 2 medium boulder, 3 great asteroid (never breaks), 4 comet ice, 5 large boulder, 6 pickup
+  pod, 7 landmark, 8 huge boulder. Per sector: 1 + s/4 great-asteroid clumps, 4–6 rock fields with gaps (about 70 rocks),
+  scattered singles, 1–2 comet-ice clusters (from sector 2), one pickup pod, and landmarks
   (`BELT_LANDMARKS`: a derelict nav buoy in 3, a sleeping comet with an ice field in 8, the wreck of the Hesper in 13, the far
   marker in 20; their words in `story.BELT.marks`). Nothing is walled off from the pad (the generator carves through
-  great asteroids). About 1,400 breakable rocks and 370 great asteroids in all.
+  great asteroids). About 1,400 breakable rocks and 370 great asteroids in all. The rocks of a sector are sized by chance,
+  bigger further north: medium 12% + 1.2% a sector, large 0.8% (2% + 0.8% a sector from sector 3), huge 0.4% (1% + 0.7% a
+  sector from sector 6), the rest small. On average a sector holds small / medium / large / huge: sector 1 61/10/1.4/0.2,
+  10 41/16/3.6/3.2, 20 22/25/11/6.4. `BELT_GOALS` puts a large boulder in sector 1, a large and a huge in 2 and a huge in 3:
+  goals for a better hammer.
 * **Trips**: `enterBelt(state, start)` builds `state.mine` (mode `belt`) from the layout minus the rocks still drifting
   back; `start` is 1 or a milestone she has reached (`beltStarts`: 5, 10, 15, 20 ≤ `belt.reached`), beside that sector's
   pod. `enterMine(state, n, 'belt')` is the same call. The UI reports her position (`beltMove(state, x, y)`, at most 3
@@ -494,31 +498,41 @@ batteries, air as the cost of distance; a start at sector 1, 5, 10, 15 or 20 onc
   updates `belt.reached` and `stats.deepestBelt` (old layered saves turn their record into milestones). `beltHome(state,
   how)`: `pad` (the launch pad, 10 min), `pod` (within 2.6 tiles of a pod, 15 min) or `tow` (air at 0: Vashti reels her
   in, 60 min and −20 stamina). There is no fly-home-from-anywhere: the pods are the way back.
-* **The hammer** (Space or E facing a rock; `hitRock` → the belt branch): 1 stamina a hit. `rockHardness`: plain rock and
-  ice 1, rich vein 2, and 3 from sector 10; `hammerHits(hard, level)`: 0 if the hammer is softer (refused, with the tier
-  it needs), 2 at an equal tier, 1 when the hammer is a tier above. Plain rock: `beltOdds(sector)`; ice: comet ice 72%,
-  silica 14%; a rich vein always gives one of titanium, star-metal, platinum, crystal, alloy or copper (weighted, by the
-  sector's first-sector rules). The rock-splitter head adds a 30% second ore. A broken rock is in `belt.gone` until a day
+* **The hammer and rock sizes** (owner: "Upgrading the hammer should make more sense. You can have bigger rocks with better
+  chance for good ore that requires higher levels hammer."). Space or E facing a rock (`hitRock` → the belt branch), 1
+  stamina a hit. `ROCK_SIZES[cell] = { name, tier, hits }`; `rockHits(kind, level)` (0: too soft, refused with a message
+  naming the hammer needed and the one she has; the prompt shows the size and the hits or the tier):
+
+  | Size | Hammer | Hits (Field / Alloy / Starsteel) | Ore (`rockOdds(kind, sector)`) |
+  |---|---|---|---|
+  | small rock, comet ice | any | 1 / 1 / 1 | small: scrap 18%, nickel-iron 26%, silica 16%, ice 8%, copper 4% from sector 2; ice: comet ice 72%, silica 14% |
+  | medium boulder | any | 3 / 2 / 1 | the sector's odds (`beltOdds`, below) |
+  | large boulder (gold flecks) | Alloy | – / 3 / 2 | always one: titanium, alloy, copper, platinum, crystal, star-metal (sector 3: 30/30/12/14/10/4%; sector 20: 20/20/8/25/19/8%) |
+  | huge boulder (warm, four glints) | Starsteel | – / – / 3 | two, or three (35%), of platinum, crystal, star-metal, titanium (sector 20: 31/31/28/10%) |
+
+  For 400 rocks in sector 16 (tested): small about 8,000 cr, medium 31,000, large 63,000; a huge boulder averages about 640
+  cr. The rock-splitter head adds a 30% chance of one more roll. A broken rock is in `belt.gone` until a day
   2–5 days later (hash of the seed, cell and day), then a new rock drifts in.
-* **Ore odds of a plain rock** (sector 1 / 5 / 10 / 15 / 20): scrap 14/12/9/6/3%, nickel-iron 20/18/16/14/12%, silica
+* **Ore odds of a medium boulder** (`beltOdds`, sector 1 / 5 / 10 / 15 / 20): scrap 14/12/9/6/3%, nickel-iron 20/18/16/14/12%, silica
   12/11/10/9/8%, comet ice 16/15/14/13/12%, copper –/10/11/11/12%, titanium –/7/8/9/10%, alloy –/10/11/12/13%, platinum
   –/–/4/5/6%, crystal –/–/6/8/9%, star-metal –/3/4/4/5% (the rest is bare rock).
 * **The mining unit** (`state.miner = { name, charge }`, Ruess, `MINER_PRICE` 1,200 cr, once): F in the belt sets it down
   on open ground beside her (`minerDeploy`; at under `MINER_RUN` charge it takes a charged battery from her rucksack, the
-  flat one back; with none it will not go). Every 4.5 s of play it breaks the nearest plain rock or ice within
-  `MINER_REACH` 4 tiles (`minerWork`, `MINER_RUN` 10 charge a rock: ten rocks a battery, swapping in another charged battery
+  flat one back; with none it will not go). Every 4.5 s of play it breaks the nearest small rock, ice or medium boulder
+  within `MINER_REACH` 4 tiles (`minerWork`, `MINER_RUN` 10 charge a small rock, 20 a medium one: ten small rocks a battery, swapping in another charged battery
   when flat), into its hopper (`MINER_HOLD` 12); walking up empties it (`minerCollect`), F again recalls it (`minerRecall`).
-  It never breaks rich veins and costs Sato no stamina. At home `chargeMiner` gives it a battery; the battery keeper tops it up.
+  It never breaks large or huge boulders and costs Sato no stamina. At home `chargeMiner` gives it a battery; the battery keeper tops it up.
 * **Drawing**: Sato is the built figure in a suit (`look.suit`: white suit, orange trim, a glass helmet, a pack) holding the
   hammer. world.js `BeltRocks` draws the rocks as one `InstancedMesh` per kind (models `asteroid`, `asteroid_big`,
   `comet_ice`, procedural fallback), only within 21 tiles of Sato, rebuilt when she has moved 3 tiles or a rock breaks,
-  plus glints on the rich veins. Props: `sector_buoy` (model `jump_buoy`) at both ends of every sector line,
+  scaled by size (small 0.62, medium 0.95, large 1.28, huge 1.75), the large ones gold-flecked with two glints and the
+  huge ones warm with four; the great asteroids are darker and use the `asteroid_big` model. Props: `sector_buoy` (model `jump_buoy`) at both ends of every sector line,
   `sector_sign` (floating "▲ SECTOR n", facing the camera), `pickup_pod` (lit pad, capsule, blinking mast), the four
   landmarks, `mining_bot` (model slot, built stand-in: an orange unit on treads with a drill arm). `spaceBackdrop` tints
   each sector's dust (blue-grey near home, through green, to gold far out) with a glowing line between sectors; Earth
   lies far north, Eden's drum behind the apron. In headless Chromium (SwiftShader, 1280×800) a belt frame took about 0.5 s
   against 1.1 s on the farm.
-* **Map**: the minimap shows the belt (sectors numbered down the side, pods pulsing green, rich veins gold, landmarks ✦,
+* **Map**: the minimap shows the belt (sectors numbered down the side, pods pulsing green, rocks sized and coloured by size (large gold, huge orange), landmarks ✦,
   the mining unit); M opens the belt chart, the whole map with the cradle's milestones. The HUD place reads
   "The belt, sector 7 · air 63/100"; a new sector, a first visit and a milestone each get a toast; the suit chimes at 30
   and 10 air.

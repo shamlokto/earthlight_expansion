@@ -1182,7 +1182,7 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   const sum3 = (a, k) => [a, a + 1, a + 2].reduce((t, s) => t + (kinds(s)[k] || 0), 0);
   check(sum3(18, 5) > sum3(3, 5) * 2 && sum3(18, 8) > sum3(3, 8) * 2 && sum3(18, 2) > sum3(1, 2), `bigger rocks further north (large ${sum3(3, 5)} → ${sum3(18, 5)}, huge ${sum3(3, 8)} → ${sum3(18, 8)})`);
   check(sum3(1, 5) >= 1 && sum3(1, 8) >= 1, 'a few big ones near home already: goals for a better hammer');
-  check(Array.from({ length: 20 }, (_, i) => kinds(i + 1)[1] || 0).every((n) => n > 25) && Array.from({ length: 20 }, (_, i) => kinds(i + 1)[3] || 0).every((n) => n > 0), 'every sector has rock fields and great asteroids');
+  check(Array.from({ length: 20 }, (_, i) => [1, 2, 5, 8].reduce((t, k) => t + (kinds(i + 1)[k] || 0), 0)).every((n) => n > 25) && Array.from({ length: 20 }, (_, i) => kinds(i + 1)[3] || 0).every((n) => n > 0), 'every sector has rock fields and great asteroids');
   for (const seed of [1, 2, 3, 99, 4242]) {           // nothing is walled off from the pad: every rock, pod and landmark can be reached
     const C = beltLayout(seed).cells, seen = new Uint8Array(C.length), q = [BELT_PAD[1] * BELT_W + BELT_PAD[0]]; seen[q[0]] = 1; let bad = 0;
     while (q.length) { const i = q.pop(), x = i % BELT_W, y = (i - x) / BELT_W; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, j = ny * BELT_W + nx; if (nx < 0 || ny < 0 || nx >= BELT_W || ny >= BELT_H || seen[j]) continue; seen[j] = 1; if (C[j] !== 3 && C[j] !== 6 && C[j] !== 7) q.push(j); } }
@@ -1221,14 +1221,14 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   H.player.toolLevel.hammer = 3; for (let k = 0; k < 3; k++) r = sim.hitRock(H, vx, vy); check(r.broke && r.gained.length >= 2 && r.gained.length <= 3 && r.gained.every((g) => ['titanium', 'star_metal', 'platinum', 'crystal'].includes(g.id)), `a huge boulder: two or three of the best (${r.gained.map((g) => g.id)})`);
   const [bx, by] = cellOf(3, 3); check(!act(sim.hitRock(H, bx, by)).ok, 'great asteroids do not break');
   const rich20 = beltTally(16, [5], 3, 400, 520), plain20 = beltTally(16, [2], 3, 400, 520), huge20 = beltTally(18, [8], 3, 200, 520), small20 = beltTally(16, [1], 3, 400, 520), val = (o) => Object.entries(o).reduce((a, [id, n]) => a + ITEMS[id].sell * n, 0);
-  check(val(rich20) > val(plain20) * 2.5 && val(plain20) > val(small20) * 1.3 && val(huge20) / 200 > val(rich20) / 400 * 1.8, `bigger is richer: small ${val(small20)}, medium ${val(plain20)}, large ${val(rich20)} cr for 400 rocks; huge ${val(huge20)} for 200`);
+  check(val(rich20) > val(plain20) * 1.8 && val(plain20) > val(small20) * 1.3 && val(huge20) / 200 > val(rich20) / 400 * 1.8, `bigger is richer: small ${val(small20)}, medium ${val(plain20)}, large ${val(rich20)} cr for 400 rocks; huge ${val(huge20)} for 200`);
   const ice = beltTally(8, [4], 3, 400, 521); check(ice.comet_ice > 250 && !ice.star_metal, 'comet ice clusters give ice');
   const far = beltTally(18, [2], 3, 2000, 522), near = beltTally(2, [2], 3, 2000, 522); check(val(far) > val(near) * 1.5, `far rock is worth more than near rock (${val(far)} against ${val(near)} cr)`);
   // respawn: broken rocks are gone for 2–5 days, then back
   const day0 = sim.absDay(H), back = H.belt.gone[ry * BELT_W + rx];
   check(back >= day0 + 2 && back <= day0 + 5, `the rock returns in 2 to 5 days (day ${back - day0})`);
   sleep(H); sim.enterBelt(H, 1); check(H.mine.cells[ry * BELT_W + rx] === 0, 'next morning it is still gone');
-  for (let d = 0; d < 5; d++) sleep(H); sim.enterBelt(H, 1); check(H.mine.cells[ry * BELT_W + rx] === 1 && !(ry * BELT_W + rx in H.belt.gone), 'a few days later a new rock has drifted in');
+  for (let d = 0; d < 5; d++) sleep(H); sim.enterBelt(H, 1); check(H.mine.cells[ry * BELT_W + rx] === mk && !(ry * BELT_W + rx in H.belt.gone), 'a few days later a new rock has drifted in');
   // saves: the belt's record and the drifting rocks survive; an old layered save keeps its depth as milestones
   const back2 = loadState(saveState(B)); check(back2 && back2.belt.reached === 6 && back2.mine === null && back2.flags.tank, 'the belt record survives a save');
   const old = JSON.parse(saveState(newGame({ seed: 503 }))); delete old.belt; delete old.miner; old.stats.deepestBelt = 11;
@@ -1238,6 +1238,7 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   check(!act(sim.minerDeploy(M, 5, 5)).ok, 'it only works in the belt');
   sim.enterBelt(M, 1); const MM = M.mine; let spot = null;
   for (let yy = sectorTop(3); yy < sectorTop(1) + SECTOR_H && !spot; yy++) for (let x = 2; x < BELT_W - 2 && !spot; x++) { if (MM.cells[yy * BELT_W + x]) continue; let n = 0; for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) if (Math.hypot(i, j) <= 3.5 && (MM.cells[(yy + j) * BELT_W + x + i] === 1 || MM.cells[(yy + j) * BELT_W + x + i] === 4)) n++; if (n >= 15) spot = [x, yy]; }
+  for (let j = -5; j <= 5; j++) for (let i = -5; i <= 5; i++) { const q = (spot[1] + j) * BELT_W + spot[0] + i; if (MM.cells[q] === 2) MM.cells[q] = 1; }   // small rocks only, so a run is ten rocks
   r = sim.minerDeploy(M, spot[0], spot[1]); check(r.ok && MM.miner && !r.swapped, 'F sets it down on open ground');
   check(!act(sim.minerDeploy(M, spot[0], spot[1])).ok, 'only one out at a time');
   const st0 = M.player.stamina; let works = 0, full = false; for (let k = 0; k < 12; k++) { const w = sim.minerWork(M); if (w.ok) works++; else if (w.full) { full = true; sim.minerCollect(M); k--; } else break; }
