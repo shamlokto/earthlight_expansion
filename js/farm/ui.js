@@ -69,6 +69,7 @@ export function icon(id) {
 export function face(who) {
   const n = NPCS[who]; if (!n) return '';
   const own = art.url(`people/${who}_portrait`) || art.url(`people/${who}_front`); if (own) return `<div class="fm-face"><img src="${own}" alt=""></div>`;
+  if (n.portrait && n.portrait.startsWith('art/farm/people/') && !art.has(`people/${who}_front`)) return `<div class="fm-face" style="display:grid;place-items:center;background:${n.look.top};color:#fff;font:700 26px var(--f-display)">${esc((n.short || n.name)[0])}</div>`;   // no portrait yet: an initial in their colours
   if (n.portrait && n.portrait.startsWith('svg:')) return `<div class="fm-face">${svgPortrait(n.portrait.slice(4))}</div>`;
   return `<div class="fm-face"><img src="${n.portrait}" alt=""></div>`;
 }

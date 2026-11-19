@@ -470,8 +470,8 @@ function central() {
   sc.prop('blackboard', 4, 0, { w: 4, act: 'sign', sign: 'school.board', label: 'Blackboard' }); sc.prop('teacher_desk', 5, 2, { w: 2 });
   for (const y of [4, 6]) for (const x of [1, 3, 8, 10]) sc.prop('school_desk', x, y);
   sc.prop('colony_planter', 11, 7); sc.prop('colony_planter', 0, 7); sc.prop('shelf', 0, 3, { w: 1, model: 'bookshelf' });
-  sc.spot('school.floor', 6, 5.5).spot('school.teacher', 6, 1.4).spot('school.pupil', 3.5, 4.95);   // the teacher and Moth, once the families are up (story.js)
-  sc.pupilDesks = [[1.5, 4.95], [8.5, 4.95], [10.5, 4.95], [1.5, 6.95], [3.5, 6.95], [8.5, 6.95], [10.5, 6.95]];
+  sc.spot('school.floor', 6, 5.5).spot('school.teacher', 6, 1.4).spot('school.pupil', 3.5, 5.15);   // the teacher and Moth, once the families are up (story.js)
+  sc.pupilDesks = [[1.5, 5.15], [8.5, 5.15], [10.5, 5.15], [1.5, 7.15], [3.5, 7.15], [8.5, 7.15], [10.5, 7.15]];
   // the church: pews, the altar, the memorial candles for those lost in the siege, a stained-glass window
   const ch = room('church', 12, 11, 'Second Dawn Church', 'o'); ch.colonyRoom = 'warm';
   ch.prop('stained_glass', 3, 0, { w: 6, solid: false }); ch.prop('altar', 5, 2, { w: 2 }); ch.spot('church.altar', 6, 1.3);
@@ -749,6 +749,21 @@ export function findSpot(name) {
 // business: lowerState(m, flags) floods or drains tunnels and opens or shuts the gates; props with `unless` are drawn only
 // until that flag is set, `zone` lamps are lit once theirs is.
 export const LOWER_ZONES = ['landing', 'lights', 'pumps', 'catacombs', 'enclave'];
+// The Undercroft's signs and notices (like MAP_SIGNS above: they are not people's spots).
+const LOWER_SIGNS = {
+  'lower.lift': 'LOWER DECK. LANDING 3. Machinery, cisterns, catacombs. NO PUBLIC ACCESS. (Underneath, in chalk: "Lift stops here anyway. T.V.")',
+  'lower.barrier': 'A work barrier across the passage, and beyond it nothing but dark and the sound of dripping water. A tag on it reads: NEEDS LIGHT. ASK AT THE TERMINAL.',
+  'lower.gallery': 'THE GALLERY. West: pump halls. East: the old crypts (catacombs). North wall: SECTOR NINE. AUTHORISED PERSONNEL ONLY. The paint is newer than the wall.',
+  'lower.pumpdoor': 'A pressure bulkhead, shut. Water seeps under it. A stencil: PUMP HALLS. FLOODED. A newer note: "Not flooded. Thinking about it. T.V."',
+  'lower.cryptdoor': 'A heavy door, shut and chained, with old colony markings. A stencil: CATACOMBS (HISTORIC). Someone small has drawn a mushroom on it, smiling.',
+  'lower.tarp': 'The arch is hung with tarpaulins from the far side, stitched tight. Behind them, faintly, someone is singing to a child.',
+  'lower.pumps': 'PUMP HALL ONE. Cisterns A to D. Fishing by arrangement with the keeper (the keeper says the arrangement is: be quiet).',
+  'lower.sump': 'THE SUMP. Deepest cistern on Eden. No swimming. No shouting. No wanting it too much. (A. Wick)',
+  'lower.beds': 'CATACOMB BEDS. Spawn goes in, mushrooms come out, all year round. Spore bags: Venn\'s bench, and Seln\'s store up top.',
+  'lower.enclave': 'THE ENCLAVE. Rota on the board by the stove. Visitors do the washing up.',
+  'lower.rota': 'THE ROTA, in chalk, in very neat columns: water, cooking, watch, washing, lessons. Under "visitors": SATO. Under that, in a child\'s hand: "AND HER HAT".',
+};
+for (const [k, v] of Object.entries(LOWER_SIGNS)) if (!(k in SIGNS)) SIGNS[k] = v;
 function lower() {
   const m = new MapDef('lower', 56, 44, 'r', { name: 'The Undercroft · Lower deck', under: true });
   m.fill(22, 35, 33, 42, 'd').fill(26, 33, 29, 34, 'd');                    // the landing and the passage north

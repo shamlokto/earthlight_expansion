@@ -425,7 +425,11 @@ item('oyster_fry', 'Oyster fry', 'food', 'Pale oysters fried in egg. Restores 35
 item('glowcap_broth', 'Glowcap broth', 'food', 'Glowcaps and a cave fish, simmered. Restores 60 stamina.', { stamina: 60, sell: 520 });
 item('undercroft_stew', 'Undercroft stew', 'food', 'Any cave mushroom, a potato or root, and a fish. The enclave\'s Sunday pot. Restores 80 stamina.', { stamina: 80, sell: 560 });
 item('truffle_omelette', 'Truffle omelette', 'food', 'A deep truffle shaved over egg and milk. Restores 90 stamina.', { stamina: 90, sell: 1500 });
-for (const id of ['mushroom_skewer', 'oyster_fry', 'glowcap_broth', 'undercroft_stew', 'truffle_omelette']) ITEMS[id].detail = ITEMS[id].desc;
+Object.assign(ITEMS.mushroom_skewer, { detail: 'Shiitake threaded on a skewer with onion, or a hill herb, and turned over the coals. Venn eats three standing up and calls it lunch.' });
+Object.assign(ITEMS.oyster_fry, { detail: 'Pale oysters dipped in beaten egg and fried soft. The enclave\'s breakfast, the mornings there was an egg.' });
+Object.assign(ITEMS.glowcap_broth, { detail: 'Glowcaps simmered with a cave fish. The pot glows faintly for a minute, then thinks better of it. Very restoring.' });
+Object.assign(ITEMS.undercroft_stew, { detail: 'Agnes Thorne\'s Sunday pot: a cave mushroom, a potato or a root, and a fish from Wick\'s basins. It kept eleven people going for three years.' });
+Object.assign(ITEMS.truffle_omelette, { detail: 'A deep truffle shaved thin over egg and milk. Possibly the most expensive breakfast on Eden. Worth it.' });
 // Where the logs of release 1 come from: a terminal (map prop act 'terminal', log id) or Moth's diary pages (by hearts).
 export const LOWER_LOGS = [
   { id: 'quarantine', src: 'terminal' }, { id: 'requisition', src: 'terminal' }, { id: 'schedule', src: 'terminal' }, { id: 'galt_hands', src: 'wall' },

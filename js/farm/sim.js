@@ -38,7 +38,7 @@ export const MAX_STAMINA_CAP = 200, STAR_SPOT = 99, COLLECTOR_KINDS = 75, HYDRO_
 export const STAR_PLUM_SOURCES = ['hill', 'ruins10', 'ruins20', 'harvest', 'lantern', 'seln7', 'marrow7', 'moraine', 'mori', 'collector'];
 export const RUCKSACK_TIERS = [[15, 1500], [20, 4000], [25, 8000], [30, 15000]];
 const FRUITS = ['cherry', 'peach', 'apple', 'persimmon', 'wild_apple', 'wild_grape', 'berry', 'plum', 'loquat', 'mulberry', 'yuzu'];
-const MUSHROOMS = ['mushroom', 'frostcap', 'shiitake', 'pale_oyster', 'glowcap'];
+const MUSHROOMS = ['mushroom', 'frostcap'];
 const CAVE_SHROOMS = ['shiitake', 'pale_oyster', 'glowcap'], CAVE_FISH = ['cave_fish', 'glowfish', 'pipe_eel'];
 const VEG = ['turnip', 'potato', 'cucumber', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach'];
 const FISH_IDS = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'cave_fish', 'glowfish', 'pipe_eel'];
@@ -727,7 +727,6 @@ function shelves(state, shopId) {
   } else if (shopId === 'undercroft') {            // Tobias Venn's bench by the restoration terminal
     sell('lamp_kit', 120, { req: [['scrap', 4], ['copper', 1]], needs: '4 scrap, 1 copper ore' }); sell('pump_part', 180, { req: [['nickel_iron', 3], ['copper', 1]], needs: '3 nickel-iron, 1 copper ore' });
     if (state.flags.ld_catacombs) sell('spore_bag', SPORE_PRICE);
-    sell('bread', 70); sell('tea', 35);
   } else if (shopId === 'cafe') {
     sell('tea', 30); sell('soup', 80); sell('pie', 150);
   } else if (shopId === 'grandmarket') {             // the Main deck's vending terminals: imports at a premium

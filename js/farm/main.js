@@ -121,7 +121,7 @@ async function talkTo(id) {
     const rec = S.npc[id] || {}, met = !!rec.met;
     const lines = story.talkLines(id, ctx({ hearts: sim.hearts(S, id), met, isBirthday: isBirthday(id) }));
     const r = sim.talk(S, id); if (S.npc[id]) S.npc[id].met = true;
-    await ui.say(lines.map((t) => ({ who: id, text: t })));
+    await ui.say(!met && story.MEETINGS && story.MEETINGS[id] ? story.MEETINGS[id] : lines.map((t) => ({ who: id, text: t })));   // the Undercroft folk: a first meeting
     if (id === 'moth') await mothPage();
     if (r.first) floatText(n.actor.x, n.actor.y, '♥');
     await favour(id, r.first);
