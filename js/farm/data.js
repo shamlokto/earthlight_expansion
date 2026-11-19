@@ -10,18 +10,18 @@ export const FIELD_SIZES = { farm: [16, 18], greenhouse: [10, 6] }, PASTURE_SIZE
 // [id, name, plural, seasons, days, regrow (0 = none), sale, bag price]
 const CROP_ROWS = [
   ['turnip', 'Turnip', 'turnips', [0], 4, 0, 60, 120],
-  ['potato', 'Potato', 'potatoes', [0], 7, 0, 80, 150],
+  ['potato', 'Potato', 'potatoes', [0], 7, 0, 100, 150],
   ['cucumber', 'Cucumber', 'cucumbers', [0], 9, 5, 60, 200],
   ['strawberry', 'Strawberry', 'strawberries', [0], 8, 2, 30, 150],
   ['tomato', 'Tomato', 'tomatoes', [1], 9, 3, 60, 200],
   ['corn', 'Corn', 'corn', [1], 13, 4, 100, 300],
-  ['onion', 'Onion', 'onions', [1], 7, 0, 80, 150],
+  ['onion', 'Onion', 'onions', [1], 7, 0, 100, 150],
   ['pumpkin', 'Pumpkin', 'pumpkins', [1], 14, 0, 250, 500],
   ['carrot', 'Carrot', 'carrots', [2], 7, 0, 120, 300],
   ['eggplant', 'Eggplant', 'eggplants', [2], 9, 3, 80, 120],
-  ['sweetpotato', 'Sweet potato', 'sweet potatoes', [2], 6, 2, 60, 300],
+  ['sweetpotato', 'Sweet potato', 'sweet potatoes', [2], 6, 3, 60, 300],
   ['spinach', 'Spinach', 'spinach', [2], 5, 0, 80, 200],
-  ['moonflower', 'Moonflower', 'moonflowers', [0, 1, 2], 18, 0, 500, 1000],
+  ['moonflower', 'Moonflower', 'moonflowers', [0, 1, 2], 18, 0, 420, 1000],
 ];
 
 // `plural` and `bag` (the seed bag's price) are extras beyond the contract.
@@ -52,13 +52,13 @@ item('milk_s', 'Small milk', 'animal', 'A small bottle of milk.', { sell: 100 })
 item('milk_m', 'Medium milk', 'animal', 'A good bottle of milk.', { sell: 150 });
 item('milk_l', 'Large milk', 'animal', 'A large bottle from a happy cow.', { sell: 200 });
 
-item('fish_s', 'Silverfin', 'fish', 'A small river fish.', { sell: 50 });
-item('fish_m', 'River trout', 'fish', 'A decent catch.', { sell: 120 });
-item('fish_l', 'Chamber carp', 'fish', 'A fish worth boasting about.', { sell: 200 });
-item('fish_spring', 'Blossom dace', 'fish', 'Runs only in spring.', { sell: 160 });
-item('fish_summer', 'Sunline perch', 'fish', 'Basks under the summer sun-line.', { sell: 180 });
-item('fish_autumn', 'Copper eel', 'fish', 'An autumn eel the colour of old wire.', { sell: 220 });
-item('fish_winter', 'Frost char', 'fish', 'Caught only in the cold.', { sell: 260 });
+item('fish_s', 'Silverfin', 'fish', 'A small river fish.', { sell: 35 });
+item('fish_m', 'River trout', 'fish', 'A decent catch.', { sell: 75 });
+item('fish_l', 'Chamber carp', 'fish', 'A fish worth boasting about.', { sell: 130 });
+item('fish_spring', 'Blossom dace', 'fish', 'Runs only in spring.', { sell: 110 });
+item('fish_summer', 'Sunline perch', 'fish', 'Basks under the summer sun-line.', { sell: 120 });
+item('fish_autumn', 'Copper eel', 'fish', 'An autumn eel the colour of old wire.', { sell: 150 });
+item('fish_winter', 'Frost char', 'fish', 'Caught only in the cold.', { sell: 180 });
 item('fish_king', 'Old Hollin', 'fish', 'The old king of the hill lake.', { sell: 1200 });
 
 item('herb', 'Hill herb', 'forage', 'A fragrant herb from the hill.', { sell: 40 });
@@ -150,8 +150,8 @@ item('bread', 'Bread', 'food', 'Restores 20 stamina.', { stamina: 20 });
 item('omelette', 'Omelette', 'food', 'Egg and milk, folded soft. Restores 45 stamina.', { stamina: 45, sell: 220 });
 item('salad', 'Garden salad', 'food', 'Two fresh vegetables, crisp. Restores 30 stamina.', { stamina: 30, sell: 190 });
 item('veg_soup', 'Vegetable soup', 'food', 'Three vegetables, simmered. Restores 60 stamina.', { stamina: 60, sell: 320 });
-item('fish_grill', 'Grilled fish', 'food', 'Any fish, salt and a hot pan. Restores 50 stamina.', { stamina: 50, sell: 260 });
-item('cooked_meal', 'Colony bento', 'food', 'Fish, egg and a vegetable in a tin box, the way crews ate on the carriers. Restores 90 stamina.', { stamina: 90, sell: 480 });
+item('fish_grill', 'Grilled fish', 'food', 'Any fish, salt and a hot pan. Restores 50 stamina.', { stamina: 50, sell: 70 });
+item('cooked_meal', 'Colony bento', 'food', 'Fish, egg and a vegetable in a tin box, the way crews ate on the carriers. Restores 90 stamina.', { stamina: 90, sell: 260 });
 item('berry_jam', 'Berry jam', 'food', 'Berries and patience. Restores 25 stamina.', { stamina: 25, sell: 160 });
 // More home cooking (2026-11-18): mountain food, fruit and the old favourites.
 item('mint_tea', 'Mint tea', 'food', 'Wild mint and a hill herb, steeped. Restores 20 stamina.', { stamina: 20, sell: 140 });
@@ -159,15 +159,15 @@ item('grape_juice', 'Grape juice', 'food', 'Three handfuls of wild grapes, press
 item('bamboo_stirfry', 'Bamboo stir-fry', 'food', 'Bamboo shoot and a garden vegetable in a hot pan. Restores 45 stamina.', { stamina: 45, sell: 290 });
 item('honey_toast', 'Honey toast', 'food', 'Bread, toasted, with hill honeycomb melting into it. Restores 40 stamina.', { stamina: 40, sell: 260 });
 item('fiddlehead_tempura', 'Fiddlehead tempura', 'food', 'Fern fronds in a light egg batter. Restores 30 stamina.', { stamina: 30, sell: 180 });
-item('fruit_tart', 'Fruit tart', 'food', 'Any fruit, an egg and bread for the crust. Restores 55 stamina.', { stamina: 55, sell: 380 });
-item('fruit_salad', 'Fruit salad', 'food', 'Two different fruits, cut small. Restores 35 stamina.', { stamina: 35, sell: 300 });
+item('fruit_tart', 'Fruit tart', 'food', 'Any fruit, an egg and bread for the crust. Restores 55 stamina.', { stamina: 55, sell: 270 });
+item('fruit_salad', 'Fruit salad', 'food', 'Two different fruits, cut small. Restores 35 stamina.', { stamina: 35, sell: 260 });
 item('persimmon_jam', 'Persimmon jam', 'food', 'Two persimmons cooked down slowly. Restores 30 stamina.', { stamina: 30, sell: 320 });
 item('chestnut_roast', 'Roast chestnuts', 'food', 'Three chestnuts, scored and roasted. Restores 35 stamina.', { stamina: 35, sell: 240 });
 item('mushroom_soup', 'Mushroom soup', 'food', 'A hill mushroom simmered in milk. Restores 50 stamina.', { stamina: 50, sell: 330 });
 item('root_stew', 'Root stew', 'food', 'Winter root, a garden root and a handful of nuts. Restores 60 stamina.', { stamina: 60, sell: 360 });
 item('honeyed_nuts', 'Honeyed nuts', 'food', 'Pine nuts rolled in warm honeycomb. Restores 30 stamina.', { stamina: 30, sell: 250 });
 item('matsutake_grill', 'Grilled matsutake', 'food', 'A matsutake and a hill herb over coals. Restores 70 stamina.', { stamina: 70, sell: 700 });
-item('forest_bento', 'Forest bento', 'food', 'Fish, a mushroom and a vegetable packed for a long walk. Restores 95 stamina.', { stamina: 95, sell: 640 });
+item('forest_bento', 'Forest bento', 'food', 'Fish, a mushroom and a vegetable packed for a long walk. Restores 95 stamina.', { stamina: 95, sell: 560 });
 item('soup', 'Soup', 'food', 'Restores 40 stamina.', { stamina: 40 });
 item('pie', 'Pie', 'food', 'Restores 70 stamina.', { stamina: 70 });
 item('tea', 'Tea', 'food', 'Restores 10 stamina.', { stamina: 10 });
@@ -252,7 +252,7 @@ const DETAIL = {
   battery_full: 'A charged Field-unit battery. Give it to one of your robots with E (or from the journal\'s Robots tab) for 60 charge; you get the empty one back. A robot on the Batteries job swaps them in for you, and the mining unit runs on them in the belt.',
   scrap: 'Twisted metal from the Old World ruins and the near belt. Ruess wants five for every Alloy upgrade, and he never says no to more.',
   alloy: 'Good structural alloy, broken from asteroid rocks from belt sector 5 out. Five go into a Starsteel upgrade; three into the Pallas filters.',
-  crystal: 'A drive crystal, broken from the belt from sector 10 out. Starsteel tools need one.',
+  crystal: 'A drive crystal from the belt: in medium boulders from sector 10 out, and in large and huge boulders anywhere. Starsteel tools need one.',
   photo: 'Strangers smiling under a blue sky, faded to sepia. Found in the shallowest ruins; the Memory Room keeps one.',
   teacup: 'A porcelain cup without a chip on it, somehow. Found in the shallow ruins.',
   book: 'An old-world book whose pages still turn. Found from level 2 of the ruins.',
@@ -305,7 +305,7 @@ for (const it of Object.values(ITEMS)) {
 // Each raises max stamina by 10 (to 200). Ten are hidden about the colony, one place each.
 item('star_plum', 'Star-plum', 'fruit', 'A small violet fruit that glows faintly. Eating one raises your max stamina by 10, for good.', { maxUp: 10,
   detail: 'Grown from the founders\' own seeds, and there are only a handful left on the whole ring. One may show itself on Terrace Hill on one day a season; the deep ruins hide two; the festivals, two old friends, a doctor, a queen and a collector each keep one.' });
-item('colony_feast', 'Colony feast', 'food', 'Fish, fruit, a vegetable and an egg: a meal for the whole crew. Restores 100 stamina; the first one you eat raises max stamina by 5.', { stamina: 100, sell: 900, firstMaxUp: 5,
+item('colony_feast', 'Colony feast', 'food', 'Fish, fruit, a vegetable and an egg: a meal for the whole crew. Restores 100 stamina; the first one you eat raises max stamina by 5.', { stamina: 100, sell: 640, firstMaxUp: 5,
   detail: 'The founders\' landing-day meal, cooked from everything the ring grows. The first time you eat one, it raises your max stamina by 5 for good.' });
 item('founders_cake', 'Founders\' cake', 'food', 'Honeycomb, chestnut, milk and egg, baked slow. Restores 80 stamina; the first one you eat raises max stamina by 5.', { stamina: 80, sell: 560, firstMaxUp: 5,
   detail: 'Marrow says the first crews baked it on the anniversary of the sealing, from the only sweet things they had. The first slice raises your max stamina by 5 for good.' });
@@ -324,7 +324,7 @@ const LANE_CROPS = [
   ['beet', 'Beet', 'beets', [2], 6, 0, 100, 220, 0, 'A deep red autumn beet that stains every board in the kitchen. Quick to grow; the base of Ruby beet soup.'],
   ['cranberry', 'Cranberry', 'cranberries', [2], 10, 2, 35, 260, 0, 'Sharp autumn berries on a low bush. Slow to start, then a handful every two days until the frost.'],
   ['cosmos', 'Cosmos', 'cosmos', [2], 7, 0, 110, 200, 1, 'Feathery autumn flowers in pink and white. The last good meal of the year for the bees, and Noor\'s favourite.'],
-  ['kale', 'Kale', 'kale', [3], 6, 0, 95, 200, 0, 'Curly winter kale that sweetens in the cold. One of the few things that will grow outdoors on the Lantern Ring in winter.'],
+  ['kale', 'Kale', 'kale', [3], 6, 0, 110, 200, 0, 'Curly winter kale that sweetens in the cold. One of the few things that will grow outdoors on the Lantern Ring in winter.'],
   ['frost_leek', 'Frost leek', 'frost leeks', [3], 8, 4, 70, 260, 0, 'A winter leek bred on a ship that never saw a summer. Pull the green and it grows back every four days.'],
   ['snowbell', 'Snowbell', 'snowbells', [3], 8, 0, 140, 240, 1, 'A small white winter flower that nods under the snow. No bee is out to see it, but every florist on the ring wants one.'],
 ];
@@ -346,17 +346,17 @@ lane('goat_milk', 'Goat milk', 'animal', 'A bottle of fresh goat milk.', { sell:
 lane('goat_milk_l', 'Rich goat milk', 'animal', 'A creamy bottle from a goat who trusts you.', { sell: 190, detail: 'What a goat gives when her affection is high. It makes the same goat cheese, only more of it would be greedy: one bottle, one round.' });
 lane('wool', 'Wool', 'material', 'A soft fleece, sheared from your own sheep.', { sell: 200, detail: 'Sheared with clippers from a fed sheep every few days. Pia Varga buys it at the tailor\'s, and the spinning wheel turns it into yarn overnight.' });
 lane('fine_wool', 'Fine wool', 'material', 'A long, silky fleece from a well-loved sheep.', { sell: 360, detail: 'A happy sheep (high affection, brushed and fed) grows wool this fine. The spinning wheel makes two skeins of yarn from it; Pia makes a face she would deny.' });
-lane('duck_egg', 'Duck egg', 'animal', 'A large blue-white duck egg.', { sell: 90, detail: 'Laid by a fed duck in the duck house by the east pond; collect them at the nest box. Richer than a hen\'s egg, and it does anything an egg can.' });
+lane('duck_egg', 'Duck egg', 'animal', 'A large blue-white duck egg.', { sell: 70, detail: 'Laid by a fed duck in the duck house by the east pond; collect them at the nest box. Richer than a hen\'s egg, and it does anything an egg can.' });
 lane('duck_feather', 'Duck feather', 'material', 'A soft white down feather.', { sell: 40, detail: 'Fond ducks leave a feather or two in the nest now and then. Pia stuffs quilts with them, and Vesna wears one in her headphones.' });
-lane('cheese', 'Farm cheese', 'artisan', 'A wheel of cheese from your own cows\' milk.', { sell: 330, stamina: 25, detail: 'Put a bottle of cow milk in the cheese press and it is a small wheel of farm cheese by morning. Good alone, better on toast.' });
-lane('goat_cheese', 'Goat cheese', 'artisan', 'A soft white goat cheese, rolled in herbs.', { sell: 400, stamina: 25, detail: 'The cheese press turns a bottle of goat milk into this overnight. Lark puts it in everything, Corran pretends it is cow cheese, and the Harvest Fair has a chair for it.' });
-lane('yarn', 'Yarn', 'material', 'A skein of homespun yarn.', { sell: 420, detail: 'Spun overnight on your spinning wheel from a fleece (two skeins from fine wool). Pia knits three into a scarf, and Vesna will trade a whole song for one.' });
-lane('honey', 'Honey', 'artisan', 'A jar of farm honey.', { sell: 170, stamina: 20, detail: 'From your own beehives, spring to autumn: a jar every three days, every two with a bed of flowers within a few tiles (tulips, sunflowers, cosmos, moonflowers). The bees sleep through winter.' });
+lane('cheese', 'Farm cheese', 'artisan', 'A wheel of cheese from your own cows\' milk.', { sell: 280, stamina: 25, detail: 'Put a bottle of cow milk in the cheese press and it is a small wheel of farm cheese by morning. Good alone, better on toast.' });
+lane('goat_cheese', 'Goat cheese', 'artisan', 'A soft white goat cheese, rolled in herbs.', { sell: 320, stamina: 25, detail: 'The cheese press turns a bottle of goat milk into this overnight. Lark puts it in everything, Corran pretends it is cow cheese, and the Harvest Fair has a chair for it.' });
+lane('yarn', 'Yarn', 'material', 'A skein of homespun yarn.', { sell: 340, detail: 'Spun overnight on your spinning wheel from a fleece (two skeins from fine wool). Pia knits three into a scarf, and Vesna will trade a whole song for one.' });
+lane('honey', 'Honey', 'artisan', 'A jar of farm honey.', { sell: 140, stamina: 20, detail: 'From your own beehives, spring to autumn: a jar every three days, every two with a bed of flowers within a few tiles (tulips, sunflowers, cosmos, moonflowers). The bees sleep through winter.' });
 lane('cheese_press', 'Cheese press', 'placeable', 'Turns a bottle of milk into cheese overnight. Set it down on the farm.', { detail: 'A screw press Tika Brandt built from a hydraulic jack and a lot of opinions. Set it on the farm, E with milk puts a bottle in, and by morning it is cheese (goat milk gives goat cheese).' });
 lane('spinning_wheel', 'Spinning wheel', 'placeable', 'Spins a fleece into yarn overnight. Set it down on the farm.', { detail: 'A treadle wheel Tika rebuilt from a bicycle and an old cable drum. E with wool puts a fleece on; by morning there is yarn. It squeaks on the upstroke and she says that is character.' });
 lane('beehive', 'Beehive', 'placeable', 'A hive of colony bees. Honey every few days, spring to autumn.', { detail: 'A white hive box with a colony of Noor\'s bees, descendants of the hives that pollinated the first crops. Set it on the farm; flowers within a few tiles make it work faster. E collects the honey.' });
-lane('yarn_scarf', 'Yarn scarf', 'craft', 'A long striped scarf, knitted by Pia from your yarn.', { sell: 950, detail: 'Three skeins of your own yarn and an evening of Pia\'s needles. A gift almost anybody on the ring would be glad of in winter; she will tell you who.' });
-lane('bouquet', 'Bouquet', 'craft', 'A bouquet tied with ribbon at the Seedhouse.', { sell: 380, detail: 'Noor ties them from her own beds or from flowers you bring, with a ribbon from Pia\'s offcuts. A bouquet says a great deal without anybody having to.' });
+lane('yarn_scarf', 'Yarn scarf', 'craft', 'A long striped scarf, knitted by Pia from your yarn.', { sell: 1300, detail: 'Three skeins of your own yarn and an evening of Pia\'s needles. A gift almost anybody on the ring would be glad of in winter; she will tell you who.' });
+lane('bouquet', 'Bouquet', 'craft', 'A bouquet tied with ribbon at the Seedhouse.', { sell: 450, detail: 'Noor ties them from her own beds or from flowers you bring, with a ribbon from Pia\'s offcuts. A bouquet says a great deal without anybody having to.' });
 lane('record', 'Salvaged record', 'craft', 'An old-world vinyl record from the radio station\'s crates.', { sell: 240, detail: 'Vesna sells the doubles from Radio Willowfall\'s crates: voices and bands from before the fall, scratched and lovely. Ruess pretends not to want one.' });
 lane('sun_bun', 'Sunrise bun', 'food', 'A sweet glazed bun from the Sunrise Oven. Restores 30 stamina.', { stamina: 30, detail: 'Lark Penhallow bakes them at four in the morning so they are warm when the sun-line comes up. Sticky, golden and gone by nine.' });
 lane('seed_loaf', 'Seeded loaf', 'food', 'A dark loaf full of seeds. Restores 35 stamina.', { stamina: 35, detail: 'Lark\'s everyday loaf, with sunflower and pumpkin seeds from the Seedhouse. It counts as bread in any recipe that wants a crust.' });
@@ -370,7 +370,7 @@ for (const [id, name, stamina, sell, desc] of [
   ['cheese_omelette', 'Cheese omelette', 55, 520, 'An egg folded over farm or goat cheese.'],
   ['duck_custard', 'Duck egg custard', 50, 480, 'A duck egg, milk and honey, baked slow.'],
   ['honey_cake', 'Honey cake', 60, 520, 'Honey, an egg and a loaf\'s worth of crumb. A proper present.'],
-  ['blossom_tea', 'Blossom tea', 25, 300, 'A flower and a hill herb, steeped.'],
+  ['blossom_tea', 'Blossom tea', 25, 200, 'A flower and a hill herb, steeped.'],
   ['cheese_toast', 'Cheese toast', 45, 500, 'A loaf and a cheese under the grill.'],
   ['stuffed_peppers', 'Stuffed peppers', 65, 600, 'Bell pepper, cheese and onion or tomato, baked.'],
   ['cabbage_rolls', 'Cabbage rolls', 60, 420, 'Cabbage leaves round a root and an egg.'],
@@ -398,9 +398,9 @@ export const ROBOT_MOODS = {
 // Cave fish from the pump halls, mushrooms grown in the catacomb beds, the parts that restore it, and the logs found there.
 // [id, name, sale, stamina, desc, detail]
 const UNDER_FISH = [
-  ['cave_fish', 'Cave fish', 70, 0, 'A blind white fish from the flooded pump halls.', 'Pale as a candle and quite unbothered by the dark. The commonest catch in the Undercroft basins; Ansel Wick says they can hear you thinking about them.'],
-  ['glowfish', 'Glowfish', 150, 0, 'A small fish with a soft cyan glow.', 'It glows faintly for an hour after it is caught, then sulks. Uncommon in the pump hall basins, a little less shy in the Sump.'],
-  ['pipe_eel', 'Pipe eel', 210, 0, 'A long grey eel that lives in the pipes.', 'It lives inside the old drain pipes and comes out to feed when the hall lamps dim, after six in the evening.'],
+  ['cave_fish', 'Cave fish', 45, 0, 'A blind white fish from the flooded pump halls.', 'Pale as a candle and quite unbothered by the dark. The commonest catch in the Undercroft basins; Ansel Wick says they can hear you thinking about them.'],
+  ['glowfish', 'Glowfish', 100, 0, 'A small fish with a soft cyan glow.', 'It glows faintly for an hour after it is caught, then sulks. Uncommon in the pump hall basins, a little less shy in the Sump.'],
+  ['pipe_eel', 'Pipe eel', 140, 0, 'A long grey eel that lives in the pipes.', 'It lives inside the old drain pipes and comes out to feed when the hall lamps dim, after six in the evening.'],
   ['abyss_koi', 'Abyss koi', 1800, 0, 'Legendary: a deep-blue koi with silver star speckles.', 'Somebody kept koi in the cisterns before the war, and one of them never stopped growing. It rises only in the deep Sump, after eight at night, to a rod of Alloy or better. Wick has seen it twice.'],
 ];
 for (const [id, name, sell, , desc, detail] of UNDER_FISH) item(id, name, 'fish', desc, { sell, detail });
@@ -423,7 +423,7 @@ item('diary_page', 'Diary page', 'keepsake', 'A folded child\'s diary page with 
 item('mushroom_skewer', 'Shiitake skewer', 'food', 'Shiitake and an onion over the coals. Restores 40 stamina.', { stamina: 40, sell: 300 });
 item('oyster_fry', 'Oyster fry', 'food', 'Pale oysters fried in egg. Restores 35 stamina.', { stamina: 35, sell: 230 });
 item('glowcap_broth', 'Glowcap broth', 'food', 'Glowcaps and a cave fish, simmered. Restores 60 stamina.', { stamina: 60, sell: 520 });
-item('undercroft_stew', 'Undercroft stew', 'food', 'Any cave mushroom, a potato or root, and a fish. The enclave\'s Sunday pot. Restores 80 stamina.', { stamina: 80, sell: 560 });
+item('undercroft_stew', 'Undercroft stew', 'food', 'Any cave mushroom, a potato or root, and a fish. The enclave\'s Sunday pot. Restores 80 stamina.', { stamina: 80, sell: 440 });
 item('truffle_omelette', 'Truffle omelette', 'food', 'A deep truffle shaved over egg and milk. Restores 90 stamina.', { stamina: 90, sell: 1500 });
 Object.assign(ITEMS.mushroom_skewer, { detail: 'Shiitake threaded on a skewer with onion, or a hill herb, and turned over the coals. Venn eats three standing up and calls it lunch.' });
 Object.assign(ITEMS.oyster_fry, { detail: 'Pale oysters dipped in beaten egg and fried soft. The enclave\'s breakfast, the mornings there was an egg.' });
@@ -436,3 +436,15 @@ export const LOWER_LOGS = [
   { id: 'venn60', src: 'terminal' }, { id: 'catacombs', src: 'terminal' }, { id: 'ninefold', src: 'vault' },
   { id: 'pim_grey', src: 'page', hearts: 0 }, { id: 'pim_shaking', src: 'page', hearts: 2 }, { id: 'pim_galt', src: 'page', hearts: 4 }, { id: 'moth_sun', src: 'page', hearts: 6 },
 ];
+// The Undercroft, release 2 (docs/FARM.md §14): what the Works makes, and the logs that finish the story.
+item('tin_lantern', 'Tin lantern', 'craft', 'A little lantern pressed from scrap, with a glowcap wick.', { sell: 180, detail: 'Venn\'s press stamps them out of old ration tins: a pierced shade, a brass handle, a glowcap in a jar for a wick. The enclave lit its first winter with lanterns like this.' });
+item('gear_brooch', 'Gear brooch', 'craft', 'A brooch made from a tiny brass gear and a copper wire.', { sell: 260, detail: 'A clock gear from a dead pump gauge, polished up and wired into a brooch. It still turns if you breathe on it.' });
+item('pipe_whistle', 'Pipe whistle', 'craft', 'A whistle cut from a length of nickel pipe.', { sell: 140, detail: 'Wick taught Venn how to tune them: one note for "dinner", two for "come and look at this fish". Children love them. Parents are more measured.' });
+item('ring_shard', 'Slice of ring three', 'keepsake', 'A thin, cold sliver of the broken ring from the vault. It glows a little.', { detail: 'All that is left of the machine under the Lower deck: a curved sliver of ring three, quite harmless now, that holds a faint blue light like a held breath. Venn cut it for you himself. "Something from it should end up with somebody kind."' });
+LOWER_LOGS.push(
+  { id: 'works_ledger', src: 'terminal' }, { id: 'galt_cover', src: 'terminal' }, { id: 'bathhouse', src: 'terminal' }, { id: 'marrow_last', src: 'wall' },
+  { id: 'day211', src: 'reactor' }, { id: 'galt_door', src: 'reactor' }, { id: 'venn_key', src: 'reactor' },
+  { id: 'ninefold_report', src: 'vault' }, { id: 'the_roll', src: 'vault' }, { id: 'agnes_letter', src: 'vault' },
+);
+FESTIVAL_DAYS.push([2, 19]);            // the Hub Cup in the Zero-G Arena (story.js FESTIVALS; held once the arena is restored)
+item('hub_cup', 'The Hub Cup', 'keepsake', 'A small, dented silver cup on a magnetic base, so it stays put in zero-g.', { detail: 'The Lower deck\'s zero-g ball trophy, first played for in the old training drum. Venn made it from a pump bell. Your name is scratched on the base, under several older names nobody can read.' });

@@ -503,6 +503,9 @@ function interiors() {
   m.prop('storage_box', 0, 4, { act: 'storage' }); m.prop('calendar_board', 5, 0, { act: 'calendar' });
   m.prop('kitchen', 8, 0, { w: 2, act: 'kitchen' }); m.prop('fridge', 10, 0, { act: 'fridge' }); m.prop('shelf', 11, 2, { d: 1 });
   m.prop('table', 8, 4, { w: 2 }); m.prop('chair', 8, 5, { solid: false }); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 }); m.prop('lamp', 6, 0, {});
+  // decor from the Works (2026-11-19, flags decor_<id>): drawn only once made
+  m.prop('decor_lantern', 9, 4, { solid: false, when: 'decor_lantern' }); m.prop('decor_clock', 7, 0, { solid: false, when: 'decor_clock' });
+  m.prop('decor_model', 0, 1, { solid: false, when: 'decor_model' }); m.prop('decor_shelf', 11, 5, { solid: false, when: 'decor_shelf' });
   out.house = m;
 
   m = room('barn', 12, 9, 'Barn', 'h');
@@ -748,7 +751,7 @@ export function findSpot(name) {
 // the enclave (north, behind the catacombs). Walls are rock ('r'). What the restoration has opened is the state's
 // business: lowerState(m, flags) floods or drains tunnels and opens or shuts the gates; props with `unless` are drawn only
 // until that flag is set, `zone` lamps are lit once theirs is.
-export const LOWER_ZONES = ['landing', 'lights', 'pumps', 'catacombs', 'enclave'];
+export const LOWER_ZONES = ['landing', 'lights', 'pumps', 'catacombs', 'enclave', 'works', 'arena', 'vents', 'vault'];
 // The Undercroft's signs and notices (like MAP_SIGNS above: they are not people's spots).
 const LOWER_SIGNS = {
   'lower.lift': 'LOWER DECK. LANDING 3. Machinery, cisterns, catacombs. NO PUBLIC ACCESS. (Underneath, in chalk: "Lift stops here anyway. T.V.")',
@@ -761,11 +764,17 @@ const LOWER_SIGNS = {
   'lower.sump': 'THE SUMP. Deepest cistern on Eden. No swimming. No shouting. No wanting it too much. (A. Wick)',
   'lower.beds': 'CATACOMB BEDS. Spawn goes in, mushrooms come out, all year round. Spore bags: Venn\'s bench, and Seln\'s store up top.',
   'lower.enclave': 'THE ENCLAVE. Rota on the board by the stove. Visitors do the washing up.',
+  'lower.worksdoor': 'A roll-up shutter, chained, with a crane hook painted on it: THE WORKS. RECYCLING · FABRICATION. Through the gap at the bottom: a press the size of a cottage, asleep.',
+  'lower.ventdoor': 'A bulkhead to the old wash hall, cold to the touch. A pressure tag: HEAT FEED ISOLATED. A chalk note: "Reactor next door. It is fine. It is fine. T.V."',
+  'lower.arenadoor': 'A long barrier across the mouth of an old training drum. Painted inside, faded: HUB CUP. Below that, a list of winners that stops in the year the war started.',
+  'lower.arena': 'THE ZERO-G ARENA. Gravity plates OFF inside the drum. Hold the rail. The Hub Cup: Autumn 19, from ten. All decks welcome; no one has ever been sick on purpose.',
+  'lower.works': 'THE WORKS. Recycling and fabrication. Hard hats are a state of mind. (The press is fed from the front; Venn takes orders.)',
+  'lower.vents': 'THE THERMAL VENTS. Wash hall and baths, heated from Core Ring B. Soak, not swim. Mind the glowcaps on the ledge; they mind you back.',
   'lower.rota': 'THE ROTA, in chalk, in very neat columns: water, cooking, watch, washing, lessons. Under "visitors": SATO. Under that, in a child\'s hand: "AND HER HAT".',
 };
 for (const [k, v] of Object.entries(LOWER_SIGNS)) if (!(k in SIGNS)) SIGNS[k] = v;
 function lower() {
-  const m = new MapDef('lower', 56, 44, 'r', { name: 'The Undercroft · Lower deck', under: true });
+  const m = new MapDef('lower', 56, 62, 'r', { name: 'The Undercroft · Lower deck', under: true });
   m.fill(22, 35, 33, 42, 'd').fill(26, 33, 29, 34, 'd');                    // the landing and the passage north
   m.fill(16, 20, 39, 32, 'd').fill(26, 19, 28, 19, 'd');                    // the gallery, and the round door's niche
   m.fill(13, 25, 15, 27, 'd').fill(1, 22, 12, 40, 'o').fill(3, 28, 9, 35, 'w');   // the pump hall and basin A
@@ -785,9 +794,9 @@ function lower() {
   lamp(23, 38, 'landing'); lamp(32, 39, 'landing'); lamp(29, 35, 'landing');
   m.prop('work_barrier', 26, 33, { w: 4, solid: false, unless: 'ld_lights', act: 'sign', sign: 'lower.barrier', label: 'Work barrier' });
   // the gallery: pipes, lamps, the sealed round door
-  m.prop('vault_door', 26, 19, { w: 3, act: 'vault', label: 'Sealed round door' });
+  m.prop('vault_door', 26, 19, { w: 3, act: 'vault', label: 'Sealed round door', unless: 'ld_vault', solid: false });   // the gate below blocks it until ld_vault m.prop('vault_door_open', 26, 19, { w: 3, solid: false, when: 'ld_vault' });
   m.prop('pipe_run', 16, 20, { w: 9 }); m.prop('pipe_run', 30, 20, { w: 10 }); m.prop('pipe_run', 16, 21, { d: 4 }); m.prop('pipe_run', 39, 28, { d: 5 });
-  m.prop('pump_station', 20, 21, { w: 4, d: 3, label: 'Dead pump' }); m.prop('vent', 33, 24); m.prop('vent', 21, 29); m.prop('cargo_crate', 37, 21); m.prop('cargo_crate', 36, 21, { scale: 0.7 });
+  m.prop('pump_station', 20, 21, { w: 4, d: 3, act: 'pump', pump: 'pump4', label: 'The gallery pump' }); m.prop('vent', 33, 24); m.prop('vent', 21, 29); m.prop('cargo_crate', 37, 21); m.prop('cargo_crate', 36, 21, { scale: 0.7 });
   m.prop('signpost', 30, 31, { act: 'sign', sign: 'lower.gallery' });
   for (const [x, y] of [[17, 23], [17, 30], [38, 23], [38, 31], [25, 21], [31, 21], [24, 31], [33, 31]]) lamp(x, y, 'lights');
   m.prop('bulkhead', 15, 25, { d: 3, solid: false, unless: 'ld_pumps', act: 'sign', sign: 'lower.pumpdoor', label: 'Pump hall bulkhead' });
@@ -818,9 +827,44 @@ function lower() {
   for (const [x, y] of [[28, 9], [34, 7], [41, 9], [46, 8], [51, 6]]) lamp(x, y, 'enclave');
   m.spot('lower.landing', 25, 37.6).spot('undercroft.counter', 31.5, 37.4).spot('lower.gallery', 27.5, 24.5).spot('lower.pumps', 6.5, 36.6).spot('lower.pumphouse', 11.5, 36.4)
     .spot('lower.sump', 7.5, 10.8).spot('lower.catacombs', 48, 20.6).spot('lower.beds', 48.2, 29.6).spot('lower.enclave', 31.5, 7.2).spot('lower.kettle', 37.5, 9.6);
+  lowerTwo(m);
   m.water = 'lower'; m.start = [27.5, 37.6];
-  m.areas = [['The landing', 27.5, 42.6], ['The gallery', 27.5, 27.6], ['Pump halls', 6.5, 41.4], ['The Sump', 7.5, 1.4], ['Old pump room', 19, 10.4], ['Catacombs', 48.5, 39.4], ['The enclave', 39, 11.6]];
+  m.areas = [['The Works', 13, 61.4], ['Thermal Vents', 43.5, 61.4], ['Zero-G Arena', 28.5, 61.4], ['The vault', 27.5, 12.6], ['The landing', 27.5, 42.6], ['The gallery', 27.5, 27.6], ['Pump halls', 6.5, 41.4], ['The Sump', 7.5, 1.4], ['Old pump room', 19, 10.4], ['Catacombs', 48.5, 39.4], ['The enclave', 39, 11.6]];
   return m;
+}
+// Release 2 (docs/FARM.md §14): the map grew south (56×44 → 56×62; nothing above row 43 moved). A passage from the landing
+// to the Works (west) and the Thermal Vents with the reactor console (east); the vault behind the round door, north of the gallery.
+function lowerTwo(m) {
+  const lamp = (x, y, zone) => m.prop('glow_lamp', x, y, { zone });
+  m.fill(26, 43, 29, 45, 'd').fill(4, 46, 52, 48, 'd').fill(3, 49, 22, 60, 'd').fill(34, 49, 53, 60, 'o');
+  m.gates.push({ x0: 26, y0: 43, x1: 29, y1: 43, flag: 'ld_works' }, { x0: 33, y0: 46, x1: 33, y1: 48, flag: 'ld_vents' }, { x0: 26, y0: 19, x1: 28, y1: 19, flag: 'ld_vault' });
+  m.prop('work_barrier', 26, 43, { w: 4, solid: false, unless: 'ld_works', act: 'sign', sign: 'lower.worksdoor', label: 'Shutter to the Works' });
+  m.prop('bulkhead', 33, 46, { d: 3, solid: false, unless: 'ld_vents', act: 'sign', sign: 'lower.ventdoor', label: 'Wash hall bulkhead' });
+  // the Works: the hall itself, the press out front, the office terminals
+  m.prop('works_hall', 9, 50, { w: 8, d: 6, label: 'The Works' });
+  m.prop('fabricator', 12, 57, { w: 2, act: 'works', label: 'The Works press' }); m.prop('scrap_bin', 16, 57, { act: 'recycle', label: 'Recycling bin' });
+  m.prop('terminal', 4, 50, { act: 'terminal', log: 'works_ledger', label: 'Works office terminal' }); m.prop('terminal', 21, 50, { act: 'terminal', log: 'galt_cover', label: 'Dispatch terminal' });
+  m.prop('cargo_crate', 4, 58); m.prop('cargo_crate', 5, 59, { scale: 0.8 }); m.prop('crate', 21, 59); m.prop('pipe_run', 3, 49, { w: 5 }); m.prop('signpost', 7, 47, { act: 'sign', sign: 'lower.works' });
+  for (const [x, y] of [[3, 53], [22, 53], [8, 57], [19, 57], [13, 47], [24, 47], [28, 44]]) lamp(x, y, 'works');
+  // the Thermal Vents: the bath, steam pipes, the reactor console
+  m.prop('vent_bath', 39, 52, { w: 6, d: 4, act: 'vents', label: 'The vent bath' }); m.prop('reactor_console', 48, 50, { w: 3, d: 2, act: 'reactor', label: 'Reactor console' });
+  m.prop('pipe_run', 34, 49, { w: 13 }); m.prop('pipe_run', 53, 50, { d: 10 }); m.prop('vent', 37, 57); m.prop('vent', 46, 57);
+  m.prop('terminal', 35, 50, { act: 'terminal', log: 'bathhouse', label: 'Wash hall terminal' }); m.prop('crypt_wall', 52, 59, { act: 'terminal', log: 'marrow_last', label: 'Chalk on the tiles' });
+  m.prop('signpost', 36, 47, { act: 'sign', sign: 'lower.vents' }); m.prop('bench', 40, 58, { w: 3, solid: false });
+  for (const [x, y] of [[35, 54], [45, 54], [38, 59], [49, 56], [44, 47]]) lamp(x, y, 'vents');
+  // the Zero-G Arena: the old training drum between the two halls, its stands, and the Hub Cup's gate
+  m.fill(24, 49, 32, 60, 'd'); m.gates.push({ x0: 24, y0: 49, x1: 32, y1: 49, flag: 'ld_arena' });
+  m.prop('work_barrier', 24, 49, { w: 9, solid: false, unless: 'ld_arena', act: 'sign', sign: 'lower.arenadoor', label: 'Barrier to the old drum' });
+  m.prop('zero_g_arena', 26, 52, { w: 5, d: 5, act: 'arena', label: 'The Zero-G Arena' }); m.prop('bench', 24, 58, { w: 2, solid: false }); m.prop('bench', 31, 58, { w: 2, solid: false });
+  m.prop('signpost', 32, 50, { act: 'sign', sign: 'lower.arena' });
+  for (const [x, y] of [[24, 51], [32, 52], [24, 56], [32, 56]]) lamp(x, y, 'arena');
+  m.spot('lower.arena', 28.5, 58.4).spot('lower.stands', 25, 57.4).spot('lower.stands2', 32, 57.4).spot('lower.arenagate', 28.5, 50.6);
+  // the vault: a dead ring, the last terminal, the names
+  m.fill(22, 13, 33, 18, 'd');
+  m.prop('decimator_ring', 25, 13, { w: 6, d: 4, label: 'Ring three' });
+  m.prop('terminal', 22, 15, { act: 'terminal', log: 'ninefold_report', label: 'Site Ninefold terminal' }); m.prop('crypt_wall', 33, 15, { act: 'terminal', log: 'the_roll', label: 'The roll' });
+  for (const [x, y] of [[23, 17], [32, 17], [22, 13], [33, 13]]) lamp(x, y, 'vault');
+  m.spot('lower.works', 10.2, 58.6).spot('lower.press', 15, 58.7).spot('lower.vents', 42, 57.6).spot('lower.reactor', 49.5, 52.6).spot('lower.vault', 27.5, 17.6);
 }
 // Fits the Lower deck to how far it has been restored: drained tunnels become floor, open gates stop blocking.
 export function lowerState(m, flags = {}) {

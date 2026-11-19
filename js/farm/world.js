@@ -106,7 +106,8 @@ const PROPS = {
   pew: { h: 0.9 }, lectern: { h: 1.2 }, map_screen: { h: 2.4 }, front_desk: { h: 1.1 }, lockers: { h: 2.0 }, rescue_drone: { h: 1.0 },
   // 2026-11-19: the Lower deck, the Undercroft (models from docs/LOWER-DECK-ART.md; built stand-ins in lowerworld.js)
   lower_lift: { model: 'lower_lift', h: 3.0, fit: 'foot' }, pump_station: { model: 'pump_station', h: 3.0, fit: 'foot' }, mushroom_bed: { model: 'mushroom_bed', h: 0.9, fit: 'foot' }, catacomb_arch: { model: 'catacomb_arch', h: 3.0, fit: 'stretch' },
-  shelter: { model: 'shelter', h: 3.4, fit: 'foot' }, glow_lamp: { model: 'glow_lamp', h: 1.8 }, terminal: { model: 'terminal', h: 1.3 }, vault_door: { model: 'vault_door', h: 3.2, fit: 'foot' }, works_hall: { model: 'works_hall', h: 4, fit: 'stretch' },
+  shelter: { model: 'shelter', h: 3.4, fit: 'foot' }, glow_lamp: { model: 'glow_lamp', h: 1.8 }, terminal: { model: 'terminal', h: 1.3 }, vault_door: { model: 'vault_door', h: 3.2, fit: 'foot' }, works_hall: { model: 'works_hall', h: 4, fit: 'box' },
+  fabricator: { h: 2.5 }, vault_door_open: { h: 3.3 }, zero_g_arena: { h: 3.6 }, scrap_bin: { h: 0.9 }, vent_bath: { h: 1.2 }, reactor_console: { h: 2.6 }, decimator_ring: { h: 4 }, decor_lantern: { h: 1.1 }, decor_clock: { h: 2.2 }, decor_model: { h: 1.1 }, decor_shelf: { h: 1.6 },
   work_barrier: { h: 0.9 }, bulkhead: { h: 2.6 }, tarp: { h: 2.4 }, crypt_wall: { h: 2.2 }, stove: { h: 1.6 }, shrooms: { h: 0.3 },
 };
 const BUILDING = {
@@ -578,8 +579,9 @@ export class World {
         g.add(box(w, 0.06, 0.06, glow(0x7dffe0), (w - 1) / 2, 0.08, -0.44)); break;
       }
       case 'departures_board': {                         // a glowing departures screen on a stand
-        const B = o.board || { title: 'DEPARTURES', rows: [['08:00', 'MIDDLE DECK', 'ON TIME'], ['10:20', 'LOWER DECK', 'BOARDING'], ['ANY', 'EARTH  (J. MARIS)', 'ASK AT DESK'], ['14:40', 'HUB SUPPLY', 'ON TIME'], ['17:00', 'LANTERN RING', 'ON TIME']] };   // a board can carry its own lines
-        const w = o.w || 3, t = panelTex('board:' + B.title, 512, 256, (x, W, H) => { x.fillStyle = '#071820'; x.fillRect(0, 0, W, H); x.fillStyle = '#ffd36a'; x.font = 'bold 34px sans-serif'; x.fillText(B.title, 22, 44);
+        const B = { ...(o.board || { title: 'DEPARTURES', rows: [['08:00', 'MIDDLE DECK', 'ON TIME'], ['10:20', 'LOWER DECK', 'BOARDING'], ['ANY', 'EARTH  (J. MARIS)', 'ASK AT DESK'], ['14:40', 'HUB SUPPLY', 'ON TIME'], ['17:00', 'LANTERN RING', 'ON TIME']] }) };   // a board can carry its own lines
+        const f = this.flags || {}; B.rows = B.rows.map((r) => (r[1] === 'UNDERCROFT' ? [r[0], r[1], f.ld_vault ? 'OPEN' : f.ld_lights ? 'RESTORING' : 'SEALED'] : r));   // the Governor's board follows the Lower deck
+        const w = o.w || 3, t = panelTex('board:' + B.title + B.rows.map((r) => r[2]).join(), 512, 256, (x, W, H) => { x.fillStyle = '#071820'; x.fillRect(0, 0, W, H); x.fillStyle = '#ffd36a'; x.font = 'bold 34px sans-serif'; x.fillText(B.title, 22, 44);
           const rows = B.rows;
           x.font = '24px monospace'; rows.forEach(([a, b, c2], i) => { x.fillStyle = '#9ff4ff'; x.fillText(a, 22, 92 + i * 34); x.fillText(b, 120, 92 + i * 34); x.fillStyle = i === 2 ? '#7dffb0' : '#cfe6ff'; x.fillText(c2, 370, 92 + i * 34); }); });
         const scr = quad(w - 0.3, 1.2, new THREE.MeshBasicMaterial({ map: t })); scr.position.set((w - 1) / 2, 1.65, 0.07); g.add(scr);
@@ -665,7 +667,8 @@ export class World {
           for (let i = 0; i < n; i++) { const c = i ? m.clone(true) : m; c.scale.setScalar(Math.min(k, step * 0.98 / s[0])); c.position.x = -fw / 2 + step * (i + 0.5); holder.add(c); }
           return;
         }
-        if (def.fit === 'stretch') m.scale.set(fw * 0.98 / s[0], h / s[1], Math.min(h / s[1], fd * 0.9 / s[2]));
+        if (def.fit === 'box') m.scale.set(fw * 0.98 / s[0], h / s[1], fd * 0.96 / s[2]);   // a shallow model stretched to its whole footprint (works_hall)
+        else if (def.fit === 'stretch') m.scale.set(fw * 0.98 / s[0], h / s[1], Math.min(h / s[1], fd * 0.9 / s[2]));
         else if (def.fit === 'foot') m.scale.setScalar(Math.min(h / s[1], fw * 0.96 / s[0], fd * 0.96 / s[2]));
         else if (def.fit === 'wide') { const [ex, ez] = o.turned ? [fd, fw] : [Math.max(fw, 0.8), Math.max(fw, 0.8)]; m.scale.setScalar(Math.min(ex * 0.95 / s[0], ez * 0.95 / s[2])); }   // a turned prop (the barge) fits its footprint across
         else m.scale.setScalar(Math.min(h / (s[1] || 1), (def.maxW || 99) * (o.scale || 1) / Math.max(s[0], s[2])));
@@ -895,6 +898,7 @@ export class World {
       if ((p.unless && this.flags[p.unless]) || (p.when && !this.flags[p.when])) { p.obj = null; continue; }   // the Undercroft's barriers, until restored
       if (p.zone) { p.lit = p.zone === 'landing' || !!this.flags['ld_' + p.zone]; if (p.lit) { this.underLamps.push({ x: p.x + 0.5, z: p.y + 0.5 }); pools.push({ x: p.x + 0.5, z: p.y + 0.5, warm: true, r: 2.8 }); } }
       if (p.pump) p.running = !!this.flags['ld_' + p.pump]; if (p.bed != null) p.rotten = !this.flags.ld_catacombs;
+      if (p.kind === 'reactor_console') { p.safe = !!this.flags.ld_reactor; p.step = this.flags.reactor || 0; }
       let kind = p.kind === 'tree' && p.y >= H - 1 ? 'bush' : p.kind;
       if ((kind === 'tree' || kind === 'pine') && this.isFelled && this.isFelled(map.id + ':' + p.index)) kind = 'stump';
       this.colonyFx = { spin: this.spinners, glow: [] };
