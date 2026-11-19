@@ -53,6 +53,47 @@ function baseOf(m, season) {
   base.set(key, c); return c;
 }
 
+// ---------------------------------------------------------------- the belt chart (one long map, from the sim's grid)
+const SECT = (n) => `hsl(${Math.round((0.58 - Math.min(1, (n - 1) / 19) * 0.5) * 360)},55%,55%)`;
+let beltBase = null;
+function beltOf(m, mine) {
+  if (beltBase && beltBase.mine === mine && beltBase.ver === mine.ver) return beltBase.c;
+  const T = 6, c = beltBase && beltBase.mine === mine ? beltBase.c : document.createElement('canvas'); c.width = m.w * T; c.height = m.h * T; const g = c.getContext('2d');
+  g.fillStyle = '#0b0e18'; g.fillRect(0, 0, c.width, c.height);
+  const sh = m.sectorH, top = (k) => (m.sectors - k) * sh + 1;
+  for (let k = 1; k <= m.sectors; k++) { g.globalAlpha = 0.16 + (k % 2) * 0.06; g.fillStyle = SECT(k); g.fillRect(T, top(k) * T, (m.w - 2) * T, sh * T); }
+  g.globalAlpha = 1; g.fillStyle = '#262a36'; g.fillRect(T, top(1) * T + sh * T, (m.w - 2) * T, (m.h - 2 - m.sectors * sh) * T);
+  const COL = { 1: '#8f857a', 3: '#4a4440', 4: '#cfeefa', 5: '#ffd36a' };
+  for (let y = 0; y < mine.h; y++) for (let x = 0; x < mine.w; x++) { const k = mine.cells[y * mine.w + x], col = COL[k]; if (!col) continue; g.fillStyle = col; if (k === 3) g.fillRect((x + 1) * T, (y + 1) * T, T, T); else { g.beginPath(); g.arc((x + 1.5) * T, (y + 1.5) * T, T * (k === 5 ? 0.45 : 0.38), 0, 7); g.fill(); } }
+  for (let k = 2; k <= m.sectors; k++) { const y = (top(k) + sh) * T; g.strokeStyle = SECT(k); g.lineWidth = 2; g.beginPath(); g.moveTo(T, y); g.lineTo((m.w - 1) * T, y); g.stroke(); }
+  beltBase = { mine, ver: mine.ver, c }; return c;
+}
+// Pods, the pad, landmarks and sector numbers drawn over a belt picture at scale s (pixels a tile), offset ox, oy.
+function beltMarks(g, m, mine, s, ox, oy, t, big) {
+  const P = (x, y) => [ox + x * s, oy + y * s], pulse = 0.5 + 0.5 * Math.sin(t / 260);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let k = 1; k <= m.sectors; k++) { const [x, y] = P(big ? 2.2 : 1.6, (m.sectors - k) * m.sectorH + 1 + m.sectorH / 2); g.font = `700 ${big ? 12 : 10}px "Chakra Petch", sans-serif`; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(String(k), x, y); g.fillStyle = SECT(k); g.fillText(String(k), x, y); }
+  for (const p of mine.pods) { const [x, y] = P(p.x + 1.5, p.y + 1.5); g.fillStyle = `rgba(95,255,210,${0.25 + 0.35 * pulse})`; g.beginPath(); g.arc(x, y, Math.max(5, s * 1.4), 0, 7); g.fill(); g.fillStyle = '#5fffd2'; g.strokeStyle = '#0b2a22'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, Math.max(3, s * 0.7), 0, 7); g.fill(); g.stroke(); }
+  for (const k of mine.marks || []) { const [x, y] = P(k.x + 1.5, k.y + 1.5); g.font = `${big ? 15 : 12}px sans-serif`; g.fillStyle = '#ffd36a'; g.fillText('✦', x, y); }
+  const [px, py] = P(m.start[0], m.start[1]); g.strokeStyle = '#7dffe0'; g.lineWidth = 2; g.beginPath(); g.arc(px, py, Math.max(4, s), 0, 7); g.stroke();
+  if (mine.miner) { const [x, y] = P(mine.miner.x + 1, mine.miner.y + 1); g.fillStyle = '#e0782a'; g.fillRect(x - 3, y - 3, 6, 6); }
+}
+function openBeltChart() {
+  const { map: m, S } = hooks.get(), mine = S.mine; if (!mine) return;
+  const html = `<canvas class="fm-mapcv" id="mapCv"></canvas><p class="fm-dim fm-maplegend"><i style="background:#e8483a"></i>Sato <i style="background:#5fffd2"></i>Pickup pods (home in 15 min) <i style="background:#ffd36a"></i>Rich veins and landmarks <i style="background:#cfeefa"></i>Comet ice · sector numbers down the side; the launch cradle can start you at ${S.belt.reached >= 5 ? [1, 5, 10, 15, 20].filter((k) => k <= S.belt.reached).join(', ') : 'sector 1 (reach 5 for more)'} · M or Esc to close</p>`;
+  hooks.openWin(`The belt chart · farthest: sector ${S.belt.reached}`, html, () => { if (open) cancelAnimationFrame(open.raf); open = null; }, 'map');
+  const cv = $('mapCv'); open = { tab: 'belt', cv, dots: [], hover: null, raf: 0 };
+  const draw = (t) => {
+    if (!open || !cv.isConnected) { open = null; return; }
+    const st = hooks.get(), me = st.me, ch = Math.round(Math.max(300, window.innerHeight * 0.92 - 170)), s = ch / m.h, cw = Math.round(m.w * s), dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (cv.width !== Math.round(cw * dpr)) { cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); cv.style.width = cw + 'px'; cv.style.height = ch + 'px'; }
+    const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.drawImage(beltOf(m, mine), 0, 0, cw, ch); beltMarks(g, m, mine, s, 0, 0, t, true);
+    if (me && st.map === m) { const p = (t / 900) % 1; g.fillStyle = `rgba(232,72,58,${0.5 * (1 - p)})`; g.beginPath(); g.arc(me.x * s, me.y * s, 5 + p * 10, 0, 7); g.fill(); g.fillStyle = '#e8483a'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(me.x * s, me.y * s, 5, 0, 7); g.fill(); g.stroke(); }
+    open.raf = requestAnimationFrame(draw);
+  };
+  open.raf = requestAnimationFrame(draw);
+}
+
 // ---------------------------------------------------------------- who is where
 function villagers(mapId) {
   const st = hooks.get(), out = [];
@@ -114,21 +155,22 @@ export function openMap(tab) {
   open.cv.onmouseleave = () => { open.hover = null; };
   open.raf = requestAnimationFrame(drawScreen);
 }
-export function toggleMap() { if (open) hooks.closeWin(); else if (!hooks.canOpen || hooks.canOpen()) { if (hooks.get().map && hooks.get().map.ruins) return hooks.toast && hooks.toast('No maps down here: the Old World has changed too much.'); openMap(); } }
+export function toggleMap() { if (open) hooks.closeWin(); else if (!hooks.canOpen || hooks.canOpen()) { if (hooks.get().map && hooks.get().map.belt) return openBeltChart(); if (hooks.get().map && hooks.get().map.ruins) return hooks.toast && hooks.toast('No maps down here: the Old World has changed too much.'); openMap(); } }
 
 // ---------------------------------------------------------------- the minimap in the corner
 function drawMini(t) {
   requestAnimationFrame(drawMini);
   if (!mini || !hooks) return;
   const st = hooks.get(), m = st.map, hud = $('hud');
-  const show = !!(m && st.me && !m.indoor && !m.ruins && hud && !hud.hidden);
+  const show = !!(m && st.me && !m.indoor && (!m.ruins || (m.belt && st.S.mine)) && hud && !hud.hidden);
   mini.wrap.hidden = !show; if (!show || t - lastMini < 66) return; lastMini = t;
   const cv = mini.cv, dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth || 160;
   if (cv.width !== Math.round(W * dpr)) { cv.width = cv.height = Math.round(W * dpr); }
-  const g = cv.getContext('2d'), s = 4.2, cx = st.me.x, cy = st.me.y; g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.fillStyle = '#5f7f55'; g.fillRect(0, 0, W, W);
-  const b = baseOf(m, st.S ? st.S.cal.season : 0), sx = (cx - W / 2 / s) * TILE, sy = (cy - W / 2 / s) * TILE, sw = (W / s) * TILE;
+  const bt = m.belt, g = cv.getContext('2d'), s = bt ? 2.4 : 4.2, cx = st.me.x, cy = st.me.y; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.fillStyle = bt ? '#05070d' : '#5f7f55'; g.fillRect(0, 0, W, W);
+  const TL = bt ? 6 : TILE, b = bt ? beltOf(m, st.S.mine) : baseOf(m, st.S ? st.S.cal.season : 0), sx = (cx - W / 2 / s) * TL, sy = (cy - W / 2 / s) * TL, sw = (W / s) * TL;
   g.drawImage(b, sx, sy, sw, sw, 0, 0, W, W);
+  if (bt) beltMarks(g, m, st.S.mine, s, W / 2 - cx * s, W / 2 - cy * s, t, false);
   const P = (x, y) => [W / 2 + (x - cx) * s, W / 2 + (y - cy) * s];
   // the camera's view, as a soft cone
   const yaw = st.W ? st.W.yaw : 0, a = Math.atan2(-Math.cos(yaw), -Math.sin(yaw));

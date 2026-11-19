@@ -39,7 +39,7 @@ for (const id of Object.keys(story.NPCS)) if (id !== 'sato') for (let season = 0
 for (const e of story.EVENTS) check(!!maps[e.map], `event ${e.id}: map ${e.map} exists`);
 for (const f of story.FESTIVALS) check(!!findSpot(f.spot), `festival ${f.id}: spot exists`);
 // the Old World: sites build, the lift pad is reachable, every pile can be reached or is beside open ground
-for (const mode of ['earth', 'belt']) for (let depth = 1; depth <= 12; depth++) for (let seed = 1; seed <= 6; seed++) {
+for (const mode of ['earth']) for (let depth = 1; depth <= 12; depth++) for (let seed = 1; seed <= 6; seed++) {
   const S = newGame({ seed: seed * 97 + depth }); enterMine(S, depth, mode); const m = ruinsMap(S.mine);
   check(!m.solid(m.start[0], m.start[1]), `ruins ${depth}/${seed}: the lift pad is free`);
   const piles = new Set(); S.mine.cells.forEach((c, i) => { if (c === 1) piles.add((i % S.mine.w + 1) + ',' + (Math.floor(i / S.mine.w) + 1)); });
@@ -47,6 +47,15 @@ for (const mode of ['earth', 'belt']) for (let depth = 1; depth <= 12; depth++) 
   const seen = new Set(), q = [[Math.floor(m.start[0]), Math.floor(m.start[1])]]; seen.add(q[0].join()); let found = 0;
   while (q.length) { const [x, y] = q.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (x + dx) + ',' + (y + dy); if (seen.has(k) || m.solid(x + dx, y + dy)) continue; seen.add(k); if (piles.has(k)) found++; q.push([x + dx, y + dy]); } }
   check(found === piles.size, `ruins ${depth}/${seed}: all ${piles.size} piles can be reached (${found})`);
+}
+// the belt: one long map built from the sim's grid, the pad at the south, a marker buoy pair and signs on every sector line
+for (const seed of [1, 7, 31]) {
+  const S = newGame({ seed }); S.belt = { seed, gone: {}, reached: 20 }; const mine = enterMine(S, 15, 'belt'), m = ruinsMap(mine);
+  check(m.belt && !m.earth && m.w === mine.w + 2 && m.h === mine.h + 2 && m.at(0, 5) === 'x' && m.at(5, 5) === 'v', `belt ${seed}: a dust lane inside a border`);
+  check(!m.solid(m.start[0], m.start[1]) && m.props.some((p) => p.act === 'liftup' && Math.floor(p.x) === Math.floor(m.start[0])), `belt ${seed}: the launch pad is where Sato starts`);
+  check(m.props.filter((p) => p.kind === 'sector_buoy').length === 2 * 19 && m.props.filter((p) => p.kind === 'sector_sign').length === 2 * 19, `belt ${seed}: buoys and signs on all 19 sector lines`);
+  check(mine.marks.every((k) => m.props.some((p) => p.kind === k.kind && p.mark === k.kind && story.BELT.marks[k.kind])), `belt ${seed}: every landmark has a sign with words`);
+  check(m.name === 'The belt, sector 15' && mine.start === 15, `belt ${seed}: named for the sector`);
 }
 // Eden Central's school, church and safety depot; the Arrivals hall; the orbital elevator (2026-11-19)
 for (const [kind, room] of [['school', 'school'], ['church', 'church'], ['safety_depot', 'depot'], ['arrivals', 'arrivals']]) {

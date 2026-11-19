@@ -238,6 +238,9 @@ const MAP_SIGNS = {
   'school.board': 'On the blackboard, in very neat chalk: WELCOME TO SCHOOL! TODAY WE WILL LEARN: Underneath, a list headed OUR CLASS, with no names on it yet, and a small drawing of a sun.',
   'school.cubbies': 'Rows of little cubbies, each with an empty name card and a hook for a coat. Somebody has put a pencil in every single one.',
   'depot.map': 'The deck map glows: every corridor, lift and hatch of the Main deck, with a green light for each. All green. Beside it, a handwritten note: "All green again today. Good." The handwriting is very stiff.',
+  'hill.summit': 'THE SUMMIT. Highest ground on the Lantern Ring. From here you can see the whole Ring curve up and over your head, the sun-line, and on a clear night the spokes lit end to end. Please do not feed the turbines.',
+  'hill.terraces': 'ORCHARD TERRACES. Planted by the founders, gone wild in the war, still fruiting. Pick what is ripe; leave some for the next person.',
+  'hill.falls': 'TERRACE FALLS. The lake\'s overflow, pumped round by the colony and let fall here because, the founders wrote, "people need somewhere to hear water". Fishing welcome. Swimming not.',
   'hill.onsen': 'THE TERRACE ONSEN. Hot spring, warmed by the colony\'s heat exchangers (Ruess says the pipes were "spare"). Open 6 till midnight. 100 cr a soak; free on your birthday. Please rinse before you get in. No towels in the water.',
   'village.lift': 'LANTERN RING LIFT. Spoke cars to the Middle deck and the hub, every twenty minutes. The climb takes nine; you get lighter as you go, so hold the rail near the top. Hesk\'s barricade stood here. The scorch marks are being kept, on purpose.',
 };
@@ -249,8 +252,33 @@ export const STAR_SPOT_XY = [2, 17];
 export const FORAGE_SPOTS = [[3, 8], [14, 5], [18, 3], [20, 6], [30, 12], [8, 15], [18, 21], [26, 19], [32, 22], [1, 23], [33, 2], [16, 10], [24, 14], [12, 8]];
 
 function hill() {
-  const m = new MapDef('hill', 36, 26, 'g', { name: 'Terrace Hill' });
-  m.fill(0, 0, 35, 1, 'r').fill(0, 24, 35, 25, 'r').fill(34, 0, 35, 25, 'r').fill(0, 0, 0, 10, 'r').fill(0, 15, 0, 25, 'r');
+  // 64 x 44 (it was 36 x 26; everything from before keeps its place, the new ground runs east and south)
+  const m = new MapDef('hill', 64, 44, 'g', { name: 'Terrace Hill' });
+  m.fill(0, 0, 63, 1, 'r').fill(0, 42, 63, 43, 'r').fill(62, 0, 63, 43, 'r').fill(0, 0, 0, 10, 'r').fill(0, 15, 0, 43, 'r');
+  // the old south ridge stays as a low rock line with gaps, so the lake hollow still feels tucked away
+  m.fill(1, 25, 12, 25, 'r').fill(17, 25, 28, 25, 'r');
+  // Hillstream: out of the lake, east under a footbridge, south to Terrace Falls and its pool
+  m.fill(16, 20, 17, 24, 'w').fill(17, 23, 38, 24, 'w').fill(37, 24, 38, 29, 'w');
+  m.fill(36, 30, 47, 31, 'r').fill(38, 30, 39, 31, 'w');                     // the falls drop over this ledge
+  m.fill(33, 32, 49, 39, 's').fill(34, 33, 48, 38, 'w');                    // the falls pool
+  m.fill(28, 9, 52, 10, 'p').fill(51, 10, 52, 27, 'p').fill(30, 26, 51, 27, 'p').fill(40, 26, 41, 31, 'p').fill(30, 11, 31, 27, 'p');
+  m.fill(30, 23, 31, 24, 'k').fill(37, 26, 38, 27, 'k');                                             // footbridge over Hillstream
+  m.fill(42, 31, 43, 31, 'p').fill(50, 32, 51, 33, 'o');                      // steps down the ledge beside the falls; the bench rock
+  // the Summit: a stone lookout at the north-east corner, wind turbines along the ridge
+  m.fill(54, 2, 60, 7, 'o').fill(51, 7, 53, 9, 'p');
+  m.prop('telescope_stand', 57, 3, { label: 'Summit lookout' }); m.prop('bench', 55, 5, { w: 2 }); m.prop('bench', 58, 5, { w: 2 });
+  m.prop('signpost', 54, 8, { act: 'sign', sign: 'hill.summit' });
+  for (const [tx, ty] of [[40, 3], [45, 2], [50, 3]]) m.prop('wind_turbine_small', tx, ty);
+  // the Orchard terraces: stepped wild fruit and berry rows east of the path
+  m.fill(54, 13, 60, 24, 'o');
+  for (let ty = 14; ty <= 23; ty += 3) for (let tx = 55; tx <= 59; tx += 2) m.prop('bush', tx, ty, { rot: tx + ty });
+  m.prop('signpost', 53, 14, { act: 'sign', sign: 'hill.terraces' });
+  // Ranger's hut (empty for now) and its woodpile
+  m.building('cottage_d', 54, 30, 5, 4, { height: 3, label: "Ranger's hut" });
+  m.prop('house_door', 56, 33, { act: 'house', house: 'ranger', solid: false }); m.prop('crate', 59, 33); m.prop('haybale', 53, 33);
+  m.prop('signpost', 50, 29, { act: 'sign', sign: 'hill.falls' }); m.prop('bench', 50, 32, { w: 2 });
+  m.prop('lantern', 42, 30); m.prop('lantern', 44, 30); m.prop('colony_lamp', 51, 20); m.prop('colony_lamp', 41, 25);
+  m.areas = [['Terrace Onsen', 6.5, 8.6], ['Hill lake', 10.5, 23.8], ['Orbital elevator', 27, 11.6], ['Summit', 57, 9], ['Orchard terraces', 57, 25.6], ['Terrace Falls', 41, 40.6], ["Ranger's hut", 56.5, 35.6], ['Hillstream', 24, 22.6]];
   m.fill(0, 12, 20, 13, 'p').fill(20, 9, 21, 13, 'p').fill(20, 9, 28, 10, 'p').fill(24, 8, 30, 9, 'c');
   m.fill(5, 17, 16, 23, 's').fill(6, 18, 15, 22, 'w');
   m.building('orbital_elevator', 25, 4, 4, 4, { height: 9, label: 'The orbital elevator', to: { map: 'hangar' } });   // the cable car up to Vashti's hangar at the axis
@@ -271,10 +299,10 @@ function hill() {
   m.prop('lantern', 3, 6); m.prop('lantern', 9, 6);
   m.prop('signpost', 8, 7, { act: 'sign', sign: 'hill.onsen' });
   m.exit(0, 11, 0, 14, { map: 'farm', x: 42.2, y: 9, dir: 2 });
-  m.spot('hill.wreck', 24.4, 9.4).spot('hill.lake', 11, 16.4).spot('hill.overlook', 31, 20.4).spot('hill.onsen', 6, 6.5);
+  m.spot('hill.wreck', 24.4, 9.4).spot('hill.lake', 11, 16.4).spot('hill.overlook', 31, 20.4).spot('hill.onsen', 6, 6.5).spot('hill.summit', 57, 6.5).spot('hill.falls', 44, 29).spot('hill.terraces', 52, 15);
   m.water = 'hill'; m.start = [1.6, 13];
   m.forage = FORAGE_SPOTS;
-  m.scatter(31, 30, ['tree', 'pine', 'pine', 'bush', 'rockdecor', 'flowers'], (x, y) => !FORAGE_SPOTS.some(([a, b]) => a === x && b === y) && !(x === STAR_SPOT_XY[0] && y === STAR_SPOT_XY[1]) && !(x <= 12 && y <= 10));   // keep the onsen's view open
+  m.scatter(31, 90, ['tree', 'pine', 'pine', 'bush', 'rockdecor', 'flowers'], (x, y) => !FORAGE_SPOTS.some(([a, b]) => a === x && b === y) && !(x === STAR_SPOT_XY[0] && y === STAR_SPOT_XY[1]) && !(x <= 12 && y <= 10) && !(x >= 53 && y <= 9) && !(x >= 52 && y >= 12 && y <= 25) && !(x >= 49 && y >= 28 && y <= 36));   // keep the onsen, summit, terraces and hut clear
   wildFruit(m, 2, ['wild_apple', 'chestnut', 'yuzu', 'plum']); m.wildShared = false;
   return m;
 }
@@ -286,6 +314,7 @@ function hill() {
 // and the Ashfall Exchange) to the viewing gallery at the window; side streets of flats and townhouses,
 // a canal with bridges, the Arrivals hall and the Grand Market. Some houses stand empty (central.house_N).
 export const CENTRAL_HOUSES = {
+  ranger: 'The hut is shut up neat: kindling stacked, a kettle on the stove, a pair of boots by the door. A card in the window: RANGER WANTED. APPLY: GOVERNOR\'S OFFICE.',
   'central.house_1': 'A neat townhouse with a brass knocker. A card in the window: TO LET. THE HOUSING OFFICE WILL DECIDE.',
   'central.house_2': 'Boarded up since the siege. Someone has chalked a sunflower on the boards.',
   'central.house_3': 'The door is locked. Through the glass: dust sheets over furniture, and a piano.',
@@ -400,19 +429,24 @@ function central() {
     ['School', 23, 13.6], ['Church', 43, 13.6], ['Safety depot', 65.5, 28.6]];
   m.bots = [[[34.5, 6], [34.5, 49]], [[3, 33.5], [66, 33.5]], [[3, 43.5], [66, 43.5]], [[3, 2.5], [66, 2.5]], [[5, 50.5], [64, 50.5]]];
   // inside: the Governor's office and the Exchange
-  const o = room('office', 12, 8, "Governor's office");
-  o.prop('desk', 5, 2, { w: 3 }); o.spot('central.office', 6.5, 1.5);
-  o.prop('shelf', 0, 0, { w: 2, model: 'bookshelf' }); o.prop('shelf', 10, 0, { w: 2, model: 'bookshelf' }); o.prop('plantpot', 3, 0); o.prop('plantpot', 9, 0);
-  o.prop('table', 9, 5, { w: 2 }); o.prop('chair', 8, 5, { solid: false }); o.prop('rug', 5, 4, { solid: false, w: 2, d: 2 });
+  const o = room('office', 12, 8, "Governor's office", 'd'); o.colonyRoom = true;   // the colony's own look: deck plate, a window onto the stars
+  o.prop('star_window', 0, 0, { w: 12, solid: false });
+  o.prop('courier_desk', 4, 2, { w: 4, plate: 'GOVERNOR', screen: 'EDEN · MAIN DECK' }); o.spot('central.office', 6.5, 1.5);
+  o.prop('departures_board', 0, 0, { w: 3, act: 'sign', sign: 'central.board', label: 'Colony notices', board: { title: 'COLONY STATUS', rows: [['AIR', 'ALL DECKS', 'GREEN'], ['WATER', 'PUMP HALLS', 'LOW'], ['POWER', 'SUN-LINE', 'GREEN'], ['HOUSING', 'MAIN DECK', '6 EMPTY'], ['LOWER', 'UNDERCROFT', 'SEALED']] } }); o.prop('shelf', 10, 0, { w: 2, model: 'bookshelf' });
+  o.prop('transit_seats', 1, 5, { w: 3 }); o.prop('transit_seats', 8, 5, { w: 3 }); for (const [px, py] of [[0, 3], [11, 3], [0, 7], [11, 7]]) o.prop('colony_planter', px, py);
+  o.prop('rug', 5, 4, { solid: false, w: 2, d: 2 });
   const hg = room('hangar', 16, 12, "Vashti's hangar", 'd');
   hg.prop('hangar_mouth', 2, 0, { w: 12, tileSolid: true, label: 'Hangar mouth' });
   hg.prop('launch_cradle', 6, 2, { w: 4, d: 4, act: 'launch', label: 'Launch cradle' });
   hg.prop('workbench', 0, 5, { d: 2 }); hg.prop('crate', 15, 8); hg.prop('crate', 15, 9); hg.prop('cargo_crate', 14, 2); hg.prop('cargo_crate', 1, 2, { scale: 0.8 });
   hg.prop('pipe_run', 0, 9, { w: 5 }); hg.prop('noticeboard', 12, 7, { act: 'sign', sign: 'hill.wreck' });
   hg.spot('hangar.floor', 11.5, 6.5);
-  const x = room('exchange', 12, 9, 'The Ashfall Exchange');
-  x.prop('counter', 4, 2, { w: 5, act: 'counter' }); x.spot('central.exchange', 6.5, 1.5);
-  x.prop('crate', 0, 4); x.prop('crate', 0, 5); x.prop('crate', 11, 6); x.prop('shelf', 0, 0, { w: 2 }); x.prop('shelf', 10, 0, { w: 2 }); x.prop('rug', 5, 5, { solid: false, w: 2, d: 2 }); x.prop('plantpot', 11, 3);
+  const x = room('exchange', 12, 9, 'The Ashfall Exchange', 'd'); x.colonyRoom = true;   // a cartel trade hall: cargo, screens, her counter
+  x.prop('star_window', 0, 0, { w: 12, solid: false });
+  x.prop('courier_desk', 4, 2, { w: 5, act: 'counter', plate: 'ASHFALL', screen: 'TRADE OPEN · NO HAGGLING' }); x.spot('central.exchange', 6.5, 1.5);
+  x.prop('departures_board', 0, 0, { w: 3, act: 'sign', sign: 'central.dock', label: 'Market prices', board: { title: 'ASHFALL PRICES', rows: [['STAR-METAL', 'BUYING', 'HIGH'], ['PLATINUM', 'BUYING', 'HIGH'], ['RELICS', 'BUYING', 'ASK'], ['COMET ICE', 'BUYING', 'FAIR'], ['HAGGLING', 'HER MAJESTY', 'NO']] } });
+  x.prop('cargo_crate', 0, 4); x.prop('cargo_crate', 0, 5, { scale: 0.85 }); x.prop('cargo_crate', 11, 5); x.prop('cargo_crate', 11, 6, { scale: 0.8 }); x.prop('vending', 11, 2);
+  x.prop('rug', 5, 5, { solid: false, w: 2, d: 2 }); x.prop('colony_planter', 0, 8); x.prop('colony_planter', 11, 8);
   // the Arrivals hall: a clean transit hall (deck floor, a window band onto the stars), the departures screen,
   // rows of seats, and the courier desk (it books Maris's shuttle to Earth too)
   const ah = room('arrivals', 14, 9, 'Arrivals hall', 'd'); ah.colonyRoom = true;
@@ -546,7 +580,7 @@ function beltMap(mine) {
     m.prop('sector_buoy', 1, y, { solid: false, sector: s + 1 }); m.prop('sector_buoy', W - 2, y, { solid: false, sector: s + 1 });
     for (const x of [Math.round(W * 0.25), Math.round(W * 0.75)]) m.prop('sector_sign', x, y, { solid: false, sector: s + 1, south: s });
   }
-  for (const k of mine.marks || []) m.prop(k.kind, k.x + 1, k.y + 1, { solid: false, act: 'sign', sign: 'belt.' + k.kind, label: BELT_MARK_NAMES[k.kind] });
+  for (const k of mine.marks || []) m.prop(k.kind, k.x + 1, k.y + 1, { solid: false, act: 'sign', mark: k.kind, label: BELT_MARK_NAMES[k.kind] });
   const px = Math.floor(mine.w / 2) + 1; m.prop('launch_pad', px, mine.h - 2, { solid: false, act: 'liftup', label: 'Launch pad' });
   m.start = [px + 0.5, mine.h - 1.5];
   return m;

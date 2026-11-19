@@ -103,6 +103,7 @@ function figure(look, tall = 1.62) {
     const blink = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 4), new THREE.MeshBasicMaterial({ color: '#7dffb0' })); blink.position.set(0.12, 0.16, 0.085); pack.add(blink);
     const glass = new THREE.Mesh(new THREE.SphereGeometry(HR * 1.42, 28, 20), new THREE.MeshStandardMaterial({ color: '#cfeefa', transparent: true, opacity: 0.22, roughness: 0.05, metalness: 0.2, depthWrite: false }));
     glass.renderOrder = 3; head.add(glass);
+    const shell = new THREE.Mesh(new THREE.SphereGeometry(HR * 1.43, 28, 20, Math.PI / 2 + 1.0, Math.PI * 2 - 2.0), toon('#f2f0ea')); shell.castShadow = true; head.add(shell);   // the back of the helmet; the visor is the front
     const rim = new THREE.Mesh(new THREE.TorusGeometry(HR * 1.36, 0.035, 8, 28), grey); rim.rotation.x = Math.PI / 2; rim.position.y = -HR * 0.55; head.add(rim);
     const shine = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7 })); shine.position.set(-0.2, 0.22, 0.36); shine.scale.set(1, 1.6, 0.4); head.add(shine);
     const ant = part(new THREE.CylinderGeometry(0.008, 0.008, 0.2, 4), grey, 0.2, 0.42, -0.1, 0, head); ant.rotation.z = -0.3;

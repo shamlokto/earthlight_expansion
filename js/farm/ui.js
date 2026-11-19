@@ -300,6 +300,7 @@ function todayTab(state, extra) {
   h += `<h3>Animals</h3>` + (state.animals.length ? state.animals.map((a) => `<div class="fm-row"><div><b>${a.kind === 'cow' ? '🐄' : '🐔'} ${esc(a.name)}</b><span>fed ${yes(a.fed)} · ${a.kind === 'cow' ? `milked ${yes(a.milked)} · brushed ${yes(a.brushed)}` : 'lays an egg tomorrow if fed'} · said hello ${yes(a.talked)}</span></div>${hearts(a.love)}</div>`).join('') + (state.eggs ? `<p>${state.eggs} egg${state.eggs > 1 ? 's' : ''} waiting in the coop.</p>` : '') : '<p class="fm-dim">No animals yet. Corran sells chickens and cows.</p>');
   const R = state.robots || [];
   h += `<h3>Field-units</h3>` + (R.length ? R.map((r, i) => `<div class="fm-row"><div><b>🤖 ${esc(r.name)} · ${esc(ROBOT_JOBS[r.job] || r.job)}</b><span>skill ${sim.robotLevel(r)} (${r.job === 'animals' ? 'tends every animal' : r.job === 'rest' ? 'resting' : 'reaches ' + sim.robotReach(r) + ' tiles'}) · “${esc(sim.robotMood(state, i))}”${r.done ? ` · did ${r.done} this morning` : ''}</span></div><span class="fm-batt"><i style="width:${r.charge}%" class="${r.charge < 30 ? 'low' : ''}"></i><u>${r.charge}%</u></span></div>`).join('') : '<p class="fm-dim">None yet. Ruess leases them at the Workshop (300 cr).</p>');
+  if (R.length) h += `<p>${crewLine(state)} <a class="fm-link" data-tab="robots">Robots tab ›</a></p>`;
   const P = state.panels || [];
   if (P.length) h += `<p>Solar chargers: ${P.map((x) => `[${x.slots.map((b) => (b === 'battery_full' ? '🔋' : b ? '▫ charging' : '·')).join(' ')}]`).join(' ')} · batteries in your rucksack: ${sim.countItem(state, 'battery_full')} charged, ${sim.countItem(state, 'battery')} empty.</p>`;
   const T = state.fruitTrees || [];
@@ -350,6 +351,27 @@ function itemsTab(state, sel) {
   } else h += `<div class="fm-exam empty"><p class="fm-dim">${list.length} kinds of things. Click one to examine it: it turns in the viewer (drag to spin it) with a longer description.</p></div>`;
   return h + '</div>';
 }
+// The crew's batteries in one line, and the Robots tab: every unit, its battery and its job, changed on the spot.
+function crewLine(state) {
+  const c = sim.crewBatteries(state);
+  return `Crew batteries: average <b>${c.average}%</b>${c.low ? ` · <span class="fm-no">${c.low} low</span>` : ''}${c.flat ? ` · <span class="fm-no">${c.flat} flat</span>` : ''} · ${c.charged} charged batter${c.charged === 1 ? 'y' : 'ies'} (${c.reachable} where a keeper can reach them), ${c.empty} flat, ${c.charging} charging · ${c.keepers ? `${c.keepers} battery keeper${c.keepers > 1 ? 's' : ''} looking after up to ${c.cover} a morning` : 'no battery keeper'}.`;
+}
+const JOB_NOTE = { water: 'waters dry plants', harvest: 'puts ripe crops in the bin', animals: 'feeds the animals, eggs to the bin', batteries: 'swaps charged batteries into the crew', rest: 'rests' };
+function robotsTab(state, msg) {
+  const R = state.robots || [], full = sim.countItem(state, 'battery_full');
+  let h = `<h3>Field-units (${R.length}/${sim.MAX_ROBOTS})</h3>`;
+  if (!R.length) return h + '<p class="fm-dim">None yet. Ruess leases them at the Workshop (300 cr).</p>';
+  h += `<p>${crewLine(state)}</p>`;
+  if (!R.some((r) => r.job === 'batteries')) h += `<p class="fm-dim">Tip: give one unit the <b>Batteries</b> job. Each morning it swaps charged batteries from your farm's solar chargers (and the storage box) into any unit at or under ${sim.KEEP_BELOW}%, up to 2 + its skill level of them, puts the flat ones on the chargers to fill again, and looks after its own battery too.</p>`;
+  if (msg) h += `<p class="fm-kready">${esc(msg)}</p>`;
+  h += R.map((r, i) => `<div class="fm-row fm-bot"><div><b>🤖 ${esc(r.name)} <small>skill ${sim.robotLevel(r)}</small></b><span>${esc(JOB_NOTE[r.job] || '')}${r.job === 'batteries' ? ` · up to ${sim.robotReach(r)} a morning` : r.job === 'water' || r.job === 'harvest' ? ` · ${sim.robotReach(r)} tiles` : ''} · “${esc(sim.robotMood(state, i))}”</span>
+    <span class="fm-jobs">${Object.entries(ROBOT_JOBS).map(([j, n]) => `<button data-job="${i}:${j}" class="${r.job === j ? 'on' : ''}">${n}</button>`).join('')}</span></div>
+    <div class="fm-botside"><span class="fm-batt"><i style="width:${Math.max(0, r.charge)}%" class="${r.charge < 30 ? 'low' : ''}"></i><u>${r.charge}%</u></span><span><button data-give="${i}" ${full && r.charge < 100 ? '' : 'disabled'}>Give battery</button><button data-rename="${i}">Rename</button></span></div></div>`).join('');
+  const u = state.miner;
+  if (u) h += `<h3>Mining unit</h3><div class="fm-row fm-bot"><div><b>⛏ ${esc(u.name)}</b><span>Goes out to the belt on your pack: F sets it down, F again recalls it. ${sim.MINER_RUN}% charge a rock; a flat unit takes a charged battery from your rucksack. A battery keeper tops it up at home.</span></div><div class="fm-botside"><span class="fm-batt"><i style="width:${u.charge}%" class="${u.charge < 30 ? 'low' : ''}"></i><u>${u.charge}%</u></span><span><button data-givem="1" ${full && u.charge < 100 ? '' : 'disabled'}>Give battery</button></span></div></div>`;
+  h += `<p class="fm-dim">Charged batteries in your rucksack: ${full}. Job changes start tomorrow morning; you can still walk up to a unit on the farm and talk to it.</p>`;
+  return h;
+}
 function collectionsTab(state) {
   const L = state.ledger, chip = (id, n, have = true) => `<span class="fm-chip${have ? '' : ' no'}">${have ? icon(id) : '<span class="fm-ico fm-fake" style="background:#bbb">?</span>'} ${have ? esc(ITEMS[id].name) : '???'}${n ? ` × ${n}` : ''}</span>`;
   const sh = Object.entries(L.shipped || {}).filter(([id]) => ITEMS[id]);
@@ -365,16 +387,23 @@ function collectionsTab(state) {
 }
 export function journal(state, opts = {}) {
   let tab = opts.tab || 'today', sel = null;
-  const tabs = [['today', 'Today'], ['items', 'Items'], ['collections', 'Collections']];
+  const tabs = [['today', 'Today'], ['robots', 'Robots'], ['items', 'Items'], ['collections', 'Collections']];
+  let msg = '';
   journalIsOpen = true;
   const draw = () => {
     stopViewer();
     const h = `<nav class="fm-tabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('')}<span class="fm-paused">⏸ Paused · P or Esc to go back</span></nav>` +
-      (tab === 'today' ? todayTab(state, opts) : tab === 'items' ? itemsTab(state, sel) : collectionsTab(state));
+      (tab === 'today' ? todayTab(state, opts) : tab === 'robots' ? robotsTab(state, msg) : tab === 'items' ? itemsTab(state, sel) : collectionsTab(state));
+    msg = '';
     const body = openWin('Farm journal', h, () => { journalIsOpen = false; stopViewer(); }, 'journal');
     body.onclick = (e) => {
       const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; return draw(); }
       const x = e.target.closest('[data-ex]'); if (x) { sel = x.dataset.ex; return draw(); }
+      const after = (r) => { msg = r.msg || ''; opts.change && opts.change(); draw(); };
+      const j = e.target.closest('[data-job]'); if (j) { const [i, job] = j.dataset.job.split(':'); return after(sim.setRobotJob(state, +i, job)); }
+      const g = e.target.closest('[data-give]'); if (g) return after(sim.chargeRobot(state, +g.dataset.give));
+      if (e.target.closest('[data-givem]')) return after(sim.chargeMiner(state));
+      const rn = e.target.closest('[data-rename]'); if (rn) { const r = state.robots[+rn.dataset.rename], n = r && prompt(`A new name for ${r.name}:`, r.name); if (n != null && r) return after(sim.renameRobot(state, +rn.dataset.rename, n)); }
     };
     if (tab === 'items' && sel) startViewer($('exView'), sel);
   };

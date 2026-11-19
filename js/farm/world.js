@@ -524,6 +524,12 @@ export class World {
         g.add(wheel); (this.spinners ||= []).push({ o: wheel, axis: 'x', speed: 1.2 });
         break;
       }
+      case 'telescope_stand': {                          // a coin telescope on a post, aimed up the curve of the Ring
+        const dk = std({ color: 0x3c4650, metalness: 0.4 }), br = std({ color: 0xc9a14a, metalness: 0.7, roughness: 0.3 });
+        g.add(cyl(0.08, 0.12, 1.0, dk, 0, 0, 0, 10), box(0.3, 0.1, 0.3, dk, 0, 1.0, 0));
+        const tube = cyl(0.12, 0.16, 0.8, br, 0, 0, 0, 12); tube.rotation.x = -1.1; tube.position.set(0, 1.25, 0.1); g.add(tube);
+        break;
+      }
       case 'charge_terminal': g.add(box(0.12, 1.1, 0.12, std({ color: 0x5d6a77 })), box(0.7, 0.5, 0.18, std({ color: 0xe9edf0, metalness: 0.2 }), 0, 1.0), box(0.5, 0.3, 0.02, new THREE.MeshBasicMaterial({ color: 0x7dffb0 }), 0, 1.1, 0.1), box(0.9, 0.3, 0.4, std({ color: 0x3c4650 }), 0, 0, 0.4)); break;
       case 'house_door': if (o.act === 'house') { const pl = std({ color: 0x9a7a52 }); const a = box(1.1, 0.14, 0.05, pl, 0, 0.9, 0.53); a.rotation.z = 0.5; const b2 = box(1.1, 0.14, 0.05, pl, 0, 0.9, 0.53); b2.rotation.z = -0.5; g.add(a, b2, box(0.5, 0.3, 0.02, std({ color: 0xf2ead6 }), 0.0, 1.5, 0.54)); } break;
       case 'starglow': { const c = ball(0.13, new THREE.MeshBasicMaterial({ color: 0xc89cff }), 0, 0.3, 0, 1); c.castShadow = false; const h = ball(0.3, new THREE.MeshBasicMaterial({ color: 0xb07aff, transparent: true, opacity: 0.3, depthWrite: false }), 0, 0.3, 0, 1); h.castShadow = false; g.add(c, h); break; }
@@ -558,8 +564,9 @@ export class World {
         g.add(box(w, 0.06, 0.06, glow(0x7dffe0), (w - 1) / 2, 0.08, -0.44)); break;
       }
       case 'departures_board': {                         // a glowing departures screen on a stand
-        const w = o.w || 3, t = panelTex('departures', 512, 256, (x, W, H) => { x.fillStyle = '#071820'; x.fillRect(0, 0, W, H); x.fillStyle = '#ffd36a'; x.font = 'bold 34px sans-serif'; x.fillText('DEPARTURES', 22, 44);
-          const rows = [['08:00', 'MIDDLE DECK', 'ON TIME'], ['10:20', 'LOWER DECK', 'BOARDING'], ['ANY', 'EARTH  (J. MARIS)', 'ASK AT DESK'], ['14:40', 'HUB SUPPLY', 'ON TIME'], ['17:00', 'LANTERN RING', 'ON TIME']];
+        const B = o.board || { title: 'DEPARTURES', rows: [['08:00', 'MIDDLE DECK', 'ON TIME'], ['10:20', 'LOWER DECK', 'BOARDING'], ['ANY', 'EARTH  (J. MARIS)', 'ASK AT DESK'], ['14:40', 'HUB SUPPLY', 'ON TIME'], ['17:00', 'LANTERN RING', 'ON TIME']] };   // a board can carry its own lines
+        const w = o.w || 3, t = panelTex('board:' + B.title, 512, 256, (x, W, H) => { x.fillStyle = '#071820'; x.fillRect(0, 0, W, H); x.fillStyle = '#ffd36a'; x.font = 'bold 34px sans-serif'; x.fillText(B.title, 22, 44);
+          const rows = B.rows;
           x.font = '24px monospace'; rows.forEach(([a, b, c2], i) => { x.fillStyle = '#9ff4ff'; x.fillText(a, 22, 92 + i * 34); x.fillText(b, 120, 92 + i * 34); x.fillStyle = i === 2 ? '#7dffb0' : '#cfe6ff'; x.fillText(c2, 370, 92 + i * 34); }); });
         const scr = quad(w - 0.3, 1.2, new THREE.MeshBasicMaterial({ map: t })); scr.position.set((w - 1) / 2, 1.65, 0.07); g.add(scr);
         g.add(box(w - 0.1, 1.35, 0.12, SLATE(), (w - 1) / 2, 1.0, 0), box(0.14, 1.0, 0.14, WHITE(), (w - 1) / 2 - 0.6, 0, 0), box(0.14, 1.0, 0.14, WHITE(), (w - 1) / 2 + 0.6, 0, 0), box(w - 0.2, 0.08, 0.5, TEAL(), (w - 1) / 2, 0, 0)); break;
@@ -567,8 +574,8 @@ export class World {
       case 'info_kiosk': { g.add(box(0.5, 0.9, 0.4, WHITE()), box(0.56, 0.08, 0.46, TEAL(), 0, 0.9)); const sc2 = quad(0.44, 0.6, new THREE.MeshBasicMaterial({ map: plate('DOCK', 300, 400, { font: 'bold 70px sans-serif' }) })); sc2.position.set(0, 1.35, 0.03); g.add(sc2, box(0.5, 0.7, 0.05, SLATE(), 0, 1.0, 0)); break; }
       case 'courier_desk': {                             // a sleek white desk with a teal band and a screen
         const w = o.w || 4, cx = (w - 1) / 2; g.add(box(w, 0.95, 0.7, WHITE(), cx), box(w + 0.1, 0.07, 0.8, std({ color: 0xdde4e8, metalness: 0.3, roughness: 0.3 }), cx, 0.95), box(w, 0.12, 0.02, glow(0x7dffe0), cx, 0.55, 0.36), box(w * 0.6, 0.2, 0.03, TEAL(), cx, 0.2, 0.36));
-        const sc2 = quad(0.7, 0.42, new THREE.MeshBasicMaterial({ map: plate('SHUTTLE TO EARTH · 200 cr', 512, 300, { font: 'bold 40px sans-serif' }) })); sc2.position.set(cx + 0.6, 1.33, 0.02); g.add(sc2, box(0.76, 0.48, 0.04, SLATE(), cx + 0.6, 1.08, -0.01), box(0.06, 0.12, 0.06, SLATE(), cx + 0.6, 1.0, 0));
-        const s3 = quad(1.4, 0.3, new THREE.MeshBasicMaterial({ map: plate('COURIER', 512, 110, { font: 'bold 64px sans-serif', bg: '#3fa7a3', fg: '#ffffff', edge: '#ffffff' }) })); s3.position.set(cx - 0.5, 0.62, 0.37); g.add(s3); break;
+        const sc2 = quad(0.7, 0.42, new THREE.MeshBasicMaterial({ map: plate(o.screen || 'SHUTTLE TO EARTH · 200 cr', 512, 300, { font: 'bold 40px sans-serif' }) })); sc2.position.set(cx + 0.6, 1.33, 0.02); g.add(sc2, box(0.76, 0.48, 0.04, SLATE(), cx + 0.6, 1.08, -0.01), box(0.06, 0.12, 0.06, SLATE(), cx + 0.6, 1.0, 0));
+        const s3 = quad(1.4, 0.3, new THREE.MeshBasicMaterial({ map: plate(o.plate || 'COURIER', 512, 110, { font: 'bold 64px sans-serif', bg: '#3fa7a3', fg: '#ffffff', edge: '#ffffff' }) })); s3.position.set(cx - 0.5, 0.62, 0.37); g.add(s3); break;
       }
       case 'transit_seats': {                            // a row of metal-and-teal seats on one beam
         const w = o.w || 3, cx = (w - 1) / 2; g.add(box(w - 0.1, 0.08, 0.12, SLATE(), cx, 0.25, 0), box(0.08, 0.3, 0.3, SLATE(), cx - w / 2 + 0.3, 0, 0), box(0.08, 0.3, 0.3, SLATE(), cx + w / 2 - 0.3, 0, 0));
@@ -1073,7 +1080,7 @@ function spaceBackdrop(W, H, map = {}) {
   const n = 1800, pos = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const u = Math.random() * 2 - 1, a = Math.random() * 6.283, r = 700; pos[i * 3] = Math.sqrt(1 - u * u) * Math.cos(a) * r + cx; pos[i * 3 + 1] = Math.abs(u) * r * 0.9 + 20; pos[i * 3 + 2] = Math.sqrt(1 - u * u) * Math.sin(a) * r + cz; }
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.add(new THREE.Points(pg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false })));
-  const earth = new THREE.Mesh(new THREE.SphereGeometry(140, 48, 32), new THREE.MeshBasicMaterial({ map: earthGlobe(), fog: false })); earth.position.set(cx + 90, -170, -260); earth.rotation.set(0.4, 2.2, 0); g.add(earth);
+  const earth = new THREE.Mesh(new THREE.SphereGeometry(140, 48, 32), new THREE.MeshBasicMaterial({ map: earthGlobe(), fog: false })); earth.position.set(cx + 120, -260, -460); earth.rotation.set(0.4, 2.2, 0); g.add(earth);
   const glow2 = new THREE.Mesh(new THREE.SphereGeometry(172, 32, 16), new THREE.MeshBasicMaterial({ color: 0x6fb4ff, transparent: true, opacity: 0.18, side: THREE.BackSide, fog: false })); glow2.position.copy(earth.position); g.add(glow2);
   const hull = new THREE.Mesh(new THREE.CylinderGeometry(60, 60, 520, 40, 1, true), std({ map: art.tex('hull_plate', { repeat: 0.5 }), side: THREE.DoubleSide })); hull.rotation.z = Math.PI / 2; hull.position.set(cx - 40, -95, H + 110); hull.material.fog = false; g.add(hull);
   for (let i = 0; i < 6; i++) { const ring = cyl(61, 61, 2, std({ color: 0x9fb0bf }), 0, 0, 0, 40); ring.rotation.z = Math.PI / 2; ring.position.set(cx - 280 + i * 100, -95, H + 110); g.add(ring); }
@@ -1085,7 +1092,7 @@ function spaceBackdrop(W, H, map = {}) {
     for (let k = 1; k <= map.sectors; k++) {
       const c = sectorColor(k), band = new THREE.Mesh(new THREE.PlaneGeometry(W - 2, sh), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.07 + (k % 2) * 0.03, depthWrite: false }));
       band.rotation.x = -Math.PI / 2; band.position.set(cx, 0.012, top(k) + sh / 2); band.renderOrder = 1; g.add(band);
-      if (k > 1) { const line = new THREE.Mesh(new THREE.PlaneGeometry(W - 2, 0.12), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.8, depthWrite: false })); line.rotation.x = -Math.PI / 2; line.position.set(cx, 0.02, top(k - 1) + sh); line.renderOrder = 2; g.add(line); }
+      if (k > 1) { const line = new THREE.Mesh(new THREE.PlaneGeometry(W - 2, 0.12), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.8, depthWrite: false })); line.rotation.x = -Math.PI / 2; line.position.set(cx, 0.02, top(k) + sh); line.renderOrder = 2; g.add(line); }
     }
   }
   return g;
@@ -1107,7 +1114,7 @@ function rockGeo(name, big) {
   });
   ROCK_GEO.set(name, pr); return pr;
 }
-const ROCK_KIND = { 1: { model: 'asteroid', s: 0.95, y: 0.45, tint: [0xffffff, 0xe8dccb, 0xd5d2dc] }, 3: { model: 'asteroid_big', s: 1.5, y: 0.6, big: true, tint: [0xb9b2aa, 0xa49c94] }, 4: { model: 'comet_ice', s: 0.95, y: 0.35, tint: [0xe8f6ff, 0xd2ecff] }, 5: { model: 'asteroid', s: 1.0, y: 0.45, tint: [0xffd890, 0xe8b8ff, 0xb8f0ff] } };
+const ROCK_KIND = { 1: { model: 'asteroid', s: 0.95, y: 0.45, tint: [0xffe2c0, 0xf2cfa8, 0xffecd8] }, 3: { model: 'asteroid_big', s: 1.5, y: 0.6, big: true, tint: [0xb9b2aa, 0xa49c94] }, 4: { model: 'comet_ice', s: 0.95, y: 0.35, tint: [0xe8f6ff, 0xd2ecff] }, 5: { model: 'asteroid', s: 1.05, y: 0.45, tint: [0xffd070, 0xffc0a0, 0xd8f0ff] } };
 const GLINT = [0xffd36a, 0xd890ff, 0x8ff4ff];
 class BeltRocks {
   constructor(root, mine) {

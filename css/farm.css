@@ -107,3 +107,8 @@ button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outl
 .fm-toast.fm-star { background: linear-gradient(90deg, #4b2a7a, #7a4ab8); color: #fff3c9; font: 600 15px var(--f-display); padding: 10px 20px; box-shadow: 0 0 22px rgba(190, 140, 255, .7); }
 .fm-terminal { display: grid; place-items: center; font-size: 32px; color: #9ff4ff; background: #23404a !important; }
 .fm-strength { margin: 8px 0 2px; } .fm-row button + button { margin-left: 6px; }
+/* the journal's Robots tab (2026-11-19) */
+.fm-bot { align-items: flex-start; } .fm-bot > div:first-child { flex: 1; min-width: 0; } .fm-botside { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.fm-jobs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; } .fm-row .fm-jobs button { min-width: 0; padding: 4px 9px; font-size: 12px; } .fm-row .fm-jobs button.on { background: #3fa7a3; color: #fff; border-color: #2c7d7a; }
+.fm-row .fm-botside button { min-width: 0; padding: 5px 10px; font-size: 12px; } .fm-link { color: #24565a; text-decoration: underline; cursor: pointer; }
+@media (max-width: 560px) { .fm-bot { flex-direction: column; } .fm-botside { align-items: flex-start; } }
