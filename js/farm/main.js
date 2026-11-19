@@ -220,7 +220,7 @@ async function checkEvents() {
       mode = 'play'; placeNpcs(true); refreshHud(); return;
     }
   }
-  for (const e of story.EVENTS) {
+  for (const e of [...story.EVENTS, ...(story.LOWER_SCENES || [])]) {
     if (S.flags['ev_' + e.id] || e.map !== map.id || !npcs.has(e.npc) || sim.hearts(S, e.npc) < e.hearts || (e.flag && !S.flags[e.flag])) continue;
     if ((e.from != null && c.minute < e.from) || (e.to != null && c.minute > e.to) || (e.season != null && e.season !== c.season) || (e.weekday != null && e.weekday !== c.weekday)) continue;
     sim.setFlag(S, 'ev_' + e.id); mode = 'talk'; const n = npcs.get(e.npc); n.actor.face(me.x, me.y);
@@ -563,9 +563,9 @@ function drawMiner() { W.unplace('miner'); const d = S.mine && S.mine.miner; if 
 function beltProbe(tx, ty) {
   const m = S.mine, cx = tx - 1, cy = ty - 1, i = cy * m.w + cx, c = cx >= 0 && cy >= 0 && cx < m.w && cy < m.h ? m.cells[i] : 0;
   const d = m.miner; if (d && d.hold.length && Math.hypot(d.x + 1 - me.x, d.y + 1 - me.y) < 1.8) return { label: `Empty ${S.miner.name}'s hopper (${d.hold.reduce((a, g) => a + g.n, 0)})`, run: () => { const r = sim.minerCollect(S); ui.gainedToast(r.gained); if (r.msg) ui.toast(r.msg); sfx('pick'); refreshHud(); } };
-  if (c === 1 || c === 4 || c === 5) {
-    const hard = sim.rockHardness(c, sim.beltSector(cy)), hits = sim.hammerHits(hard, S.player.toolLevel.hammer || 1), left = m.hp[i] ?? hits, what = c === 5 ? 'the rich vein' : c === 4 ? 'the comet ice' : 'the rock';
-    return { label: hits ? `Break ${what} with the hammer${left > 1 ? ` (${left} hits)` : ''}` : `A ${hard >= 3 ? 'starsteel-hard' : 'hard'} vein: it needs ${hard >= 3 ? 'a Starsteel' : 'an Alloy'} hammer`, run: () => hammerRock(cx, cy) };
+  if (sim.isRock(c)) {                                       // the rock's size, and what the hammer needs
+    const z = sim.ROCK_SIZES[c], lv = S.player.toolLevel.hammer || 1, hits = sim.rockHits(c, lv), left = m.hp[i] ?? hits;
+    return { label: hits ? `Break the ${z.name} with the hammer (${left} hit${left > 1 ? 's' : ''})` : `A ${z.name}: needs ${z.tier >= 3 ? 'a Starsteel' : 'an Alloy'} hammer (yours is ${['', 'Field', 'Alloy', 'Starsteel'][lv]})`, run: () => hammerRock(cx, cy) };
   }
   const pod = m.pods.find((p) => Math.hypot(p.x + 1.5 - me.x, p.y + 1.5 - me.y) < 2.4) || (c === 6 ? m.pods.find((p) => p.x === cx && p.y === cy) : null);
   if (pod) return { label: `Board the sector ${pod.sector} pickup pod home (15 min)`, run: () => leaveBelt('pod') };
@@ -576,8 +576,8 @@ function beltProbe(tx, ty) {
 }
 function hammerRock(cx, cy) {
   const r = sim.hitRock(S, cx, cy); me.swing = 1; if (!r.ok) return ui.toast(r.msg);
-  sfx(r.broke ? 'dig' : 'chop'); W.puff(cx + 1.5, cy + 1.5, r.kind === 4 ? 0xdff4ff : 0xb9b0a4, r.broke ? 14 : 5, 0.5); W.shake = Math.max(W.shake || 0, r.broke ? 0.06 : 0.03);
-  if (r.broke) { ui.gainedToast(r.gained); if (r.msg && !(r.gained || []).length) ui.toast(r.msg); else if (Math.random() < 0.08) ui.toast(pick(story.BELT.hammer), 2200); } else floatText(cx + 1.5, cy + 1.5, 'crack');
+  sfx(r.broke ? 'dig' : 'chop'); W.puff(cx + 1.5, cy + 1.5, r.kind === 4 ? 0xdff4ff : r.kind === 5 || r.kind === 8 ? 0xffd36a : 0xb9b0a4, r.broke ? (r.kind === 8 ? 26 : 14) : 5, r.kind === 8 ? 0.9 : 0.5); W.shake = Math.max(W.shake || 0, r.broke ? 0.06 : 0.03);
+  if (r.broke) { ui.gainedToast(r.gained); if (r.msg && !(r.gained || []).length) ui.toast(r.msg); else if (Math.random() < 0.08) ui.toast(pick(story.BELT.hammer), 2200); } else floatText(cx + 1.5, cy + 1.5, `crack (${r.left})`);
   refreshHud(); if (r.fainted) night(true);
 }
 function minerToggle() {
@@ -751,7 +751,7 @@ async function boardShuttle() {
 
 function use() {                                     // Space: the held tool or item
   if (fishing) return pullLine();
-  if (map.belt) { const [tx, ty] = target(), c = S.mine.cells[(ty - 1) * S.mine.w + tx - 1]; if (c === 1 || c === 4 || c === 5) return hammerRock(tx - 1, ty - 1); return; }
+  if (map.belt) { const [tx, ty] = target(), c = S.mine.cells[(ty - 1) * S.mine.w + tx - 1]; if (sim.isRock(c)) return hammerRock(tx - 1, ty - 1); return; }
   if (map.ruins) return pallasFire();
   const s = sim.selected(S); if (!s) return; const it = ITEMS[s.id], [tx, ty] = target();
   const near = nearestNpc(1.5); if (near && it.kind !== 'tool' && it.kind !== 'seed') return giveTo(near);

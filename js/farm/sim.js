@@ -710,7 +710,7 @@ function shelves(state, shopId) {
       apply: () => { state.flags.yard_big = true; return 'Ruess glazes four new racks in the solar yard. "Belt glass. Better than anything we pour up here."'; } });
     if (state.flags.feed_mill && !state.flags.mill_rollers) out.push({ key: 'mill_rollers', label: 'Titanium mill rollers', desc: 'Steel-and-titanium rollers for your feed mill: it grinds forty crops a night instead of twenty.', price: 800, req: [['titanium', 2]], needs: '2 titanium ore', once: true,
       apply: () => { state.flags.mill_rollers = true; return 'Ruess fits the new rollers. The mill sounds less like it is complaining.'; } });
-    if (!state.miner) out.push({ key: 'miner', label: 'Lease a mining unit', desc: `A stubby belt robot with a drill arm. Take it out with you: F sets it down and it breaks the plain rocks and ice around it, ${MINER_RUN} charge a rock, on charged batteries from your rucksack. It leaves the rich veins to you.`, price: MINER_PRICE, once: true,
+    if (!state.miner) out.push({ key: 'miner', label: 'Lease a mining unit', desc: `A stubby belt robot with a drill arm. Take it out with you: F sets it down and it breaks the small rocks, ice and medium boulders around it, ${MINER_RUN} charge a rock (double for a medium one), on charged batteries from your rucksack. The large and huge boulders it leaves to you.`, price: MINER_PRICE, once: true,
       apply: () => { state.miner = { name: 'Gravel', charge: 100 }; return 'Ruess pats a squat orange robot with a drill for an arm. "Gravel. It is not clever, but it is very sincere."'; } });
     if (!state.flags.tank) out.push({ key: 'up_tank', label: 'Big suit air tank', desc: `A titanium-lined tank for your space suit: ${AIR_TANK_BIG} air instead of ${AIR_TANK}, so you can fly half as far again.`, price: 1800, req: [['titanium', 2], ['silica', 2]], needs: '2 titanium ore, 2 silica', once: true,
       apply: () => { state.flags.tank = true; return 'Ruess swaps the tank on your suit. "Breathe as much as you like. Within reason."'; } });
@@ -931,16 +931,37 @@ export function leaveMine(state) { state.mine = null; return { ok: true }; }
 // Sato flies out of Vashti's hangar in a space suit with a thruster pack and breaks rocks with her hammer.
 // The belt is one map BELT_W wide, running north from the launch apron (the south edge) through BELT_SECTORS
 // bands of SECTOR_H rows: sector 1 near home, sector 20 at the far north, richer the further out. The layout
-// (rock fields, great unbreakable asteroids, comet ice, rich veins, a pickup pod in every sector, landmarks)
+// (rock fields of small rocks and medium, large and huge boulders, great unbreakable asteroids, comet ice, a pickup pod in every sector, landmarks)
 // comes from state.belt.seed and never changes; the rocks she breaks drift back 2–5 days later
 // (state.belt.gone: cell → the day it returns). The suit's air is the price of distance: AIR_PER_TILE a tile
 // flown. Every sector has a pickup pod that flies her home; the launch cradle starts a trip at sector 1, or at
 // sector 5, 10, 15, 20 once she has reached it (state.belt.reached, the milestones).
-// Cells: 0 open, 1 rock, 3 great asteroid (solid), 4 comet ice, 5 rich vein, 6 pickup pod, 7 landmark.
+// Cells: 0 open, 1 small rock, 2 medium boulder, 3 great asteroid (solid, never breaks), 4 comet ice, 5 large boulder,
+// 6 pickup pod, 7 landmark, 8 huge boulder (ROCK_SIZES: the bigger the rock, the better the hammer it needs and the ore).
 export const BELT_W = 34, SECTOR_H = 14, BELT_SECTORS = 20, BELT_APRON = 6, BELT_H = BELT_APRON + BELT_SECTORS * SECTOR_H;
 export const BELT_PAD = [17, BELT_H - 3], AIR_TANK = 100, AIR_TANK_BIG = 150, AIR_PER_TILE = 0.3, BELT_MILESTONE = 5;
 export const BELT_LANDMARKS = { 3: 'derelict', 8: 'comet', 13: 'wreck', 20: 'far_marker' };
 export const MINER_REACH = 4, MINER_RUN = 10, MINER_HOLD = 12, MINER_PRICE = 1200;
+// Rock sizes and the hammer: tier is the lowest hammer level that breaks it (1 Field, 2 Alloy, 3 Starsteel); hits by
+// hammer level (0: too soft). Small rocks and ice give common ore; medium boulders the sector's odds (beltOdds);
+// large boulders always one good ore; huge boulders two or three of the best.
+export const ROCK_SIZES = {
+  1: { id: 'small', name: 'small rock', tier: 1, hits: [0, 1, 1, 1] }, 4: { id: 'ice', name: 'comet ice', tier: 1, hits: [0, 1, 1, 1] },
+  2: { id: 'medium', name: 'medium boulder', tier: 1, hits: [0, 3, 2, 1] }, 5: { id: 'large', name: 'large boulder', tier: 2, hits: [0, 0, 3, 2] },
+  8: { id: 'huge', name: 'huge boulder', tier: 3, hits: [0, 0, 0, 3] },
+};
+const BELT_GOALS = { 1: [5], 2: [5, 8], 3: [8] };
+export const isRock = (kind) => own(ROCK_SIZES, String(kind));
+export const rockHits = (kind, level) => (isRock(kind) ? ROCK_SIZES[kind].hits[clamp(int(level) ? level : 1, 1, 3)] : 0);
+export const smallOdds = (s) => ({ scrap: 0.18, nickel_iron: 0.26, silica: 0.16, comet_ice: 0.08, ...(s >= 2 ? { copper: 0.04 } : {}) });
+const LARGE_W = (s) => { const k = 0.6 + s / 12; return { titanium: 3, alloy: 3, copper: 1.2, platinum: 1.6 * k, crystal: 1.2 * k, star_metal: 0.5 * k }; };
+const HUGE_W = (s) => ({ platinum: 3, crystal: 3, star_metal: 1.6 * (0.7 + s / 20), titanium: 1 });
+// The chance of each ore from one roll on a rock of this size in sector s (large and huge: per pick, and they always give).
+export function rockOdds(kind, s) {
+  if (kind === 1) return smallOdds(s); if (kind === 2) return beltOdds(s); if (kind === 4) return { comet_ice: 0.72, silica: 0.14 };
+  const w = kind === 8 ? HUGE_W(s) : kind === 5 ? LARGE_W(s) : {}, t = Object.values(w).reduce((a, b) => a + b, 0);
+  return Object.fromEntries(Object.entries(w).map(([id, v]) => [id, v / t]));
+}
 // The sector of a belt row (cell y): the apron and sector 1 are home; sector 20 is the far north.
 export const beltSector = (y) => (y >= BELT_H - BELT_APRON ? 1 : clamp(BELT_SECTORS - Math.floor(y / SECTOR_H), 1, BELT_SECTORS));
 export const sectorTop = (s) => (BELT_SECTORS - s) * SECTOR_H;          // the northmost row of a sector
@@ -961,8 +982,10 @@ export function beltLayout(seed) {
     for (let n = 4 + ri(3); n > 0; n--) blob(2 + r() * (w - 4), Y(), 2 + r() * 2.6, 1.4 + r() * 1.6, 1, 0.66);                      // rock fields with gaps between
     if (s >= 2) for (let n = s >= 6 && s <= 14 ? 2 : 1; n > 0; n--) blob(2 + r() * (w - 4), Y(), 1.2 + r(), 1 + r() * 0.8, 4, 0.8); // comet ice clusters
     for (let y = y0; y < y0 + SECTOR_H; y++) for (let x = 0; x < w; x++) if (!cells[at(x, y)] && r() < 0.022) cells[at(x, y)] = 1;
-    const pr = s < 3 ? 0 : Math.min(0.2, 0.012 * (s - 2));                // rich veins: only further out, and more of them
-    for (let y = y0; y < y0 + SECTOR_H; y++) for (let x = 0; x < w; x++) if (cells[at(x, y)] === 1 && r() < pr) cells[at(x, y)] = 5;
+    const pm = 0.12 + 0.012 * s, pl = s < 3 ? 0.008 : 0.02 + 0.008 * s, ph = s < 6 ? 0.004 : 0.01 + 0.007 * (s - 5);   // bigger rocks further north
+    const band = []; for (let y = y0; y < y0 + SECTOR_H; y++) for (let x = 0; x < w; x++) if (cells[at(x, y)] === 1) band.push(at(x, y));
+    for (const i of band) { const q = r(); cells[i] = q < ph ? 8 : q < ph + pl ? 5 : q < ph + pl + pm ? 2 : 1; }
+    for (const k of BELT_GOALS[s] || []) { const smalls = band.filter((i) => cells[i] === 1); if (smalls.length) cells[smalls[ri(smalls.length)]] = k; }   // a few big ones early: goals for a better hammer
     const lm = BELT_LANDMARKS[s];
     if (lm) { const x = 5 + ri(w - 10), y = y0 + 4 + ri(SECTOR_H - 8); if (lm === 'comet') blob(x, y, 3.5, 2.6, 4, 0.75, false); clear(x, y, 1); cells[at(x, y)] = 7; marks.push({ kind: lm, sector: s, x, y }); }
     let px, py; do { px = 4 + ri(w - 8); py = y0 + 3 + ri(SECTOR_H - 6); } while (marks.some((m) => Math.abs(m.x - px) < 5 && Math.abs(m.y - py) < 4));
@@ -994,15 +1017,11 @@ function beltOf(state) {
 export const beltAirMax = (state) => (state.flags.tank ? AIR_TANK_BIG : AIR_TANK);
 // Where the launch cradle can start a trip: sector 1, and every fifth sector she has reached.
 export const beltStarts = (state) => { const top = beltOf(state).reached; return [1, ...[5, 10, 15, 20].filter((s) => s <= top)]; };
-// The hardness of a rock: plain rock and ice 1; a rich vein 2, and 3 from sector 10. The hammer's level must be at
-// least the hardness; a hammer one level harder than the rock breaks it in one hit, an equal one takes two.
-export const rockHardness = (kind, sector) => (kind === 5 ? (sector >= 10 ? 3 : 2) : kind === 1 || kind === 4 ? 1 : 0);
-export const hammerHits = (hard, level) => (!hard || level < hard ? 0 : level > hard ? 1 : 2);
 export function enterBelt(state, start = 1) {
   const b = beltOf(state), L = beltLayout(b.seed), today = absDay(state);
   start = beltStarts(state).includes(start) ? start : 1;
   for (const k of Object.keys(b.gone)) if (!(b.gone[k] > today)) delete b.gone[k];
-  const cells = L.cells.slice(); for (const k of Object.keys(b.gone)) if (cells[+k] === 1 || cells[+k] === 4 || cells[+k] === 5) cells[+k] = 0;
+  const cells = L.cells.slice(); for (const k of Object.keys(b.gone)) if (isRock(cells[+k])) cells[+k] = 0;
   const pod = L.pods.find((p) => p.sector === start), pos = start > 1 && pod ? [pod.x + 0.5, pod.y + 2.5] : [BELT_PAD[0] + 0.5, BELT_PAD[1] + 0.5];
   const air = beltAirMax(state);
   state.mine = { mode: 'belt', depth: start, floor: start, sector: start, start, w: L.w, h: L.h, sectors: BELT_SECTORS, sectorH: SECTOR_H, apron: BELT_APRON, cells, hp: {}, pods: L.pods, marks: L.marks, pos, air, airMax: air, monsters: [], haz: [], hatch: -1, star: -1, miner: null, ver: 0 };
@@ -1035,34 +1054,31 @@ export function beltHome(state, how = 'pad') {
   state.mine = null; tick(state, minutes);
   return { ok: true, minutes, how, msg: how === 'tow' ? 'The air alarm, then the tug of the tow line: Vashti reels you in. It takes an hour, and it takes it out of you.' : how === 'pod' ? 'The pickup pod seals, hums, and flies you home on its own. Fifteen minutes of stars.' : 'Back through the hangar mouth.' };
 }
-// What a rock gives up: plain rock by the sector's odds; comet ice mostly ice; a rich vein always something good.
-function richFind(state, s) {
-  const pool = [['titanium', 4, 3], ['star_metal', 3, 2.5], ['platinum', 8, 2.5], ['crystal', 10, 2], ['alloy', 1, s < 5 ? 3 : 1], ['copper', 1, s < 4 ? 3 : 0.5]].filter(([, from]) => s >= from);
-  return pool[pick(state, pool.map((p) => p[2]))][0];
-}
+// What a rock gives up, by its size (rockOdds): a list of ore ids, maybe empty.
+function roll(state, odds) { let r = rnd(state), acc = 0; for (const [id, p] of Object.entries(odds)) { acc += p; if (r < acc) return id; } return null; }
 function beltFind(state, kind, s) {
-  if (kind === 5) return richFind(state, s);
-  if (kind === 4) { const r = rnd(state); return r < 0.72 ? 'comet_ice' : r < 0.86 ? 'silica' : null; }
-  return find(state, s, 'belt');
+  if (kind === 8) return Array.from({ length: rnd(state) < 0.35 ? 3 : 2 }, () => roll(state, rockOdds(8, s)) || 'platinum');
+  const id = roll(state, rockOdds(kind, s)); return id ? [id] : [];
 }
 function breakCell(state, m, i, by) {
   const kind = m.cells[i], s = beltSector(Math.floor(i / m.w)), b = beltOf(state);
   m.cells[i] = 0; delete m.hp[i]; m.ver++; state.stats.searched++;
   b.gone[i] = absDay(state) + 2 + (hash32(b.seed, i, absDay(state)) % 4);   // a fresh rock drifts in 2–5 days later
-  const id = beltFind(state, kind, s), extra = by === 'sato' && state.flags.drill && rnd(state) < DRILL_BONUS ? beltFind(state, kind === 5 ? 1 : kind, s) : null;
-  return [...(id ? [id] : []), ...(extra ? [extra] : [])];
+  const got = beltFind(state, kind, s);
+  if (by === 'sato' && state.flags.drill && rnd(state) < DRILL_BONUS) got.push(...beltFind(state, kind === 8 ? 5 : kind, s));   // the rock-splitter: now and then one more
+  return got;
 }
 // Space with the hammer (or E): one hit on a belt rock. 1 stamina a hit.
 function beltHit(state, x, y) {
   const m = state.mine, no = (msg) => fail(msg, { broke: false, gained: [] });
   const i = int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? y * m.w + x : -1, kind = i >= 0 ? m.cells[i] : 0, s = i >= 0 ? beltSector(y) : 1;
-  const hard = rockHardness(kind, s);
-  if (!hard) return no(kind === 3 ? 'Too big to break: a whole asteroid. Fly round it.' : 'There is nothing to break here.');
+  const size = isRock(kind) ? ROCK_SIZES[kind] : null;
+  if (!size) return no(kind === 3 ? 'Too big to break: a whole asteroid. Fly round it.' : 'There is nothing to break here.');
   if (!countItem(state, 'hammer')) return no(state.pending.upgrade && state.pending.upgrade.tool === 'hammer' ? 'Your hammer is at Ruess\'s workshop.' : 'You need your hammer to break rocks.');
-  const lv = state.player.toolLevel.hammer || 1, hits = hammerHits(hard, lv);
-  if (!hits) return no(`A ${hard >= 3 ? 'starsteel-hard' : 'hard'} vein: it needs ${hard >= 3 ? 'a Starsteel' : 'an Alloy'} hammer. Ruess can rework yours.`);
+  const lv = state.player.toolLevel.hammer || 1, hits = rockHits(kind, lv);
+  if (!hits) return no(`A ${size.name}: it needs ${size.tier >= 3 ? 'a Starsteel' : 'an Alloy'} hammer, and yours is ${TOOL_LEVELS[lv]}. Ruess can rework it.`, { need: size.tier });
   const left = (m.hp[i] ?? hits) - 1;
-  if (left > 0) { m.hp[i] = left; return spend(state, 1, { ok: true, broke: false, gained: [], left, msg: 'Crack. One more.' }); }
+  if (left > 0) { m.hp[i] = left; return spend(state, 1, { ok: true, broke: false, gained: [], left, kind, msg: `Crack. ${left} more hit${left > 1 ? 's' : ''}.` }); }
   const res = take(state, breakCell(state, m, i, 'sato').map((id) => [id, 1]), { ok: true, broke: true, gained: [], left: 0, kind });
   if (!res.gained.length && !res.msg) res.msg = kind === 4 ? 'The ice shatters into glitter. Nothing worth keeping.' : 'The rock splits. Nothing inside but more rock.';
   return spend(state, 1, res);
@@ -1070,7 +1086,8 @@ function beltHit(state, x, y) {
 // The mining unit (Ruess leases one, MINER_PRICE): F sets it down near Sato in the belt and it breaks plain rocks and
 // ice within MINER_REACH tiles of where it stands, one at a time (the UI calls minerWork every few seconds), MINER_RUN
 // charge a rock. A run is a charged battery from her rucksack (the flat one comes back); it keeps what it breaks in
-// its hopper (MINER_HOLD) until she comes close or recalls it. It will not touch the rich veins: those are hers.
+// its hopper (MINER_HOLD) until she comes close or recalls it. It breaks small rocks, ice and medium
+// boulders (a medium one costs a double run); the large and huge boulders are hers.
 export function minerDeploy(state, x, y) {
   const m = inBelt(state), u = ensure(state).miner;
   if (!u) return fail('You have no mining unit. Ruess leases them at the Workshop.');
@@ -1089,12 +1106,13 @@ export function minerWork(state) {
   if (d.hold.reduce((a, g) => a + g.n, 0) >= MINER_HOLD) return fail(`${u.name}'s hopper is full. Come and empty it.`, { full: true });
   let best = -1, bd = MINER_REACH + 0.01;
   for (let y = Math.max(0, Math.floor(d.y - MINER_REACH)); y <= Math.min(m.h - 1, d.y + MINER_REACH); y++) for (let x = Math.max(0, Math.floor(d.x - MINER_REACH)); x <= Math.min(m.w - 1, d.x + MINER_REACH); x++) {
-    const c = m.cells[y * m.w + x]; if (c !== 1 && c !== 4) continue; const dd = Math.hypot(x + 0.5 - d.x, y + 0.5 - d.y); if (dd < bd) { bd = dd; best = y * m.w + x; }
+    const c = m.cells[y * m.w + x]; if (c !== 1 && c !== 2 && c !== 4) continue; const dd = Math.hypot(x + 0.5 - d.x, y + 0.5 - d.y); if (dd < bd) { bd = dd; best = y * m.w + x; }
   }
   if (best < 0) return fail(`${u.name} has broken everything in reach. Set it down somewhere new.`, { idle: true });
   let swapped = false;
-  if (u.charge < MINER_RUN) { if (!countItem(state, 'battery_full')) return fail(`${u.name}'s battery is flat. Give it a charged one (F to recall it, then set it down again).`, { flat: true }); removeItem(state, 'battery_full', 1); addItem(state, 'battery', 1); u.charge = 100; swapped = true; }
-  u.charge -= MINER_RUN; const got = breakCell(state, m, best, 'miner');
+  const cost = m.cells[best] === 2 ? MINER_RUN * 2 : MINER_RUN;       // a medium boulder takes a double run
+  if (u.charge < cost) { if (!countItem(state, 'battery_full')) return fail(`${u.name}'s battery is flat. Give it a charged one (F to recall it, then set it down again).`, { flat: true }); removeItem(state, 'battery_full', 1); addItem(state, 'battery', 1); u.charge = 100; swapped = true; }
+  u.charge -= cost; const got = breakCell(state, m, best, 'miner');
   for (const id of got) { const l = d.hold.find((g) => g.id === id); if (l) l.n++; else d.hold.push({ id, n: 1 }); }
   return { ok: true, x: best % m.w, y: Math.floor(best / m.w), got, charge: u.charge, swapped };
 }

@@ -392,7 +392,7 @@ export function whereIs(npcId, ctx) {
   const wd = (((Number(ctx.weekday) || 0) % 7) + 7) % 7;
   const storm = ctx.weather === 'storm';
   // The Undercroft folk keep their own hours below decks: no weather, no festivals (until the Thornes move up).
-  if (UNDERFOLK.includes(npcId) && !(ctx.flags && ctx.flags.ld_rehoused && (npcId === 'thorne' || npcId === 'moth'))) { const s = plan(wd, m, ctx); return s ? { spot: s } : null; }
+  if (UNDERFOLK.includes(npcId) && !(ctx.flags && ctx.flags.ld_rehoused && (npcId === 'thorne' || npcId === 'moth'))) { const s = plan(wd, m, ctx); return s ? { spot: festivalOf(ctx) && s.endsWith('.counter') ? 'lower.landing' : s } : null; }   // festival days: the bench is shut
   let spot = null;
   const fest = festivalOf(ctx);
   // Sato's partner lives at the farm: on the porch at dawn and in the evening (unless a festival is on).
@@ -2562,7 +2562,7 @@ Object.assign(NPCS, {
   },
 });
 VILLAGERS.push(...UNDERFOLK);
-SPOTS.push('undercroft.counter', 'lower.landing', 'lower.gallery', 'lower.pumps', 'lower.pumphouse', 'lower.sump', 'lower.catacombs', 'lower.beds', 'lower.enclave', 'lower.kettle', 'school.teacher', 'school.pupil', 'central.homes');
+SPOTS.push('central.gallery', 'undercroft.counter', 'lower.landing', 'lower.gallery', 'lower.pumps', 'lower.pumphouse', 'lower.sump', 'lower.catacombs', 'lower.beds', 'lower.enclave', 'lower.kettle', 'school.teacher', 'school.pupil', 'central.homes');
 for (const id of UNDERFOLK) {
   const n = NPCS[id], m = {};
   for (const x of n.dislikes) m[x] = 'disliked'; for (const x of n.likes) m[x] = 'liked'; for (const x of n.loves) m[x] = 'loved';
@@ -2795,7 +2795,7 @@ Object.assign(GIFT, {
 
 EVENTS.push(
   // ---- Tobias Venn: the terminal, the pumps, and the door he will not open.
-  { id: 'venn4', npc: 'venn', hearts: 4, map: 'lower', flag: 'ld_pumps', from: H(13), to: H(15),
+  { id: 'venn3', npc: 'venn', hearts: 3, map: 'lower', flag: 'ld_pumps', from: H(13), to: H(15),
     lines: [
       L('narrator', 'Pump one is running. Venn has his ear pressed to the casing like a doctor with a stethoscope.'),
       L('venn', 'Hear that? The bearing on the left is tired. So am I. We are both still going.'),
@@ -2816,7 +2816,7 @@ EVENTS.push(
     ],
     reward: { love: 5, item: ['lamp_kit', 2] } },
   // ---- Moth: the girl who goes where the lamps are.
-  { id: 'moth4', npc: 'moth', hearts: 4, map: 'lower', flag: 'ld_enclave', from: H(13), to: H(17),
+  { id: 'moth3', npc: 'moth', hearts: 3, map: 'lower', flag: 'ld_enclave', from: H(13), to: H(17),
     lines: [
       L('narrator', 'Moth has laid out her collection on a crate by the beds: bulbs, a cracked lamp glass, a bicycle bell, eleven buttons, and a hand-crank torch.'),
       L('moth', 'This is the museum. You are the first visitor. Visitors do not touch, they only look, and then they say "ooh".'),
@@ -2827,7 +2827,7 @@ EVENTS.push(
     ],
     reward: { love: 4, item: ['glowcap', 2] } },
   // ---- Agnes Thorne: the rota and the lift that lied.
-  { id: 'thorne4', npc: 'thorne', hearts: 4, map: 'lower', flag: 'ld_enclave', from: H(18), to: H(21),
+  { id: 'thorne3', npc: 'thorne', hearts: 3, map: 'lower', flag: 'ld_enclave', from: H(18), to: H(21),
     lines: [
       L('narrator', 'Evening at the enclave. The children are asleep. Agnes pours two cups and sits down beside you on an upturned crate.'),
       L('thorne', 'The Okafor boy asked me today what a window is. A real one, with the stars in it. I did not know how to tell him.'),
@@ -2838,7 +2838,7 @@ EVENTS.push(
     ],
     reward: { love: 4 } },
   // ---- Ansel Wick: the ledger and the koi.
-  { id: 'wick4', npc: 'wick', hearts: 4, map: 'lower', flag: 'ld_pump2', from: H(19), to: H(23),
+  { id: 'wick3', npc: 'wick', hearts: 3, map: 'lower', flag: 'ld_pump2', from: H(19), to: H(23),
     lines: [
       L('narrator', 'Night at the Sump. The water is black and very still. Wick is not fishing; he is just looking.'),
       L('wick', 'Before the war the cisterns had koi in them. Somebody\'s hobby. Gold and white and red. They all went belly-up in the bad month.'),
@@ -2848,40 +2848,37 @@ EVENTS.push(
       L('wick', 'Not tonight. Tonight I am keeping her company. Here. Bread for bait, for your turn. It does not help. It makes you feel better.'),
     ],
     reward: { love: 4, item: ['bread', 2] } },
-  // ---- The first pupils: Fenn's box and Pastor Ines's assembly, once the families are up.
-  { id: 'fenn_pupils', npc: 'fenn', hearts: 1, map: 'school', flag: 'ld_rehoused', from: H(8), to: H(8, 30),
+  { id: 'moth7', npc: 'moth', hearts: 7, map: 'lower', flag: 'ld_enclave', from: H(17), to: H(19, 30),
     lines: [
-      L('narrator', 'Eight o\'clock. Constable Fenn checks the school locks, as he has every morning since it was built. This morning the room is full of children.'),
-      L('fenn', 'Good morning. Constable Fenn. I check the locks. ...I am not needed. I can see that. I shall go.'),
-      L('narrator', 'He does not go. He takes a cardboard box out from under his arm and sets it very carefully on Moth\'s desk.'),
-      L('fenn', 'Equipment. Crayons. A ruler. A torch, with a crank. It was for the first child. You are the first child, by about four seconds.'),
-      L('moth', 'Forty-eight colours! Constable, you have to be my friend now. It is a rule.'),
-      L('sato', 'You kept it safe the whole time, Constable.'),
-      L('fenn', '...I did. I shall log it. Under "kindness, received". The heading is getting full.'),
+      L('narrator', 'By the stove at the enclave, Moth is lying on her stomach with a crayon and a very serious face.'),
+      L('moth', 'Do not look. ...You can look now. It is you. That is your hat.'),
+      L('sato', 'I do not have a hat that big.'),
+      L('moth', 'In the drawing you do. In the drawing you have a hat with a lamp on it, so you can see in the dark and also in the light.'),
+      L('moth', 'Gran says when we go up I will see the sun-line every day. Every single day. I am going to get tired of it. I want to see what that feels like.'),
+      L('narrator', 'She folds the drawing in four and pushes it into your hand, and then, for good measure, a glowcap.'),
     ],
-    reward: { love: 5 } },
-  { id: 'calloway_pupils', npc: 'calloway', hearts: 1, map: 'school', flag: 'ld_rehoused', weekday: 2, from: H(12), to: H(13),
+    reward: { love: 5, item: ['glowcap', 1] } },
+  { id: 'thorne7', npc: 'thorne', hearts: 7, map: 'lower', flag: 'ld_enclave', from: H(9), to: H(12),
     lines: [
-      L('narrator', 'Wednesday, noon. Pastor Ines comes in with her notes for the first assembly, which she has been planning in this empty room every Wednesday for a year. The room is not empty.'),
-      L('calloway', 'Oh. Oh, look at you all.'),
-      L('narrator', 'She looks down at her notes, folds them in half, and puts them in her pocket.'),
-      L('calloway', 'Hello.'),
-      L('sato', '(quietly) That was perfect.'),
-      L('narrator', 'Six children say hello back, all at slightly different times. Agnes Thorne, at the teacher\'s desk, has to look out of the window for a moment.'),
-      L('calloway', 'That was the whole assembly. I had more, but it was not as good. Carry on, Mrs Thorne. I will light a candle with a name on it this afternoon. Several.'),
+      L('narrator', 'Agnes is at the rota board, rubbing out a column of names with the side of her hand.'),
+      L('thorne', 'Watch. I have taken the watch off the rota. Four years, somebody awake every hour, listening for boots on the lift.'),
+      L('thorne', 'Last night nobody kept watch, and nobody came, and the children slept through. So did I. First time since the ships.'),
+      L('sato', 'How did it feel?'),
+      L('thorne', 'Like being forty again. Stiff, and very rested.'),
+      L('thorne', 'Take these eggs back up with you, dear. No, I insist. You brought them, and we have had our share. That is how a rota works.'),
     ],
-    reward: { love: 5 } },
-  // ---- Warden Marrow, once the enclave has light.
-  { id: 'marrow_under', npc: 'marrow', hearts: 2, map: 'hall', flag: 'ld_enclave', from: H(9), to: H(16),
+    reward: { love: 5, item: ['egg', 3] } },
+  { id: 'wick7', npc: 'wick', hearts: 7, map: 'lower', flag: 'ld_pump2', from: H(14), to: H(19),
     lines: [
-      L('narrator', 'At the hall desk, Warden Marrow lets her pen stop when you tell her about the shelters under the catacombs.'),
-      L('marrow', 'Agnes. Agnes Thorne. She said she would follow me up. She never did, and I never went back down to ask why.'),
-      L('marrow', 'I kept sixty-one people alive in those crypts, child. I counted them every night. I thought, when the lifts opened, I had counted them all up.'),
-      L('sato', 'She says she has been writing you a letter for three years.'),
-      L('marrow', 'Has she. ...So have I. We are a pair of old fools, and the lift goes both ways.'),
-      L('marrow', 'Tell her the strawberries by the memorial are for everyone, and there are plenty. And tell her I shall come down on a Saturday. Bring her eggs.'),
+      L('narrator', 'Wick holds his ledger out to you, open at a page near the back. Under a heading in his small square hand: REGULARS.'),
+      L('wick', 'Agatha. The eel in the third pipe. The glowfish I named after you. And you.'),
+      L('sato', 'I am in the fish ledger.'),
+      L('wick', 'You are in the ledger. It is not only fish. It is everything that comes back to the water. That is a short list, down here.'),
+      L('wick', 'Venn says the families are going up. I am glad. I shall stay with the halls. Somebody has to tell the fish the news.'),
+      L('wick', 'Here. One of mine. Grill it with salt, and think of the Sump.'),
     ],
-    reward: { love: 3 } },
+    reward: { love: 5, item: ['glowfish', 1] } },
+
 );
 
 // First meetings: they play instead of TALK[id].first the first time Sato talks to each of them.
@@ -2919,11 +2916,49 @@ export const MEETINGS = {
     ],
 };
 
+// Story scenes of the Undercroft that are not heart events: the school's first morning, its first assembly, Marrow's letter.
+export const LOWER_SCENES = [
+  { id: 'fenn_pupils', npc: 'fenn', hearts: 1, map: 'school', flag: 'ld_rehoused', from: H(8), to: H(8, 30),
+    lines: [
+      L('narrator', 'Eight o\'clock. Constable Fenn checks the school locks, as he has every morning since it was built. This morning the room is full of children.'),
+      L('fenn', 'Good morning. Constable Fenn. I check the locks. ...I am not needed. I can see that. I shall go.'),
+      L('narrator', 'He does not go. He takes a cardboard box out from under his arm and sets it very carefully on Moth\'s desk.'),
+      L('fenn', 'Equipment. Crayons. A ruler. A torch, with a crank. It was for the first child. You are the first child, by about four seconds.'),
+      L('moth', 'Forty-eight colours! Constable, you have to be my friend now. It is a rule.'),
+      L('sato', 'You kept it safe the whole time, Constable.'),
+      L('fenn', '...I did. I shall log it. Under "kindness, received". The heading is getting full.'),
+    ],
+    reward: { love: 5 } },
+  { id: 'calloway_pupils', npc: 'calloway', hearts: 1, map: 'school', flag: 'ld_rehoused', weekday: 2, from: H(12), to: H(13),
+    lines: [
+      L('narrator', 'Wednesday, noon. Pastor Ines comes in with her notes for the first assembly, which she has been planning in this empty room every Wednesday for a year. The room is not empty.'),
+      L('calloway', 'Oh. Oh, look at you all.'),
+      L('narrator', 'She looks down at her notes, folds them in half, and puts them in her pocket.'),
+      L('calloway', 'Hello.'),
+      L('sato', '(quietly) That was perfect.'),
+      L('narrator', 'Six children say hello back, all at slightly different times. Agnes Thorne, at the teacher\'s desk, has to look out of the window for a moment.'),
+      L('calloway', 'That was the whole assembly. I had more, but it was not as good. Carry on, Mrs Thorne. I will light a candle with a name on it this afternoon. Several.'),
+    ],
+    reward: { love: 5 } },
+  // ---- Warden Marrow, once the enclave has light.
+  { id: 'marrow_under', npc: 'marrow', hearts: 2, map: 'hall', flag: 'ld_enclave', from: H(9), to: H(16),
+    lines: [
+      L('narrator', 'At the hall desk, Warden Marrow lets her pen stop when you tell her about the shelters under the catacombs.'),
+      L('marrow', 'Agnes. Agnes Thorne. She said she would follow me up. She never did, and I never went back down to ask why.'),
+      L('marrow', 'I kept sixty-one people alive in those crypts, child. I counted them every night. I thought, when the lifts opened, I had counted them all up.'),
+      L('sato', 'She says she has been writing you a letter for three years.'),
+      L('marrow', 'Has she. ...So have I. We are a pair of old fools, and the lift goes both ways.'),
+      L('marrow', 'Tell her the strawberries by the memorial are for everyone, and there are plenty. And tell her I shall come down on a Saturday. Bring her eggs.'),
+    ],
+    reward: { love: 3 } },
+];
+
 Object.assign(QUESTS, {
   venn: [
     Q('venn_scrap', 'scrap', 6, 'Six bits of scrap, if you have them. Pump three has eaten its own gasket again.', 'Good. That will keep it quiet for a week. It thanks you. I can tell by the noise.'),
     Q('venn_copper', 'copper', 2, 'Two copper ore from the belt. I am rewinding a motor older than you, and it is running out of patience.', 'Copper. Lovely. The motor and I both feel better.'),
     Q('venn_tea', 'tea', 2, 'Bring me two teas from the Hangar? The kettle down here makes everything taste of valve.', 'Real tea. Do not tell Oduya I said it was better than mine. He knows.'),
+    Q('venn_pie', 'pie', 1, 'A slice of pie from the Hangar? I have not eaten anything that was not grey since the war. I would like one thing that is not grey.', 'It is brown. Close enough. ...It is very good. Do not watch me eat it.'),
     Q('venn_nickel', 'nickel_iron', 4, 'Four nickel-iron. I want to cast new brackets for the gallery lamps. The old ones are mostly rust and optimism.', 'That will do it. The lamps will stay up now. Probably.', { minHearts: 2 }),
   ],
   thorne: [
@@ -2937,6 +2972,7 @@ Object.assign(QUESTS, {
   moth: [
     Q('moth_berry', 'berry', 3, 'Can you bring me three berries? From a real bush? I want to see if they are as red as in the pages.', 'They ARE red! Redder! The pages were not lying! Thank you thank you.', { season: 1 }),
     Q('moth_strawberry', 'strawberry', 2, 'Two strawberries, please. Gran says they are the best thing up top. I have to check.', 'Gran was right. Do not tell her. She will be unbearable.', { season: 0 }),
+    Q('moth_egg', 'egg', 1, 'Can I have an egg? Just one. I want to see if it really comes out of a bird. Gran says yes. I have questions.', 'It is warm! It is SMOOTH! I am never eating it. I am keeping it. ...I am eating it tomorrow.'),
     Q('moth_glowcap', 'glowcap', 2, 'Two glowcaps for my museum. They have to be nice ones. Glowing ones.', 'Perfect. They are glowing at me. That means they like the museum.'),
     Q('moth_apple', 'wild_apple', 2, 'Two apples. Off a tree. Trees are real, Wick says. I need evidence.', 'Evidence! I am going to keep one and eat one. Science.', { season: 2 }),
     Q('moth_pinenut', 'pine_nut', 3, 'Three pine nuts. They come out of a cone. A cone! What is a cone? Bring me some and I will find out.', 'They are tiny! The cone must be enormous. Is it enormous? Do not tell me. I will imagine it.', { season: 3 }),
@@ -2945,6 +2981,7 @@ Object.assign(QUESTS, {
     Q('wick_fish_s', 'fish_s', 3, 'Three silverfin from up top? I want to see what fish look like when they have had sunshine.', 'Look at them. Bright as coins. The cave fish will be jealous.'),
     Q('wick_fish_m', 'fish_m', 2, 'Two river trout, if the river is kind. For the ledger. I have room for some foreigners.', 'Speckled. Like the old pictures. Into the ledger they go.', { minHearts: 1 }),
     Q('wick_bread', 'bread', 2, 'Two loaves for bait. It does not help. I just like the ritual.', 'Lovely. I will feed one to the fish and one to me.'),
+    Q('wick_fish_l', 'fish_l', 1, 'One chamber carp from up top, for the ledger. I want to show the cave fish what their cousins look like with a tan.', 'A carp! Heavy as a full can. The basin will talk of nothing else.', { minHearts: 3 }),
     Q('wick_tea', 'tea', 1, 'A tea from the Hangar, for a long watch at the Sump. It gets cold down there at night.', 'Hot all the way down the lift? You must have run. Bless you.', { minHearts: 2 }),
   ],
 });
@@ -2998,5 +3035,5 @@ export const LOWER = {
 
 HELP.push({
   title: 'The Lower deck (the Undercroft)',
-  body: 'The spoke lift goes all the way down: past Eden Central to the Lower deck. At first only the landing is lit. Tobias Venn\'s restoration terminal by the lift lists the projects: work lights, the Pump Halls, the Mushroom Catacombs, the Survivors\' Enclave and, once the families trust you, new homes for them on the Main deck. Each costs credits and materials (scrap, lamp kits, pump parts, belt ores, lumber) and is done by the next morning. Venn makes lamp kits and pump parts at his bench.\n\nThe pump halls have fishing: cave fish, glowfish and, after six, pipe eels; fit pump parts to the silent pumps to drain more tunnels. The catacomb beds grow mushrooms from spore bags in any season, with no watering. Terminals hold recorded logs, and Moth brings you diary pages: read them in the journal (P), under Logs.',
+  body: 'The spoke lift goes all the way down, past Eden Central, to the Lower deck. At first only the landing is lit. Tobias Venn\'s restoration terminal by the lift lists the projects: work lights, the Pump Halls, the Mushroom Catacombs, the Survivors\' Enclave and, once the families trust you, homes for them up on the Main deck. Each costs credits and materials and is done by morning; Venn\'s bench makes lamp kits and pump parts.\n\nThe pump halls have cave fish, glowfish and, after six, pipe eels; fit pump parts to the silent pumps to drain more tunnels. Catacomb beds grow mushrooms from spore bags all year. Logs from the terminals and Moth\'s diary pages are in the journal (P), under Logs.',
 });

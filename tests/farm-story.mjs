@@ -29,8 +29,17 @@ const CAST = {
   yui: { portrait: 'art/farm/people/yui_front.webp' },
   calloway: { portrait: 'art/farm/people/calloway_front.webp' },
   fenn: { portrait: 'art/farm/people/fenn_front.webp' },
+  // 2026-11-19: the Undercroft (the Lower deck)
+  venn: { portrait: 'art/farm/people/venn_front.webp', shop: 'undercroft' },
+  thorne: { portrait: 'art/farm/people/thorne_front.webp' },
+  moth: { portrait: 'art/farm/people/moth_front.webp' },
+  wick: { portrait: 'art/farm/people/wick_front.webp' },
 };
-const NEWCOMERS = ['kestrel', 'mori', 'yui', 'calloway', 'fenn'];
+const NEWCOMERS = ['kestrel', 'mori', 'yui', 'calloway', 'fenn', 'venn', 'thorne', 'moth', 'wick'];
+const UNDER = story.UNDERFOLK || [];
+// The Undercroft's progress flags in order: year 2 schedules are checked with the deck half restored (spring, summer), then all of it.
+const LD = ['ld_lights', 'ld_pumps', 'ld_pump2', 'ld_pump3', 'ld_catacombs', 'ld_enclave', 'ld_rehoused'];
+const ldUpTo = (flag) => Object.fromEntries(LD.slice(0, LD.indexOf(flag) + 1).map((k) => [k, true]));
 const LOVERS = ['general', 'ruess', 'kestrel', 'mori', 'oduya', 'yui'];
 const VILLAGERS = Object.keys(CAST).filter((id) => id !== 'sato');
 const MAIN = VILLAGERS.filter((id) => id !== 'moraine');
@@ -40,16 +49,18 @@ const SPOTS = new Set(('farm.porch farm.bin farm.gate farm.pond farm.field villa
   'hill.wreck hill.lake hill.overlook hill.onsen central.office central.arrivals central.exchange central.plaza central.dock hangar.floor store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
   'cafe.counter cafe.table1 cafe.table2 cafe.table3 hall.desk hall.floor ' +
   'clinic.counter clinic.floor library.counter library.floor village.clinicfront village.libraryfront ' +
-  'church.altar church.pew central.churchgarden central.schoolyard school.floor depot.desk depot.floor central.depotfront').split(' '));
+  'church.altar church.pew central.churchgarden central.schoolyard school.floor depot.desk depot.floor central.depotfront ' +
+  'central.gallery undercroft.counter lower.landing lower.gallery lower.pumps lower.pumphouse lower.sump lower.catacombs lower.beds lower.enclave lower.kettle school.teacher school.pupil central.homes').split(' '));
 const STYLES = new Set(['bob', 'short', 'long', 'bald', 'bun', 'bandana', 'cap']);
-const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', 'cafe', 'hall', 'clinic', 'library', 'central', 'hangar', 'church', 'depot', 'school']);
+const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', 'cafe', 'hall', 'clinic', 'library', 'central', 'hangar', 'church', 'depot', 'school', 'lower']);
 const TIERS = new Set(['loved', 'liked', 'neutral', 'disliked']);
 const WEATHERS = ['sun', 'rain', 'storm', 'snow'];
 const RELICS = ['photo', 'teacup', 'book', 'watch', 'toy', 'medal', 'seedtin', 'musicbox', 'datachip', 'ring'];
-const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king'];
+const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king', 'cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi'];
 const CROPS = ['turnip', 'potato', 'cucumber', 'strawberry', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach', 'moonflower'];
 const GIFTABLE = [...CROPS, 'egg', 'milk_s', 'milk_m', 'milk_l', ...FISH, 'herb', 'berry', 'mushroom', 'frostcap', 'comet_ice', 'nickel_iron', 'silica', 'copper', 'titanium', 'platinum',
-  'scrap', 'alloy', 'crystal', ...RELICS, 'bread', 'soup', 'pie', 'tea', 'tonic'];
+  'scrap', 'alloy', 'crystal', ...RELICS, 'bread', 'soup', 'pie', 'tea', 'tonic',
+  'cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi', 'shiitake', 'pale_oyster', 'glowcap', 'deep_truffle', 'pump_part', 'lamp_kit', 'diary_page', 'undercroft_stew', 'fish_grill', 'honey_toast', 'wild_apple', 'cherry', 'peach', 'pine_nut', 'mushroom_skewer'];
 const NEUTRAL = ['pendant', 'weed', 'weeds', 'lumber', 'fodder', 'feed', 'seed_turnip', 'seed_grass', 'seed_moonflower', 'hoe', 'no_such_thing', '', 'toString', '__proto__', 'constructor'];
 const FEST = {
   planting: { name: 'Planting Day', season: 0, day: 18, from: 600, to: 900, spot: 'village.square' },
@@ -148,14 +159,14 @@ const seenBy = Object.fromEntries(VILLAGERS.map((id) => [id, new Set()]));
 for (const year of [1, 2]) for (let season = 0; season < 4; season++) for (let weekday = 0; weekday < 7; weekday++) {
   const day = dayFor(season, weekday, year);
   for (const weather of WEATHERS) for (let minute = 360; minute <= 1440; minute += 10) {
-    const ctx = { season, day, weekday, minute, weather, festival: null, year };
+    const ctx = { season, day, weekday, minute, weather, festival: null, year, flags: year === 2 ? ldUpTo(season === 0 ? 'ld_catacombs' : season === 1 ? 'ld_enclave' : 'ld_rehoused') : undefined };
     const here = {};
     for (const id of VILLAGERS) {
       const spot = where(id, ctx);
       if (!spot) continue;
       seen.add(spot); seenBy[id].add(spot);
       (here[spot] ||= []).push(id);
-      if (weather === 'storm') check(spot.startsWith('cafe.'), `storm: ${id} is out at ${spot}`);
+      if (weather === 'storm') check(spot.startsWith('cafe.') || (UNDER.includes(id) && spot.startsWith('lower.')) || spot === 'undercroft.counter', `storm: ${id} is out at ${spot}`);   // no weather below decks
       if (minute >= 1380 || minute < 420) check(false, `${id} is up at ${minute} (${spot})`);
     }
     for (const spot of Object.keys(here)) {
@@ -233,6 +244,7 @@ for (const f of FESTIVALS) {
       const spot = where(id, ctx);
       check(!spot || !/counter|desk/.test(spot), `${f.id}: ${id} is at ${spot} on a festival day`);
       check(spot !== 'farm.bin', `${f.id}: Maris does not collect`);
+      if (UNDER.includes(id)) continue;   // the Undercroft folk stay below decks (until the Thornes move up)
       if (weather !== 'storm' && minute >= f.from && minute < f.to) check(near.includes(spot), `${f.id}: ${id} is at the festival (${minute}: ${spot})`);
       if (weather === 'storm') check(spot === null || spot.startsWith('cafe.'), `${f.id}: storm sends ${id} home`);
     }
@@ -334,7 +346,7 @@ for (const e of EVENTS) {
       if (e.weekday !== undefined && e.weekday !== wd) continue;
       let all = true, any = false;
       for (let m = e.from ?? 360; m < (e.to ?? 1440); m += 10) {
-        const s = where(e.npc, { season, day: dayFor(season, wd), weekday: wd, minute: m, weather: 'sun', festival: null, year: 1 });
+        const s = where(e.npc, { season, day: dayFor(season, wd), weekday: wd, minute: m, weather: 'sun', festival: null, year: 1, flags: e.flag ? ldUpTo(e.flag) : undefined });
         const on = !!s && s.split('.')[0] === e.map;
         any ||= on; all &&= on;
       }
@@ -347,7 +359,7 @@ const byNpc = (id) => EVENTS.filter((e) => e.npc === id).map((e) => e.hearts).so
 for (const id of LOVERS) check(EVENTS.some((e) => e.npc === id && e.hearts < 8), `${id}: a heart event before the confession`);
 check(byNpc('general') === '2,4,6,8,10', `the General's five events (${byNpc('general')})`);
 for (const id of VILLAGERS) if (id !== 'general') check(byNpc(id) === '3,7', `${id}: events at 3 and 7 hearts (${byNpc(id)})`);
-check(EVENTS.length === 5 + 2 * 13, `31 events (${EVENTS.length})`);
+check(EVENTS.length === 5 + 2 * (VILLAGERS.length - 1), `${5 + 2 * (VILLAGERS.length - 1)} events (${EVENTS.length})`);
 
 check(FESTIVALS.length === 4, 'four festivals');
 for (const f of FESTIVALS) {
@@ -392,7 +404,7 @@ for (const s of SIGN_SPOTS) { check(isText(SIGNS[s]), `SIGNS['${s}'] (${SIGNS[s]
 for (const s of Object.keys(SIGNS)) check(SPOTS.has(s), `sign spot ${s} is a known spot`);
 check(/orbital elevator/i.test(SIGNS['hill.wreck']) && !/wreck|mine\b|descent/i.test(SIGNS['hill.wreck']), 'the hill sign is the orbital elevator');
 
-check(Array.isArray(HELP) && HELP.length >= 7 && HELP.length <= 12, `HELP has 7-12 pages (${HELP.length})`);
+check(Array.isArray(HELP) && HELP.length >= 7 && HELP.length <= 16, `HELP has 7-16 pages (${HELP.length})`);
 check(HELP.some((p) => p.title === 'Love'), 'HELP has a Love page');
 for (const p of HELP) {
   check(isText(p.title, 50), `HELP title ${p.title}`);
@@ -419,7 +431,7 @@ for (const k of ['bite', 'miss']) {
   check(Array.isArray(FISHING[k]) && FISHING[k].length === 3 && new Set(FISHING[k]).size === 3, `FISHING.${k}: three lines`);
   for (const s of FISHING[k] || []) { check(isText(s, 90), `FISHING.${k}: ${s}`); count(s); }
 }
-check(Object.keys(FISHING.caught).sort().join() === [...FISH].sort().join(), 'FISHING.caught covers exactly the eight fish');
+check(Object.keys(FISHING.caught).sort().join() === [...FISH].sort().join(), 'FISHING.caught covers exactly the fish');
 for (const f of FISH) { check(isText(FISHING.caught[f], 110), `FISHING.caught.${f}`); count(FISHING.caught[f]); }
 check(/old hollin/i.test(FISHING.caught.fish_king), 'the king of the lake is Old Hollin');
 
@@ -486,10 +498,11 @@ for (const id of VILLAGERS) check(giftTier(id, 'pendant') === 'neutral', `${id}:
 
 const SEASON_OF = { turnip: [0], potato: [0], cucumber: [0], strawberry: [0], tomato: [1], corn: [1], onion: [1], pumpkin: [1],
   carrot: [2], eggplant: [2], sweetpotato: [2], spinach: [2], herb: [0, 1], berry: [1], mushroom: [2], frostcap: [3],
-  fish_spring: [0], fish_summer: [1], fish_autumn: [2], fish_winter: [3] };
-const ANYTIME = ['egg', 'milk_s', 'milk_m', 'milk_l', 'fish_s', 'fish_m', 'fish_l', 'scrap', 'alloy', 'crystal', ...RELICS, 'bread', 'soup', 'pie', 'tea'];
+  fish_spring: [0], fish_summer: [1], fish_autumn: [2], fish_winter: [3], wild_apple: [2], pine_nut: [3] };
+const ANYTIME = ['egg', 'milk_s', 'milk_m', 'milk_l', 'fish_s', 'fish_m', 'fish_l', 'scrap', 'alloy', 'crystal', ...RELICS, 'bread', 'soup', 'pie', 'tea',
+  'copper', 'nickel_iron', 'shiitake', 'pale_oyster', 'glowcap', 'cave_fish', 'glowfish', 'pump_part'];   // the Undercroft grows and catches its own all year
 const NUMBER_WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six'];
-check(Object.keys(QUESTS).sort().join() === [...VILLAGERS].sort().join(), 'QUESTS covers exactly the fourteen villagers');
+check(Object.keys(QUESTS).sort().join() === [...VILLAGERS].sort().join(), 'QUESTS covers exactly the villagers');
 const questIds = new Set();
 let questCount = 0;
 for (const id of VILLAGERS) {

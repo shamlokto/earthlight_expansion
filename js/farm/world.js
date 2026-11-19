@@ -1139,13 +1139,14 @@ function rockGeo(name, big) {
   });
   ROCK_GEO.set(name, pr); return pr;
 }
-const ROCK_KIND = { 1: { model: 'asteroid', s: 0.95, y: 0.45, tint: [0xffe2c0, 0xf2cfa8, 0xffecd8] }, 3: { model: 'asteroid_big', s: 1.5, y: 0.6, big: true, tint: [0xb9b2aa, 0xa49c94] }, 4: { model: 'comet_ice', s: 0.95, y: 0.35, tint: [0xe8f6ff, 0xd2ecff] }, 5: { model: 'asteroid', s: 1.05, y: 0.45, tint: [0xffd070, 0xffc0a0, 0xd8f0ff] } };
+// Rock sizes (sim.ROCK_SIZES): small, medium, large (gold-flecked, two glints), huge (warm, four glints); great asteroids are the walls.
+const ROCK_KIND = { 1: { model: 'asteroid', s: 0.62, y: 0.32, tint: [0xffe2c0, 0xf2cfa8, 0xffecd8] }, 2: { model: 'asteroid', s: 0.95, y: 0.45, tint: [0xe8dccb, 0xd9cbb8, 0xf0e4d4] }, 3: { model: 'asteroid_big', s: 1.5, y: 0.6, big: true, tint: [0x8f8880, 0x7c766f] }, 4: { model: 'comet_ice', s: 0.85, y: 0.32, tint: [0xe8f6ff, 0xd2ecff] }, 5: { model: 'asteroid', s: 1.28, y: 0.6, glints: 2, tint: [0xffe2a0, 0xf5d090, 0xffd8b0] }, 8: { model: 'asteroid', s: 1.75, y: 0.8, glints: 4, tint: [0xffc890, 0xffb880, 0xf0c0a0] } };
 const GLINT = [0xffd36a, 0xd890ff, 0x8ff4ff];
 class BeltRocks {
   constructor(root, mine) {
     this.mine = mine; this.root = new THREE.Group(); root.add(this.root); this.meshes = {}; this.ver = -1; this.at = [1e9, 1e9]; this.REACH = 21; this.alive = true;
     const count = {}; for (const c of mine.cells) count[c] = (count[c] || 0) + 1;
-    for (const k of [1, 3, 4, 5]) {
+    for (const k of [1, 2, 3, 4, 5, 8]) {
       const d = ROCK_KIND[k], cap = Math.min(count[k] || 0, k === 3 ? 520 : 420) + 4;
       rockGeo(d.model, d.big).then(({ geo, mat }) => {
         if (!this.alive) return;
@@ -1154,14 +1155,14 @@ class BeltRocks {
         im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); this.meshes[k] = im; this.root.add(im); this.ver = -1;
       });
     }
-    const gl = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.11, 0), new THREE.MeshBasicMaterial({ color: 0xffffff }), Math.min(count[5] || 0, 420) * 2 + 4);
+    const gl = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.11, 0), new THREE.MeshBasicMaterial({ color: 0xffffff }), Math.min(count[5] || 0, 420) * 2 + Math.min(count[8] || 0, 200) * 4 + 4);
     gl.frustumCulled = false; gl.count = 0; this.meshes.glint = gl; this.root.add(gl);
   }
   dispose() { this.alive = false; this.root.parent && this.root.parent.remove(this.root); }
   update(px, py) {
     const m = this.mine; if (m.ver === this.ver && Math.hypot(px - this.at[0], py - this.at[1]) < 3) return;
     this.ver = m.ver; this.at = [px, py];
-    const R = this.REACH, mat = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color(), n = { 1: 0, 3: 0, 4: 0, 5: 0, glint: 0 };
+    const R = this.REACH, mat = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color(), n = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 8: 0, glint: 0 };
     const x0 = Math.max(0, Math.floor(px - 1 - R)), x1 = Math.min(m.w - 1, Math.ceil(px - 1 + R)), y0 = Math.max(0, Math.floor(py - 1 - R)), y1 = Math.min(m.h - 1, Math.ceil(py - 1 + R));
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
       const k = m.cells[y * m.w + x], im = this.meshes[k]; if (!im || n[k] >= im.instanceMatrix.count) continue;
@@ -1170,7 +1171,7 @@ class BeltRocks {
       e.set(h % 7, (h >> 3) % 7, (h >> 6) % 7); q.setFromEuler(e); const s = d.s * (0.82 + f * 0.36);
       v.set(x + 1.5 + ((h >> 9) % 10 - 5) * 0.02, d.y + ((h >> 13) % 10) * 0.025, y + 1.5 + ((h >> 17) % 10 - 5) * 0.02);
       mat.compose(v, q, sc.set(s, s * (k === 3 ? 0.9 : 0.85), s)); im.setMatrixAt(n[k], mat); im.setColorAt(n[k], c.set(d.tint[h % d.tint.length])); n[k]++;
-      if (k === 5) for (let j = 0; j < 2; j++) { const g = this.meshes.glint; if (n.glint >= g.instanceMatrix.count) break; const a = (h % 6) + j * 2.6; mat.compose(sc.set(v.x + Math.cos(a) * 0.3 * s, v.y + 0.18 + j * 0.12, v.z + Math.sin(a) * 0.3 * s), q, new THREE.Vector3(1, 1.6, 1)); g.setMatrixAt(n.glint, mat); g.setColorAt(n.glint, c.set(GLINT[(h >> 4) % 3])); n.glint++; }
+      for (let j = 0; j < (d.glints || 0); j++) { const g = this.meshes.glint; if (n.glint >= g.instanceMatrix.count) break; const a = (h % 6) + j * (6.28 / d.glints); mat.compose(sc.set(v.x + Math.cos(a) * 0.32 * s, v.y + 0.12 * s + (j % 2) * 0.14, v.z + Math.sin(a) * 0.32 * s), q, new THREE.Vector3(1, 1.6, 1).multiplyScalar(k === 8 ? 1.4 : 1)); g.setMatrixAt(n.glint, mat); g.setColorAt(n.glint, c.set(GLINT[(h >> 4) % 3])); n.glint++; }
     }
     for (const [k, im] of Object.entries(this.meshes)) { im.count = n[k]; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
   }

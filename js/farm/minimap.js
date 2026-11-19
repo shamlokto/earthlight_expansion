@@ -65,8 +65,8 @@ function beltOf(m, mine) {
   const sh = m.sectorH, top = (k) => (m.sectors - k) * sh + 1;
   for (let k = 1; k <= m.sectors; k++) { g.globalAlpha = 0.16 + (k % 2) * 0.06; g.fillStyle = SECT(k); g.fillRect(T, top(k) * T, (m.w - 2) * T, sh * T); }
   g.globalAlpha = 1; g.fillStyle = '#262a36'; g.fillRect(T, top(1) * T + sh * T, (m.w - 2) * T, (m.h - 2 - m.sectors * sh) * T);
-  const COL = { 1: '#8f857a', 3: '#4a4440', 4: '#cfeefa', 5: '#ffd36a' };
-  for (let y = 0; y < mine.h; y++) for (let x = 0; x < mine.w; x++) { const k = mine.cells[y * mine.w + x], col = COL[k]; if (!col) continue; g.fillStyle = col; if (k === 3) g.fillRect((x + 1) * T, (y + 1) * T, T, T); else { g.beginPath(); g.arc((x + 1.5) * T, (y + 1.5) * T, T * (k === 5 ? 0.45 : 0.38), 0, 7); g.fill(); } }
+  const COL = { 1: '#8f857a', 2: '#b0a596', 3: '#4a4440', 4: '#cfeefa', 5: '#ffd36a', 8: '#ff9f5a' }, RAD = { 1: 0.3, 2: 0.4, 4: 0.36, 5: 0.48, 8: 0.62 };
+  for (let y = 0; y < mine.h; y++) for (let x = 0; x < mine.w; x++) { const k = mine.cells[y * mine.w + x], col = COL[k]; if (!col) continue; g.fillStyle = col; if (k === 3) g.fillRect((x + 1) * T, (y + 1) * T, T, T); else { g.beginPath(); g.arc((x + 1.5) * T, (y + 1.5) * T, T * RAD[k], 0, 7); g.fill(); } }
   for (let k = 2; k <= m.sectors; k++) { const y = (top(k) + sh) * T; g.strokeStyle = SECT(k); g.lineWidth = 2; g.beginPath(); g.moveTo(T, y); g.lineTo((m.w - 1) * T, y); g.stroke(); }
   beltBase = { mine, ver: mine.ver, c }; return c;
 }
@@ -82,7 +82,7 @@ function beltMarks(g, m, mine, s, ox, oy, t, big) {
 }
 function openBeltChart() {
   const { map: m, S } = hooks.get(), mine = S.mine; if (!mine) return;
-  const html = `<canvas class="fm-mapcv" id="mapCv"></canvas><p class="fm-dim fm-maplegend"><i style="background:#e8483a"></i>Sato <i style="background:#5fffd2"></i>Pickup pods (home in 15 min) <i style="background:#ffd36a"></i>Rich veins and landmarks <i style="background:#cfeefa"></i>Comet ice · sector numbers down the side; the launch cradle can start you at ${S.belt.reached >= 5 ? [1, 5, 10, 15, 20].filter((k) => k <= S.belt.reached).join(', ') : 'sector 1 (reach 5 for more)'} · M or Esc to close</p>`;
+  const html = `<canvas class="fm-mapcv" id="mapCv"></canvas><p class="fm-dim fm-maplegend"><i style="background:#e8483a"></i>Sato <i style="background:#5fffd2"></i>Pickup pods (home in 15 min) <i style="background:#ffd36a"></i>Large boulders and landmarks <i style="background:#ff9f5a"></i>Huge boulders <i style="background:#cfeefa"></i>Comet ice · sector numbers down the side; the launch cradle can start you at ${S.belt.reached >= 5 ? [1, 5, 10, 15, 20].filter((k) => k <= S.belt.reached).join(', ') : 'sector 1 (reach 5 for more)'} · M or Esc to close</p>`;
   hooks.openWin(`The belt chart · farthest: sector ${S.belt.reached}`, html, () => { if (open) cancelAnimationFrame(open.raf); open = null; }, 'map');
   const cv = $('mapCv'); open = { tab: 'belt', cv, dots: [], hover: null, raf: 0 };
   const draw = (t) => {

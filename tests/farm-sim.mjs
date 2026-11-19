@@ -29,8 +29,8 @@ const rich = (seed = 5) => { const s = newGame({ seed }); s.player.money = 1e6; 
 // rich, with belt ore for Ruess's ore jobs and room to carry it
 const richer = (seed = 5) => { const s = rich(seed); while (s.player.inv.length < 24) s.player.inv.push(null); s.player.slots = 24; for (const o of ['nickel_iron', 'silica', 'copper', 'titanium', 'platinum']) addItem(s, o, 12); for (const o of ['wool', 'fine_wool', 'yarn', 'tulip', 'sunflower', 'cosmos', 'snowbell']) addItem(s, o, 6); return s; };
 // break belt rocks of the given kinds in one sector, over and over, with the given hammer; tally the finds
-const beltTally = (sector, kinds = [1], hammer = 3, n0 = 2500, seed = 310) => { const g = rich(seed + sector), got = {}; g.player.toolLevel.hammer = hammer; let n = 0; sim.enterBelt(g, 1); const m = g.mine, y0 = sim.sectorTop(sector);
-  while (n < n0) { for (let y = y0; y < y0 + sim.SECTOR_H && n < n0; y++) for (let x = 0; x < m.w && n < n0; x++) { const i = y * m.w + x; if (!kinds.includes(sim.beltLayout(g.belt.seed).cells[i])) continue; m.cells[i] = sim.beltLayout(g.belt.seed).cells[i]; delete m.hp[i]; g.player.stamina = 100; n++; let r; do r = sim.hitRock(g, x, y); while (r.ok && !r.broke); for (const f of r.gained || []) got[f.id] = (got[f.id] || 0) + f.n; }
+const beltTally = (sector, kinds = [2], hammer = 3, n0 = 2500, seed = 310) => { const g = rich(seed + sector), got = {}; g.player.toolLevel.hammer = hammer; let n = 0; sim.enterBelt(g, 1); const m = g.mine, y0 = sim.sectorTop(sector);
+  for (let pass = 0, n1 = -1; n < n0 && n1 !== n; pass++) { n1 = n; for (let y = y0; y < y0 + sim.SECTOR_H && n < n0; y++) for (let x = 0; x < m.w && n < n0; x++) { const i = y * m.w + x; if (!kinds.includes(sim.beltLayout(g.belt.seed).cells[i])) continue; m.cells[i] = sim.beltLayout(g.belt.seed).cells[i]; delete m.hp[i]; g.player.stamina = 100; n++; let r; do r = sim.hitRock(g, x, y); while (r.ok && !r.broke); for (const f of r.gained || []) got[f.id] = (got[f.id] || 0) + f.n; }
     for (let i = 0; i < g.player.inv.length; i++) if (g.player.inv[i] && ITEMS[g.player.inv[i].id].kind === 'ore') g.player.inv[i] = null; }
   return got; };
 const setDate = (s, season, day) => { s.cal.season = season; s.cal.day = day; };
@@ -1144,7 +1144,7 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   check(!sim.beltOdds(1).copper && sim.beltOdds(2).copper && !sim.beltOdds(3).titanium && sim.beltOdds(4).titanium && !sim.beltOdds(7).platinum && sim.beltOdds(8).platinum, 'copper from 2, titanium from 4, platinum from 8');
   check(sim.beltOdds(20).star_metal > sim.beltOdds(3).star_metal && sim.beltOdds(20).scrap < sim.beltOdds(1).scrap, 'further out: more star-metal, less scrap');
   check(JSON.stringify(sim.beltOdds(40)) === JSON.stringify(sim.beltOdds(20)), 'the odds stop changing at sector 20');
-  const t1 = beltTally(1, [1], 3, 1500, 410), t9 = beltTally(9, [1], 3, 1500, 410);
+  const t1 = beltTally(1, [2], 3, 1500, 410), t9 = beltTally(9, [2], 3, 1500, 410);
   check(t1.nickel_iron > 0 && t1.silica > 0 && !t1.copper && !t1.titanium && !t1.platinum, 'sector 1: nickel-iron, silica, ice and scrap');
   check(t9.copper > 0 && t9.titanium > 0 && t9.platinum > 0 && !t9.crystal && t9.platinum < t9.nickel_iron, 'sector 9: copper, titanium, a little platinum, no crystal yet');
   const sum = (o) => Object.values(o).reduce((a, b) => a + b, 0);
@@ -1179,7 +1179,9 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   check(L.pods.every((p) => beltSector(p.y) === p.sector && L.cells[p.y * BELT_W + p.x] === 6), 'each pod sits in its own sector');
   check(Object.keys(sim.BELT_LANDMARKS).every((s) => L.marks.some((m) => m.sector === +s && L.cells[m.y * BELT_W + m.x] === 7)), 'the landmarks: the derelict, the comet, the wreck, the far marker');
   const kinds = (s) => { const o = {}; for (let y = sectorTop(s); y < sectorTop(s) + SECTOR_H; y++) for (let x = 0; x < BELT_W; x++) { const c = L.cells[y * BELT_W + x]; o[c] = (o[c] || 0) + 1; } return o; };
-  check(!kinds(1)[5] && !kinds(2)[5] && kinds(18)[5] > 0 && (kinds(18)[5] + kinds(19)[5] + kinds(20)[5]) > (kinds(3)[5] || 0) + (kinds(4)[5] || 0) + (kinds(5)[5] || 0), 'rich veins: none near home, most far out');
+  const sum3 = (a, k) => [a, a + 1, a + 2].reduce((t, s) => t + (kinds(s)[k] || 0), 0);
+  check(sum3(18, 5) > sum3(3, 5) * 2 && sum3(18, 8) > sum3(3, 8) * 2 && sum3(18, 2) > sum3(1, 2), `bigger rocks further north (large ${sum3(3, 5)} → ${sum3(18, 5)}, huge ${sum3(3, 8)} → ${sum3(18, 8)})`);
+  check(sum3(1, 5) >= 1 && sum3(1, 8) >= 1, 'a few big ones near home already: goals for a better hammer');
   check(Array.from({ length: 20 }, (_, i) => kinds(i + 1)[1] || 0).every((n) => n > 25) && Array.from({ length: 20 }, (_, i) => kinds(i + 1)[3] || 0).every((n) => n > 0), 'every sector has rock fields and great asteroids');
   for (const seed of [1, 2, 3, 99, 4242]) {           // nothing is walled off from the pad: every rock, pod and landmark can be reached
     const C = beltLayout(seed).cells, seen = new Uint8Array(C.length), q = [BELT_PAD[1] * BELT_W + BELT_PAD[0]]; seen[q[0]] = 1; let bad = 0;
@@ -1204,18 +1206,24 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   B.flags.tank = true; check(sim.enterBelt(B, 1).air === 150, 'the big air tank: 150');
   // the hammer: tiers set what breaks and how fast
   const H = rich(502); sim.enterBelt(H, 1); const HM = H.mine, cellOf = (k, s) => { for (let yy = sectorTop(s); yy < sectorTop(s) + SECTOR_H; yy++) for (let x = 0; x < BELT_W; x++) if (HM.cells[yy * BELT_W + x] === k) return [x, yy]; };
-  check(sim.hammerHits(1, 1) === 2 && sim.hammerHits(1, 2) === 1 && sim.hammerHits(2, 1) === 0 && sim.hammerHits(2, 2) === 2 && sim.hammerHits(3, 2) === 0 && sim.hammerHits(3, 3) === 2, 'hammer hits: a better hammer, fewer hits; too soft a hammer, none');
-  check(sim.rockHardness(1, 20) === 1 && sim.rockHardness(5, 4) === 2 && sim.rockHardness(5, 12) === 3 && sim.rockHardness(3, 5) === 0, 'hardness: rock 1, rich veins 2, and 3 from sector 10');
-  const [rx, ry] = cellOf(1, 1); H.player.stamina = 50;
-  r = sim.hitRock(H, rx, ry); check(r.ok && !r.broke && r.left === 1 && H.player.stamina === 49, 'a field hammer: the first hit cracks it');
-  r = sim.hitRock(H, rx, ry); check(r.ok && r.broke && HM.cells[ry * BELT_W + rx] === 0 && H.player.stamina === 48 && H.belt.gone[ry * BELT_W + rx] > sim.absDay(H), 'the second breaks it; it will drift back');
-  const [vx, vy] = cellOf(5, 12); check(!act(sim.hitRock(H, vx, vy)).ok && /Starsteel/.test(sim.hitRock(H, vx, vy).msg), 'a far rich vein needs a Starsteel hammer');
-  H.player.toolLevel.hammer = 3; r = sim.hitRock(H, vx, vy); r = r.broke ? r : sim.hitRock(H, vx, vy); check(r.broke && r.gained.length && ['titanium', 'star_metal', 'platinum', 'crystal', 'alloy', 'copper'].includes(r.gained[0].id), `a rich vein always gives something good (${r.gained.map((g) => g.id)})`);
+  const Z = sim.ROCK_SIZES; check(Z[1].tier === 1 && Z[2].tier === 1 && Z[5].tier === 2 && Z[8].tier === 3 && sim.isRock(4) && !sim.isRock(3) && !sim.isRock(0), 'sizes: small and medium for any hammer, large needs Alloy, huge Starsteel; great asteroids are no rock');
+  for (const k of [1, 2, 4, 5, 8]) for (let lv = 1; lv < 3; lv++) check(sim.rockHits(k, lv + 1) <= sim.rockHits(k, lv) || !sim.rockHits(k, lv), `a better hammer never takes more hits (${Z[k].name}, level ${lv + 1})`);
+  check(sim.rockHits(1, 1) === 1 && sim.rockHits(2, 1) === 3 && sim.rockHits(2, 3) === 1 && sim.rockHits(5, 1) === 0 && sim.rockHits(5, 2) === 3 && sim.rockHits(5, 3) === 2 && sim.rockHits(8, 2) === 0 && sim.rockHits(8, 3) === 3, 'hits by hammer level');
+  const [sx, sy] = cellOf(1, 1); H.player.stamina = 50;
+  r = sim.hitRock(H, sx, sy); check(r.ok && r.broke && H.player.stamina === 49, 'a small rock: one hit with any hammer');
+  const [rx, ry] = cellOf(2, 2), mk = HM.cells[ry * BELT_W + rx];
+  r = sim.hitRock(H, rx, ry); check(r.ok && !r.broke && r.left === 2 && H.player.stamina === 48 && /2 more/.test(r.msg), 'a medium boulder with a field hammer: crack, two more');
+  sim.hitRock(H, rx, ry); r = sim.hitRock(H, rx, ry); check(r.ok && r.broke && HM.cells[ry * BELT_W + rx] === 0 && H.player.stamina === 46 && H.belt.gone[ry * BELT_W + rx] > sim.absDay(H), 'the third hit breaks it; it will drift back');
+  const [lx, ly] = cellOf(5, 15), [vx, vy] = cellOf(8, 18);
+  r = act(sim.hitRock(H, lx, ly)); check(!r.ok && r.need === 2 && /large boulder: it needs an Alloy hammer, and yours is Field/.test(r.msg), `a large boulder names the hammer it needs (${r.msg})`);
+  H.player.toolLevel.hammer = 2; r = act(sim.hitRock(H, vx, vy)); check(!r.ok && r.need === 3 && /huge boulder: it needs a Starsteel hammer/.test(r.msg), 'a huge boulder needs Starsteel');
+  r = sim.hitRock(H, lx, ly); r = sim.hitRock(H, lx, ly); r = sim.hitRock(H, lx, ly); check(r.broke && r.gained.length === 1 && ['titanium', 'star_metal', 'platinum', 'crystal', 'alloy', 'copper'].includes(r.gained[0].id), `an Alloy hammer: a large boulder in three hits, always one good ore (${r.gained.map((g) => g.id)})`);
+  H.player.toolLevel.hammer = 3; for (let k = 0; k < 3; k++) r = sim.hitRock(H, vx, vy); check(r.broke && r.gained.length >= 2 && r.gained.length <= 3 && r.gained.every((g) => ['titanium', 'star_metal', 'platinum', 'crystal'].includes(g.id)), `a huge boulder: two or three of the best (${r.gained.map((g) => g.id)})`);
   const [bx, by] = cellOf(3, 3); check(!act(sim.hitRock(H, bx, by)).ok, 'great asteroids do not break');
-  const rich20 = beltTally(16, [5], 3, 400, 520), plain20 = beltTally(16, [1], 3, 400, 520), val = (o) => Object.entries(o).reduce((a, [id, n]) => a + ITEMS[id].sell * n, 0);
-  check(val(rich20) > val(plain20) * 2.5, `rich veins are worth far more (${val(rich20)} against ${val(plain20)} cr for 400 rocks)`);
+  const rich20 = beltTally(16, [5], 3, 400, 520), plain20 = beltTally(16, [2], 3, 400, 520), huge20 = beltTally(18, [8], 3, 200, 520), small20 = beltTally(16, [1], 3, 400, 520), val = (o) => Object.entries(o).reduce((a, [id, n]) => a + ITEMS[id].sell * n, 0);
+  check(val(rich20) > val(plain20) * 2.5 && val(plain20) > val(small20) * 1.3 && val(huge20) / 200 > val(rich20) / 400 * 1.8, `bigger is richer: small ${val(small20)}, medium ${val(plain20)}, large ${val(rich20)} cr for 400 rocks; huge ${val(huge20)} for 200`);
   const ice = beltTally(8, [4], 3, 400, 521); check(ice.comet_ice > 250 && !ice.star_metal, 'comet ice clusters give ice');
-  const far = beltTally(18, [1], 3, 2000, 522), near = beltTally(2, [1], 3, 2000, 522); check(val(far) > val(near) * 1.5, `far rock is worth more than near rock (${val(far)} against ${val(near)} cr)`);
+  const far = beltTally(18, [2], 3, 2000, 522), near = beltTally(2, [2], 3, 2000, 522); check(val(far) > val(near) * 1.5, `far rock is worth more than near rock (${val(far)} against ${val(near)} cr)`);
   // respawn: broken rocks are gone for 2–5 days, then back
   const day0 = sim.absDay(H), back = H.belt.gone[ry * BELT_W + rx];
   check(back >= day0 + 2 && back <= day0 + 5, `the rock returns in 2 to 5 days (day ${back - day0})`);
@@ -1238,9 +1246,9 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   addItem(M, 'battery_full', 1); r = sim.minerWork(M); check(r.ok && r.swapped && countItem(M, 'battery_full') === 0 && countItem(M, 'battery') === 1 && M.miner.charge === 90, 'with a charged battery it swaps one in and carries on; the flat one comes back');
   const held = MM.miner.hold.reduce((a, g) => a + g.n, 0); r = sim.minerCollect(M); check(r.ok && r.gained.reduce((a, g) => a + g.n, 0) === held && !MM.miner.hold.length, 'Sato empties its hopper');
   { const T = rich(505); T.miner = { name: 'Gravel', charge: 100 }; sim.enterBelt(T, 1); const TM = T.mine, L5 = []; for (let i = 0; i < TM.cells.length; i++) if (TM.cells[i] === 5) L5.push(i);
-    const c = L5[0], cx = c % BELT_W, cy = Math.floor(c / BELT_W); for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) { const q = (cy + j) * BELT_W + cx + i; if (TM.cells[q] === 1 || TM.cells[q] === 4) TM.cells[q] = 0; }
+    const c = L5[0], cx = c % BELT_W, cy = Math.floor(c / BELT_W); for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) { const q = (cy + j) * BELT_W + cx + i; if (TM.cells[q] === 1 || TM.cells[q] === 2 || TM.cells[q] === 4) TM.cells[q] = 0; }
     let free = null; for (let j = -2; j <= 2 && !free; j++) for (let i = -2; i <= 2 && !free; i++) if (!TM.cells[(cy + j) * BELT_W + cx + i]) free = [cx + i, cy + j];
-    if (free) { sim.minerDeploy(T, free[0], free[1]); r = sim.minerWork(T); check(!r.ok && r.idle && TM.cells[c] === 5, 'the mining unit will not touch a rich vein'); } }
+    if (free) { sim.minerDeploy(T, free[0], free[1]); r = sim.minerWork(T); check(!r.ok && r.idle && TM.cells[c] === 5, 'the mining unit will not touch a large boulder'); } }
   r = sim.minerRecall(M); check(r.ok && !MM.miner && /folds up/.test(r.msg), 'F again recalls it');
   M.miner.charge = 0; check(!act(sim.minerDeploy(M, spot[0], spot[1])).ok && /charged battery/.test(sim.minerDeploy(M, spot[0], spot[1]).msg), 'a flat unit cannot be set down without a charged battery');
   addItem(M, 'battery_full', 1); r = sim.minerDeploy(M, spot[0], spot[1]); check(r.ok && r.swapped && M.miner.charge === 100, 'a charged battery from the rucksack: a full run');
