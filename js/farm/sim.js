@@ -205,6 +205,7 @@ export function ensure(s) {
   arr(s.player, 'basket'); arr(s, 'chests'); arr(s, 'panels'); arr(s, 'robots'); arr(s, 'fruitTrees');
   obj(s, 'cooked'); obj(s, 'foraged'); obj(s, 'flags'); obj(s, 'museum'); obj(s, 'fishLog');
   arr(s, 'mill'); arr(s, 'hydro'); obj(s, 'solarYard'); arr(s.solarYard, 'slots'); obj(s, 'stats');
+  if (!s.miner || typeof s.miner !== 'object' || !Number.isFinite(s.miner.charge)) s.miner = null;
   if (!Array.isArray(s.storage)) s.storage = new Array(STORAGE_SIZE).fill(null);
   if (!Array.isArray(s.fridge)) s.fridge = new Array(FRIDGE_SIZE).fill(null);
   obj(s, 'npc'); for (const id of NPC_IDS) if (!s.npc[id] || typeof s.npc[id] !== 'object') s.npc[id] = { love: 0, talked: false, gifted: false, met: false };   // people who moved in after the save
@@ -694,8 +695,12 @@ function shelves(state, shopId) {
       apply: () => { state.flags.yard_big = true; return 'Ruess glazes four new racks in the solar yard. "Belt glass. Better than anything we pour up here."'; } });
     if (state.flags.feed_mill && !state.flags.mill_rollers) out.push({ key: 'mill_rollers', label: 'Titanium mill rollers', desc: 'Steel-and-titanium rollers for your feed mill: it grinds forty crops a night instead of twenty.', price: 800, req: [['titanium', 2]], needs: '2 titanium ore', once: true,
       apply: () => { state.flags.mill_rollers = true; return 'Ruess fits the new rollers. The mill sounds less like it is complaining.'; } });
-    if (!state.flags.drill) out.push({ key: 'up_drill', label: 'Pallas drill head', desc: 'A titanium drill head with a platinum tip: now and then a belt rock gives up a second ore.', price: 2500, req: [['titanium', 3], ['copper', 2], ['platinum', 1]], needs: '3 titanium ore, 2 copper ore, 1 platinum nugget', once: true,
-      apply: () => { state.flags.drill = true; return 'Ruess bolts a new drill head onto the Pallas. "Do not drill anything I am standing on."'; } });
+    if (!state.miner) out.push({ key: 'miner', label: 'Lease a mining unit', desc: `A stubby belt robot with a drill arm. Take it out with you: F sets it down and it breaks the plain rocks and ice around it, ${MINER_RUN} charge a rock, on charged batteries from your rucksack. It leaves the rich veins to you.`, price: MINER_PRICE, once: true,
+      apply: () => { state.miner = { name: 'Gravel', charge: 100 }; return 'Ruess pats a squat orange robot with a drill for an arm. "Gravel. It is not clever, but it is very sincere."'; } });
+    if (!state.flags.tank) out.push({ key: 'up_tank', label: 'Big suit air tank', desc: `A titanium-lined tank for your space suit: ${AIR_TANK_BIG} air instead of ${AIR_TANK}, so you can fly half as far again.`, price: 1800, req: [['titanium', 2], ['silica', 2]], needs: '2 titanium ore, 2 silica', once: true,
+      apply: () => { state.flags.tank = true; return 'Ruess swaps the tank on your suit. "Breathe as much as you like. Within reason."'; } });
+    if (!state.flags.drill) out.push({ key: 'up_drill', label: 'Rock-splitter hammer head', desc: 'A titanium wedge with a platinum tip for your hammer: now and then a belt rock gives up a second ore.', price: 2500, req: [['titanium', 3], ['copper', 2], ['platinum', 1]], needs: '3 titanium ore, 2 copper ore, 1 platinum nugget', once: true,
+      apply: () => { state.flags.drill = true; return 'Ruess fits the splitter to your hammer. "Do not hit anything I am standing on."'; } });
     if (!state.flags.kitchen) {
       out.push({ key: 'kitchen', label: 'Kitchen refit', desc: 'A stove, a sink and a cold-locker fridge for the farmhouse. Cook meals from your own harvest.', price: 2500, lumber: 60, needs: '60 lumber', once: true,
         apply: () => { state.flags.kitchen = true; boxes(state); return 'Ruess refitted your kitchen. The fridge hums like a small engine.'; } });
@@ -806,7 +811,6 @@ export function setFlag(state, key, value = true) {
 export function enterMine(state, depth = 1, mode = 'earth') {
   if (mode === 'belt') return enterBelt(state, depth);
   depth = int(depth) && depth > 0 ? Math.min(depth, 999) : 1;
-  const belt = false;
   const w = MINE_W, h = MINE_H, at = (x, y) => y * w + x, entry = at(...ENTRY);
   const cells = Array.from({ length: w * h }, () => { const r = rnd(state); return r < 0.12 ? 3 : r < 0.40 ? 1 : 0; });
   cells[entry] = 0;
@@ -826,7 +830,7 @@ export function enterMine(state, depth = 1, mode = 'earth') {
   if (!piles.length) { const i = open.length ? open.splice(rint(state, open.length), 1)[0] : entry - 1; cells[i] = 1; piles = [i]; }
   const hatch = piles[rint(state, piles.length)];
   const monsters = [], haz = new Array(w * h).fill(0);
-  if (!belt) {
+  {                                                  // creatures, then haze
     for (let n = Math.min(depth === 1 ? 1 + rint(state, 3) : 2 + rint(state, 3) + Math.floor(depth / 4), 6, open.length); n > 0; n--) {
       const i = open.splice(rint(state, open.length), 1)[0];
       monsters.push({ x: i % w, y: (i - (i % w)) / w, kind: rnd(state) < 0.6 ? 'crawler' : 'drone', hp: 1 + rint(state, 2) });
@@ -840,7 +844,7 @@ export function enterMine(state, depth = 1, mode = 'earth') {
   state.stats.deepest = Math.max(state.stats.deepest, depth);
   // Depth 10 and 20 of the Old World each hide a star-plum in the pile farthest from the landing (once ever).
   let star = -1;
-  if (!belt && (depth === 10 || depth === 20) && !state.flags['plum_ruins' + depth]) {
+  if ((depth === 10 || depth === 20) && !state.flags['plum_ruins' + depth]) {
     let bd = -1; for (const i of piles) { const d = Math.abs((i % w) - ENTRY[0]) + Math.abs(Math.floor(i / w) - ENTRY[1]); if (d > bd) { bd = d; star = i; } }
   }
   state.mine = { mode: 'earth', depth, floor: depth, w, h, cells, monsters, hatch, star, haz };
@@ -934,8 +938,8 @@ export function beltLayout(seed) {
   const pods = [], marks = [];
   for (let s = 1; s <= BELT_SECTORS; s++) {
     const y0 = sectorTop(s), Y = () => y0 + 1 + r() * (SECTOR_H - 2);
-    for (let n = 1 + Math.floor(s / 4) + ri(2); n > 0; n--) blob(2 + r() * (w - 4), Y(), 0.8 + r() * 1.6, 0.8 + r() * 1.3, 3, 1.1);   // great asteroids
-    for (let n = 3 + ri(3); n > 0; n--) blob(2 + r() * (w - 4), Y(), 2 + r() * 2.6, 1.4 + r() * 1.6, 1, 0.58);                      // rock fields with gaps between
+    for (let n = 1 + Math.floor(s / 4) + ri(2); n > 0; n--) blob(2 + r() * (w - 4), Y(), 0.7 + r() * 1.4, 0.7 + r() * 1.1, 3, 1.1);   // great asteroids
+    for (let n = 4 + ri(3); n > 0; n--) blob(2 + r() * (w - 4), Y(), 2 + r() * 2.6, 1.4 + r() * 1.6, 1, 0.66);                      // rock fields with gaps between
     if (s >= 2) for (let n = s >= 6 && s <= 14 ? 2 : 1; n > 0; n--) blob(2 + r() * (w - 4), Y(), 1.2 + r(), 1 + r() * 0.8, 4, 0.8); // comet ice clusters
     for (let y = y0; y < y0 + SECTOR_H; y++) for (let x = 0; x < w; x++) if (!cells[at(x, y)] && r() < 0.022) cells[at(x, y)] = 1;
     const pr = s < 3 ? 0 : Math.min(0.2, 0.012 * (s - 2));                // rich veins: only further out, and more of them
@@ -982,7 +986,7 @@ export function enterBelt(state, start = 1) {
   const cells = L.cells.slice(); for (const k of Object.keys(b.gone)) if (cells[+k] === 1 || cells[+k] === 4 || cells[+k] === 5) cells[+k] = 0;
   const pod = L.pods.find((p) => p.sector === start), pos = start > 1 && pod ? [pod.x + 0.5, pod.y + 2.5] : [BELT_PAD[0] + 0.5, BELT_PAD[1] + 0.5];
   const air = beltAirMax(state);
-  state.mine = { mode: 'belt', depth: start, floor: start, sector: start, start, w: L.w, h: L.h, cells, hp: {}, pods: L.pods, marks: L.marks, pos, air, airMax: air, monsters: [], haz: [], hatch: -1, star: -1, miner: null, ver: 0 };
+  state.mine = { mode: 'belt', depth: start, floor: start, sector: start, start, w: L.w, h: L.h, sectors: BELT_SECTORS, sectorH: SECTOR_H, apron: BELT_APRON, cells, hp: {}, pods: L.pods, marks: L.marks, pos, air, airMax: air, monsters: [], haz: [], hatch: -1, star: -1, miner: null, ver: 0 };
   state.stats.deepestBelt = Math.max(state.stats.deepestBelt || 0, start);
   return state.mine;
 }
@@ -1333,8 +1337,10 @@ export function soak(state) {
 
 // ---------------------------------------------------------------- Field-units (leased robots)
 export const robotLevel = (r) => Math.min(5, 1 + Math.floor((r.days || 0) / 5));
-export const robotReach = (r) => ({ water: 24, harvest: 12 }[r.job] || 0) + 4 * (robotLevel(r) - 1);
-export const robotCost = (r) => (r.job === 'rest' ? 0 : ({ water: 25, harvest: 30, animals: 30 }[r.job] || 0) + 2 * (robotLevel(r) - 1));
+// Reach: tiles for water and harvest; for the battery job, how many units it can swap a battery for (2 + its level).
+export const robotReach = (r) => (r.job === 'batteries' ? 2 + robotLevel(r) : ({ water: 24, harvest: 12 }[r.job] || 0) + 4 * (robotLevel(r) - 1));
+export const robotCost = (r) => (r.job === 'rest' ? 0 : ({ water: 25, harvest: 30, animals: 30, batteries: 15 }[r.job] || 0) + 2 * (robotLevel(r) - 1));
+export const KEEP_BELOW = 60;                 // the battery robot swaps a battery for any unit at or under 60%
 const robotOf = (state, i) => (int(i) ? ensure(state).robots[i] || null : null);
 export function robotMood(state, i) {
   const r = robotOf(state, i); if (!r) return '';
@@ -1344,9 +1350,10 @@ export function robotMood(state, i) {
 }
 export function setRobotJob(state, i, job) {
   const r = robotOf(state, i); if (!r) return fail('There is no robot there.');
-  if (!own(ROBOT_JOBS, job)) return fail('Field-units know four jobs: water, harvest, animals and rest.');
+  if (!own(ROBOT_JOBS, job)) return fail('Field-units know five jobs: water, harvest, animals, batteries and rest.');
+  if (r.job === job) return { ok: true, same: true, msg: `${r.name} is already on ${ROBOT_JOBS[job].toLowerCase()}.` };
   r.job = job; r.mood = job === 'rest' ? 'bored' : r.mood === 'bored' ? 'happy' : r.mood;
-  return { ok: true, msg: job === 'rest' ? `${r.name} settles down for a rest.` : `${r.name} beeps: job set to ${ROBOT_JOBS[job].toLowerCase()}. It will start tomorrow morning.` };
+  return { ok: true, msg: job === 'rest' ? `${r.name} settles down for a rest.` : job === 'batteries' ? `${r.name} beeps: battery keeper from tomorrow morning. It will swap charged batteries from your solar chargers and the storage box into the crew.` : `${r.name} beeps: job set to ${ROBOT_JOBS[job].toLowerCase()}. It will start tomorrow morning.` };
 }
 export function renameRobot(state, i, name) {
   const r = robotOf(state, i); if (!r) return fail('There is no robot there.');
@@ -1366,12 +1373,71 @@ export function chargeRobot(state, i) {
   if (r.mood === 'tired' || r.mood === 'flat') r.mood = 'happy';
   return { ok: true, msg: `${r.name} whirrs happily. Charge ${r.charge}%. You keep the empty battery.` };
 }
-// The morning's work, in order of the robots: [{ name, job, done, used, charge, short, levelUp }].
+// Charged batteries the battery robot can reach on the farm: the solar chargers' slots, then the storage box.
+// A swap leaves the flat battery where the charged one was (a charger slot charges it again tonight).
+function swapBattery(state) {
+  for (const p of state.panels) { if (p.map !== 'farm') continue; const k = p.slots.indexOf('battery_full'); if (k >= 0) { p.slots[k] = 'battery'; return 'charger'; } }
+  const box = boxes(state).storage, k = box.findIndex((b) => b && b.id === 'battery_full'); if (k < 0) return null;
+  const e = box.find((b) => b && b.id === 'battery' && b.n < STACK);
+  if (!e && box[k].n > 1 && !box.includes(null)) return null;          // nowhere to leave the flat one
+  if (--box[k].n <= 0) box[k] = null;
+  if (e) e.n++; else box[box.indexOf(null)] = { id: 'battery', n: 1 };
+  return 'storage';
+}
+// Then it carries flat batteries from the storage box to empty charger slots.
+function loadChargers(state) {
+  const box = boxes(state).storage; let n = 0;
+  for (const p of state.panels) for (let k = 0; k < p.slots.length; k++) {
+    if (p.map !== 'farm' || p.slots[k]) continue; const i = box.findIndex((b) => b && b.id === 'battery'); if (i < 0) return n;
+    if (--box[i].n <= 0) box[i] = null; p.slots[k] = 'battery'; n++;
+  }
+  return n;
+}
+// The battery job: first its own battery if it is low, then the lowest units of the crew (and the mining unit) at or
+// under KEEP_BELOW, up to robotReach of them: +60 each from a charged battery. Its own swap is free of the count.
+function keeperWork(state, r, rec, notes) {
+  const cost = robotCost(r), served = [];
+  if (r.charge <= KEEP_BELOW && swapBattery(state)) { r.charge = Math.min(100, r.charge + 60); rec.self = true; }
+  if (r.charge <= 0) { r.mood = 'flat'; r.done = 0; rec.short = true; notes.push(`${r.name} has a flat battery and found no charged one to swap in. Leave charged batteries in a solar charger or the storage box.`); return; }
+  const full = robotReach(r), cap = r.charge >= cost ? full : Math.max(1, Math.floor(full * r.charge / cost));
+  const crew = [...state.robots.filter((x) => x !== r && x.charge <= KEEP_BELOW).map((x) => ({ u: x, name: x.name })), ...(state.miner && state.miner.charge <= KEEP_BELOW ? [{ u: state.miner, name: `the mining unit ${state.miner.name}` }] : [])].sort((a, b) => a.u.charge - b.u.charge);
+  let dry = false;
+  for (const c of crew) { if (served.length >= cap) break; if (!swapBattery(state)) { dry = true; break; } c.u.charge = Math.min(100, c.u.charge + 60); if (c.u.mood === 'tired' || c.u.mood === 'flat') c.u.mood = 'happy'; served.push(c.name); }
+  const loaded = loadChargers(state), done = served.length;
+  const used = !done ? 0 : Math.min(r.charge, Math.max(4, Math.round(cost * done / full)));
+  r.charge -= used; rec.done = r.done = done; rec.used = used; rec.charge = r.charge; rec.swapped = served; rec.loaded = loaded;
+  rec.short = done < crew.length && !dry && done >= cap;
+  if (done) { const before = robotLevel(r); r.days = (r.days || 0) + 1; rec.levelUp = robotLevel(r) > before; }
+  r.mood = rec.levelUp ? 'proud' : done ? 'keeper' : dry ? 'tired' : 'idle';
+  const list = served.length > 1 ? `${served.slice(0, -1).join(', ')} and ${served[served.length - 1]}` : served[0];
+  notes.push(done ? `${r.name} swapped charged batteries into ${list}${loaded ? `, and put ${loaded} flat one${loaded > 1 ? 's' : ''} on the chargers` : ''}. Battery ${r.charge}%.` : dry ? `${r.name} found no charged batteries for the crew. Leave some in a solar charger or the storage box.` : `${r.name} checked the crew: everyone is above ${KEEP_BELOW}%.${loaded ? ` It put ${loaded} flat batter${loaded > 1 ? 'ies' : 'y'} on the chargers.` : ''}`);
+  if (dry && done) notes.push(`${r.name} ran out of charged batteries before it got round everyone.`);
+  if (rec.levelUp) notes.push(`${r.name} is now skill level ${robotLevel(r)}.`);
+}
+// The battery state of the whole crew, for the journal and the report.
+export function crewBatteries(state) {
+  ensure(state); const R = state.robots, inv = (id) => countItem(state, id), box = (id) => boxes(state).storage.reduce((a, b) => a + (b && b.id === id ? b.n : 0), 0);
+  const panels = state.panels.flatMap((p) => p.slots), yard = state.solarYard.slots, chests = state.chests.flatMap((c) => c.items).filter(Boolean);
+  const keepers = R.filter((r) => r.job === 'batteries');
+  return {
+    units: R.length, low: R.filter((r) => r.charge > 0 && r.charge < 30).length, flat: R.filter((r) => r.charge <= 0).length, average: R.length ? Math.round(R.reduce((a, r) => a + r.charge, 0) / R.length) : 0,
+    charged: inv('battery_full') + box('battery_full') + panels.filter((b) => b === 'battery_full').length + yard.filter((b) => b === 'battery_full').length + chests.filter((s) => s.id === 'battery_full').reduce((a, s) => a + s.n, 0),
+    empty: inv('battery') + box('battery') + chests.filter((s) => s.id === 'battery').reduce((a, s) => a + s.n, 0),
+    charging: panels.filter((b) => b === 'battery').length + yard.filter((b) => b === 'battery').length,
+    keepers: keepers.length, cover: keepers.reduce((a, r) => a + robotReach(r), 0), reachable: state.panels.filter((p) => p.map === 'farm').flatMap((p) => p.slots).filter((b) => b === 'battery_full').length + box('battery_full'),
+    miner: state.miner ? state.miner.charge : null,
+  };
+}
+// The morning's work, in order of the robots: [{ name, job, done, used, charge, short, levelUp }]. The battery
+// keepers go first, so the crew starts the day on fresh batteries.
 function robotsWork(state, notes) {
-  const out = [], fields = [state.fields.farm, ...(state.flags.greenhouse ? [state.fields.greenhouse] : [])];
-  for (const r of ensure(state).robots) {
-    const cost = robotCost(r), rec = { name: r.name, job: r.job, done: 0, used: 0, charge: r.charge, short: false, levelUp: false };
-    out.push(rec);
+  const out = [], fields = [state.fields.farm, ...(state.flags.greenhouse ? [state.fields.greenhouse] : [])], R = ensure(state).robots;
+  const recs = R.map((r) => ({ name: r.name, job: r.job, done: 0, used: 0, charge: r.charge, short: false, levelUp: false }));
+  R.forEach((r, i) => { if (r.job === 'batteries') keeperWork(state, r, recs[i], notes); });
+  for (const [ri, r] of R.entries()) {
+    const cost = robotCost(r), rec = recs[ri];
+    out.push(rec); if (r.job === 'batteries') continue;
+    rec.charge = r.charge;
     if (r.job === 'rest' || !own(ROBOT_JOBS, r.job)) { r.mood = 'bored'; r.done = 0; continue; }
     if (r.charge <= 0) { r.mood = 'flat'; r.done = 0; rec.short = true; notes.push(`${r.name} has a flat battery and did no work. Give it a charged battery.`); continue; }
     let full = r.job === 'animals' ? state.animals.length + (state.eggs > 0 ? 1 : 0) : robotReach(r);

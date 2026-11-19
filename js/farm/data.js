@@ -312,7 +312,7 @@ item('founders_cake', 'Founders\' cake', 'food', 'Honeycomb, chestnut, milk and 
 
 // The Field-units (leased farm robots): their names and what they say (by mood).
 export const ROBOT_NAMES = ['Mochi', 'Sprocket', 'Tamago', 'Pebble', 'Kettle', 'Daikon', 'Bolt', 'Yuzu'];
-export const ROBOT_JOBS = { water: 'Water', harvest: 'Harvest', animals: 'Animals', rest: 'Rest' };
+export const ROBOT_JOBS = { water: 'Water', harvest: 'Harvest', animals: 'Animals', batteries: 'Batteries', rest: 'Rest' };
 export const ROBOT_MOODS = {
   happy: ['Beep! Today was a good day.', 'All tasks done. The soil smells nice.', 'Whirr. I like this farm.'],
   proud: ['New skill level! I counted every leaf.', 'I am getting very good at this. Beep beep.'],
@@ -320,4 +320,5 @@ export const ROBOT_MOODS = {
   flat: ['Zzz… battery flat… please charge…', '…bip. (It is too flat to say more.)'],
   bored: ['Resting. Watching the sun-line.', 'No job today. I counted clouds. There are none; it is a colony.'],
   idle: ['Nothing needed doing. I polished my wheels.', 'Everything was already done! Beep.'],
+  keeper: ['Everyone is charged. I counted twice.', 'Battery round done. Nobody went flat on my watch.', 'I like the chargers. They hum back.'],
 };

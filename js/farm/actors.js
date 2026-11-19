@@ -45,7 +45,8 @@ function faceTexture(look, blink) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
 }
 function figure(look, tall = 1.62) {
-  const g = new THREE.Group(), skinC = look.skin || '#f3d3b8', skin = toon(skinC), hair = toon(look.hair || '#222'), top = toon(look.top || '#e8e2d0'), bot = toon(look.bottom || '#2c3a66'), boot = toon('#6a452c');
+  if (look.suit) look = { ...look, top: '#f2f0ea', bottom: '#e9e6de', bib: false, apron: null };
+  const g = new THREE.Group(), skinC = look.skin || '#f3d3b8', skin = toon(skinC), hair = toon(look.hair || '#222'), top = toon(look.top || '#e8e2d0'), bot = toon(look.bottom || '#2c3a66'), boot = toon(look.suit ? '#7b8794' : '#6a452c');
   const part = (geo, mat, x, y, z, ink = 0, parent = g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); if (ink) { const o = new THREE.Mesh(geo, INK); o.scale.setScalar(1 + ink); m.add(o); } return m; };
   const st = look.style || 'short', isSato = st === 'bob';
   // legs and boots
@@ -90,7 +91,23 @@ function figure(look, tall = 1.62) {
     if (st === 'cap') { part(new THREE.SphereGeometry(HR * 1.13, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.4), toon(look.cap || look.top), 0, 0.03, 0, 0.04, head); part(new THREE.CylinderGeometry(0.17, 0.17, 0.025, 14), toon(look.cap || look.top), 0, 0.15, 0.29, 0, head); }
     if (st === 'cap' && look.capBadge) { part(new THREE.CylinderGeometry(HR * 1.1, HR * 1.1, 0.06, 20), toon('#111827'), 0, 0.13, 0, 0, head); part(new THREE.BoxGeometry(0.07, 0.08, 0.02), toon('#e8c45a', { emissive: 0x3a2a00 }), 0, 0.22, HR * 1.06, 0, head); const vis = part(new THREE.CylinderGeometry(0.24, 0.24, 0.03, 18, 1, false, -Math.PI / 2, Math.PI), toon('#0d1424'), 0, 0.12, HR * 0.86, 0.08, head); vis.rotation.x = 0.25; }
   }
-  if (look.hat || isSato) {            // the straw hat, hanging on her back as in her picture
+  if (look.suit) {                     // the belt: a white space suit with orange trim, a round glass helmet and a pack
+    const suit = toon('#f2f0ea'), trim = toon('#e0782a'), grey = toon('#7b8794');
+    part(new THREE.TorusGeometry(0.17, 0.05, 8, 18), grey, 0, 0.86, 0).rotation.x = Math.PI / 2;
+    part(new THREE.CylinderGeometry(0.205, 0.205, 0.05, 14), trim, 0, 0.57, 0);
+    part(new THREE.BoxGeometry(0.12, 0.09, 0.03), toon('#3fa7a3', { emissive: 0x0a2a28 }), -0.06, 0.7, 0.19);
+    const pack = new THREE.Group(); pack.position.set(0, 0.68, -0.2); g.add(pack);
+    part(new THREE.BoxGeometry(0.34, 0.36, 0.16), suit, 0, 0, 0, 0.06, pack);
+    for (const x of [-0.09, 0.09]) part(new THREE.CapsuleGeometry(0.055, 0.22, 3, 8), trim, x, 0, -0.1, 0.06, pack);
+    for (const x of [-0.11, 0.11]) part(new THREE.CylinderGeometry(0.035, 0.05, 0.08, 8), grey, x, -0.22, -0.06, 0, pack);
+    const blink = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 4), new THREE.MeshBasicMaterial({ color: '#7dffb0' })); blink.position.set(0.12, 0.16, 0.085); pack.add(blink);
+    const glass = new THREE.Mesh(new THREE.SphereGeometry(HR * 1.42, 28, 20), new THREE.MeshStandardMaterial({ color: '#cfeefa', transparent: true, opacity: 0.22, roughness: 0.05, metalness: 0.2, depthWrite: false }));
+    glass.renderOrder = 3; head.add(glass);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(HR * 1.36, 0.035, 8, 28), grey); rim.rotation.x = Math.PI / 2; rim.position.y = -HR * 0.55; head.add(rim);
+    const shine = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7 })); shine.position.set(-0.2, 0.22, 0.36); shine.scale.set(1, 1.6, 0.4); head.add(shine);
+    const ant = part(new THREE.CylinderGeometry(0.008, 0.008, 0.2, 4), grey, 0.2, 0.42, -0.1, 0, head); ant.rotation.z = -0.3;
+    part(new THREE.SphereGeometry(0.03, 6, 4), new THREE.MeshBasicMaterial({ color: '#ff6a5a' }), 0.23, 0.52, -0.1, 0, head);
+  } else if (look.hat || isSato) {            // the straw hat, hanging on her back as in her picture
     const straw = toon('#e3bf6a'), hat = new THREE.Group(); hat.position.set(0, 0.86, -0.25); hat.rotation.x = -1.32; g.add(hat);
     part(new THREE.CylinderGeometry(0.34, 0.36, 0.026, 26), straw, 0, 0, 0, 0.04, hat);
     part(new THREE.SphereGeometry(0.2, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), straw, 0, 0, 0, 0.05, hat);
@@ -178,7 +195,7 @@ export class Actor {
     this.idle = o.pallas ? null : art.sheet(key + '_idle_front');
     this.acts = {}; if (!o.pallas) for (const a of ['hoe', 'water', 'fish']) this.acts[a] = art.sheet(`${key}_${a}`);
     this.act = null; this.actT = 0;
-    const mname = o.pallas ? 'pallas' : id;
+    const mname = o.pallas ? 'pallas' : o.suit ? null : id;      // in the suit she is the built figure (no suit model yet)
     if (mname && art.hasModel(mname)) {
       this.mode = 'model'; this.body = new THREE.Group(); this.inner = new THREE.Group(); this.body.add(this.inner); this.group.add(this.body);
       art.model(mname).then((m) => {
@@ -186,7 +203,7 @@ export class Actor {
         if (!o.pallas) { const r = rigFigurine(m); r.scale.setScalar(this.tall / r.userData.height); this.body.userData.limbs = r.userData.limbs; this.inner.add(r); this.rigged = true; this.rigH = r.userData.height; this.applyTool(); }
         else { m.scale.setScalar(this.tall / (s[1] || 1)); this.inner.add(m); }
       });
-    } else if (o.pallas && this.views.front) {
+    } else if (o.pallas && this.views.front && !o.suit) {
       this.mode = 'pic'; this.mat = world.spriteMat(this.views.front.tex);
       this.plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.mat); this.plane.geometry.translate(0, 0.5, 0);
       this.body = new THREE.Group(); this.body.add(this.plane); this.group.add(this.body); world.facers.push(this.body);

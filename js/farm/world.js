@@ -89,7 +89,10 @@ const PROPS = {
   charger: { model: () => (art.hasModel('solar_charger') ? 'solar_charger' : 'solar_panel'), h: 1.2, fit: 'foot' },
   farm_bot: { model: 'farm_bot', h: 0.8, fit: 'foot', turn: true },
   asteroid: { model: 'asteroid', h: 0.9, face: true, maxW: 0.95 }, asteroid_big: { model: 'asteroid_big', h: 1.6, fit: 'foot' }, buoy: { model: 'jump_buoy', h: 1.4, fit: 'foot' },
-  launch_pad: { h: 0.1 }, shuttle_pad: { h: 0.1 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, shuttle_gate: { h: 3.4 },
+  launch_pad: { h: 0.1 }, shuttle_pad: { h: 0.1 },
+  // 2026-11-19: the open belt (sector markers, pickup pods, landmarks) and Sato's mining unit; built stand-ins
+  sector_buoy: { model: 'jump_buoy', h: 1.7, fit: 'foot' }, sector_sign: { h: 2.6 }, pickup_pod: { h: 2.2 }, mining_bot: { model: 'mining_bot', h: 0.9, fit: 'foot' },
+  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, shuttle_gate: { h: 3.4 },
   hull_window: { h: 12 }, hull_wall: { h: 10 }, glass_roof: { h: 16 }, vending: { model: 'vending', h: 1.9, fit: 'foot' }, feed_sacks: { model: 'feed_sacks', h: 0.8, fit: 'foot' },
   crane: { model: 'dock_crane', h: 5.5, fit: 'foot' },
   bay_window: { h: 10 }, landing_pad: { h: 0.1 }, hazard_stripes: { h: 0.05 }, trader_ship: { model: 'cartel_ship', h: 5.2, fit: 'foot' }, shuttle: { model: 'shuttle', h: 3.8, fit: 'foot' },
@@ -342,6 +345,63 @@ export class World {
         break;
       }
       case 'buoy': { g.add(cyl(0.06, 0.06, 1.0, std({ color: 0xd9dee3, metalness: 0.4 }), 0, 0.2, 0, 6), cyl(0.35, 0.25, 0.3, std({ color: 0xe8b830 }), 0, 0.1, 0, 10)); const l = ball(0.16, new THREE.MeshBasicMaterial({ color: 0x7dffb0 }), 0, 1.3, 0, 1); l.castShadow = false; g.add(l); const pl = new THREE.PointLight(0x7dffb0, 6, 6, 1.6); pl.position.y = 1.3; g.add(pl); break; }
+      case 'sector_sign': {                              // SECTOR n, floating over the line, turned to the camera
+        const n = o.sector || 1, hue = sectorColor(n), sign = new THREE.Group(); sign.position.y = 2.2;
+        const t = panelTex('sector:' + n, 512, 160, (x, W, H) => { x.clearRect(0, 0, W, H); x.fillStyle = 'rgba(6,12,24,.72)'; x.beginPath(); x.roundRect(8, 8, W - 16, H - 16, 40); x.fill(); x.strokeStyle = '#' + hue.getHexString(); x.lineWidth = 8; x.stroke(); x.fillStyle = '#eaf6ff'; x.font = '700 76px "Chakra Petch", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(`▲ SECTOR ${n}`, W / 2, H / 2 + 4); });
+        const q = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.81), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, fog: false })); q.renderOrder = 4; sign.add(q); g.add(sign); this.facers.push(sign);
+        break;
+      }
+      case 'pickup_pod': {                               // a lit pad, a little white capsule with an orange band, a blinking mast
+        const pad = new THREE.Mesh(new THREE.CircleGeometry(1.25, 28), std({ color: 0x2b3440 })); pad.rotation.x = -Math.PI / 2; pad.position.y = 0.03; g.add(pad);
+        const ring = new THREE.Mesh(new THREE.RingGeometry(1.08, 1.25, 28), glow(0x5fffd2)); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; g.add(ring);
+        for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3, l = ball(0.06, glow(0xffd36a), Math.cos(a) * 1.0, 0.06, Math.sin(a) * 1.0, 0); l.castShadow = false; g.add(l); }
+        const body = cyl(0.42, 0.48, 0.9, std({ color: 0xf2f0ea, roughness: 0.5, metalness: 0.2 }), 0, 0.12, 0, 16); g.add(body);
+        g.add(cyl(0.49, 0.49, 0.14, std({ color: 0xe0782a }), 0, 0.5, 0, 16), cyl(0.2, 0.36, 0.18, SLATE(), 0, 0.02, 0, 12));
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x9fd8ee, roughness: 0.15, metalness: 0.3, transparent: true, opacity: 0.8 })); dome.position.y = 1.02; g.add(dome);
+        for (const sx of [-1, 1]) { const leg = box(0.06, 0.4, 0.06, SLATE(), sx * 0.42, 0, 0.3); leg.rotation.z = sx * 0.3; g.add(leg); }
+        g.add(cyl(0.03, 0.03, 1.6, std({ color: 0xd9dee3, metalness: 0.4 }), 0.95, 0, -0.6, 6));
+        const bulb = ball(0.13, glow(0x5fffd2), 0.95, 1.7, -0.6, 1); bulb.castShadow = false; g.add(bulb);
+        const halo = new THREE.Mesh(new THREE.SphereGeometry(0.34, 12, 8), new THREE.MeshBasicMaterial({ color: 0x5fffd2, transparent: true, opacity: 0.25, depthWrite: false })); halo.position.copy(bulb.position); g.add(halo);
+        (this.beacons ||= []).push({ m: bulb, l: { intensity: 0 } }, { m: halo, l: { intensity: 0 } });
+        break;
+      }
+      case 'mining_bot': {                               // Gravel: a squat orange unit on treads with a drill for an arm
+        const orange = std({ color: 0xe0782a, roughness: 0.55, metalness: 0.2 }), dk = SLATE();
+        for (const sx of [-1, 1]) g.add(box(0.14, 0.16, 0.5, dk, sx * 0.24, 0, 0));
+        g.add(box(0.42, 0.34, 0.42, orange, 0, 0.14, 0), box(0.3, 0.12, 0.3, WHITE(), 0, 0.48, 0));
+        const lamp = ball(0.06, glow(0xfff2b8), 0, 0.38, 0.22, 0); lamp.castShadow = false; g.add(lamp);
+        const eye = box(0.22, 0.07, 0.02, glow(0x7dffb0), 0, 0.27, 0.215); eye.castShadow = false; g.add(eye);
+        const arm = new THREE.Group(); arm.position.set(0.28, 0.32, 0.05); g.add(arm); g.userData.arm = arm;
+        arm.add(box(0.08, 0.08, 0.3, dk, 0, -0.04, 0.12)); const bit = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.22, 8), std({ color: 0xcfd6dc, metalness: 0.6, roughness: 0.3 })); bit.rotation.x = Math.PI / 2; bit.position.set(0, 0, 0.36); arm.add(bit);
+        break;
+      }
+      case 'derelict': {                                 // an old nav buoy from before the war, tilted, one light still trying
+        const rust = std({ color: 0x8a5a3a, roughness: 0.9 }), t = new THREE.Group(); t.rotation.z = 0.35; t.rotation.x = 0.2; g.add(t);
+        t.add(cyl(0.45, 0.55, 1.4, rust, 0, 0.4, 0, 10), cyl(0.06, 0.06, 1.2, std({ color: 0x9a958c }), 0, 1.8, 0, 6));
+        for (const sx of [-1, 1]) { const w = box(1.1, 0.04, 0.5, std({ color: 0x24324a, metalness: 0.4 }), sx * 1.0, 1.1, 0); w.rotation.z = sx * 0.25 + (sx > 0 ? 0.5 : 0); t.add(w); }
+        const l = ball(0.1, glow(0xff5a4a), 0, 3.0, 0, 1); l.castShadow = false; t.add(l); (this.beacons ||= []).push({ m: l, l: { intensity: 0 } });
+        break;
+      }
+      case 'comet': {                                    // a sleeping comet: a dirty snowball with a faint tail
+        const ice = new THREE.Mesh(new THREE.IcosahedronGeometry(1.25, 2), std({ color: 0xdfeef6, roughness: 0.6, flatShading: true })); ice.position.y = 1.2; ice.scale.set(1.1, 0.85, 1); ice.castShadow = true; g.add(ice);
+        for (let k = 0; k < 3; k++) { const tail = new THREE.Mesh(new THREE.ConeGeometry(0.9 - k * 0.2, 7 + k * 2, 12, 1, true), new THREE.MeshBasicMaterial({ color: k ? 0x8fd8ff : 0xeaf8ff, transparent: true, opacity: 0.14 - k * 0.03, depthWrite: false, side: THREE.DoubleSide })); tail.rotation.x = -Math.PI / 2 + 0.15; tail.position.set(0, 1.6 + k * 0.2, -(3.5 + k)); g.add(tail); }
+        break;
+      }
+      case 'wreck': {                                    // a hull section of an old freighter, ribs showing, her name half burned off
+        const hull = std({ map: art.tex('hull_plate', { repeat: 0.5 }), side: THREE.DoubleSide }), ribs = SLATE();
+        const shell = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 4.2, 16, 1, true, 0, Math.PI * 1.25), hull); shell.rotation.z = Math.PI / 2; shell.rotation.x = 0.3; shell.position.y = 1.2; shell.castShadow = true; g.add(shell);
+        for (let k = -2; k <= 2; k++) { const rb = new THREE.Mesh(new THREE.TorusGeometry(1.62, 0.07, 6, 18, Math.PI * 1.3), ribs); rb.rotation.y = Math.PI / 2; rb.rotation.z = 0.3; rb.position.set(k * 0.95, 1.2, 0); g.add(rb); }
+        const name = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.4), new THREE.MeshBasicMaterial({ map: plate('HESP..', 1.6, 0.4, { bg: '#3a3f46', fg: '#e8e2d0', edge: '#6a6f76' }) })); name.position.set(0, 1.8, 1.62); g.add(name);
+        break;
+      }
+      case 'far_marker': {                               // the last buoy the colony ever set: a lattice mast and a great ring
+        const m2 = std({ color: 0xd9dee3, metalness: 0.5, roughness: 0.4 });
+        for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + 0.78; g.add(cyl(0.04, 0.04, 5.2, m2, Math.cos(a) * 0.3, 0, Math.sin(a) * 0.3, 5)); }
+        const ringM = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.08, 8, 40), glow(0xffd36a)); ringM.position.y = 5.0; g.add(ringM); g.userData.spin = ringM;
+        (this.spinners ||= []).push({ o: ringM, axis: 'y', speed: 0.6 });
+        const top = ball(0.22, glow(0xffd36a), 0, 5.4, 0, 1); top.castShadow = false; g.add(top); (this.beacons ||= []).push({ m: top, l: { intensity: 0 } });
+        break;
+      }
       case 'launch_pad': case 'shuttle_pad': { const r = 0.95; const d0 = new THREE.Mesh(new THREE.CircleGeometry(r, 24), std({ color: kind === 'launch_pad' ? 0x3c4650 : 0x6b6258 })); d0.rotation.x = -Math.PI / 2; d0.position.y = 0.04; g.add(d0); const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.15, r, 24), new THREE.MeshBasicMaterial({ color: kind === 'launch_pad' ? 0x7dffe0 : 0xe8b830 })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; g.add(ring); break; }
       case 'haze': {                                     // a low glowing patch of toxic (green) or radioactive (yellow) air
         const c = o.hazard === 2 ? 0xe8e040 : 0x7dff5a;
@@ -780,9 +840,9 @@ export class World {
       const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : cp ? 'colony_path' : GROUND_TEX[c] || 'soil_dry';
       const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : c === 'd' ? 0.015 : 0, false, c === 'c' ? 0.34 : c === 'k' || c === 'b' || c === 'd' ? 0.5 : 0.25), std({ map: art.tex(slot, { repeat: 1 }), color: c === 'f' ? 0xb48a66 : c === 'c' ? 0xd8d2c8 : 0xffffff })); m.receiveShadow = true; R.add(m);
     }
-    this.colony.setCentre(H / 2); this.spinners = []; this.beacons = []; this.cars = []; this.bots = null; this.pools = null;
+    this.colony.setCentre(H / 2); this.spinners = []; this.beacons = []; this.cars = []; this.bots = null; this.pools = null; this.rocks = null;
     if (!map.indoor && !map.ruins) R.add(buildSurroundings(map, this.season));   // terraces rising into the cylinder's curve
-    else if (map.belt) R.add(spaceBackdrop(W, H));       // the belt: stars, the Earth, Eden's hull, drifting rocks
+    else if (map.belt) R.add(spaceBackdrop(W, H, map));  // the belt: stars, the Earth, Eden's hull, sector bands
     else if (!map.indoor) {                              // the Old World: ash plains and broken towers
       const slot = map.ruins ? 'ash_ground' : 'grass_' + SEASON_KEY[this.season];
       const t = art.tex(slot, { repeat: 1 }).clone(); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(60, 60); t.needsUpdate = true;
@@ -880,6 +940,8 @@ export class World {
     const g = kind ? this.makeProp(kind, o) : new THREE.Group(); if (o.procKind) g.add(this.proc(o.procKind, o));
     g.position.set(x, o.h0 || 0, y); this.tileObjs.set(key, g); this.dyn.add(g); return g;
   }
+  // The belt's rocks, drawn instanced from the sim's grid (state.mine.cells), only those near Sato (see BeltRocks).
+  beltField(mine) { if (this.rocks) this.rocks.dispose(); this.rocks = new BeltRocks(this.root, mine); return this.rocks; }
   unplace(key) { const old = this.tileObjs.get(key); if (old) { this.dyn.remove(old); this.unface(old); this.tileObjs.delete(key); } }
 
   // ------------------------------------------------------------ effects
@@ -912,6 +974,7 @@ export class World {
     for (const b of this.beacons || []) { const on = Math.sin(this.t * 3.2) > 0.2; b.m.visible = on || (this.night || 0) < 0.3; b.l.intensity = on ? (this.night || 0) * 18 : 0; }
     for (const g of this.steam || []) for (const m of g.children) { const k = ((this.t * 0.25 + m.userData.seed) % 1); m.position.set(m.userData.x + Math.sin(this.t + m.userData.seed) * 0.15, 0.3 + k * 1.7, m.userData.z); m.scale.setScalar(0.7 + k * 1.6); m.material.opacity = 0.42 * Math.sin(k * Math.PI); }
     if (this.bots) this.bots.update(dt, this.t);
+    if (this.rocks) this.rocks.update(px, py);
     for (const f of this.facers) f.rotation.y = this.yaw;
     for (const m of this.waterMats || []) m.map.offset.set(this.t * 0.015, this.t * 0.01);
     for (const l of this.lamps || []) l.intensity = (this.night || 0) * 14;
@@ -1001,19 +1064,82 @@ function earthBand() {
   EARTH = new THREE.CanvasTexture(c); EARTH.colorSpace = THREE.SRGBColorSpace; return EARTH;
 }
 
-// Space around a belt sector: a star sphere, the Earth huge and close, Eden's hull drum, far rocks, a dust lane floor.
-function spaceBackdrop(W, H) {
-  const g = new THREE.Group();
-  const n = 1500, pos = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const u = Math.random() * 2 - 1, a = Math.random() * 6.283, r = 600; pos[i * 3] = Math.sqrt(1 - u * u) * Math.cos(a) * r + W / 2; pos[i * 3 + 1] = Math.abs(u) * r * 0.9 + 20; pos[i * 3 + 2] = Math.sqrt(1 - u * u) * Math.sin(a) * r + H / 2; }
+// Space around the belt: a star sphere, the Earth far to the north, Eden's hull drum behind the launch apron, far rocks
+// down both sides, and on the dust lane a tint for each sector (blue-grey near home, violet, then gold far out) with a
+// glowing line where one sector meets the next.
+export const sectorColor = (n) => new THREE.Color().setHSL(0.58 - Math.min(1, (n - 1) / 19) * 0.5, 0.55, 0.55);
+function spaceBackdrop(W, H, map = {}) {
+  const g = new THREE.Group(), cx = W / 2, cz = H / 2;
+  const n = 1800, pos = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const u = Math.random() * 2 - 1, a = Math.random() * 6.283, r = 700; pos[i * 3] = Math.sqrt(1 - u * u) * Math.cos(a) * r + cx; pos[i * 3 + 1] = Math.abs(u) * r * 0.9 + 20; pos[i * 3 + 2] = Math.sqrt(1 - u * u) * Math.sin(a) * r + cz; }
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.add(new THREE.Points(pg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false })));
-  const earth = new THREE.Mesh(new THREE.SphereGeometry(120, 48, 32), new THREE.MeshBasicMaterial({ map: earthGlobe(), fog: false })); earth.position.set(W / 2 + 50, -150, H / 2 - 250); earth.rotation.set(0.4, 2.2, 0); g.add(earth);
-  const glow = new THREE.Mesh(new THREE.SphereGeometry(150, 32, 16), new THREE.MeshBasicMaterial({ color: 0x6fb4ff, transparent: true, opacity: 0.18, side: THREE.BackSide, fog: false })); glow.position.copy(earth.position); g.add(glow);
-  const hull = new THREE.Mesh(new THREE.CylinderGeometry(60, 60, 520, 40, 1, true), std({ map: art.tex('hull_plate', { repeat: 0.5 }), side: THREE.DoubleSide })); hull.rotation.z = Math.PI / 2; hull.position.set(W / 2 - 40, -95, H / 2 + 120); hull.material.fog = false; g.add(hull);
-  for (let i = 0; i < 6; i++) { const ring = cyl(61, 61, 2, std({ color: 0x9fb0bf }), 0, 0, 0, 40); ring.rotation.z = Math.PI / 2; ring.position.set(W / 2 - 280 + i * 100, -95, H / 2 + 120); g.add(ring); }
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(W + 30, H + 30), new THREE.MeshStandardMaterial({ color: 0x1a1c26, transparent: true, opacity: 0.55, roughness: 1 })); floor.rotation.x = -Math.PI / 2; floor.position.set(W / 2, -0.06, H / 2); floor.receiveShadow = true; g.add(floor);
-  for (let i = 0; i < 70; i++) { const a = i * 2.399, d = 12 + (i % 9) * 6, s = 0.4 + (i % 5) * 0.5; const r = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), std({ color: [0x6e6258, 0x5a5550, 0x7a6a5a][i % 3], flatShading: true })); r.position.set(W / 2 + Math.cos(a) * d, -1 + (i % 7) * 1.2 - 3, H / 2 + Math.sin(a) * d); r.rotation.set(i, i * 2, i * 3); g.add(r); }
+  const earth = new THREE.Mesh(new THREE.SphereGeometry(140, 48, 32), new THREE.MeshBasicMaterial({ map: earthGlobe(), fog: false })); earth.position.set(cx + 90, -170, -260); earth.rotation.set(0.4, 2.2, 0); g.add(earth);
+  const glow2 = new THREE.Mesh(new THREE.SphereGeometry(172, 32, 16), new THREE.MeshBasicMaterial({ color: 0x6fb4ff, transparent: true, opacity: 0.18, side: THREE.BackSide, fog: false })); glow2.position.copy(earth.position); g.add(glow2);
+  const hull = new THREE.Mesh(new THREE.CylinderGeometry(60, 60, 520, 40, 1, true), std({ map: art.tex('hull_plate', { repeat: 0.5 }), side: THREE.DoubleSide })); hull.rotation.z = Math.PI / 2; hull.position.set(cx - 40, -95, H + 110); hull.material.fog = false; g.add(hull);
+  for (let i = 0; i < 6; i++) { const ring = cyl(61, 61, 2, std({ color: 0x9fb0bf }), 0, 0, 0, 40); ring.rotation.z = Math.PI / 2; ring.position.set(cx - 280 + i * 100, -95, H + 110); g.add(ring); }
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(W + 60, H + 30), new THREE.MeshStandardMaterial({ color: 0x1a1c26, transparent: true, opacity: 0.55, roughness: 1 })); floor.rotation.x = -Math.PI / 2; floor.position.set(cx, -0.06, cz); floor.receiveShadow = true; g.add(floor);
+  const far = new THREE.DodecahedronGeometry(1, 0), farM = [0x6e6258, 0x5a5550, 0x7a6a5a].map((c) => std({ color: c, flatShading: true }));
+  for (let i = 0; i < 160; i++) { const side = i % 2 ? -1 : 1, s2 = 0.4 + (i % 5) * 0.5, r = new THREE.Mesh(far, farM[i % 3]); r.scale.setScalar(s2); r.position.set(side > 0 ? W + 4 + ((i * 37) % 26) : -4 - ((i * 53) % 26), -5 + (i % 7) * 1.1, ((i * 0.618) % 1) * (H + 40) - 20); r.rotation.set(i, i * 2, i * 3); g.add(r); }
+  if (map.sectors) {
+    const sh = map.sectorH, top = (k) => (map.sectors - k) * sh + 1;
+    for (let k = 1; k <= map.sectors; k++) {
+      const c = sectorColor(k), band = new THREE.Mesh(new THREE.PlaneGeometry(W - 2, sh), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.07 + (k % 2) * 0.03, depthWrite: false }));
+      band.rotation.x = -Math.PI / 2; band.position.set(cx, 0.012, top(k) + sh / 2); band.renderOrder = 1; g.add(band);
+      if (k > 1) { const line = new THREE.Mesh(new THREE.PlaneGeometry(W - 2, 0.12), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.8, depthWrite: false })); line.rotation.x = -Math.PI / 2; line.position.set(cx, 0.02, top(k - 1) + sh); line.renderOrder = 2; g.add(line); }
+    }
+  }
   return g;
+}
+// The belt's rocks: an InstancedMesh for each kind (plain rock, great asteroid, comet ice, rich vein, and the glints on
+// the veins), using the art pack's rock models when there are any. Only the rocks within REACH tiles of Sato are
+// instanced (several hundred stay off the GPU); the list is rebuilt when she has moved a few tiles or a rock breaks.
+const ROCK_GEO = new Map();
+function rockGeo(name, big) {
+  if (ROCK_GEO.has(name)) return ROCK_GEO.get(name);
+  const proc = () => { const geo = new THREE.DodecahedronGeometry(big ? 0.62 : 0.42, 1), p = geo.attributes.position; for (let i = 0; i < p.count; i++) { const k = 0.82 + (((i * 37 + (big ? 5 : 11)) % 17) / 17) * 0.35; p.setXYZ(i, p.getX(i) * k, p.getY(i) * k * 0.85, p.getZ(i) * k); } geo.computeVertexNormals(); return { geo, mat: std({ color: 0xffffff, flatShading: true }), model: false }; };
+  const pr = art.model(name).then((m) => {
+    if (!m) return proc();
+    m.updateMatrixWorld(true); let mesh = null; m.traverse((q) => { if (q.isMesh && !mesh) mesh = q; });
+    if (!mesh) return proc();
+    const geo = mesh.geometry.clone(); geo.applyMatrix4(mesh.matrixWorld); geo.computeBoundingBox(); const bb = geo.boundingBox, sz = Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) || 1;
+    geo.translate(-(bb.min.x + bb.max.x) / 2, -(bb.min.y + bb.max.y) / 2, -(bb.min.z + bb.max.z) / 2); geo.scale(0.9 / sz, 0.9 / sz, 0.9 / sz);
+    const mat = mesh.material.clone(); return { geo, mat, model: true };
+  });
+  ROCK_GEO.set(name, pr); return pr;
+}
+const ROCK_KIND = { 1: { model: 'asteroid', s: 0.95, y: 0.45, tint: [0xffffff, 0xe8dccb, 0xd5d2dc] }, 3: { model: 'asteroid_big', s: 1.5, y: 0.6, big: true, tint: [0xb9b2aa, 0xa49c94] }, 4: { model: 'comet_ice', s: 0.95, y: 0.35, tint: [0xe8f6ff, 0xd2ecff] }, 5: { model: 'asteroid', s: 1.0, y: 0.45, tint: [0xffd890, 0xe8b8ff, 0xb8f0ff] } };
+const GLINT = [0xffd36a, 0xd890ff, 0x8ff4ff];
+class BeltRocks {
+  constructor(root, mine) {
+    this.mine = mine; this.root = new THREE.Group(); root.add(this.root); this.meshes = {}; this.ver = -1; this.at = [1e9, 1e9]; this.REACH = 21; this.alive = true;
+    const count = {}; for (const c of mine.cells) count[c] = (count[c] || 0) + 1;
+    for (const k of [1, 3, 4, 5]) {
+      const d = ROCK_KIND[k], cap = Math.min(count[k] || 0, k === 3 ? 520 : 420) + 4;
+      rockGeo(d.model, d.big).then(({ geo, mat }) => {
+        if (!this.alive) return; const im = new THREE.InstancedMesh(geo, mat, cap); im.castShadow = true; im.frustumCulled = false; im.count = 0;
+        im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); this.meshes[k] = im; this.root.add(im); this.ver = -1;
+      });
+    }
+    const gl = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.11, 0), new THREE.MeshBasicMaterial({ color: 0xffffff }), Math.min(count[5] || 0, 420) * 2 + 4);
+    gl.frustumCulled = false; gl.count = 0; this.meshes.glint = gl; this.root.add(gl);
+  }
+  dispose() { this.alive = false; this.root.parent && this.root.parent.remove(this.root); }
+  update(px, py) {
+    const m = this.mine; if (m.ver === this.ver && Math.hypot(px - this.at[0], py - this.at[1]) < 3) return;
+    this.ver = m.ver; this.at = [px, py];
+    const R = this.REACH, mat = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3(), c = new THREE.Color(), n = { 1: 0, 3: 0, 4: 0, 5: 0, glint: 0 };
+    const x0 = Math.max(0, Math.floor(px - 1 - R)), x1 = Math.min(m.w - 1, Math.ceil(px - 1 + R)), y0 = Math.max(0, Math.floor(py - 1 - R)), y1 = Math.min(m.h - 1, Math.ceil(py - 1 + R));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const k = m.cells[y * m.w + x], im = this.meshes[k]; if (!im || n[k] >= im.instanceMatrix.count) continue;
+      const dx = x + 1.5 - px, dy = y + 1.5 - py; if (dx * dx + dy * dy > R * R) continue;
+      const h = ((x * 73856093) ^ (y * 19349663)) >>> 0, f = (h % 1000) / 1000, d = ROCK_KIND[k];
+      e.set(h % 7, (h >> 3) % 7, (h >> 6) % 7); q.setFromEuler(e); const s = d.s * (0.82 + f * 0.36);
+      v.set(x + 1.5 + ((h >> 9) % 10 - 5) * 0.02, d.y + ((h >> 13) % 10) * 0.025, y + 1.5 + ((h >> 17) % 10 - 5) * 0.02);
+      mat.compose(v, q, sc.set(s, s * (k === 3 ? 0.9 : 0.85), s)); im.setMatrixAt(n[k], mat); im.setColorAt(n[k], c.set(d.tint[h % d.tint.length])); n[k]++;
+      if (k === 5) for (let j = 0; j < 2; j++) { const g = this.meshes.glint; if (n.glint >= g.instanceMatrix.count) break; const a = (h % 6) + j * 2.6; mat.compose(sc.set(v.x + Math.cos(a) * 0.3 * s, v.y + 0.18 + j * 0.12, v.z + Math.sin(a) * 0.3 * s), q, new THREE.Vector3(1, 1.6, 1)); g.setMatrixAt(n.glint, mat); g.setColorAt(n.glint, c.set(GLINT[(h >> 4) % 3])); n.glint++; }
+    }
+    for (const [k, im] of Object.entries(this.meshes)) { im.count = n[k]; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
+  }
 }
 let GLOBE = null;
 function earthGlobe() {

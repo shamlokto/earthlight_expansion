@@ -518,7 +518,8 @@ function interiors() {
 // A site from the sim's grid (state.mine): the Old World (mode 'earth': rubble, walls of ruin, haze) or a
 // belt sector (mode 'belt': asteroid rocks to drill, great unbreakable rocks, a dark dust lane).
 export function ruinsMap(mine) {
-  const belt = mine.mode === 'belt';
+  if (mine.mode === 'belt') return beltMap(mine);
+  const belt = false;
   const m = new MapDef('ruins', mine.w + 2, mine.h + 3, belt ? 'v' : 'a', { name: belt ? `The belt, sector ${mine.depth || 1}` : `The Old World, level ${mine.depth || mine.floor || 1}`, ruins: true, belt, earth: !belt });
   m.fill(0, 0, m.w - 1, 0, 'x'); m.fill(0, 0, 0, m.h - 1, 'x'); m.fill(m.w - 1, 0, m.w - 1, m.h - 1, 'x'); m.fill(0, m.h - 1, m.w - 1, m.h - 1, 'x');
   m.origin = [1, 1];
@@ -528,6 +529,26 @@ export function ruinsMap(mine) {
   }
   m.prop(belt ? 'launch_pad' : 'shuttle_pad', 8, mine.h + 1, { solid: false, act: 'liftup' });
   m.start = [8.5, mine.h + 1.5];
+  return m;
+}
+
+// The belt (sim.js beltLayout): one long map, the launch apron at the south edge, sectors banding north. The rocks,
+// great asteroids, pods and landmarks are cells of the sim's grid (drawn instanced by world.js, solid in main.js);
+// the map adds the dust lane, the pad, the sector marker buoys and signs, and the landmarks' signs.
+export const BELT_MARK_NAMES = { derelict: 'A derelict nav buoy', comet: 'A sleeping comet', wreck: 'The wreck of the Hesper', far_marker: 'The far marker' };
+function beltMap(mine) {
+  const W = mine.w + 2, H = mine.h + 2, sec = mine.sectorH || 14, ns = mine.sectors || 20;
+  const m = new MapDef('ruins', W, H, 'v', { name: `The belt, sector ${mine.sector || 1}`, ruins: true, belt: true, earth: false });
+  m.fill(0, 0, W - 1, 0, 'x'); m.fill(0, 0, 0, H - 1, 'x'); m.fill(W - 1, 0, W - 1, H - 1, 'x'); m.fill(0, H - 1, W - 1, H - 1, 'x');
+  m.origin = [1, 1]; m.sectorH = sec; m.sectors = ns;
+  for (let s = 1; s < m.sectors; s++) {                       // the line between sector s and s + 1: a buoy at each side, the numbers floating over it
+    const y = (m.sectors - s) * sec + 1;
+    m.prop('sector_buoy', 1, y, { solid: false, sector: s + 1 }); m.prop('sector_buoy', W - 2, y, { solid: false, sector: s + 1 });
+    for (const x of [Math.round(W * 0.25), Math.round(W * 0.75)]) m.prop('sector_sign', x, y, { solid: false, sector: s + 1, south: s });
+  }
+  for (const k of mine.marks || []) m.prop(k.kind, k.x + 1, k.y + 1, { solid: false, act: 'sign', sign: 'belt.' + k.kind, label: BELT_MARK_NAMES[k.kind] });
+  const px = Math.floor(mine.w / 2) + 1; m.prop('launch_pad', px, mine.h - 2, { solid: false, act: 'liftup', label: 'Launch pad' });
+  m.start = [px + 0.5, mine.h - 1.5];
   return m;
 }
 
