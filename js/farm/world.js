@@ -95,6 +95,10 @@ const PROPS = {
   bay_window: { h: 10 }, landing_pad: { h: 0.1 }, hazard_stripes: { h: 0.05 }, trader_ship: { model: 'cartel_ship', h: 5.2, fit: 'foot' }, shuttle: { model: 'shuttle', h: 3.8, fit: 'foot' },
   feed_mill: { model: 'feed_mill', h: 2.6, fit: 'foot' }, charge_terminal: { model: 'charge_terminal', h: 1.6, fit: 'foot' }, house_door: { h: 1 }, starglow: { h: 0.5 },
   fruit_tree: { h: 3.4 }, fruit_tree_young: { h: 2.1 }, sapling: { model: 'sapling', h: 1.0 },
+  // 2026-11-19: colony interiors (the Arrivals hall, the school, the church, the safety depot), built in proc()
+  star_window: { h: 2.6 }, courier_desk: { h: 1.1 }, departures_board: { h: 2.4 }, info_kiosk: { h: 1.8 }, transit_seats: { h: 0.9 }, colony_planter: { h: 1.2 },
+  cubbies: { h: 1.3 }, blackboard: { h: 2.2 }, teacher_desk: { h: 0.9 }, school_desk: { h: 0.7 }, stained_glass: { h: 2.8 }, altar: { h: 1.1 }, candle_stand: { h: 1.2 },
+  pew: { h: 0.9 }, lectern: { h: 1.2 }, map_screen: { h: 2.4 }, front_desk: { h: 1.1 }, lockers: { h: 2.0 }, rescue_drone: { h: 1.0 },
 };
 const BUILDING = {
   house: { model: 'farmhouse', facade: 'buildings/house', wall: 'plank_wall', roof: 'roof_tin' },
@@ -126,6 +130,12 @@ const BUILDING = {
   apartment: { model: ['apartment'], facade: 'buildings/apartment', wall: 'hull_plate', roof: 'roof_tin', flat: true },
   townhouse: { model: ['townhouse', 'cottage_c', 'cottage_b'], facade: 'buildings/townhouse', wall: 'plaster_wall', roof: 'roof_shingle' },
   observatory: { model: ['observatory'], facade: 'buildings/observatory', wall: 'hull_plate', roof: 'roof_tin', observatory: true },
+  // 2026-11-19: the school, the church and the safety depot in Eden Central; the orbital elevator on Terrace Hill.
+  // Models keep their proportions (uniform); the built stand-ins are white-and-teal colony architecture.
+  school: { model: ['school'], facade: 'buildings/school', civic: 'school', uniform: true },
+  church: { model: ['church'], facade: 'buildings/church', civic: 'church', uniform: true },
+  safety_depot: { model: ['safety_depot'], facade: 'buildings/safety_depot', civic: 'depot', uniform: true },
+  orbital_elevator: { model: ['orbital_elevator'], facade: 'buildings/orbital_elevator', elevator: true, uniform: true, tall: true },
 };
 const FRUIT_COLOR = { apple: 0xd8362a, peach: 0xffa48a, cherry: 0xc8102e, persimmon: 0xf07a1a };
 const BLOSSOM = { apple: 0xfbe3ea, peach: 0xf7a8c0, cherry: 0xffc6d9, persimmon: 0xf3f0d6 };
@@ -135,6 +145,19 @@ const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.95, metalness: 
 function box(w, h, d, mat, x = 0, y = 0, z = 0) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y + h / 2, z); m.castShadow = m.receiveShadow = true; return m; }
 function cyl(r0, r1, h, mat, x = 0, y = 0, z = 0, seg = 10) { const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, h, seg), mat); m.position.set(x, y + h / 2, z); m.castShadow = m.receiveShadow = true; return m; }
 function ball(r, mat, x = 0, y = 0, z = 0, detail = 1) { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, detail), mat); m.position.set(x, y, z); m.castShadow = true; return m; }
+// Colony colours for the built stand-ins, and a painted panel (a sign, a screen, a board) as a texture.
+const WHITE = () => std({ color: 0xf2f0ea, roughness: 0.55, metalness: 0.1 }), TEAL = () => std({ color: 0x3fa7a3, roughness: 0.5, metalness: 0.2 }), SLATE = () => std({ color: 0x46525e, metalness: 0.4, roughness: 0.5 });
+const glow = (c) => new THREE.MeshBasicMaterial({ color: c });
+const PANELS = new Map();
+function panelTex(key, w, h, paint) {
+  if (PANELS.has(key)) return PANELS.get(key);
+  const c = document.createElement('canvas'); c.width = w; c.height = h; paint(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; PANELS.set(key, t); return t;
+}
+function plate(text, w, h, { bg = '#0d2a33', fg = '#9ff4ff', edge = '#7dffe0', font = 'bold 44px sans-serif' } = {}) {
+  return panelTex('plate:' + text + bg + fg, 512, Math.round(512 * h / w), (x, W, H) => { x.fillStyle = bg; x.fillRect(0, 0, W, H); x.strokeStyle = edge; x.lineWidth = 8; x.strokeRect(6, 6, W - 12, H - 12); x.fillStyle = fg; x.font = font; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, W / 2, H / 2 + 2); });
+}
+const quad = (w, h, mat) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); return m; };
 
 export class World {
   constructor(canvas) {
@@ -467,6 +490,77 @@ export class World {
         if (o.fruit) for (let i = 0; i < 9; i++) { const a = i * 2.4, r = 0.75 + (i % 3) * 0.12; g.add(ball(0.11, std({ color: FRUIT_COLOR[o.tree] || 0xd8362a, roughness: 0.5 }), Math.cos(a) * r, 1.6 + (i % 4) * 0.25, Math.sin(a) * r, 1)); }
         break;
       }
+      // ---- colony interiors (2026-11-19); built from the first tile, along +x, like the counter
+      case 'star_window': {                              // a long window band high on the back wall, onto the stars and the Earth
+        const w = o.w || 8, view = quad(w - 0.4, 1.3, new THREE.MeshBasicMaterial({ map: earthBand(), fog: false })); view.position.set((w - 1) / 2, 2.05, -0.44); g.add(view);
+        g.add(box(w, 0.12, 0.12, TEAL(), (w - 1) / 2, 1.32, -0.44), box(w, 0.12, 0.12, WHITE(), (w - 1) / 2, 2.7, -0.44));
+        for (let x = 0; x <= w - 0.4; x += 2) g.add(box(0.1, 1.3, 0.1, WHITE(), x - 0.3, 1.4, -0.42));
+        g.add(box(w, 0.06, 0.06, glow(0x7dffe0), (w - 1) / 2, 0.08, -0.44)); break;
+      }
+      case 'departures_board': {                         // a glowing departures screen on a stand
+        const w = o.w || 3, t = panelTex('departures', 512, 256, (x, W, H) => { x.fillStyle = '#071820'; x.fillRect(0, 0, W, H); x.fillStyle = '#ffd36a'; x.font = 'bold 34px sans-serif'; x.fillText('DEPARTURES', 22, 44);
+          const rows = [['08:00', 'MIDDLE DECK', 'ON TIME'], ['10:20', 'LOWER DECK', 'BOARDING'], ['ANY', 'EARTH  (J. MARIS)', 'ASK AT DESK'], ['14:40', 'HUB SUPPLY', 'ON TIME'], ['17:00', 'LANTERN RING', 'ON TIME']];
+          x.font = '24px monospace'; rows.forEach(([a, b, c2], i) => { x.fillStyle = '#9ff4ff'; x.fillText(a, 22, 92 + i * 34); x.fillText(b, 120, 92 + i * 34); x.fillStyle = i === 2 ? '#7dffb0' : '#cfe6ff'; x.fillText(c2, 370, 92 + i * 34); }); });
+        const scr = quad(w - 0.3, 1.2, new THREE.MeshBasicMaterial({ map: t })); scr.position.set((w - 1) / 2, 1.65, 0.07); g.add(scr);
+        g.add(box(w - 0.1, 1.35, 0.12, SLATE(), (w - 1) / 2, 1.0, 0), box(0.14, 1.0, 0.14, WHITE(), (w - 1) / 2 - 0.6, 0, 0), box(0.14, 1.0, 0.14, WHITE(), (w - 1) / 2 + 0.6, 0, 0), box(w - 0.2, 0.08, 0.5, TEAL(), (w - 1) / 2, 0, 0)); break;
+      }
+      case 'info_kiosk': { g.add(box(0.5, 0.9, 0.4, WHITE()), box(0.56, 0.08, 0.46, TEAL(), 0, 0.9)); const sc2 = quad(0.44, 0.6, new THREE.MeshBasicMaterial({ map: plate('DOCK', 300, 400, { font: 'bold 70px sans-serif' }) })); sc2.position.set(0, 1.35, 0.03); g.add(sc2, box(0.5, 0.7, 0.05, SLATE(), 0, 1.0, 0)); break; }
+      case 'courier_desk': {                             // a sleek white desk with a teal band and a screen
+        const w = o.w || 4, cx = (w - 1) / 2; g.add(box(w, 0.95, 0.7, WHITE(), cx), box(w + 0.1, 0.07, 0.8, std({ color: 0xdde4e8, metalness: 0.3, roughness: 0.3 }), cx, 0.95), box(w, 0.12, 0.02, glow(0x7dffe0), cx, 0.55, 0.36), box(w * 0.6, 0.2, 0.03, TEAL(), cx, 0.2, 0.36));
+        const sc2 = quad(0.7, 0.42, new THREE.MeshBasicMaterial({ map: plate('SHUTTLE TO EARTH · 200 cr', 512, 300, { font: 'bold 40px sans-serif' }) })); sc2.position.set(cx + 0.6, 1.33, 0.02); g.add(sc2, box(0.76, 0.48, 0.04, SLATE(), cx + 0.6, 1.08, -0.01), box(0.06, 0.12, 0.06, SLATE(), cx + 0.6, 1.0, 0));
+        const s3 = quad(1.4, 0.3, new THREE.MeshBasicMaterial({ map: plate('COURIER', 512, 110, { font: 'bold 64px sans-serif', bg: '#3fa7a3', fg: '#ffffff', edge: '#ffffff' }) })); s3.position.set(cx - 0.5, 0.62, 0.37); g.add(s3); break;
+      }
+      case 'transit_seats': {                            // a row of metal-and-teal seats on one beam
+        const w = o.w || 3, cx = (w - 1) / 2; g.add(box(w - 0.1, 0.08, 0.12, SLATE(), cx, 0.25, 0), box(0.08, 0.3, 0.3, SLATE(), cx - w / 2 + 0.3, 0, 0), box(0.08, 0.3, 0.3, SLATE(), cx + w / 2 - 0.3, 0, 0));
+        const n = w * 2 - 1; for (let i = 0; i < n; i++) { const x = cx + (i - (n - 1) / 2) * 0.5; g.add(box(0.42, 0.07, 0.42, TEAL(), x, 0.42, 0.02), box(0.42, 0.45, 0.06, std({ color: 0xdfe6ea, metalness: 0.4, roughness: 0.35 }), x, 0.47, -0.2)); }
+        break;
+      }
+      case 'colony_planter': g.add(cyl(0.3, 0.24, 0.5, WHITE(), 0, 0, 0, 14), cyl(0.31, 0.31, 0.05, TEAL(), 0, 0.45, 0, 14), ball(0.32, std({ color: 0x4f9a3a }), 0, 0.75, 0), ball(0.2, std({ color: 0x6fbf5a }), 0.15, 0.95, 0.05), ball(0.18, std({ color: 0x5fae4a }), -0.15, 0.9, -0.08)); break;
+      case 'cubbies': {                                  // little cubby holes with empty name cards and coat hooks
+        const w = o.w || 3, cx = (w - 1) / 2, cols = [0xf08a6c, 0x5fb3b0, 0xf2c230, 0x8fb8e8, 0xa3d977, 0xc89cff]; g.add(box(w - 0.1, 1.2, 0.45, std({ color: 0xe6d3b0 }), cx, 0, -0.2));
+        for (let r = 0; r < 2; r++) for (let i = 0; i < w * 2; i++) { const x = -0.4 + i * 0.5; g.add(box(0.4, 0.42, 0.05, std({ color: cols[(i + r * 3) % 6] }), x + 0.15, 0.12 + r * 0.55, 0.04), box(0.2, 0.08, 0.01, std({ color: 0xffffff }), x + 0.15, 0.45 + r * 0.55, 0.07)); }
+        break;
+      }
+      case 'blackboard': {
+        const w = o.w || 4, cx = (w - 1) / 2, t = panelTex('blackboard', 512, 200, (x, W, H) => { x.fillStyle = '#244a3a'; x.fillRect(0, 0, W, H); x.strokeStyle = 'rgba(255,255,255,.12)'; for (let i = 0; i < 9; i++) { x.beginPath(); x.moveTo(i * 60, 0); x.lineTo(i * 60 + 40, H); x.stroke(); }
+          x.fillStyle = '#f4f1e6'; x.font = '34px cursive, sans-serif'; x.fillText('WELCOME TO SCHOOL!', 40, 56); x.font = '24px cursive, sans-serif'; x.fillText('OUR CLASS:', 40, 110); x.fillStyle = '#ffd36a'; x.beginPath(); x.arc(430, 140, 26, 0, 7); x.fill(); x.strokeStyle = '#ffd36a'; x.lineWidth = 4; for (let a = 0; a < 6.28; a += 0.79) { x.beginPath(); x.moveTo(430 + Math.cos(a) * 34, 140 + Math.sin(a) * 34); x.lineTo(430 + Math.cos(a) * 48, 140 + Math.sin(a) * 48); x.stroke(); } });
+        const bd = quad(w - 0.3, 1.15, new THREE.MeshBasicMaterial({ map: t })); bd.position.set(cx, 1.55, -0.38); g.add(bd, box(w - 0.1, 1.3, 0.06, std({ color: 0x9a6a45 }), cx, 0.9, -0.44), box(w - 0.2, 0.05, 0.12, std({ color: 0x9a6a45 }), cx, 0.92, -0.36)); break;
+      }
+      case 'teacher_desk': { const w = o.w || 2, cx = (w - 1) / 2; g.add(box(w - 0.1, 0.75, 0.7, std({ color: 0xc9a877 }), cx), box(w, 0.06, 0.78, std({ color: 0x9a6a45 }), cx, 0.75), ball(0.12, std({ color: 0xd8362a }), cx + 0.5, 0.9, 0), box(0.3, 0.06, 0.22, std({ color: 0xf2f0ea }), cx - 0.3, 0.81, 0)); break; }
+      case 'school_desk': g.add(box(0.7, 0.05, 0.45, std({ color: 0xe8cf9a }), 0, 0.55, 0.05), box(0.05, 0.55, 0.05, TEAL(), -0.3, 0, 0.22), box(0.05, 0.55, 0.05, TEAL(), 0.3, 0, 0.22), box(0.05, 0.55, 0.05, TEAL(), -0.3, 0, -0.12), box(0.05, 0.55, 0.05, TEAL(), 0.3, 0, -0.12), box(0.36, 0.04, 0.32, std({ color: 0xf08a6c }), 0, 0.32, 0.42), box(0.36, 0.3, 0.04, std({ color: 0xf08a6c }), 0, 0.34, 0.58), box(0.04, 0.32, 0.04, SLATE(), 0, 0, 0.42)); break;
+      case 'stained_glass': {                            // a tall arched window in coloured glass on the back wall
+        const w = o.w || 4, cx = (w - 1) / 2, t = panelTex('stained', 256, 384, (x, W, H) => { const c = ['#e2463a', '#f2c230', '#3fa7a3', '#5f8ad8', '#a35ad0', '#7fbf5a'];
+          for (let j = 0; j < 12; j++) for (let i = 0; i < 8; i++) { x.fillStyle = c[(i * 3 + j * 5) % 6]; x.fillRect(i * 32, j * 32, 32, 32); }
+          x.fillStyle = '#ffe6a0'; x.beginPath(); x.arc(W / 2, H * 0.58, 70, 0, 7); x.fill(); x.fillStyle = '#5f8ad8'; x.beginPath(); x.arc(W / 2, H * 0.58, 46, 0, 7); x.fill(); x.fillStyle = '#7fbf5a'; x.beginPath(); x.ellipse(W / 2 - 10, H * 0.55, 18, 26, 0.4, 0, 7); x.fill();
+          x.strokeStyle = '#2a2420'; x.lineWidth = 5; for (let i = 0; i <= 8; i++) { x.beginPath(); x.moveTo(i * 32, 0); x.lineTo(i * 32, H); x.stroke(); } for (let j = 0; j <= 12; j++) { x.beginPath(); x.moveTo(0, j * 32); x.lineTo(W, j * 32); x.stroke(); } });
+        for (const [dx, k] of [[-1.7, 0.75], [0, 1], [1.7, 0.75]]) { const win = quad(1.1 * k + 0.2, 2.0 * k, new THREE.MeshBasicMaterial({ map: t })); win.position.set(cx + dx, 1.0 + k * 1.0, -0.42); g.add(win); const arch = new THREE.Mesh(new THREE.CircleGeometry((1.1 * k + 0.2) / 2, 18, 0, Math.PI), new THREE.MeshBasicMaterial({ map: t })); arch.position.set(cx + dx, 1.0 + k * 2.0, -0.42); g.add(arch); }
+        const pl = new THREE.PointLight(0xffd7a0, 6, 7, 1.6); pl.position.set(cx, 2.2, 0.6); g.add(pl); break;
+      }
+      case 'altar': { const w = o.w || 2, cx = (w - 1) / 2; g.add(box(w + 0.2, 0.95, 0.8, WHITE(), cx), box(w + 0.3, 0.06, 0.9, std({ color: 0xc9a14a, metalness: 0.6, roughness: 0.35 }), cx, 0.95), box(w * 0.7, 0.05, 0.92, std({ color: 0x3fa7a3 }), cx, 0.99));
+        for (const dx of [-0.6, 0.6]) { g.add(cyl(0.05, 0.06, 0.22, WHITE(), cx + dx, 1.0, 0, 8)); const f = ball(0.04, glow(0xffc870), cx + dx, 1.26, 0, 1); f.castShadow = false; g.add(f); }
+        g.add(ball(0.16, std({ color: 0x6fbf5a }), cx, 1.12, 0)); break; }
+      case 'candle_stand': {                             // tiers of little lit candles for those lost in the siege
+        const w = o.w || 2, cx = (w - 1) / 2, brass = std({ color: 0xc9a14a, metalness: 0.6, roughness: 0.35 });
+        g.add(box(w - 0.2, 0.5, 0.5, brass, cx, 0, 0), box(w - 0.4, 0.15, 0.4, brass, cx, 0.5, -0.05), box(w - 0.6, 0.15, 0.3, brass, cx, 0.65, -0.1));
+        for (let i = 0; i < 18; i++) { const r = i % 3, x = cx - (w - 0.5) / 2 + ((i * 7) % 6) * ((w - 0.5) / 5) * (1 - r * 0.2), y = 0.5 + r * 0.15, z = 0.12 - r * 0.07; g.add(cyl(0.025, 0.025, 0.1, WHITE(), x, y, z, 6)); const f = ball(0.022, glow(0xffc060), x, y + 0.13, z, 0); f.castShadow = false; g.add(f); }
+        const pl = new THREE.PointLight(0xffb860, 3, 4, 1.8); pl.position.set(cx, 1.0, 0.2); g.add(pl); break;
+      }
+      case 'pew': { const w = o.w || 3, cx = (w - 1) / 2, wd = std({ color: 0xa9774a }); g.add(box(w - 0.1, 0.07, 0.45, wd, cx, 0.42, 0.05), box(w - 0.1, 0.5, 0.06, wd, cx, 0.45, -0.2), box(0.08, 0.85, 0.5, std({ color: 0x8a5a35 }), cx - w / 2 + 0.1, 0, 0), box(0.08, 0.85, 0.5, std({ color: 0x8a5a35 }), cx + w / 2 - 0.1, 0, 0), box(w - 0.3, 0.1, 0.06, TEAL(), cx, 0.82, -0.2)); break; }
+      case 'lectern': g.add(cyl(0.18, 0.24, 0.9, std({ color: 0xa9774a }), 0, 0, 0, 8), box(0.5, 0.06, 0.4, std({ color: 0x8a5a35 }), 0, 0.95, 0), box(0.34, 0.03, 0.26, std({ color: 0xf2ead6 }), 0, 1.0, 0)); break;
+      case 'map_screen': {                               // the deck map: every corridor and hatch, all green
+        const w = o.w || 4, cx = (w - 1) / 2, t = panelTex('deckmap', 512, 256, (x, W, H) => { x.fillStyle = '#061a1c'; x.fillRect(0, 0, W, H); x.strokeStyle = '#3fa7a3'; x.lineWidth = 6; x.strokeRect(30, 40, 452, 180); x.beginPath(); x.moveTo(256, 40); x.lineTo(256, 220); x.moveTo(30, 130); x.lineTo(482, 130); x.moveTo(120, 40); x.lineTo(120, 220); x.moveTo(390, 40); x.lineTo(390, 220); x.stroke();
+          x.fillStyle = '#7dffb0'; for (let i = 0; i < 22; i++) { x.beginPath(); x.arc(40 + (i * 97) % 440, 50 + (i * 53) % 170, 7, 0, 7); x.fill(); } x.fillStyle = '#9ff4ff'; x.font = 'bold 26px sans-serif'; x.fillText('MAIN DECK  ·  ALL GREEN', 34, 30); });
+        const sc2 = quad(w - 0.4, 1.3, new THREE.MeshBasicMaterial({ map: t })); sc2.position.set(cx, 1.75, -0.38); g.add(sc2, box(w - 0.2, 1.45, 0.08, SLATE(), cx, 1.02, -0.44)); break;
+      }
+      case 'front_desk': { const w = o.w || 4, cx = (w - 1) / 2; g.add(box(w, 1.0, 0.7, WHITE(), cx), box(w + 0.1, 0.07, 0.8, std({ color: 0xdde4e8, metalness: 0.3 }), cx, 1.0), box(w, 0.14, 0.02, glow(0xff9a3a), cx, 0.62, 0.36));
+        const s3 = quad(1.8, 0.36, new THREE.MeshBasicMaterial({ map: plate('SAFETY DEPOT', 512, 104, { bg: '#e0782a', fg: '#ffffff', edge: '#ffffff', font: 'bold 60px sans-serif' }) })); s3.position.set(cx, 0.32, 0.37); g.add(s3, box(0.5, 0.36, 0.04, SLATE(), cx + 1.1, 1.07, -0.1), box(0.3, 0.05, 0.2, std({ color: 0x2b2b33 }), cx - 1, 1.04, 0)); break; }
+      case 'lockers': { const w = o.w || 3, cx = (w - 1) / 2; for (let i = 0; i < w * 2; i++) { const x = cx - w / 2 + 0.25 + i * 0.5; g.add(box(0.46, 1.9, 0.5, std({ color: i % 2 ? 0x5b7f9a : 0x4f738e, metalness: 0.35, roughness: 0.5 }), x, 0, -0.2), box(0.2, 0.04, 0.01, SLATE(), x, 1.5, 0.06), box(0.03, 0.15, 0.02, std({ color: 0xdfe6ea, metalness: 0.6 }), x + 0.15, 0.95, 0.06)); } g.add(box(w, 0.06, 0.55, TEAL(), cx, 1.9, -0.2)); break; }
+      case 'rescue_drone': {                             // a rescue drone on its charging pad: white body, orange cross, four rotors
+        const pad = new THREE.Mesh(new THREE.CircleGeometry(0.45, 20), std({ color: 0x3c4650 })); pad.rotation.x = -Math.PI / 2; pad.position.y = 0.02; g.add(pad); const ring = new THREE.Mesh(new THREE.RingGeometry(0.38, 0.45, 20), glow(0xff9a3a)); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; g.add(ring);
+        const d0 = new THREE.Group(); d0.position.y = 0.55; d0.add(ball(0.2, WHITE(), 0, 0, 0, 2), box(0.22, 0.06, 0.04, std({ color: 0xe0782a }), 0, 0.08, 0.19), box(0.06, 0.22, 0.04, std({ color: 0xe0782a }), 0, -0.0, 0.19), ball(0.05, glow(0x7dffe0), 0, -0.08, 0.17, 1));
+        for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const arm = box(0.32, 0.03, 0.04, SLATE(), x * 0.16, 0.02, z * 0.16); arm.rotation.y = x * z * 0.78; d0.add(arm, cyl(0.12, 0.12, 0.02, std({ color: 0xdfe6ea, transparent: true, opacity: 0.6 }), x * 0.28, 0.04, z * 0.28, 12)); }
+        g.add(d0); break;
+      }
       default: { const c = colonyProp(kind, o, this.colonyFx || undefined); g.add(c || box(0.6, 0.6, 0.6, std({ color: 0x999999 }))); }
     }
     if (kind === 'memorial' || kind === 'bench') for (const c of g.children) c.position.x += 0.5;
@@ -540,6 +634,82 @@ export class World {
     (this.beacons ||= []).push({ m: beacon, l: bl });
   }
 
+  // The colony's civic buildings, built: white walls, teal trim, lit windows (a model replaces them when it exists).
+  buildCivic(b, g, kind) {
+    const W = b.w, D = b.d, H = b.height, wh = WHITE(), tl = TEAL(), sl = SLATE(), dx = Math.floor(W / 2) + 0.5 - W / 2, fz = D / 2;
+    const win = (c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.35, roughness: 0.2 });
+    const front = (mesh, x, y, z = fz + 0.02) => { mesh.position.set(x, y, z); g.add(mesh); return mesh; };
+    if (kind === 'school') {                         // a friendly two-storey block with crayon window frames, a clock and a bell turret
+      const bh = H * 0.62; g.add(box(W - 0.3, bh, D - 0.5, wh, 0, 0, -0.1), box(W - 0.1, 0.25, D - 0.3, tl, 0, bh, -0.1), box(W - 0.3, 0.18, 0.1, tl, 0, 0, fz - 0.33));
+      const cols = [0xf08a6c, 0xf2c230, 0x5fb3b0, 0x8fb8e8, 0xa3d977];
+      for (let fl = 0; fl < 2; fl++) for (let i = 0; i < 3; i++) { const x = -W / 2 + 0.9 + i * ((W - 1.8) / 2); if (fl === 0 && Math.abs(x - dx) < 0.8) continue; g.add(box(0.9, 0.8, 0.06, std({ color: cols[(i + fl * 2) % 5] }), x, 0.6 + fl * 1.6, fz - 0.32)); front(box(0.7, 0.6, 0.04, win(0x9fd8ee)), x, 0.7 + fl * 1.6, fz - 0.29); }
+      for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) { const z = -D / 2 + 1.2 + i * ((D - 2.4) / 2); g.add(box(0.06, 0.8, 0.9, std({ color: cols[(i + 2) % 5] }), sx * (W / 2 - 0.13), 1.4, z), box(0.04, 0.6, 0.7, win(0x9fd8ee), sx * (W / 2 - 0.1), 1.5, z)); }
+      g.add(box(1.0, 1.6, 0.08, std({ color: 0xf08a6c }), dx, 0, fz - 0.28), box(1.6, 0.12, 0.9, tl, dx, 1.8, fz - 0.05), box(0.08, 1.8, 0.08, wh, dx - 0.7, 0, fz + 0.3), box(0.08, 1.8, 0.08, wh, dx + 0.7, 0, fz + 0.3));
+      const clock = new THREE.Mesh(new THREE.CircleGeometry(0.32, 24), new THREE.MeshBasicMaterial({ map: panelTex('clock', 128, 128, (x, w2) => { x.fillStyle = '#fffaf0'; x.beginPath(); x.arc(64, 64, 62, 0, 7); x.fill(); x.strokeStyle = '#2b3a44'; x.lineWidth = 6; x.beginPath(); x.moveTo(64, 64); x.lineTo(64, 22); x.moveTo(64, 64); x.lineTo(92, 64); x.stroke(); for (let a = 0; a < 6.28; a += 0.524) { x.fillStyle = '#3fa7a3'; x.fillRect(62 + Math.cos(a) * 52, 62 + Math.sin(a) * 52, 5, 5); } }) }));
+      front(clock, dx, bh - 0.45, fz - 0.27);
+      const sign = quad(2.2, 0.42, new THREE.MeshBasicMaterial({ map: plate('SCHOOL', 512, 98, { bg: '#ffffff', fg: '#2b7a78', edge: '#f2c230', font: 'bold 68px sans-serif' }) })); front(sign, dx, 2.15, fz + 0.38);
+      g.add(box(0.9, 0.9, 0.9, wh, 0, bh + 0.25, -0.6)); const cap = new THREE.Mesh(new THREE.ConeGeometry(0.75, 0.8, 4), tl); cap.rotation.y = Math.PI / 4; cap.position.set(0, bh + 1.55, -0.6); cap.castShadow = true; g.add(cap, ball(0.18, std({ color: 0xc9a14a, metalness: 0.6, roughness: 0.3 }), 0, bh + 0.75, -0.15));
+      for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) g.add(box(0.06, 0.5, 0.06, wh, sx * (W / 2 + 0.3), 0, -D / 2 + 0.6 + i * 1.3));
+      return;
+    }
+    if (kind === 'church') {                         // a white nave under a teal roof, tall coloured windows, a slender spire with Eden's ring on top
+      const nh = H * 0.48, roofH = H * 0.32, nave = new THREE.Group(); g.add(nave);
+      nave.add(box(W - 0.8, nh, D - 1.4, wh, 0, 0, -0.5));
+      const roof = new THREE.Mesh(gable(D - 0.9, W - 0.2, roofH), std({ color: 0x3fa7a3, side: THREE.DoubleSide, roughness: 0.5 })); roof.rotation.y = Math.PI / 2; roof.position.set(0, nh, -0.5); roof.castShadow = true; nave.add(roof);
+      const cols = [0xe2463a, 0xf2c230, 0x5f8ad8, 0xa35ad0, 0x3fa7a3];
+      for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) { const z = -D / 2 + 1.4 + i * ((D - 3.2) / 2); g.add(box(0.05, 1.5, 0.55, win(cols[(i * 2 + (sx > 0)) % 5]), sx * (W / 2 - 0.38), 0.7, z)); const a = new THREE.Mesh(new THREE.CircleGeometry(0.275, 12, 0, Math.PI), win(cols[(i * 2 + (sx > 0)) % 5])); a.rotation.y = sx * Math.PI / 2; a.position.set(sx * (W / 2 - 0.35), 2.2, z); g.add(a); }
+      const tz = fz - 0.9, th = H * 1.05;              // the tower at the front, the door at its foot
+      g.add(box(1.7, th, 1.5, wh, dx, 0, tz), box(1.9, 0.2, 1.7, tl, dx, th, tz), box(1.9, 0.14, 1.7, tl, dx, nh, tz));
+      const spire = new THREE.Mesh(new THREE.ConeGeometry(0.85, H * 0.75, 4), tl); spire.rotation.y = Math.PI / 4; spire.position.set(dx, th + 0.2 + H * 0.375, tz); spire.castShadow = true; g.add(spire);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.06, 8, 24), std({ color: 0xc9a14a, metalness: 0.7, roughness: 0.3 })); ring.position.set(dx, th + 0.2 + H * 0.75 + 0.3, tz); g.add(ring);
+      const rose = new THREE.Mesh(new THREE.CircleGeometry(0.45, 16), new THREE.MeshBasicMaterial({ map: panelTex('rose', 128, 128, (x) => { const c = ['#e2463a', '#f2c230', '#5f8ad8', '#a35ad0', '#3fa7a3', '#7fbf5a']; for (let i = 0; i < 12; i++) { x.fillStyle = c[i % 6]; x.beginPath(); x.moveTo(64, 64); x.arc(64, 64, 64, i * 0.524, (i + 1) * 0.524); x.fill(); } x.fillStyle = '#ffe6a0'; x.beginPath(); x.arc(64, 64, 18, 0, 7); x.fill(); x.strokeStyle = '#2a2420'; x.lineWidth = 4; for (let i = 0; i < 12; i++) { x.beginPath(); x.moveTo(64, 64); x.lineTo(64 + Math.cos(i * 0.524) * 64, 64 + Math.sin(i * 0.524) * 64); x.stroke(); } }) }));
+      front(rose, dx, nh + 0.9, tz + 0.77);
+      g.add(box(1.0, 1.7, 0.08, std({ color: 0x6b4a36 }), dx, 0, tz + 0.75)); const arch = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.06, 6, 16, Math.PI), glow(0xffd98a)); arch.position.set(dx, 1.7, tz + 0.8); g.add(arch);
+      g.add(box(2.2, 0.15, 0.9, std({ color: 0xd7d2c6 }), dx, 0, tz + 1.15));
+      return;
+    }
+    // the safety depot: a solid white post with an orange rescue stripe, a garage bay, a drone pad and a blue beacon on the roof
+    const bh = H * 0.7, or = std({ color: 0xe0782a, roughness: 0.5 });
+    g.add(box(W - 0.2, bh, D - 0.3, wh, 0, 0, -0.05), box(W, 0.25, D - 0.1, sl, 0, bh, -0.05), box(W - 0.15, 0.3, 0.05, or, 0, bh - 0.75, fz - 0.18), box(W - 0.15, 0.12, 0.05, tl, 0, bh - 0.45, fz - 0.18));
+    for (const sx of [-1, 1]) g.add(box(0.05, 0.3, D - 0.4, or, sx * (W / 2 - 0.09), bh - 0.75, -0.05));
+    const gx = dx - 1.6 >= -W / 2 + 0.7 ? dx - 1.6 : dx + 1.6;
+    const garage = quad(1.4, 1.6, new THREE.MeshStandardMaterial({ map: panelTex('garage', 128, 128, (x) => { x.fillStyle = '#c9d1d6'; x.fillRect(0, 0, 128, 128); x.fillStyle = '#9aa6ae'; for (let i = 0; i < 128; i += 16) x.fillRect(0, i, 128, 3); for (let i = 0; i < 8; i++) { x.fillStyle = i % 2 ? '#222' : '#e8b830'; x.fillRect(i * 16, 112, 16, 16); } }), roughness: 0.6 }));
+    front(garage, gx, 0.8, fz - 0.16);
+    g.add(box(0.9, 1.7, 0.08, std({ color: 0x3f6f78, metalness: 0.4 }), dx, 0, fz - 0.17), box(1.5, 0.1, 0.8, tl, dx, 1.95, fz + 0.2), box(0.07, 1.95, 0.07, sl, dx - 0.65, 0, fz + 0.55), box(0.07, 1.95, 0.07, sl, dx + 0.65, 0, fz + 0.55));
+    const sign = quad(2.4, 0.42, new THREE.MeshBasicMaterial({ map: plate('SAFETY DEPOT', 512, 90, { bg: '#ffffff', fg: '#e0782a', edge: '#3fa7a3', font: 'bold 56px sans-serif' }) })); front(sign, 0, bh - 0.25);
+    const shield = new THREE.Mesh(new THREE.CircleGeometry(0.32, 6), new THREE.MeshBasicMaterial({ map: plate('+', 128, 128, { bg: '#3fa7a3', fg: '#ffffff', edge: '#ffffff', font: 'bold 110px sans-serif' }) })); front(shield, W / 2 - 0.55, bh - 0.25);
+    for (const sx of [-1, 1]) for (let i = 0; i < 2; i++) g.add(box(0.04, 0.6, 0.8, win(0x9fd8ee), sx * (W / 2 - 0.08), 1.2, -D / 2 + 1.5 + i * 2.2));
+    const pad = new THREE.Mesh(new THREE.CircleGeometry(0.9, 24), std({ color: 0x3c4650 })); pad.rotation.x = -Math.PI / 2; pad.position.set(-0.6, bh + 0.27, -0.8); g.add(pad);
+    const pr = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.9, 24), glow(0xff9a3a)); pr.rotation.x = -Math.PI / 2; pr.position.set(-0.6, bh + 0.28, -0.8); g.add(pr);
+    const drone = this.proc('rescue_drone'); drone.children.slice(0, 2).forEach((q) => q.visible = false); drone.position.set(-0.6, bh + 0.1, -0.8); g.add(drone);
+    g.add(box(0.1, 0.8, 0.1, sl, W / 2 - 0.6, bh + 0.25, -D / 2 + 0.8));
+    const beacon = ball(0.17, glow(0x4a9aff), W / 2 - 0.6, bh + 1.15, -D / 2 + 0.8, 1); beacon.castShadow = false; g.add(beacon);
+    const bl = new THREE.PointLight(0x4a9aff, 0, 12, 1.6); bl.position.copy(beacon.position); g.add(bl); (this.beacons ||= []).push({ m: beacon, l: bl });
+  }
+  // The orbital elevator on Terrace Hill: a base station, a lattice tower, and the cable rising out of sight to the axis.
+  buildElevator(b, g) {
+    const H = b.height, wh = WHITE(), tl = TEAL(), sl = SLATE(), R = Math.min(b.w, b.d) / 2 - 0.15;
+    g.add(cyl(R, R + 0.1, 0.4, wh, 0, 0, 0, 24), cyl(R + 0.02, R + 0.02, 0.08, glow(0x7dffe0), 0, 0.4, 0, 24), cyl(R * 0.75, R * 0.8, 0.5, std({ color: 0xdfe6ea, metalness: 0.3 }), 0, 0.42, 0, 20));
+    for (let i = 0; i < 4; i++) {                    // four legs leaning in to the head of the tower
+      const a = i * Math.PI / 2 + Math.PI / 4, x0 = Math.cos(a) * R * 0.85, z0 = Math.sin(a) * R * 0.85, x1 = Math.cos(a) * 0.35, z1 = Math.sin(a) * 0.35, L = Math.hypot(x1 - x0, H, z1 - z0);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.14, L, 8), wh); leg.position.set((x0 + x1) / 2, 0.8 + H / 2, (z0 + z1) / 2); leg.lookAt(x1, 0.8 + H, z1); leg.rotateX(Math.PI / 2); leg.castShadow = true; g.add(leg);
+    }
+    for (let y = 1.8; y < H; y += 1.6) { const k = 1 - (y - 0.8) / H; g.add(cyl(R * 0.85 * k + 0.35 * (1 - k), R * 0.85 * k + 0.35 * (1 - k), 0.1, y % 3.2 < 1.6 ? tl : wh, 0, y, 0, 16)); }
+    const shaft = cyl(0.28, 0.28, H, std({ color: 0xcfeaf0, transparent: true, opacity: 0.45, roughness: 0.1 }), 0, 0.9, 0, 14); shaft.castShadow = false; g.add(shaft);
+    g.add(cyl(0.7, 0.5, 0.5, tl, 0, H + 0.8, 0, 16), cyl(0.72, 0.72, 0.06, glow(0x7dffe0), 0, H + 1.05, 0, 16));
+    // the car waiting at the foot, facing the door
+    const dz = b.d / 2 - 0.2; g.add(box(1.2, 1.7, 1.0, wh, 0, 0.9, dz - 0.7), box(1.0, 0.5, 0.04, glow(0x9ff4ff), 0, 1.9, dz - 0.18), box(0.7, 1.3, 0.04, std({ color: 0x3f6f78, metalness: 0.4 }), 0, 0.92, dz - 0.18), box(1.3, 0.12, 1.1, tl, 0, 2.6, dz - 0.7));
+    const sign = quad(1.7, 0.36, new THREE.MeshBasicMaterial({ map: plate('▲ ORBITAL ELEVATOR', 512, 108, { font: 'bold 46px sans-serif' }) })); sign.position.set(0, 2.95, dz - 0.15); g.add(sign);
+    this.elevatorCable(g, H + 1.1);
+  }
+  // The cable from the top of the tower up to the axis, ringed with lights, and a car gliding up and down it.
+  elevatorCable(g, top) {
+    const cable = cyl(0.07, 0.07, 340, std({ color: 0xdfe6ea, metalness: 0.5 }), 0, top, 0, 6); cable.castShadow = false; g.add(cable);
+    for (let y = top + 3; y < top + 90; y += 4) { const r = cyl(0.22, 0.22, 0.08, glow(0x7dffe0), 0, y, 0, 10); r.castShadow = false; g.add(r); }
+    const car = new THREE.Group(); car.add(cyl(0.55, 0.55, 1.3, WHITE(), 0, -0.65, 0, 12), cyl(0.57, 0.57, 0.3, glow(0x9ff4ff), 0, -0.2, 0, 12), cyl(0.6, 0.4, 0.25, TEAL(), 0, 0.65, 0, 12));
+    g.add(car); (this.cars ||= []).push({ o: car, y0: top + 2, y1: top + 70 });
+  }
+
   // ------------------------------------------------------------ buildings
   makeBuilding(b) {
     const def = BUILDING[b.kind] || BUILDING.house, g = new THREE.Group();
@@ -550,6 +720,8 @@ export class World {
       const H = b.height, wallH = def.round || def.frame ? H : H * 0.62;
       if (def.round) { g.add(cyl(b.w * 0.45, b.w * 0.45, H * 0.85, std({ map: art.tex(def.wall, { repeat: 1 }) }), 0, 0, 0, 20)); const c = new THREE.Mesh(new THREE.ConeGeometry(b.w * 0.5, H * 0.2, 20), std({ map: art.tex(def.roof) })); c.position.y = H * 0.95; c.castShadow = true; g.add(c); return; }
       if (def.observatory) { this.buildObservatory(b, g); return; }
+      if (def.civic) { this.buildCivic(b, g, def.civic); return; }
+      if (def.elevator) { this.buildElevator(b, g); return; }
       if (def.flat) {                                    // a block of flats: hull-plate walls, rows of lit windows, a flat roof with a rail
         const wm2 = std({ map: art.tex(def.wall, { repeat: 0.5 }) }), win = new THREE.MeshStandardMaterial({ color: 0x9fd0e0, emissive: 0x6a5a30, emissiveIntensity: 0.35, roughness: 0.2 });
         g.add(box(b.w - 0.1, H, b.d - 0.1, wm2), box(b.w + 0.1, 0.25, b.d + 0.1, std({ color: 0x7b878e }), 0, H));
@@ -574,8 +746,11 @@ export class World {
         const s = art.modelInfo(mname).size || [1, 1, 1];
         // fill the footprint (no invisible walls around a small model), stretching x and z by at most a third
         const kx = (b.w + 0.2) / s[0], kz = (b.d + 0.2) / s[2], k = Math.min(kx, kz, (b.height * 1.4) / s[1]);
-        m.scale.set(Math.min(kx, k * 1.33), k, Math.min(kz, k * 1.33));
+        if (def.tall) { const kt = Math.min(b.height / s[1], Math.min(kx, kz) * 1.25); m.scale.setScalar(kt); }   // a slim tower: as tall as asked, a little wider than its pad
+        else if (def.uniform) m.scale.setScalar(k);                                       // keep the model's proportions
+        else m.scale.set(Math.min(kx, k * 1.33), k, Math.min(kz, k * 1.33));
         g.add(m);
+        if (def.elevator) this.elevatorCable(g, s[1] * m.scale.y);
       });
     } else proc();
     return g;
@@ -605,7 +780,7 @@ export class World {
       const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : cp ? 'colony_path' : GROUND_TEX[c] || 'soil_dry';
       const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : c === 'd' ? 0.015 : 0, false, c === 'c' ? 0.34 : c === 'k' || c === 'b' || c === 'd' ? 0.5 : 0.25), std({ map: art.tex(slot, { repeat: 1 }), color: c === 'f' ? 0xb48a66 : c === 'c' ? 0xd8d2c8 : 0xffffff })); m.receiveShadow = true; R.add(m);
     }
-    this.colony.setCentre(H / 2); this.spinners = []; this.beacons = []; this.bots = null; this.pools = null;
+    this.colony.setCentre(H / 2); this.spinners = []; this.beacons = []; this.cars = []; this.bots = null; this.pools = null;
     if (!map.indoor && !map.ruins) R.add(buildSurroundings(map, this.season));   // terraces rising into the cylinder's curve
     else if (map.belt) R.add(spaceBackdrop(W, H));       // the belt: stars, the Earth, Eden's hull, drifting rocks
     else if (!map.indoor) {                              // the Old World: ash plains and broken towers
@@ -615,8 +790,9 @@ export class World {
       if (false) for (let i = 0; i < 70; i++) { const a = i * 2.399, d = Math.max(W, H) * 0.62 + (i % 7) * 4; const x = W / 2 + Math.cos(a) * d, z = H / 2 + Math.sin(a) * d * 0.9; if (x > -2 && x < W + 2 && z > -2 && z < H + 2) continue; if (z > H && Math.abs(x - W / 2) < 16) continue; const p = this.makeProp(i % 3 ? 'tree' : 'pine', { scale: 1 + (i % 5) * 0.12 }); p.position.set(x, 0, z); R.add(p); }
       else for (let i = 0; i < 26; i++) { const a = i * 2.399, d = 14 + (i % 6) * 5; const h = 3 + (i % 5) * 2.2; const t2 = box(2 + (i % 3), h, 2 + (i % 2), std({ map: art.tex(i % 2 ? 'concrete_ruin' : 'brick_ruin', { repeat: 0.25 }) })); t2.position.set(W / 2 + Math.cos(a) * d, h / 2, H / 2 + Math.sin(a) * d - 6); if (t2.position.z > H - 1) continue; t2.rotation.z = (i % 4 - 1.5) * 0.03; R.add(t2); }
     } else {                                             // room walls: back and sides, open to the camera
-      const wm = map.glass ? new THREE.MeshStandardMaterial({ color: 0xcfeaf0, transparent: true, opacity: 0.3, roughness: 0.1 }) : std({ map: art.tex(map.id === 'barn' || map.id === 'ranch' ? 'barn_red' : map.id === 'coop' || map.id === 'house' || map.id === 'workshop' ? 'plank_wall' : map.id === 'cafe' ? 'metal_hull' : 'plaster_wall', { repeat: 0.5 }) });
-      const hh = 2.9; R.add(box(W, hh, 0.2, wm, W / 2, 0, -0.1), box(0.2, hh, H, wm, -0.1, 0, H / 2), box(0.2, hh, H, wm, W + 0.1, 0, H / 2));
+      const wm = map.colonyRoom ? std({ color: map.colonyRoom === 'warm' ? 0xf4ecdc : 0xe9eef0, roughness: 0.7 }) : map.glass ? new THREE.MeshStandardMaterial({ color: 0xcfeaf0, transparent: true, opacity: 0.3, roughness: 0.1 }) : std({ map: art.tex(map.id === 'barn' || map.id === 'ranch' ? 'barn_red' : map.id === 'coop' || map.id === 'house' || map.id === 'workshop' ? 'plank_wall' : map.id === 'cafe' ? 'metal_hull' : 'plaster_wall', { repeat: 0.5 }) });
+      const hh = map.id === 'church' ? 3.9 : 2.9; R.add(box(W, hh, 0.2, wm, W / 2, 0, -0.1), box(0.2, hh, H, wm, -0.1, 0, H / 2), box(0.2, hh, H, wm, W + 0.1, 0, H / 2));
+      if (map.colonyRoom) { const tm = TEAL(); R.add(box(W, 0.22, 0.24, tm, W / 2, 0, -0.08), box(0.24, 0.22, H, tm, -0.08, 0, H / 2), box(0.24, 0.22, H, tm, W + 0.08, 0, H / 2), box(W, 0.08, 0.24, tm, W / 2, hh - 0.08, -0.08)); }
       const mat = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.6), std({ color: 0x6f5a3a })); mat.rotation.x = -Math.PI / 2; mat.position.set(map.exitTile[0] + 0.5, 0.02, map.exitTile[1] + 0.6); R.add(mat);
       const lamp = new THREE.PointLight(0xffd9a0, 30, 30, 1.6); lamp.position.set(W / 2, 3.4, H / 2); R.add(lamp);
     }
@@ -732,6 +908,7 @@ export class World {
     this.colony.update(c);
     for (const s of this.spinners || []) s.o.rotation[s.axis] += s.speed * dt;
     for (const [k, o] of this.tileObjs) if (o.userData && o.children[0] && o.children[0].userData.haze) for (const q of o.children[0].children) if (q.isSprite) { q.material.opacity = 0.22 + 0.12 * Math.sin(this.t * 1.3 + k.length + q.userData.haze * 2); q.position.y = 0.45 + 0.1 * Math.sin(this.t * 0.7 + q.userData.haze); }
+    for (const c of this.cars || []) { const k = 0.5 - 0.5 * Math.cos(this.t * 0.09); c.o.position.y = c.y0 + (c.y1 - c.y0) * k; }   // the elevator car rides the cable
     for (const b of this.beacons || []) { const on = Math.sin(this.t * 3.2) > 0.2; b.m.visible = on || (this.night || 0) < 0.3; b.l.intensity = on ? (this.night || 0) * 18 : 0; }
     for (const g of this.steam || []) for (const m of g.children) { const k = ((this.t * 0.25 + m.userData.seed) % 1); m.position.set(m.userData.x + Math.sin(this.t + m.userData.seed) * 0.15, 0.3 + k * 1.7, m.userData.z); m.scale.setScalar(0.7 + k * 1.6); m.material.opacity = 0.42 * Math.sin(k * Math.PI); }
     if (this.bots) this.bots.update(dt, this.t);

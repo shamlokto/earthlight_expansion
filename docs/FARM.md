@@ -37,6 +37,8 @@ Cast (all canon to this project; portraits in `art/colony/portrait/`):
 | `maris` | Juno Maris, courier pilot; orange headband, cheerful. | Collects the shipping bin at 17:00; wanders the village | `w_maris.webp` |
 | `vashti` | Nell Vashti, salvage hunter; red bandana, braid, few words. | At the **Wreck** on the hill (the mine) | `w_vashti.webp` |
 | `moraine` | Queen Moraine of the Ashfall Cartel; trader now, still a queen. | Her barge is at the village dock on **Saturdays** (rare seeds, tonic) | `svg:moraine` (js/expansion/portraits.js) |
+| `calloway` | Pastor Ines Calloway, once a field chaplain on the gates; silvering bun, round glasses, teal stole. Gentle, wry. | **Second Dawn Church**, Eden Central (§10) | `art/farm/people/calloway_front.webp` |
+| `fenn` | Constable Aldo Fenn, a siege cadet turned peacetime constable; navy uniform, peaked cap, badge. Dutiful, stiff, soft-hearted. | **Safety depot**, Eden Central (§10) | `art/farm/people/fenn_front.webp` |
 
 Do not use Lt. Arkin (he may have died in the player's campaign) or name the General.
 
@@ -77,7 +79,7 @@ Do not use Lt. Arkin (he may have died in the player's campaign) or name the Gen
   (<34, <67, ≥67). Affection 0–100: +2 fed, +3 brushed (cows), +1 talked to; −5 unfed.
 * **Shipping bin**: put items in; Maris collects at 17:00 (flavour); paid at dawn. A ledger
   counts everything ever shipped.
-* **The Descent and the Old World** (owner, 2026-11-16: no mine; a peaceful search of the ruins).
+* **The Descent and the Old World** (owner, 2026-11-16: no mine; a peaceful search of the ruins. Since §9 the Old World is a shuttle trip, and since §10 the hill has the orbital elevator instead of the Descent).
   On the hill, Vashti's cargo lift takes Sato, in her **custom Pallas** (guns swapped for a salvage
   arm), down to the ruins of human civilisation on Earth's surface: sites of 14×12 with walls and
   rubble piles. Searching a pile (1 stamina) may give scrap (15), alloy (40; from level 5), crystal
@@ -234,7 +236,7 @@ existing game is used.
 ## 5. Upper deck, love and favours (owner, 2026-11-16, later the same day)
 
 * **Setting**: Eden's **Upper deck**, on the Lantern Ring, **after Major Hesk's defeat** (the colony
-  game's Reckoning). Willowfall, the Hollin field on its terrace, and Terrace Hill with the Descent.
+  game's Reckoning). Willowfall, the Hollin field on its terrace, and Terrace Hill (with the Descent, now the orbital elevator, §10).
 * **Three more villagers**: Commander Rell Kestrel (Guardians' wing), Dr. Haruto Mori (the
   **clinic**: a check-up restores stamina for 150 cr) and Yui Hoshino (the **library**: the shelves
   hold the how-to pages as books).
@@ -421,3 +423,48 @@ Art slots added: models `observatory`, `gov_office`, `exchange`, `arrivals`, `ap
 `shuttle_gate`, `launch_cradle`, `asteroid`, `asteroid_big`, `jump_buoy`; facades `buildings/<kind>`
 for those buildings; icons `icons/star_plum`, `icons/colony_feast`, `icons/founders_cake`,
 `icons/comet_ice`, `icons/star_metal`; music `music/belt`.
+
+## 10. Eden Central's school, church and safety depot; belt ores; the orbital elevator (owner, 2026-11-19)
+
+* **Arrivals hall** (interior `arrivals`, deck floor, `colonyRoom`): a window band onto the stars (`star_window`, the
+  `earthBand()` texture), a glowing departures screen on a stand (`departures_board`, act `sign` 'central.arrivals'),
+  a dock information kiosk (`info_kiosk`, sign 'central.dock'), rows of metal-and-teal seats (`transit_seats`), white
+  planters (`colony_planter`) and the sleek white courier desk with a screen (`courier_desk`, act `shuttle`: books
+  Maris's shuttle to Earth). The building's footprint is now 12×5 (its model is long and thin).
+* **Three new buildings** in Eden Central (`maps.js` central(); building kinds and model slots `school`, `church`,
+  `safety_depot`; models keep their proportions, `BUILDING[kind].uniform`; built stand-ins in `World.buildCivic`):
+  * **The school** (north-west, by the gardens; interior `school`): small desks, a blackboard ('school.board'), cubbies
+    with empty name cards ('school.cubbies'), a teacher's desk. There are no children in the game yet: it stands ready
+    and quiet. Pastor Ines sits in it on Wednesdays planning the first assembly; Constable Fenn checks its locks at eight
+    every morning (spot `school.floor`). **Future hook**: the first pupils (a family moving down from the Middle deck,
+    or children from the Lower deck), a teacher, lessons as a festival or events, the Constable's box of crayons and
+    Fenn's toy-box favour paying off, a school bell at 8:30.
+  * **Second Dawn Church** (north, off the avenue; interior `church`: pews, the altar, two memorial candle stands with
+    act `candles` for the 312 lost in the siege (`story.CHURCH.candles`), a stained-glass window, a lectern) and the
+    pastor's garden (`central.churchgarden`). **Pastor Ines Calloway** (`calloway`): Tue–Sat altar 9–12 and 15–18,
+    garden 8–9 and 13–15, the empty school Wed 12–13, evensong in the pews 18–19:30; Sunday service 8–12; Mondays off in
+    Willowfall (memorial, river, library). Birthday Spring 14. Loves tomato, teacup, herb, soup. Events `calloway3`
+    (the candles; tomato seed) and `calloway7` (the tomato in the rubble; her mother's teacup). Six favours. She
+    blesses every wedding (a line in each `ROMANCE.people[id].wedding`) and speaks at Lantern Night and Year's End.
+  * **The safety depot** (east, beside the arrivals apron; interior `depot`: front desk, lockers, rescue drones on
+    pads, the deck map screen 'depot.map'). **Constable Aldo Fenn** (`fenn`): 7–8 outside, 8–8:30 the school's locks,
+    desk 8:30–12 and 15–17, a beat 13–15, the drones 17–18; Sunday evensong at the back of the church; Thursdays off
+    (stray hens home to Willowfall, fishing at the hill lake). Birthday Autumn 26. Loves pie, toy, sweet potato, frost
+    char. Events `fenn3` (Corran's hen in the evidence crate; finder's fee) and `fenn7` (the box for the first pupil).
+    Six favours. Speaks at Planting Day and the Harvest Fair.
+  * Both are full villagers (`story.VILLAGERS`, `sim.NPC_IDS`; `ensure()` gives old saves their records), not
+    romance candidates. Their built figures: `LOOKS` in main.js (`collar`, `stole`, `badge`, `capBadge`, `belt`,
+    drawn in actors.js). Portraits: renders of the figures in `art/farm/people/<id>_front.webp`.
+* **Belt ores** (`sim.BELT_ORES`, `sim.beltOdds(depth)`: one roll a rock, odds by sector to 20): scrap (15),
+  nickel-iron (25), silica (30), comet ice (60) from sector 1; copper ore (45) from 2; star-metal (500) from 3, a little
+  more often further out; titanium ore (90) from 4; alloy (40) from 5; platinum nugget (260) from 8; crystal (150)
+  from 10. Ruess's ore jobs: **smelt alloy** (4 nickel-iron + 100 cr), **wind a battery** (2 copper + 80 cr), **solar
+  yard racks** (4 silica + 2 copper + 1,200 cr: 10 racks, `flags.yard_big`, `yardSlots`), **titanium mill rollers**
+  (2 titanium + 800 cr: the mill grinds 40 a night, `flags.mill_rollers`, `millCap`), **Pallas drill head** (3 titanium
+  + 2 copper + 1 platinum + 2,500 cr: a 30% chance of a second ore per rock, `flags.drill`). The Old World keeps its
+  scrap and relics.
+* **The orbital elevator** replaces the Descent on Terrace Hill (building kind and model slot `orbital_elevator`, 4×4,
+  height 9; built stand-in `World.buildElevator`: a base station, a lattice tower, the waiting car; `elevatorCable`
+  adds the cable rising out of sight with a second car riding it, model or not). Its door goes to Vashti's hangar at
+  the axis; the prompt reads "Ride the orbital elevator up to the hangar" (`story.ELEVATOR.up` / `.down` toasts). The
+  spot and sign id stay `hill.wreck` (save compatible).

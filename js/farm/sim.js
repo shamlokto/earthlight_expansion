@@ -888,7 +888,7 @@ export function hitRock(state, x, y) {
   const extra = m.mode === 'belt' && state.flags.drill && rnd(state) < DRILL_BONUS ? find(state, m.depth, 'belt') : null;   // the drill head pulls a second core now and then
   const res = take(state, [...(id ? [[id, 1]] : []), ...(extra ? [[extra, 1]] : []), ...(starHere ? [['star_plum', 1]] : [])], { ok: true, broke: true, gained: [], hatch });
   if (starHere && res.gained.some((g) => g.id === 'star_plum')) { state.flags['plum_ruins' + m.depth] = true; m.star = -1; res.star = true; res.msg = 'Under the rubble, in a sealed seed tin, a small fruit glowing violet: a star-plum.'; }
-  if (hatch) res.msg = m.mode === 'belt' ? (res.gained.length ? `You drilled out ${lower(id)}, and behind the rock a jump buoy blinks.` : 'Behind the rock, a jump buoy blinks: the way to the next sector.') : res.gained.length ? `You found ${lower(id)}, and a way down.` : 'Under the rubble is a way down.';
+  if (hatch) res.msg = m.mode === 'belt' ? (res.gained.length ? `You drilled out ${lower(res.gained[0].id)}, and behind the rock a jump buoy blinks.` : 'Behind the rock, a jump buoy blinks: the way to the next sector.') : res.gained.length ? `You found ${lower(res.gained[0].id)}, and a way down.` : 'Under the rubble is a way down.';
   return spend(state, 1, res);
 }
 export function defeatMonster(state, index) {

@@ -226,12 +226,18 @@ function village() {
 }
 // The lift kiosk's notice lives here with the map that has the kiosk (story.js owns the other signs).
 const MAP_SIGNS = {
-  'central.board': 'EDEN CENTRAL, Main deck. Governor\'s office: weekdays 9 to 5 (the General). The Ashfall Exchange: Her Majesty receives traders daily but Saturdays. Arrivals: courier runs Tuesdays and Fridays. Viewing gallery open all night; please do not tap the glass.',
+  'central.board': 'EDEN CENTRAL, Main deck. Governor\'s office: weekdays 9 to 5. The Ashfall Exchange: daily but Saturdays. Arrivals: courier runs Tue and Fri. Second Dawn Church: doors always open. Safety depot: always staffed. The school: opening soon.',
   'central.dock': 'SPACE DOCK, BAY ONE. SHUTTLE TO EARTH (the Old World): J. Maris\'s courier, any day, any hour; board at the lit gate beside her shuttle, or book at the Arrivals hall desk. Courier shuttles, cargo lighters and the Ashfall trader. Her Majesty trades from her ship on Saturdays and from the Exchange on the plaza the rest of the week. Stay behind the yellow lines when the bay doors cycle.',
   'central.watch': 'SATO\'S WATCH. Observatory and beacon of the Main deck, named by the Colony Council for Captain M. Sato, who kept watch. Dome open to the public from 7 in the evening. (The Captain has asked twice for the name to be changed. The Council has declined twice.)',
-  'central.plaza': 'THE PLAZA. Laid out by the founders, rebuilt after the siege. Avenue north to the great window; south to the lift terminal. Canal walks east and west. SPACE DOCK (shuttle to Earth): north-west corner, past the Grand Market and the gardens.',
+  'central.plaza': 'THE PLAZA. Rebuilt after the siege. North: the church, the school and the great window. South: the lift. East: Arrivals and the safety depot. SPACE DOCK (shuttle to Earth): north-west, past the Grand Market.',
   'central.arrivals': 'ARRIVALS. The courier desk inside books J. Maris\'s shuttle to Earth (it leaves from the space dock). Courier and supply runs from the Middle and Lower decks. J. Maris lands at 8 on Tuesdays and Fridays and asks that nobody wave at her during docking.',
   'central.market': 'GRAND MARKET. Imported seeds, saplings in any season, batteries. The terminals also BUY fine food at a fifth above bin prices. No haggling with the machines.',
+  'central.school': 'EDEN CENTRAL SCHOOL. Classes for ages five to twelve. Enrolment: the Housing Office, when there is anyone to enrol. The desks are new. The chalk is new. The bell has been tested, once, by the Constable.',
+  'central.church': 'SECOND DAWN CHURCH. All welcome, of any faith or none. Doors open day and night. Memorial candles for those lost in the siege are kept lit inside. The garden is the Pastor\'s; the tomatoes are not for sale, but ask.',
+  'central.depot': 'SAFETY DEPOT, MAIN DECK. Peacekeeping, rescue, lost property and hull alarms. Constable A. Fenn. Always staffed. In an emergency, shout; the drones are listening. Lost hens are returned to Willowfall on Thursdays.',
+  'school.board': 'On the blackboard, in very neat chalk: WELCOME TO SCHOOL! TODAY WE WILL LEARN: Underneath, a list headed OUR CLASS, with no names on it yet, and a small drawing of a sun.',
+  'school.cubbies': 'Rows of little cubbies, each with an empty name card and a hook for a coat. Somebody has put a pencil in every single one.',
+  'depot.map': 'The deck map glows: every corridor, lift and hatch of the Main deck, with a green light for each. All green. Beside it, a handwritten note: "All green again today. Good." The handwriting is very stiff.',
   'hill.onsen': 'THE TERRACE ONSEN. Hot spring, warmed by the colony\'s heat exchangers (Ruess says the pipes were "spare"). Open 6 till midnight. 100 cr a soak; free on your birthday. Please rinse before you get in. No towels in the water.',
   'village.lift': 'LANTERN RING LIFT. Spoke cars to the Middle deck and the hub, every twenty minutes. The climb takes nine; you get lighter as you go, so hold the rail near the top. Hesk\'s barricade stood here. The scorch marks are being kept, on purpose.',
 };
@@ -247,7 +253,7 @@ function hill() {
   m.fill(0, 0, 35, 1, 'r').fill(0, 24, 35, 25, 'r').fill(34, 0, 35, 25, 'r').fill(0, 0, 0, 10, 'r').fill(0, 15, 0, 25, 'r');
   m.fill(0, 12, 20, 13, 'p').fill(20, 9, 21, 13, 'p').fill(20, 9, 28, 10, 'p').fill(24, 8, 30, 9, 'c');
   m.fill(5, 17, 16, 23, 's').fill(6, 18, 15, 22, 'w');
-  m.building('lift', 25, 4, 4, 4, { height: 6, label: 'The Descent', to: { map: 'hangar' } });   // the hull lift up to Vashti's hangar
+  m.building('orbital_elevator', 25, 4, 4, 4, { height: 9, label: 'The orbital elevator', to: { map: 'hangar' } });   // the cable car up to Vashti's hangar at the axis
   m.prop('liftpad', 27, 8, { solid: false });
   m.prop('signpost', 23, 8, { act: 'sign', sign: 'hill.wreck' });
   m.prop('signpost', 9, 16, { act: 'sign', sign: 'hill.lake' });
@@ -315,7 +321,8 @@ function central() {
   for (const [x, y] of [[26, 26], [42, 26]]) m.prop('bench', x, y, { w: 2 });
   m.spot('central.plaza', 29.5, 27.5);
   // the Arrivals hall and its apron
-  m.building('arrivals', 50, 21, 12, 7, { height: 5, to: { map: 'arrivals' }, label: 'Arrivals hall' });
+  m.building('arrivals', 50, 21, 12, 5, { height: 5, to: { map: 'arrivals' }, label: 'Arrivals hall' });
+  m.fill(50, 26, 61, 27, 'c');
   m.prop('liftpad', 52, 29, { solid: false }); m.prop('cargo_crate', 63, 29); m.prop('cargo_crate', 64, 29, { scale: 0.8 }); m.prop('cargo_crate', 63, 30, { scale: 0.9 });
   m.spot('central.arrivals', 56.5, 29.5);
   m.prop('signpost', 49, 31, { act: 'sign', sign: 'central.arrivals' });
@@ -342,6 +349,25 @@ function central() {
   for (const [x, y] of [[17, 8], [17, 15], [51, 9], [61, 16]]) m.prop('tree', x, y, { rot: y });
   for (const [x, y] of [[49, 6], [50, 6], [49, 7], [63, 6], [64, 7]]) m.prop('cargo_crate', x, y, { scale: 0.85 + (x % 3) * 0.1 });
   m.prop('water_tank', 64, 10, { w: 2, d: 2 }); m.prop('fan_tower', 64, 15, { w: 2, d: 2 });
+  // the school (north-west, by the gardens): ready and quiet, waiting for its first pupils
+  m.fill(21, 12, 25, 12, 'c');
+  m.building('school', 20, 5, 6, 7, { height: 5.5, to: { map: 'school' }, label: 'Eden Central school' });
+  m.prop('signpost', 26, 12, { act: 'sign', sign: 'central.school' });
+  for (const [x, y] of [[27, 7], [29, 7], [27, 10]]) m.prop('flowers', x, y, { solid: false });
+  m.prop('bench', 28, 9, { w: 2 }); m.prop('plantpot', 30, 6);
+  m.spot('central.schoolyard', 28.5, 11.4);
+  // the church (north, off the avenue), with the pastor's little garden beside it
+  m.fill(41, 12, 45, 12, 'c');
+  m.building('church', 40, 5, 6, 7, { height: 5.5, to: { map: 'church' }, label: 'Second Dawn Church' });
+  m.prop('signpost', 46, 12, { act: 'sign', sign: 'central.church' });
+  for (const [x, y] of [[47, 7], [48, 9], [47, 10], [49, 11]]) m.prop('flowers', x, y, { solid: false });
+  m.prop('bush', 48, 6, { scale: 0.8 }); m.prop('bench', 47, 8, { w: 2, rot: Math.PI / 2 });
+  m.spot('central.churchgarden', 47.5, 11.4);
+  // the safety depot (east, beside the arrivals apron): the colony's peacekeeping and rescue post
+  m.fill(63, 26, 67, 27, 'c');
+  m.building('safety_depot', 63, 19, 5, 7, { height: 4.5, to: { map: 'depot' }, label: 'Safety depot' });
+  m.prop('signpost', 62, 27, { act: 'sign', sign: 'central.depot' });
+  m.spot('central.depotfront', 64.5, 27.4);
   // Sato's Watch: the colony's landmark (an observatory named for her), at the head of its own walk off the plaza
   m.fill(53, 13, 60, 14, 'c').fill(57, 15, 58, 20, 'c');
   m.building('observatory', 53, 6, 8, 7, { height: 9, label: "Sato's Watch" });
@@ -364,13 +390,14 @@ function central() {
   for (const x of [6, 14, 22, 28, 42, 50, 58, 64]) { m.prop('colony_lamp', x, 35); m.prop('colony_lamp', x, 45); }
   for (const x of [8, 20, 26, 44, 54, 62]) m.prop('plantpot', x, 32);
   for (const x of [3, 9, 27, 40, 49, 65]) m.prop('bush', x, 52, { scale: 0.9, rot: x });
-  m.prop('vent', 30, 9); m.prop('vent', 40, 9); m.prop('vent', 20, 48); m.prop('vent', 48, 48);
+  m.prop('vent', 30, 9); m.prop('vent', 38, 12); m.prop('vent', 20, 48); m.prop('vent', 48, 48);
   // the lift terminal at the south end of the avenue
   m.prop('lift_kiosk', 33, 52, { w: 3, d: 2, act: 'liftup', label: 'Lift to the Lantern Ring' });
   m.spot('central.lift', 34.5, 50.5);
   m.prop('signpost', 31, 49, { act: 'sign', sign: 'central.plaza' });
   m.start = [34.5, 50.5];
-  m.areas = [['The great window', 34.5, 2.5], ['The plaza', 34.5, 31.5], ['Grand Market', 11.5, 32], ['Arrivals', 56, 32.3], ['Canal', 22, 38.4], ['Lift terminal', 34.5, 54.3], ['Gardens', 9, 18.5], ['Space dock: shuttle to Earth', 8, 4.6]];
+  m.areas = [['The great window', 34.5, 2.5], ['The plaza', 34.5, 31.5], ['Grand Market', 11.5, 32], ['Arrivals', 56, 32.3], ['Canal', 22, 38.4], ['Lift terminal', 34.5, 54.3], ['Gardens', 9, 18.5], ['Space dock: shuttle to Earth', 8, 4.6],
+    ['School', 23, 13.6], ['Church', 43, 13.6], ['Safety depot', 65.5, 28.6]];
   m.bots = [[[34.5, 6], [34.5, 49]], [[3, 33.5], [66, 33.5]], [[3, 43.5], [66, 43.5]], [[3, 2.5], [66, 2.5]], [[5, 50.5], [64, 50.5]]];
   // inside: the Governor's office and the Exchange
   const o = room('office', 12, 8, "Governor's office");
@@ -386,13 +413,35 @@ function central() {
   const x = room('exchange', 12, 9, 'The Ashfall Exchange');
   x.prop('counter', 4, 2, { w: 5, act: 'counter' }); x.spot('central.exchange', 6.5, 1.5);
   x.prop('crate', 0, 4); x.prop('crate', 0, 5); x.prop('crate', 11, 6); x.prop('shelf', 0, 0, { w: 2 }); x.prop('shelf', 10, 0, { w: 2 }); x.prop('rug', 5, 5, { solid: false, w: 2, d: 2 }); x.prop('plantpot', 11, 3);
-  // the Arrivals hall: benches, the departures board, the courier desk (it books Maris's shuttle too)
-  const ah = room('arrivals', 14, 9, 'Arrivals hall', 'o');
-  ah.prop('desk', 5, 1, { w: 4, act: 'shuttle', label: 'Courier desk: book the shuttle to Earth' }); ah.spot('arrivals.desk', 7, 0.6);
-  ah.prop('noticeboard', 1, 0, { w: 2, act: 'sign', sign: 'central.arrivals' }); ah.prop('noticeboard', 11, 0, { w: 2, act: 'sign', sign: 'central.dock' });
-  for (const y of [4, 6]) { ah.prop('bench', 2, y, { w: 2 }); ah.prop('bench', 10, y, { w: 2 }); }
-  ah.prop('vending', 0, 4); ah.prop('vending', 13, 4); ah.prop('plantpot', 0, 7); ah.prop('plantpot', 13, 7); ah.prop('cargo_crate', 12, 2, { scale: 0.8 }); ah.prop('rug', 6, 4, { solid: false, w: 2, d: 3 });
-  return { central: m, office: o, exchange: x, hangar: hg, arrivals: ah };
+  // the Arrivals hall: a clean transit hall (deck floor, a window band onto the stars), the departures screen,
+  // rows of seats, and the courier desk (it books Maris's shuttle to Earth too)
+  const ah = room('arrivals', 14, 9, 'Arrivals hall', 'd'); ah.colonyRoom = true;
+  ah.prop('star_window', 0, 0, { w: 14, solid: false });
+  ah.prop('courier_desk', 5, 1, { w: 4, act: 'shuttle', label: 'Courier desk: book the shuttle to Earth' }); ah.spot('arrivals.desk', 7, 0.6);
+  ah.prop('departures_board', 1, 0, { w: 3, act: 'sign', sign: 'central.arrivals', label: 'Departures' }); ah.prop('info_kiosk', 12, 0, { act: 'sign', sign: 'central.dock', label: 'Dock information' });
+  for (const y of [4, 6]) { ah.prop('transit_seats', 1, y, { w: 3 }); ah.prop('transit_seats', 10, y, { w: 3 }); }
+  ah.prop('vending', 0, 2); ah.prop('vending', 13, 2); for (const [x, y] of [[0, 7], [13, 7], [4, 4], [9, 4]]) ah.prop('colony_planter', x, y);
+  // the school: small desks, a blackboard, cubbies with no names on them yet
+  const sc = room('school', 12, 9, 'Eden Central school'); sc.colonyRoom = 'warm';
+  sc.prop('cubbies', 0, 0, { w: 3, act: 'sign', sign: 'school.cubbies', label: 'Cubbies' }); sc.prop('cubbies', 9, 0, { w: 3, act: 'sign', sign: 'school.cubbies', label: 'Cubbies' });
+  sc.prop('blackboard', 4, 0, { w: 4, act: 'sign', sign: 'school.board', label: 'Blackboard' }); sc.prop('teacher_desk', 5, 2, { w: 2 });
+  for (const y of [4, 6]) for (const x of [1, 3, 8, 10]) sc.prop('school_desk', x, y);
+  sc.prop('colony_planter', 11, 7); sc.prop('colony_planter', 0, 7); sc.prop('shelf', 0, 3, { w: 1, model: 'bookshelf' });
+  sc.spot('school.floor', 6, 5.5);
+  // the church: pews, the altar, the memorial candles for those lost in the siege, a stained-glass window
+  const ch = room('church', 12, 11, 'Second Dawn Church', 'o'); ch.colonyRoom = 'warm';
+  ch.prop('stained_glass', 3, 0, { w: 6, solid: false }); ch.prop('altar', 5, 2, { w: 2 }); ch.spot('church.altar', 6, 1.3);
+  ch.prop('candle_stand', 1, 1, { w: 2, act: 'candles', label: 'Memorial candles' }); ch.prop('candle_stand', 9, 1, { w: 2, act: 'candles', label: 'Memorial candles' });
+  for (const y of [4, 6, 8]) { ch.prop('pew', 1, y, { w: 3 }); ch.prop('pew', 8, y, { w: 3 }); }
+  ch.prop('colony_planter', 0, 9); ch.prop('colony_planter', 11, 9); ch.prop('lectern', 8, 2);
+  ch.spot('church.pew', 5, 7);
+  // the safety depot: the front desk, lockers, rescue drones on their pads, the big map screen of the deck
+  const dp = room('depot', 12, 9, 'Safety depot', 'd'); dp.colonyRoom = true;
+  dp.prop('map_screen', 4, 0, { w: 4, act: 'sign', sign: 'depot.map', label: 'Deck map' }); dp.prop('front_desk', 4, 2, { w: 4 }); dp.spot('depot.desk', 6, 1.3);
+  dp.prop('lockers', 0, 0, { w: 3 }); dp.prop('rescue_drone', 10, 1, { solid: false }); dp.prop('rescue_drone', 10, 4, { solid: false }); dp.prop('rescue_drone', 1, 4, { solid: false });
+  dp.prop('cargo_crate', 11, 7); dp.prop('colony_planter', 0, 7); dp.prop('charge_terminal', 9, 0);
+  dp.spot('depot.floor', 3.5, 6);
+  return { central: m, office: o, exchange: x, hangar: hg, arrivals: ah, school: sc, church: ch, depot: dp };
 }
 
 // ---------------------------------------------------------------- indoors

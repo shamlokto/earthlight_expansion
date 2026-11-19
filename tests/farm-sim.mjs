@@ -1133,5 +1133,38 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   const old = JSON.parse(saveState(newGame({ seed: 304 }))); old.mine = { floor: 3, w: 14, h: 12, cells: [] };
   check(loadState(JSON.stringify(old)).mine === null, 'an old site is cleared on load');
 }
+// ---------------------------------------------------------------- the belt's ores, Ruess's ore jobs, the new villagers (2026-11-19)
+{
+  const ORES = ['nickel_iron', 'silica', 'copper', 'titanium', 'platinum'];
+  for (const id of ORES) check(ITEMS[id] && ITEMS[id].kind === 'ore' && ITEMS[id].sell > 0 && ITEMS[id].detail && ITEMS[id].detail.length > 60, `ore ${id} is an item with a price and a story`);
+  check(ITEMS.nickel_iron.sell < ITEMS.copper.sell && ITEMS.copper.sell < ITEMS.titanium.sell && ITEMS.titanium.sell < ITEMS.platinum.sell && ITEMS.platinum.sell < ITEMS.star_metal.sell, 'deeper ores are worth more');
+  for (const [id, from] of sim.BELT_ORES) check(ITEMS[id] && Number.isInteger(from) && from >= 1, `BELT_ORES: ${id} from sector ${from}`);
+  for (const d of [1, 3, 5, 8, 10, 15, 20, 40]) { const o = sim.beltOdds(d), sum = Object.values(o).reduce((a, b) => a + b, 0); check(sum > 0.6 && sum < 1 && Object.values(o).every((p) => p > 0), `belt odds at sector ${d} sum to ${sum.toFixed(2)}`); }
+  check(!sim.beltOdds(1).copper && sim.beltOdds(2).copper && !sim.beltOdds(3).titanium && sim.beltOdds(4).titanium && !sim.beltOdds(7).platinum && sim.beltOdds(8).platinum, 'copper from 2, titanium from 4, platinum from 8');
+  check(sim.beltOdds(20).star_metal > sim.beltOdds(3).star_metal && sim.beltOdds(20).scrap < sim.beltOdds(1).scrap, 'further out: more star-metal, less scrap');
+  check(JSON.stringify(sim.beltOdds(40)) === JSON.stringify(sim.beltOdds(20)), 'the odds stop changing at sector 20');
+  const tally = (depth, drill) => { const g = richer(410 + depth), got = {}; if (drill) g.flags.drill = true; let n = 0; while (n < 1500) { sim.enterBelt(g, depth); g.mine.cells.forEach((v, i) => { if (v !== 1) return; g.player.stamina = 100; n++; for (const f of sim.hitRock(g, i % 14, Math.floor(i / 14)).gained) got[f.id] = (got[f.id] || 0) + f.n; }); for (let i = 0; i < g.player.inv.length; i++) if (g.player.inv[i] && ITEMS[g.player.inv[i].id].kind === 'ore') g.player.inv[i] = null; } return got; };
+  const t1 = tally(1), t9 = tally(9), t9d = tally(9, true);
+  check(t1.nickel_iron > t1.comet_ice && t1.silica > 0 && !t1.copper && !t1.titanium && !t1.platinum, 'sector 1: nickel-iron, silica, ice and scrap');
+  check(t9.copper > 0 && t9.titanium > 0 && t9.platinum > 0 && !t9.crystal && t9.platinum < t9.nickel_iron, 'sector 9: copper, titanium, a little platinum, no crystal yet');
+  const sum = (o) => Object.values(o).reduce((a, b) => a + b, 0);
+  check(sum(t9d) > sum(t9) * 1.15, `the drill head pulls more ore (${sum(t9d)} against ${sum(t9)})`);
+  // Ruess's ore jobs
+  const w = richer(420), job = (k) => shopStock(w, 'workshop').find((e) => e.key === k);
+  check(job('smelt_alloy').needs === '4 nickel-iron' && job('wind_battery').needs === '2 copper ore' && job('yard_racks') && job('up_drill') && !job('mill_rollers'), 'Ruess offers ore jobs (the rollers need a mill)');
+  let al = countItem(w, 'alloy'); check(buy(w, 'workshop', 'smelt_alloy').ok && countItem(w, 'alloy') === al + 1 && countItem(w, 'nickel_iron') === 8 && w.player.money === 1e6 - 100, 'four nickel-iron smelt into one alloy for 100 cr');
+  check(buy(w, 'workshop', 'smelt_alloy', 5).ok && countItem(w, 'nickel_iron') === 4, 'one smelt at a time');
+  check(buy(w, 'workshop', 'wind_battery').ok && countItem(w, 'battery') === 1 && countItem(w, 'copper') === 10, 'two copper wind a battery');
+  check(sim.yardSlots(w) === 6 && buy(w, 'workshop', 'yard_racks').ok && sim.yardSlots(w) === 10 && !job('yard_racks'), 'the solar yard grows to ten racks, once');
+  w.flags.feed_mill = true; check(sim.millCap(w) === 20 && buy(w, 'workshop', 'mill_rollers').ok && sim.millCap(w) === 40 && !job('mill_rollers'), 'titanium rollers: the mill grinds forty a night');
+  addItem(w, 'corn', 30); const ci = w.player.inv.findIndex((x) => x && x.id === 'corn'); check(sim.millAdd(w, ci, 30).ok && sim.millCount(w) === 30, 'thirty crops fit the faster mill');
+  check(buy(w, 'workshop', 'up_drill').ok && w.flags.drill && countItem(w, 'platinum') === 11 && !job('up_drill'), 'Ruess fits the drill head once');
+  const poor = rich(421); check(shopStock(poor, 'workshop').find((e) => e.key === 'smelt_alloy').can === false && !act(buy(poor, 'workshop', 'smelt_alloy')).ok, 'no smelting without the ore');
+  // old saves meet the new villagers and the new ores
+  const old = JSON.parse(saveState(newGame({ seed: 422 }))); delete old.npc.calloway; delete old.npc.fenn; delete old.flags.yard_big;
+  const back = loadState(JSON.stringify(old));
+  check(back && back.npc.calloway && back.npc.fenn && back.npc.fenn.love === 0 && sim.hearts(back, 'calloway') === 0, 'an old save gets the pastor and the constable');
+  check(sim.NPC_IDS.includes('calloway') && sim.NPC_IDS.includes('fenn'), 'the pastor and the constable are villagers');
+}
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

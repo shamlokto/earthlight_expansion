@@ -27,8 +27,10 @@ const CAST = {
   kestrel: { portrait: 'art/colony/portrait/w_kestrel.webp' },
   mori: { portrait: 'art/farm/people/mori_front.webp', shop: 'clinic' },
   yui: { portrait: 'art/farm/people/yui_front.webp' },
+  calloway: { portrait: 'art/farm/people/calloway_front.webp' },
+  fenn: { portrait: 'art/farm/people/fenn_front.webp' },
 };
-const NEWCOMERS = ['kestrel', 'mori', 'yui'];
+const NEWCOMERS = ['kestrel', 'mori', 'yui', 'calloway', 'fenn'];
 const LOVERS = ['general', 'ruess', 'kestrel', 'mori', 'oduya', 'yui'];
 const VILLAGERS = Object.keys(CAST).filter((id) => id !== 'sato');
 const MAIN = VILLAGERS.filter((id) => id !== 'moraine');
@@ -37,15 +39,16 @@ const SPOTS = new Set(('farm.porch farm.bin farm.gate farm.pond farm.field villa
   'village.bench village.storefront village.cafefront village.hallfront village.workshopfront village.ranchyard village.river ' +
   'hill.wreck hill.lake hill.overlook hill.onsen central.office central.arrivals central.exchange central.plaza central.dock hangar.floor store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
   'cafe.counter cafe.table1 cafe.table2 cafe.table3 hall.desk hall.floor ' +
-  'clinic.counter clinic.floor library.counter library.floor village.clinicfront village.libraryfront').split(' '));
+  'clinic.counter clinic.floor library.counter library.floor village.clinicfront village.libraryfront ' +
+  'church.altar church.pew central.churchgarden central.schoolyard school.floor depot.desk depot.floor central.depotfront').split(' '));
 const STYLES = new Set(['bob', 'short', 'long', 'bald', 'bun', 'bandana', 'cap']);
-const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', 'cafe', 'hall', 'clinic', 'library', 'central', 'hangar']);
+const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', 'cafe', 'hall', 'clinic', 'library', 'central', 'hangar', 'church', 'depot', 'school']);
 const TIERS = new Set(['loved', 'liked', 'neutral', 'disliked']);
 const WEATHERS = ['sun', 'rain', 'storm', 'snow'];
 const RELICS = ['photo', 'teacup', 'book', 'watch', 'toy', 'medal', 'seedtin', 'musicbox', 'datachip', 'ring'];
 const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king'];
 const CROPS = ['turnip', 'potato', 'cucumber', 'strawberry', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach', 'moonflower'];
-const GIFTABLE = [...CROPS, 'egg', 'milk_s', 'milk_m', 'milk_l', ...FISH, 'herb', 'berry', 'mushroom', 'frostcap', 'comet_ice',
+const GIFTABLE = [...CROPS, 'egg', 'milk_s', 'milk_m', 'milk_l', ...FISH, 'herb', 'berry', 'mushroom', 'frostcap', 'comet_ice', 'nickel_iron', 'silica', 'copper', 'titanium', 'platinum',
   'scrap', 'alloy', 'crystal', ...RELICS, 'bread', 'soup', 'pie', 'tea', 'tonic'];
 const NEUTRAL = ['pendant', 'weed', 'weeds', 'lumber', 'fodder', 'feed', 'seed_turnip', 'seed_grass', 'seed_moonflower', 'hoe', 'no_such_thing', '', 'toString', '__proto__', 'constructor'];
 const FEST = {
@@ -344,7 +347,7 @@ const byNpc = (id) => EVENTS.filter((e) => e.npc === id).map((e) => e.hearts).so
 for (const id of LOVERS) check(EVENTS.some((e) => e.npc === id && e.hearts < 8), `${id}: a heart event before the confession`);
 check(byNpc('general') === '2,4,6,8,10', `the General's five events (${byNpc('general')})`);
 for (const id of VILLAGERS) if (id !== 'general') check(byNpc(id) === '3,7', `${id}: events at 3 and 7 hearts (${byNpc(id)})`);
-check(EVENTS.length === 5 + 2 * 11, `27 events (${EVENTS.length})`);
+check(EVENTS.length === 5 + 2 * 13, `31 events (${EVENTS.length})`);
 
 check(FESTIVALS.length === 4, 'four festivals');
 for (const f of FESTIVALS) {
@@ -387,9 +390,9 @@ const SIGN_SPOTS = ['farm.gate', 'farm.bin', 'village.square', 'village.memorial
   'village.hallfront', 'village.workshopfront', 'village.ranchyard', 'hill.wreck', 'hill.lake', 'hill.overlook'];
 for (const s of SIGN_SPOTS) { check(isText(SIGNS[s]), `SIGNS['${s}'] (${SIGNS[s]?.length})`); count(SIGNS[s]); }
 for (const s of Object.keys(SIGNS)) check(SPOTS.has(s), `sign spot ${s} is a known spot`);
-check(/descent/i.test(SIGNS['hill.wreck']) && !/wreck|mine\b/i.test(SIGNS['hill.wreck']), 'the hill sign is the lift pad of the Descent');
+check(/orbital elevator/i.test(SIGNS['hill.wreck']) && !/wreck|mine\b|descent/i.test(SIGNS['hill.wreck']), 'the hill sign is the orbital elevator');
 
-check(Array.isArray(HELP) && HELP.length >= 7 && HELP.length <= 11, `HELP has 7-11 pages (${HELP.length})`);
+check(Array.isArray(HELP) && HELP.length >= 7 && HELP.length <= 12, `HELP has 7-12 pages (${HELP.length})`);
 check(HELP.some((p) => p.title === 'Love'), 'HELP has a Love page');
 for (const p of HELP) {
   check(isText(p.title, 50), `HELP title ${p.title}`);
@@ -399,7 +402,7 @@ for (const p of HELP) {
 }
 const help = HELP.map((p) => p.title + '\n' + p.body).join('\n').toLowerCase();
 for (const w of ['w a s d', 'arrow', 'shift', 'space', 'left click', 'mouse wheel', 'tab', 'esc', 'touch', 'stamina', 'shipping bin', 'sickle', 'hoe',
-  'starsteel', 'greenhouse', 'chicken', 'cow', 'birthday', 'descent', 'old world', 'hydra', 'memory room', 'float', 'hill lake', 'forage', 'planting day',
+  'starsteel', 'greenhouse', 'chicken', 'cow', 'birthday', 'orbital elevator', 'old world', 'hydra', 'memory room', 'float', 'hill lake', 'forage', 'planting day',
   'lantern night', 'harvest fair', "year's end", 'moonflower', 'favour', 'pendant', 'sweetheart', 'wedding', '8 hearts', '10 hearts', 'clinic', 'library', 'lantern ring']) check(help.includes(w), `HELP mentions '${w}'`);
 check(new Set(HELP.map((p) => p.title)).size === HELP.length, 'HELP titles are unique');
 
@@ -486,7 +489,7 @@ const SEASON_OF = { turnip: [0], potato: [0], cucumber: [0], strawberry: [0], to
   fish_spring: [0], fish_summer: [1], fish_autumn: [2], fish_winter: [3] };
 const ANYTIME = ['egg', 'milk_s', 'milk_m', 'milk_l', 'fish_s', 'fish_m', 'fish_l', 'scrap', 'alloy', 'crystal', ...RELICS, 'bread', 'soup', 'pie', 'tea'];
 const NUMBER_WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six'];
-check(Object.keys(QUESTS).sort().join() === [...VILLAGERS].sort().join(), 'QUESTS covers exactly the twelve villagers');
+check(Object.keys(QUESTS).sort().join() === [...VILLAGERS].sort().join(), 'QUESTS covers exactly the fourteen villagers');
 const questIds = new Set();
 let questCount = 0;
 for (const id of VILLAGERS) {
@@ -528,6 +531,23 @@ check(!/\brom\b/.test(everything), 'nothing refers to a ROM');
 check(!/river chamber/.test(everything) && /upper deck/.test(everything) && /lantern ring/.test(everything) && /hesk/.test(everything), 'the setting is the Upper deck, after Hesk');
 check(!/\bmine shaft\b|\bthe mine\b|\bminer\b/.test(everything), 'there is no mine');
 for (const id of VILLAGERS) check(!JSON.stringify(story.TALK?.[id] ?? '').includes('"sato"'), `${id}: talk data has no speaker tags`);
+
+// ---------------------------------------------------------------- the pastor and the constable (2026-11-19)
+check(!ROMANCE.candidates.includes('calloway') && !ROMANCE.candidates.includes('fenn'), 'the pastor and the constable are friends, not romance candidates');
+const atC = (id, wd, m, more) => at(id, wd, m, more);
+for (const wd of [1, 2, 3, 4, 5]) for (const m of [600, 960]) check(atC('calloway', wd, m) === 'church.altar', `Pastor Ines keeps the altar (wd ${wd}, ${m})`);
+check([800, 840].every((m) => atC('calloway', 1, m) === 'central.churchgarden'), 'she tends her garden after lunch');
+check(atC('calloway', 2, 750) === 'school.floor', 'on Wednesdays she sits in the empty school');
+check(atC('calloway', 0, 600)?.startsWith('village.') && atC('calloway', 0, 900)?.startsWith('library.'), 'Mondays off, in Willowfall');
+for (const wd of [0, 1, 2, 4, 5, 6]) { check(atC('fenn', wd, 490) === 'school.floor', `Constable Fenn checks the school locks at eight (wd ${wd})`); for (const m of [600, 960]) check(atC('fenn', wd, m) === 'depot.desk', `the depot desk is staffed (wd ${wd}, ${m})`); }
+check([600, 720, 840, 960].every((m) => !atC('fenn', 3, m)?.startsWith('depot.')) && atC('fenn', 3, 600) === 'village.ranchyard', 'Thursdays off: stray hens home to Willowfall');
+check(atC('fenn', 6, 1110) === 'church.pew' && atC('calloway', 6, 1110) === 'church.pew', 'Sunday evensong: the constable sits at the back');
+check(atC('fenn', 3, 840, { weather: 'rain' }) === 'village.bench', 'no fishing in the rain');
+for (const id of ['calloway', 'fenn']) check(at(id, 1, 700, { weather: 'storm' }) === null, `${id} stays in in a storm`);
+check(ROMANCE.candidates.every((id) => ROMANCE.people[id].wedding.some((l) => l.who === 'calloway')), 'the pastor blesses every wedding');
+for (const f of FESTIVALS) check(f.lines.some((l) => l.who === 'calloway' || l.who === 'fenn'), `${f.id}: the pastor or the constable is there`);
+check(isText(SIGNS['hill.wreck']) && story.ELEVATOR && isText(story.ELEVATOR.up) && isText(story.ELEVATOR.down) && story.CHURCH.candles.length >= 3, 'the elevator and the candles have words');
+check(!/\bdescent\b/i.test(JSON.stringify({ TALK: story.TALK, EVENTS, QUESTS, HELP, SIGNS, NPCS })), 'the Descent is gone from the words (the elevator replaced it)');
 
 console.log(`conversations: ${VILLAGERS.map((id) => `${id} ${convs[id].size}`).join(', ')}`);
 console.log(`requests: ${questCount}, love stories: ${LOVERS.length}`);

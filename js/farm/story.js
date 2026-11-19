@@ -81,7 +81,7 @@ export const NPCS = {
     dislikes: ['scrap', 'onion', 'frostcap'],
   },
   vashti: {
-    id: 'vashti', name: 'Nell Vashti', short: 'Vashti', title: 'Salvage pilot; keeper of the hangar and the Descent', portrait: P + 'w_vashti.webp',
+    id: 'vashti', name: 'Nell Vashti', short: 'Vashti', title: 'Salvage pilot; keeper of the hangar and the orbital elevator', portrait: P + 'w_vashti.webp',
     look: { skin: '#b98a66', hair: '#3b2a20', top: '#55604a', bottom: '#2f2c28', style: 'bandana' },
     birthday: { season: 1, day: 17 },
     loves: ['crystal', 'photo', 'watch', 'datachip', 'medal'],
@@ -92,7 +92,7 @@ export const NPCS = {
     id: 'moraine', name: 'Queen Moraine', short: 'Moraine', title: 'Of the Ashfall Cartel; trader', portrait: 'svg:moraine',
     look: { skin: '#caa58a', hair: '#7a1f2b', top: '#1f1a24', bottom: '#b8922e', style: 'long' },
     birthday: { season: 3, day: 21 },
-    loves: ['ring', 'crystal', 'moonflower', 'fish_king'],
+    loves: ['ring', 'crystal', 'moonflower', 'fish_king', 'platinum'],
     likes: ['tea', 'teacup', 'strawberry', 'pumpkin', 'musicbox', 'tonic', 'fish_l'],
     dislikes: ['scrap', 'turnip', 'fish_s'],
     shop: 'barge',
@@ -125,9 +125,26 @@ Object.assign(NPCS, {
     likes: ['tea', 'photo', 'teacup', 'berry', 'sweetpotato', 'mushroom', 'datachip', 'fish_spring'],
     dislikes: ['scrap', 'onion', 'fish_l'],
   },
+  // 2026-11-19: Eden Central's pastor and its constable (friends, not romance candidates).
+  calloway: {
+    id: 'calloway', name: 'Pastor Ines Calloway', short: 'Pastor Ines', title: 'Pastor of Second Dawn Church, Eden Central', portrait: 'art/farm/people/calloway_front.webp',
+    look: { skin: '#f3cfb4', hair: '#b4b7c0', top: '#363a48', bottom: '#2b2e38', style: 'bun' },
+    birthday: { season: 0, day: 14 },
+    loves: ['tomato', 'teacup', 'herb', 'soup'],
+    likes: ['bread', 'tea', 'egg', 'strawberry', 'carrot', 'book', 'musicbox', 'milk_m'],
+    dislikes: ['tonic', 'scrap', 'medal'],
+  },
+  fenn: {
+    id: 'fenn', name: 'Constable Aldo Fenn', short: 'Constable Fenn', title: 'Constable of the Eden Central safety depot', portrait: 'art/farm/people/fenn_front.webp',
+    look: { skin: '#c99a74', hair: '#2a2830', top: '#24406e', bottom: '#1e2636', style: 'cap' },
+    birthday: { season: 2, day: 26 },
+    loves: ['pie', 'toy', 'sweetpotato', 'fish_winter'],
+    likes: ['tea', 'bread', 'soup', 'corn', 'potato', 'watch', 'egg', 'fish_s'],
+    dislikes: ['tonic', 'onion', 'berry'],
+  },
 });
 
-export const VILLAGERS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui'];
+export const VILLAGERS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui', 'calloway', 'fenn'];
 
 export const SPOTS = [
   'farm.porch', 'farm.bin', 'farm.gate', 'farm.pond', 'farm.field',
@@ -137,6 +154,7 @@ export const SPOTS = [
   'store.counter', 'store.floor', 'ranch.counter', 'workshop.counter', 'workshop.bench',
   'cafe.counter', 'cafe.table1', 'cafe.table2', 'cafe.table3', 'hall.desk', 'hall.floor',
   'clinic.counter', 'clinic.floor', 'library.counter', 'library.floor', 'village.clinicfront', 'village.libraryfront',
+  'church.altar', 'church.pew', 'central.churchgarden', 'central.schoolyard', 'school.floor', 'depot.desk', 'depot.floor', 'central.depotfront',
 ];
 
 // ------------------------------------------------------------------ festivals
@@ -155,6 +173,7 @@ export const FESTIVALS = [
       { who: 'general', text: 'May I take the row beside yours, Sato? I am told you have become the expert.' },
       { who: 'sato', text: 'Seventeen days in. I know which end of the seed goes down. Stay close, sir, and I will share the secret.' },
       { who: 'ruess', text: 'I built a drill that plants forty rows an hour. Marrow has banned it. Apparently it lacks soul.' },
+      { who: 'fenn', text: 'For the record, Professor, it also lacked a licence.' },
       { who: 'marrow', text: 'It also lacks brakes, Professor. Hands, please. All of you.' },
       { who: 'narrator', text: 'By three the bed is planted and watered, and nobody can say afterwards which row was whose.' },
       { who: 'seln', text: 'Take these home, Mira. A field that size wants potatoes in it.' },
@@ -176,6 +195,7 @@ export const FESTIVALS = [
       { who: 'sato', text: 'Hand me half, sir. You always did try to carry the whole manifest yourself.' },
       { who: 'narrator', text: 'They kneel side by side on the bank and launch them one at a time. Neither of them hurries.' },
       { who: 'moraine', text: 'I sold to both sides, Captain. So I have brought lanterns for both. It seemed the only honest count.' },
+      { who: 'calloway', text: 'I have brought the names up from the church candles, all three hundred and twelve. The Constable carried the basket and would not let me help.' },
       { who: 'narrator', text: 'The lights drift under the bridge and away round the long curve of the ring, until the river above and the river below both carry stars.' },
       { who: 'marrow', text: 'There. Now they know the way home. Go and eat something, all of you. Tem has soup on.' },
     ],
@@ -194,6 +214,7 @@ export const FESTIVALS = [
       { who: 'ruess', text: "I've weighed every entry twice. The scale is mine and it is accurate to a hair, whatever Corran says." },
       { who: 'corran', text: 'That scale is rigged against dairy!' },
       { who: 'kestrel', text: 'I am judging pies. I have tasted eleven. It is a hard duty, and I shall see it through to the end.' },
+      { who: 'fenn', text: 'Order at the pie table, please. Commander, that is your twelfth. I am obliged to log it.' },
       { who: 'maris', text: 'The Hollin field takes a ribbon! First one since before the war. Somebody ring something!' },
       { who: 'general', text: 'Well earned. I have pinned a good many things on your jacket, Sato. I think this one suits you best.' },
       { who: 'sato', text: 'It is the only one that came with prize money, sir. That helps.' },
@@ -213,6 +234,7 @@ export const FESTIVALS = [
       { who: 'yui', text: 'I am to read aloud at eleven. It is one page. I have chosen it very carefully. It is about a morning.' },
       { who: 'vashti', text: '...I came down off the hill. Do not make a fuss about it.' },
       { who: 'moraine', text: 'A year of honest trade. I find I can sleep on it. Tell no one; I have a reputation.' },
+      { who: 'calloway', text: 'I have three words for midnight. They are "well done, everyone". Then I am helping with the bowls.' },
       { who: 'general', text: 'When I signed away the fleet I thought it was the end of something. It appears I had the direction wrong.' },
       { who: 'sato', text: 'You usually had the direction right, sir. It was the arrival time you guessed at.' },
       { who: 'narrator', text: 'At midnight the shutters of the great window roll back. Earth hangs there, grey and scarred, and along one coast, faintly, green.' },
@@ -283,7 +305,7 @@ const SCHEDULE = {
       [H(16, 20), H(17), 'farm.gate'], [H(17), H(17, 40), 'farm.bin'], [H(17, 40), H(18, 10), 'farm.gate'],
       [H(18, 30), H(20, 30), wd === 1 || wd === 6 ? 'cafe.table2' : 'village.cafefront']);
   },
-  // The hangar at the top of the hull lift (the Descent), where the Pallas launches for the belt.
+  // The hangar at the top of the orbital elevator, where the Pallas launches for the belt.
   vashti(wd, m) {
     if (wd === 6) return pick(m, [H(9), H(11), 'hill.lake'], [H(11, 30), H(15), 'cafe.table3'], [H(15), H(18), 'hangar.floor']);
     if (wd === 4 && m >= H(15, 30) && m < H(17)) return 'workshop.bench';
@@ -333,16 +355,33 @@ Object.assign(SCHEDULE, {
   },
 });
 
+Object.assign(SCHEDULE, {
+  // Second Dawn Church: the pastor keeps the altar and the candles, and her garden after lunch. Mondays off, in Willowfall.
+  calloway(wd, m) {
+    if (wd === 0) return pick(m, [H(9), H(11), 'village.memorial'], [H(11), H(13, 30), 'village.river'], [H(13, 30), H(16), 'library.floor'], [H(16), H(18), 'village.bench']);
+    if (wd === 6) return pick(m, [H(8), H(12), 'church.altar'], [H(12), H(14), 'central.plaza'], [H(14), H(16, 30), 'central.churchgarden'], [H(18), H(20), 'church.pew']);
+    return pick(m, [H(8), H(9), 'central.churchgarden'], [H(9), H(12), 'church.altar'], [H(12), H(13), wd === 2 ? 'school.floor' : 'central.plaza'],
+      [H(13), H(15), 'central.churchgarden'], [H(15), H(18), 'church.altar'], [H(18), H(19, 30), 'church.pew']);
+  },
+  // The safety depot: the constable checks the empty school's locks every morning. Thursdays off (he takes stray hens home to Willowfall).
+  fenn(wd, m) {
+    if (wd === 3) return pick(m, [H(9), H(11), 'village.ranchyard'], [H(11), H(13), 'village.square'], [H(13), H(15), 'hill.lake'], [H(15), H(17), 'village.riverside'], [H(18), H(20), 'village.bridge']);
+    const beat = ['central.schoolyard', 'central.arrivals', 'central.churchgarden', null, 'central.arrivals', 'central.plaza', 'central.schoolyard'][wd];
+    return pick(m, [H(7), H(8), 'central.depotfront'], [H(8), H(8, 30), 'school.floor'], [H(8, 30), H(12), 'depot.desk'], [H(12), H(13), 'central.plaza'],
+      [H(13), H(15), beat], [H(15), H(17), 'depot.desk'], [H(17), H(18), 'depot.floor'], [H(18), H(19, 30), wd === 6 ? 'church.pew' : 'central.depotfront']);
+  },
+});
+
 const FESTIVAL_SPOTS = {
   'village.square': {
     general: 'village.memorial', marrow: 'village.square', seln: 'village.storefront', corran: 'village.square', ruess: 'village.bench',
     oduya: 'village.cafefront', maris: 'village.square', vashti: 'village.bench', moraine: 'village.hallfront',
-    kestrel: 'village.square', mori: 'village.bench', yui: 'village.hallfront',
+    kestrel: 'village.square', mori: 'village.bench', yui: 'village.hallfront', calloway: 'village.memorial', fenn: 'village.square',
   },
   'village.bridge': {
     general: 'village.bridge', marrow: 'village.bridge', seln: 'village.river', corran: 'village.river', ruess: 'village.bench',
     oduya: 'village.bench', maris: 'village.bridge', vashti: 'village.riverside', moraine: 'village.river',
-    kestrel: 'village.bridge', mori: 'village.river', yui: 'village.bench',
+    kestrel: 'village.bridge', mori: 'village.river', yui: 'village.bench', calloway: 'village.bridge', fenn: 'village.riverside',
   },
 };
 
@@ -701,12 +740,12 @@ export const TALK = {
   },
 
   vashti: {
-    first: ['...You are the one with the Pallas.', 'Vashti. I run the lift. It goes down to the Old World and it comes back. I see to the second part.'],
+    first: ['...You are the one with the Pallas.', 'Vashti. I run the elevator and the hangar at the top of it. The Pallas goes out to the belt and it comes back. I see to the second part.'],
     bday: ['...How did you know.', 'Nobody has given me anything in a long time. I do not know what my face is doing. Ignore it.'],
     b0: [
-      'Lift runs eight till six. Be on it by six or sleep down there. The crawlers snore.',
+      'Elevator runs eight till six. Be back in the car by six or sleep in the hangar. The hangar is cold.',
       'Search the rubble. Set your Hydra down first. The crawlers scatter. It is not difficult.',
-      'Scrap near the top. Better things lower. Everything has a price or a place. Learn which.',
+      'Nickel-iron near the colony. Copper and titanium further out. Platinum if you are patient. Everything has a price or a place. Learn which.',
     ],
     b1: [
       'You keep that salvage arm clean. Most do not. ...Good.',
@@ -721,17 +760,17 @@ export const TALK = {
     b3: [
       ['I am looking for a street. I have half the name, from a photograph.', 'When I find it I will tell you first. I have decided that.'],
       'I do not stay in places. Three years is the longest. I have been on this hill for one and I have planted beans. Draw your own conclusion.',
-      '...You can have the lift after six. If you ask. Only you.',
+      '...You can have the elevator after six. If you ask. Only you.',
     ],
-    s0: 'Spring melt gets into the lift shaft. I grease the cable twice. You are welcome.',
-    s1: 'Summer. Cooler down below than up here. One good thing about a dead city.',
-    s2: 'Mushrooms come up round the lift pad in autumn. Take them. I do not eat things that grow overnight.',
+    s0: 'Spring damp gets into the elevator cable. I grease the clamps twice. You are welcome.',
+    s1: 'Summer. Cooler at the axis than down here. One good thing about having no weight.',
+    s2: 'Mushrooms come up round the elevator pad in autumn. Take them. I do not eat things that grow overnight.',
     s3: 'Frostcaps by the lake. And the cable sings in the cold. I like winter. It is quiet in the right way.',
-    rain: 'Rain. The pad is slick. Walk your Pallas on, do not run it. I am not fishing you out of the shaft.',
+    rain: 'Rain. The pad is slick. Walk on to the car, do not run. I am not fishing you off the hillside.',
     snow: 'Snow up here. Ash down there. From a distance they look the same. They are not.',
     sun: 'Clear. From the overlook you can see the whole ring curve. ...I look, sometimes.',
     morning: 'Early. Good. The best finds are before the dust lifts.',
-    evening: 'Lift is locked. The lake is that way, if you are going to stand about.',
+    evening: 'Elevator is locked. The lake is that way, if you are going to stand about.',
     eve: {
       lantern: 'Lantern Night tomorrow. ...I will come down for it. One lantern. Do not ask whose.',
       yearsend: "Year's End tomorrow. Marrow came up the hill herself to invite me. Unfair tactics.",
@@ -882,6 +921,81 @@ Object.assign(TALK, {
     year2: ['Your library card is full. I have never had to issue a second one to a farmer.', 'I made it myself. It has a turnip on it.'],
     fish: 'There is a book of lake stories in the local history bay. Old Hollin is in six of them. He gets bigger in each. I respect the editing.',
     eve: { yearsend: "Year's End tomorrow. I read aloud by the fire at eleven. It is a short piece. I have been practising since autumn." },
+  },
+});
+
+Object.assign(TALK, {
+  calloway: {
+    first: ['Hello, hello. You are the farmer. Ines Calloway; I keep Second Dawn Church, the candles and a very argumentative tomato bed.', 'Come in whenever you like. The door has not been locked since the siege. I lost the key, and then I decided I had not.'],
+    bday: ['A present? On my birthday? I shall have to preach on gratitude now, and I had something lazy planned.', '...Thank you, Mira. Truly. Sit a moment. I like to be given things slowly.'],
+    b0: [
+      'The church is open day and night. People come in at three in the morning to sit. I leave the kettle out for them.',
+      ['Of any faith or none, the sign says. I wrote it.', 'Mostly "none" come, and sit at the back, and look at the windows. That counts.'],
+      'I have a garden beside the church. Six tomato plants, two herbs, and one rose that refuses to admit it is a weed.',
+    ],
+    b1: [
+      ['I was a field chaplain on the gates in the siege. You were on the gates too, I think.', 'We never met. I would have remembered somebody who was not shouting.'],
+      ['Three hundred and twelve candles. One for each name.', 'I trim the wicks every morning. It takes an hour. It is the best hour I have.'],
+      'Constable Fenn sits at the back on Sunday evenings and pretends he is checking the exits. I let him.',
+    ],
+    b2: [
+      ['People ask me whether I still believe, after the siege.', 'I tell them I believe in soup, and tomatoes, and the people who turn up. The rest is on loan.'],
+      ['The school across the avenue has no children yet. I go and sit in it on Wednesdays.', 'I plan the first assembly. It is a very short one. Mostly it is "hello".'],
+      'You water things the way I light candles. Every day, whether or not anything comes of it. I recognise the habit.',
+    ],
+    b3: [
+      ['I have started a candle that has no name on it.', 'It is for the ones still to come. The first child at that school. Your next spring. It seemed only fair.'],
+      'You are the person I talk to when I am tired of being the person people talk to. I thought you should know.',
+    ],
+    s0: 'Spring. My tomatoes are in, and already sulking. The climate plant and I are not on speaking terms.',
+    s1: 'Summer. The windows throw colours all down the aisle in the afternoon. People come in just to stand in them.',
+    s2: 'Autumn. I bottle what the garden gives and leave the jars by the door. They are always gone by morning. Good.',
+    s3: 'Winter. The candles matter more in winter. I do not know why. Perhaps because the dark is scheduled.',
+    rain: 'Rain on the Upper deck, they tell me. Down here under the glass we only hear about it. I pray for your crops anyway.',
+    snow: 'Snow up on the Lantern Ring. I shall light one candle for the sledges and one for the people mending them.',
+    sun: 'A fine day. The sun-line comes through the glass roof and the whole avenue smells of warm dust and bread.',
+    morning: 'Good morning. I have trimmed every wick. Three hundred and twelve, and none of them complained.',
+    evening: 'Evening. This is the hour people come in to sit. I try to be furniture. Kind furniture.',
+    fest: 'A festival! I have left the candles with the Constable. He is guarding them with his life. Somebody should tell him to sit down.',
+    year2: ['A whole year of you coming in with mud on your boots.', 'I have stopped sweeping it up on Mondays. It is a sort of attendance record.'],
+    fish: 'I fished once, as a girl. I caught a boot and gave it a proper burial. My father never let me forget it.',
+    eve: { lantern: ['Lantern Night tomorrow. I bring the names from the church.', 'I carry them down the lift in a basket. It is heavier than it looks, and lighter than it was.'], yearsend: "Year's End tomorrow. I say three words at midnight, and then I go and help Oduya with the bowls." },
+  },
+  fenn: {
+    first: ['Constable Aldo Fenn, safety depot, Main deck. Good day, madam. ...Captain. Farmer. Good day.', 'If you see anything unsafe, report it. If you lose anything, report it. If you find a hen, I will take the hen.'],
+    bday: ['A gift. For me. On the correct date.', '...I shall log it. Under "kindness, received". It is a new heading. Thank you, Sato.'],
+    b0: [
+      'Peacekeeping, rescue, lost property and hull alarms. Mostly lost property. Yesterday: one glove, one umbrella, one goose.',
+      ['All green on the deck map today.', 'I say that every morning. I say it to the drones. They do not reply, which is correct procedure.'],
+      'Please do not run on the avenue. That is not a rule. It is a strongly worded hope.',
+    ],
+    b1: [
+      ['I check the school locks every morning at eight.', 'Nobody has asked me to. There is nothing in it. It is the principle of the thing.'],
+      ['I was a cadet in the siege. Nineteen. They gave me a torch and a corridor.', 'I kept the corridor. I still have the torch. It is in the drawer, regulation side up.'],
+      'Pastor Ines says I salute too much. I have reduced it to three a day. It is very difficult.',
+    ],
+    b2: [
+      ['There is a shelf at the depot of things nobody came back for. From the siege.', 'I keep them labelled and dusted. In case. A constable must allow for in case.'],
+      'I tested the school bell once. To be sure it worked. It worked. I stood there afterwards for a while.',
+      ['People think I am stiff. I am. It is like a splint.', 'It keeps the soft part straight while it heals.'],
+    ],
+    b3: [
+      ['I have bought a box for the school. For the first child. Crayons, a ruler, a little torch.', 'Do not tell anyone. I have filed it under "equipment".'],
+      'When you come down the lift on a Sunday, the deck map shows one green light walking about. I find I watch it.',
+    ],
+    s0: 'Spring. The hydroponics in the gardens bloom and half the deck stops to look. I direct the traffic. It is the best duty there is.',
+    s1: 'Summer. The glass roof warms the avenue. I have issued myself a lighter jacket. It took a form.',
+    s2: 'Autumn. Harvest Fair on the Lantern Ring. I am on duty there, which means I eat a pie standing up and guard the others.',
+    s3: 'Winter. Snow up on the Upper deck, none down here. People come down the lift with it on their shoulders, and I let them track it in.',
+    rain: 'Rain on the Upper deck, the board says. We get the rumour of it down here. I have an umbrella anyway. Regulation.',
+    snow: 'Snow up on the Ring. Mind the lift steps when you come down. Wet boots on deck plate. I have seen things.',
+    sun: 'Clear day under the glass. Visibility excellent. Morale, if I may say, also excellent.',
+    morning: 'Good morning. School locks checked: secure. Deck map: green. Constable: present and correct.',
+    evening: 'Evening. The depot drones are charging. I like the hum. It sounds like a house with people in it.',
+    fest: 'On duty at the festival. Nobody has done anything unsafe. Corran has come close. I am watching Corran.',
+    year2: ['A year since you came down that lift with a sack of turnips and no idea where the market was.', 'I gave you directions. You did not need them. I gave them anyway. I would again.'],
+    fish: 'I fish the hill lake on Thursdays. I have caught nothing, and logged every hour of it. It is the most peaceful file in the depot.',
+    eve: { harvest: 'Harvest Fair tomorrow. I have been asked to keep order at the pie table. I have been asked by the Commander, who is judging it.', planting: 'Planting Day tomorrow. I have pressed my gardening uniform. There is no such uniform. I have pressed a shirt.' },
   },
 });
 
@@ -1054,6 +1168,23 @@ Object.assign(GIFT, {
     neutral: 'Thank you. I shall file it under "gifts, miscellaneous". It is a small section, but it is growing.',
     disliked: 'Oh. Hm. I do not think that may come into the library. But thank you for thinking of me.',
     bday: 'A birthday present. ',
+  },
+});
+
+Object.assign(GIFT, {
+  calloway: {
+    loved: 'Oh, now. This is a blessing with its sleeves rolled up. Thank you, Mira. I shall be cheerful about it all week.',
+    liked: 'How kind. I shall share it, which is the only way I know to keep a thing.',
+    neutral: 'Thank you, dear. Everything given in kindness finds a use here, eventually. Usually on Sundays.',
+    disliked: 'Ah. I have buried too many of these, in my time. I shall find it a quiet drawer. Thank you for the thought.',
+    bday: 'And on my birthday. ',
+  },
+  fenn: {
+    loved: 'This is... Sato, this is entirely in order. Wholly in order. I need a moment. I am going to log it twice.',
+    liked: 'Thank you. Received with thanks. I shall make a note. A good note.',
+    neutral: 'Received. Thank you, citizen. Farmer. Sato. Thank you.',
+    disliked: 'Ah. I shall place it in lost property. Not that it is lost. It is simply... safer there.',
+    bday: 'On the correct date, too. ',
   },
 });
 
@@ -1365,13 +1496,13 @@ export const EVENTS = [
   {
     id: 'vashti3', npc: 'vashti', hearts: 3, map: 'hangar', from: H(8), to: H(18),
     lines: [
-      L('narrator', 'Vashti is greasing the cable drum of the Descent. A square of card is tucked into her bandana, the way other people keep a pencil.'),
+      L('narrator', 'Vashti is greasing the cable clamps of the elevator car. A square of card is tucked into her bandana, the way other people keep a pencil.'),
       L('sato', 'You have a photograph in your hat.'),
       L('vashti', '...Most people pretend they have not seen it.'),
       L('narrator', 'She hands it over. A street corner, long ago. A blue door. A woman laughing with a child on her hip. Half a street sign: —ILLOW LA—.'),
       L('vashti', 'Found it in a wallet, in a hull I was stripping. Their side. He had carried it right through the war.'),
       L('vashti', 'I took the copper out of that ship and sold it. Then I could not sell the picture. Three years I have had it.'),
-      L('sato', 'And the lift goes down to where the streets are.'),
+      L('sato', 'And Maris\'s shuttle goes down to where the streets are.'),
       L('vashti', 'There are a great many streets. I have been looking for one blue door. It is stupid.'),
       L('sato', 'I bought a field I did not know how to plant. I am in no position to call a thing stupid.'),
       L('vashti', '...Hm. If you see a blue door down there, tell me. Take this. I have too many, and you came and asked.'),
@@ -1381,17 +1512,17 @@ export const EVENTS = [
   {
     id: 'vashti7', npc: 'vashti', hearts: 7, map: 'hangar', from: H(8), to: H(18),
     lines: [
-      L('narrator', 'The lift is up and locked, in the middle of the day. Vashti sits on the edge of the pad with her boots hanging over the shaft.'),
+      L('narrator', 'The elevator car is docked and locked, in the middle of the day. Vashti sits on the lip of the hangar mouth with her boots hanging over the stars.'),
       L('vashti', 'I found it. Willow Lane. The door is grey now. It was blue under the ash. I scratched it to be sure.'),
       L('sato', 'And inside?'),
       L('vashti', 'A kitchen. A table laid for three. Dust. A height chart on the door frame, pencil, up to here. Nobody. There was never going to be anybody.'),
       L('vashti', 'I thought I would feel finished. I put the photograph on the table and came up. Now I do not know what I am for.'),
       L('sato', 'I know that one. It lasts about a season. Then something needs watering.'),
       L('vashti', '...I thought about leaving. I always do, after. I have the pack by the door.'),
-      L('sato', "Marrow's Memory Room needs someone who knows what things were. The children ask questions she cannot answer. And the lift does not run itself."),
+      L('sato', "Marrow's Memory Room needs someone who knows what things were. The children ask questions she cannot answer. And the elevator does not run itself."),
       L('vashti', 'You are giving me a reason. You are not even hiding it.'),
       L('sato', 'I was a captain. Subtlety was never in the manual.'),
-      L('narrator', 'Vashti is quiet for a while. Then she gets up, hangs her pack on the hook inside the lift house, and leaves it there.'),
+      L('narrator', 'Vashti is quiet for a while. Then she gets up, hangs her pack on the hook inside the elevator car, and leaves it there.'),
       L('vashti', 'The village is called Willowfall. I only noticed that on the way up. ...Take this. It was on their mantelpiece. It ought to be wound by someone.'),
     ],
     reward: { love: 5, item: ['watch', 1] },
@@ -1533,6 +1664,74 @@ EVENTS.push(
   },
 );
 
+EVENTS.push(
+  // ---- Pastor Ines: the candles, and the garden.
+  {
+    id: 'calloway3', npc: 'calloway', hearts: 3, map: 'church', from: H(9), to: H(12),
+    lines: [
+      L('narrator', 'Second Dawn Church is empty but for the candles and Pastor Ines, who is trimming wicks with a pair of nail scissors.'),
+      L('calloway', 'Mira. Hold this, would you? No, the other end. That is the end that is on fire.'),
+      L('sato', 'You know every one of these by name.'),
+      L('calloway', 'Three hundred and twelve. I wrote the names on the bases in pencil. Pencil, so I can go over it when it fades.'),
+      L('calloway', 'You are wondering whether there is one of yours here. There is room. There is always room. Light one if you like.'),
+      L('narrator', 'Sato lights a candle and says a name from the carrier, very quietly. Ines writes it on the base without asking how it is spelled.'),
+      L('sato', 'You did not ask.'),
+      L('calloway', 'You said it as if you had been saying it for years. I trust a name that has been carried that long.'),
+      L('calloway', 'Now. Take these. Tomato seed, from my own bed. They are stubborn, like the people who come in here. They do very well.'),
+    ],
+    reward: { love: 3, item: ['seed_tomato', 1] },
+  },
+  {
+    id: 'calloway7', npc: 'calloway', hearts: 7, map: 'central', from: H(13), to: H(15),
+    lines: [
+      L('narrator', 'In the little garden beside the church, Pastor Ines is on her knees in the soil, in her cassock, swearing mildly at a tomato.'),
+      L('calloway', 'Do not look so shocked. He understands me. Help me tie him up. Gently. He has had a hard week.'),
+      L('sato', 'You never told me why you came down from the gates. After the siege.'),
+      L('calloway', 'I stopped believing in anything, the eleventh night. I knelt by a boy who had been nineteen for one day, and I had nothing to say to him.'),
+      L('calloway', 'I came down here meaning to give it all up. The church was a ruin. Someone had planted one tomato in the rubble by the door.'),
+      L('calloway', 'Nobody knew who. It fruited anyway. I sat by it every day for a month. Then I swept the floor. Then I lit a candle. Then I lit another.'),
+      L('sato', 'So it was a tomato.'),
+      L('calloway', 'It was somebody who planted one, and went away, and never knew. Like you, every morning. That is the whole of my faith now, Mira. It is enough.'),
+      L('narrator', 'She sits back on her heels, and wipes her hands on her cassock, and looks at the plant as if it were a person she was proud of.'),
+      L('calloway', 'Here. This was my mother\'s. Thin as a leaf. Drink something good out of it, and think of somebody who planted something.'),
+    ],
+    reward: { love: 5, item: ['teacup', 1] },
+  },
+  // ---- Constable Fenn: the lost property shelf, and the school bell.
+  {
+    id: 'fenn3', npc: 'fenn', hearts: 3, map: 'depot', from: H(9), to: H(12),
+    lines: [
+      L('narrator', 'At the safety depot, Constable Fenn is standing very straight at the front desk. On the desk, in a crate marked EVIDENCE, sits a hen.'),
+      L('fenn', 'Sato. Good. Official business. Is this your hen?'),
+      L('sato', 'No. That is Pell. She is Corran\'s. She is famous for it.'),
+      L('fenn', 'She was found in the Arrivals hall at six this morning, on the courier desk. She had no ticket. I have taken a statement.'),
+      L('sato', 'From the hen.'),
+      L('fenn', 'She declined to comment. ...She has had some seed, and some water, and a short lie-down on my jacket. Not regulation. She looked cold.'),
+      L('narrator', 'Behind him, a whole wall of shelves: gloves, a child\'s shoe, a pair of spectacles, a cap badge. Every one labelled in very neat writing.'),
+      L('fenn', 'Lost property. From the siege, mostly. I keep it. People do come back, sometimes. Not often. Sometimes.'),
+      L('fenn', 'I take strays up to Willowfall on Thursdays. If you would carry this one now, there is a finder\'s fee. It is regulation. I wrote the regulation.'),
+    ],
+    reward: { love: 3, money: 150 },
+  },
+  {
+    id: 'fenn7', npc: 'fenn', hearts: 7, map: 'village', weekday: 3, from: H(9), to: H(11),
+    lines: [
+      L('narrator', 'Thursday, Willowfall. Constable Fenn is out of uniform for once, in a knitted jumper, holding a cardboard box very carefully at the ranch gate.'),
+      L('fenn', 'Sato. You have caught me off duty. I do not do it well.'),
+      L('sato', 'What is in the box?'),
+      L('fenn', '...Equipment. For the school. Crayons. A ruler. A little torch, the kind with a hand crank. For the first child, whoever that is.'),
+      L('fenn', 'In the siege they gave me a corridor full of children from the Lower deck, and a torch, and said hold it. I held it. Nine days.'),
+      L('fenn', 'They used to ask me for stories in the dark. I did not know any. I read them the safety regulations, in voices. They liked the fire drill best.'),
+      L('sato', 'And now you check the school locks every morning.'),
+      L('fenn', 'It is empty, so I keep it safe. Then when somebody comes, it will have been safe the whole time. That seems important. I cannot explain why.'),
+      L('sato', 'You just did. Very clearly.'),
+      L('narrator', 'Fenn looks at the box for a long moment, and then, very stiffly, holds out a paper bag to Sato.'),
+      L('fenn', 'Pie. From the Hangar. I bought two. Do not tell the depot drones. They will want to know which one I gave away.'),
+    ],
+    reward: { love: 5, item: ['pie', 1] },
+  },
+);
+
 // ------------------------------------------------------------------ the opening
 
 export const INTRO = [
@@ -1599,7 +1798,7 @@ export const SIGNS = {
   'village.hallfront': 'VILLAGE HALL. Warden E. Marrow. Desk hours 9 to 4, Monday to Friday. The Memory Room is open to all: things from the Old World, kept so we know what was good.',
   'village.workshopfront': 'RUESS: WORKSHOP. Tools upgraded overnight. Greenhouses mended. Clocks, prams and rods considered. Open 9 to 5. Closed Wednesdays. Do not touch the carousel.',
   'village.ranchyard': "CORRAN'S RANCH. Chickens, cows, feed and fodder, milkers and brushes. Open 9 to 5. Closed Thursdays (gone fishing). The shouting is normal.",
-  'hill.wreck': 'THE DESCENT. Hull lift up to the hangar; Pallas runs to the asteroid belt, 8 to 6. N. Vashti, keeper. The Old World is reached by shuttle from the Eden Central space dock.',
+  'hill.wreck': 'THE ORBITAL ELEVATOR. Cable car up to the axis and N. Vashti\'s hangar; Pallas runs to the asteroid belt, 8 to 6. You get lighter as you rise; hold the rail. The Old World is by shuttle from the Eden Central space dock.',
   'hill.lake': 'HILL LAKE. Best fishing on the Upper deck. Home of "Old Hollin", a carp of great age and poor manners. Rods lost to him so far: 14.',
   'hill.overlook': 'THE OVERLOOK. From here the whole Lantern Ring curves up and over. At dusk the great window opens, and you can see the Earth. Give it time. So are we.',
 };
@@ -1643,7 +1842,11 @@ export const HELP = [
   },
   {
     title: 'The Old World, fishing and forage',
-    body: 'On the hill, the Descent (Vashti\'s hull lift) climbs to her hangar; from there the Pallas flies sector runs into the asteroid belt. Drill rocks with E for ore, comet ice and rare star-metal; one hides the jump buoy deeper. The Old World is a shuttle trip from Eden Central with Maris: search rubble for relics, set the Hydra down with F, and keep out of the haze until Ruess fits filters. Relics go to the Memory Room.\n\nFishing: hold the rod, face water and press Space to cast. When the float dips, press Space again. Rain and the hill lake are best, each season has its own fish, and Ruess can improve the rod.\n\nForage grows on the hill each day: herbs, berries, mushrooms, frostcaps.',
+    body: 'On the hill, the orbital elevator rides its cable up to Vashti\'s hangar at the axis; from there the Pallas flies sector runs into the asteroid belt. Drill rocks with E for ore (nickel-iron and silica near home, copper, titanium and platinum further out), comet ice and rare star-metal; one hides the jump buoy. The Old World is Maris\'s shuttle from Eden Central: search rubble for relics for the Memory Room, set the Hydra down with F, mind the haze.\n\nFishing: face water, Space to cast, Space when the float dips; rain and the hill lake are best. Forage grows on the hill daily.',
+  },
+  {
+    title: 'Eden Central',
+    body: 'The lift in Willowfall\'s lift plaza drops to Eden Central on the Main deck (20 minutes). There: the Governor\'s office, the Ashfall Exchange, the Grand Market terminals, the viewing gallery at the great window, Sato\'s Watch after seven, and the Arrivals hall, whose courier desk books the shuttle to Earth (200 cr, free with Maris at 5 hearts). The space dock is north-west. Pastor Ines keeps Second Dawn Church; Constable Fenn the safety depot. The new school waits for its first pupils.',
   },
   {
     title: 'Seasons and festivals',
@@ -1767,6 +1970,7 @@ export const ROMANCE = {
         L('ruess', 'Eleven years I watched the pair of you not say it. I had a wager with myself. I have won, and nobody to collect from.'),
         L('general', 'I promise to dig where I am told, to come home when the light dims, and never again to mistake duty for a life.'),
         L('sato', 'I promise to tell you the true thing sideways, so you can bear to look at it. And to keep the lamp lit.'),
+        L('calloway', 'And from the church, a blessing, if you will have one: may your field be stubborn, your table full, and your watches all off duty.'),
         L('marrow', 'Then it is written. In ink. Kiss her, man, the village has been waiting longer than you have.'),
         L('narrator', 'Overhead, the far side of the ring is all lights. Through the great window, Earth looks on, and seems a little less grey.'),
       ],
@@ -1830,6 +2034,7 @@ export const ROMANCE = {
         L('corran', "HE'S GOT A CLEAN SHIRT ON! Somebody write the date down!"),
         L('ruess', "I'll not make a speech. I built her a pump, a porch swing and a kettle that whistles in tune. That's the speech."),
         L('sato', 'It is the best one I have heard. I promise to hand you the right spanner, and to make you stop when the light dims.'),
+        L('calloway', 'A blessing on the pair of you, and on whatever he builds next in that barn. May it have brakes.'),
         L('marrow', 'Then it is written. Hal, you may kiss your wife. Goggles off first, you will have her eye out.'),
         L('narrator', 'The carousel plays its four thin notes. The little carrier goes round beside the cow, and for once the engineer does not check the bearings.'),
       ],
@@ -1895,6 +2100,7 @@ export const ROMANCE = {
         L('kestrel', 'I promise to land where your lamp is. To listen at least as often as I speak. ...Half as often. I shall work up to it.'),
         L('sato', 'I promise to let you tell the story your way, and to know the true one. And to ask how you are, and wait.'),
         L('general', 'I flew beside both of them. I never thought to see either one grounded so gladly.'),
+        L('calloway', 'Bless you both. May you always land where the lamp is lit, Commander, and may she always leave it on.'),
         L('marrow', 'It is written. Kiss her, Commander, and for once in your life say nothing first.'),
       ],
       partnerTalk: [
@@ -1956,6 +2162,7 @@ export const ROMANCE = {
         L('yui', 'He borrowed every book on farming last month. He returned them all with notes. I have kept the notes.'),
         L('mori', 'I promise to listen to your heart for no reason at all, and to come home when the sign says closed.'),
         L('sato', 'I promise to ask how you are and wait for the answer. And to make you take your own advice.'),
+        L('calloway', 'A blessing, Doctor, from one night-watcher to another: may you both sleep through till morning, for years and years.'),
         L('marrow', 'It is written. You may kiss her, Doctor. Take your time. You always do, and we have all learned to like it.'),
       ],
       partnerTalk: [
@@ -2016,6 +2223,7 @@ export const ROMANCE = {
         L('seln', "Every dish on this table grew in Mira's field. I checked. I cried into the carrots a bit, sorry."),
         L('oduya', "I promise there'll be something hot when you come in from the field. Every day. Till I can't lift the pan."),
         L('sato', 'I promise to come in when it is ready, to eat it while it is hot, and to sit with you until the end of the meal.'),
+        L('calloway', 'Bless this table and everyone at it. May the pan never be empty, and may the cook sit down for once.'),
         L('marrow', 'It is written. Kiss her, Tem. And take off the headlamp, for pity\'s sake.'),
         L('narrator', 'Twelve places at the head of the table, and for the first time every one of them is filled. He counts them twice. Then he stops counting.'),
       ],
@@ -2080,6 +2288,7 @@ export const ROMANCE = {
         L('corran', "I'm whispering! Look! THIS IS ME WHISPERING! ...Lovely service."),
         L('yui', 'I promise you a quiet house and a full shelf. And to say what I mean, even when it takes me eleven weeks.'),
         L('sato', 'I promise to wait the eleven weeks. And to sit by you, saying nothing, for as long as there is light to read by.'),
+        L('calloway', 'A blessing, very quietly: may your house be full of good pages, and may the best ones be the ones you write together.'),
         L('marrow', 'It is written, which seems only proper. Go on, my dears.'),
         L('narrator', 'They do not make a speech. They stand hand in hand under the lanterns, and the whole village, for once, lets a silence be.'),
       ],
@@ -2170,11 +2379,11 @@ export const QUESTS = {
     Q('maris_pie', 'pie', 1, 'Okay, big ask. One pie. It is my flying anniversary and I always have pie, and I have no time to queue.', "You remembered! I mean, I told you. But you DID it!"),
   ],
   vashti: [
-    Q('vashti_scrap', 'scrap', 4, 'Four scrap. The lift brake is worn. I could go down for it. Somebody has to stay up and mind the cable.', 'Good. That will hold. ...Thanks.'),
-    Q('vashti_crystal', 'crystal', 1, 'One crystal, if you find one below. The lift lamp wants a new lens. Then you can see the bottom. Useful.', 'Clean one. Good eye. The shaft will be lit by tonight.'),
+    Q('vashti_scrap', 'scrap', 4, 'Four scrap. The elevator brake is worn. I could fetch it. Somebody has to stay up here and mind the cable.', 'Good. That will hold. ...Thanks.'),
+    Q('vashti_crystal', 'crystal', 1, 'One crystal, if you find one out there. The car lamp wants a new lens. Then you can see the cable all the way down. Useful.', 'Clean one. Good eye. The cable will be lit by tonight.'),
     Q('vashti_mushroom', 'mushroom', 2, 'Two mushrooms. ...I said I do not eat them. Oduya made a soup. I was wrong. Do not repeat that.', 'Hm. Fine. I was wrong twice. Thank you.', { season: 2 }),
     Q('vashti_frostcap', 'frostcap', 3, 'Three frostcaps from by the lake. They keep the cable grease from freezing. Old salvage trick.', 'That will do it. You did not ask why. I like that.', { season: 3 }),
-    Q('vashti_soup', 'soup', 1, 'One soup. Hot. The wind comes up the shaft all day. I will not ask twice.', '...Still hot. You ran. You did not need to run. Thanks.'),
+    Q('vashti_soup', 'soup', 1, 'One soup. Hot. It is cold at the axis all day. I will not ask twice.', '...Still hot. You ran. You did not need to run. Thanks.'),
   ],
   moraine: [
     Q('moraine_strawberry', 'strawberry', 5, 'Five strawberries, darling. My crew has scurvy of the spirit, and I am told fruit is the cure.', 'Exquisite. They shall have two each. I shall have the rest, as is proper.', { season: 0 }),
@@ -2206,6 +2415,22 @@ export const QUESTS = {
     Q('yui_datachip', 'datachip', 1, 'One data chip, if you find one below. Ruess says he can read them. There may be whole libraries on a thing that size.', 'Nine hundred novels. Nine hundred. I need to sit down.'),
     Q('yui_fish', 'fish_m', 1, 'One river trout? I should like a quiet fish supper. For two, if... if you are not busy. You need not talk.', 'Thank you. Come at seven. I have laid the table already. Twice.', { minHearts: 5 }),
     Q('yui_musicbox', 'musicbox', 1, 'There is a thing I would like, if you ever find one. A music box. The library is very silent after six, and I have begun to mind.', 'It plays. Listen. ...Stay till it winds down? It is a short tune. I should like it to be longer.', { minHearts: 6 }),
+  ],
+  calloway: [
+    Q('calloway_tomato', 'tomato', 3, 'Might I beg three tomatoes? Mine have gone on strike again, and the Sunday soup is a tomato soup by long tradition.', 'Look at them. Proper ones. The soup will be the talk of the deck, and I shall take no credit.', { season: 1 }),
+    Q('calloway_herb', 'herb', 3, 'Three herbs from the hill, if you are up that way. I make a tea for the people who come in at three in the morning.', 'Thank you, Mira. Somebody will sleep tonight on the strength of these.', { season: 0 }),
+    Q('calloway_bread', 'bread', 2, 'Two loaves, if you are passing Seln\'s. Whoever sits in the back pew after evensong gets fed. That is my only rule.', 'Lovely. The back pew is going to be very popular tonight.'),
+    Q('calloway_tea', 'tea', 2, 'Two teas from the Hangar? One for me and one for the Constable. He will not accept one from me directly. He thinks it is a bribe.', 'Bless you. I shall tell him it is evidence. He will drink it to keep it safe.'),
+    Q('calloway_milk', 'milk_s', 2, 'Two small milks, please. The old folk come to Sunday tea, and they like it the way it used to be, before the powder.', 'Real milk. You will hear the sighing from the Lantern Ring.'),
+    Q('calloway_photo', 'photo', 1, 'If you find one photograph in the Old World, would you bring it to me? Some names on the candles have no face. I should like one, even a stranger\'s.', 'Look at her laughing. She will stand beside the candles now. Thank you, Mira.', { minHearts: 5 }),
+  ],
+  fenn: [
+    Q('fenn_egg', 'egg', 6, 'Half a dozen eggs, if your hens can spare them. For the depot breakfast. The night shift is one constable and three drones, and only I eat.', 'Six. Received in good order. The drones will watch me eat them, as usual.'),
+    Q('fenn_scrap', 'scrap', 4, 'Four pieces of scrap, if you have them. One of the rescue drones scraped a bulkhead. It was not its fault. The bulkhead was in the way.', 'Thank you. The drone is fixed. It has been told the bulkhead is sorry.'),
+    Q('fenn_corn', 'corn', 3, 'Three ears of corn. The Arrivals hall wants a display for the summer couriers. I volunteered. I do not know why I volunteered.', 'An excellent display. I have arranged it at regulation spacing.', { season: 1 }),
+    Q('fenn_sweetpotato', 'sweetpotato', 3, 'Three sweet potatoes, please. I roast them on the depot heater on cold shifts. It is against regulations. I have not yet reported myself.', 'Thank you. I shall continue not reporting myself.', { season: 2 }),
+    Q('fenn_fish', 'fish_s', 2, 'Two silverfin. I have fished every Thursday for a year and logged nothing. I should like the log to show one good day, even if it is yours.', 'Two. I shall enter them as "assisted". Thank you, Sato.'),
+    Q('fenn_toy', 'toy', 1, 'An odd request. One tin robot, if the Old World gives you one. For the school\'s toy box. For the first child. It must be one that still walks.', 'It walks. Three steps and over. ...That is correct procedure, for a toy. Thank you.', { minHearts: 5 }),
   ],
 };
 
@@ -2254,6 +2479,19 @@ export const BELT = {
   drill: ['The drill bites. Dust sparkles away into the dark.', 'A clean core. Vashti will be pleased.'],
   debris: 'A tumbling scrap of old hull bumps the Pallas aside. No harm done.',
   hangar: 'Vashti\'s hangar: the launch cradle, the Pallas on its gantry, and through the hangar mouth, the stars.',
+};
+// The orbital elevator on Terrace Hill (it replaced the old hull lift, the Descent), and the church candles.
+export const ELEVATOR = {
+  up: 'The car hums up the cable. Terrace Hill shrinks to a green coin, the ring curls overhead, and you grow lighter until the hangar takes you in.',
+  down: 'The car slides back down the cable. The ring unrolls into hills and roofs again, and your weight comes home a little at a time.',
+};
+export const CHURCH = {
+  candles: [
+    'You light a candle from one already burning. The flame leans, steadies, and stands up straight with the others.',
+    'Three hundred and twelve little flames, and a few more since. Each base has a name in pencil. Somebody has gone over the faded ones.',
+    'You light a candle for the carrier crews, and stand a while. Nobody hurries you. That is what the room is for.',
+    'There is one candle without a name, a little apart from the rest. Pastor Ines says it is for the ones still to come.',
+  ],
 };
 export const SHUTTLE = {
   board: [{ who: 'maris', text: 'Strap in, Captain. Down through the soup and out the other side. Keep your lunch where it is.' }],
