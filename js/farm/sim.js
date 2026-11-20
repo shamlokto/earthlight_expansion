@@ -126,6 +126,8 @@ export const FORAGE = [
 const FISH_ODDS = { farm: [70, 25, 5], village: [55, 35, 10], hill: [35, 40, 25], lower: [0, 0, 0], sump: [0, 0, 0] };   // the Undercroft's waters: underFish()   // small, medium, large
 const SEASON_FISH = ['fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'];
 const GIFT = { loved: 8, liked: 4, neutral: 1, disliked: -4 };
+// What a gift is worth: by tier, tripled on a birthday, times `share` (a mailbox gift is worth 80%), rounded, never to nothing.
+export function giftDelta(tier, isBirthday, share = 1) { const b = (own(GIFT, tier) ? GIFT[tier] : GIFT.neutral) * (isBirthday ? 3 : 1) * share, r = Math.round(b); return r === 0 ? Math.sign(b) : r; }
 const UPGRADE_COST = [null, null, { price: 800, req: [['scrap', 5]] }, { price: 2500, req: [['alloy', 5], ['crystal', 1]] }];
 const TOOL_FX = { hoe: 'till', can: 'water', sickle: 'cut', hammer: 'smash', axe: 'chop' };
 const WEATHER_NOTE = { sun: 'The sun-line is bright and clear.', rain: 'It is raining.', storm: 'A storm is rattling the chamber. The shops are shut.', snow: 'It is snowing.' };
@@ -800,15 +802,15 @@ export function talk(state, npcId) {
   n.talked = true; n.met = true;
   return { ok: true, first };
 }
-export function gift(state, npcId, slot, tier, isBirthday) {
+export function gift(state, npcId, slot, tier, isBirthday, share = 1) {
   const n = npcOf(state, npcId), s = slotItem(state, slot), no = (msg) => fail(msg, { delta: 0 });
   if (!n) return no('There is nobody there.');
   if (!s) return no('You have nothing in your hands to give.');
   if (ITEMS[s.id].kind === 'tool') return no('You cannot give your tools away.');
   if (n.gifted) return no('One gift a day is plenty.');
   const before = n.love, name = ITEMS[s.id].name;
-  n.love = clamp(n.love + (own(GIFT, tier) ? GIFT[tier] : GIFT.neutral) * (isBirthday ? 3 : 1), 0, 100);
-  n.gifted = true; n.met = true;
+  n.love = clamp(n.love + giftDelta(tier, isBirthday, share), 0, 100);
+  n.gifted = true; if (share === 1) n.met = true;
   takeFromSlot(state, slot, 1);
   state.stats.gifts++;
   return { ok: true, msg: `You gave the ${name.toLowerCase()}.`, delta: n.love - before };
@@ -2291,4 +2293,14 @@ export function homeVisit(state, npcId) {
   const d = absDay(state); if (state.visits[npcId] === d) return { ok: true, first: false };
   state.visits[npcId] = d; n.love = clamp(n.love + VISIT_BONUS, 0, 100); n.met = true;
   return { ok: true, first: true };
+}
+
+// ---------------------------------------------------------------- mailboxes (docs/FARM.md §15)
+// A gift left in someone's mailbox counts as the day's gift (the same once-a-day rule as handing it over) and is worth 80% of it,
+// birthday and tier included. They remember it (npc.mail = tier) and say so next time they talk.
+export const MAIL_SHARE = 0.8;
+export function mailGift(state, npcId, slot, tier, isBirthday) {
+  const s = slotItem(state, slot), r = gift(state, npcId, slot, tier, isBirthday, MAIL_SHARE); if (!r.ok) return r;
+  const n = npcOf(state, npcId); n.mail = own(GIFT, tier) ? tier : 'neutral'; state.stats.mailed = (state.stats.mailed || 0) + 1;
+  return { ...r, msg: `You leave the ${ITEMS[s.id].name.toLowerCase()} in the mailbox.` };
 }
