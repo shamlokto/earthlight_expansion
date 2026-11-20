@@ -859,3 +859,16 @@ Art slots added (models; each has a procedural stand-in in js/farm/cityworld.js)
 `toxic_pool`, `shuttle_pad` (as before), and the creatures `rad_hound`, `glow_slime`, `rust_crawler`, `smog_wraith`,
 `spore_brute`. Icons `icons/old_coin`, `icons/teddy_bear`, `icons/film_camera`,
 `icons/credit_chip`, `icons/data_core`. Texture `textures/asphalt` (optional).
+* **Expression portraits** (owner, 2026-11-20). Bust cut-outs at `art/farm/people/portraits/<id>_<expression>.webp`, listed in
+  `portraits/index.json` (`{ id: { expression: file } }`). `js/farm/expressions.js`: the names (main cast: neutral, joyful,
+  enjoying, shy, embarrassed, loved, sad, tearful, angry, surprised, worried, disgusted, teasing; others: neutral, happy, sad,
+  angry, surprised, worried), the nearest faces to fall back on (`CLOSEST`, happy and joyful stand in for each other), then
+  neutral, then the full-body front picture. The index loads in the background at boot and pictures on demand (cached; a
+  speaker's other faces are fetched when they start talking). The dialogue shows the bust beside the box (`#dStand.bust`; Moth
+  smaller). A line can carry `ex` (`L(who, text, ex)`); scenes fill the rest (`story.moodLines`, `SCENE_MOOD`): confessions and
+  proposals shy, weddings loved, declines worried, partners loved, sweethearts shy, birthdays joyful; gifts by tier
+  (`GIFT_FACE`: loved, happy, neutral, disgusted). Hand-picked faces for the key lines of all eight love stories (`EX_PICKS`),
+  Sato's closing lines in them, and plain cues in heart events (tears, a laugh, a gasp, a sorry); a heart event's last line is
+  loved (love stories, 7+) or joyful. The wiki's people cards use the neutral bust and show a strip of faces when there are some.
+  Tests (farm-story): every tag is a known name, every speaker has some face, fallbacks, and index.json's files exist (skipped
+  while there is no index).

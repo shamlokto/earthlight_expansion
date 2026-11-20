@@ -1,6 +1,7 @@
 // Sato's Harvest: the interface (plain DOM over the 3D view): HUD, rucksack bar, dialogue with
 // portraits, picture and film scenes, shops, the menu and the morning report.
 import * as THREE from 'three';
+import { portraitUrl, warmPerson, loadPortraits } from './expressions.js';
 import * as art from './art.js';
 import { ITEMS, CROPS, SEASONS, TOOL_LEVELS, FRUIT_TREES, TREE_DAYS, ROBOT_JOBS, RELICS } from './data.js';
 import * as sim from './sim.js';
@@ -131,7 +132,9 @@ function showLine() {
   const l = dlgLines[dlgIndex], n = NPCS[l.who];
   if (l.art) scene(l.art);
   $('dFace').innerHTML = n ? face(l.who) : ''; $('dFace').hidden = !n;
-  const su = n && art.url(`people/${l.who}_front`), sd = $('dStand'); sd.hidden = !su; if (su && sd.dataset.who !== l.who) { sd.dataset.who = l.who; sd.innerHTML = `<img src="${su}" alt="">`; sd.className = (l.who === 'sato' ? 'left' : 'right') + (l.who === 'moth' ? ' child' : ''); }
+  // the speaker: an expression bust when there is one (expressions.js: the line's `ex`, its nearest, neutral), else the full-body front picture
+  const bu = n && portraitUrl(l.who, l.ex), su = bu || (n && art.url(`people/${l.who}_front`)), sd = $('dStand'); sd.hidden = !su;
+  if (su && sd.dataset.src !== su) { if (sd.dataset.who !== l.who) warmPerson(l.who); sd.dataset.who = l.who; sd.dataset.src = su; sd.innerHTML = `<img src="${su}" alt="">`; sd.className = (l.who === 'sato' ? 'left' : 'right') + (l.who === 'moth' ? ' child' : '') + (bu ? ' bust' : ''); }
   $('dName').textContent = n ? n.name : ''; $('dName').hidden = !n;
   $('dialog').className = 'fm-dialog' + (n ? '' : ' narr');
   const t = $('dText'); t.textContent = ''; const t0 = performance.now(); clearInterval(typing);
@@ -141,7 +144,7 @@ function showLine() {
 export function say(lines, { keepScene = false } = {}) {
   lines = (Array.isArray(lines) ? lines : [lines]).map((l) => (typeof l === 'string' ? { who: 'narrator', text: l } : l)).filter((l) => l && l.text);
   if (!lines.length) return Promise.resolve();
-  return new Promise((res) => { dlgLines = lines; dlgIndex = 0; $('dialog').hidden = false; dlgResolve = () => { $('dialog').hidden = true; $('dStand').hidden = true; if (!keepScene) scene(null); res(); }; showLine(); });
+  return new Promise((res) => { dlgLines = lines; dlgIndex = 0; $('dialog').hidden = false; dlgResolve = () => { $('dialog').hidden = true; $('dStand').hidden = true; $('dStand').dataset.src = ''; if (!keepScene) scene(null); res(); }; showLine(); });
 }
 export function advance() {
   if (!dlgResolve) return false;

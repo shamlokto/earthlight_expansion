@@ -1,0 +1,265 @@
+{
+ "sato": {
+  "neutral": "sato_neutral.webp",
+  "joyful": "sato_joyful.webp",
+  "enjoying": "sato_enjoying.webp",
+  "shy": "sato_shy.webp",
+  "embarrassed": "sato_embarrassed.webp",
+  "loved": "sato_loved.webp",
+  "sad": "sato_sad.webp",
+  "tearful": "sato_tearful.webp",
+  "angry": "sato_angry.webp",
+  "surprised": "sato_surprised.webp",
+  "worried": "sato_worried.webp",
+  "disgusted": "sato_disgusted.webp",
+  "teasing": "sato_teasing.webp"
+ },
+ "general": {
+  "neutral": "general_neutral.webp",
+  "joyful": "general_joyful.webp",
+  "enjoying": "general_enjoying.webp",
+  "shy": "general_shy.webp",
+  "embarrassed": "general_embarrassed.webp",
+  "loved": "general_loved.webp",
+  "sad": "general_sad.webp",
+  "tearful": "general_tearful.webp",
+  "angry": "general_angry.webp",
+  "surprised": "general_surprised.webp",
+  "worried": "general_worried.webp",
+  "disgusted": "general_disgusted.webp",
+  "teasing": "general_teasing.webp"
+ },
+ "ruess": {
+  "neutral": "ruess_neutral.webp",
+  "joyful": "ruess_joyful.webp",
+  "enjoying": "ruess_enjoying.webp",
+  "shy": "ruess_shy.webp",
+  "embarrassed": "ruess_embarrassed.webp",
+  "loved": "ruess_loved.webp",
+  "sad": "ruess_sad.webp",
+  "tearful": "ruess_tearful.webp",
+  "angry": "ruess_angry.webp",
+  "surprised": "ruess_surprised.webp",
+  "worried": "ruess_worried.webp",
+  "disgusted": "ruess_disgusted.webp",
+  "teasing": "ruess_teasing.webp"
+ },
+ "kestrel": {
+  "neutral": "kestrel_neutral.webp",
+  "joyful": "kestrel_joyful.webp",
+  "enjoying": "kestrel_enjoying.webp",
+  "shy": "kestrel_shy.webp",
+  "embarrassed": "kestrel_embarrassed.webp",
+  "loved": "kestrel_loved.webp",
+  "sad": "kestrel_sad.webp",
+  "tearful": "kestrel_tearful.webp",
+  "angry": "kestrel_angry.webp",
+  "surprised": "kestrel_surprised.webp",
+  "worried": "kestrel_worried.webp",
+  "disgusted": "kestrel_disgusted.webp",
+  "teasing": "kestrel_teasing.webp"
+ },
+ "mori": {
+  "neutral": "mori_neutral.webp",
+  "joyful": "mori_joyful.webp",
+  "enjoying": "mori_enjoying.webp",
+  "shy": "mori_shy.webp",
+  "embarrassed": "mori_embarrassed.webp",
+  "loved": "mori_loved.webp",
+  "sad": "mori_sad.webp",
+  "tearful": "mori_tearful.webp",
+  "angry": "mori_angry.webp",
+  "surprised": "mori_surprised.webp",
+  "worried": "mori_worried.webp",
+  "disgusted": "mori_disgusted.webp",
+  "teasing": "mori_teasing.webp"
+ },
+ "oduya": {
+  "neutral": "oduya_neutral.webp",
+  "joyful": "oduya_joyful.webp",
+  "enjoying": "oduya_enjoying.webp",
+  "shy": "oduya_shy.webp",
+  "embarrassed": "oduya_embarrassed.webp",
+  "loved": "oduya_loved.webp",
+  "sad": "oduya_sad.webp",
+  "tearful": "oduya_tearful.webp",
+  "angry": "oduya_angry.webp",
+  "surprised": "oduya_surprised.webp",
+  "worried": "oduya_worried.webp",
+  "disgusted": "oduya_disgusted.webp",
+  "teasing": "oduya_teasing.webp"
+ },
+ "yui": {
+  "neutral": "yui_neutral.webp",
+  "joyful": "yui_joyful.webp",
+  "enjoying": "yui_enjoying.webp",
+  "shy": "yui_shy.webp",
+  "embarrassed": "yui_embarrassed.webp",
+  "loved": "yui_loved.webp",
+  "sad": "yui_sad.webp",
+  "tearful": "yui_tearful.webp",
+  "angry": "yui_angry.webp",
+  "surprised": "yui_surprised.webp",
+  "worried": "yui_worried.webp",
+  "disgusted": "yui_disgusted.webp",
+  "teasing": "yui_teasing.webp"
+ },
+ "lark": {
+  "neutral": "lark_neutral.webp",
+  "joyful": "lark_joyful.webp",
+  "enjoying": "lark_enjoying.webp",
+  "shy": "lark_shy.webp",
+  "embarrassed": "lark_embarrassed.webp",
+  "loved": "lark_loved.webp",
+  "sad": "lark_sad.webp",
+  "tearful": "lark_tearful.webp",
+  "angry": "lark_angry.webp",
+  "surprised": "lark_surprised.webp",
+  "worried": "lark_worried.webp",
+  "disgusted": "lark_disgusted.webp",
+  "teasing": "lark_teasing.webp"
+ },
+ "vesna": {
+  "neutral": "vesna_neutral.webp",
+  "joyful": "vesna_joyful.webp",
+  "enjoying": "vesna_enjoying.webp",
+  "shy": "vesna_shy.webp",
+  "embarrassed": "vesna_embarrassed.webp",
+  "loved": "vesna_loved.webp",
+  "sad": "vesna_sad.webp",
+  "tearful": "vesna_tearful.webp",
+  "angry": "vesna_angry.webp",
+  "surprised": "vesna_surprised.webp",
+  "worried": "vesna_worried.webp",
+  "disgusted": "vesna_disgusted.webp",
+  "teasing": "vesna_teasing.webp"
+ },
+ "marrow": {
+  "neutral": "marrow_neutral.webp",
+  "happy": "marrow_happy.webp",
+  "sad": "marrow_sad.webp",
+  "angry": "marrow_angry.webp",
+  "surprised": "marrow_surprised.webp",
+  "worried": "marrow_worried.webp"
+ },
+ "seln": {
+  "neutral": "seln_neutral.webp",
+  "happy": "seln_happy.webp",
+  "sad": "seln_sad.webp",
+  "angry": "seln_angry.webp",
+  "surprised": "seln_surprised.webp",
+  "worried": "seln_worried.webp"
+ },
+ "corran": {
+  "neutral": "corran_neutral.webp",
+  "happy": "corran_happy.webp",
+  "sad": "corran_sad.webp",
+  "angry": "corran_angry.webp",
+  "surprised": "corran_surprised.webp",
+  "worried": "corran_worried.webp"
+ },
+ "maris": {
+  "neutral": "maris_neutral.webp",
+  "happy": "maris_happy.webp",
+  "sad": "maris_sad.webp",
+  "angry": "maris_angry.webp",
+  "surprised": "maris_surprised.webp",
+  "worried": "maris_worried.webp"
+ },
+ "vashti": {
+  "neutral": "vashti_neutral.webp",
+  "happy": "vashti_happy.webp",
+  "sad": "vashti_sad.webp",
+  "angry": "vashti_angry.webp",
+  "surprised": "vashti_surprised.webp",
+  "worried": "vashti_worried.webp"
+ },
+ "moraine": {
+  "neutral": "moraine_neutral.webp",
+  "happy": "moraine_happy.webp",
+  "sad": "moraine_sad.webp",
+  "angry": "moraine_angry.webp",
+  "surprised": "moraine_surprised.webp",
+  "worried": "moraine_worried.webp"
+ },
+ "calloway": {
+  "neutral": "calloway_neutral.webp",
+  "happy": "calloway_happy.webp",
+  "sad": "calloway_sad.webp",
+  "angry": "calloway_angry.webp",
+  "surprised": "calloway_surprised.webp",
+  "worried": "calloway_worried.webp"
+ },
+ "fenn": {
+  "neutral": "fenn_neutral.webp",
+  "happy": "fenn_happy.webp",
+  "sad": "fenn_sad.webp",
+  "angry": "fenn_angry.webp",
+  "surprised": "fenn_surprised.webp",
+  "worried": "fenn_worried.webp"
+ },
+ "pia": {
+  "neutral": "pia_neutral.webp",
+  "happy": "pia_happy.webp",
+  "sad": "pia_sad.webp",
+  "angry": "pia_angry.webp",
+  "surprised": "pia_surprised.webp",
+  "worried": "pia_worried.webp"
+ },
+ "tika": {
+  "neutral": "tika_neutral.webp",
+  "happy": "tika_happy.webp",
+  "sad": "tika_sad.webp",
+  "angry": "tika_angry.webp",
+  "surprised": "tika_surprised.webp",
+  "worried": "tika_worried.webp"
+ },
+ "noor": {
+  "neutral": "noor_neutral.webp",
+  "happy": "noor_happy.webp",
+  "sad": "noor_sad.webp",
+  "angry": "noor_angry.webp",
+  "surprised": "noor_surprised.webp",
+  "worried": "noor_worried.webp"
+ },
+ "venn": {
+  "neutral": "venn_neutral.webp",
+  "happy": "venn_happy.webp",
+  "sad": "venn_sad.webp",
+  "angry": "venn_angry.webp",
+  "surprised": "venn_surprised.webp",
+  "worried": "venn_worried.webp"
+ },
+ "wick": {
+  "neutral": "wick_neutral.webp",
+  "happy": "wick_happy.webp",
+  "sad": "wick_sad.webp",
+  "angry": "wick_angry.webp",
+  "surprised": "wick_surprised.webp",
+  "worried": "wick_worried.webp"
+ },
+ "thorne": {
+  "neutral": "thorne_neutral.webp",
+  "happy": "thorne_happy.webp",
+  "sad": "thorne_sad.webp",
+  "angry": "thorne_angry.webp",
+  "surprised": "thorne_surprised.webp",
+  "worried": "thorne_worried.webp"
+ },
+ "moth": {
+  "neutral": "moth_neutral.webp",
+  "happy": "moth_happy.webp",
+  "sad": "moth_sad.webp",
+  "angry": "moth_angry.webp",
+  "surprised": "moth_surprised.webp",
+  "worried": "moth_worried.webp"
+ },
+ "hana": {
+  "neutral": "hana_neutral.webp",
+  "happy": "hana_happy.webp",
+  "sad": "hana_sad.webp",
+  "angry": "hana_angry.webp",
+  "surprised": "hana_surprised.webp",
+  "worried": "hana_worried.webp"
+ }
+}

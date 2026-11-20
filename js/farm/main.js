@@ -11,6 +11,7 @@ import * as art from './art.js';
 import { allMaps, ruinsMap, doorTarget, outsideOf, findSpot, FORAGE_SPOTS, STAR_SPOT_XY, CENTRAL_HOUSES } from './maps.js';
 import { lowerState, waterPlace, homeAt } from './maps.js';
 import * as paths from './paths.js';
+import { GIFT_FACE, loadPortraits } from './expressions.js';
 import { World } from './world.js';
 import { pallasFold } from './cityworld.js';
 import { initMap, toggleMap, isOpen as mapOpen } from './minimap.js';
@@ -169,7 +170,7 @@ async function talkTo(id) {
     if (met && rec.mail && story.MAIL_LINES[rec.mail]) { lines = [story.MAIL_LINES[rec.mail], ...lines].slice(0, 3); delete rec.mail; }   // they found what was left in the mailbox
     if (home && met) { const v = home.visit[(sim.absDay(S) + hash(id)) % home.visit.length]; lines = Array.isArray(v) ? v : [v]; if (sim.homeVisit(S, id).first) { floatText(n.actor.x, n.actor.y - 0.4, '♥'); ui.toast(`A visit at home: ${NPCS[id].short || NPCS[id].name} is glad you came.`, 2600); } }   // at home: their own lines, and a little extra once a day
     const r = sim.talk(S, id); if (S.npc[id]) S.npc[id].met = true;
-    await ui.say(!met && story.MEETINGS && story.MEETINGS[id] ? story.MEETINGS[id] : lines.map((t) => ({ who: id, text: t })));   // the Undercroft folk: a first meeting
+    await ui.say(!met && story.MEETINGS && story.MEETINGS[id] ? story.MEETINGS[id] : lines.map((t) => ({ who: id, text: t, ex: isBirthday(id) ? 'joyful' : S.flags.partner === id ? 'loved' : S.flags.sweet === id ? 'shy' : undefined })));   // the Undercroft folk: a first meeting
     if (id === 'moth') await mothPage();
     if (r.first) floatText(n.actor.x, n.actor.y, '♥');
     await favour(id, r.first);
@@ -208,7 +209,7 @@ async function maybeConfess(id) {
   const declined = S.flags['declined_' + id];
   if (!S.flags['confess_' + id]) {                  // the story: once, after their last heart event and two favours
     if (story.EVENTS.some((e) => e.npc === id && e.hearts < 8 && !S.flags['ev_' + e.id]) || (S.flags['favours_' + id] || 0) < 2) return;
-    sim.setFlag(S, 'confess_' + id); await ui.say(who.confess); floatText(me.x, me.y, '♥♥');
+    sim.setFlag(S, 'confess_' + id); await ui.say(story.moodLines(who.confess, 'confess', id)); floatText(me.x, me.y, '♥♥');
   } else if (declined == null || sim.absDay(S) - declined < 7) return;   // asked again a week after a 'not yet'
   // The choice is Sato's: become sweethearts now, or not yet.
   mode = 'talk'; const other = S.flags.sweet && S.flags.sweet !== id ? S.flags.sweet : null, nm = NPCS[id].short || NPCS[id].name;
@@ -221,11 +222,11 @@ async function maybeConfess(id) {
 }
 async function offerPendant(id) {
   const R = LOVE(), who = R.people[id], n = npcs.get(id); n.actor.face(me.x, me.y); mode = 'talk';
-  if (!who || S.flags.sweet !== id || sim.hearts(S, id) < 10) { await ui.say([{ who: id, text: (who && who.decline) || 'That is a beautiful thing. Keep it for the right day.' }]); mode = 'play'; return; }
+  if (!who || S.flags.sweet !== id || sim.hearts(S, id) < 10) { await ui.say([{ who: id, text: (who && who.decline) || 'That is a beautiful thing. Keep it for the right day.', ex: 'worried' }]); mode = 'play'; return; }
   sim.removeItem(S, 'pendant', 1); sim.setFlag(S, 'partner', id); sfx('good');
-  await ui.say(who.propose);
+  await ui.say(story.moodLines(who.propose, 'propose', id));
   await ui.fade(true, 500); ui.scene('wedding'); setMood({ festival: 'wedding' }); await ui.fade(false, 500);
-  await ui.say(who.wedding); setMood({ festival: null }); for (const k of Object.keys(NPCS)) if (k !== 'sato') sim.addLove(S, k, 2);
+  await ui.say(story.moodLines(who.wedding, 'wedding', id)); setMood({ festival: null }); for (const k of Object.keys(NPCS)) if (k !== 'sato') sim.addLove(S, k, 2);
   ui.toast(`${NPCS[id].short || NPCS[id].name} shares the farm with you now.`, 5200);
   mode = 'play'; placeNpcs(true); refreshHud(); save();
 }
@@ -246,7 +247,7 @@ async function giveTo(id) {
   n.actor.face(me.x, me.y); mode = 'talk'; if (S.npc[id]) S.npc[id].met = true;
   sfx(tier === 'disliked' ? 'bad' : 'good'); floatText(n.actor.x, n.actor.y, tier === 'disliked' ? '…' : tier === 'loved' ? '♥♥' : '♥');
   if (r.later) ui.toast(`${NPCS[id].short || NPCS[id].name} has already had a gift today: pleased, but less so.`, 3200);   // a quarter of the effect; the birthday words are for the first
-  await ui.say([{ who: id, text: story.giftLine(id, tier, bd && !r.later) }]);
+  await ui.say([{ who: id, text: story.giftLine(id, tier, bd && !r.later), ex: bd && !r.later && tier !== 'disliked' ? 'joyful' : GIFT_FACE[tier] || 'neutral' }]);   // the face says it too
   mode = 'play'; refreshHud();
 }
 function reward(r, npc) {
@@ -1252,7 +1253,7 @@ async function begin(state, fresh) {
   if (fresh) save();
 }
 async function boot() {
-  const info = await art.loadArt();
+  const info = await art.loadArt(); loadPortraits();   // the expression busts: their list loads in the background, the pictures on demand
   W = new World($('view'));
   { const cv = W.renderer.domElement;   // the GPU dropped the 3D view (memory pressure, a GPU switch, a phone in the background): get it back
     cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); console.warn('[webgl] context lost'); try { ui.toast('The 3D view was interrupted. Restoring…', 3000); } catch {} });
