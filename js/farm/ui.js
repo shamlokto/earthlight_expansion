@@ -171,7 +171,7 @@ export function shop(state, shopId, keeper, onChange) {
   return new Promise((res) => {
     const draw = () => {
       const stock = sim.shopStock(state, shopId), bg = art.url('scenes/shop_' + shopId);
-      const body = openWin(sim.SHOPS[shopId].name, `<div class="fm-shop"${bg ? ` style="--bg:url(${bg})"` : ''}><div class="fm-shophead">${keeper ? face(keeper) : '<div class="fm-face fm-terminal">◈</div>'}<div><b>${keeper ? esc(NPCS[keeper].name) : 'Vending terminal'}</b><span>${state.player.money.toLocaleString()} cr</span></div></div>` +
+      const body = openWin(sim.SHOPS[shopId].name, `<div class="fm-shop"${bg ? ` style="--bg:url(${new URL(bg, document.baseURI).href})"` : ''}><div class="fm-shophead">${keeper ? face(keeper) : '<div class="fm-face fm-terminal">◈</div>'}<div><b>${keeper ? esc(NPCS[keeper].name) : 'Vending terminal'}</b><span>${state.player.money.toLocaleString()} cr</span></div></div>` +
         (stock.length ? stock.map((s) => `<div class="fm-row${s.can ? '' : ' no'}"><div><b>${esc(s.label)}</b><span>${esc(s.desc || '')}${s.needs ? ' · needs ' + esc(s.needs) : ''}${!s.can && s.why ? ` · <em>${esc(s.why)}</em>` : ''}</span></div><button data-key="${esc(s.key)}" ${s.can ? '' : 'disabled'}>${s.price.toLocaleString()} cr</button></div>`).join('') : '<p class="fm-dim">Nothing for sale today.</p>') + '</div>', () => res());
       body.onclick = (e) => { const b = e.target.closest('button[data-key]'); if (!b) return; const r = sim.buy(state, shopId, b.dataset.key, 1); toast(r.msg || (r.ok ? 'Bought.' : 'You cannot buy that.')); onChange && onChange(); draw(); };
     };
