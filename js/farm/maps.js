@@ -584,7 +584,7 @@ export function ruinsMap(mine) {
 // ground is asphalt streets, ash lots, overgrowth and toxic pools ('t', walkable: the sim wears the hull there); every
 // solid cell blocks (MapDef.block). The towers are props (stretched to their footprints); the small things (cars, buses,
 // rubble, lockers, safes, counters, billboards, debris) and the gas are placed near Sato by main.js as she walks.
-const CITY_GROUND = { 0: 'm', 1: 'a', 2: 'o', 3: 'm', 4: 'm', 5: 'a', 6: 't', 7: 'g', 8: 'a', 9: 'm', 10: 'a', 11: 'a', 12: 'a', 13: 'a', 14: 'a' };
+const CITY_GROUND = { 0: 'm', 1: 'a', 2: 'o', 3: 'm', 4: 'm', 5: 'a', 6: 't', 7: 'n', 8: 'a', 9: 'm', 10: 'a', 11: 'a', 12: 'a', 13: 'a', 14: 'a' };
 const CITY_SOLID_CELLS = new Set([2, 3, 4, 5, 8, 10, 11, 12, 13, 14]);
 function cityMap(mine) {
   const W = mine.w + 2, H = mine.h + 2;

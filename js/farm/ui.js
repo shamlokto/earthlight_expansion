@@ -87,7 +87,8 @@ export function hud(state, extra = {}) {
   $('hPlace').textContent = extra.place || '';
   const g = sim.goalState(state), next = sim.GOALS.find((q, i) => !g[i].done);
   const qh = extra.quest ? `<b>Favour for ${esc(extra.quest.who)}</b><span>${esc(extra.quest.text)}</span>` : '';
-  $('hGoal').innerHTML = (next ? `<b>${esc(next.title)}</b><span>${esc(next.hint)}</span>` : '') + qh; $('hGoal').hidden = !next && !qh;
+  if (extra.trip) { $('hGoal').innerHTML = `<b>${esc(extra.trip.title)}</b><span>${esc(extra.trip.hint)}</span>`; $('hGoal').hidden = false; }   // on Earth: the trip's goal, not the farm's
+  else { $('hGoal').innerHTML = (next ? `<b>${esc(next.title)}</b><span>${esc(next.hint)}</span>` : '') + qh; $('hGoal').hidden = !next && !qh; }
   let h = '';
   p.inv.forEach((s, i) => {
     let tag = '';
@@ -100,7 +101,7 @@ export function hud(state, extra = {}) {
   const size = Math.max(26, Math.min(narrow ? 44 : 52, Math.floor((innerWidth * 0.96 - 14 - 5 * (cols - 1)) / cols)));
   bar.style.setProperty('--cols', cols); bar.style.setProperty('--slot', size + 'px'); bar.classList.add('grid');
   $('hud').style.setProperty('--barH', (bar.offsetHeight || 64) + 'px');
-  const s = p.inv[p.sel]; $('hHeld').textContent = s ? ITEMS[s.id].name + (ITEMS[s.id].kind === 'tool' && p.toolLevel[s.id] ? ` · ${TOOL_LEVELS[p.toolLevel[s.id]]}` : '') : 'Empty hands';
+  const s = p.inv[p.sel]; $('hHeld').textContent = extra.held != null ? extra.held : s ? ITEMS[s.id].name + (ITEMS[s.id].kind === 'tool' && p.toolLevel[s.id] ? ` · ${TOOL_LEVELS[p.toolLevel[s.id]]}` : '') : 'Empty hands';
 }
 export function prompt(text) { const e = $('prompt'); e.hidden = !text; if (text) e.innerHTML = text; }
 let toastT = 0;
