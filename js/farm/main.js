@@ -162,6 +162,7 @@ async function talkTo(id) {
   if (what === 0) {
     const rec = S.npc[id] || {}, met = !!rec.met, home = map.home && story.homeKey(id, S.flags) === map.home && story.HOME_LINES[id];
     let lines = story.talkLines(id, ctx({ hearts: sim.hearts(S, id), met, isBirthday: isBirthday(id) }));
+    if (met && rec.mail && story.MAIL_LINES[rec.mail]) { lines = [story.MAIL_LINES[rec.mail], ...lines].slice(0, 3); delete rec.mail; }   // they found what was left in the mailbox
     if (home && met) { const v = home.visit[(sim.absDay(S) + hash(id)) % home.visit.length]; lines = Array.isArray(v) ? v : [v]; if (sim.homeVisit(S, id).first) { floatText(n.actor.x, n.actor.y - 0.4, '♥'); ui.toast(`A visit at home: ${NPCS[id].short || NPCS[id].name} is glad you came.`, 2600); } }   // at home: their own lines, and a little extra once a day
     const r = sim.talk(S, id); if (S.npc[id]) S.npc[id].met = true;
     await ui.say(!met && story.MEETINGS && story.MEETINGS[id] ? story.MEETINGS[id] : lines.map((t) => ({ who: id, text: t })));   // the Undercroft folk: a first meeting
@@ -240,7 +241,8 @@ async function giveTo(id) {
   if (!r.ok) return ui.toast(r.msg);
   n.actor.face(me.x, me.y); mode = 'talk'; if (S.npc[id]) S.npc[id].met = true;
   sfx(tier === 'disliked' ? 'bad' : 'good'); floatText(n.actor.x, n.actor.y, tier === 'disliked' ? '…' : tier === 'loved' ? '♥♥' : '♥');
-  await ui.say([{ who: id, text: story.giftLine(id, tier, bd) }]);
+  if (r.later) ui.toast(`${NPCS[id].short || NPCS[id].name} has already had a gift today: pleased, but less so.`, 3200);   // a quarter of the effect; the birthday words are for the first
+  await ui.say([{ who: id, text: story.giftLine(id, tier, bd && !r.later) }]);
   mode = 'play'; refreshHud();
 }
 function reward(r, npc) {
@@ -796,6 +798,8 @@ function probe() {                                   // → { label, run } for E
     if (p.act === 'hydro') return hydroProbe(p);
     if (p.act === 'counter') { const k = nearestNpc(3.2); if (k) return { label: `Talk to ${NPCS[k].short || NPCS[k].name}`, run: () => talkTo(k) }; if (map.id === 'hall') return { label: 'Nobody is at the desk', run: () => ui.toast('Nobody is at the desk just now.') }; return { label: 'Nobody is at the counter', run: () => ui.toast('Nobody is here to serve just now.') }; }
     if (p.act === 'home' || (p.act === 'house' && p.home)) return homeProbe(p.home) || { label: 'Knock', run: () => act(p) };
+    if (p.act === 'mail') return mailProbe(p.home);
+    if (p.act === 'hours') return { label: `Read the opening hours: ${(story.PLACES[p.place] || {}).name || 'sign'}`, run: () => act(p) };
     if (p.act === 'pump') return pumpProbe(p);
     if (p.act === 'bed' && p.bed != null) return bedProbe(p);   // a catacomb growing bed (the farmhouse bed has no bed number: it is for sleeping)
     if (p.act === 'terminal') return { label: S.lower && S.lower.logs && S.lower.logs[p.log] != null ? `${p.label} (log recovered)` : p.kind === 'crypt_wall' ? 'Read the scratches on the wall' : `Recover the log from the ${p.label.toLowerCase()}`, run: () => act(p) };
@@ -828,6 +832,22 @@ function homeProbe(key) {
   const H = homeAt(key); if (!H) return null; const r = homeAnswer(key);
   return { label: r.ok ? `Visit ${nameOf(r.id)} at home` : r.id ? `Knock at ${H.label.replace(/^The /, 'the ')}` : 'Read the note on the door', run: () => knock(key) };
 }
+// Mailboxes (2026-11-20): whose home it is, and a gift left for someone you cannot find (80% of handing it over; sim.mailGift).
+const fullName = (id) => NPCS[id].name;
+const giftable = (s) => s && ITEMS[s.id] && !['tool', 'seed'].includes(ITEMS[s.id].kind) && s.id !== 'pendant';
+function mailProbe(key) {
+  const who = residents(key), s = sim.selected(S), moved = S.flags.partner && story.homeKey(S.flags.partner, S.flags) === key;
+  if (!who.length) return { label: moved ? 'Read the card on the mailbox' : 'An empty mailbox', run: () => ui.toast(moved ? story.HOME_NOTES.moved : 'An empty mailbox. Nobody lives here just now.', 3600) };
+  if (!giftable(s)) return { label: `Mailbox: ${who.map(fullName).join(' & ')}`, run: () => ui.toast(`The mailbox of ${who.map(fullName).join(' and ')}. Hold something to give and press E to leave it as a gift (worth a little less than handing it over).`, 4200) };
+  return { label: `Leave the ${ITEMS[s.id].name.toLowerCase()} in ${who.length > 1 ? 'the Thornes\'' : nameOf(who[0]) + '\'s'} mailbox`, run: () => postGift(who) };
+}
+async function postGift(who) {
+  let id = who[0];
+  if (who.length > 1) { mode = 'talk'; const i = await ui.choose('Who is it for?', [...who.map(nameOf), 'Never mind']); mode = 'play'; if (i >= who.length) return; id = who[i]; }
+  const s = sim.selected(S), nm = ITEMS[s.id].name.toLowerCase(), r = sim.mailGift(S, id, S.player.sel, story.giftTier(id, s.id), isBirthday(id));
+  if (!r.ok) return ui.toast(r.msg);
+  sfx('drop'); ui.toast(`You leave the ${nm} in ${nameOf(id)}'s mailbox.${r.later ? ` ${nameOf(id)} has already had a gift today: pleased, but less so.` : ''}`, 3800); refreshHud();
+}
 let knockT = 0;
 async function knock(key, walkedIn = false) {
   const r = homeAnswer(key), L = (r.id && story.HOME_LINES[r.id]) || {}, N = story.HOME_NOTES;
@@ -858,6 +878,7 @@ async function act(p) {
     case 'gallery': { const r = sim.gallerySit(S); mode = 'talk'; const G = story.CENTRAL; await ui.say([{ who: 'narrator', text: r.night ? G.gallery[sim.absDay(S) % G.gallery.length] : G.galleryDay }]); mode = 'play'; if (r.restored) { sfx('good'); ui.toast(`You sit a while. +${r.restored} stamina.`); } break; }
     case 'candles': { const c = story.CHURCH.candles; ui.say([{ who: 'narrator', text: c[(sim.absDay(S) + Math.floor(S.cal.minute / 120)) % c.length] }]); break; }
     case 'home': await knock(p.home); break;
+    case 'hours': { mode = 'talk'; const c = ctx(); await ui.say([{ who: 'narrator', text: story.hoursSign(p.place, { season: c.season, year: c.year, flags: S.flags, partner: c.partner }) || '…' }]); mode = 'play'; break; }
     case 'house': if (p.home) { await knock(p.home); break; } ui.say([{ who: 'narrator', text: (S.flags.ld_rehoused && story.LOWER.houses[p.house]) || CENTRAL_HOUSES[p.house] || 'The door is locked.' }]); break;
     case 'stargaze': await stargaze(); break;
     case 'silo': ui.siloWindow(S, refreshHud); break;

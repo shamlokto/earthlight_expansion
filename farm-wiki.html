@@ -136,7 +136,7 @@
       <div class="cards">${person('sato')}${ids.map(person).join('')}</div>`);
 
     // ---- love
-    add('love', 'Love', `<p>Friendship grows from talking (once a day), gifts (loved ones count most, birthdays triple) and <b>favours</b>: now and then someone asks Sato for something, and bringing it is worth more than any gift.</p>
+    add('love', 'Love', `<p>Friendship grows from talking (once a day), gifts (loved ones count most, birthdays triple; the first gift of the day to someone counts in full, any more that day a quarter; a gift left in their <b>mailbox</b>, by every home's door, counts 80%) and <b>favours</b>: now and then someone asks Sato for something, and bringing it is worth more than any gift.</p>
       <p>A love story starts only when you have seen that person's heart events, done <b>two favours</b> for them and reached <b>8 hearts</b>: then, after a conversation, they say how they feel. At <b>10 hearts</b>, the <b>Earthlight pendant</b> from Queen Moraine's barge asks the question, and the wedding follows under the lanterns of the square. Your partner then shares the farm, waits on the porch at dawn and in the evening, and waters some of the field before you wake.</p>
       <p><b>Romance candidates:</b> ${R.candidates.map((c) => esc(story.NPCS[c] ? story.NPCS[c].name : c)).join(', ')}.</p>
       ${R.pendant ? `<p class="lead">${esc(R.pendant)}</p>` : ''}`);

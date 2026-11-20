@@ -1843,7 +1843,7 @@ export const HELP = [
   },
   {
     title: 'The village and friendship',
-    body: 'Every villager has a friendship score, shown as hearts (0 to 10).\n\nTalk to someone with E: the first talk each day adds a little. You may give each person one gift a day: hold the item and press E. People have things they love, like and dislike, and a birthday gift counts three times over.\n\nNow and then someone asks a favour: a few of something from your field, the water or the Old World. Bringing it raises friendship more than a gift does.\n\nAt certain hearts a villager has something to show or tell you. Walk in at the right place and time and the scene plays by itself.\n\nThe General visits the village on Saturdays and the farm on Sundays.',
+    body: 'Every villager has a friendship score, shown as hearts (0 to 10).\n\nTalk to someone with E: the first talk each day adds a little. Hold an item and press E to give it: the first gift of the day counts in full, more that day a quarter. People have things they love, like and dislike, and a birthday gift counts three times over.\n\nNow and then someone asks a favour: a few of something from your field, the water or the Old World. Bringing it raises friendship more than a gift does.\n\nAt certain hearts a villager has something to show or tell you. Walk in at the right place and time and the scene plays by itself.\n\nThe General visits the village on Saturdays and the farm on Sundays.',
   },
   {
     title: 'Love',
@@ -4083,5 +4083,55 @@ export const HOME_NOTES = {
 SPOTS.push(...Object.entries(HOMES).flatMap(([id, h]) => (typeof h.home === 'function' ? [h.home({}), h.home({ ld_rehoused: true })] : [h.home]).map((k) => `home_${k}.${id}`)));
 HELP.push({
   title: 'People walk, and visiting homes',
-  body: 'Everyone has a home and walks where they are going next, through doors, the farm gate and the lift. Stand still near a walker and they stop for a word.\n\nThe map marks whose home is whose. Knock (E at the door): if they are in, awake and fond enough, they let you in. Most want 4 hearts; the open-house sort (Marrow, Seln, Corran, Oduya, Lark, Pastor Ines, Agnes, Moth) 3. From nine at night only a sweetheart gets in. Otherwise: a note on the door, a sleepy voice, or a kind "not yet".\n\nThe first chat of the day at someone\'s home is worth a little extra. A partner lives at the farm.',
+  body: 'Everyone has a home and walks where they are going next, through doors, the farm gate and the lift. Stand still near a walker and they stop for a word.\n\nThe map marks whose home is whose. Knock (E at the door): if they are in, awake and fond enough, they let you in. Most want 4 hearts; the open-house sort (Marrow, Seln, Corran, Oduya, Lark, Pastor Ines, Agnes, Moth) 3. From nine at night only a sweetheart gets in. Otherwise: a note on the door, a sleepy voice, or a kind "not yet".\n\nThe first chat at someone\'s home each day is worth a little extra. Their mailbox takes a gift when they are out (80% of handing it over). Signs by public doors give the opening hours.',
 });
+
+// ------------------------------------------------------------------ opening hours (2026-11-20: a signboard by every public door)
+// The hours are read off the schedules themselves (whereIs on a fine, ordinary day with the current story flags), so a sign can
+// never disagree with when the keeper is really there. maps.js puts an `hours_sign` prop with `place` by each door.
+export const PLACES = {
+  store: { name: "Seln's Seed & Sundry", keeper: 'seln', spots: ['store.counter'] }, ranch: { name: "Corran's Ranch", keeper: 'corran', spots: ['ranch.counter'] },
+  workshop: { name: "Ruess's Workshop", keeper: 'ruess', spots: ['workshop.counter'] }, cafe: { name: 'The Hangar', keeper: 'oduya', spots: ['cafe.counter'], note: 'Shut on festival days. Open in a storm.' },
+  clinic: { name: 'Willowfall Clinic', keeper: 'mori', spots: ['clinic.counter'] }, library: { name: 'Lantern Ring Library', keeper: 'yui', spots: ['library.counter'] },
+  hall: { name: 'Village Hall', keeper: 'marrow', spots: ['hall.desk'], what: 'Front desk' },
+  bakery: { name: 'The Sunrise Oven', keeper: 'lark', spots: ['bakery.counter'] }, tailor: { name: "Varga's Mend & Make", keeper: 'pia', spots: ['tailor.counter'] },
+  florist: { name: 'The Seedhouse', keeper: 'noor', spots: ['florist.counter'] }, garage: { name: "Brandt's Garage", keeper: 'tika', spots: ['garage.counter'] },
+  radio: { name: 'Radio Willowfall', keeper: 'vesna', spots: ['radio.counter'], what: 'On air' },
+  guard: { name: "Guardians' Post", keeper: 'kestrel', spots: [], note: 'Always manned. In an emergency, ring the bell.' },
+  office: { name: "Governor's office", keeper: 'general', spots: ['central.office'], what: 'Office hours' },
+  exchange: { name: 'The Ashfall Exchange', keeper: 'moraine', spots: ['central.exchange', 'central.dock'], what: 'Trading (on Saturdays from the ship at the dock)' },
+  church: { name: 'Second Dawn Church', keeper: 'calloway', spots: ['church.altar'], what: 'Services at the altar', note: 'The doors are always open.' },
+  depot: { name: 'Safety depot', keeper: 'fenn', spots: ['depot.desk'], what: 'Front desk', note: 'Always staffed; in an emergency, shout.' },
+  arrivals: { name: 'Arrivals hall', keeper: 'maris', spots: ['central.arrivals'], what: 'Courier landings', note: 'The courier desk books the shuttle to Earth at any hour.' },
+  grandmarket: { name: 'Grand Market', keeper: null, spots: [], note: 'The terminals never close and never haggle.' },
+  undercroft: { name: "Venn's bench", keeper: 'venn', spots: ['undercroft.counter'], note: 'The restoration terminal beside it is always on.' },
+};
+const DAY = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+// [[from, to], …] for each weekday (0 = Mon), when the keeper stands at one of the spots.
+export function openHours(keeper, spots, base = {}) {
+  return DAY.map((_, wd) => { const out = []; let a = null;
+    for (let m = 360; m <= 1440; m += 10) { const w = m < 1440 && whereIs(keeper, { season: 0, day: 1, year: 1, ...base, weekday: wd, minute: m, weather: 'sun', festival: null }), on = !!(w && spots.includes(w.spot));
+      if (on && a == null) a = m; if (!on && a != null) { out.push([a, m]); a = null; } }
+    return out; });
+}
+// The sign's words (only the place and its hours, owner 2026-11-20): the name, the hours grouped by day ("Mon–Sat 9:00–17:00 · Sun closed") and a note.
+export function hoursSign(place, base = {}) {
+  const P = PLACES[place]; if (!P) return null;
+  const lines = [P.name];
+  if (P.spots.length && P.keeper) {
+    const shop = P.spots.some((x) => x.endsWith('.counter') || x === 'central.exchange');
+    const H = openHours(P.keeper, P.spots, base).map((d) => (d.length ? d.map(([a, b]) => `${hm(a)}–${hm(b)}`).join(', ') : shop ? 'closed' : 'none')), parts = [];
+    for (let i = 0; i < 7;) { let j = i; while (j + 1 < 7 && H[j + 1] === H[i]) j++; parts.push(`${j > i ? DAY[i] + '–' + DAY[j] : DAY[i]} ${H[i]}`); i = j + 1; }
+    lines.push(`${P.what || 'Open'}: ${parts.join(' · ')}.`);
+    if (!P.note || !/storm/.test(P.note)) lines.push(P.keeper === 'venn' ? 'Below decks there is no weather. Shut on festival days.' : shop ? 'Shut on festival days and in a storm.' : 'Not on festival days, nor in a storm.');
+  }
+  if (P.note) lines.push(P.note);
+  return lines.join('\n');
+}
+// What they say the next time they see you, after a gift in the mailbox (by tier).
+export const MAIL_LINES = {
+  loved: 'Somebody left something wonderful in my mailbox. I have a fair idea who. Thank you, truly.',
+  liked: 'I found your parcel in the mailbox. That was kind. It made the whole morning.',
+  neutral: 'There was something in my mailbox from you. Thank you for thinking of me.',
+  disliked: 'Somebody posted me a... thing. I am choosing to believe it was a joke.',
+};
