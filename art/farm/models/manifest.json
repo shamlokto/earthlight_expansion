@@ -2256,13 +2256,13 @@
  },
  "star_metal": {
   "file": "star_metal.glb",
-  "tris": 3000,
+  "tris": 3500,
   "size": [
-   0.9912,
-   0.9775,
+   0.9712,
+   0.9983,
    1.0
   ],
-  "note": "item model; mirror shine baked as pale blotches"
+  "note": "item; faceted mirror-bright meteorite fragment, faint blue sheen, dark crust on one side"
  },
  "fiddlehead_tempura": {
   "file": "fiddlehead_tempura.glb",
@@ -2278,11 +2278,11 @@
   "file": "hoe.glb",
   "tris": 3000,
   "size": [
-   0.3735,
-   1.0,
-   0.8628
+   0.476,
+   0.9883,
+   1.0
   ],
-  "note": "item model; chunky hoe standing on the end of its handle, blade at the top curving back toward -Z"
+  "note": "item model; field hoe standing on the end of its handle, flat blade hanging down at a right angle at the top"
  },
  "observatory": {
   "file": "observatory.glb",
@@ -3358,11 +3358,11 @@
   "file": "honey_cake.glb",
   "tris": 3500,
   "size": [
-   1.0,
-   0.5172,
-   0.9994
+   0.9323,
+   0.4978,
+   1.0
   ],
-  "note": "item"
+  "note": "item; honey loaf cake on a plate, one slice cut, honey dipper"
  },
  "kale": {
   "file": "kale.glb",
@@ -3538,11 +3538,11 @@
   "file": "copper.glb",
   "tris": 3500,
   "size": [
-   0.9958,
-   0.9969,
-   1.0
+   1.0,
+   0.9763,
+   0.9999
   ],
-  "note": "item"
+  "note": "item; dark charcoal rock with polished red-orange copper bands (texture hue-corrected after paint)"
  },
  "feed": {
   "file": "feed.glb",
@@ -3598,11 +3598,11 @@
   "file": "platinum.glb",
   "tris": 3500,
   "size": [
-   0.966,
+   0.962,
    1.0,
-   0.9276
+   0.923
   ],
-  "note": "item"
+  "note": "item; warm white-grey rounded lumpy satin nugget"
  },
  "potato": {
   "file": "potato.glb",
