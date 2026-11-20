@@ -33,7 +33,8 @@ const lookOf = (id) => ({ ...NPCS[id].look, ...(LOOKS[id] || {}) });
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 // ---------------------------------------------------------------- save
-function save() { const away = map.id === 'ruins', bt = away && map.belt; S.player.map = away ? (bt ? 'hangar' : 'central') : map.id; S.player.x = away ? (bt ? 8 : 7.5) : me.x; S.player.y = away ? (bt ? 7.6 : 16.5) : me.y; S.player.dir = me.dir; try { localStorage.setItem(SAVE_KEY, sim.saveState(S)); } catch { ui.toast('Could not save in this browser.'); } }
+function save(atCamp = false) { const away = map.id === 'ruins', bt = away && map.belt, cm = away && !bt && S.mine && S.mine.mode === 'city' ? S.mine : null, camp = atCamp && cm && cm.saveCamp != null ? cm.camps[cm.saveCamp] : null; if (cm && !camp) cm.saveCamp = null;   // a trip is kept only in a camp save
+  S.player.map = camp ? 'ruins' : away ? (bt ? 'hangar' : 'central') : map.id; S.player.x = camp ? camp.x + 1.5 : away ? (bt ? 8 : 7.5) : me.x; S.player.y = camp ? camp.y + 2.5 : away ? (bt ? 7.6 : 16.5) : me.y; S.player.dir = me.dir; try { localStorage.setItem(SAVE_KEY, sim.saveState(S)); } catch { ui.toast('Could not save in this browser.'); } }
 function loadSaved() { try { const t = localStorage.getItem(SAVE_KEY); return t ? sim.loadState(t) : null; } catch { return null; } }
 
 // ---------------------------------------------------------------- context
@@ -664,7 +665,7 @@ function ruinsTick(dt) {
     else if (mon.state === 'windup') { if (mon.t <= 0) { mon.state = 'lunge'; mon.t = 0.28; } }
     else if (mon.state === 'lunge') { tx = mon.lx; ty = mon.ly; sp = mon.big ? 5 : 6.5; if (d < (mon.big ? 1.2 : 0.8)) { satoHit(mon.x, mon.y, mon); mon.state = 'rest'; mon.t = 0.9; } else if (mon.t <= 0) { mon.state = 'rest'; mon.t = 0.8; } }
     else if (mon.t <= 0) mon.state = 'chase';                              // rest or stun
-    if (sp) { const nx = mon.x + tx * sp * dt, ny = mon.y + ty * sp * dt; if (!blocked(nx, mon.y)) mon.x = nx; if (!blocked(mon.x, ny)) mon.y = ny; if (mon.o.userData.is3d && (tx || ty)) mon.o.rotation.y = Math.atan2(tx, ty); }
+    if (sp) { const nx = mon.x + tx * sp * dt, ny = mon.y + ty * sp * dt; if (!blocked(nx, mon.y) && !inCamp(nx, mon.y)) mon.x = nx; if (!blocked(mon.x, ny) && !inCamp(mon.x, ny)) mon.y = ny; if (mon.o.userData.is3d && (tx || ty)) mon.o.rotation.y = Math.atan2(tx, ty); }
     mon.squash = Math.max(0, mon.squash - dt * 5); const q = 1 + Math.sin(mon.squash * 9) * mon.squash * 0.25;
     mon.o.scale.set(q, 1 / q, q);
     mon.o.position.set(mon.x, mon.drain ? 0.25 + Math.sin(mon.wob * 2.2) * 0.12 : mon.state === 'windup' ? Math.abs(Math.sin(mon.t * 40)) * 0.06 : 0, mon.y);   // smog-wraiths hover and bob
@@ -721,7 +722,7 @@ function cityMonsterObj(ref) {
 function drawCity() {
   const m = S.mine; monsters = []; bolts = []; dashT = 0; debris = []; cityPlaced = new Set(); cityAt = [1e9, 1e9]; cityZoneNow = -1; hullWarned = 0; cityTowing = false;
   for (const ref of m.monsters) cityMonsterObj(ref);
-  cityStream(true); hullBar(true);
+  drawCamps(); cityStream(true); hullBar(true);
 }
 function cityTick(dt) {
   const m = S.mine; if (!m || cityTowing) return;
@@ -746,6 +747,8 @@ async function cityTow() {
 }
 function cityProbe(tx, ty) {
   const m = S.mine, cx = tx - 1, cy = ty - 1;
+  sim.cityMove(S, me.x - 1, me.y - 1); const ck = sim.campNear(S);
+  if (ck >= 0) return m.camps[ck].built ? { label: 'Use the camp (sleep, save, fly home)', run: useCamp } : { label: `Build a camp here (${sim.CAMP_COST.scrap} scrap, ${sim.CAMP_COST.credits} cr)`, run: makeCamp };
   let s = sim.citySpotAt(S, cx, cy);
   if (!s) for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { s = sim.citySpotAt(S, Math.floor(me.x) - 1 + dx, Math.floor(me.y) - 1 + dy); if (s && !s.open) break; s = null; }
   if (s && !s.open) { const x = s.i % m.w, y = Math.floor(s.i / m.w); return { label: SPOT_LABEL[s.kind], run: () => citySearch(x, y) }; }
@@ -753,6 +756,43 @@ function cityProbe(tx, ty) {
   if (p && p.act === 'liftup') return { label: 'Board the shuttle home', run: leaveRuins };
   if (s && s.open) return { label: 'Already searched', run: () => ui.toast('You have been through that already.') };
   return null;
+}
+// Safe spots: creatures never step inside CAMP_R of one. A camp built there lets Sato sleep, save or fly home.
+const inCamp = (x, y) => !!(map && map.city && S.mine && S.mine.camps && S.mine.camps.some((c) => Math.hypot(c.x + 1.5 - x, c.y + 1.5 - y) < sim.CAMP_R));
+function drawCamps() { for (const [k, c] of (S.mine.camps || []).entries()) { W.place('campspot' + k, 'camp_spot', c.x + 1.5, c.y + 1.5, { kind: c.kind }); if (c.built) W.place('camp' + k, 'camp', c.x + 1.5, c.y + 1.5); else W.unplace('camp' + k); } }
+function makeCamp() { const r = sim.buildCamp(S); ui.toast(r.msg, 4200); if (r.ok) { sfx('good'); W.puff(me.x, me.y, 0xffa040, 14, 0.5); drawCamps(); } refreshHud(); }
+async function useCamp() {
+  mode = 'talk'; const i = await ui.choose(`Sato's camp (${{ plaza: 'a cleared plaza', rooftop: 'a rooftop', bunker: 'a shielded bunker entrance' }[S.mine.camps[sim.campNear(S)].kind]})`, ['Sleep until morning (mends the hull; the farm runs as usual)', 'Save the game (loading resumes here, at the camp)', 'Fly home: the Pallas transforms (no penalty)', 'Not yet']); mode = 'play';
+  if (i === 0) await night(false, true);
+  else if (i === 1) { sim.campSave(S); save(true); ui.toast('Saved at the camp. Loading this save resumes here.'); }
+  else if (i === 2) await flyHome();
+}
+// The Pallas folds into its flight form (crouch, a flash, wings out), lifts off, banks and climbs away; the camera follows,
+// then the screen fades and she lands at the space dock with everything she found. About 3.5 s; E or Space skips it.
+async function flyHome() {
+  if (sim.campNear(S) < 0) return;
+  mode = 'talk'; busy = true; hullBar(false); cityTowing = true;   // (no hazards or hits while she takes off)
+  let skip = false; const onKey = (e) => { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') skip = true; }; addEventListener('keydown', onKey, true); addEventListener('pointerdown', onKey, true);
+  const g = me.group, x0 = me.x, y0 = me.y, T = 3.6, jet = W.place('pallasJet', 'pallas_jet', x0, y0); jet.visible = false;
+  const wings = () => jet.children[0] && jet.children[0].userData.wings; let t = 0, last = performance.now(), flashed = false;
+  window.__farmFly = 0;
+  while (t < T && !skip) {
+    await new Promise((r) => requestAnimationFrame(r)); const now = performance.now(); t += Math.min(0.1, (now - last) / 1000); last = now; window.__farmFly = t;
+    if (t < 0.8) { const k = t / 0.8; g.scale.set(1 + 0.2 * k, 1 - 0.5 * k, 1 + 0.2 * k); g.rotation.x = 0.3 * k; }          // crouch, limbs folding in
+    else if (!flashed) { flashed = true; W.puff(x0, y0, 0xffffff, 26, 1.0); W.puff(x0, y0, 0x8ff4ff, 16, 1.3); W.shake = 0.15; sfx('zap'); g.visible = false; jet.visible = true; }
+    if (t >= 0.8) {
+      const k = Math.min(1, (t - 0.8) / 0.5), w = wings(); jet.scale.setScalar(0.5 + 0.5 * k); if (w) w.scale.set(0.05 + 0.95 * k, 1, 1);
+      const f = Math.max(0, t - 1.4); jet.position.set(x0 + Math.sin(f * 1.4) * f * 0.8, 0.2 + f * f * 1.6, y0 - f * f * 3.2);
+      jet.rotation.set(-Math.min(0.45, f * 0.35), Math.sin(f * 1.4) * 0.25, Math.sin(f * 1.6) * 0.6);                // climb and bank
+      me.y = Math.max(2, y0 - f * f * 2.6);                                                                               // the camera follows a little
+    }
+  }
+  removeEventListener('keydown', onKey, true); removeEventListener('pointerdown', onKey, true);
+  await ui.fade(true, 450); W.unplace('pallasJet'); g.scale.set(1, 1, 1); g.rotation.x = 0; g.visible = true; me.x = x0; me.y = y0;
+  sim.cityMove(S, x0 - 1, y0 - 1); const r = sim.cityHome(S, 'fly'); busy = false;
+  if (!r.ok) { cityTowing = false; await ui.fade(false, 300); mode = 'play'; return ui.toast(r.msg); }
+  sfx('door'); await ui.say([{ who: 'narrator', text: r.msg }, { who: 'narrator', text: story.SHUTTLE.tally(r.credits, r.finds) }]); mode = 'play';
+  await go({ map: 'central', x: 7.5, y: 16.5, dir: 0 });
 }
 function citySearch(x, y) {
   const r = sim.searchSpot(S, x, y); if (!r.ok) return ui.toast(r.msg);
@@ -1072,18 +1112,19 @@ function fishTick(dt) {
 }
 
 // ---------------------------------------------------------------- night
-async function night(collapsed) {
+async function night(collapsed, camp = false) {
   if (busy) return; busy = true; mode = 'talk'; endFishing();
   if (collapsed) ui.toast(S.cal.minute >= 1440 ? 'It is midnight. Sato is asleep on her feet.' : 'Sato has worked herself to a standstill.', 3000);
   await ui.fade(true, 700);
-  if (S.mine) sim.leaveMine(S);
-  const rep = sim.sleep(S, { collapsed }); sim.claimGoals(S);
+  const atCamp = camp && map.city && S.mine && sim.campNear(S) >= 0;
+  if (S.mine && !atCamp) sim.leaveMine(S);
+  const rep = atCamp ? sim.campSleep(S, { collapsed }) : sim.sleep(S, { collapsed }); sim.claimGoals(S);
   if (S.flags.partner && NPCS[S.flags.partner]) {            // a partner waters some of the field before she wakes
     let k = 0; for (const t of S.fields.farm.tiles) { if (k >= 12) break; if (t.till && t.crop && !t.crop.dead && !t.wet) { t.wet = true; k++; } }
     if (k) (rep.notes ||= []).push(`${NPCS[S.flags.partner].short || NPCS[S.flags.partner].name} watered ${k} plants before you woke.`);
   }
-  busy = false; await go({ map: 'house', x: 2.6, y: 2.6, dir: 0 }, { quick: true }); busy = true;
-  save(); sfx('morning');
+  busy = false; if (atCamp) { const c = S.mine.camps[rep.camp]; await go({ map: 'ruins', x: c.x + 1.5, y: c.y + 2.5, dir: 0 }, { quick: true }); } else await go({ map: 'house', x: 2.6, y: 2.6, dir: 0 }, { quick: true }); busy = true;
+  if (atCamp) { sim.campSave(S); save(true); } else save(); sfx('morning');
   const f = festivalToday(), SK = ['spring', 'summer', 'autumn', 'winter'];
   const head = rep.newYear ? `A new year on Eden. Year ${S.cal.year} begins.` : rep.seasonChanged ? `${['Spring', 'Summer', 'Autumn', 'Winter'][S.cal.season]} has come to the river chamber.` : collapsed ? 'She wakes in her own bed, with no memory of getting there, and half her strength.' : '';
   if (f) (rep.notes ||= []).push(`${f.name} today. ${f.blurb}`);
@@ -1199,7 +1240,7 @@ async function begin(state, fresh) {
   S = state; $('title').hidden = true; startMusic(); $('hud').hidden = false; mode = 'talk';
   if (fresh) { await ui.fade(true, 400); $('hud').hidden = true; ui.fade(false, 600); await ui.say(story.INTRO); $('hud').hidden = false; }
   mode = 'play';
-  const p = S.player, m = allMaps()[p.map] ? p.map : 'farm';
+  const p = S.player, m = p.map === 'ruins' && S.mine && S.mine.mode === 'city' ? 'ruins' : allMaps()[p.map] ? p.map : 'farm';   // a camp save resumes in the city
   await go(fresh || p.x == null ? { map: 'farm' } : { map: m, x: p.x, y: p.y, dir: p.dir });
   if (fresh) save();
 }

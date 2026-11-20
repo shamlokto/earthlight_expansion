@@ -828,6 +828,20 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   about 2,100 cr against about 950 cr for 60 Field-hammer blows in belt sector 5 (tests/farm-sim.mjs measures both):
   more, with more risk (the hull, the tow fee, the shuttle fare). A full clear including the core and the vault is
   worth several thousand.
+* **Safe spots and camps** (owner, 2026-11-20, later). `cityLayout` places three safe spots a trip, one per zone
+  (`camps: [{ x, y, kind, zone }]`): a cleared **plaza** 12–22 tiles from the pad, a **rooftop** downtown and a shielded
+  **bunker** entrance in the core. Each is cleared ground (radius 2) with no gas within 3, on reachable ground; no
+  creature starts within 4, and in main.js no creature ever steps inside `CAMP_R` = 3 of one. E at a safe spot builds a
+  **camp** (`buildCamp`: `CAMP_COST` = 3 scrap and 100 cr; once a trip; a tent, a scrap windbreak and a campfire). At a
+  built camp E offers: **Sleep** (`campSleep`: the full night as in the farmhouse bed — `sim.sleep`, so crops, animals,
+  robots and deliveries all tick, then the morning report — and she wakes at the camp with the hull mended; the trip
+  goes on, and it saves there); **Save the game** (`campSave` marks `mine.saveCamp`, and main.js `save(true)` writes
+  `player.map = 'ruins'` at the camp; `loadState` keeps a city trip only for such a save, otherwise it drops the trip and
+  puts Sato at the space dock); and **Fly home** (`cityHome(state, 'fly')`, only at a built camp: 30 minutes, no
+  penalty, the loot kept). Flying home plays the Pallas's transformation (main.js `flyHome`, about 3.6 s, E, Space or a
+  tap skips it): the mech crouches and folds, a flash, and its flight form (`pallas_jet`, procedural in cityworld.js,
+  wings sweeping out) lifts off, banks and climbs north with the camera following, then the screen fades and she lands
+  at Eden Central's space dock.
 * **The HUD** shows the zone, the hull and the credits found (`The core · hull 72/100 · found 340 cr`) and a hull bar
   under it. The minimap works on the city (streets dark, toxic pools lime, tower footprints pale); the map screen (M)
   says there is no chart of a city that shifts every trip.
@@ -839,7 +853,7 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   `belt` or `city`) and puts Sato back at the space dock. `state.city = { trips, best }`; `stats.deepest` is no longer
   used.
 
-Art slots added (models; each has a procedural stand-in in js/farm/cityworld.js): `ruin_tower`, `ruin_car`,
+Art slots added (models; each has a procedural stand-in in js/farm/cityworld.js): `camp_spot`, `camp`, `pallas_jet` (procedural only so far), `ruin_tower`, `ruin_car`,
 `ruin_bus`, `ruin_rubble`, `ruin_billboard`, `ruin_locker`, `ruin_vault` (also the safes, smaller), `shop_counter`,
 `toxic_pool`, `shuttle_pad` (as before), and the creatures `rad_hound`, `glow_slime`, `rust_crawler`, `smog_wraith`,
 `spore_brute`. Icons `icons/old_coin`, `icons/teddy_bear`, `icons/film_camera`,

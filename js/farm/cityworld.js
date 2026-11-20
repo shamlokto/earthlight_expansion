@@ -30,6 +30,7 @@ export const CITY_PROPS = {
   smog_wraith: { model: 'smog_wraith', h: 1.0, hover: 0.9, turn: true },   // the model's tail touches y = 0: lifted 0.45 here, and main.js bobs it
   spore_brute: { model: 'spore_brute', h: 1.6, turn: true },
   searched_mark: { h: 0.2 },
+  camp_spot: { h: 0.4 }, camp: { h: 1.2 }, pallas_jet: { h: 1.2 },   // safe spots, a built camp, the Pallas's flight form (procedural)
 };
 export const CITY_MONSTER_KINDS = new Set(['rad_hound', 'glow_slime', 'rust_crawler', 'smog_wraith', 'spore_brute']);
 
@@ -105,6 +106,32 @@ export function cityProp(kind, o = {}) {
       break;
     }
     case 'searched_mark': { const r = new THREE.Mesh(new THREE.RingGeometry(0.18, 0.24, 16), glow(0x7dffb0, { transparent: true, opacity: 0.6, side: THREE.DoubleSide })); r.rotation.x = -Math.PI / 2; r.position.y = 0.05; g.add(r); break; }
+    case 'camp_spot': {                                  // a safe spot: a soft green ring on the ground and a little shield beacon
+      const r = new THREE.Mesh(new THREE.RingGeometry(2.7, 2.9, 40), glow(0x7dffb0, { transparent: true, opacity: 0.45, side: THREE.DoubleSide })); r.rotation.x = -Math.PI / 2; r.position.y = 0.04; g.add(r);
+      g.add(cyl(0.05, 0.06, 1.1, std({ color: 0x8a98a6, metalness: 0.4 }), 1.2, 0, -1.2, 8), ball(0.11, glow(0x7dffb0), 1.2, 1.18, -1.2));
+      if (o.kind === 'bunker') g.add(box(1.4, 0.7, 0.9, std({ color: 0x7a8088, metalness: 0.3 }), -1.1, 0, -1.4), box(0.6, 0.5, 0.05, std({ color: 0x2c3440 }), -1.1, 0, -0.94));
+      else if (o.kind === 'rooftop') g.add(box(1.6, 0.25, 1.2, std({ map: concrete() }), -1.1, 0, -1.3), box(0.4, 0.6, 0.4, std({ color: 0x9aa4ac, metalness: 0.4 }), -1.5, 0.25, -1.5));
+      else g.add(cyl(0.45, 0.5, 0.35, std({ map: concrete() }), -1.2, 0, -1.2, 14), ball(0.3, std({ color: 0x6fae4c }), -1.2, 0.5, -1.2));
+      break;
+    }
+    case 'camp': {                                       // a built camp: a little tent, a scrap windbreak, a campfire
+      const tent = new THREE.Mesh(new THREE.ConeGeometry(0.75, 0.95, 4), std({ color: 0xf0a860 })); tent.rotation.y = Math.PI / 4; tent.position.set(-0.6, 0.47, -0.5); tent.castShadow = true; g.add(tent);
+      g.add(box(0.3, 0.5, 0.04, std({ color: 0x5a3a24 }), -0.6, 0, -0.04), box(1.4, 0.45, 0.12, std({ color: 0x8a6a50, metalness: 0.3 }), 0.4, 0, -1.2));
+      for (let i = 0; i < 6; i++) g.add(ball(0.08, std({ color: 0x8a8580 }), 0.6 + Math.cos(i) * 0.3, 0.05, 0.4 + Math.sin(i) * 0.3));
+      const f1 = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.42, 7), glow(0xffa040)), f2 = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.3, 7), glow(0xffe08a)); f1.position.set(0.6, 0.22, 0.4); f2.position.set(0.6, 0.2, 0.4); g.add(f1, f2);
+      const pl = new THREE.PointLight(0xffa050, 6, 6, 1.6); pl.position.set(0.6, 0.6, 0.4); g.add(pl); g.userData.fire = [f1, f2];
+      break;
+    }
+    case 'pallas_jet': {                                 // the Pallas folded into its flight form: a white and crimson jet, nose to -Z
+      const white = std({ color: 0xf2f0ec, roughness: 0.5 }), red = std({ color: 0x9a1f3a, roughness: 0.5 }), dark = std({ color: 0x2c3440, roughness: 0.3 });
+      const body = cyl(0.2, 0.28, 1.6, white, 0, 0, 0, 12); body.rotation.x = Math.PI / 2; body.position.set(0, 0.5, 0); g.add(body);
+      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 12), red); nose.rotation.x = -Math.PI / 2; nose.position.set(0, 0.5, -1.05); g.add(nose);
+      g.add(ball(0.16, dark, 0, 0.66, -0.35, 1, 0.7, 1.6));
+      const wings = new THREE.Group(); wings.add(box(2.2, 0.05, 0.55, white, 0, 0.45, 0.1), box(0.5, 0.06, 0.3, red, -0.9, 0.46, 0.25), box(0.5, 0.06, 0.3, red, 0.9, 0.46, 0.25)); g.add(wings); g.userData.wings = wings;
+      const fin = box(0.05, 0.45, 0.35, red, 0, 0.6, 0.6); g.add(fin, box(0.9, 0.04, 0.25, white, 0, 0.5, 0.7));
+      const jet = ball(0.14, glow(0x8ff4ff), 0, 0.5, 0.85); jet.castShadow = false; g.add(jet);
+      break;
+    }
     // ---- the creatures: round, a little silly, glowing eyes
     case 'rad_hound': {
       const fur = std({ color: 0xb8a888 }), spot = glow(0xc8ff6a), eye = glow(0xeaff5a);

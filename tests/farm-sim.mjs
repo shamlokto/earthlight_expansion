@@ -589,6 +589,25 @@ function script(s, days = 12) {
   check(wc > wb * 0.9 && wc < wb * 2.5, `a city trip is worth about a belt trip or a bit more (city ${Math.round(wc / 6)} cr, belt ${Math.round(wb / 6)} cr, on 60 stamina)`);
   console.log(`  trip worth on 60 stamina: city ${Math.round(wc / 6)} cr, belt (sector 5) ${Math.round(wb / 6)} cr`);
 
+  // camps (safe spots): build (3 scrap + 100 cr), sleep there (the night runs, the hull is mended, the trip goes on), save and load there, fly home
+  const cp = rich(60); sim.enterCity(cp); const C = cp.mine.camps[0];
+  check(cp.mine.camps.length >= 2 && cp.mine.camps.every((c) => !c.built), 'a few safe spots, none built yet');
+  check(!act(sim.buildCamp(cp)).ok, 'no camp on the landing pad');
+  sim.cityMove(cp, C.x + 0.5, C.y + 0.5); const sc0 = countItem(cp, 'scrap'), mo0 = cp.player.money;
+  r = act(sim.buildCamp(cp)); check(r.ok && C.built && countItem(cp, 'scrap') === sc0 - sim.CAMP_COST.scrap && cp.player.money === mo0 - sim.CAMP_COST.credits, `building a camp costs ${sim.CAMP_COST.scrap} scrap and ${sim.CAMP_COST.credits} cr`);
+  check(!act(sim.buildCamp(cp)).ok && countItem(cp, 'scrap') === sc0 - sim.CAMP_COST.scrap, 'once a trip');
+  const broke = newGame({ seed: 61 }); sim.enterCity(broke); const BC = broke.mine.camps[0]; sim.cityMove(broke, BC.x + 0.5, BC.y + 0.5); check(!act(sim.buildCamp(broke)).ok && !BC.built, 'no scrap, no camp');
+  cp.mine.hull = 12; cp.player.stamina = 30; const day0 = cp.cal.day, crop = tile(cp, 1, 1); crop.till = true; crop.wet = true; crop.crop = { id: 'turnip', age: 0, dead: false };
+  r = act(sim.campSleep(cp)); check(r.ok && cp.mine && cp.mine.mode === 'city' && cp.mine.hull === cp.mine.hullMax && cp.cal.day === day0 + 1 && cp.player.stamina === cp.player.maxStamina && tile(cp, 1, 1).crop.age === 1, 'sleeping at the camp: a night passes, the farm grows, the hull is mended, the trip goes on');
+  check(sim.campNear(cp) >= 0 && C.built, 'she wakes at the camp, which still stands');
+  check(act(sim.campSave(cp)).ok && cp.mine.saveCamp === 0, 'save at the camp');
+  cp.player.map = 'ruins'; cp.player.x = C.x + 1.5; cp.player.y = C.y + 2.5;
+  const back = sim.loadState(saveState(cp)); check(back && back.mine && back.mine.mode === 'city' && back.mine.camps[0].built && back.player.map === 'ruins', 'loading a camp save resumes at the camp');
+  const ns = JSON.parse(saveState(cp)); ns.mine.saveCamp = null; const back2 = sim.loadState(JSON.stringify(ns)); check(back2 && back2.mine === null && back2.player.map === 'central', 'a trip not saved at a camp is not resumed: back at the space dock');
+  const cm0 = cp.player.money, cs0 = cp.player.stamina; const t2 = cp.cal.minute;
+  r = act(sim.cityHome(cp, 'fly')); check(r.ok && cp.mine === null && cp.player.money === cm0 && cp.player.stamina === cs0 && cp.cal.minute === t2 + 30, 'fly home from a camp: no penalty');
+  const nf = rich(62); sim.enterCity(nf); sim.cityMove(nf, 10, 10); check(!act(sim.cityHome(nf, 'fly')).ok, 'no flying home without a camp');
+
   // saves: an old levels-style trip is dropped and Sato is back at the space dock
   const old = newGame({ seed: 47 }); old.mine = { mode: 'earth', depth: 4, floor: 4, w: 14, h: 12, cells: [], monsters: [], hatch: 3, star: -1, haz: [] }; old.player.map = 'ruins';
   sim.ensure(old); check(old.mine === null && old.player.map === 'central' && old.player.x === 7.5, 'an old Old World trip in a save: dropped, back at the space dock');

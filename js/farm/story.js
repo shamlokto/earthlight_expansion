@@ -1852,7 +1852,7 @@ export const HELP = [
   },
   {
     title: 'The Old World, fishing and forage',
-    body: 'The orbital elevator on the hill rides up to Vashti\'s hangar: suit up for the asteroid belt, twenty sectors north, richer further out. Space or E with the hammer breaks rocks (bigger ones need a better hammer); flying uses air, and every sector has a pickup pod home.\n\nThe Old World: Maris\'s shuttle lands by one big ruined city, new every trip. Roam it in the Pallas (Space fires, F sets the Hydra, E searches); the far north is richer and rougher. Relics go to the Memory Room. Walk back to the shuttle before the hull runs out, or be towed.\n\nFishing: face water, Space to cast, Space when the float dips; the hill lake is best.',
+    body: 'The orbital elevator on the hill rides up to Vashti\'s hangar: suit up for the asteroid belt, twenty sectors north, richer further out. Space or E with the hammer breaks rocks (bigger ones need a better hammer); flying uses air, and every sector has a pickup pod home.\n\nThe Old World: Maris\'s shuttle lands by one big ruined city, new every trip. Roam it in the Pallas (Space fires, F sets the Hydra, E searches); the far north is richer and rougher. Relics go to the Memory Room. Camp at a safe spot to sleep, save or fly home; or walk back to the shuttle before the hull runs out.\n\nFishing: face water, Space to cast, Space when the float dips; the hill lake is best.',
   },
   {
     title: 'Eden Central',

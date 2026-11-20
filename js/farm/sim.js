@@ -208,7 +208,8 @@ export function loadState(text) {
   try {
     const s = JSON.parse(text);
     const good = s && s.v === 1 && s.cal && s.player && Array.isArray(s.player.inv) && s.fields && s.fields.farm && Array.isArray(s.fields.farm.tiles) && s.fields.greenhouse && s.pasture && s.stats;
-    if (good) s.mine = null;   // a saved site (or an old-style one) is not resumed: the trip starts again
+    const camp = good && s.mine && s.mine.mode === 'city' && Number.isInteger(s.mine.saveCamp) && s.mine.camps && s.mine.camps[s.mine.saveCamp] && s.mine.camps[s.mine.saveCamp].built && s.player.map === 'ruins';
+    if (good && !camp) { s.mine = null; if (s.player.map === 'ruins') Object.assign(s.player, { map: 'central', x: 7.5, y: 16.5 }); }   // a trip resumes only from a camp save
     return good ? ensure(s) : null;
   } catch { return null; }
 }
@@ -843,6 +844,7 @@ export function setFlag(state, key, value = true) {
 // the shuttle (cityHome 'pad'), or with a tow when the hull gives out ('tow': an hour, 20 stamina and Maris's tow fee).
 // Cells: 0 street, 1 open lot, 2 tower (solid), 3 car, 4 bus, 5 rubble pile, 6 toxic pool (walkable; it hurts),
 // 7 overgrowth, 8 billboard, 9 the landing pad, 10 locker, 11 safe, 12 shop counter, 13 the sealed vault, 14 debris (solid).
+export const CAMP_R = 3, CAMP_COST = { scrap: 3, credits: 100 };   // safe spots: creatures keep out of CAMP_R; building a camp costs this
 export const CITY_W = 96, CITY_H = 72, CITY_PAD = [48, 67], HULL_MAX = 100, HULL_FILTERS = 130, TOW_FEE = 150, TOW_MINUTES = 60;
 export const CITY_CELL = { street: 0, lot: 1, tower: 2, car: 3, bus: 4, rubble: 5, pool: 6, green: 7, sign: 8, pad: 9, locker: 10, safe: 11, counter: 12, vault: 13, debris: 14 };
 export const CITY_SOLID = new Set([2, 3, 4, 5, 8, 10, 11, 12, 13, 14]);
@@ -951,6 +953,22 @@ export function cityLayout(seed) {
   let vault = -1, vt = null, bd = -1;
   for (const t of towers) if (t.zone === 2) { const d = Math.hypot(t.x - PX, t.y - PY); if (d > bd && beside(t).length) { bd = d; vt = t; } }
   if (vt) { const b = beside(vt); const [vx, vy] = b[ri(b.length)]; set(vx, vy, 13); vault = at(vx, vy); }
+  // safe spots (camps): a cleared plaza near the pad, a rooftop downtown, a shielded bunker in the core. Cleared ground
+  // (radius 2), no gas within 3; creatures never come within CAMP_R (main.js) and none start within 4.
+  const camps = [], want = [[12, 22], [34, 50], [60, 99]], KIND = ['plaza', 'rooftop', 'bunker'];
+  for (let z = 0; z < 3; z++) {
+    let best = -1, bs = -1;
+    for (let g = 0; g < 600; g++) {
+      const x = 4 + ri(w - 8), y = 4 + ri(h - 10), c = cells[at(x, y)], d = Math.hypot(x - PX, y - PY);
+      if (c !== 0 && c !== 1 && c !== 7) continue; if (d < want[z][0] || d > want[z][1] || cityZone(x, y) !== z) continue;
+      if (camps.some((q) => Math.hypot(q.x - x, q.y - y) < 14)) continue;
+      let t = 0; for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) if (cells[at(x + i, y + j)] === 2 || cells[at(x + i, y + j)] === 13) t++;
+      const sc = (c === 0 ? 2 : 1) - t + r(); if (sc > bs) { bs = sc; best = at(x, y); }
+    }
+    if (best < 0) continue;
+    const x = best % w, y = Math.floor(best / w); camps.push({ x, y, kind: KIND[z], zone: z });
+    for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) { if (!inb(x + i, y + j)) continue; const k = at(x + i, y + j), dd = Math.hypot(i, j); if (dd <= 3.2) haz[k] = 0; if (dd <= 2.3 && cells[k] !== 2 && cells[k] !== 13) cells[k] = 0; }
+  }
   // nothing walled off: carve a way (round the towers if it can) from any cut-off pocket to the pad
   const pass = (c) => !citySolid(c), start = at(PX, PY);
   const reach = () => { const seen = new Uint8Array(w * h), todo = [start]; seen[start] = 1; while (todo.length) { const i = todo.pop(), x = i % w, y = (i - x) / w; for (const [dx, dy] of DIRS) { const j = at(x + dx, y + dy); if (!inb(x + dx, y + dy) || seen[j] || !pass(cells[j])) continue; seen[j] = 1; todo.push(j); } } return seen; };
@@ -976,7 +994,7 @@ export function cityLayout(seed) {
   }
   // the creatures, by zone, on open ground away from the pad; the spore-brute guards the vault
   const monsters = [], free = [[], [], []];
-  for (let i = 0; i < w * h; i++) { const x = i % w, y = (i - x) / w; if (seen[i] && cells[i] !== 6 && cells[i] !== 9 && Math.hypot(x - PX, y - PY) > 12) free[cityZone(x, y)].push(i); }
+  for (let i = 0; i < w * h; i++) { const x = i % w, y = (i - x) / w; if (seen[i] && cells[i] !== 6 && cells[i] !== 9 && Math.hypot(x - PX, y - PY) > 12 && !camps.some((q) => Math.hypot(q.x - x, q.y - y) < CAMP_R + 1)) free[cityZone(x, y)].push(i); }
   for (let z = 0; z < 3; z++) for (let n = CITY_MONSTER_COUNT[z]; n > 0 && free[z].length; n--) {
     const i = free[z].splice(ri(free[z].length), 1)[0], mix = Object.entries(CITY_MIX[z]); let k = r() * mix.reduce((a, [, v]) => a + v, 0), kind = mix[0][0];
     for (const [id, v] of mix) { k -= v; if (k < 0) { kind = id; break; } }
@@ -988,7 +1006,7 @@ export function cityLayout(seed) {
     if (best >= 0) monsters.push({ x: best % w, y: Math.floor(best / w), kind: 'spore_brute', zone: 2, guard: true });
   }
   if (r() < 0.5 && free[2].length) { const i = free[2][ri(free[2].length)]; monsters.push({ x: i % w, y: Math.floor(i / w), kind: 'spore_brute', zone: 2 }); }
-  const out = { w, h, cells, haz, towers, spots, monsters, vault, pad: CITY_PAD.slice() }; CITY_LAYOUTS.set(seed, out); return out;
+  const out = { w, h, cells, haz, towers, spots, monsters, vault, camps, pad: CITY_PAD.slice() }; CITY_LAYOUTS.set(seed, out); return out;
 }
 // The lasting part: how many trips (each trip's city comes from the save's seed and the trip number) and the best zone reached.
 function cityOf(state) {
@@ -1002,7 +1020,7 @@ export const hullMax = (state) => (state.flags.filters ? HULL_FILTERS : HULL_MAX
 export function enterCity(state) {
   const c = cityOf(state); c.trips++;
   const seed = hash32(state.seed || 1, 911, c.trips) % 1000000007, L = cityLayout(seed), hm = hullMax(state);
-  state.mine = { mode: 'city', seed, w: L.w, h: L.h, cells: L.cells.slice(), haz: L.haz, spots: L.spots.map((s) => ({ ...s, open: false })), vault: L.vault, towers: L.towers, pad: L.pad,
+  state.mine = { mode: 'city', seed, w: L.w, h: L.h, cells: L.cells.slice(), haz: L.haz, spots: L.spots.map((s) => ({ ...s, open: false })), vault: L.vault, towers: L.towers, pad: L.pad, camps: L.camps.map((c) => ({ ...c, built: false })), saveCamp: null,
     monsters: L.monsters.map((m, k) => ({ id: k, x: m.x, y: m.y, ...cityMonster(m.kind, m.zone), guard: !!m.guard })), nextId: L.monsters.length,
     pos: [CITY_PAD[0] + 0.5, CITY_PAD[1] + 0.5], zone: 0, hull: hm, hullMax: hm, credits: 0, finds: 0, start: state.cal.minute, depth: 1, floor: 1 };
   return state.mine;
@@ -1078,9 +1096,10 @@ export function cityHazard(state, x, y) {
 export function cityHome(state, how = 'pad') {
   const m = inCity(state); if (!m) return fail('You are not in the city.');
   if (how === 'pad' && Math.hypot(m.pos[0] - CITY_PAD[0] - 0.5, m.pos[1] - CITY_PAD[1] - 0.5) > 5.5) return fail('The shuttle is back at the landing pad.');
-  const tow = how === 'tow', fee = tow ? Math.min(state.player.money, TOW_FEE) : 0, minutes = tow ? TOW_MINUTES : 20;
+  if (how === 'fly') { const k = campNear(state); if (k < 0 || !m.camps[k].built) return fail('The Pallas needs a camp to transform and take off from.'); }
+  const tow = how === 'tow', fee = tow ? Math.min(state.player.money, TOW_FEE) : 0, minutes = tow ? TOW_MINUTES : how === 'fly' ? 30 : 20;
   if (tow) { state.player.stamina = Math.max(Math.min(1, state.player.stamina), state.player.stamina - 20); state.player.money -= fee; }
-  const res = { ok: true, how, minutes, fee, credits: m.credits, finds: m.finds, msg: tow ? `The tow line bites and Maris reels the Pallas home. It takes an hour, it takes it out of you, and the tow costs ${fee} cr.` : 'Up the ramp and strapped in. The shuttle climbs for home.' };
+  const res = { ok: true, how, minutes, fee, credits: m.credits, finds: m.finds, msg: how === 'fly' ? 'The Pallas folds into its flight form and climbs out of the grey. Thirty minutes later it touches down at the space dock, loot and all.' : tow ? `The tow line bites and Maris reels the Pallas home. It takes an hour, it takes it out of you, and the tow costs ${fee} cr.` : 'Up the ramp and strapped in. The shuttle climbs for home.' };
   state.mine = null; tick(state, minutes);
   return res;
 }
@@ -1099,6 +1118,28 @@ export function beltOdds(depth) {
   for (const [id, from, w, step] of BELT_ORES) if (d >= from) out[id] = Math.max(0.01, w + step * (d - from));
   return out;
 }
+// Camps (the safe spots): the one Sato stands at (within 2.8 tiles), building one, sleeping and saving there.
+export function campNear(state) { const m = inCity(state); if (!m || !Array.isArray(m.camps)) return -1; return m.camps.findIndex((c) => Math.hypot(c.x + 0.5 - m.pos[0], c.y + 0.5 - m.pos[1]) < 2.8); }
+export function buildCamp(state) {
+  const m = inCity(state); if (!m) return fail('You are not in the city.');
+  const k = campNear(state); if (k < 0) return fail('This is no place for a camp. Look for a safe spot.');
+  if (m.camps[k].built) return fail('Your camp is already up.');
+  if (countItem(state, 'scrap') < CAMP_COST.scrap || state.player.money < CAMP_COST.credits) return fail(`A camp takes ${CAMP_COST.scrap} scrap (for the windbreak and the stove) and ${CAMP_COST.credits} cr of supplies.`);
+  removeItem(state, 'scrap', CAMP_COST.scrap); state.player.money -= CAMP_COST.credits; m.camps[k].built = true;
+  return { ok: true, camp: k, msg: 'Sato pitches a little tent, stacks scrap into a windbreak and gets a fire going. The creatures will not come near it.' };
+}
+// Sleep at a built camp: the night runs as at home (the farm ticks, the morning report), and Sato wakes at the camp, the
+// Pallas's hull mended. The trip carries on.
+export function campSleep(state, opts = {}) {
+  const m = inCity(state), k = campNear(state);
+  if (!m || k < 0 || !m.camps[k].built) return fail('You need a built camp to sleep in.');
+  const c = m.camps[k], r = sleep(state, opts);
+  state.mine = m; m.hull = m.hullMax; m.pos = [c.x + 0.5, c.y + 1.5]; m.zone = cityZone(c.x, c.y); m.saveCamp = null;
+  return { ...r, camp: k };
+}
+// Saving at a camp: the save keeps the trip, and loading it resumes at the camp (loadState keeps a city trip only then).
+export function campSave(state) { const m = inCity(state), k = campNear(state); if (!m || k < 0 || !m.camps[k].built) return fail('You need a built camp to save at.'); m.saveCamp = k; return { ok: true, camp: k }; }
+
 // The old entry point: the belt (enterBelt) or a trip to the city (the depth is no longer used: the city is one big map).
 export function enterMine(state, depth = 1, mode = 'earth') {
   if (mode === 'belt') return enterBelt(state, depth);
