@@ -124,8 +124,8 @@ item('nickel_iron', 'Nickel-iron', 'ore', 'Grey, heavy ore that makes up most of
   detail: 'The commonest rock in the belt, from sector 1 out: iron and nickel, much as it came from the birth of the sun. Ruess smelts four of them into a bar of alloy for 100 cr, which saves you waiting for sector 5.' });
 item('silica', 'Silica', 'ore', 'Glassy belt sand. The colony melts it into panes and solar cells.', { sell: 30,
   detail: 'Drifting grit and glassy nodules from the belt, from sector 1 out. Every window on Eden began as something like this. Ruess wants four, with two copper, to build more charging racks in the Willowfall solar yard.' });
-item('copper', 'Copper ore', 'ore', 'Green-streaked ore from sector 2 out. Wiring, motors and batteries.', { sell: 45,
-  detail: 'A streak of copper green in a darker rock, from belt sector 2 out. Ruess winds two into a new robot battery for 80 cr, and it goes into the solar yard racks and the rock-splitter head for your hammer.' });
+item('copper', 'Copper ore', 'ore', 'Reddish, metal-bright ore from sector 2 out. Wiring, motors and batteries.', { sell: 45,
+  detail: 'Bright copper, red-orange as a new coin, in a darker rock, from belt sector 2 out. Ruess winds two into a new robot battery for 80 cr, and it goes into the solar yard racks and the rock-splitter head for your hammer.' });
 item('titanium', 'Titanium ore', 'ore', 'Light, stubborn ore from sector 4 out. Ruess uses it where things wear.', { sell: 90,
   detail: 'Pale, light and very hard to break, broken from belt sector 4 out. Ruess casts two into steel rollers for the feed mill (it grinds twice as much), three go into the rock-splitter hammer head and two line a bigger suit air tank.' });
 item('platinum', 'Platinum nugget', 'ore', 'A heavy, soft-shining nugget of the platinum metals, deep in the belt.', { sell: 260,

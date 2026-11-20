@@ -3089,7 +3089,7 @@ Object.assign(QUESTS, {
   ],
   tika: [
     Q('tika_scrap', 'scrap', 5, 'Five bits of scrap! I am building a thing. A good thing. The Professor says it is a bad thing. It is a good thing.', 'Yes! Perfect! It is going to be SO good. Possibly loud.'),
-    Q('tika_copper', 'copper', 3, 'Three copper ore from the belt? I am winding a motor for Vesna\'s turntable so it stops going wobbly on the slow songs.', 'Copper! Lovely and green. Vesna\'s slow songs are saved.'),
+    Q('tika_copper', 'copper', 3, 'Three copper ore from the belt? I am winding a motor for Vesna\'s turntable so it stops going wobbly on the slow songs.', 'Copper! Lovely and shiny. Vesna\'s slow songs are saved.'),
     Q('tika_pie', 'pie', 1, 'One pie. A whole one. I forgot lunch. And yesterday\'s lunch. The Professor says I am running on solder.', 'Pie! You are a hero. A pie hero. I am going to eat it with a spanner.'),
     Q('tika_corn', 'corn', 2, 'Two ears of corn, please! I am testing a corn-popper for the Bloom Fair. Not the Professor\'s. Mine. Mine is better.', 'Great! If you hear a bang on the Lane, that was science.', { season: 1 }),
     Q('tika_sweetpotato', 'sweetpotato', 3, 'Three sweet potatoes. I roast them on the welding bench. Do not tell Pia. She thinks the burn marks on my sleeves are from engines.', 'Thank you! They are also from engines. Some of them.', { season: 2 }),
@@ -3938,7 +3938,7 @@ MEETINGS.hana = [
   L('hana', 'Anyway! If you want something made, tell me. If you want it made well, tell Venn. If you want it made fast, definitely tell me.'),
 ];
 QUESTS.hana = [
-  Q('hana_copper', 'copper', 3, 'Three copper ore? I am rewinding the crane motor and I refuse to ask Venn for his. He labels them.', 'Copper! Lovely and green. The crane says thank you. It says it by not falling on me.'),
+  Q('hana_copper', 'copper', 3, 'Three copper ore? I am rewinding the crane motor and I refuse to ask Venn for his. He labels them.', 'Copper! Lovely and shiny. The crane says thank you. It says it by not falling on me.'),
   Q('hana_bread', 'bread', 2, 'Two loaves from up top. I lived on duct mushrooms for three years. I am making up for it one loaf at a time.', 'Still warm from the lift! I am going to eat one now and the other one also now.'),
   Q('hana_tea', 'tea', 1, 'A tea from the Hangar? Venn\'s kettle tastes of valve and so, by now, does Venn.', 'Real tea. I am going to drink it very slowly in front of him.'),
   Q('hana_scrap', 'scrap', 6, 'Six scrap for the press. Moth has requested a lantern with a door that opens. She has drawn the hinges.', 'Perfect. The hinges will be exactly as drawn. They will not work, but they will be exactly as drawn.', { minHearts: 2 }),
