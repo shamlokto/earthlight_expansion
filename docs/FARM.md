@@ -818,7 +818,7 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   from the pad; its spore-brute must be beaten first). `cityLoot(state, kind, zone)` → `{ items, credits }`;
   credits go straight to the purse and count in the trip's tally (`mine.credits`, shown on the HUD). Old-world
   finds come from `OLD_FINDS` (the ten relics plus the new valuables, rarer ones further in and from lockers and
-  safes). The vault: a data core, a ring or music box, two credit chips, a seed tin, 200–300 cr × the zone, and a
+  safes). The vault: a data core, a ring or music box, two credit chips, a seed tin, about 390–590 cr (280–420 × 1.4 in the core), and a
   star-plum the first two times ever (`flags.plum_ruins10`, `plum_ruins20`, as the old levels 10 and 20 had).
 * **New items** (kind `valuable`, sell): `old_coin` 50, `teddy_bear` 90, `film_camera` 240,
   `credit_chip` 80, `data_core` 800. Gifts: Ruess loves the data core (the pocket watch is now a like) and likes the camera;
