@@ -88,15 +88,11 @@ Do not use Lt. Arkin (he may have died in the player's campaign) or name the Gen
   (<34, <67, ≥67). Affection 0–100: +2 fed, +3 brushed (cows), +1 talked to; −5 unfed.
 * **Shipping bin**: put items in; Maris collects at 17:00 (flavour); paid at dawn. A ledger
   counts everything ever shipped.
-* **The Descent and the Old World** (owner, 2026-11-16: no mine; a peaceful search of the ruins. Since §9 the Old World is a shuttle trip, and since §10 the hill has the orbital elevator instead of the Descent).
-  On the hill, Vashti's cargo lift takes Sato, in her **custom Pallas** (guns swapped for a salvage
-  arm), down to the ruins of human civilisation on Earth's surface: sites of 14×12 with walls and
-  rubble piles. Searching a pile (1 stamina) may give scrap (15), alloy (40; from level 5), crystal
-  (150; from level 10) or a **relic** (photograph, porcelain cup, book, pocket watch, tin robot,
-  medal, seed tin, music box, data chip, gold ring; rarer ones lie deeper). One pile hides the way
-  down. Crawlers and stray drones live there; the Pallas and a **Hydra autoturret** she sets down
-  deal with them easily (a creature that reaches her costs 5 stamina, never more). Relics can be
-  sold, given, or donated to the **Memory Room** in the Village Hall (10 kinds to collect).
+* **The Old World** (owner, 2026-11-16: no mine; since §9 a shuttle trip, and since §16 one big roaming
+  city map a trip instead of levels). Sato walks her **custom Pallas** round the ruins of a city on Earth's
+  surface, fighting the creatures the war's radiation and gas left behind and searching for old-world
+  finds: scrap, batteries, credits, the ten **relics** for the **Memory Room** in the Village Hall, and
+  the city's own valuables. See §16.
 * **Fishing**, her other great love: the rod (600; Ruess upgrades it) at any water. Cast, wait for
   the float to dip, pull. Silverfin, river trout, chamber carp (35/75/130), a special fish for
   each season, and the legendary **Old Hollin** in the hill lake. Rain and the lake are best.
@@ -406,12 +402,10 @@ every new item id.
 ## 9. The Old World (owner, 2026-11-18, later; the belt is in §11, the orbital elevator in §10)
 
 * **The Old World** on Earth: Maris's courier shuttle from the space dock in Eden Central (act
-  `shuttle`, `takeShuttle(state, depth)`: 200 cr, free once Maris is at 5 hearts). Rubble, relics,
-  creatures and the way down as before; Earth rubble now gives scrap only (ore comes from the belt).
-  **Haze**: patches of toxic (1, green) or, from depth 4, radioactive (2, yellow) air in `mine.haz`;
-  `hazardTick(state, x, y)` costs 1 stamina (the UI ticks every 3 s with a geiger click) unless Ruess
-  has fitted the Pallas **air filters** (`up_filters`: 2,000 cr + 3 alloy + 1 star-metal,
-  `flags.filters`). A saved site is not resumed: `loadState` clears `state.mine`.
+  `shuttle`, `takeShuttle(state)`: 200 cr, free once Maris is at 5 hearts). Since §16 it lands on the
+  edge of one big ruined city a trip; the levels, the way down and the stamina haze are gone. The Pallas
+  **air filters** (`up_filters`: 2,000 cr + 3 alloy + 1 star-metal, `flags.filters`) now keep the gas off
+  the hull and stiffen it (hull 130 instead of 100). A saved trip is not resumed: `loadState` clears `state.mine`.
 
 Art slots added: models `observatory`, `gov_office`, `exchange`, `arrivals`, `apartment`, `townhouse`,
 `vending`, `feed_sacks`, `feed_mill`, `charge_terminal`, `dock_crane`, `cartel_ship`, `shuttle`,
@@ -775,3 +769,79 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   quarter each (`LATER_GIFT_SHARE`, gains and losses alike; a loved, liked or disliked gift never rounds to nothing; the birthday
   words only for the first). There is no weekly limit. A mailbox gift is the day's first gift like any other: later mailbox gifts
   are 80% of a quarter. Old saves: any old weekly gift count is dropped by `ensure()`.
+* **Walking, tidied** (owner, 2026-11-20: "fix the rough spots"): `planDay` works deadlines backwards, so everybody reaches every
+  post (`DUTY`, now with the school floor) on the hour, shop or not; to other places they set off when the hour comes, or sooner
+  if a later post needs it. Slots too short to walk were fixed in the schedules: Fenn checks the school locks from the schoolyard
+  and opens the depot desk at 9:30; Hana lunches on the Works steps; Pastor Ines leaves the altar at 11:10 on Wednesdays for the
+  assembly; Tika shuts the garage at 17:20 on Fridays before the Hangar stage; Vashti's Friday at Ruess's bench is 15:10-17:30 and
+  then the overlook; Venn's Friday visit up top is 15:10-17:30, back at the landing for the evening bench; Noor's evenings off are by
+  the river, not up the hill; Venn's reactor rounds start at 14:30. People sharing a spot stand on open ground at least 0.75 apart;
+  `central.homes` moved off the Thornes' doorway. A shop opens exactly on the hour and only with the keeper at the counter
+  (`onDuty`). A guest still in a home at the host's bedtime, at 21:00 (bar a sweetheart), or when the host goes out, gets a
+  goodnight line (`HOME_NOTES.goodnight` / `byeOut`) and is shown out of the door. The town map names Eden Central's housing rows
+  once and labels only the houses that are somebody's home. Tests (farm-maps): on time to every post every weekday, early, middle
+  and late in the story; nobody in a wall, on soil or through a post; nobody standing inside anybody else.
+
+## 16. The Old World as one big city (owner, 2026-11-20: "we shouldn't go down to mine city ruins (it's not a mine or anything). The city ruins should be a big map (similar but not equal to the asteroid mines). Sato's pallas can roam around, fighting monsters (from radiation and toxic gases from the previous war) and searching for treasures (old-world stuff, credits, valuables, and rare items).")
+
+* **The trip.** Maris's shuttle (the space dock gate, or the Arrivals desk; act `shuttle`) lands on a pad at the
+  south edge of a ruined city. Sato is in her Pallas (actor `pallas: true`, tall 2.5) and can walk it anywhere.
+  The trip ends when she walks back to the shuttle (E by the pad or the shuttle: "Board the shuttle home",
+  `cityHome(state, 'pad')`, 20 minutes up), or when the Pallas's **hull** gives out and Maris tows her home
+  (`cityHome(state, 'tow')`: an hour, 20 stamina, never below 1, and a **tow fee** of `TOW_FEE` = 150 cr, never
+  more than she has) — the belt's air and tow, in Earth's terms. Overnight the trip ends anyway (`sleep` clears
+  `state.mine`).
+* **The map** (`sim.cityLayout(seed)`, pure and cached; a new seed every trip from the save's seed and
+  `state.city.trips`): `CITY_W` × `CITY_H` = 96 × 72 cells. Cells: 0 street, 1 lot, 2 tower (solid footprint), 3 car,
+  4 bus (1 × 3, north-south), 5 rubble pile, 6 **toxic pool** (walkable, 3 hull a second), 7 overgrowth, 8 billboard,
+  9 landing pad, 10 locker, 11 safe, 12 shop counter, 13 sealed vault, 14 debris (`CITY_SOLID`: 2–5, 8, 10–14).
+  `haz[i]` = 1 marks **gas pockets** (1 hull a second, nothing with the filters). Avenues run north–south three
+  wide, streets east–west two wide, the boulevard straight north from the pad; blocks fill by zone: little houses
+  in overgrown yards in the **suburbs**, big broken towers (or a collapsed one, or a park gone wild) **downtown** and
+  in the industrial **core**. Craters with toxic pools (more in the core), weeds, cars, buses, billboards, rubble,
+  shop counters by downtown towers, lockers, safes beside the tall ones, gas over downtown and the core.
+  `cityZone(x, y)`: by distance from the pad (stretched north–south): 0 under 30, 1 under 58, 2 beyond — the core
+  is the far north. A pass carves a way from any cut-off pocket to the pad, so every spot and creature can be
+  reached (tests/farm-maps.mjs walks it for 8 seeds and checks the zones get further away in that order).
+* **Creatures** (`CITY_MONSTERS`; `cityMonster(kind, zone)` scales hp +50% and damage +35% a zone):
+  `rad_hound` (fast, weak), `glow_slime` (slow; a big one splits into two small ones), `rust_crawler` (armoured:
+  bolts glance off for half, the sabre bites), `smog_wraith` (floats up close and drains the hull instead of
+  biting), `spore_brute` (the mini-boss: one guards the vault, sometimes a second roams the core). `CITY_MIX` and
+  `CITY_MONSTER_COUNT` (10 / 16 / 18) set who lives where. They wander near home, chase when she comes within sight,
+  wind up and lunge (`monsterHit(state, kind, zone)` takes their damage off the hull). Beaten, they flee or fizzle
+  (no gore): credits by zone and sometimes scrap, a battery, alloy, copper, silica, comet ice or crystal
+  (`defeatMonster`). The Pallas fights as before: **Space** fires (gentle aim at the nearest creature ahead), up close
+  it swings the beam sabre (2 damage, a wide arc), **F** sets down the Hydra autoturret, **Shift** boosts. Only the
+  creatures within 26 tiles of her think.
+* **Treasures** (`searchSpot(state, x, y)`, also `hitRock` in the city; 1 stamina; each spot once): rubble piles,
+  car (and bus) trunks, shop counters, lockers, safes and the **sealed vault** (one, beside the core tower farthest
+  from the pad; its spore-brute must be beaten first). `cityLoot(state, kind, zone)` → `{ items, credits }`;
+  credits go straight to the purse and count in the trip's tally (`mine.credits`, shown on the HUD). Old-world
+  finds come from `OLD_FINDS` (the ten relics plus the new valuables, rarer ones further in and from lockers and
+  safes). The vault: a data core, a ring or music box, two credit chips, a seed tin, 200–300 cr × the zone, and a
+  star-plum the first two times ever (`flags.plum_ruins10`, `plum_ruins20`, as the old levels 10 and 20 had).
+* **New items** (kind `valuable`, sell): `old_coin` 50, `teddy_bear` 90, `vinyl_record` 140, `film_camera` 240,
+  `credit_chip` 80, `data_core` 800. Gifts: Ruess loves the data core and likes the camera; Yui and Maris love
+  vinyl records, Yui likes teddy bears; Fenn loves teddy bears; Vashti likes the camera and old coins; Moraine loves
+  old coins; Marrow likes old coins. Reused: `photo`, `teacup`, `book`, `watch`, `toy`, `medal`, `seedtin`,
+  `musicbox`, `datachip`, `ring`, `scrap`, `battery`.
+* **Economy.** A city trip on 60 stamina (the 60 spots nearest the pad and the creatures outside the core) is worth
+  about 1,900 cr against about 950 cr for 60 Field-hammer blows in belt sector 5 (tests/farm-sim.mjs measures both):
+  more, with more risk (the hull, the tow fee, the shuttle fare). A full clear including the core and the vault is
+  worth several thousand.
+* **The HUD** shows the zone, the hull and the credits found (`The core · hull 72/100 · found 340 cr`) and a hull bar
+  under it. The minimap works on the city (streets dark, toxic pools lime, tower footprints pale); the map screen (M)
+  says there is no chart of a city that shifts every trip.
+* **Rendering.** The towers are props stretched to their footprints (height `hgt`); the small things (cars, buses,
+  rubble, lockers, safes, counters, billboards, debris, pool bubbles, gas) are placed only within 19 tiles of Sato and
+  taken away behind her (main.js `cityStream`). Ground: asphalt `m`, ash lots `a`, overgrowth `g`, toxic pools `t`
+  (a glowing lime surface, world.js).
+* **Saves.** `ensure()` drops any old levels-style trip (`state.mine` with mode `earth`, or anything else that is not
+  `belt` or `city`) and puts Sato back at the space dock. `state.city = { trips, best }`; `stats.deepest` is no longer
+  used.
+
+Art slots added (models; each has a procedural stand-in in js/farm/cityworld.js): `ruin_tower`, `ruin_car`,
+`ruin_bus`, `ruin_rubble`, `ruin_billboard`, `ruin_locker`, `ruin_vault` (also the safes, smaller), `shop_counter`,
+`toxic_pool`, `shuttle_pad` (as before), and the creatures `rad_hound`, `glow_slime`, `rust_crawler`, `smog_wraith`,
+`spore_brute`. Icons `icons/old_coin`, `icons/vinyl_record`, `icons/teddy_bear`, `icons/film_camera`,
+`icons/credit_chip`, `icons/data_core`. Texture `textures/asphalt` (optional).

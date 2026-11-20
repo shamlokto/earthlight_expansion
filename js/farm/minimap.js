@@ -11,7 +11,7 @@ import * as art from './art.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const OUTDOOR = [['farm', 'The Hollin field'], ['village', 'Willowfall'], ['hill', 'Terrace Hill'], ['central', 'Eden Central'], ['lower', 'The Undercroft']];
-const GROUND = { g: '#93c870', f: '#a8805a', p: '#e6d3a4', c: '#ddd5c4', s: '#ecdfb2', w: '#72b9de', k: '#bb8c5a', r: '#8c877f', o: '#c4c0b6', h: '#dcc06c', b: '#b48a5c', d: '#c6d0d6', a: '#8c877e', x: '#33302c' };
+const GROUND = { g: '#93c870', f: '#a8805a', p: '#e6d3a4', c: '#ddd5c4', s: '#ecdfb2', w: '#72b9de', k: '#bb8c5a', r: '#8c877f', o: '#c4c0b6', h: '#dcc06c', b: '#b48a5c', d: '#c6d0d6', a: '#8c877e', x: '#33302c', m: '#6f6c68', t: '#9cff5a' };   // m, t: the city ruins' streets and toxic pools
 const ROOF = { gov_office: '#8ea3b8', exchange: '#9a5ab0', arrivals: '#a3b0ba', apartment: '#9fb0bf', townhouse: '#d98a6a', observatory: '#eef1f3', onsen_house: '#c9583a', house: '#e0905a', barn: '#c8553e', coop: '#dca85e', silo: '#a3b0ba', greenhouse: '#c3eaee', store: '#ea8762', cafe: '#8299b4', workshop: '#cba36c', hall: '#c45c4a', ranch: '#bc543f', clinic: '#f2efe8', library: '#9378b4', pumphouse: '#93a7b4', post: '#e6c454', guard: '#7393ac', lift: '#8c7c6c', orbital_elevator: '#5fb3b0', school: '#f2c230', church: '#3fa7a3', safety_depot: '#e0782a' };
 Object.assign(ROOF, { bakery: '#d9534f', tailor: '#5a8f92', seedhouse: '#cfeee0', garage: '#8a98a2', radio_station: '#5b4a7a', fold: '#9a8a70', duckhouse: '#7ab0d8' });   // Market Lane, the fold, the duck house
 const TILE = 12;                                                  // pixels per tile in the cached base picture
@@ -130,7 +130,8 @@ function drawScreen(t) {
   g.imageSmoothingEnabled = true; g.drawImage(baseOf(m, season), 0, 0, cw, ch);
   const label = (txt, x, y, font, fill = '#2b2118', halo = 'rgba(255,250,235,.9)') => { g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3.5; g.strokeStyle = halo; g.strokeText(txt, x, y); g.fillStyle = fill; g.fillText(txt, x, y); };
   for (const [txt, x, y] of m.areas || []) label(txt, x * s, y * s, `italic 600 ${Math.max(10, s * 0.95)}px "Spectral", Georgia, serif`, '#4a5a3a');
-  for (const b of m.buildings) if (b.label) { const lines = b.label.length > 14 && b.w * s < 110 ? (/^\S+\s\S+\s/.test(b.label) && b.label.length > 18 ? b.label.replace(/^(\S+\s\S+)\s/, '$1\n') : b.label.replace(/\s(\S+)$/, '\n$1')).split('\n') : [b.label]; lines.forEach((l, i) => label(l, (b.x + b.w / 2) * s, (b.y + b.d / 2) * s + (i - (lines.length - 1) / 2) * s * 1.05, `600 ${Math.max(9, Math.min(13, s * 0.92))}px "IBM Plex Sans", sans-serif`)); }
+  for (const b of m.buildings) if (b.label && !(b.city && /^(Flats|Townhouse|Empty house)$/.test(b.label))) {   // the housing rows get one name, not twenty
+    const lines = b.label.length > 14 && b.w * s < 110 ? (/^\S+\s\S+\s/.test(b.label) && b.label.length > 18 ? b.label.replace(/^(\S+\s\S+)\s/, '$1\n') : b.label.replace(/\s(\S+)$/, '\n$1')).split('\n') : [b.label]; lines.forEach((l, i) => label(l, (b.x + b.w / 2) * s, (b.y + b.d / 2) * s + (i - (lines.length - 1) / 2) * s * 1.05, `600 ${Math.max(9, Math.min(13, s * 0.92))}px "IBM Plex Sans", sans-serif`)); }
   const fl = (hooks.get().S && hooks.get().S.flags) || {};
   for (const b of m.buildings) if (b.homeLabel && (!b.homeFlag || fl[b.homeFlag])) label('⌂ ' + b.homeLabel, (b.x + b.w / 2) * s, (b.y + b.d) * s + s * 0.15, `italic 600 ${Math.max(8, Math.min(12, s * 0.8))}px "IBM Plex Sans", sans-serif`, '#7a3a5a');   // whose home is upstairs or behind (§15)
   for (const p of m.props) if (p.label && p.kind !== 'memorial') label(p.label, (p.x + p.w / 2) * s, (p.y + p.d + 0.7) * s, `600 ${Math.max(9, s * 0.8)}px "IBM Plex Sans", sans-serif`, '#24565a');
@@ -162,14 +163,14 @@ export function openMap(tab) {
   open.cv.onmouseleave = () => { open.hover = null; };
   open.raf = requestAnimationFrame(drawScreen);
 }
-export function toggleMap() { if (open) hooks.closeWin(); else if (!hooks.canOpen || hooks.canOpen()) { if (hooks.get().map && hooks.get().map.belt) return openBeltChart(); if (hooks.get().map && hooks.get().map.ruins) return hooks.toast && hooks.toast('No maps down here: the Old World has changed too much.'); openMap(); } }
+export function toggleMap() { if (open) hooks.closeWin(); else if (!hooks.canOpen || hooks.canOpen()) { if (hooks.get().map && hooks.get().map.belt) return openBeltChart(); if (hooks.get().map && hooks.get().map.ruins) return hooks.toast && hooks.toast('No chart of the old city: it shifts every trip. The minimap shows what is near; the shuttle is south.'); openMap(); } }
 
 // ---------------------------------------------------------------- the minimap in the corner
 function drawMini(t) {
   requestAnimationFrame(drawMini);
   if (!mini || !hooks) return;
   const st = hooks.get(), m = st.map, hud = $('hud');
-  const show = !!(m && st.me && !m.indoor && (!m.ruins || (m.belt && st.S.mine)) && hud && !hud.hidden);
+  const show = !!(m && st.me && !m.indoor && (!m.ruins || (m.belt && st.S.mine) || (m.city && st.S.mine)) && hud && !hud.hidden);
   mini.wrap.hidden = !show; if (!show || t - lastMini < 66) return; lastMini = t;
   const cv = mini.cv, dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth || 160;
   if (cv.width !== Math.round(W * dpr)) { cv.width = cv.height = Math.round(W * dpr); }

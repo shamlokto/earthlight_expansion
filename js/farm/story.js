@@ -32,8 +32,8 @@ export const NPCS = {
     id: 'ruess', name: 'Prof. Hal Ruess', short: 'Ruess', title: 'Chief engineer; the Workshop', portrait: P + 'ruess.webp',
     look: { skin: '#e0b896', hair: '#9a9da3', top: '#6b5a48', bottom: '#3a3632', style: 'short' },
     birthday: { season: 2, day: 21 },
-    loves: ['scrap', 'alloy', 'crystal', 'datachip', 'watch'],
-    likes: ['tea', 'bread', 'corn', 'potato', 'egg', 'musicbox', 'toy', 'comet_ice'],
+    loves: ['scrap', 'alloy', 'crystal', 'datachip', 'watch', 'data_core'],
+    likes: ['tea', 'bread', 'corn', 'potato', 'egg', 'musicbox', 'toy', 'comet_ice', 'film_camera'],
     dislikes: ['moonflower', 'berry', 'spinach'],
     shop: 'workshop',
   },
@@ -42,7 +42,7 @@ export const NPCS = {
     look: { skin: '#e6c9b0', hair: '#d5d8dc', top: '#5a4a6e', bottom: '#33303c', style: 'bun' },
     birthday: { season: 3, day: 3 },
     loves: ['photo', 'book', 'strawberry', 'tea'],
-    likes: ['teacup', 'musicbox', 'turnip', 'spinach', 'soup', 'herb', 'moonflower'],
+    likes: ['teacup', 'musicbox', 'old_coin', 'turnip', 'spinach', 'soup', 'herb', 'moonflower'],
     dislikes: ['scrap', 'alloy', 'tonic'],
   },
   seln: {
@@ -76,7 +76,7 @@ export const NPCS = {
     id: 'maris', name: 'Juno Maris', short: 'Maris', title: 'Courier pilot', portrait: P + 'w_maris.webp',
     look: { skin: '#c99672', hair: '#5a3622', top: '#3a78b8', bottom: '#d9d2c0', style: 'short' },
     birthday: { season: 0, day: 25 },
-    loves: ['berry', 'pie', 'strawberry', 'musicbox'],
+    loves: ['berry', 'pie', 'strawberry', 'musicbox', 'vinyl_record'],
     likes: ['bread', 'corn', 'milk_s', 'sweetpotato', 'cucumber', 'tea', 'ring', 'fish_spring'],
     dislikes: ['scrap', 'onion', 'frostcap'],
   },
@@ -85,14 +85,14 @@ export const NPCS = {
     look: { skin: '#b98a66', hair: '#3b2a20', top: '#55604a', bottom: '#2f2c28', style: 'bandana' },
     birthday: { season: 1, day: 17 },
     loves: ['crystal', 'photo', 'watch', 'datachip', 'medal'],
-    likes: ['teacup', 'book', 'toy', 'seedtin', 'musicbox', 'ring', 'soup', 'mushroom'],
+    likes: ['teacup', 'book', 'toy', 'film_camera', 'old_coin', 'seedtin', 'musicbox', 'ring', 'soup', 'mushroom'],
     dislikes: ['tonic', 'cucumber', 'tea'],
   },
   moraine: {
     id: 'moraine', name: 'Queen Moraine', short: 'Moraine', title: 'Of the Ashfall Cartel; trader', portrait: 'svg:moraine',
     look: { skin: '#caa58a', hair: '#7a1f2b', top: '#1f1a24', bottom: '#b8922e', style: 'long' },
     birthday: { season: 3, day: 21 },
-    loves: ['ring', 'crystal', 'moonflower', 'fish_king', 'platinum'],
+    loves: ['ring', 'crystal', 'moonflower', 'fish_king', 'platinum', 'old_coin'],
     likes: ['tea', 'teacup', 'strawberry', 'pumpkin', 'musicbox', 'tonic', 'fish_l'],
     dislikes: ['scrap', 'turnip', 'fish_s'],
     shop: 'barge',
@@ -121,8 +121,8 @@ Object.assign(NPCS, {
     id: 'yui', name: 'Yui Hoshino', short: 'Yui', title: 'Librarian of the Lantern Ring library', portrait: 'art/farm/people/yui_front.webp',
     look: { skin: '#ecd0b4', hair: '#231a18', top: '#b06a7a', bottom: '#5b5347', style: 'long' },
     birthday: { season: 3, day: 17 },
-    loves: ['book', 'moonflower', 'strawberry', 'musicbox'],
-    likes: ['tea', 'photo', 'teacup', 'berry', 'sweetpotato', 'mushroom', 'datachip', 'fish_spring'],
+    loves: ['book', 'moonflower', 'strawberry', 'musicbox', 'vinyl_record'],
+    likes: ['tea', 'photo', 'teddy_bear', 'teacup', 'berry', 'sweetpotato', 'mushroom', 'datachip', 'fish_spring'],
     dislikes: ['scrap', 'onion', 'fish_l'],
   },
   // 2026-11-19: Eden Central's pastor and its constable (friends, not romance candidates).
@@ -138,7 +138,7 @@ Object.assign(NPCS, {
     id: 'fenn', name: 'Constable Aldo Fenn', short: 'Constable Fenn', title: 'Constable of the Eden Central safety depot', portrait: 'art/farm/people/fenn_front.webp',
     look: { skin: '#c99a74', hair: '#2a2830', top: '#24406e', bottom: '#1e2636', style: 'cap' },
     birthday: { season: 2, day: 26 },
-    loves: ['pie', 'toy', 'sweetpotato', 'fish_winter'],
+    loves: ['pie', 'toy', 'sweetpotato', 'fish_winter', 'teddy_bear'],
     likes: ['tea', 'bread', 'soup', 'corn', 'potato', 'watch', 'egg', 'fish_s'],
     dislikes: ['tonic', 'onion', 'berry'],
   },
@@ -308,7 +308,8 @@ const SCHEDULE = {
   // The hangar at the top of the orbital elevator, where the Pallas launches for the belt.
   vashti(wd, m) {
     if (wd === 6) return pick(m, [H(9), H(11), 'hill.lake'], [H(11, 30), H(15), 'cafe.table3'], [H(15), H(18), 'hangar.floor']);
-    if (wd === 4 && m >= H(15, 30) && m < H(17)) return 'workshop.bench';
+    if (wd === 4 && m >= H(15, 10) && m < H(17, 30)) return 'workshop.bench';
+    if (wd === 4 && m >= H(17, 30) && m < H(18)) return 'hill.overlook';   // Fridays: from the Workshop up the hill, too late to open the hangar again
     const lake = wd === 1 || wd === 3 || wd === 5;
     return pick(m, [H(8), H(18), 'hangar.floor'], [H(18), H(20, 30), lake ? 'hill.lake' : 'hill.overlook']);
   },
@@ -360,14 +361,14 @@ Object.assign(SCHEDULE, {
   calloway(wd, m) {
     if (wd === 0) return pick(m, [H(9), H(11), 'village.memorial'], [H(11), H(13, 30), 'village.river'], [H(13, 30), H(16), 'library.floor'], [H(16), H(18), 'village.bench']);
     if (wd === 6) return pick(m, [H(8), H(12), 'church.altar'], [H(12), H(14), 'central.plaza'], [H(14), H(16, 30), 'central.churchgarden'], [H(18), H(20), 'church.pew']);
-    return pick(m, [H(8), H(9), 'central.churchgarden'], [H(9), H(12), 'church.altar'], [H(12), H(13), wd === 2 ? 'school.floor' : 'central.plaza'],
+    return pick(m, [H(8), H(9), 'central.churchgarden'], [H(9), wd === 2 ? H(11, 10) : H(12), 'church.altar'], [H(11, 10), H(12), 'central.schoolyard'], [H(12), H(13), wd === 2 ? 'school.floor' : 'central.plaza'],   // Wednesdays: across to the school for assembly
       [H(13), H(15), 'central.churchgarden'], [H(15), H(18), 'church.altar'], [H(18), H(19, 30), 'church.pew']);
   },
   // The safety depot: the constable checks the empty school's locks every morning. Thursdays off (he takes stray hens home to Willowfall).
   fenn(wd, m) {
     if (wd === 3) return pick(m, [H(9), H(11), 'village.ranchyard'], [H(11), H(13), 'village.square'], [H(13), H(15), 'hill.lake'], [H(15), H(17), 'village.riverside'], [H(18), H(20), 'village.bridge']);
     const beat = ['central.schoolyard', 'central.arrivals', 'central.churchgarden', null, 'central.arrivals', 'central.plaza', 'central.schoolyard'][wd];
-    return pick(m, [H(7), H(8), 'central.depotfront'], [H(8), H(8, 30), 'school.floor'], [H(8, 30), H(12), 'depot.desk'], [H(12), H(13), 'central.plaza'],
+    return pick(m, [H(7, 30), H(8), 'central.schoolyard'], [H(8), H(8, 30), 'school.floor'], [H(8, 30), H(9, 30), 'central.depotfront'], [H(9, 30), H(12), 'depot.desk'],   // the school is a walk from the depot [H(12), H(13), 'central.plaza'],
       [H(13), H(15), beat], [H(15), H(17), 'depot.desk'], [H(17), H(18), 'depot.floor'], [H(18), H(19, 30), wd === 6 ? 'church.pew' : 'central.depotfront']);
   },
 });
@@ -1708,7 +1709,7 @@ EVENTS.push(
   },
   // ---- Constable Fenn: the lost property shelf, and the school bell.
   {
-    id: 'fenn3', npc: 'fenn', hearts: 3, map: 'depot', from: H(9), to: H(12),
+    id: 'fenn3', npc: 'fenn', hearts: 3, map: 'depot', from: H(9, 30), to: H(12),
     lines: [
       L('narrator', 'At the safety depot, Constable Fenn is standing very straight at the front desk. On the desk, in a crate marked EVIDENCE, sits a hen.'),
       L('fenn', 'Sato. Good. Official business. Is this your hen?'),
@@ -1851,7 +1852,7 @@ export const HELP = [
   },
   {
     title: 'The Old World, fishing and forage',
-    body: 'The orbital elevator on the hill rides up to Vashti\'s hangar; there Sato suits up for the asteroid belt: twenty sectors from the launch apron north to the far marker, richer further out. Space or E with the hammer breaks rocks: small and medium for any hammer, large boulders for Alloy, huge ones for Starsteel, and the bigger the richer. Flying uses the suit\'s air: every sector has a lit pickup pod home, and the cradle can start you at sector 5, 10, 15 or 20 once reached. F sets down a mining unit. The Old World is Maris\'s shuttle: relics for the Memory Room, the Hydra on F.\n\nFishing: face water, Space to cast, Space when the float dips; the hill lake is best.',
+    body: 'The orbital elevator on the hill rides up to Vashti\'s hangar; there Sato suits up for the asteroid belt: twenty sectors from the launch apron north to the far marker, richer further out. Space or E with the hammer breaks rocks: small and medium for any hammer, large boulders for Alloy, huge ones for Starsteel, and the bigger the richer. Flying uses the suit\'s air: every sector has a lit pickup pod home, and the cradle can start you at sector 5, 10, 15 or 20 once reached. F sets down a mining unit.\n\nThe Old World is Maris\'s shuttle from the space dock: one big ruined city a trip, new every time. Walk the Pallas from the landing pad through the suburbs, downtown and the glowing core in the far north, where it is most dangerous and most rewarding. E searches rubble, car trunks, shop counters, lockers and safes; a sealed vault in the core is guarded by a spore-brute. Space fires (the sabre up close), F sets the Hydra. Creatures, gas and toxic pools wear the hull: walk back to the shuttle before it runs out, or Maris tows you home (an hour, and a tow fee).\n\nFishing: face water, Space to cast, Space when the float dips; the hill lake is best.',
   },
   {
     title: 'Eden Central',
@@ -1910,20 +1911,30 @@ export const FISHING = {
 };
 
 export const RUINS = {
+  // The Old World is one big ruined city a trip (sim.cityLayout): suburbs by the landing pad, downtown, the core far north.
+  first: [
+    'The shuttle settles on its skids at the edge of a city nobody has walked in a lifetime. Grey light, still air, ivy on everything.',
+    'Sato climbs down the ramp in the Pallas. Streets run off in every direction: little houses here, the broken towers of downtown beyond, and far to the north a glow over the old industrial core.',
+    'Maris, over the radio: "I\'ll keep the engine warm on the pad. Walk back to me when you\'re done, or when that hull bar goes red. If it gives out, I tow you. And I charge for towing."',
+  ],
   arrive: [
-    'The shuttle settles on its skids. Grey light, still air, and the long quiet of streets nobody has walked in a lifetime.',
-    'The Pallas steps off the shuttle ramp into ash and ivy. Somewhere, a shop sign is still creaking. Green haze pools in the low streets.',
-    'The Old World. Roofless houses, a rusted tram, and a sky the colour of old pewter. The air meter on the Pallas ticks.',
+    'The shuttle settles on its skids. A new street plan, the same quiet: the city has shifted its rubble since last time.',
+    'The Pallas steps off the shuttle ramp into ash and ivy. Somewhere a broken billboard creaks. Green haze pools in the low streets downtown.',
+    'The Old World. Roofless houses, rusted cars nose to tail, and a sky the colour of old pewter. The hull meter on the Pallas hums.',
   ],
-  deeper: [
-    'Further in. The buildings are taller here, and the dust has kept things better.',
-    'A stairway down, half buried. The air is cooler, and the rubble has not been touched.',
-    'The old city centre. Whatever people prized, they kept it near here.',
+  zone: ['The suburbs: little houses, overgrown yards. The shuttle is south.', 'Downtown: tall broken towers, shopfronts, and the gas lies thick in places.', 'The core: the old industrial district. The air hums, the pools glow, and the creatures here are bigger.'],
+  zoneFirst: [
+    'The suburbs. Little houses in yards gone wild, cars still parked in the drives. Rad-hounds nose about here: quick, but not tough.',
+    'Downtown for the first time. Towers broken off at the third or fourth floor, shop counters still standing in the shopfronts. Watch for the smog-wraiths: they drink the Pallas\'s charge.',
+    'The core. Everything glows faintly, and the craters are full of something lime-green. Somewhere in here is a sealed vault, and something big guarding it.',
   ],
+  vault: 'The sealed vault groans open. Inside, on steel shelves, the things somebody thought worth saving from the end of the world.',
   monster: [
     'Pest control. Carry on.',
     'It was eating a letterbox. I have done the letterbox a favour.',
     'The Hydra has opinions about crawlers. I let it express them.',
+    'It fizzled off into the gas, sulking. It will be back. They always are.',
+    'Shoo. Go and glow somewhere else.',
   ],
   relic: {
     photo: 'A faded photograph: strangers on a beach, laughing at whoever held the camera.',
@@ -1936,6 +1947,12 @@ export const RUINS = {
     musicbox: 'A music box of dark wood; the comb is bent, but it remembers most of its tune.',
     datachip: 'A data chip in a cracked case, labelled in careful handwriting: "Keep."',
     ring: 'A gold ring, plain and thin, found in a saucer beside a kitchen sink.',
+    old_coin: 'An old coin, its face worn smooth by a lifetime of pockets.',
+    vinyl_record: 'A record in a sleeve gone soft with age. Yui will want to hear what is on it, somehow.',
+    teddy_bear: 'A teddy bear with one button eye, tucked away as if somebody meant to come back for it.',
+    film_camera: 'A film camera with a roll still inside: twelve pictures nobody has ever seen.',
+    credit_chip: 'An old-world credit chip, still sealed. The Ashfall Exchange will honour it.',
+    data_core: 'A crystal data core, humming faintly in its cradle: a whole archive of the old world.',
   },
 };
 
@@ -2542,13 +2559,13 @@ Object.assign(SCHEDULE, {
   // The Seedhouse: closed Tuesdays, for the hill terraces and a look at the farmer's hives.
   noor(wd, m) {
     if (wd === 1) return pick(m, [H(9), H(13), 'hill.terraces'], [H(13), H(16), 'library.floor'], [H(16), H(18), 'farm.east'], [H(18), H(19, 30), 'village.trialbeds']);
-    return pick(m, [H(7), H(9), 'village.trialbeds'], [H(9), H(17), 'florist.counter'], [H(17), H(19), wd === 0 || wd === 3 || wd === 5 ? 'hill.overlook' : 'village.trialbeds'], [H(19), H(20), 'village.floristfront']);
+    return pick(m, [H(7), H(9), 'village.trialbeds'], [H(9), H(17), 'florist.counter'], [H(17), H(19), wd === 0 || wd === 3 || wd === 5 ? 'village.riverside' : 'village.trialbeds'], [H(19), H(20), 'village.floristfront']);
   },
   // The Workshop with Ruess in the mornings, her own garage in the afternoons; Wednesdays with Ruess on the hill, Sundays off.
   tika(wd, m) {
     if (wd === 6) return pick(m, [H(10), H(13), 'hangar.floor'], [H(13), H(16), 'village.riverside'], [H(16), H(19), 'village.garagefront']);
     if (wd === 2) return pick(m, [H(10), H(13), 'hill.wreck'], [H(13), H(15), 'village.river'], [H(15), H(18), 'garage.bench'], [H(18), H(20), 'village.lane']);
-    return pick(m, [H(8), H(12), 'workshop.bench'], [H(12), H(13), 'village.workshopfront'], [H(13), H(18), 'garage.counter'], [H(18), H(20), wd === 4 ? 'cafe.stage' : 'village.garagefront']);
+    return pick(m, [H(8), H(12), 'workshop.bench'], [H(12), H(13), 'village.workshopfront'], [H(13), wd === 4 ? H(17, 20) : H(18), 'garage.counter'], [H(17, 20), H(18), 'village.garagefront'], [H(18), H(20), wd === 4 ? 'cafe.stage' : 'village.garagefront']);
   },
   // Radio Willowfall: the morning show 7-9, the booth in the afternoon, the night show from seven; Fridays and Saturdays she plays the Hangar.
   vesna(wd, m) {
@@ -3197,9 +3214,12 @@ export const CHURCH = {
 export const SHUTTLE = {
   board: [{ who: 'maris', text: 'Strap in, Captain. Down through the soup and out the other side. Keep your lunch where it is.' }],
   boardAlt: [{ who: 'maris', text: 'Earth run! I love this one. Well. I love the coming back.' }],
-  descent: 'The shuttle drops out of the dock and down the long fall to Earth. The windows go orange, then grey, then the poisoned clouds close round you, thick as wool. Then, below: the old world.',
+  descent: 'The shuttle drops out of the dock and down the long fall to Earth. The windows go orange, then grey, then the poisoned clouds close round you, thick as wool. Then, below: the old city, and a landing pad at its edge.',
   home: 'The shuttle climbs out of the grey into black, and there is Eden, turning, every window lit.',
-  haze: 'The Pallas\'s air meter chatters: the haze here is not good to breathe. (It drains stamina until Ruess fits air filters.)',
+  haze: 'The Pallas\'s hull meter chatters: gas and toxic pools eat at the plating. (Ruess\'s air filters keep the gas out; nothing keeps a pool from stinging.)',
+  hull: { 50: 'Hull at half. Maris, on the radio: "Plenty left. But you do know where I\'m parked?"', 25: 'Hull warning! The Pallas\'s alarms go off in a polite, rising chime. Time to walk back to the shuttle, or Maris tows you.' },
+  tow: 'The hull gives out with a sigh and the Pallas kneels in the street. A cable drops out of the grey: Maris\'s tow.',
+  tally: (cr, n) => (cr || n ? `This trip: ${cr} cr found, and ${n} thing${n === 1 ? '' : 's'} in the rucksack.` : 'This trip: nothing found but dust. Next time.'),
 };
 
 // ------------------------------------------------------------------ the Lower deck, "the Undercroft" (2026-11-19, release 1)
@@ -3255,10 +3275,10 @@ Object.assign(SCHEDULE, {
   // The terminal by the lift, the pumps after lunch, the gallery last thing. Fridays, once the halls run, he goes up to argue with Ruess at the Workshop door.
   venn(wd, m, c) {
     const f = (c && c.flags) || {};
-    if (wd === 4 && f.ld_pumps && c.weather !== 'storm' && m >= H(17, 30) && m < H(19)) return 'village.workshopfront';
+    if (wd === 4 && f.ld_pumps && c.weather !== 'storm' && m >= H(15, 10) && m < H(19)) return m < H(17, 30) ? 'village.workshopfront' : 'lower.landing';   // up the lift to argue with Ruess, and back down in time for the evening bench
     if (wd === 6) return pick(m, [H(9), H(12), f.ld_pumps ? 'lower.pumphouse' : 'lower.landing'], [H(12), H(14), f.ld_arena ? 'lower.arenagate' : f.ld_enclave ? 'lower.kettle' : 'undercroft.counter'], [H(14), H(18), f.ld_pump2 ? 'lower.sump' : f.ld_lights ? 'lower.gallery' : 'lower.landing']);
-    return pick(m, [H(7), H(12), 'undercroft.counter'], [H(12), H(13), f.ld_enclave ? 'lower.kettle' : 'undercroft.counter'], [H(13), H(15), f.ld_works ? 'lower.works' : f.ld_pumps ? 'lower.pumphouse' : 'undercroft.counter'],
-      [H(15), H(16), f.ld_vents ? 'lower.reactor' : 'undercroft.counter'], [H(16), H(20), 'undercroft.counter'], [H(20), H(22), f.ld_vault ? 'lower.vault' : f.ld_lights ? 'lower.gallery' : 'lower.landing']);   // release 2: the Works after lunch, the needles at three, the open vault last thing
+    return pick(m, [H(7), H(12), 'undercroft.counter'], [H(12), H(13), f.ld_enclave ? 'lower.kettle' : 'undercroft.counter'], [H(13), f.ld_vents ? H(14, 30) : H(15), f.ld_works ? 'lower.works' : f.ld_pumps ? 'lower.pumphouse' : 'undercroft.counter'],
+      [f.ld_vents ? H(14, 30) : H(15), H(16), f.ld_vents ? 'lower.reactor' : 'undercroft.counter'], [H(16), H(20), 'undercroft.counter'], [H(20), H(22), f.ld_vault ? 'lower.vault' : f.ld_lights ? 'lower.gallery' : 'lower.landing']);   // release 2: the Works after lunch, the needles at three, the open vault last thing
   },
   // The basins by day, the Sump at night once it is drained. He eats with the enclave when there is light to eat by.
   wick(wd, m, c) {
@@ -3273,7 +3293,7 @@ Object.assign(SCHEDULE, {
     if (!f.ld_rehoused) return pick(m, [H(7), H(9), 'lower.kettle'], [H(9), H(12), 'lower.enclave'], [H(12), H(14), 'lower.kettle'], [H(14), H(18), 'lower.enclave'], [H(18), H(21), 'lower.kettle']);
     if (wd === 5) return pick(m, [H(10), H(16), 'lower.kettle'], [H(16), H(19), 'central.homes']);
     if (wd === 6) return pick(m, [H(8), H(12), 'church.pew'], [H(12), H(18), 'central.homes']);
-    return pick(m, [H(7, 30), H(8), 'central.homes'], [H(8), H(15), 'school.teacher'], [H(15), H(17), 'central.schoolyard'], [H(17), H(20), 'central.homes']);
+    return pick(m, [H(8), H(15), 'school.teacher'], [H(15), H(17), 'central.schoolyard'], [H(17), H(20), 'central.homes']);
   },
   // Wherever the lamps are newest. After the move: school, the schoolyard, and Saturdays fishing with Wick.
   moth(wd, m, c) {
@@ -3880,7 +3900,7 @@ FESTIVAL_SPOTS['lower.arena'].hana = 'lower.arenagate';
 SCHEDULE.hana = (wd, m, c) => {
   const f = (c && c.flags) || {}; if (!f.ld_works) return null;
   if (wd === 6) return pick(m, [H(9), H(13), f.ld_arena ? 'lower.arena' : 'lower.gallery'], [H(13), H(17), f.ld_vents ? 'lower.vents' : 'lower.pumps'], [H(17), H(21), 'lower.gallery']);
-  return pick(m, [H(7, 30), H(12), 'lower.press'], [H(12), H(13), f.ld_enclave ? 'lower.kettle' : 'lower.landing'], [H(13), H(17), 'lower.press'], [H(17), H(19), f.ld_vents ? 'lower.vents' : 'lower.gallery'], [H(19), H(22), 'lower.landing']);
+  return pick(m, [H(7, 30), H(12), 'lower.press'], [H(12), H(13), 'lower.works'], [H(13), H(17), 'lower.press'], [H(17), H(19), f.ld_vents ? 'lower.vents' : 'lower.gallery'], [H(19), H(22), 'lower.landing']);
 };
 TALK.hana = {
   first: ['Oh! A person. A whole one. Sorry. I am Hana. I used to work here.', 'I still work here, apparently. The press woke up and so did I.'],
@@ -4079,6 +4099,8 @@ export const HOME_NOTES = {
   thornes: 'A neat townhouse with a brass knocker. A card in the window: TO LET. THE HOUSING OFFICE WILL DECIDE.',
   moved: 'The door is locked and the curtains are drawn. A card on the step: MOVED TO THE HOLLIN FIELD. FORWARD EVERYTHING, ESPECIALLY CAKE.',
   late: 'A light behind the curtain, and then it goes out. It is late to be knocking.',
+  goodnight: 'Look at the time. I am for bed, Sato. Thank you for coming; mind the step on your way out.',
+  byeOut: 'I have to be off now, I am afraid. Come again soon? I will see you out.',
 };
 SPOTS.push(...Object.entries(HOMES).flatMap(([id, h]) => (typeof h.home === 'function' ? [h.home({}), h.home({ ld_rehoused: true })] : [h.home]).map((k) => `home_${k}.${id}`)));
 HELP.push({

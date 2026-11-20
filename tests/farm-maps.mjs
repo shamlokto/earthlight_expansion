@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { allMaps, ruinsMap, doorTarget, outsideOf, findSpot, FORAGE_SPOTS, CENTRAL_HOUSES } from '../js/farm/maps.js';
 import * as story from '../js/farm/story.js';
-import { newGame, enterMine, FORAGE_SPOT_COUNT } from '../js/farm/sim.js';
+import { newGame, enterMine, cityZone, FORAGE_SPOT_COUNT } from '../js/farm/sim.js';
 
 let failures = 0, checks = 0;
 const check = (cond, what) => { checks++; if (!cond) { failures++; console.log('FAIL', what); } };
@@ -40,15 +40,30 @@ for (const id of Object.keys(story.NPCS)) if (id !== 'sato') for (let season = 0
 }
 for (const e of story.EVENTS) check(!!maps[e.map], `event ${e.id}: map ${e.map} exists`);
 for (const f of story.FESTIVALS) check(!!findSpot(f.spot), `festival ${f.id}: spot exists`);
-// the Old World: sites build, the lift pad is reachable, every pile can be reached or is beside open ground
-for (const mode of ['earth']) for (let depth = 1; depth <= 12; depth++) for (let seed = 1; seed <= 6; seed++) {
-  const S = newGame({ seed: seed * 97 + depth }); enterMine(S, depth, mode); const m = ruinsMap(S.mine);
-  check(!m.solid(m.start[0], m.start[1]), `ruins ${depth}/${seed}: the lift pad is free`);
-  const piles = new Set(); S.mine.cells.forEach((c, i) => { if (c === 1) piles.add((i % S.mine.w + 1) + ',' + (Math.floor(i / S.mine.w) + 1)); });
-  // rubble blocks walking until searched; search outward from the pad
-  const seen = new Set(), q = [[Math.floor(m.start[0]), Math.floor(m.start[1])]]; seen.add(q[0].join()); let found = 0;
-  while (q.length) { const [x, y] = q.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (x + dx) + ',' + (y + dy); if (seen.has(k) || m.solid(x + dx, y + dy)) continue; seen.add(k); if (piles.has(k)) found++; q.push([x + dx, y + dy]); } }
-  check(found === piles.size, `ruins ${depth}/${seed}: all ${piles.size} piles can be reached (${found})`);
+// the Old World city ruins (2026-11-20): one big map a trip, from a seed. The pad is free and reachable from every
+// treasure spot and every creature; zones run suburbs → downtown → core with distance from the pad.
+for (const seed of [1, 2, 3, 5, 8, 13, 21, 34]) {
+  const S = newGame({ seed: seed * 101 }); enterMine(S, 1, 'earth'); const mine = S.mine, m = ruinsMap(mine), W = mine.w;
+  check(mine.mode === 'city' && m.city && m.earth && !m.belt && mine.w >= 90 && mine.h >= 70 && m.w === mine.w + 2, `city ${seed}: one big map (${mine.w}×${mine.h})`);
+  check(!m.solid(m.start[0], m.start[1]) && m.props.some((p) => p.act === 'liftup' && p.kind === 'shuttle_pad') && m.props.some((p) => p.kind === 'shuttle'), `city ${seed}: Sato starts on the landing pad, the shuttle beside it`);
+  check(!m.props.some((p) => p.kind === 'stairs') && !mine.cells.includes(undefined), `city ${seed}: no way down, no holes`);
+  // walk out from the pad on the built map
+  const seen = new Uint8Array(m.w * m.h), dist = new Int32Array(m.w * m.h).fill(-1), q = [[Math.floor(m.start[0]), Math.floor(m.start[1])]];
+  seen[q[0][1] * m.w + q[0][0]] = 1; dist[q[0][1] * m.w + q[0][0]] = 0;
+  for (let k = 0; k < q.length; k++) { const [x, y] = q[k]; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = (y + dy) * m.w + x + dx; if (seen[j] || m.solid(x + dx, y + dy)) continue; seen[j] = 1; dist[j] = dist[y * m.w + x] + 1; q.push([x + dx, y + dy]); } }
+  const reachCell = (i) => seen[(Math.floor(i / W) + 1) * m.w + (i % W) + 1];
+  const besideOpen = (i) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => reachCell(i + dy * W + dx)) || (mine.cells[i] === 4 && [i + W, i + 2 * W].some((j) => [[1, 0], [-1, 0], [0, 1]].some(([dx, dy]) => reachCell(j + dy * W + dx))));
+  const kinds = new Set(mine.spots.map((s) => s.kind));
+  check(mine.spots.length >= 60 && ['rubble', 'car', 'locker', 'safe', 'vault'].every((k) => kinds.has(k)), `city ${seed}: ${mine.spots.length} treasure spots of every kind (${[...kinds].join(', ')})`);
+  check(mine.spots.every((s) => besideOpen(s.i)), `city ${seed}: every treasure spot can be reached from the pad`);
+  check(mine.monsters.length >= 30 && mine.monsters.every((r) => reachCell(r.y * W + r.x)), `city ${seed}: all ${mine.monsters.length} creatures stand where the Pallas can reach`);
+  check(mine.monsters.some((r) => r.kind === 'spore_brute' && r.guard), `city ${seed}: a spore-brute guards the vault`);
+  // zones by distance: the mean walking distance from the pad grows suburbs < downtown < core
+  const sum = [0, 0, 0], n = [0, 0, 0];
+  for (let i = 0; i < mine.cells.length; i++) { const d = dist[(Math.floor(i / W) + 1) * m.w + (i % W) + 1]; if (d < 0) continue; const z = cityZone(i % W, Math.floor(i / W)); sum[z] += d; n[z]++; }
+  check(n.every((k) => k > 100) && sum[0] / n[0] < sum[1] / n[1] && sum[1] / n[1] < sum[2] / n[2], `city ${seed}: zones get further from the pad (${sum.map((v, z) => Math.round(v / n[z])).join(' < ')})`);
+  check(mine.monsters.filter((r) => r.zone === 2).length > mine.monsters.filter((r) => r.zone === 0).length, `city ${seed}: more creatures in the core than the suburbs`);
+  check(m.at(Math.floor(m.start[0]), Math.floor(m.start[1])) === 'm' && m.g.includes('t') && m.g.includes('g') && m.props.filter((p) => p.kind === 'ruin_tower').length >= 30, `city ${seed}: streets, toxic pools, overgrowth and towers`);
 }
 // the belt: one long map built from the sim's grid, the pad at the south, a marker buoy pair and signs on every sector line
 for (const seed of [1, 7, 31]) {
@@ -129,15 +144,17 @@ for (const s of ['central.school', 'central.church', 'central.depot', 'school.bo
   check(Object.values(HOMES).every((h) => (P[h.room] || []).some((p) => p.to === h.map) && (P[h.map] || []).some((p) => p.to === h.room)), 'people can walk in and out of every home');
   // a whole day for everybody, each weekday, early and late in the story: every move between two places has a walk
   const ids = Object.keys(story.NPCS).filter((k) => k !== 'sato');
-  for (const flags of [{}, FULL]) {
+  const MID = Object.fromEntries(['ld_lights', 'ld_pumps', 'ld_pump2', 'ld_pump3', 'ld_catacombs', 'ld_enclave'].map((k) => [k, true]));
+  for (const [flags, year] of [[{}, 1], [MID, 1], [FULL, 2]]) {
     lowerState(maps.lower, flags);
     for (let wd = 0; wd < 7; wd++) for (const weather of ['sun', 'rain']) {
-      const sched = (id, m) => { const c = { season: 1, day: 1 + wd, weekday: wd, minute: m, weather, festival: null, year: 2, flags }; const w = story.whereIs(id, c); if (w) return { spot: w.spot, vis: true }; const h = story.homeSpot(id, c); return h ? { spot: h, vis: false } : null; };
+      const sched = (id, m) => { const c = { season: 1, day: 1 + wd, weekday: wd, minute: m, weather, festival: null, year, flags }; const w = story.whereIs(id, c); if (w) return { spot: w.spot, vis: true }; const h = story.homeSpot(id, c); return h ? { spot: h, vis: false } : null; };
       const plan = paths.planDay(ids, sched); let moves = 0, walked = 0;
       for (const id of ids) plan[id].stops.forEach((st, i) => { const pr = plan[id].stops[i - 1]; if (!pr || !pr.at || !st.at || pr.spot === st.spot) return; moves++; if (st.route) walked++; else check(false, `no walk for ${id}: ${pr.spot} → ${st.spot} (wd ${wd}, ${weather}, ${flags.ld_vault ? 'late' : 'early'})`); });
       check(walked === moves && moves > 60, `wd ${wd} ${weather}: ${walked}/${moves} moves walked`);
-      for (const id of ids) for (let t = 360; t < 1440; t += 7) { const L = paths.locate(plan, id, t); if (L) check(maps[L.map] && Number.isFinite(L.x) && Number.isFinite(L.y), `${id} is somewhere real at ${t}`); }
-      for (const id of ['seln', 'corran', 'ruess', 'mori', 'lark', 'pia', 'noor']) { const c = NPCSHOP[id]; for (const st of plan[id].stops) if (st.spot === c && st.route) check(st.A <= st.T + 0.01, `${id} reaches the counter on time (${st.T}, arrives ${st.A.toFixed(0)})`); }
+      for (const id of ids) for (let t = 360; t < 1440; t += 7) { const L = paths.locate(plan, id, t); if (L) { const m = maps[L.map]; check(m && Number.isFinite(L.x) && Number.isFinite(L.y) && !m.solid(L.x, L.y) && (m.at(L.x, L.y) !== 'f' || !L.moving), `${id} is somewhere real, not in a wall or on the soil, at ${t} (${L.map} ${L.x?.toFixed(1)},${L.y?.toFixed(1)})`); if (L.moving) check(!m.posts.some(([px, py, pr]) => Math.hypot(px - L.x, py - L.y) < pr * 0.8), `${id} does not walk through a post at ${t} (${L.map} ${L.x.toFixed(1)},${L.y.toFixed(1)})`); } }
+      for (let t = 420; t < 1380; t += 30) { const here = ids.map((id) => [id, paths.locate(plan, id, t)]).filter(([, L]) => L && L.vis && !L.moving); for (let i = 0; i < here.length; i++) for (let j = i + 1; j < here.length; j++) { const [a, A] = here[i], [b, B] = here[j]; if (A.map === B.map) check(Math.hypot(A.x - B.x, A.y - B.y) > 0.45, `${a} and ${b} do not stand inside each other (${A.map} ${A.x.toFixed(1)},${A.y.toFixed(1)} at ${t})`); } }
+      for (const id of ids) for (const st of plan[id].stops) if (st.route && !st.shuffle && paths.DUTY.test(st.spot)) check(st.A <= st.T + 0.01, `${id} reaches ${st.spot} on time (wd ${wd}, ${weather}, ${flags.ld_vault ? 'late' : flags.ld_enclave ? 'middle' : 'early'}: due ${st.T}, arrives ${st.A.toFixed(0)})`);   // every post, shop or not (2026-11-20)
     }
   }
 }

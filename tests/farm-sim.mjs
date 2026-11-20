@@ -91,7 +91,7 @@ function script(s, days = 12) {
       if (i % 7 === 0) act(sim.refillCan(s));
       if (i % 9 === 0) act(harvest(s, 'farm', r(16), r(18)));
     }
-    sim.enterMine(s, 1 + d); act(sim.hitRock(s, r(14), r(12))); act(sim.defeatMonster(s, 0));
+    sim.enterMine(s, 1 + d); act(sim.hitRock(s, r(90), r(70))); act(sim.defeatMonster(s, 0)); sim.leaveMine(s);
     act(sim.pickForage(s, r(8))); sim.talk(s, 'seln');
     sleep(s);
   }
@@ -507,96 +507,93 @@ function script(s, days = 12) {
   sleep(g); check(!tile(g, 1, 1, 'greenhouse').crop.dead, 'no season indoors');
 }
 
-// ---------------------------------------------------------------- the ruins
+// ---------------------------------------------------------------- the Old World: the city ruins (2026-11-20)
 
 {
   const a = newGame({ seed: 20 }), b = newGame({ seed: 20 }), c = newGame({ seed: 21 });
   const m = sim.enterMine(a, 1);
-  check(m === a.mine && JSON.stringify(m) === JSON.stringify(sim.enterMine(b, 1)) && JSON.stringify(m) !== JSON.stringify(sim.enterMine(c, 1)), 'sites come from the seed');
-  check(m.w === 14 && m.h === 12 && m.cells.length === 168 && m.depth === 1 && m.floor === 1 && m.cells[11 * 14 + 7] === 0, 'a 14×12 site with the lift clear');
-  check(!act(sim.hitRock(newGame({ seed: 1 }), 1, 1)).ok && !act(sim.defeatMonster(newGame({ seed: 1 }), 0)).ok, 'not in the ruins');
-  let walls = 0, piles = 0, sites = 0, deepMonsters = 0;
-  for (let seed = 1; seed <= 40; seed++) {
-    const s = newGame({ seed }), depth = 1 + (seed % 14), site = sim.enterMine(s, depth);
-    sites++;
-    walls += site.cells.filter((v) => v === 3).length; piles += site.cells.filter((v) => v === 1).length;
-    check(site.cells.every((v) => v === 0 || v === 1 || v === 3) && site.cells[site.hatch] === 1, `site ${seed}: only open, rubble and wall; the way down is under a pile`);
-    // every open or rubble cell can be reached from the lift
-    const seen = new Set([11 * 14 + 7]), todo = [11 * 14 + 7];
-    while (todo.length) { const i = todo.pop(), x = i % 14, y = (i - x) / 14; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, j = ny * 14 + nx; if (nx >= 0 && ny >= 0 && nx < 14 && ny < 12 && !seen.has(j) && site.cells[j] !== 3) { seen.add(j); todo.push(j); } } }
-    check(site.cells.every((v, i) => v === 3 || seen.has(i)), `site ${seed}: nothing walled off`);
-    const mc = site.monsters.length;
-    check(mc >= 1 && mc <= (depth === 1 ? 3 : 6) && site.monsters.every((q) => site.cells[q.y * 14 + q.x] === 0 && !(q.x === 7 && q.y === 11) && ['crawler', 'drone'].includes(q.kind) && (q.hp === 1 || q.hp === 2)), `site ${seed}: ${mc} monsters on open ground`);
-    check(new Set(site.monsters.map((q) => `${q.x},${q.y}`)).size === mc, `site ${seed}: one monster a cell`);
-    if (depth > 8) deepMonsters += mc;
-    check(s.stats.deepest === depth, 'the depth record');
-  }
-  check(walls / sites / 168 > 0.08 && walls / sites / 168 < 0.2 && piles / sites > 25, `about 12% walls (${(walls / sites / 168).toFixed(2)}), ${Math.round(piles / sites)} piles a site`);
-  check(deepMonsters > 0, 'deeper sites have monsters too');
+  check(m === a.mine && m.mode === 'city' && JSON.stringify(m) === JSON.stringify(sim.enterMine(b, 7)) && JSON.stringify(m) !== JSON.stringify(sim.enterMine(c, 1)), 'cities come from the seed (the depth means nothing now)');
+  check(m.w === sim.CITY_W && m.h === sim.CITY_H && m.w >= 90 && m.h >= 70 && m.cells.length === m.w * m.h && m.hull === sim.HULL_MAX && m.credits === 0, 'one big city, hull full, nothing found yet');
+  const second = sim.enterCity(a); check(second.seed !== m.seed && a.city.trips === 2, 'a new city every trip');
+  check(!act(sim.hitRock(newGame({ seed: 1 }), 1, 1)).ok && !act(sim.defeatMonster(newGame({ seed: 1 }), 0)).ok && !act(sim.searchSpot(newGame({ seed: 1 }), 1, 1)).ok && !act(sim.cityHome(newGame({ seed: 1 }))).ok, 'not in the city');
 
-  // search every pile: exactly one way down
-  const s = rich(22); sim.enterMine(s, 1); s.player.sel = 14;   // empty hands: no tool needed
-  let found = 0, searched = 0;
-  const wallsBefore = s.mine.cells.map((v) => v === 3).join();
-  for (let y = 0; y < 12; y++) for (let x = 0; x < 14; x++) {
-    const was = s.mine.cells[y * 14 + x]; s.player.stamina = 100;
-    const r = act(sim.hitRock(s, x, y));
-    check(r.ok === (was === 1) && r.broke === r.ok && Array.isArray(r.gained) && typeof r.hatch === 'boolean', `search (${x},${y})`);
-    if (r.ok) { searched++; check(s.player.stamina === 99, 'one stamina a search'); if (r.hatch) { found++; check(s.mine.cells[y * 14 + x] === 2 && r.msg, 'the way down shows'); } else check(s.mine.cells[y * 14 + x] === 0, 'the pile is gone'); }
-    else check(s.player.stamina === 100 && r.msg, 'nothing to search costs nothing');
-  }
-  check(found === 1 && searched > 20 && s.mine.cells.filter((v) => v === 2).length === 1 && !s.mine.cells.includes(1) && s.mine.cells.map((v) => v === 3).join() === wallsBefore, 'every pile searched: one way down, walls untouched');
-  check(!act(sim.hitRock(s, s.mine.hatch % 14, Math.floor(s.mine.hatch / 14))).ok && !act(sim.hitRock(s, -1, 0)).ok && !act(sim.hitRock(s, 'a')).ok && !act(sim.hitRock(s, 99, 99)).ok, 'bad searches refused');
-  check(sim.enterMine(s, 2).depth === 2 && s.mine.cells.includes(1) && s.stats.deepest === 2, 'down a level: a fresh site');
-  check(sim.enterMine(s, 'deep').depth === 1 && sim.enterMine(s, -4).depth === 1 && sim.enterMine(s).depth === 1 && s.stats.deepest === 2, 'odd depths mean the top');
-  check(sim.leaveMine(s).ok && s.mine === null, 'leave');
-  sim.enterMine(s, 3); sleep(s); check(s.mine === null, 'the site resets overnight');
+  // monster stats scale with the zone; every kind has stats
+  for (const k of Object.keys(sim.CITY_MONSTERS)) { const z0 = sim.cityMonster(k, 0), z2 = sim.cityMonster(k, 2); check(z0.hp > 0 && z0.dmg > 0 && z0.speed > 0 && z2.hp > z0.hp && z2.dmg > z0.dmg, `${k}: tougher in the core (hp ${z0.hp}→${z2.hp}, dmg ${z0.dmg}→${z2.dmg})`); }
+  check(['rad_hound', 'glow_slime', 'rust_crawler', 'smog_wraith', 'spore_brute'].every((k) => sim.CITY_MONSTERS[k]), 'the five creatures');
+  check(sim.CITY_MONSTERS.rad_hound.speed > sim.CITY_MONSTERS.glow_slime.speed && sim.CITY_MONSTERS.rad_hound.hp < sim.CITY_MONSTERS.rust_crawler.hp && sim.CITY_MONSTERS.spore_brute.hp > 3 * sim.CITY_MONSTERS.rust_crawler.hp && sim.CITY_MONSTERS.smog_wraith.drain, 'hounds fast and weak, crawlers armoured, wraiths drain, the brute a boss');
+  check(sim.cityMonster('nonsense', 9).kind === 'rad_hound' && sim.cityMonster('glow_slime', -3).zone === 0, 'odd monster asks are made safe');
 
-  // finds by depth
-  const tally = (depth, n = 3000) => {
-    const g = rich(30 + depth), got = {}; let piles2 = 0;
-    while (piles2 < n) {
-      sim.enterMine(g, depth);
-      g.mine.cells.forEach((v, i) => { if (v !== 1) return; g.player.stamina = 100; piles2++; for (const f of sim.hitRock(g, i % 14, Math.floor(i / 14)).gained) got[f.id] = (got[f.id] || 0) + f.n; });
-      for (let i = 0; i < 20; i++) if (g.player.inv[i] && !['hoe', 'can', 'sickle', 'hammer', 'axe'].includes(g.player.inv[i].id)) g.player.inv[i] = null;
-    }
-    return { got, piles: piles2 };
-  };
-  const relicIds = RELICS.map((r) => r.id), relics = (t) => relicIds.reduce((n, id) => n + (t.got[id] || 0), 0);
-  const t1 = tally(1), t5 = tally(5), t12 = tally(12);
-  check(!t1.got.alloy && !t1.got.crystal && t1.got.scrap > 0, 'depth 1: scrap only');
-  check(!t5.got.alloy && !t5.got.crystal && !t12.got.alloy && !t12.got.crystal && !t12.got.comet_ice, 'Earth rubble: scrap only, no ore (that is the belt\'s)');
-  for (const t of [t1, t5, t12]) { const per = t.piles / relics(t); check(per > 6.5 && per < 12, `about one relic in 8–10 piles (${per.toFixed(1)})`); }
-  check(Object.keys(t1.got).filter((id) => relicIds.includes(id)).sort().join() === 'photo,teacup', 'depth 1 relics: the common two');
-  check(t5.got.medal > 0 && !t5.got.seedtin && !t5.got.ring && !t5.got.datachip, 'depth 5 relics stop at the medal');
-  check(relicIds.every((id) => t12.got[id] > 0) && t12.got.photo > t12.got.ring, 'depth 12: all ten, the rare ones rarer');
-  const empty = (t) => 1 - Object.values(t.got).reduce((a, b) => a + b, 0) / t.piles;
-  check(empty(t1) > 0.4 && (t1.got.scrap + (1 - empty(t1)) * 0) / t1.piles > 0.3, 'most piles give scrap or nothing');
+  // loot tables: by spot kind and zone
+  const g = rich(30); const loot = (kind, z, n = 3000) => { let cr = 0, items = 0, rare = 0, worth = 0; for (let i = 0; i < n; i++) { const L = sim.cityLoot(g, kind, z); cr += L.credits; for (const [id, k] of L.items) { check(!!ITEMS[id], `loot ${id} is an item`); items += k; worth += (ITEMS[id].sell || 0) * k; if (['ring', 'datachip', 'film_camera', 'musicbox', 'data_core'].includes(id)) rare += k; } } return { cr: cr / n, items: items / n, rare: rare / n, worth: (worth + cr) / n }; };
+  const r0 = loot('rubble', 0), r2 = loot('rubble', 2), car = loot('car', 1), safe0 = loot('safe', 1), safe2 = loot('safe', 2), lock = loot('locker', 1), vault = loot('vault', 2, 50);
+  check(r0.worth > 3 && r0.worth < 40 && r2.worth > r0.worth, `rubble: a little, more in the core (${r0.worth.toFixed(0)} → ${r2.worth.toFixed(0)} cr a pile)`);
+  check(r2.rare > r0.rare && safe2.rare > r2.rare, 'the rare finds come further in, and from safes');
+  check(car.cr > 2 && safe0.cr > 30 && safe0.items >= 1 && safe2.worth > safe0.worth && lock.items > 0.6, `cars hold credits, safes always pay (${safe0.worth.toFixed(0)}–${safe2.worth.toFixed(0)} cr a safe), lockers mostly hold something`);
+  check(vault.worth > 1500 && vault.items >= 5, `the sealed vault is the big prize (${vault.worth.toFixed(0)} cr)`);
+  check(['old_coin', 'vinyl_record', 'teddy_bear', 'film_camera', 'credit_chip', 'data_core'].every((id) => ITEMS[id] && ITEMS[id].sell > 0 && ITEMS[id].kind === 'valuable'), 'the new old-world valuables sell');
+  check(sim.OLD_FINDS.every(([id]) => ITEMS[id]) && RELICS.every((r) => sim.OLD_FINDS.some(([id]) => id === r.id)), 'every relic can still be found');
 
-  // monsters
-  const q = rich(40); sim.enterMine(q, 6);
+  // searching: one stamina, once a spot, credits to the purse; a bad search costs nothing
+  const s = rich(22); sim.enterCity(s); s.player.sel = 14;
+  const spot = s.mine.spots.find((q) => q.kind === 'locker') || s.mine.spots[0], sx = spot.i % s.mine.w, sy = Math.floor(spot.i / s.mine.w);
+  const money0 = s.player.money; s.player.stamina = 100;
+  let r = act(sim.searchSpot(s, sx, sy));
+  check(r.ok && s.player.stamina === 99 && spot.open && s.stats.searched === 1 && s.player.money === money0 + r.credits && s.mine.credits === r.credits, 'a search: one stamina, the credits in the purse');
+  check(!act(sim.searchSpot(s, sx, sy)).ok && s.player.stamina === 99, 'searched once only');
+  check(!act(sim.hitRock(s, -1, 0)).ok && !act(sim.hitRock(s, 'a')).ok && !act(sim.hitRock(s, 999, 999)).ok && !act(sim.searchSpot(s, sim.CITY_PAD[0], sim.CITY_PAD[1])).ok && s.player.stamina === 99, 'bad searches refused, free');
+  const v = s.mine.spots.find((q) => q.kind === 'vault');
+  if (v) { const vx = v.i % s.mine.w, vy = Math.floor(v.i / s.mine.w); check(!act(sim.searchSpot(s, vx, vy)).ok, 'the vault is guarded'); while (s.mine.monsters.some((q) => q.guard)) sim.defeatMonster(s, s.mine.monsters.findIndex((q) => q.guard)); r = act(sim.searchSpot(s, vx, vy)); check(r.ok && r.star && countItem(s, 'star_plum') === 1 && countItem(s, 'data_core') === 1 && s.flags.plum_ruins10, 'past the spore-brute: the vault, a data core and a star-plum'); }
+
+  // creatures: credits by zone, a big slime splits, hits wear the hull (gas too, pools always)
+  const q = rich(40); sim.enterCity(q);
   const n0 = q.mine.monsters.length, st = q.player.stamina, money = q.player.money;
-  let r = sim.defeatMonster(q, 0);
-  check(r.ok && Array.isArray(r.gained) && q.mine.monsters.length === n0 - 1 && q.player.stamina === st && q.player.money === money, 'a monster beaten costs nothing');
-  check(!act(sim.defeatMonster(q, 99)).ok && !act(sim.defeatMonster(q, -1)).ok && !act(sim.defeatMonster(q, 'x')).ok, 'bad monster indexes refused');
-  let drops = 0, fights = 0; const kinds = {};
-  for (const depth of [1, 6]) for (let i = 0; i < 300; i++) {
-    sim.enterMine(q, depth);
-    while (q.mine.monsters.length) { fights++; for (const f of sim.defeatMonster(q, 0).gained) { drops++; kinds[`${depth}${f.id}`] = 1; } }
-    removeItem(q, 'scrap', countItem(q, 'scrap')); removeItem(q, 'alloy', countItem(q, 'alloy'));
-  }
-  check(Math.abs(drops / fights - 0.35) < 0.06 && kinds['1scrap'] && !kinds['1alloy'] && !kinds['6alloy'] && kinds['6scrap'], `monster drops ${(drops / fights).toFixed(2)}: scrap`);
-  q.player.stamina = 20; r = sim.monsterHit(q);
-  check(r.ok && r.msg && q.player.stamina === 15, 'a hit costs five stamina');
-  q.player.stamina = 3; sim.monsterHit(q); check(q.player.stamina === 1, 'never below one');
-  sim.monsterHit(q); check(q.player.stamina === 1, 'still one');
+  const si = q.mine.monsters.findIndex((x) => x.kind === 'glow_slime');
+  r = sim.defeatMonster(q, si >= 0 ? si : 0);
+  check(r.ok && Array.isArray(r.gained) && r.credits > 0 && q.player.stamina === st && q.player.money === money + r.credits && q.stats.monsters === 1, 'a creature beaten: credits, no stamina');
+  if (si >= 0) check(r.spawned.length === 2 && q.mine.monsters.length === n0 + 1 && r.spawned.every((x) => x.small && x.hp === 1), 'a big glow-slime splits in two small ones');
+  check(!act(sim.defeatMonster(q, 999)).ok && !act(sim.defeatMonster(q, -1)).ok && !act(sim.defeatMonster(q, 'x')).ok, 'bad monster indexes refused');
+  let c0 = 0, c2 = 0; for (let i = 0; i < 200; i++) { q.mine.monsters.push({ id: 900 + i, x: 1, y: 1, ...sim.cityMonster('rust_crawler', i % 2 ? 2 : 0) }); c2 += i % 2 ? sim.defeatMonster(q, q.mine.monsters.length - 1).credits : 0; if (!(i % 2)) c0 += sim.defeatMonster(q, q.mine.monsters.length - 1).credits; }
+  check(c2 > c0 * 1.5, `core creatures pay more (${c0} → ${c2})`);
+  const h0 = q.mine.hull; r = sim.monsterHit(q, 'spore_brute', 2);
+  check(r.ok && r.dmg === sim.cityMonster('spore_brute', 2).dmg && q.mine.hull === h0 - r.dmg && q.player.stamina === st, 'a hit wears the hull, not Sato');
+  const pool = q.mine.cells.indexOf(6), gas = q.mine.haz.findIndex((x, i) => x && q.mine.cells[i] !== 6);
+  r = sim.cityHazard(q, pool % q.mine.w, Math.floor(pool / q.mine.w)); check(r.drained === 3 && r.hazard === 2, 'a toxic pool stings: 3 hull');
+  if (gas >= 0) { r = sim.cityHazard(q, gas % q.mine.w, Math.floor(gas / q.mine.w)); check(r.drained === 1, 'gas: 1 hull'); q.flags.filters = true; r = sim.cityHazard(q, gas % q.mine.w, Math.floor(gas / q.mine.w)); check(r.drained === 0 && r.filtered, 'the filters keep the gas out'); q.flags.filters = false; }
+  check(sim.cityHazard(q, sim.CITY_PAD[0], sim.CITY_PAD[1]).drained === 0, 'the pad is safe');
+  q.flags.filters = true; check(sim.enterCity(q).hullMax === sim.HULL_FILTERS, 'the filters also stiffen the hull'); q.flags.filters = false;
 
-  // a full rucksack leaves the find behind
-  const full = newGame({ seed: 41 });
-  for (let i = 0; i < 10; i++) if (!full.player.inv[i]) full.player.inv[i] = { id: 'herb', n: 99 };
-  let left = 0;
-  for (let k = 0; k < 6; k++) { sim.enterMine(full, 1); full.mine.cells.forEach((v, i) => { if (v !== 1) return; full.player.stamina = 100; const rr = sim.hitRock(full, i % 14, Math.floor(i / 14)); check(rr.ok && rr.gained.length === 0, 'full: searched, nothing kept'); if (/stayed behind/.test(rr.msg || '')) left++; }); }
-  check(left > 10, 'and the result says what stayed behind');
+  // home: walk to the shuttle, or the tow (an hour, 20 stamina, the fee)
+  const h = rich(44); sim.enterCity(h); sim.cityMove(h, 10, 10);
+  check(!act(sim.cityHome(h, 'pad')).ok && h.mine, 'the shuttle is back at the pad');
+  sim.cityMove(h, sim.CITY_PAD[0] + 0.5, sim.CITY_PAD[1] + 0.5); const t0 = h.cal.minute;
+  r = act(sim.cityHome(h, 'pad')); check(r.ok && h.mine === null && h.cal.minute === t0 + 20 && r.fee === 0, 'home on the shuttle: twenty minutes');
+  sim.enterCity(h); h.player.stamina = 80; const m0 = h.player.money, t1 = h.cal.minute;
+  while (!sim.monsterHit(h, 'spore_brute', 2).out);
+  r = act(sim.cityHome(h, 'tow')); check(r.ok && h.mine === null && h.player.stamina === 60 && h.player.money === m0 - sim.TOW_FEE && h.cal.minute === t1 + sim.TOW_MINUTES && r.msg, `towed: an hour, 20 stamina and ${sim.TOW_FEE} cr`);
+  const poor = newGame({ seed: 45 }); poor.player.money = 40; sim.enterCity(poor); poor.player.stamina = 5; r = sim.cityHome(poor, 'tow'); check(poor.player.money === 0 && poor.player.stamina === 1, 'the tow never takes more than she has, nor her last stamina');
+  check(sim.leaveMine(s).ok && s.mine === null, 'leave');
+  sim.enterCity(s); sleep(s); check(s.mine === null, 'the trip ends overnight');
+  // zones: news when she walks into a new one, first time ever once
+  const z = rich(46); sim.enterCity(z); let zr = sim.cityMove(z, 48, 40); check(zr.changed && zr.zone === 1 && zr.first && z.city.best === 1, 'downtown: news');
+  zr = sim.cityMove(z, 48, 3); check(zr.zone === 2 && zr.first && z.city.best === 2, 'the core'); sim.cityMove(z, 48, 66); sim.enterCity(z); zr = sim.cityMove(z, 48, 40); check(zr.changed && !zr.first, 'not news twice');
+
+  // a trip's worth: everything near enough on 60 stamina, against a belt trip of 60 hammer blows
+  const tripCity = () => { const t = rich(50); t.player.money = 0; sim.enterCity(t); const M = t.mine; let worth = 0; const near = M.spots.filter((p) => p.kind !== 'vault').sort((x, y) => Math.hypot(x.i % M.w - 48, Math.floor(x.i / M.w) - 67) - Math.hypot(y.i % M.w - 48, Math.floor(y.i / M.w) - 67)).slice(0, 60);
+    for (const p of near) { const x = p.i % M.w, y = Math.floor(p.i / M.w); t.player.stamina = 100; const rr = sim.searchSpot(t, x, y); worth += rr.credits || 0; for (const f of rr.gained || []) worth += (ITEMS[f.id].sell || 0) * f.n; for (let k = 0; k < t.player.inv.length; k++) if (t.player.inv[k] && ITEMS[t.player.inv[k].id].kind !== 'tool') t.player.inv[k] = null; }
+    for (let i = M.monsters.length - 1; i >= 0; i--) if (M.monsters[i].zone < 2) { const rr = sim.defeatMonster(t, i); worth += rr.credits; for (const f of rr.gained) worth += (ITEMS[f.id].sell || 0) * f.n; }
+    return worth; };
+  const tripBelt = () => { const t = rich(51); t.belt = { seed: 51, gone: {}, reached: 5 }; sim.enterBelt(t, 5); const M = t.mine; let worth = 0, blows = 0; const lv = t.player.toolLevel.hammer || 1;
+    for (let i = M.cells.length - 1; i >= 0 && blows < 60; i--) { if (!sim.isRock(M.cells[i]) || !sim.rockHits(M.cells[i], lv)) continue; let rr; do { t.player.stamina = 100; rr = sim.hitRock(t, i % M.w, Math.floor(i / M.w)); blows++; } while (rr.ok && !rr.broke); for (const f of rr.gained || []) worth += (ITEMS[f.id].sell || 0) * f.n; for (let k = 0; k < t.player.inv.length; k++) if (t.player.inv[k] && ITEMS[t.player.inv[k].id].kind !== 'tool') t.player.inv[k] = null; }
+    return worth; };
+  let wc = 0, wb = 0; for (let k = 0; k < 6; k++) { wc += tripCity(); wb += tripBelt(); }
+  check(wc > wb * 0.9 && wc < wb * 2.5, `a city trip is worth about a belt trip or a bit more (city ${Math.round(wc / 6)} cr, belt ${Math.round(wb / 6)} cr, on 60 stamina)`);
+  console.log(`  trip worth on 60 stamina: city ${Math.round(wc / 6)} cr, belt (sector 5) ${Math.round(wb / 6)} cr`);
+
+  // saves: an old levels-style trip is dropped and Sato is back at the space dock
+  const old = newGame({ seed: 47 }); old.mine = { mode: 'earth', depth: 4, floor: 4, w: 14, h: 12, cells: [], monsters: [], hatch: 3, star: -1, haz: [] }; old.player.map = 'ruins';
+  sim.ensure(old); check(old.mine === null && old.player.map === 'central' && old.player.x === 7.5, 'an old Old World trip in a save: dropped, back at the space dock');
+  const keep = newGame({ seed: 48 }); sim.enterCity(keep); sim.ensure(keep); check(keep.mine && keep.mine.mode === 'city', 'a city trip survives ensure()');
+  const ld = sim.loadState(JSON.stringify(old)); check(ld && ld.mine === null, 'and it loads');
 
   // the Memory Room
   const d = rich(42);
@@ -777,6 +774,7 @@ function script(s, days = 12) {
       () => [() => sim.takeShuttle(s, any(1 + r(5))), () => sim.hazardTick(s, any(r(14)), any(r(12))), () => { sim.enterBelt(s, any(1 + r(12))); return { ok: true }; }][r(3)](),
       () => sim.hitRock(s, any(r(14)), any(r(12))), () => sim.hitRock(s, r(14), r(12)),
       () => sim.defeatMonster(s, any(r(4))), () => sim.monsterHit(s), () => sim.leaveMine(s),
+      () => [() => sim.searchSpot(s, any(r(96)), any(r(72))), () => sim.cityMove(s, any(r(96)), any(r(72))), () => sim.cityHazard(s, any(r(96)), any(r(72))), () => sim.cityHome(s, any(['pad', 'tow'][r(2)])), () => sim.monsterHit(s, any(['rad_hound', 'spore_brute', 'smog_wraith'][r(3)]), any(r(3)))][r(5)](),
       () => sim.donate(s, any(r(s.player.slots))),
       () => sim.fish(s, any(['farm', 'village', 'hill'][r(3)])),
       () => sim.pickForage(s, any(r(14))),
@@ -1007,7 +1005,7 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   select(R, 'axe'); check(sim.pickUpPlaced(R, 'farm', 33, 20).ok && !R.panels.length && countItem(R, 'solar_panel') === 1, 'the axe picks up an empty charger');
   // batteries turn up in the ruins
   const ru = newGame({ seed: 71 }); let found = 0;
-  for (let i = 0; i < 40; i++) { sim.enterMine(ru, 3); ru.mine.cells.forEach((cc, j) => { if (cc === 1) { const g = sim.hitRock(ru, j % ru.mine.w, Math.floor(j / ru.mine.w)); if (g.gained.some((x) => x.id === 'battery')) found++; } }); for (let q = 0; q < ru.player.inv.length; q++) if (ru.player.inv[q] && !['hoe', 'can', 'sickle', 'hammer', 'axe'].includes(ru.player.inv[q].id)) ru.player.inv[q] = null; ru.player.stamina = 100; }
+  for (let i = 0; i < 400; i++) { const L = sim.cityLoot(ru, 'rubble', i % 3); if (L.items.some((x) => x[0] === 'battery')) found++; }
   check(found > 3, `batteries in the ruins (${found})`);
 
   // save and load the new state; load an OLD save without the new fields
@@ -1047,10 +1045,10 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   k.player.stamina = 100; r = sim.eat(k, slotOf(k, 'colony_feast')); check(r.ok && r.celebrate && k.player.maxStamina === 105, 'the first colony feast: +5 max even when full');
   addItem(k, 'colony_feast', 1); k.player.stamina = 10; r = sim.eat(k, slotOf(k, 'colony_feast')); check(r.ok && !r.celebrate && k.player.maxStamina === 105, 'the second: just food');
   r = sim.eat(k, slotOf(k, 'founders_cake')); check(r.ok && k.player.maxStamina === 110, 'the first founders\' cake: +5');
-  // the ruins at depth 10
-  const d = newGame({ seed: 203 }); sim.enterMine(d, 10); const star = d.mine.star; check(star >= 0 && d.mine.cells[star] === 1, 'depth 10 has a star pile');
-  r = sim.hitRock(d, star % d.mine.w, Math.floor(star / d.mine.w)); check(r.ok && r.star && countItem(d, 'star_plum') === 1 && d.flags.plum_ruins10, 'searching it finds the star-plum');
-  sim.enterMine(d, 10); check(d.mine.star === -1, 'only once'); sim.enterMine(d, 9); check(d.mine.star === -1, 'not at depth 9');
+  // the city's sealed vault: a star-plum the first two times
+  const d = rich(203); let plums = 0;
+  for (let k = 0; k < 4; k++) { sim.enterCity(d); for (let q = 0; q < d.player.inv.length; q++) if (d.player.inv[q] && !['hoe', 'can', 'sickle', 'hammer', 'axe', 'star_plum'].includes(d.player.inv[q].id)) d.player.inv[q] = null; const v = d.mine.spots.find((q) => q.kind === 'vault'); if (!v) continue; d.mine.monsters = d.mine.monsters.filter((q) => !q.guard); d.player.stamina = 100; r = sim.searchSpot(d, v.i % d.mine.w, Math.floor(v.i / d.mine.w)); if (r.star) plums++; }
+  check(plums === 2 && d.flags.plum_ruins10 && d.flags.plum_ruins20 && countItem(d, 'star_plum') === 2, 'two star-plums from the vault, ever');
   // Moraine: one a year
   const m = rich(204); setDate(m, 0, 6);
   check(shopStock(m, 'barge').find((e) => e.key === 'star_plum').price === 8000 && buy(m, 'barge', 'star_plum').ok && !shopStock(m, 'barge').some((e) => e.key === 'star_plum') && m.flags.plum_moraine, 'Moraine sells one star-plum a year');
@@ -1118,19 +1116,19 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   const a = newGame({ seed: 301 });
   // the shuttle
   const t = newGame({ seed: 302 }); t.player.money = 500;
-  check(sim.shuttleFare(t) === 200 && sim.takeShuttle(t, 1).ok && t.player.money === 300 && t.mine.mode === 'earth', 'the shuttle costs 200 cr');
-  t.player.money = 100; check(!act(sim.takeShuttle(t, 1)).ok, 'not without the fare');
-  sim.addLove(t, 'maris', 50); check(sim.shuttleFare(t) === 0 && sim.takeShuttle(t, 2).ok && t.player.money === 100, 'free once Maris is at 5 hearts');
-  // the haze
-  let cell = -1; for (let k = 0; k < 20 && cell < 0; k++) { sim.enterMine(t, 6); cell = t.mine.haz.findIndex((x) => x > 0); }
-  check(cell >= 0 && t.mine.haz.some((x) => x === 2) === t.mine.haz.some((x) => x === 2), 'Earth sites have haze patches');
-  const hx = cell % 14, hy = Math.floor(cell / 14); t.player.stamina = 50;
-  let r = sim.hazardTick(t, hx, hy); check(r.ok && r.drained === 1 && t.player.stamina === 49 && sim.hazardAt(t, hx, hy) > 0, 'haze drains a stamina a tick');
-  r = sim.hazardTick(t, 7, 11); check(r.ok && !r.drained, 'the landing is clear');
+  check(sim.shuttleFare(t) === 200 && sim.takeShuttle(t).ok && t.player.money === 300 && t.mine.mode === 'city', 'the shuttle costs 200 cr, to the city');
+  t.player.money = 100; check(!act(sim.takeShuttle(t)).ok, 'not without the fare');
+  sim.addLove(t, 'maris', 50); check(sim.shuttleFare(t) === 0 && sim.takeShuttle(t).ok && t.player.money === 100, 'free once Maris is at 5 hearts');
+  // the gas
+  const cell = t.mine.haz.findIndex((x, i) => x > 0 && t.mine.cells[i] !== 6);
+  check(cell >= 0, 'the city has gas pockets');
+  const hx = cell % t.mine.w, hy = Math.floor(cell / t.mine.w); t.player.stamina = 50; const h0 = t.mine.hull;
+  let r = sim.hazardTick(t, hx, hy); check(r.ok && r.drained === 1 && t.mine.hull === h0 - 1 && t.player.stamina === 50 && sim.hazardAt(t, hx, hy) === 1, 'gas wears a point of hull a tick');
+  r = sim.hazardTick(t, sim.CITY_PAD[0], sim.CITY_PAD[1]); check(r.ok && !r.drained, 'the landing is clear');
   const u = rich(303); check(shopStock(u, 'workshop').find((e) => e.key === 'up_filters').needs === '3 alloy, 1 star-metal', 'the filters need alloy and star-metal');
   check(buy(u, 'workshop', 'up_filters').ok && u.flags.filters && countItem(u, 'star_metal') === 1, 'Ruess fits the filters');
-  sim.enterMine(u, 6); const c2 = u.mine.haz.findIndex((x) => x > 0); u.player.stamina = 50;
-  if (c2 >= 0) { r = sim.hazardTick(u, c2 % 14, Math.floor(c2 / 14)); check(r.ok && r.filtered && u.player.stamina === 50, 'with filters the haze costs nothing'); }
+  sim.enterMine(u, 6); const c2 = u.mine.haz.findIndex((x, i) => x > 0 && u.mine.cells[i] !== 6); const uh = u.mine.hull;
+  if (c2 >= 0) { r = sim.hazardTick(u, c2 % u.mine.w, Math.floor(c2 / u.mine.w)); check(r.ok && r.filtered && u.mine.hull === uh, 'with filters the gas costs nothing'); }
   // old saves: a saved site is cleared on load
   const old = JSON.parse(saveState(newGame({ seed: 304 }))); old.mine = { floor: 3, w: 14, h: 12, cells: [] };
   check(loadState(JSON.stringify(old)).mine === null, 'an old site is cleared on load');

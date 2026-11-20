@@ -8,9 +8,10 @@ import { cropStage } from './sim.js';
 import { lowerProp } from './lowerworld.js';
 import { laneProp, laneBuilding, flowerHead, LANE_PROPS, LANE_BUILDINGS, LANE_CROP_COLOR, LANE_CROP_H } from './laneworld.js';
 import { homeProp, HOME_PROPS } from './homeworld.js';
+import { cityProp, CITY_PROPS } from './cityworld.js';
 import { ColonySky, buildSurroundings, colonyProp, buildingExtras, COLONY_KINDS, Bots, mergeStatic, lightPools, setColonyTime, U as HAZE } from './colony.js';
 
-const GROUND_TEX = { v: 'dust_lane', f: 'soil_dry', p: 'path_dirt', c: 'cobble', s: 'sand', k: 'wood_floor', a: 'ash_ground', o: 'stone_floor', h: 'hay', b: 'wood_floor', d: 'deck_floor' };
+const GROUND_TEX = { v: 'dust_lane', f: 'soil_dry', p: 'path_dirt', c: 'cobble', s: 'sand', k: 'wood_floor', a: 'ash_ground', o: 'stone_floor', h: 'hay', b: 'wood_floor', d: 'deck_floor', m: 'asphalt' };
 const SEASON_KEY = ['spring', 'summer', 'autumn', 'winter'];
 const CROP_COLOR = { turnip: '#f1ece0', potato: '#c9a56a', cucumber: '#3f8a3a', strawberry: '#d5283c', tomato: '#d8362a', corn: '#f0c93c', onion: '#d8b25e', pumpkin: '#e8812a', carrot: '#ee7a22', eggplant: '#5b2c7a', sweetpotato: '#b0546a', spinach: '#2f7a35', moonflower: '#cfe6ff' };
 const CROP_H = { corn: 1.7, tomato: 1.1, cucumber: 1.0, eggplant: 0.9, moonflower: 0.9, pumpkin: 0.7 };
@@ -149,7 +150,7 @@ const BUILDING = {
   orbital_elevator: { model: ['orbital_elevator'], facade: 'buildings/orbital_elevator', elevator: true, uniform: true, tall: true },
 };
 // Market Lane, the fold and the hives (2026-11-19): built stand-ins in laneworld.js until their models arrive.
-Object.assign(PROPS, LANE_PROPS, HOME_PROPS); Object.assign(BUILDING, LANE_BUILDINGS); Object.assign(CROP_COLOR, LANE_CROP_COLOR); Object.assign(CROP_H, LANE_CROP_H);
+Object.assign(PROPS, LANE_PROPS, HOME_PROPS, CITY_PROPS); Object.assign(BUILDING, LANE_BUILDINGS); Object.assign(CROP_COLOR, LANE_CROP_COLOR); Object.assign(CROP_H, LANE_CROP_H);
 const FRUIT_COLOR = { apple: 0xd8362a, peach: 0xffa48a, cherry: 0xc8102e, persimmon: 0xf07a1a };
 const BLOSSOM = { apple: 0xfbe3ea, peach: 0xf7a8c0, cherry: 0xffc6d9, persimmon: 0xf3f0d6 };
 
@@ -644,7 +645,7 @@ export class World {
         for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const arm = box(0.32, 0.03, 0.04, SLATE(), x * 0.16, 0.02, z * 0.16); arm.rotation.y = x * z * 0.78; d0.add(arm, cyl(0.12, 0.12, 0.02, std({ color: 0xdfe6ea, transparent: true, opacity: 0.6 }), x * 0.28, 0.04, z * 0.28, 12)); }
         g.add(d0); break;
       }
-      default: { const c = lowerProp(kind, o) || laneProp(kind, o) || homeProp(kind, o) || colonyProp(kind, o, this.colonyFx || undefined); g.add(c || box(0.6, 0.6, 0.6, std({ color: 0x999999 }))); }
+      default: { const c = cityProp(kind, o) || lowerProp(kind, o) || laneProp(kind, o) || homeProp(kind, o) || colonyProp(kind, o, this.colonyFx || undefined); g.add(c || box(0.6, 0.6, 0.6, std({ color: 0x999999 }))); }
     }
     if (kind === 'memorial' || kind === 'bench') for (const c of g.children) c.position.x += 0.5;
     return g;
@@ -652,7 +653,7 @@ export class World {
   // Build a prop: 3D model if there is one, else its picture, else the stand-in.
   makeProp(kind, o = {}) {
     const def = PROPS[kind] || {}, holder = new THREE.Group();
-    const h = (def.h || 1) * (o.scale || 1), fw = o.w || 1, fd = o.d || 1;
+    const h = (o.hgt || def.h || 1) * (o.scale || 1), fw = o.w || 1, fd = o.d || 1;   // o.hgt: a city tower's own height
     const slot = def.sprite ? def.sprite(this) : null, p = slot && art.pic(slot);
     const mname = o.model && art.hasModel(o.model) ? o.model : typeof def.model === 'function' ? def.model(this) : def.model;
     holder.userData.is3d = !!(mname && art.hasModel(mname)) || !p;
@@ -860,6 +861,10 @@ export class World {
         continue;
       }
       if (c === 'r') { const m = new THREE.Mesh(tiles(cells, 1.7, true), std({ map: art.tex('cliff_rock', { repeat: 1 }) })); m.castShadow = m.receiveShadow = true; R.add(m); continue; }
+      if (c === 't') {                                   // the city's toxic pools: a sunken bed under a glowing lime surface
+        R.add(new THREE.Mesh(tiles(cells, -0.3), std({ color: 0x2a3424 })));
+        const m = new THREE.Mesh(tiles(cells, 0.02), new THREE.MeshStandardMaterial({ color: 0x8ef05a, emissive: 0x4ab02a, emissiveIntensity: 0.7, transparent: true, opacity: 0.88, roughness: 0.2 })); m.receiveShadow = true; R.add(m); continue;
+      }
       if (c === 'w') {
         const bed = new THREE.Mesh(tiles(cells, -0.5), std({ color: 0x2a3a34 })); R.add(bed);
         // the surface sits just above the colony's surrounding ground sheet (y -0.07), which runs under the whole map
@@ -880,7 +885,7 @@ export class World {
       const t = art.tex(slot, { repeat: 1 }).clone(); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(60, 60); t.needsUpdate = true;
       const far = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), std({ map: t })); far.rotation.x = -Math.PI / 2; far.position.set(W / 2, -0.04, H / 2); far.receiveShadow = true; R.add(far);
       if (false) for (let i = 0; i < 70; i++) { const a = i * 2.399, d = Math.max(W, H) * 0.62 + (i % 7) * 4; const x = W / 2 + Math.cos(a) * d, z = H / 2 + Math.sin(a) * d * 0.9; if (x > -2 && x < W + 2 && z > -2 && z < H + 2) continue; if (z > H && Math.abs(x - W / 2) < 16) continue; const p = this.makeProp(i % 3 ? 'tree' : 'pine', { scale: 1 + (i % 5) * 0.12 }); p.position.set(x, 0, z); R.add(p); }
-      else for (let i = 0; i < 26; i++) { const a = i * 2.399, d = 14 + (i % 6) * 5; const h = 3 + (i % 5) * 2.2; const t2 = box(2 + (i % 3), h, 2 + (i % 2), std({ map: art.tex(i % 2 ? 'concrete_ruin' : 'brick_ruin', { repeat: 0.25 }) })); t2.position.set(W / 2 + Math.cos(a) * d, h / 2, H / 2 + Math.sin(a) * d - 6); if (t2.position.z > H - 1) continue; t2.rotation.z = (i % 4 - 1.5) * 0.03; R.add(t2); }
+      else for (let i = 0; i < 26; i++) { const a = i * 2.399, d = map.city ? Math.max(W, H) * 0.62 + (i % 6) * 5 : 14 + (i % 6) * 5; const h = 3 + (i % 5) * 2.2; const t2 = box(2 + (i % 3), h, 2 + (i % 2), std({ map: art.tex(i % 2 ? 'concrete_ruin' : 'brick_ruin', { repeat: 0.25 }) })); t2.position.set(W / 2 + Math.cos(a) * d, h / 2, H / 2 + Math.sin(a) * d - 6); if (t2.position.z > H - 1) continue; t2.rotation.z = (i % 4 - 1.5) * 0.03; R.add(t2); }
     } else {                                             // room walls: back and sides, open to the camera
       const wm = map.colonyRoom ? std({ color: map.colonyRoom === 'warm' ? 0xf4ecdc : 0xe9eef0, roughness: 0.7 }) : map.glass ? new THREE.MeshStandardMaterial({ color: 0xcfeaf0, transparent: true, opacity: 0.3, roughness: 0.1 }) : std({ map: art.tex(map.id === 'barn' || map.id === 'ranch' ? 'barn_red' : map.id === 'coop' || map.id === 'house' || map.id === 'workshop' ? 'plank_wall' : map.id === 'cafe' ? 'metal_hull' : 'plaster_wall', { repeat: 0.5 }) });
       const hh = map.id === 'church' ? 3.9 : 2.9; R.add(box(W, hh, 0.2, wm, W / 2, 0, -0.1), box(0.2, hh, H, wm, -0.1, 0, H / 2), box(0.2, hh, H, wm, W + 0.1, 0, H / 2));
