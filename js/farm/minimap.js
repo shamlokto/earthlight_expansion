@@ -158,9 +158,9 @@ export function openMap(tab) {
     <canvas class="fm-mapcv" id="mapCv"></canvas><p class="fm-dim fm-maplegend"><i style="background:#e8483a"></i>Sato <i style="background:#c9a06a;border-radius:3px"></i>Buildings <i style="background:#ffd36a"></i>Lamps · hover a dot to see who it is · M or Esc to close</p>`;
   const body = hooks.openWin('Map of the Lantern Ring', html, () => { if (open) cancelAnimationFrame(open.raf); open = null; }, 'map');
   open = { tab, cv: $('mapCv'), dots: [], hover: null, raf: 0 };
-  body.onclick = (e) => { const b = e.target.closest('[data-map]'); if (!b) return; open.tab = b.dataset.map; for (const x of body.querySelectorAll('[data-map]')) x.classList.toggle('on', x === b); open.cv.width = 0; };
-  open.cv.onmousemove = (e) => { const r = open.cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; open.hover = open.dots.find((d) => Math.hypot(d.x - x, d.y - y) < 9) || null; };
-  open.cv.onmouseleave = () => { open.hover = null; };
+  body.onclick = (e) => { const b = e.target.closest('[data-map]'); if (!b || !open) return; open.tab = b.dataset.map; for (const x of body.querySelectorAll('[data-map]')) x.classList.toggle('on', x === b); open.cv.width = 0; };
+  open.cv.onmousemove = (e) => { if (!open) return; const r = open.cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; open.hover = open.dots.find((d) => Math.hypot(d.x - x, d.y - y) < 9) || null; };
+  open.cv.onmouseleave = () => { if (open) open.hover = null; };   // the map may already be closed (a touch on the close button)
   open.raf = requestAnimationFrame(drawScreen);
 }
 export function toggleMap() { if (open) hooks.closeWin(); else if (!hooks.canOpen || hooks.canOpen()) { if (hooks.get().map && hooks.get().map.belt) return openBeltChart(); if (hooks.get().map && hooks.get().map.ruins) return hooks.toast && hooks.toast('No chart of the old city: it shifts every trip. The minimap shows what is near; the shuttle is south.'); openMap(); } }

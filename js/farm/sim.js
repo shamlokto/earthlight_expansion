@@ -763,7 +763,7 @@ function shelves(state, shopId) {
 function refusal(state, d, n) {
   const why = d.stop ? d.stop(n) : null;
   if (why) return why;
-  if (state.player.money < d.price * n) return `You need ${d.price * n} cr.`;
+  if (state.player.money < d.price * n) return `You need ${(d.price * n).toLocaleString("en-GB")} cr.`;
   for (const [id, k] of d.req || []) if (countItem(state, id) < k) return `You need ${k} ${lower(id)} in your rucksack.`;
   if (d.lumber && state.stock.lumber < d.lumber * n) return `You need ${d.lumber * n} lumber.`;
   if (d.give && !canAdd(state, d.give, n)) return FULL;
@@ -2284,7 +2284,7 @@ function projectWhy(state, p) {
   if (p.after && !lowerDone(state, p.after)) return `First: ${LOWER_PROJECTS.find((q) => q.id === p.after).name}.`;
   if (L.pending) return 'One project at a time. Venn has only so many hands, and two of them are his.';
   if (p.trust) { const t = enclaveTrust(state); if (!t.ok) return `The families must trust you first: ${t.favours}/${t.needFavours} favours for the enclave, ${t.hearts}/${t.needHearts} hearts with Agnes.`; }
-  if (state.player.money < p.price) return `You need ${p.price} cr.`;
+  if (state.player.money < p.price) return `You need ${p.price.toLocaleString("en-GB")} cr.`;
   for (const [id, n] of p.req) if (countItem(state, id) < n) return `You need ${n} ${lower(id)}${n > 1 && /(part|kit)$/.test(id) ? 's' : ''} in your rucksack.`;
   if (p.lumber && state.stock.lumber < p.lumber) return `You need ${p.lumber} lumber.`;
   return null;

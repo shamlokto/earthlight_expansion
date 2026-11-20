@@ -298,7 +298,7 @@ function todayTab(state, extra) {
     <div><span>${WEATHER_ICON[state.weather]} Today: ${state.weather}</span><span>${WEATHER_ICON[state.weatherTomorrow]} Tomorrow: ${state.weatherTomorrow}</span></div>
     <div><b class="fm-big">${p.money.toLocaleString()} cr</b><span>Stamina ${p.stamina}/${p.maxStamina}${buff ? ' · <span class="fm-ok">♨ onsen glow: tools cost 1 less today</span>' : ''}</span></div></div>`;
   if (fc) h += `<p class="fm-dim">Forecast: ${esc(fc)}</p>`;
-  h += `<div class="fm-stats fm-strength"><span>Max stamina <b>${p.maxStamina}</b>/${sim.MAX_STAMINA_CAP}</span><span>★ Star-plums found <b>${sim.starPlumsFound(state)}</b>/10</span><span>eaten <b>${(state.stats && state.stats.starPlums) || 0}</b></span>${['colony_feast', 'founders_cake'].map((id) => `<span>${state.flags['ate_' + id] ? '✓' : '○'} ${esc(ITEMS[id].name)}</span>`).join('')}</div>`;
+  h += `<div class="fm-stats fm-strength"><span>Max stamina <b>${p.maxStamina}</b>/${sim.MAX_STAMINA_CAP}</span><span>★ Star-plums found <b>${sim.starPlumsFound(state)}</b>/10</span><span>Star-plums eaten <b>${(state.stats && state.stats.starPlums) || 0}</b></span>${['colony_feast', 'founders_cake'].map((id) => `<span>${state.flags['ate_' + id] ? '✓' : '○'} ${esc(ITEMS[id].name)}</span>`).join('')}</div>`;
   h += `<h3>The Hollin field</h3>${fieldSummary(state, 'farm')}`;
   h += `<h3>Greenhouse</h3>${state.flags.greenhouse ? fieldSummary(state, 'greenhouse') : '<p class="fm-dim">Still a wreck. Ruess can repair it (4,000 cr and 120 lumber).</p>'}`;
   const g = state.pasture.grass, sown = g.filter(Boolean).length, rg = g.filter((x) => x === 3).length;

@@ -1203,7 +1203,7 @@ function bindInput() {
     if (e.code === 'F1') { e.preventDefault(); return openMenu('help'); }
     if (e.repeat) return;
     if (e.code === 'KeyM') { if (mapOpen()) ui.closeWin(); else toggleMap(); return; }
-    if (e.code === 'KeyP') return toggleJournal();   // the town map (music: the menu's button)
+    if (e.code === 'KeyP') return toggleJournal();   // the Farm journal (M: the town map; music: the menu's button)
     if (e.code === 'KeyE' || e.code === 'Enter') return pressE();
     if (e.code === 'Space') { e.preventDefault(); return pressUse(); }
     if (ui.windowOpen() || ui.talking()) return;
