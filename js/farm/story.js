@@ -1207,7 +1207,7 @@ export function giftLine(npcId, tier, isBirthday) {
 
 // ------------------------------------------------------------------ heart events
 
-const L = (who, text) => ({ who, text });
+const L = (who, text, ex) => (ex ? { who, text, ex } : { who, text });   // ex: an expression for the portrait (see expressions.js)
 
 export const EVENTS = [
   // ---- The General: two soldiers learning to live in peace.
@@ -4159,3 +4159,37 @@ export const MAIL_LINES = {
   neutral: 'There was something in my mailbox from you. Thank you for thinking of me.',
   disliked: 'Somebody posted me a... thing. I am choosing to believe it was a joke.',
 };
+
+// ------------------------------------------------------------------ expressions (2026-11-20: expression portraits, js/farm/expressions.js)
+// A line may carry `ex` (L(who, text, ex)); the dialogue shows that face when there is a picture for it. Where a line has none,
+// the scene gives a sensible default (moodLines); the key lines of the love stories are picked by hand below.
+export const SCENE_MOOD = {
+  confess: { npc: 'shy', sato: 'shy' }, propose: { npc: 'shy', sato: 'shy' }, wedding: { npc: 'loved', sato: 'loved', other: 'joyful' },
+  decline: { npc: 'sad' }, partner: { npc: 'loved' }, birthday: { npc: 'joyful' }, sweet: { npc: 'shy' },
+};
+// [person, scene, line index, expression]: picked by hand where the feeling is plain.
+const EX_PICKS = [
+  ['general', 'confess', 1, 'embarrassed'], ['general', 'confess', 6, 'shy'], ['general', 'propose', 5, 'embarrassed'], ['general', 'propose', 7, 'loved'], ['general', 'propose', 9, 'joyful'],
+  ['ruess', 'confess', 4, 'embarrassed'], ['ruess', 'confess', 6, 'worried'], ['ruess', 'confess', 8, 'tearful'], ['ruess', 'propose', 1, 'surprised'], ['ruess', 'propose', 3, 'teasing'], ['ruess', 'propose', 7, 'joyful'], ['ruess', 'propose', 9, 'loved'],
+  ['kestrel', 'confess', 1, 'teasing'], ['kestrel', 'confess', 5, 'embarrassed'], ['kestrel', 'confess', 9, 'surprised'], ['kestrel', 'propose', 1, 'surprised'], ['kestrel', 'propose', 3, 'angry'], ['kestrel', 'propose', 8, 'loved'], ['kestrel', 'propose', 9, 'joyful'],
+  ['mori', 'confess', 1, 'embarrassed'], ['mori', 'confess', 5, 'shy'], ['mori', 'confess', 7, 'loved'], ['mori', 'propose', 3, 'teasing'], ['mori', 'propose', 6, 'embarrassed'], ['mori', 'propose', 8, 'tearful'], ['mori', 'propose', 10, 'loved'],
+  ['oduya', 'confess', 1, 'worried'], ['oduya', 'confess', 7, 'shy'], ['oduya', 'propose', 1, 'surprised'], ['oduya', 'propose', 3, 'embarrassed'], ['oduya', 'propose', 6, 'tearful'], ['oduya', 'propose', 8, 'loved'], ['oduya', 'propose', 9, 'joyful'],
+  ['yui', 'confess', 1, 'shy'], ['yui', 'confess', 6, 'embarrassed'], ['yui', 'confess', 9, 'loved'], ['yui', 'propose', 1, 'surprised'], ['yui', 'propose', 6, 'tearful'], ['yui', 'propose', 8, 'loved'], ['yui', 'propose', 9, 'joyful'],
+  ['lark', 'confess', 1, 'embarrassed'], ['lark', 'confess', 6, 'loved'], ['lark', 'confess', 8, 'tearful'], ['lark', 'propose', 1, 'surprised'], ['lark', 'propose', 4, 'surprised'], ['lark', 'propose', 6, 'joyful'], ['lark', 'propose', 8, 'tearful'],
+  ['vesna', 'confess', 1, 'teasing'], ['vesna', 'confess', 4, 'loved'], ['vesna', 'confess', 6, 'embarrassed'], ['vesna', 'confess', 8, 'joyful'], ['vesna', 'propose', 1, 'teasing'], ['vesna', 'propose', 5, 'surprised'], ['vesna', 'propose', 7, 'joyful'],
+];
+for (const [id, scene, i, ex] of EX_PICKS) { const l = ROMANCE.people[id] && ROMANCE.people[id][scene] && ROMANCE.people[id][scene][i]; if (l && l.who === id) l.ex = ex; }
+// Sato in the love stories: the last thing she says in a confession is shy, in a proposal loved; at the wedding, her vow is loved.
+for (const id of ROMANCE.candidates) { const P = ROMANCE.people[id]; for (const [scene, ex] of [['confess', 'shy'], ['propose', 'loved'], ['wedding', 'loved']]) { const own = (P[scene] || []).filter((l) => l.who === 'sato'); if (own.length && !own[own.length - 1].ex) own[own.length - 1].ex = ex; } }
+// Heart events: plain feelings from the words themselves (tears, a laugh, a gasp), only where there is no doubt, and only for people speaking.
+const CUES = [[/\b(cry|crying|cried|tears?)\b/i, 'tearful'], [/^(Ha!|Ha\b)/, 'joyful'], [/^(Oh!|Oh\.|What\?|Wait\.)/, 'surprised'], [/\bsorry\b/i, 'sad']];
+for (const e of EVENTS) for (const l of e.lines) if (!l.ex && l.who !== 'narrator' && NPCS[l.who]) { const c = CUES.find(([re]) => re.test(l.text)); if (c) l.ex = c[1]; }
+// Fills `ex` from the scene where a line has none: npc for the person the scene is about, sato for Sato, other for anybody else.
+export function moodLines(lines, scene, npc) {
+  const M = SCENE_MOOD[scene] || {};
+  return (lines || []).map((l) => (typeof l === 'string' ? { who: npc, text: l, ex: M.npc } : l.ex ? l : { ...l, ex: l.who === npc ? M.npc : l.who === 'sato' ? M.sato : l.who === 'narrator' ? undefined : M.other }));
+}
+// Every expression tagged in the words (for the tests).
+export function taggedLines() { const out = []; (function w(v) { if (Array.isArray(v)) v.forEach(w); else if (v && typeof v === 'object') { if (typeof v.text === 'string' && v.ex) out.push(v); else for (const k of Object.keys(v)) w(v[k]); } })({ EVENTS, ROMANCE, FESTIVALS }); return out; }
+// The close of a heart event: in the love stories from seven hearts the last thing they say is loved; otherwise, from three, joyful.
+for (const e of EVENTS) { const own = e.lines.filter((l) => l.who === e.npc); const last = own[own.length - 1]; if (last && !last.ex && e.hearts >= 3) last.ex = ROMANCE.candidates.includes(e.npc) && e.hearts >= 7 ? 'loved' : 'joyful'; }

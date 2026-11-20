@@ -632,6 +632,22 @@ for (const id of ['lark', 'vesna']) check(EVENTS.filter((e) => e.npc === id).len
   check(HOME('thorne') === null && HOME('thorne', { ld_enclave: 1 }) === 'home_shelter.thorne' && HOME('thorne', { ld_enclave: 1, ld_rehoused: 1 }) === 'home_thornes.thorne', 'the Thornes: the enclave shelter, then a house up top');
   check(HOME('wick') === null && HOME('hana') === null, 'nobody is home before they are on the deck');
 }
+// ---------------------------------------------------------------- expressions (2026-11-20)
+{
+  const X = await import('../js/farm/expressions.js'); const { readFileSync, existsSync } = await import('node:fs');
+  const tagged = story.taggedLines();
+  check(tagged.length >= 60, `a good number of lines carry an expression (${tagged.length})`);
+  for (const l of tagged) check(X.known(l.ex), `expression "${l.ex}" is a known one (${l.who}: ${l.text.slice(0, 40)})`);
+  for (const l of tagged) check(l.who === 'sato' || !!NPCS[l.who], `${l.who} is somebody who can wear a face`);
+  for (const ex of X.EXPRESSIONS) check(ex === 'neutral' || (X.CLOSEST[ex] || []).every(X.known), `${ex}: its nearest faces are known`);
+  check(X.portraitFile({ yui: { neutral: 'n.webp', joyful: 'j.webp' } }, 'yui', 'happy') === 'j.webp' && X.portraitFile({ yui: { neutral: 'n.webp' } }, 'yui', 'shy') === 'n.webp' && X.portraitFile({}, 'yui', 'shy') === null && X.portraitFile({ moth: { sad: 's.webp' } }, 'moth', 'tearful') === 's.webp', 'missing faces fall back: nearest, then neutral, then none (the front picture)');
+  check(Object.values(X.GIFT_FACE).every(X.known) && Object.values(story.SCENE_MOOD).every((m) => Object.values(m).every(X.known)), 'gift and scene faces are known ones');
+  const idxPath = new URL('../art/farm/people/portraits/index.json', import.meta.url); const IDX = existsSync(idxPath) ? JSON.parse(readFileSync(idxPath, 'utf8')) : null;
+  const manifest = JSON.parse(readFileSync(new URL('../art/farm/manifest.json', import.meta.url), 'utf8')), flat = JSON.stringify(manifest);
+  for (const id of new Set(tagged.map((l) => l.who))) check(!!X.portraitFile(IDX || {}, id, 'neutral') || flat.includes(`people/${id}_front`) || /^(look|svg):/.test(NPCS[id].portrait || '') || !!NPCS[id].portrait, `${id}: a face to show (a bust, the front picture or the drawn portrait)`);
+  if (IDX) for (const [id, o] of Object.entries(IDX)) for (const [ex, f] of Object.entries(o)) { check(X.known(ex), `index.json: ${id} ${ex} is a known expression`); check(existsSync(new URL('../art/farm/people/portraits/' + f, import.meta.url)), `index.json: ${id} ${ex} -> ${f} exists`); }
+  else console.log('(no art/farm/people/portraits/index.json yet: the file checks are skipped)');
+}
 console.log(`conversations: ${VILLAGERS.map((id) => `${id} ${convs[id].size}`).join(', ')}`);
 console.log(`requests: ${questCount}, love stories: ${LOVERS.length}`);
 console.log(`events: ${EVENTS.length}, festivals: ${FESTIVALS.length}, intro lines: ${INTRO.length}, help pages: ${HELP.length}, words: about ${totalWords}`);

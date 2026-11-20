@@ -109,7 +109,10 @@
     const name = (id) => (ITEMS[id] ? ITEMS[id].name : id);
     const ico = (id) => { const u = url('icons/' + id) || (ITEMS[id] && ITEMS[id].kind === 'seed' && url('icons/seedbag')); return u ? `<img class="ico" src="${u}" alt="" loading="lazy">` : `<span class="fake">${esc(name(id).slice(0, 2))}</span>`; };
     const seasonName = (s) => (typeof s === 'number' ? SEASONS[s] : s);
-    const face = (id) => { const n = story.NPCS[id]; const u = url(`people/${id}_portrait`) || url(`people/${id}_front`) || (n && n.portrait && !n.portrait.startsWith('svg:') && !n.portrait.startsWith('look:') && !(story.UNDERFOLK || []).includes(id) ? n.portrait : ''); return u ? `<img class="face" src="${u}" alt="" loading="lazy">` : n && n.portrait && n.portrait.startsWith('look:') ? `<div class="face" style="overflow:hidden">${lookPortrait(n)}</div>` : '<div class="face"></div>'; };
+    // expression portraits (art/farm/people/portraits/index.json): the neutral bust on the card, and a strip of faces for the main cast
+    const PX = await fetch('art/farm/people/portraits/index.json').then((r) => (r.ok ? r.json() : {})).catch(() => ({})), PXB = 'art/farm/people/portraits/';
+    const exStrip = (id) => { const o = PX[id]; if (!o || Object.keys(o).length < 3) return ''; return `<div class="g" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${Object.entries(o).map(([e, f]) => `<img src="${PXB + f}" title="${esc(e)}" alt="${esc(e)}" loading="lazy" style="width:34px;height:42px;object-fit:cover;object-position:top;border-radius:6px;background:#0001">`).join('')}</div>`; };
+    const face = (id) => { const n = story.NPCS[id]; if (PX[id] && PX[id].neutral) return `<img class="face" src="${PXB + PX[id].neutral}" alt="" loading="lazy" style="object-fit:cover;object-position:top">`; const u = url(`people/${id}_portrait`) || url(`people/${id}_front`) || (n && n.portrait && !n.portrait.startsWith('svg:') && !n.portrait.startsWith('look:') && !(story.UNDERFOLK || []).includes(id) ? n.portrait : ''); return u ? `<img class="face" src="${u}" alt="" loading="lazy">` : n && n.portrait && n.portrait.startsWith('look:') ? `<div class="face" style="overflow:hidden">${lookPortrait(n)}</div>` : '<div class="face"></div>'; };
     const sections = [];
     const add = (id, title, html) => sections.push({ id, title, html });
     if (url('scenes/title')) $('#hero').style.backgroundImage = `url(${url('scenes/title')})`;
@@ -134,6 +137,7 @@
     const person = (id) => { const n = story.NPCS[id]; if (!n) return ''; const love = R.candidates.includes(id);
       return `<div class="card">${face(id)}<div><b>${esc(n.name)}${love ? '<span class="tag">♥ romance</span>' : ''}</b><div class="t">${esc(n.title || '')}</div>
         ${homeOf(id) ? `<div class="t">Home: ${esc(homeOf(id))}</div>` : ''}
+        ${exStrip(id)}
         ${n.birthday ? `<div class="t">Birthday: ${esc(seasonName(n.birthday.season))} ${n.birthday.day}</div>` : ''}
         ${n.loves && n.loves.length ? `<div class="g"><b style="display:inline;font-size:12.5px">Loves</b> ${n.loves.map((x) => esc(name(x))).join(', ')}</div>` : ''}
         ${n.likes && n.likes.length ? `<div class="g">Likes ${n.likes.slice(0, 6).map((x) => esc(name(x))).join(', ')}</div>` : ''}
