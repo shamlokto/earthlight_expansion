@@ -12,6 +12,7 @@ import { allMaps, ruinsMap, doorTarget, outsideOf, findSpot, FORAGE_SPOTS, STAR_
 import { lowerState, waterPlace, homeAt } from './maps.js';
 import * as paths from './paths.js';
 import { World } from './world.js';
+import { pallasFold } from './cityworld.js';
 import { initMap, toggleMap, isOpen as mapOpen } from './minimap.js';
 import { Actor, DIRV } from './actors.js';
 import * as ui from './ui.js';
@@ -776,24 +777,25 @@ async function flyHome() {
   if (sim.campNear(S) < 0) return;
   mode = 'talk'; busy = true; hullBar(false); cityTowing = true;   // (no hazards or hits while she takes off)
   let skip = false; const onKey = (e) => { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') skip = true; }; addEventListener('keydown', onKey, true); addEventListener('pointerdown', onKey, true);
-  const g = me.group, x0 = me.x, y0 = me.y, T = 3.6, jet = W.place('pallasJet', 'pallas_jet', x0, y0); jet.visible = false;
-  const wings = () => jet.children[0] && jet.children[0].userData.wings; let t = 0, last = performance.now(), flashed = false;
+  me.dir = 1; me.moving = false;                                                                          // nose to the north
+  const g = me.group, x0 = me.x, y0 = me.y, T = 3.9, jet = W.place('pallasJet', 'pallas_jet', x0, y0); jet.visible = false;
+  if (art.hasModel('pallas_jet')) jet.rotation.y = Math.PI;                                                      // the model's nose is +Z, the climb goes −Z
+  const fold = pallasFold(me), wings = () => jet.children[0] && jet.children[0].userData.wings; let t = 0, last = performance.now(), flashed = false;
   window.__farmFly = 0;
   while (t < T && !skip) {
     await new Promise((r) => requestAnimationFrame(r)); const now = performance.now(); t += Math.min(0.1, (now - last) / 1000); last = now; window.__farmFly = t;
-    if (t < 0.8) { const k = t / 0.8; g.scale.set(1 + 0.2 * k, 1 - 0.5 * k, 1 + 0.2 * k); g.rotation.x = 0.3 * k; }          // crouch, limbs folding in
-    else if (t < 1.05) { const k = (t - 0.8) / 0.25; g.scale.setScalar(Math.max(0.05, 1 - k)); jet.visible = true; jet.scale.setScalar(0.05 + 0.45 * k); if (!flashed) { flashed = true; W.puff(x0, y0, 0xffffff, 26, 1.0); W.puff(x0, y0, 0x8ff4ff, 16, 1.3); W.puff(x0, y0, 0xff9ab0, 10, 0.6); W.shake = 0.15; sfx('zap'); } }   // the mech shrinks into the flash as the jet grows out of it
-    else if (g.visible) { g.visible = false; W.puff(x0, y0, 0xffffff, 10, 1.4); }
-    if (t >= 1.05) {
-      const k = Math.min(1, (t - 1.05) / 0.35), w = wings(); jet.scale.setScalar(0.5 + 0.5 * k); if (w) w.scale.set(0.05 + 0.95 * k, 1, 1);
-      const f = Math.max(0, t - 1.4); jet.position.set(x0 + Math.sin(f * 1.4) * f * 0.8, 0.2 + f * f * 1.6, y0 - f * f * 3.2);
-      jet.rotation.set(-Math.min(0.45, f * 0.35), Math.sin(f * 1.4) * 0.25, Math.sin(f * 1.6) * 0.6);                // climb and bank
+    if (t < 1.5) { fold.pose(t / 1.35, (t - 0.95) / 0.45); if (t > 0.3 && Math.random() < 0.25) W.puff(x0 + (Math.random() - 0.5) * 0.8, y0, 0xdfe6ea, 1, 0.3); }   // legs fold, arms sweep back, the body levels, wings out
+    else if (!flashed) { flashed = true; fold.pose(1, 1); W.puff(x0, y0, 0xffffff, 18, 1.0); W.puff(x0, y0, 0x8ff4ff, 10, 1.1); W.shake = 0.1; sfx('zap'); g.visible = false; jet.visible = true; jet.scale.setScalar(0.9); }   // a brief flash: the jet takes over
+    if (t >= 1.5) {
+      const k = Math.min(1, (t - 1.5) / 0.25), w = wings(); jet.scale.setScalar(0.9 + 0.1 * k); if (w) w.scale.set(1, 1, 1);
+      const f = Math.max(0, t - 1.75); jet.position.set(x0 + Math.sin(f * 1.4) * f * 0.8, 0.9 + f * f * 1.6, y0 - f * f * 3.2);
+      jet.rotation.set(-Math.min(0.45, f * 0.35), (art.hasModel('pallas_jet') ? Math.PI : 0) + Math.sin(f * 1.4) * 0.25, Math.sin(f * 1.6) * 0.6);   // climb and bank
       me.y = Math.max(2, y0 - f * f * 2.6);                                                                               // the camera follows a little
-      if (f > 0 && Math.random() < 0.7) W.puff(jet.position.x, jet.position.z + 0.6, Math.random() < 0.5 ? 0x8ff4ff : 0xffffff, 2, jet.position.y + 0.4);   // an engine trail
+      if (f > 0 && Math.random() < 0.7) W.puff(jet.position.x, jet.position.z + 0.6, Math.random() < 0.5 ? 0x8ff4ff : 0xffffff, 2, jet.position.y + 0.1);   // an engine trail
     }
   }
   removeEventListener('keydown', onKey, true); removeEventListener('pointerdown', onKey, true);
-  await ui.fade(true, 450); W.unplace('pallasJet'); g.scale.set(1, 1, 1); g.rotation.x = 0; g.visible = true; me.x = x0; me.y = y0;
+  await ui.fade(true, 450); W.unplace('pallasJet'); fold.restore(); g.visible = true; me.x = x0; me.y = y0;
   sim.cityMove(S, x0 - 1, y0 - 1); const r = sim.cityHome(S, 'fly'); busy = false;
   if (!r.ok) { cityTowing = false; await ui.fade(false, 300); mode = 'play'; return ui.toast(r.msg); }
   sfx('door'); await ui.say([{ who: 'narrator', text: r.msg }, { who: 'narrator', text: story.SHUTTLE.tally(r.credits, r.finds) }]); mode = 'play';
