@@ -196,6 +196,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/credit_chip": {
+   "file": "icons/credit_chip.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/crystal": {
    "file": "icons/crystal.webp",
    "w": 256,
@@ -203,6 +208,11 @@
   },
   "icons/cucumber": {
    "file": "icons/cucumber.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/data_core": {
+   "file": "icons/data_core.webp",
    "w": 256,
    "h": 256
   },
@@ -268,6 +278,11 @@
   },
   "icons/field_chest": {
    "file": "icons/field_chest.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/film_camera": {
+   "file": "icons/film_camera.webp",
    "w": 256,
    "h": 256
   },
@@ -566,6 +581,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/old_coin": {
+   "file": "icons/old_coin.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/omelette": {
    "file": "icons/omelette.webp",
    "w": 256,
@@ -841,6 +861,11 @@
    "w": 256,
    "h": 256
   },
+  "icons/teddy_bear": {
+   "file": "icons/teddy_bear.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/tin_lantern": {
    "file": "icons/tin_lantern.webp",
    "w": 256,
@@ -888,6 +913,11 @@
   },
   "icons/veg_soup": {
    "file": "icons/veg_soup.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/vinyl_record": {
+   "file": "icons/vinyl_record.webp",
    "w": 256,
    "h": 256
   },

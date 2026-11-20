@@ -854,11 +854,11 @@
   "file": "ruin_tower.glb",
   "tris": 14000,
   "size": [
-   0.8424,
-   1.0,
-   0.8493
+   0.9991,
+   0.9444,
+   1.0
   ],
-  "note": "ruined two-storey stump on a tree-trunk base"
+  "note": "earth prop; collapsed office-tower stub, window grid, vines, on a square slab"
  },
  "yui": {
   "file": "yui.glb",
@@ -3831,6 +3831,146 @@
    1.0,
    0.2843,
    0.6831
+  ],
+  "note": "item"
+ },
+ "rad_hound": {
+  "file": "rad_hound.glb",
+  "tris": 10000,
+  "size": [
+   0.4855,
+   0.7378,
+   1.0
+  ],
+  "note": "earth monster; small scrappy mutant pup, glowing green spots and eyes; face on +Z"
+ },
+ "glow_slime": {
+  "file": "glow_slime.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.5081,
+   0.9779
+  ],
+  "note": "earth monster; lime/cyan jelly blob with glowing core and dot eyes; face on +Z"
+ },
+ "rust_crawler": {
+  "file": "rust_crawler.glb",
+  "tris": 10000,
+  "size": [
+   0.9365,
+   0.547,
+   1.0
+  ],
+  "note": "earth monster; rusty orange-brown plated beetle, amber eyes; head on +Z"
+ },
+ "smog_wraith": {
+  "file": "smog_wraith.glb",
+  "tris": 8000,
+  "size": [
+   0.7069,
+   1.0,
+   0.6783
+  ],
+  "note": "earth monster; purple-grey smog cloud with violet eyes and curling tail (tail tip at y=0, hover it in code); face on +Z"
+ },
+ "spore_brute": {
+  "file": "spore_brute.glb",
+  "tris": 12000,
+  "size": [
+   1.0,
+   0.9897,
+   0.8452
+  ],
+  "note": "earth mini-boss; mossy mushroom golem with glowing spotted cap; face on +Z"
+ },
+ "ruin_rubble": {
+  "file": "ruin_rubble.glb",
+  "tris": 6000,
+  "size": [
+   0.9857,
+   0.6261,
+   1.0
+  ],
+  "note": "earth prop; concrete chunks, bricks and a twisted girder"
+ },
+ "ruin_vault": {
+  "file": "ruin_vault.glb",
+  "tris": 6000,
+  "size": [
+   0.9569,
+   1.0,
+   0.4464
+  ],
+  "note": "earth prop; round steel vault door in a concrete frame, gold seam; door faces +Z"
+ },
+ "ruin_bus": {
+  "file": "ruin_bus.glb",
+  "tris": 10000,
+  "size": [
+   0.4497,
+   0.4984,
+   1.0
+  ],
+  "note": "earth prop; rusty yellow/teal city bus, length along Z, front on +Z"
+ },
+ "ruin_locker": {
+  "file": "ruin_locker.glb",
+  "tris": 5000,
+  "size": [
+   0.6334,
+   1.0,
+   0.6179
+  ],
+  "note": "earth prop; three-door steel locker bank, one door ajar; doors face +Z"
+ },
+ "ruin_billboard": {
+  "file": "ruin_billboard.glb",
+  "tris": 3999,
+  "size": [
+   1.0,
+   0.9053,
+   0.3327
+  ],
+  "note": "earth prop; leaning blank billboard on two posts; board faces +Z"
+ },
+ "toxic_pool": {
+  "file": "toxic_pool.glb",
+  "tris": 3000,
+  "size": [
+   1.0,
+   0.1056,
+   0.9947
+  ],
+  "note": "earth prop; flat glowing lime-green puddle in a cracked tarmac rim"
+ },
+ "teddy_bear": {
+  "file": "teddy_bear.glb",
+  "tris": 3500,
+  "size": [
+   0.7373,
+   1.0,
+   0.6395
+  ],
+  "note": "item"
+ },
+ "film_camera": {
+  "file": "film_camera.glb",
+  "tris": 3500,
+  "size": [
+   1.0,
+   0.6959,
+   0.7064
+  ],
+  "note": "item"
+ },
+ "credit_chip": {
+  "file": "credit_chip.glb",
+  "tris": 3500,
+  "size": [
+   1.0,
+   0.2366,
+   0.9988
   ],
   "note": "item"
  }

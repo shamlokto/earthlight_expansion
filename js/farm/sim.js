@@ -108,7 +108,7 @@ export const GOALS = [
   { id: 'earn', title: 'Earn 1000 cr', hint: 'Ship crops, fish, eggs and finds.', reward: 300 },
 ];
 
-const STACK = 99, MINE_W = 14, MINE_H = 12, ENTRY = [7, 11];
+const STACK = 99;
 const DIRS = [[0, 1], [0, -1], [-1, 0], [1, 0]];
 const STOCK = ['lumber', 'fodder', 'feed'];
 const HOUSING = { chicken: { cap: 6, home: 'coop', food: 'feed' }, cow: { cap: 4, home: 'barn', food: 'fodder' } };
@@ -208,7 +208,8 @@ export function loadState(text) {
   try {
     const s = JSON.parse(text);
     const good = s && s.v === 1 && s.cal && s.player && Array.isArray(s.player.inv) && s.fields && s.fields.farm && Array.isArray(s.fields.farm.tiles) && s.fields.greenhouse && s.pasture && s.stats;
-    if (good) s.mine = null;   // a saved site (or an old-style one) is not resumed: the trip starts again
+    const camp = good && s.mine && s.mine.mode === 'city' && Number.isInteger(s.mine.saveCamp) && s.mine.camps && s.mine.camps[s.mine.saveCamp] && s.mine.camps[s.mine.saveCamp].built && s.player.map === 'ruins';
+    if (good && !camp) { s.mine = null; if (s.player.map === 'ruins') Object.assign(s.player, { map: 'central', x: 7.5, y: 16.5 }); }   // a trip resumes only from a camp save
     return good ? ensure(s) : null;
   } catch { return null; }
 }
@@ -225,6 +226,9 @@ export function ensure(s) {
   if (!Array.isArray(s.storage)) s.storage = new Array(STORAGE_SIZE).fill(null);
   if (!Array.isArray(s.fridge)) s.fridge = new Array(FRIDGE_SIZE).fill(null);
   laneEnsure(s);
+  // The Old World used to be levels you went down (state.mine mode 'earth'); now it is one city map a trip. A trip saved
+  // mid-way in the old style is dropped, and Sato is back at the space dock.
+  if (s.mine && (typeof s.mine !== 'object' || (s.mine.mode !== 'belt' && s.mine.mode !== 'city'))) { s.mine = null; if (s.player && s.player.map === 'ruins') Object.assign(s.player, { map: 'central', x: 7.5, y: 16.5 }); }
   for (const r of s.robots) if (r && typeof r === 'object') for (const k of ['fast', 'sturdy', 'cell']) if (s.flags['works_' + k]) r[k] = true;   // the Works' crew upgrades fit every unit, old and new
   obj(s, 'npc'); for (const id of NPC_IDS) if (!s.npc[id] || typeof s.npc[id] !== 'object') s.npc[id] = { love: 0, talked: false, gifted: false, met: false };   // people who moved in after the save
   return s;
@@ -759,7 +763,7 @@ function shelves(state, shopId) {
 function refusal(state, d, n) {
   const why = d.stop ? d.stop(n) : null;
   if (why) return why;
-  if (state.player.money < d.price * n) return `You need ${d.price * n} cr.`;
+  if (state.player.money < d.price * n) return `You need ${(d.price * n).toLocaleString("en-GB")} cr.`;
   for (const [id, k] of d.req || []) if (countItem(state, id) < k) return `You need ${k} ${lower(id)} in your rucksack.`;
   if (d.lumber && state.stock.lumber < d.lumber * n) return `You need ${d.lumber * n} lumber.`;
   if (d.give && !canAdd(state, d.give, n)) return FULL;
@@ -829,53 +833,277 @@ export function setFlag(state, key, value = true) {
   return { ok: true };
 }
 
-// ---------------------------------------------------------------- the ruins (state.mine)
-
-// A site on Earth's surface: 0 open, 1 rubble pile, 2 the way down (found), 3 wall. One pile hides the way down.
-// The Old World (mode 'earth', reached by Maris's shuttle: rubble, relics, creatures, hazard haze). Since the
-// belt became one open map (below), enterMine(state, n, 'belt') is enterBelt(state, n).
-export function enterMine(state, depth = 1, mode = 'earth') {
-  if (mode === 'belt') return enterBelt(state, depth);
-  depth = int(depth) && depth > 0 ? Math.min(depth, 999) : 1;
-  const w = MINE_W, h = MINE_H, at = (x, y) => y * w + x, entry = at(...ENTRY);
-  const cells = Array.from({ length: w * h }, () => { const r = rnd(state); return r < 0.12 ? 3 : r < 0.40 ? 1 : 0; });
-  cells[entry] = 0;
-  // Anything the walls cut off from the lift becomes wall too.
-  const seen = new Set([entry]), todo = [entry];
-  while (todo.length) {
-    const i = todo.pop(), x = i % w, y = (i - x) / w;
-    for (const [dx, dy] of DIRS) {
-      const nx = x + dx, ny = y + dy, j = at(nx, ny);
-      if (nx < 0 || ny < 0 || nx >= w || ny >= h || seen.has(j) || cells[j] === 3) continue;
-      seen.add(j); todo.push(j);
+// ---------------------------------------------------------------- the Old World: the city ruins (state.mine, mode 'city'; 2026-11-20)
+// Maris's shuttle sets Sato down on a landing pad at the south edge of one big ruined city, in her Pallas. Each trip is
+// a fresh city from a seed (cityLayout: pure, cached): CITY_W × CITY_H tiles of streets and avenues, collapsed towers
+// (solid footprints), rusted cars and buses, rubble, craters with toxic pools, overgrowth, broken billboards and pockets
+// of gas. The further from the pad, the worse it gets: the suburbs (zone 0), downtown (1) and the irradiated industrial
+// core (2). Creatures born of the war's radiation and gas roam it (CITY_MONSTERS, scaled by zone); the treasures are
+// searchable spots (rubble piles, car trunks, shop counters, lockers, tower safes, and one sealed vault deep in the core,
+// guarded by a spore-brute). The Pallas has a hull (hullMax): hits, toxic pools and gas wear it down. The trip ends at
+// the shuttle (cityHome 'pad'), or with a tow when the hull gives out ('tow': an hour, 20 stamina and Maris's tow fee).
+// Cells: 0 street, 1 open lot, 2 tower (solid), 3 car, 4 bus, 5 rubble pile, 6 toxic pool (walkable; it hurts),
+// 7 overgrowth, 8 billboard, 9 the landing pad, 10 locker, 11 safe, 12 shop counter, 13 the sealed vault, 14 debris (solid).
+export const CAMP_R = 3, CAMP_COST = { scrap: 3, credits: 100 };   // safe spots: creatures keep out of CAMP_R; building a camp costs this
+export const CITY_W = 96, CITY_H = 72, CITY_PAD = [48, 67], HULL_MAX = 100, HULL_FILTERS = 130, TOW_FEE = 150, TOW_MINUTES = 60;
+export const CITY_CELL = { street: 0, lot: 1, tower: 2, car: 3, bus: 4, rubble: 5, pool: 6, green: 7, sign: 8, pad: 9, locker: 10, safe: 11, counter: 12, vault: 13, debris: 14 };
+export const CITY_SOLID = new Set([2, 3, 4, 5, 8, 10, 11, 12, 13, 14]);
+export const citySolid = (c) => CITY_SOLID.has(c);
+export const CITY_ZONES = ['The suburbs', 'Downtown', 'The core'];
+const SPOT_OF = { 5: 'rubble', 3: 'car', 4: 'bus', 10: 'locker', 11: 'safe', 12: 'counter', 13: 'vault' };
+// The zone of a cell: by distance from the pad (stretched north-south, so the core is the far north of the city).
+export function cityZone(x, y) { const d = Math.hypot(x - CITY_PAD[0], (y - CITY_PAD[1]) * 1.2); return d < 30 ? 0 : d < 58 ? 1 : 2; }
+// The creatures: base stats in the suburbs; cityMonster scales them by zone (hp +50%, damage +35% a zone).
+export const CITY_MONSTERS = {
+  rad_hound: { name: 'rad-hound', hp: 2, dmg: 4, speed: 2.4, sight: 7, credits: [2, 6], drops: { scrap: 0.2, battery: 0.05 } },
+  glow_slime: { name: 'glow-slime', hp: 3, dmg: 5, speed: 0.8, sight: 5, split: true, credits: [2, 7], drops: { battery: 0.08, silica: 0.15 } },
+  rust_crawler: { name: 'rust-crawler', hp: 5, dmg: 7, speed: 1.3, sight: 6, armour: true, credits: [3, 9], drops: { scrap: 0.5, alloy: 0.12, copper: 0.1 } },
+  smog_wraith: { name: 'smog-wraith', hp: 3, dmg: 3, speed: 1.1, sight: 7, drain: true, float: true, credits: [4, 10], drops: { comet_ice: 0.12, crystal: 0.05 } },
+  spore_brute: { name: 'spore-brute', hp: 16, dmg: 12, speed: 0.75, sight: 6, boss: true, credits: [40, 80], drops: { seedtin: 0.5, crystal: 0.5, alloy: 1 } },
+};
+export const CITY_MIX = [{ rad_hound: 6, glow_slime: 4, rust_crawler: 1 }, { rad_hound: 3, glow_slime: 3, rust_crawler: 3, smog_wraith: 2 }, { rad_hound: 2, glow_slime: 2, rust_crawler: 3, smog_wraith: 3 }];
+export const CITY_MONSTER_COUNT = [10, 16, 18];
+export function cityMonster(kind, zone) {
+  const b = own(CITY_MONSTERS, kind) ? CITY_MONSTERS[kind] : CITY_MONSTERS.rad_hound, z = clamp(int(zone) ? zone : 0, 0, 2);
+  return { kind: own(CITY_MONSTERS, kind) ? kind : 'rad_hound', zone: z, hp: Math.round(b.hp * (1 + 0.5 * z)), dmg: Math.round(b.dmg * (1 + 0.35 * z)), speed: b.speed, sight: b.sight, boss: !!b.boss, armour: !!b.armour, drain: !!b.drain, float: !!b.float };
+}
+const CITY_LAYOUTS = new Map();
+// The city for a seed: { w, h, cells, haz (1 = gas), towers: [{ x, y, w, d, h, zone }], spots: [{ i, kind }],
+// monsters: [{ x, y, kind, zone }], vault (cell or -1), pad }. Every spot and creature can be reached from the pad.
+export function cityLayout(seed) {
+  seed >>>= 0; if (CITY_LAYOUTS.has(seed)) return CITY_LAYOUTS.get(seed);
+  const w = CITY_W, h = CITY_H, r = seeded(seed ^ 0xc17e), ri = (n) => Math.floor(r() * n), at = (x, y) => y * w + x;
+  const cells = new Array(w * h).fill(1), haz = new Array(w * h).fill(0), towers = [];
+  const inb = (x, y) => x >= 1 && y >= 1 && x < w - 1 && y < h - 1, get = (x, y) => (inb(x, y) ? cells[at(x, y)] : 14);
+  const set = (x, y, c) => { if (inb(x, y)) cells[at(x, y)] = c; };
+  const rect = (x0, y0, x1, y1, c) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, c); };
+  const [PX, PY] = CITY_PAD, nearPad = (x, y, d) => Math.abs(x - PX) <= d && Math.abs(y - PY) <= d;
+  for (let x = 0; x < w; x++) cells[at(x, 0)] = cells[at(x, h - 1)] = 14;
+  for (let y = 0; y < h; y++) cells[at(0, y)] = cells[at(w - 1, y)] = 14;
+  // avenues run north-south (3 wide), streets east-west (2 wide); the boulevard runs north from the pad
+  const xs = [PX - 1]; for (let x = PX - 1 - (11 + ri(4)); x > 4; x -= 11 + ri(5)) xs.push(x); for (let x = PX - 1 + 12 + ri(4); x < w - 6; x += 11 + ri(5)) xs.push(x);
+  const ys = []; for (let y = 3 + ri(3); y < h - 8; y += 8 + ri(4)) ys.push(y); ys.push(h - 7);
+  for (const x of xs) rect(x, 1, x + 2, h - 2, 0);
+  for (const y of ys) rect(1, y, w - 2, y + 1, 0);
+  // the blocks between them (each a rectangle of lot), filled by zone
+  const seenB = new Uint8Array(w * h);
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    if (cells[at(x, y)] !== 1 || seenB[at(x, y)]) continue;
+    let x1 = x, y1 = y; while (get(x1 + 1, y) === 1) x1++; while (get(x, y1 + 1) === 1) y1++;
+    for (let j = y; j <= y1; j++) for (let i = x; i <= x1; i++) seenB[at(i, j)] = 1;
+    const z = cityZone((x + x1) / 2, (y + y1) / 2), bw = x1 - x + 1, bd = y1 - y + 1;
+    if (y1 >= h - 7 && nearPad((x + x1) / 2, y, 12)) continue;                  // the open apron round the pad
+    const tower = (tx, ty, tw, td, th) => { if (tw < 2 || td < 2) return; rect(tx, ty, tx + tw - 1, ty + td - 1, 2); towers.push({ x: tx, y: ty, w: tw, d: td, h: th, zone: z }); };
+    if (z === 0) {                                                               // the suburbs: little houses in overgrown yards
+      for (let j = y + 1; j + 2 <= y1; j += 4) for (let i = x + 1; i + 2 <= x1; i += 4) { if (r() < 0.72) tower(i, j, Math.min(3, x1 - i), Math.min(3, y1 - j), 1 + ri(2)); else if (r() < 0.5) set(i + 1, j + 1, 5); }
+    } else {                                                                     // downtown and the core: big towers, or a collapsed one
+      const n = Math.max(1, Math.round(bw / 9)), sw = Math.floor(bw / n);
+      for (let k = 0; k < n; k++) {
+        const sx = x + k * sw, ex = k === n - 1 ? x1 : sx + sw - 1;
+        if (r() < (z === 2 ? 0.22 : 0.14)) { for (let j = y + 1; j < y1; j++) for (let i = sx + 1; i < ex; i++) if (r() < 0.35) set(i, j, r() < 0.3 ? 5 : 14); continue; }
+        if (r() < 0.12) { for (let j = y + 1; j < y1; j++) for (let i = sx + 1; i < ex; i++) if (r() < 0.6) set(i, j, 7); continue; }   // a park gone wild
+        const tw = Math.max(2, Math.min(8, ex - sx - 1) - ri(3)), td = Math.max(2, Math.min(7, bd - 2) - ri(3));
+        tower(sx + 1 + ri(Math.max(1, ex - sx - tw)), y + 1 + ri(Math.max(1, bd - 1 - td)), tw, td, z === 2 ? 2 + ri(2) : 3 + ri(3));
+      }
     }
   }
-  cells.forEach((c, i) => { if (!seen.has(i)) cells[i] = 3; });
-  let piles = cells.flatMap((c, i) => (c === 1 ? [i] : []));
-  const open = cells.flatMap((c, i) => (c === 0 && i !== entry ? [i] : []));
-  if (!piles.length) { const i = open.length ? open.splice(rint(state, open.length), 1)[0] : entry - 1; cells[i] = 1; piles = [i]; }
-  const hatch = piles[rint(state, piles.length)];
-  const monsters = [], haz = new Array(w * h).fill(0);
-  {                                                  // creatures, then haze
-    for (let n = Math.min(depth === 1 ? 1 + rint(state, 3) : 2 + rint(state, 3) + Math.floor(depth / 4), 6, open.length); n > 0; n--) {
-      const i = open.splice(rint(state, open.length), 1)[0];
-      monsters.push({ x: i % w, y: (i - (i % w)) / w, kind: rnd(state) < 0.6 ? 'crawler' : 'drone', hp: 1 + rint(state, 2) });
-    }
-    // Haze: patches of toxic (1) or, from depth 4, radioactive (2) air on open ground, never on the landing pad.
-    for (let n = Math.min(2 + Math.floor(depth / 3), 6); n > 0 && open.length; n--) {
-      const c = open[rint(state, open.length)], kind = depth >= 4 && rnd(state) < 0.45 ? 2 : 1, cx = c % w, cy = (c - cx) / w;
-      for (let y = cy - 1; y <= cy + 1; y++) for (let x = cx - 1; x <= cx + 1; x++) if (x >= 0 && y >= 0 && x < w && y < h && cells[at(x, y)] === 0 && Math.abs(x - ENTRY[0]) + Math.abs(y - ENTRY[1]) > 2) haz[at(x, y)] = kind;
+  // craters, each with a toxic pool and a rim of debris (more of them in the core); never on a tower or near the pad
+  const craters = [6, 10, 14];
+  for (let z = 0; z < 3; z++) for (let n = craters[z], g = 0; n > 0 && g < 400; g++) {
+    const cx = 3 + r() * (w - 6), cy = 3 + r() * (h - 6); if (cityZone(cx, cy) !== z || nearPad(cx, cy, 8)) continue; n--;
+    const rad = 1.2 + r() * (z === 2 ? 2.2 : 1.4);
+    for (let y = Math.floor(cy - rad - 1); y <= cy + rad + 1; y++) for (let x = Math.floor(cx - rad - 1); x <= cx + rad + 1; x++) {
+      if (!inb(x, y) || cells[at(x, y)] === 2) continue; const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+      if (d < rad) cells[at(x, y)] = 6; else if (d < rad + 1 && r() < 0.3) cells[at(x, y)] = r() < 0.4 ? 5 : 14;
     }
   }
-  state.stats.deepest = Math.max(state.stats.deepest, depth);
-  // Depth 10 and 20 of the Old World each hide a star-plum in the pile farthest from the landing (once ever).
-  let star = -1;
-  if ((depth === 10 || depth === 20) && !state.flags['plum_ruins' + depth]) {
-    let bd = -1; for (const i of piles) { const d = Math.abs((i % w) - ENTRY[0]) + Math.abs(Math.floor(i / w) - ENTRY[1]); if (d > bd) { bd = d; star = i; } }
+  // overgrowth: weeds and vines take back the streets, most of all in the suburbs
+  for (let n = 70; n > 0; n--) {
+    const cx = 2 + r() * (w - 4), cy = 2 + r() * (h - 4), z = cityZone(cx, cy); if (r() < z * 0.3) continue;
+    const rad = 1 + r() * 2.5; for (let y = Math.floor(cy - rad); y <= cy + rad; y++) for (let x = Math.floor(cx - rad); x <= cx + rad; x++) if (inb(x, y) && (cells[at(x, y)] === 0 || cells[at(x, y)] === 1) && Math.hypot(x - cx, y - cy) < rad && r() < 0.75) cells[at(x, y)] = 7;
   }
-  state.mine = { mode: 'earth', depth, floor: depth, w, h, cells, monsters, hatch, star, haz };
+  // cars and buses in the streets (one lane of a street stays clear), billboards and rubble on the kerbs
+  const walk = (c) => c === 0 || c === 1 || c === 7;
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const c = cells[at(x, y)]; if (nearPad(x, y, 5) || Math.abs(x - PX) <= 1) continue;
+    if (c === 0) {
+      const ew = get(x, y - 1) !== 0 || get(x, y + 1) !== 0, k = r();            // an east-west street or the edge of an avenue
+      if (k < 0.045 && ![[0, -1], [0, 1], [-1, 0], [1, 0]].some(([a, b]) => citySolid(get(x + a, y + b)))) set(x, y, 3);
+      else if (k < 0.052 && !ew && get(x, y - 1) === 0 && get(x, y + 1) === 0 && get(x, y + 2) === 0 && get(x - 1, y) !== 0) { set(x, y, 4); set(x, y + 1, 4); set(x, y + 2, 4); }
+      else if (k < 0.062) set(x, y, 5);
+    } else if (c === 1 || c === 7) {
+      const kerb = [[0, -1], [0, 1], [-1, 0], [1, 0]].some(([a, b]) => get(x + a, y + b) === 0), k = r();
+      if (kerb && k < 0.018) set(x, y, 8); else if (k < 0.03) set(x, y, 5); else if (k < 0.04) set(x, y, 14);
+    }
+  }
+  // by the towers: shop counters downtown, lockers anywhere, safes that tumbled out of the tall ones
+  const beside = (t) => { const out = []; for (let i = t.x; i < t.x + t.w; i++) out.push([i, t.y - 1], [i, t.y + t.d]); for (let j = t.y; j < t.y + t.d; j++) out.push([t.x - 1, j], [t.x + t.w, j]); return out.filter(([a, b]) => cells[at(a, b)] === 1 || cells[at(a, b)] === 7); };
+  for (const t of towers) {
+    const b = beside(t); if (!b.length) continue; const q = r(), [sx, sy] = b[ri(b.length)];
+    if (t.zone === 1 && q < 0.4) set(sx, sy, 12); else if (q > 0.82) set(sx, sy, 10); else if (t.zone > 0 && t.h >= 3 && q > 0.68 && q < 0.8) set(sx, sy, 11);
+  }
+  // gas: pockets of toxic air over the open ground, downtown and in the core
+  for (let n = 9, g = 0; n > 0 && g < 300; g++) {
+    const cx = 3 + r() * (w - 6), cy = 3 + r() * (h - 6); if (cityZone(cx, cy) === 0 || nearPad(cx, cy, 10)) continue; n--;
+    const rad = 1.8 + r() * 2.2; for (let y = Math.floor(cy - rad); y <= cy + rad; y++) for (let x = Math.floor(cx - rad); x <= cx + rad; x++) if (inb(x, y) && !citySolid(cells[at(x, y)]) && Math.hypot(x - cx, y - cy) < rad) haz[at(x, y)] = 1;
+  }
+  // the pad and its apron
+  rect(PX - 4, PY - 3, PX + 4, PY + 3, 0); cells[at(PX, PY)] = 9; for (let y = PY - 3; y <= PY + 3; y++) for (let x = PX - 4; x <= PX + 4; x++) haz[at(x, y)] = 0;
+  // the sealed vault: beside the core tower farthest from the pad
+  let vault = -1, vt = null, bd = -1;
+  for (const t of towers) if (t.zone === 2) { const d = Math.hypot(t.x - PX, t.y - PY); if (d > bd && beside(t).length) { bd = d; vt = t; } }
+  if (vt) { const b = beside(vt); const [vx, vy] = b[ri(b.length)]; set(vx, vy, 13); vault = at(vx, vy); }
+  // safe spots (camps): a cleared plaza near the pad, a rooftop downtown, a shielded bunker in the core. Cleared ground
+  // (radius 2), no gas within 3; creatures never come within CAMP_R (main.js) and none start within 4.
+  const camps = [], want = [[12, 22], [34, 50], [60, 99]], KIND = ['plaza', 'rooftop', 'bunker'];
+  for (let z = 0; z < 3; z++) {
+    let best = -1, bs = -1;
+    for (let g = 0; g < 600; g++) {
+      const x = 4 + ri(w - 8), y = 4 + ri(h - 10), c = cells[at(x, y)], d = Math.hypot(x - PX, y - PY);
+      if (c !== 0 && c !== 1 && c !== 7) continue; if (d < want[z][0] || d > want[z][1] || cityZone(x, y) !== z) continue;
+      if (camps.some((q) => Math.hypot(q.x - x, q.y - y) < 14)) continue;
+      let t = 0; for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) if (cells[at(x + i, y + j)] === 2 || cells[at(x + i, y + j)] === 13) t++;
+      const sc = (c === 0 ? 2 : 1) - t + r(); if (sc > bs) { bs = sc; best = at(x, y); }
+    }
+    if (best < 0) continue;
+    const x = best % w, y = Math.floor(best / w); camps.push({ x, y, kind: KIND[z], zone: z });
+    for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) { if (!inb(x + i, y + j)) continue; const k = at(x + i, y + j), dd = Math.hypot(i, j); if (dd <= 3.2) haz[k] = 0; if (dd <= 2.3 && cells[k] !== 2 && cells[k] !== 13) cells[k] = 0; }
+  }
+  // nothing walled off: carve a way (round the towers if it can) from any cut-off pocket to the pad
+  const pass = (c) => !citySolid(c), start = at(PX, PY);
+  const reach = () => { const seen = new Uint8Array(w * h), todo = [start]; seen[start] = 1; while (todo.length) { const i = todo.pop(), x = i % w, y = (i - x) / w; for (const [dx, dy] of DIRS) { const j = at(x + dx, y + dy); if (!inb(x + dx, y + dy) || seen[j] || !pass(cells[j])) continue; seen[j] = 1; todo.push(j); } } return seen; };
+  let seen = reach();
+  for (let guard = 0; guard < 300; guard++) {
+    const lost = cells.findIndex((c, i) => pass(c) && !seen[i] && inb(i % w, Math.floor(i / w))); if (lost < 0) break;
+    const back = new Int32Array(w * h).fill(-1), q = [lost]; back[lost] = lost; let hit = -1;
+    for (let k = 0; k < q.length && hit < 0; k++) { const i = q[k], x = i % w, y = (i - x) / w; for (const [dx, dy] of DIRS) { const j = at(x + dx, y + dy); if (!inb(x + dx, y + dy) || back[j] >= 0 || cells[j] === 2 || cells[j] === 13) continue; back[j] = i; if (seen[j]) { hit = j; break; } q.push(j); } }
+    if (hit < 0) { cells[lost] = 14; continue; }
+    for (let i = back[hit]; i !== lost; i = back[i]) if (citySolid(cells[i])) cells[i] = 0;
+    seen = reach();
+  }
+  for (let i = 0; i < w * h; i++) if (pass(cells[i]) && !seen[i]) cells[i] = 14;
+  // the spots worth searching: any of them with a way to it (about half the cars have a trunk worth opening)
+  const spots = [], open = (i) => DIRS.some(([dx, dy]) => seen[i + dy * w + dx]);
+  for (let i = 0; i < w * h; i++) {
+    const kind = SPOT_OF[cells[i]]; if (!kind) continue;
+    if (kind === 'bus' && cells[i - w] === 4) continue;                          // one spot a bus (its north end)
+    if ((kind === 'car' || kind === 'bus') && r() > 0.55) continue;
+    if (kind === 'rubble' && r() > 0.3) { cells[i] = 14; continue; }          // most heaps are just heaps
+    if (open(i) || (kind === 'bus' && [i + w, i + 2 * w].some(open))) spots.push({ i, kind });
+    else if (kind === 'vault') { cells[i] = 14; vault = -1; }
+  }
+  // the creatures, by zone, on open ground away from the pad; the spore-brute guards the vault
+  const monsters = [], free = [[], [], []];
+  for (let i = 0; i < w * h; i++) { const x = i % w, y = (i - x) / w; if (seen[i] && cells[i] !== 6 && cells[i] !== 9 && Math.hypot(x - PX, y - PY) > 12 && !camps.some((q) => Math.hypot(q.x - x, q.y - y) < CAMP_R + 1)) free[cityZone(x, y)].push(i); }
+  for (let z = 0; z < 3; z++) for (let n = CITY_MONSTER_COUNT[z]; n > 0 && free[z].length; n--) {
+    const i = free[z].splice(ri(free[z].length), 1)[0], mix = Object.entries(CITY_MIX[z]); let k = r() * mix.reduce((a, [, v]) => a + v, 0), kind = mix[0][0];
+    for (const [id, v] of mix) { k -= v; if (k < 0) { kind = id; break; } }
+    monsters.push({ x: i % w, y: Math.floor(i / w), kind, zone: z });
+  }
+  if (vault >= 0) {
+    const vx = vault % w, vy = Math.floor(vault / w); let best = -1, bdd = 99;
+    for (const i of free[2]) { const d = Math.hypot((i % w) - vx, Math.floor(i / w) - vy); if (d >= 1.5 && d < bdd) { bdd = d; best = i; } }
+    if (best >= 0) monsters.push({ x: best % w, y: Math.floor(best / w), kind: 'spore_brute', zone: 2, guard: true });
+  }
+  if (r() < 0.5 && free[2].length) { const i = free[2][ri(free[2].length)]; monsters.push({ x: i % w, y: Math.floor(i / w), kind: 'spore_brute', zone: 2 }); }
+  const out = { w, h, cells, haz, towers, spots, monsters, vault, camps, pad: CITY_PAD.slice() }; CITY_LAYOUTS.set(seed, out); return out;
+}
+// The lasting part: how many trips (each trip's city comes from the save's seed and the trip number) and the best zone reached.
+function cityOf(state) {
+  const s = ensure(state);
+  if (!s.city || typeof s.city !== 'object') s.city = {};
+  if (!int(s.city.trips) || s.city.trips < 0) s.city.trips = 0;
+  if (!int(s.city.best) || s.city.best < 0) s.city.best = 0;
+  return s.city;
+}
+export const hullMax = (state) => (state.flags.filters ? HULL_FILTERS : HULL_MAX);
+export function enterCity(state) {
+  const c = cityOf(state); c.trips++;
+  const seed = hash32(state.seed || 1, 911, c.trips) % 1000000007, L = cityLayout(seed), hm = hullMax(state);
+  state.mine = { mode: 'city', seed, w: L.w, h: L.h, cells: L.cells.slice(), haz: L.haz, spots: L.spots.map((s) => ({ ...s, open: false })), vault: L.vault, towers: L.towers, pad: L.pad, camps: L.camps.map((c) => ({ ...c, built: false })), saveCamp: null,
+    monsters: L.monsters.map((m, k) => ({ id: k, x: m.x, y: m.y, ...cityMonster(m.kind, m.zone), guard: !!m.guard })), nextId: L.monsters.length,
+    pos: [CITY_PAD[0] + 0.5, CITY_PAD[1] + 0.5], zone: 0, hull: hm, hullMax: hm, credits: 0, finds: 0, start: state.cal.minute, depth: 1, floor: 1 };
   return state.mine;
 }
+const inCity = (state) => (state.mine && state.mine.mode === 'city' ? state.mine : null);
+export const citySpotAt = (state, x, y) => { const m = inCity(state); if (!m || !int(x) || !int(y)) return null; const i = y * m.w + x; return m.spots.find((s) => s.i === i || (s.kind === 'bus' && (s.i + m.w === i || s.i + 2 * m.w === i))) || null; };
+// Sato walks (cell coordinates, from the UI): a new zone is news, the first time she reaches it ever more so.
+export function cityMove(state, x, y) {
+  const m = inCity(state); if (!m || !Number.isFinite(x) || !Number.isFinite(y)) return fail('You are not in the city.');
+  m.pos = [x, y]; const z = cityZone(x, y), c = cityOf(state), res = { ok: true, zone: z, changed: z !== m.zone, first: false };
+  if (res.changed) { m.zone = z; if (z > c.best) { c.best = z; res.first = true; } }
+  return res;
+}
+// Old-world finds: [id, weight in the suburbs, downtown, the core]. The rarer ones come further in (and from safes and lockers).
+export const OLD_FINDS = [
+  ['old_coin', 6, 5, 4], ['photo', 5, 3, 2], ['teacup', 4, 3, 2], ['teddy_bear', 3, 3, 2], ['book', 3, 3, 2], ['record', 1, 2, 2],
+  ['watch', 1, 3, 3], ['toy', 1, 2, 2], ['film_camera', 0.5, 2, 3], ['medal', 0.3, 1.5, 2], ['musicbox', 0.2, 1, 2], ['seedtin', 0.2, 0.8, 1.5],
+  ['datachip', 0, 0.6, 1.5], ['ring', 0, 0.4, 1.2], ['credit_chip', 0.5, 1.5, 2],
+];
+function oldFind(state, z, rare = 0) { return OLD_FINDS[pick(state, OLD_FINDS.map((e, k) => e[1 + z] * (k >= 6 ? 1 + rare : 1)))][0]; }
+// What a spot gives up: { items: [[id, n]], credits }. Credits grow by half a zone further in.
+export function cityLoot(state, kind, zone) {
+  const z = clamp(int(zone) ? zone : 0, 0, 2), k = 1 + 0.5 * z, items = [], cr = (a, b) => Math.round((a + rnd(state) * (b - a)) * k), q = rnd(state);
+  let credits = 0;
+  if (kind === 'rubble') { if (q < 0.3) items.push(['scrap', 1]); else if (q < 0.36) items.push(['battery', 1]); else if (q < 0.43) items.push([oldFind(state, z), 1]); else if (q < 0.53) credits = cr(3, 12); }
+  else if (kind === 'car' || kind === 'bus') { if (q < 0.2) items.push(['scrap', 1]); else if (q < 0.45) credits = cr(4, 15); else if (q < 0.53) items.push([oldFind(state, z), 1]); }
+  else if (kind === 'counter') { if (rnd(state) < 0.6) credits = cr(8, 30); if (q < 0.25) items.push([oldFind(state, z), 1]); }
+  else if (kind === 'locker') { if (q < 0.45) items.push([oldFind(state, z, 1), 1]); else if (q < 0.6) items.push(['credit_chip', 1]); else if (q < 0.75) items.push(['battery', 1]); }
+  else if (kind === 'safe') { credits = cr(30, 80); items.push([oldFind(state, z, 2), 1]); if (q < 0.4) items.push(['old_coin', 2 + rint(state, 3)]); }
+  else if (kind === 'vault') { credits = cr(200, 300); items.push(['data_core', 1], [rnd(state) < 0.5 ? 'ring' : 'musicbox', 1], ['credit_chip', 2], ['seedtin', 1]); }
+  return { items, credits };
+}
+const SPOT_NAMES = { rubble: 'the rubble', car: 'the car', bus: 'the bus', counter: 'the shop counter', locker: 'the locker', safe: 'the safe', vault: 'the sealed vault' };
+// Search a spot (x, y: its cell, or any cell of a bus). 1 stamina. The vault holds a star-plum, the first two times.
+export function searchSpot(state, x, y) {
+  const m = inCity(state), no = (msg) => fail(msg, { gained: [], credits: 0 });
+  if (!m) return no('You are not in the city.');
+  const s = citySpotAt(state, x, y); if (!s) return no('There is nothing to search here.');
+  if (s.open) return no(`You have already been through ${SPOT_NAMES[s.kind]}.`);
+  if (s.kind === 'vault' && m.monsters.some((q) => q.guard)) return no('The spore-brute will not let you near the vault.');
+  s.open = true; state.stats.searched++;
+  const z = cityZone(s.i % m.w, Math.floor(s.i / m.w)), L = cityLoot(state, s.kind, z);
+  const star = s.kind === 'vault' ? ['plum_ruins10', 'plum_ruins20'].find((f) => !state.flags[f]) : null;
+  const res = take(state, [...(star ? [['star_plum', 1]] : []), ...L.items], { ok: true, gained: [], credits: L.credits, kind: s.kind, zone: z });
+  state.player.money += L.credits; m.credits += L.credits; m.finds += res.gained.reduce((a, g) => a + g.n, 0);
+  if (star && res.gained.some((g) => g.id === 'star_plum')) { state.flags[star] = true; res.star = true; res.msg = 'Deep in the vault, in a sealed seed tin, a small fruit glowing violet: a star-plum.'; }
+  if (!res.gained.length && !L.credits && !res.msg) res.msg = `Nothing in ${SPOT_NAMES[s.kind]} but dust.`;
+  return spend(state, 1, res);
+}
+// A creature flees or fizzles: credits (by zone) and maybe materials. A big glow-slime splits into two small ones.
+function cityDefeat(state, m, index) {
+  const q = m.monsters[index], b = CITY_MONSTERS[q.kind]; m.monsters.splice(index, 1); state.stats.monsters++;
+  const credits = q.small ? 1 + rint(state, 3) : Math.round((b.credits[0] + rnd(state) * (b.credits[1] - b.credits[0])) * (1 + 0.5 * q.zone));
+  const drops = q.small ? [] : Object.entries(b.drops).filter(([, p]) => rnd(state) < p).map(([id]) => [id, 1]);
+  const res = take(state, drops, { ok: true, gained: [], credits, kind: q.kind, spawned: [] });
+  state.player.money += credits; m.credits += credits;
+  if (b.split && !q.small) for (const d of [-0.4, 0.4]) { const s = { id: m.nextId++, x: q.x + d, y: q.y, ...cityMonster('glow_slime', q.zone), small: true }; s.hp = 1; m.monsters.push(s); res.spawned.push(s); }
+  return res;
+}
+// A hit on the Pallas from a creature (kind, zone), or the drain of a smog-wraith: the hull takes it.
+function cityHit(state, m, kind, zone) {
+  const d = cityMonster(kind, zone).dmg; m.hull = Math.max(0, m.hull - d);
+  return { ok: true, dmg: d, hull: m.hull, out: m.hull <= 0, msg: m.hull <= 0 ? 'The Pallas sags: hull gone. Maris is sending the tow.' : CITY_MONSTERS[kind] && CITY_MONSTERS[kind].drain ? 'The smog-wraith drinks the Pallas\'s charge.' : `Something clipped the Pallas. Hull ${Math.ceil(m.hull)}/${m.hullMax}.` };
+}
+// The ground under her (the UI ticks it about once a second): a toxic pool eats 3 hull, gas 1 (none with filters).
+export function cityHazard(state, x, y) {
+  const m = inCity(state); if (!m) return { ok: true, drained: 0, hazard: 0, hull: 0, out: false };
+  const i = int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? y * m.w + x : -1, pool = i >= 0 && m.cells[i] === 6, gas = i >= 0 && m.haz[i];
+  const d = pool ? 3 : gas && !state.flags.filters ? 1 : 0; m.hull = Math.max(0, m.hull - d);
+  return { ok: true, drained: d, hazard: pool ? 2 : gas ? 1 : 0, filtered: !!(gas && state.flags.filters && !pool), hull: m.hull, out: m.hull <= 0 };
+}
+// Home: 'pad' (board the shuttle, standing by it: 20 minutes up) or 'tow' (the hull gave out: an hour, 20 stamina, the tow fee).
+export function cityHome(state, how = 'pad') {
+  const m = inCity(state); if (!m) return fail('You are not in the city.');
+  if (how === 'pad' && Math.hypot(m.pos[0] - CITY_PAD[0] - 0.5, m.pos[1] - CITY_PAD[1] - 0.5) > 5.5) return fail('The shuttle is back at the landing pad.');
+  if (how === 'fly') { const k = campNear(state); if (k < 0 || !m.camps[k].built) return fail('The Pallas needs a camp to transform and take off from.'); }
+  const tow = how === 'tow', fee = tow ? Math.min(state.player.money, TOW_FEE) : 0, minutes = tow ? TOW_MINUTES : how === 'fly' ? 30 : 20;
+  if (tow) { state.player.stamina = Math.max(Math.min(1, state.player.stamina), state.player.stamina - 20); state.player.money -= fee; }
+  const res = { ok: true, how, minutes, fee, credits: m.credits, finds: m.finds, msg: how === 'fly' ? 'The Pallas folds into its flight form and climbs out of the grey. Thirty minutes later it touches down at the space dock, loot and all.' : tow ? `The tow line bites and Maris reels the Pallas home. It takes an hour, it takes it out of you, and the tow costs ${fee} cr.` : 'Up the ramp and strapped in. The shuttle climbs for home.' };
+  state.mine = null; tick(state, minutes);
+  return res;
+}
+
 // The belt's ores: [id, first sector, weight there, weight gained a sector further out (to sector 20)].
 // Near the colony it is scrap, nickel-iron, silica and comet ice; copper, titanium, alloy, platinum and
 // crystal come in further out, and star-metal a little more often the deeper you go. The rest is bare rock.
@@ -890,46 +1118,51 @@ export function beltOdds(depth) {
   for (const [id, from, w, step] of BELT_ORES) if (d >= from) out[id] = Math.max(0.01, w + step * (d - from));
   return out;
 }
-// What a pile or a monster gives up at this depth.
-function find(state, depth, mode = 'earth') {
-  const r = rnd(state);
-  if (mode === 'belt') {                             // ore by sector depth: one roll against the odds table
-    let acc = 0; for (const [id, p] of Object.entries(beltOdds(depth))) { acc += p; if (r < acc) return id; }
-    return null;
-  }
-  if (r < 0.11) {
-    const pool = RELICS.filter((x) => x.depth <= depth);
-    return pool[pick(state, pool.map((_, i) => 1 / (i + 1)))].id;   // cheaper ones more often
-  }
-  if (r < 0.28) return 'scrap';                     // Earth rubble gives scrap; good ore comes from the belt
-  return r < 0.50 ? 'scrap' : r < 0.56 ? 'battery' : null;
+// Camps (the safe spots): the one Sato stands at (within 2.8 tiles), building one, sleeping and saving there.
+export function campNear(state) { const m = inCity(state); if (!m || !Array.isArray(m.camps)) return -1; return m.camps.findIndex((c) => Math.hypot(c.x + 0.5 - m.pos[0], c.y + 0.5 - m.pos[1]) < 2.8); }
+export function buildCamp(state) {
+  const m = inCity(state); if (!m) return fail('You are not in the city.');
+  const k = campNear(state); if (k < 0) return fail('This is no place for a camp. Look for a safe spot.');
+  if (m.camps[k].built) return fail('Your camp is already up.');
+  if (countItem(state, 'scrap') < CAMP_COST.scrap || state.player.money < CAMP_COST.credits) return fail(`A camp takes ${CAMP_COST.scrap} scrap (for the windbreak and the stove) and ${CAMP_COST.credits} cr of supplies.`);
+  removeItem(state, 'scrap', CAMP_COST.scrap); state.player.money -= CAMP_COST.credits; m.camps[k].built = true;
+  return { ok: true, camp: k, msg: 'Sato pitches a little tent, stacks scrap into a windbreak and gets a fire going. The creatures will not come near it.' };
 }
-// Search a rubble pile (the name is from the first design, when this was a mine).
+// Sleep at a built camp: the night runs as at home (the farm ticks, the morning report), and Sato wakes at the camp, the
+// Pallas's hull mended. The trip carries on.
+export function campSleep(state, opts = {}) {
+  const m = inCity(state), k = campNear(state);
+  if (!m || k < 0 || !m.camps[k].built) return fail('You need a built camp to sleep in.');
+  const c = m.camps[k], r = sleep(state, opts);
+  state.mine = m; m.hull = m.hullMax; m.pos = [c.x + 0.5, c.y + 1.5]; m.zone = cityZone(c.x, c.y); m.saveCamp = null;
+  return { ...r, camp: k };
+}
+// Saving at a camp: the save keeps the trip, and loading it resumes at the camp (loadState keeps a city trip only then).
+export function campSave(state) { const m = inCity(state), k = campNear(state); if (!m || k < 0 || !m.camps[k].built) return fail('You need a built camp to save at.'); m.saveCamp = k; return { ok: true, camp: k }; }
+
+// The old entry point: the belt (enterBelt) or a trip to the city (the depth is no longer used: the city is one big map).
+export function enterMine(state, depth = 1, mode = 'earth') {
+  if (mode === 'belt') return enterBelt(state, depth);
+  return enterCity(state);
+}
+// E on a belt rock, or a search in the city.
 export function hitRock(state, x, y) {
-  const m = state.mine, no = (msg) => fail(msg, { broke: false, gained: [], hatch: false });
+  const m = state.mine, no = (msg) => fail(msg, { broke: false, gained: [] });
   if (!m) return no('You are not in the ruins.');
   if (m.mode === 'belt') return beltHit(state, x, y);
-  const c = int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? m.cells[y * m.w + x] : -1;
-  if (c === 2) return no('The way down is open.');
-  if (c !== 1) return no('There is nothing to search here.');
-  const i = y * m.w + x, hatch = i === m.hatch, id = find(state, m.depth, m.mode);
-  m.cells[i] = hatch ? 2 : 0;
-  state.stats.searched++;
-  const starHere = i === m.star && !state.flags['plum_ruins' + m.depth];
-  const res = take(state, [...(id ? [[id, 1]] : []), ...(starHere ? [['star_plum', 1]] : [])], { ok: true, broke: true, gained: [], hatch });
-  if (starHere && res.gained.some((g) => g.id === 'star_plum')) { state.flags['plum_ruins' + m.depth] = true; m.star = -1; res.star = true; res.msg = 'Under the rubble, in a sealed seed tin, a small fruit glowing violet: a star-plum.'; }
-  if (hatch) res.msg = res.gained.length ? `You found ${lower(res.gained[0].id)}, and a way down.` : 'Under the rubble is a way down.';
-  return spend(state, 1, res);
+  if (m.mode === 'city') return searchSpot(state, x, y);
+  return no('There is nothing to search here.');
 }
 export function defeatMonster(state, index) {
   const m = state.mine;
-  if (!m || !int(index) || !m.monsters[index]) return fail('There is nothing to fight here.', { gained: [] });
-  m.monsters.splice(index, 1);
-  state.stats.monsters++;
-  const drop = rnd(state) < 0.35; rnd(state);
-  return take(state, drop ? [['scrap', 1]] : [], { ok: true, gained: [] });
+  if (!m || !int(index) || index < 0 || !Array.isArray(m.monsters) || !m.monsters[index]) return fail('There is nothing to fight here.', { gained: [] });
+  if (m.mode === 'city') return cityDefeat(state, m, index);
+  m.monsters.splice(index, 1); state.stats.monsters++;
+  return { ok: true, gained: [] };
 }
-export function monsterHit(state) {
+// A creature's hit: on the Pallas's hull in the city (kind, zone); elsewhere a little stamina.
+export function monsterHit(state, kind = 'rad_hound', zone = 0) {
+  const m = inCity(state); if (m) return cityHit(state, m, kind, zone);
   state.player.stamina = Math.max(Math.min(1, state.player.stamina), state.player.stamina - 5);
   return { ok: true, msg: 'Something clipped the Pallas. You lost a little stamina.' };
 }
@@ -1146,21 +1379,15 @@ export function chargeMiner(state) {
 // Juno Maris's courier shuttle to the Old World: 200 cr a trip, free once she is a good friend (5 hearts).
 export const SHUTTLE_FARE = 200;
 export const shuttleFare = (state) => (hearts(state, 'maris') >= 5 ? 0 : SHUTTLE_FARE);
-export function takeShuttle(state, depth = 1) {
+export function takeShuttle(state) {
   const fare = shuttleFare(state);
   if (state.player.money < fare) return fail(`The shuttle costs ${fare} cr a trip.`);
-  state.player.money -= fare; enterMine(state, depth, 'earth');
+  state.player.money -= fare; enterCity(state);
   return { ok: true, fare, msg: fare ? `You paid Maris ${fare} cr. Strap in.` : 'Maris waves away your money. "Friends fly free."' };
 }
-// Haze on the Old World: standing in it costs 1 stamina a tick (the UI ticks every few seconds), unless the Pallas has filters.
-export function hazardAt(state, x, y) { const m = state.mine; return m && m.mode === 'earth' && Array.isArray(m.haz) && int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? m.haz[y * m.w + x] || 0 : 0; }
-export function hazardTick(state, x, y) {
-  const h = hazardAt(state, x, y);
-  if (!h) return { ok: true, drained: 0, hazard: 0 };
-  if (state.flags.filters) return { ok: true, drained: 0, hazard: h, filtered: true };
-  state.player.stamina = Math.max(0, state.player.stamina - 1);
-  return { ok: true, drained: 1, hazard: h, fainted: state.player.stamina <= 0 };
-}
+// Gas and toxic pools in the city (cityHazard): hazardAt is 2 on a pool, 1 in gas; hazardTick wears the hull.
+export function hazardAt(state, x, y) { const m = inCity(state); if (!m || !int(x) || !int(y) || x < 0 || y < 0 || x >= m.w || y >= m.h) return 0; const i = y * m.w + x; return m.cells[i] === 6 ? 2 : m.haz[i] ? 1 : 0; }
+export const hazardTick = (state, x, y) => cityHazard(state, x, y);
 
 // The Memory Room in the village hall.
 export function donate(state, slot) {
@@ -2057,7 +2284,7 @@ function projectWhy(state, p) {
   if (p.after && !lowerDone(state, p.after)) return `First: ${LOWER_PROJECTS.find((q) => q.id === p.after).name}.`;
   if (L.pending) return 'One project at a time. Venn has only so many hands, and two of them are his.';
   if (p.trust) { const t = enclaveTrust(state); if (!t.ok) return `The families must trust you first: ${t.favours}/${t.needFavours} favours for the enclave, ${t.hearts}/${t.needHearts} hearts with Agnes.`; }
-  if (state.player.money < p.price) return `You need ${p.price} cr.`;
+  if (state.player.money < p.price) return `You need ${p.price.toLocaleString("en-GB")} cr.`;
   for (const [id, n] of p.req) if (countItem(state, id) < n) return `You need ${n} ${lower(id)}${n > 1 && /(part|kit)$/.test(id) ? 's' : ''} in your rucksack.`;
   if (p.lumber && state.stock.lumber < p.lumber) return `You need ${p.lumber} lumber.`;
   return null;

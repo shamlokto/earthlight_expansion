@@ -33,7 +33,8 @@ const lookOf = (id) => ({ ...NPCS[id].look, ...(LOOKS[id] || {}) });
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 // ---------------------------------------------------------------- save
-function save() { const away = map.id === 'ruins', bt = away && map.belt; S.player.map = away ? (bt ? 'hangar' : 'central') : map.id; S.player.x = away ? (bt ? 8 : 7.5) : me.x; S.player.y = away ? (bt ? 7.6 : 16.5) : me.y; S.player.dir = me.dir; try { localStorage.setItem(SAVE_KEY, sim.saveState(S)); } catch { ui.toast('Could not save in this browser.'); } }
+function save(atCamp = false) { const away = map.id === 'ruins', bt = away && map.belt, cm = away && !bt && S.mine && S.mine.mode === 'city' ? S.mine : null, camp = atCamp && cm && cm.saveCamp != null ? cm.camps[cm.saveCamp] : null; if (cm && !camp) cm.saveCamp = null;   // a trip is kept only in a camp save
+  S.player.map = camp ? 'ruins' : away ? (bt ? 'hangar' : 'central') : map.id; S.player.x = camp ? camp.x + 1.5 : away ? (bt ? 8 : 7.5) : me.x; S.player.y = camp ? camp.y + 2.5 : away ? (bt ? 7.6 : 16.5) : me.y; S.player.dir = me.dir; try { localStorage.setItem(SAVE_KEY, sim.saveState(S)); } catch { ui.toast('Could not save in this browser.'); } }
 function loadSaved() { try { const t = localStorage.getItem(SAVE_KEY); return t ? sim.loadState(t) : null; } catch { return null; } }
 
 // ---------------------------------------------------------------- context
@@ -44,7 +45,7 @@ const isBirthday = (id) => { const b = NPCS[id].birthday; return !!b && b.season
 // ---------------------------------------------------------------- maps and movement
 function dynSolid(tx, ty) {
   for (const f of map.fields || (map.field ? [map.field] : [])) { const x = tx - f.x, y = ty - f.y, fd = S.fields[f.id]; if (fd && x >= 0 && y >= 0 && x < fd.w && y < fd.h) { const o = fd.tiles[y * fd.w + x].obj; if (o && o !== 'weed' && o !== 'branch') return true; } }
-  if (map.ruins && S.mine) { const x = tx - 1, y = ty - 1; if (x >= 0 && y >= 0 && x < S.mine.w && y < S.mine.h) { const c = S.mine.cells[y * S.mine.w + x]; if (map.belt ? c !== 0 : c === 1) return true; } }
+  if (map.ruins && S.mine) { const x = tx - 1, y = ty - 1; if (x >= 0 && y >= 0 && x < S.mine.w && y < S.mine.h) { const c = S.mine.cells[y * S.mine.w + x]; if (map.belt ? c !== 0 : !map.city && c === 1) return true; } }
   return false;
 }
 const blocked = (x, y) => map.solid(x, y) || dynSolid(Math.floor(x), Math.floor(y));
@@ -112,7 +113,7 @@ function recover(e, where) {
 }
 window.addEventListener('error', (ev) => recover(ev.error || ev.message, 'error'));
 window.addEventListener('unhandledrejection', (ev) => recover(ev.reason, 'promise'));
-function refreshHud() { const q = S.flags.quest, bm = map && map.belt && S.mine; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : map.name, quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
+function refreshHud() { const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
 // ---------------------------------------------------------------- people
@@ -152,11 +153,13 @@ function moveNpcs(dt) {
 }
 const whereNow = () => (plan && S ? PEOPLE.map((id) => ({ id, ...(paths.locate(plan, id, nowT()) || {}) })).filter((p) => p.map && p.vis) : []);
 function nearestNpc(maxD) { let best = null, bd = maxD; for (const [id, n] of npcs) { const d = Math.hypot(n.actor.x - me.x, n.actor.y - me.y); if (d < bd) { bd = d; best = id; } } return best; }
-const shopOf = (id) => { const n = npcs.get(id), s = NPCS[id].shop; if (!n || !s || n.walking) return null; return n.spot === s + '.counter' || (id === 'moraine' && (n.spot === 'central.dock' || n.spot === 'central.exchange')) ? s : null; };
+// Open only on the hour and only with the keeper standing there (they may arrive a few minutes early to set out the stock).
+const onDuty = (id, n) => { const w = story.whereIs(id, ctx()); return !!(w && n && w.spot === n.spot); };
+const shopOf = (id) => { const n = npcs.get(id), s = NPCS[id].shop; if (!n || !s || n.walking || !onDuty(id, n)) return null; return n.spot === s + '.counter' || (id === 'moraine' && (n.spot === 'central.dock' || n.spot === 'central.exchange')) ? s : null; };
 
 async function talkTo(id) {
   const n = npcs.get(id); n.actor.face(me.x, me.y); me.face(n.actor.x, n.actor.y); mode = 'talk';
-  const sh = shopOf(id), desk = id === 'marrow' && n.spot === 'hall.desk';
+  const sh = shopOf(id), desk = id === 'marrow' && n.spot === 'hall.desk' && onDuty(id, n);
   let what = 0;
   if (sh || desk) { const opts = ['Talk']; if (sh) opts.push('Buy'); if (desk) opts.push('Give a find to the Memory Room'); opts.push('Leave'); const i = await ui.choose(NPCS[id].name, opts); what = opts[i] === 'Talk' ? 0 : opts[i] === 'Buy' ? 1 : opts[i] === 'Leave' ? 3 : 2; }
   if (what === 0) {
@@ -571,6 +574,7 @@ function hpBar(mon) {
   g.add(bg, fg); g.position.y = mon.kind === 'drone' ? 1.55 : mon.big ? 1.25 : 0.95; g.visible = false; mon.o.add(g); W.facers.push(g); mon.bar = fg; mon.barG = g;
 }
 function drawRuins() {
+  if (map.city) return drawCity();
   const m = S.mine; monsters = []; bolts = []; dashT = 0;
   for (let i = 0; i < m.cells.length; i++) { const c = m.cells[i], x = (i % m.w) + 1.5, y = Math.floor(i / m.w) + 1.5; W.unplace('r' + i); if (c === 1) { const g = W.place('r' + i, m.mode === 'belt' ? 'asteroid' : 'rubble', x, y, { scale: 0.9 + (i % 4) * 0.08, seed: i }); if (i === m.star) g.add(W.proc('starglow')); } else if (c === 2) W.place('r' + i, m.mode === 'belt' ? 'buoy' : 'stairs', x, y); W.unplace('hz' + i); if (m.haz && m.haz[i]) W.place('hz' + i, 'haze', x, y, { hazard: m.haz[i] }); }
   debris = []; if (m.mode === 'belt') for (let k = 0; k < 4; k++) { const o = W.place('debris' + k, 'asteroid', 2 + Math.random() * (m.w - 2), 2 + Math.random() * (m.h - 2), { seed: 50 + k, scale: 0.6 }); debris.push({ o, vx: (Math.random() - 0.5) * 0.8, vy: (Math.random() - 0.5) * 0.8 }); }
@@ -583,23 +587,17 @@ function drawRuins() {
     mon.max = mon.hp; hpBar(mon); monsters.push(mon);
   });
 }
-async function descend(depth) {
-  const first = !S.flags.descended; sim.setFlag(S, 'descended');
-  sim.enterMine(S, depth, 'earth');
-  if (first) { mode = 'talk'; ui.scene('descent'); await ui.say(story.RUINS.arrive.map((t) => ({ who: 'narrator', text: t }))); mode = 'play'; }
-  await go({ map: 'ruins' });
-  ui.toast(first ? 'Space fires the Pallas (up close it swings the beam sabre). F sets down the Hydra. Shift boosts. E searches rubble.' : pick(depth > 1 ? story.RUINS.deeper : story.RUINS.arrive), 5200);
-}
 function popMonster(mon) {
-  const i = S.mine.monsters.indexOf(mon.ref); const r = i >= 0 ? sim.defeatMonster(S, i) : { gained: [] };
+  const i = S.mine ? S.mine.monsters.indexOf(mon.ref) : -1; const r = i >= 0 ? sim.defeatMonster(S, i) : { gained: [] };
   W.puff(mon.x, mon.y, 0xffb347, 18, 0.5); W.puff(mon.x, mon.y, 0x7dffb0, 8, 0.8); W.shake = Math.max(W.shake || 0, 0.12);
   const k = W.facers.indexOf(mon.barG); if (k >= 0) W.facers.splice(k, 1);
-  W.dyn.remove(mon.o); W.unface(mon.o); monsters.splice(monsters.indexOf(mon), 1); sfx('pop'); floatText(mon.x, mon.y, pick(['pop!', 'poof', 'shoo!']));
-  ui.gainedToast(r.gained); if (Math.random() < 0.35) ui.toast(pick(story.RUINS.monster));
-  if (!monsters.length) ui.toast('All quiet on this level.', 2200);
+  W.dyn.remove(mon.o); W.unface(mon.o); W.tileObjs.delete('mon' + (mon.ref.id ?? '')); monsters.splice(monsters.indexOf(mon), 1); sfx('pop'); floatText(mon.x, mon.y, pick(mon.kind === 'glow_slime' || mon.kind === 'smog_wraith' ? ['fizzle!', 'pff…', 'blorp'] : mon.kind === 'spore_brute' ? ['it flees!', 'stomp… stomp… gone'] : ['pop!', 'poof', 'shoo!', 'it flees!']));
+  ui.gainedToast(r.gained); if (r.credits) floatText(mon.x, mon.y + 0.3, `+${r.credits} cr`); if (Math.random() < 0.35) ui.toast(pick(story.RUINS.monster));
+  for (const ref of r.spawned || []) { const q = cityMonsterObj(ref); q.state = 'chase'; floatText(q.x, q.y, 'split!'); }
   refreshHud();
 }
 function hurtMonster(mon, dmg, fromX, fromY) {
+  if (mon.armour && dmg < 2) { dmg *= 0.5; floatText(mon.x, mon.y, 'clank'); }   // a rust-crawler's shell: bolts glance off, the sabre bites
   mon.hp -= dmg; mon.squash = 1;
   const d = Math.hypot(mon.x - fromX, mon.y - fromY) || 1, kx = (mon.x - fromX) / d * 0.5, ky = (mon.y - fromY) / d * 0.5;
   if (!blocked(mon.x + kx, mon.y)) mon.x += kx; if (!blocked(mon.x, mon.y + ky)) mon.y += ky;
@@ -640,9 +638,9 @@ function placeHydra() {
   const [dx, dy] = DIRV[me.dir]; let x = me.x + dx * 0.9, y = me.y + dy * 0.9; if (blocked(x, y)) { x = me.x; y = me.y; }
   hydra = { x, y, o: W.place('hydra', 'hydra', x, y), cd: 0.6 }; W.puff(x, y, 0xc9c2b0, 8, 0.2); sfx('drop'); ui.toast('Hydra set.', 900);
 }
-function satoHit(fromX, fromY) {
-  if (hurtT > 0 || dashT > 0) return false;
-  hurtT = 1.4; const r = sim.monsterHit(S); ui.toast(r.msg); W.shake = 0.2; sfx('bad');
+function satoHit(fromX, fromY, mon) {
+  if (hurtT > 0 || dashT > 0 || cityTowing) return false;
+  hurtT = 1.4; const r = mon && mon.ref && map.city ? sim.monsterHit(S, mon.kind, mon.ref.zone) : sim.monsterHit(S); if (!map.city || Math.random() < 0.3) ui.toast(r.msg); hullBar(map.city); if (r.out) { cityTow(); return true; } W.shake = 0.2; sfx('bad');
   const d = Math.hypot(me.x - fromX, me.y - fromY) || 1; for (let k = 0; k < 6; k++) { const nx = me.x + (me.x - fromX) / d * 0.12, ny = me.y + (me.y - fromY) / d * 0.12; if (canStand(nx, ny)) { me.x = nx; me.y = ny; } }
   refreshHud(); return true;
 }
@@ -650,28 +648,27 @@ function pallasDash() { if (dashCd > 0) return; dashCd = 0.9; dashT = 0.2; W.puf
 let debris = [], hazT = 0, hazWarned = false;
 function ruinsTick(dt) {
   if (map.belt) return beltTick(dt);
-  if (map.earth && S.mine) {                              // haze: a tick of stamina every three seconds while she stands in it
-    const hz = sim.hazardAt(S, Math.floor(me.x) - 1, Math.floor(me.y) - 1);
-    if (hz) { hazT -= dt; if (hazT <= 0) { hazT = 3; const r = sim.hazardTick(S, Math.floor(me.x) - 1, Math.floor(me.y) - 1); if (r.drained) { sfx('geiger'); floatText(me.x, me.y, '−1'); refreshHud(); if (!hazWarned) { hazWarned = true; ui.toast(story.SHUTTLE.haze, 4200); } if (r.fainted) night(true); } } }
-    else hazT = 0.8;
-  }
+  if (map.city) { if (!S.mine || S.mine.mode !== 'city' || cityTowing) return; cityTick(dt); }
   hurtT -= dt; fireCd -= dt; slashCd -= dt; hydraCd -= dt; dashCd -= dt; dashT -= dt;
   if (me.group) me.group.visible = !(hurtT > 0 && Math.floor(hurtT * 12) % 2);
   for (const mon of [...monsters]) {
-    const ex = me.x - mon.x, ey = me.y - mon.y, d = Math.hypot(ex, ey) || 0.01; mon.wob += dt; mon.t -= dt;
+    const ex = me.x - mon.x, ey = me.y - mon.y, d = Math.hypot(ex, ey) || 0.01; if (map.city && d > 26) continue; mon.wob += dt; mon.t -= dt;
     let sp = 0, tx = 0, ty = 0;
     if (mon.kind === 'drone') {                                            // drones keep their distance and lob slow orbs
       if (d < 7) { const want = d < 3 ? -1 : d > 4.5 ? 1 : 0; tx = ex / d * want + Math.cos(mon.wob) * 0.6; ty = ey / d * want + Math.sin(mon.wob * 1.3) * 0.6; sp = 1.3; mon.shotT -= dt; if (mon.shotT <= 0) { mon.shotT = 2.4 + Math.random(); spawnBolt(mon.x, mon.y, ex, ey, 'enemy'); floatText(mon.x, mon.y, '!'); } }
       else { tx = Math.cos(mon.wob * 0.5); ty = Math.sin(mon.wob * 0.6); sp = 0.4; }
-    } else if (mon.state === 'wander') { tx = Math.cos(mon.wob * 0.7); ty = Math.sin(mon.wob * 0.9); sp = 0.45; if (d < 6) { mon.state = 'chase'; floatText(mon.x, mon.y, '!'); } }
-    else if (mon.state === 'chase') { tx = ex / d; ty = ey / d; sp = mon.big ? 1.0 : 1.45; if (d < 1.7) { mon.state = 'windup'; mon.t = mon.big ? 0.7 : 0.5; mon.lx = ex / d; mon.ly = ey / d; } if (d > 9) mon.state = 'wander'; }
+    } else if (mon.drain) {                                                // smog-wraiths drift up close and drink the Pallas's charge
+      if (d < (mon.sight || 7)) { const want = d > 1.1 ? 1 : 0; tx = ex / d * want + Math.cos(mon.wob * 2) * 0.3; ty = ey / d * want + Math.sin(mon.wob * 2.3) * 0.3; sp = mon.spd || 1.1; mon.shotT -= dt; if (d < 1.7 && mon.shotT <= 0) { mon.shotT = 1.3; const r = sim.monsterHit(S, mon.kind, mon.ref.zone); floatText(me.x, me.y, '−charge'); sfx('geiger'); hullBar(true); refreshHud(); if (r.out) cityTow(); } }
+      else { tx = Math.cos(mon.wob * 0.5); ty = Math.sin(mon.wob * 0.6); sp = 0.4; }
+    } else if (mon.state === 'wander') { const hx = mon.home ? mon.home[0] - mon.x : 0, hy = mon.home ? mon.home[1] - mon.y : 0, far = Math.hypot(hx, hy) > 5; tx = far ? hx : Math.cos(mon.wob * 0.7); ty = far ? hy : Math.sin(mon.wob * 0.9); if (far) { const l = Math.hypot(tx, ty); tx /= l; ty /= l; } sp = 0.45; if (d < (mon.sight || 6)) { mon.state = 'chase'; floatText(mon.x, mon.y, '!'); } }
+    else if (mon.state === 'chase') { tx = ex / d; ty = ey / d; sp = mon.spd || (mon.big ? 1.0 : 1.45); if (d < (mon.big ? 2.0 : 1.7)) { mon.state = 'windup'; mon.t = mon.big ? 0.8 : 0.5; mon.lx = ex / d; mon.ly = ey / d; } if (d > (mon.sight || 6) + 3) mon.state = 'wander'; }
     else if (mon.state === 'windup') { if (mon.t <= 0) { mon.state = 'lunge'; mon.t = 0.28; } }
-    else if (mon.state === 'lunge') { tx = mon.lx; ty = mon.ly; sp = mon.big ? 5 : 6.5; if (d < 0.75) { satoHit(mon.x, mon.y); mon.state = 'rest'; mon.t = 0.9; } else if (mon.t <= 0) { mon.state = 'rest'; mon.t = 0.8; } }
+    else if (mon.state === 'lunge') { tx = mon.lx; ty = mon.ly; sp = mon.big ? 5 : 6.5; if (d < (mon.big ? 1.2 : 0.8)) { satoHit(mon.x, mon.y, mon); mon.state = 'rest'; mon.t = 0.9; } else if (mon.t <= 0) { mon.state = 'rest'; mon.t = 0.8; } }
     else if (mon.t <= 0) mon.state = 'chase';                              // rest or stun
-    if (sp) { const nx = mon.x + tx * sp * dt, ny = mon.y + ty * sp * dt; if (!blocked(nx, mon.y)) mon.x = nx; if (!blocked(mon.x, ny)) mon.y = ny; if (mon.o.userData.is3d && (tx || ty)) mon.o.rotation.y = Math.atan2(tx, ty); }
+    if (sp) { const nx = mon.x + tx * sp * dt, ny = mon.y + ty * sp * dt; if (!blocked(nx, mon.y) && !inCamp(nx, mon.y)) mon.x = nx; if (!blocked(mon.x, ny) && !inCamp(mon.x, ny)) mon.y = ny; if (mon.o.userData.is3d && (tx || ty)) mon.o.rotation.y = Math.atan2(tx, ty); }
     mon.squash = Math.max(0, mon.squash - dt * 5); const q = 1 + Math.sin(mon.squash * 9) * mon.squash * 0.25;
     mon.o.scale.set(q, 1 / q, q);
-    mon.o.position.set(mon.x, mon.state === 'windup' ? Math.abs(Math.sin(mon.t * 40)) * 0.06 : 0, mon.y);
+    mon.o.position.set(mon.x, mon.drain ? 0.25 + Math.sin(mon.wob * 2.2) * 0.12 : mon.state === 'windup' ? Math.abs(Math.sin(mon.t * 40)) * 0.06 : 0, mon.y);   // smog-wraiths hover and bob
   }
   if (hydra) {                                                              // the Hydra: a short-range auto-turret
     hydra.cd -= dt;
@@ -683,9 +680,131 @@ function ruinsTick(dt) {
     b.life -= dt; b.x += b.vx * dt; b.y += b.vy * dt; b.m.position.x = b.x; b.m.position.z = b.y;
     let dead = b.life <= 0 || map.solid(b.x, b.y);
     if (!dead && b.from !== 'enemy') for (const mon of monsters) if (Math.hypot(mon.x - b.x, mon.y - b.y) < (mon.big ? 0.65 : 0.5)) { hurtMonster(mon, 1, b.x - b.vx * 0.05, b.y - b.vy * 0.05); dead = true; break; }
-    if (!dead && b.from === 'enemy' && Math.hypot(me.x - b.x, me.y - b.y) < 0.55) { satoHit(b.x - b.vx, b.y - b.vy); dead = true; }
+    if (!dead && b.from === 'enemy' && Math.hypot(me.x - b.x, me.y - b.y) < 0.55) { satoHit(b.x - b.vx, b.y - b.vy, b.mon); dead = true; }
     if (dead) { W.scene.remove(b.m); if (b.life > 0) W.puff(b.x, b.y, b.from === 'enemy' ? 0xff6a5a : 0xfff2b8, 4, 0.6); bolts.splice(i, 1); }
   }
+}
+
+// ---------------------------------------------------------------- the Old World city ruins (one big map a trip, 2026-11-20)
+// Sato walks her Pallas round a ruined city from the shuttle's landing pad (sim.cityLayout). The small things in the
+// streets (cars, buses, rubble, lockers, safes, counters, billboards, debris, gas, pool bubbles) are placed only near
+// her (cityStream) and the creatures only think when she is within reach. The hull bar sits under the place name.
+const CITY_PROP = { 3: 'ruin_car', 4: 'ruin_bus', 5: 'ruin_rubble', 8: 'ruin_billboard', 10: 'ruin_locker', 11: 'ruin_vault', 12: 'shop_counter', 13: 'ruin_vault', 14: 'ruin_debris' };
+const SPOT_LABEL = { rubble: 'Search the rubble', car: 'Search the car', bus: 'Search the bus', counter: 'Check the shop counter', locker: 'Open the locker', safe: 'Crack the safe', vault: 'Open the sealed vault' };
+let cityPlaced = new Set(), cityAt = [1e9, 1e9], cityZoneNow = -1, hazTick = 1, hullWarned = 0, cityTowing = false;
+function hullBar(on) {
+  let e = $('hHull');
+  if (!e && on) { const p = $('hPlace'); if (!p) return; e = document.createElement('div'); e.id = 'hHull'; e.style.cssText = 'height:7px;width:150px;max-width:60vw;margin:3px 0 0;border-radius:4px;background:rgba(20,16,12,.55);overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.35)'; e.innerHTML = '<i style="display:block;height:100%;width:100%;background:#7dffb0;transition:width .3s"></i>'; p.insertAdjacentElement('afterend', e); }
+  if (!e) return; e.hidden = !on; if (!on || !S.mine) return;
+  const k = Math.max(0, S.mine.hull / S.mine.hullMax), f = e.firstChild; f.style.width = Math.round(k * 100) + '%'; f.style.background = k < 0.25 ? '#ff6a5a' : k < 0.5 ? '#ffd36a' : '#7dffb0';
+}
+function cityPlace(i) {
+  const m = S.mine, c = m.cells[i], x = i % m.w, y = Math.floor(i / m.w), kind = CITY_PROP[c];
+  if (c === 4) { if (m.cells[i - m.w] === 4) return; W.place('cy' + i, kind, x + 1.5, y + 2.5, { w: 1, d: 3, seed: i }); }
+  else if (kind) { const o = W.place('cy' + i, kind, x + 1.5, y + 1.5, { seed: i, scale: c === 11 ? 0.7 : 1 }); if (c === 5 || c === 14) o.rotation.y = i % 6; }   // billboards, lockers, counters, safes and the vault face +Z, towards the camera
+  else if (c === 6 && x % 2 === 0 && y % 2 === 0) W.place('cy' + i, 'toxic_pool', x + 1.5, y + 1.5, { seed: i });
+  else if (m.haz[i] && (x + y) % 2 === 0) W.place('cy' + i, 'haze', x + 1.5, y + 1.5, { hazard: 1 });
+  else return;
+  cityPlaced.add(i);
+  const s = m.spots.find((q) => q.i === i); if (s && s.open) W.place('cs' + i, 'searched_mark', x + 1.5, y + (c === 4 ? 2.5 : 1.5));
+}
+function cityStream(force) {
+  const m = S.mine; if (!m || (!force && Math.hypot(me.x - cityAt[0], me.y - cityAt[1]) < 3)) return; cityAt = [me.x, me.y];
+  const R = 19, cx = me.x - 1, cy = me.y - 1;
+  for (const i of [...cityPlaced]) { const x = i % m.w, y = Math.floor(i / m.w); if (Math.abs(x - cx) > R + 4 || Math.abs(y - cy) > R + 4) { W.unplace('cy' + i); W.unplace('cs' + i); cityPlaced.delete(i); } }
+  for (let y = Math.max(0, Math.floor(cy - R)); y <= Math.min(m.h - 1, cy + R); y++) for (let x = Math.max(0, Math.floor(cx - R)); x <= Math.min(m.w - 1, cx + R); x++) { const i = y * m.w + x; if (!cityPlaced.has(i)) cityPlace(i); }
+}
+function cityMonsterObj(ref) {
+  const o = W.place('mon' + ref.id, ref.kind, ref.x + 1.5, ref.y + 1.5, { small: !!ref.small, scale: ref.small ? 0.6 : 1 });
+  const mon = { ref, o, kind: ref.kind, big: ref.boss, x: ref.x + 1.5, y: ref.y + 1.5, hp: ref.hp, max: ref.hp, wob: Math.random() * 6, state: 'wander', t: Math.random() * 2, squash: 0, shotT: 1, spd: ref.speed * (ref.small ? 1.3 : 1), sight: ref.sight, drain: ref.drain, armour: ref.armour, home: [ref.x + 1.5, ref.y + 1.5] };
+  hpBar(mon); if (ref.boss) mon.barG.position.y = 2.0; else if (ref.float) mon.barG.position.y = 1.55; monsters.push(mon); return mon;
+}
+function drawCity() {
+  const m = S.mine; monsters = []; bolts = []; dashT = 0; debris = []; cityPlaced = new Set(); cityAt = [1e9, 1e9]; cityZoneNow = -1; hullWarned = 0; cityTowing = false;
+  for (const ref of m.monsters) cityMonsterObj(ref);
+  drawCamps(); cityStream(true); hullBar(true);
+}
+function cityTick(dt) {
+  const m = S.mine; if (!m || cityTowing) return;
+  cityStream(false);
+  const r = sim.cityMove(S, me.x - 1, me.y - 1);
+  if (r.ok && (r.changed || cityZoneNow < 0)) { if (cityZoneNow >= 0) { ui.toast(r.first ? story.RUINS.zoneFirst[r.zone] : story.RUINS.zone[r.zone], r.first ? 4600 : 2600); if (r.first) sfx('good'); } cityZoneNow = r.zone; refreshHud(); }
+  hazTick -= dt;
+  if (hazTick <= 0) {
+    hazTick = 1; const h = sim.cityHazard(S, Math.floor(me.x) - 1, Math.floor(me.y) - 1);
+    if (h.drained) { sfx('geiger'); floatText(me.x, me.y, h.hazard === 2 ? 'sizzle' : '−hull'); if (!hazWarned) { hazWarned = true; ui.toast(story.SHUTTLE.haze, 4200); } }
+    if (h.drained || h.filtered) hullBar(true);
+    if (h.out) return cityTow();
+  }
+  for (const k of [50, 25]) if (m.hull <= m.hullMax * k / 100 && hullWarned < 100 - k) { hullWarned = 100 - k; ui.toast(story.SHUTTLE.hull[k], 4200); sfx('bad'); }
+}
+async function cityTow() {
+  if (cityTowing) return; cityTowing = true;
+  const r = sim.cityHome(S, 'tow'); if (!r.ok) { cityTowing = false; return; }
+  hullBar(false); sfx('bad'); busy = true; await ui.fade(true, 500); busy = false; mode = 'talk';
+  await ui.say([{ who: 'narrator', text: story.SHUTTLE.tow }, { who: 'narrator', text: r.msg }, { who: 'narrator', text: story.SHUTTLE.tally(r.credits, r.finds) }]); mode = 'play';
+  await go({ map: 'central', x: 7.5, y: 16.5, dir: 0 });
+}
+function cityProbe(tx, ty) {
+  const m = S.mine, cx = tx - 1, cy = ty - 1;
+  sim.cityMove(S, me.x - 1, me.y - 1); const ck = sim.campNear(S);
+  if (ck >= 0) return m.camps[ck].built ? { label: 'Use the camp (sleep, save, fly home)', run: useCamp } : { label: `Build a camp here (${sim.CAMP_COST.scrap} scrap, ${sim.CAMP_COST.credits} cr)`, run: makeCamp };
+  let s = sim.citySpotAt(S, cx, cy);
+  if (!s) for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { s = sim.citySpotAt(S, Math.floor(me.x) - 1 + dx, Math.floor(me.y) - 1 + dy); if (s && !s.open) break; s = null; }
+  if (s && !s.open) { const x = s.i % m.w, y = Math.floor(s.i / m.w); return { label: SPOT_LABEL[s.kind], run: () => citySearch(x, y) }; }
+  const p = propAt(tx, ty) || propAt(Math.floor(me.x), Math.floor(me.y)) || (Math.hypot(me.x - m.pad[0] - 1.5, me.y - m.pad[1] - 1.5) < 3.2 ? { act: 'liftup' } : null);
+  if (p && p.act === 'liftup') return { label: 'Board the shuttle home', run: leaveRuins };
+  if (s && s.open) return { label: 'Already searched', run: () => ui.toast('You have been through that already.') };
+  return null;
+}
+// Safe spots: creatures never step inside CAMP_R of one. A camp built there lets Sato sleep, save or fly home.
+const inCamp = (x, y) => !!(map && map.city && S.mine && S.mine.camps && S.mine.camps.some((c) => Math.hypot(c.x + 1.5 - x, c.y + 1.5 - y) < sim.CAMP_R));
+function drawCamps() { for (const [k, c] of (S.mine.camps || []).entries()) { W.place('campspot' + k, 'camp_spot', c.x + 1.5, c.y + 1.5, { kind: c.kind }); if (c.built) W.place('camp' + k, 'camp', c.x + 1.5, c.y + 1.5); else W.unplace('camp' + k); } }
+function makeCamp() { const r = sim.buildCamp(S); ui.toast(r.msg, 4200); if (r.ok) { sfx('good'); W.puff(me.x, me.y, 0xffa040, 14, 0.5); drawCamps(); } refreshHud(); }
+async function useCamp() {
+  mode = 'talk'; const i = await ui.choose(`Sato's camp (${{ plaza: 'a cleared plaza', rooftop: 'a rooftop', bunker: 'a shielded bunker entrance' }[S.mine.camps[sim.campNear(S)].kind]})`, ['Sleep until morning (mends the hull; the farm runs as usual)', 'Save the game (loading resumes here, at the camp)', 'Fly home: the Pallas transforms (no penalty)', 'Not yet']); mode = 'play';
+  if (i === 0) await night(false, true);
+  else if (i === 1) { sim.campSave(S); save(true); ui.toast('Saved at the camp. Loading this save resumes here.'); }
+  else if (i === 2) await flyHome();
+}
+// The Pallas folds into its flight form (crouch, a flash, wings out), lifts off, banks and climbs away; the camera follows,
+// then the screen fades and she lands at the space dock with everything she found. About 3.5 s; E or Space skips it.
+async function flyHome() {
+  if (sim.campNear(S) < 0) return;
+  mode = 'talk'; busy = true; hullBar(false); cityTowing = true;   // (no hazards or hits while she takes off)
+  let skip = false; const onKey = (e) => { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') skip = true; }; addEventListener('keydown', onKey, true); addEventListener('pointerdown', onKey, true);
+  const g = me.group, x0 = me.x, y0 = me.y, T = 3.6, jet = W.place('pallasJet', 'pallas_jet', x0, y0); jet.visible = false;
+  const wings = () => jet.children[0] && jet.children[0].userData.wings; let t = 0, last = performance.now(), flashed = false;
+  window.__farmFly = 0;
+  while (t < T && !skip) {
+    await new Promise((r) => requestAnimationFrame(r)); const now = performance.now(); t += Math.min(0.1, (now - last) / 1000); last = now; window.__farmFly = t;
+    if (t < 0.8) { const k = t / 0.8; g.scale.set(1 + 0.2 * k, 1 - 0.5 * k, 1 + 0.2 * k); g.rotation.x = 0.3 * k; }          // crouch, limbs folding in
+    else if (!flashed) { flashed = true; W.puff(x0, y0, 0xffffff, 26, 1.0); W.puff(x0, y0, 0x8ff4ff, 16, 1.3); W.shake = 0.15; sfx('zap'); g.visible = false; jet.visible = true; }
+    if (t >= 0.8) {
+      const k = Math.min(1, (t - 0.8) / 0.5), w = wings(); jet.scale.setScalar(0.5 + 0.5 * k); if (w) w.scale.set(0.05 + 0.95 * k, 1, 1);
+      const f = Math.max(0, t - 1.4); jet.position.set(x0 + Math.sin(f * 1.4) * f * 0.8, 0.2 + f * f * 1.6, y0 - f * f * 3.2);
+      jet.rotation.set(-Math.min(0.45, f * 0.35), Math.sin(f * 1.4) * 0.25, Math.sin(f * 1.6) * 0.6);                // climb and bank
+      me.y = Math.max(2, y0 - f * f * 2.6);                                                                               // the camera follows a little
+    }
+  }
+  removeEventListener('keydown', onKey, true); removeEventListener('pointerdown', onKey, true);
+  await ui.fade(true, 450); W.unplace('pallasJet'); g.scale.set(1, 1, 1); g.rotation.x = 0; g.visible = true; me.x = x0; me.y = y0;
+  sim.cityMove(S, x0 - 1, y0 - 1); const r = sim.cityHome(S, 'fly'); busy = false;
+  if (!r.ok) { cityTowing = false; await ui.fade(false, 300); mode = 'play'; return ui.toast(r.msg); }
+  sfx('door'); await ui.say([{ who: 'narrator', text: r.msg }, { who: 'narrator', text: story.SHUTTLE.tally(r.credits, r.finds) }]); mode = 'play';
+  await go({ map: 'central', x: 7.5, y: 16.5, dir: 0 });
+}
+function citySearch(x, y) {
+  const r = sim.searchSpot(S, x, y); if (!r.ok) return ui.toast(r.msg);
+  const m = S.mine, i = y * m.w + x, bus = m.cells[i] === 4; me.swing = 1; sfx('dig');
+  W.puff(x + 1.5, y + (bus ? 2.5 : 1.5), 0x9a958c, 10, 0.4); W.place('cs' + i, 'searched_mark', x + 1.5, y + (bus ? 2.5 : 1.5));
+  if (r.star) { sfx('good'); ui.celebrate(r.msg); }
+  if (r.credits) { floatText(x + 1.5, y + 1.5, `+${r.credits} cr`); sfx('pick'); }
+  ui.gainedToast(r.gained);
+  for (const g of r.gained || []) if (ITEMS[g.id].kind === 'relic' || ITEMS[g.id].kind === 'valuable') { sfx('good'); const t = story.RUINS.relic[g.id] || (story.RUINS.finds && story.RUINS.finds[g.id]); if (t) ui.toast(t, 5200); break; }
+  if (r.kind === 'vault') ui.toast(story.RUINS.vault, 5200);
+  if (r.msg && !r.star && !(r.gained || []).length && !r.credits) ui.toast(r.msg);
+  refreshHud(); hullBar(true); if (r.fainted) night(true);
 }
 
 // ---------------------------------------------------------------- the belt (one big open map, in a space suit)
@@ -776,13 +895,7 @@ function probe() {                                   // → { label, run } for E
   const [tx, ty] = target();
   if (map.belt) return beltProbe(tx, ty);
   if (map.ruins && !S.mine) return null;
-  if (map.ruins) {
-    const cx = tx - 1, cy = ty - 1, m = S.mine, c = cx >= 0 && cy >= 0 && cx < m.w && cy < m.h ? m.cells[cy * m.w + cx] : 0;
-    if (c === 1) return { label: map.belt ? 'Drill the rock' : 'Search the rubble', run: () => search(cx, cy) };
-    if (c === 2) return { label: map.belt ? 'Jump to the next sector' : 'Go deeper', run: () => descend((m.depth || 1) + 1) };
-    const p = propAt(tx, ty) || propAt(Math.floor(me.x), Math.floor(me.y)); if (p && p.act === 'liftup') return { label: map.belt ? 'Fly back to the hangar' : 'Board the shuttle home', run: leaveRuins };
-    return null;
-  }
+  if (map.ruins) return map.city && S.mine.mode === 'city' ? cityProbe(tx, ty) : null;
   { const tp = propAt(tx, ty); if (tp && tp.act === 'restore') return { label: 'Use the restoration terminal (fund projects)', run: () => act(tp) }; }   // the terminal wins over anyone standing near it
   const near = nearestNpc(1.5);
   if (near) return { label: `Talk to ${S.npc[near] && S.npc[near].met ? NPCS[near].short || NPCS[near].name : 'the stranger'}`, run: () => talkTo(near) };
@@ -848,6 +961,18 @@ async function postGift(who) {
   if (!r.ok) return ui.toast(r.msg);
   sfx('drop'); ui.toast(`You leave the ${nm} in ${nameOf(id)}'s mailbox.${r.later ? ` ${nameOf(id)} has already had a gift today: pleased, but less so.` : ''}`, 3800); refreshHud();
 }
+// A guest at bedtime (or late, or when the host has to go out) is wished goodnight and shown to the door, never just left alone.
+function homeBedtime() {
+  if (!map || !map.home || mode !== 'play' || busy) return false;
+  const c = ctx(), who = residents(map.home); if (!who.length) return false;
+  const late = c.minute >= sim.VISIT_LATE && !who.includes(S.flags.sweet), pr = who.map((id) => story.presence(id, c));
+  if (!late && pr.includes('home')) return false;
+  const host = who.find((id, i) => pr[i] !== 'home' && npcs.has(id)) || who.find((id) => npcs.has(id)) || who[0], i = who.indexOf(host), out = !late && pr[i] === 'out';
+  const n = npcs.get(host); if (n) n.actor.face(me.x, me.y);
+  mode = 'talk';
+  (async () => { await ui.say([{ who: host, text: out ? story.HOME_NOTES.byeOut : story.HOME_NOTES.goodnight }]); mode = 'play'; sfx('door'); await go(outsideOf(map.id)); })();
+  return true;
+}
 let knockT = 0;
 async function knock(key, walkedIn = false) {
   const r = homeAnswer(key), L = (r.id && story.HOME_LINES[r.id]) || {}, N = story.HOME_NOTES;
@@ -901,26 +1026,14 @@ async function act(p) {
     case 'museum': ui.museum(S, RELICS.map((r) => ({ id: r.id, text: story.RUINS.relic[r.id] }))); break;
     case 'launch': await launchBelt(); break;
     case 'shuttle': await boardShuttle(); break;
-    case 'lift': {
-      const deep = (S.stats && S.stats.deepest) || 0, opts = ['Level 1'], lv = [1]; for (let d = 5; d <= deep; d += 5) { opts.push('Level ' + d); lv.push(d); } opts.push('Stay up here');
-      mode = 'talk'; const i = await ui.choose('The orbital elevator: Sato climbs into her Pallas.', opts); mode = 'play'; if (i < lv.length) await descend(lv[i]); break;
-    }
   }
   refreshHud();
 }
-function search(cx, cy) {
-  const r = sim.hitRock(S, cx, cy); if (!r.ok) { ui.toast(r.msg); return; }
-  const i = cy * S.mine.w + cx; W.unplace('r' + i); W.puff(cx + 1.5, cy + 1.5, 0x9a958c, 10, 0.3); sfx('dig'); me.swing = 1;
-  if (S.mine.cells[i] === 2) { W.place('r' + i, 'stairs', cx + 1.5, cy + 1.5); ui.toast('A way down!'); sfx('good'); } else W.place('r' + i, 'rubble_done', cx + 1.5, cy + 1.5);
-  if (r.star) { sfx('good'); ui.celebrate(r.msg); }
-  for (const g of r.gained || []) { ui.toast(`+${g.n} ${ITEMS[g.id].name}`); if (ITEMS[g.id].kind === 'relic') { sfx('good'); ui.toast(story.RUINS.relic[g.id] || '', 5200); } }
-  if (r.msg && !(r.gained || []).length) ui.toast(r.msg);
-  refreshHud(); if (r.fainted) night(true);
-}
 async function leaveRuins() {
   if (map.belt) return leaveBelt('pad');
-  sim.leaveMine(S); sfx('door');
-  busy = true; await ui.fade(true, 400); busy = false; mode = 'talk'; await ui.say([{ who: 'narrator', text: story.SHUTTLE.home }]); mode = 'play';
+  sim.cityMove(S, me.x - 1, me.y - 1); const r = sim.cityHome(S, 'pad'); if (!r.ok) return ui.toast(r.msg);
+  hullBar(false); sfx('door');
+  busy = true; await ui.fade(true, 400); busy = false; mode = 'talk'; await ui.say([{ who: 'narrator', text: story.SHUTTLE.home }, { who: 'narrator', text: story.SHUTTLE.tally(r.credits, r.finds) }]); mode = 'play';
   await go({ map: 'central', x: 7.5, y: 16.5, dir: 0 });
 }
 // Vashti's hangar: Sato suits up at the launch cradle, which flings her out to sector 1, or to a milestone sector
@@ -937,13 +1050,14 @@ async function launchBelt() {
 }
 // Maris's courier shuttle from the space dock down to the Old World.
 async function boardShuttle() {
-  const fare = sim.shuttleFare(S), deep = (S.stats && S.stats.deepest) || 0, opts = ['Level 1'], lv = [1]; for (let d = 5; d <= deep; d += 5) { opts.push('Level ' + d); lv.push(d); } opts.push('Not today');
-  mode = 'talk'; const i = await ui.choose(`Juno Maris's courier shuttle to the Old World · ${fare ? fare + ' cr' : 'free for a friend'}`, opts); mode = 'play'; if (i >= lv.length) return;
-  const r = sim.takeShuttle(S, lv[i]); if (!r.ok) return ui.toast(r.msg);
+  const fare = sim.shuttleFare(S);
+  mode = 'talk'; const i = await ui.choose(`Juno Maris's courier shuttle to the Old World · ${fare ? fare + ' cr' : 'free for a friend'} · Pallas hull ${sim.hullMax(S)}${S.flags.filters ? ' (filters fitted)' : ''}`, ['Fly down to the old city', 'Not today']); mode = 'play'; if (i !== 0) return;
+  const r = sim.takeShuttle(S); if (!r.ok) return ui.toast(r.msg);
   ui.toast(r.msg); mode = 'talk'; await ui.say([...(S.flags.shuttled ? story.SHUTTLE.boardAlt : story.SHUTTLE.board), { who: 'narrator', text: story.SHUTTLE.descent }]); mode = 'play';
   const first = !S.flags.descended; sim.setFlag(S, 'descended'); sim.setFlag(S, 'shuttled');
+  if (first) { mode = 'talk'; await ui.say(story.RUINS.first.map((t) => ({ who: 'narrator', text: t }))); mode = 'play'; }
   await go({ map: 'ruins' });
-  ui.toast(first ? 'Space fires the Pallas (up close it swings the beam sabre). F sets down the Hydra. Shift boosts. E searches rubble. Keep out of the green and yellow haze.' : pick(story.RUINS.arrive), 5200);
+  ui.toast(first ? 'Walk the Pallas anywhere. Space fires (up close it swings the beam sabre), F sets down the Hydra, Shift boosts, E searches cars, rubble, lockers and safes. Mind the hull bar: gas, toxic pools and creatures wear it down. The shuttle waits on its pad.' : pick(story.RUINS.arrive), 7000);
 }
 
 function use() {                                     // Space: the held tool or item
@@ -998,18 +1112,19 @@ function fishTick(dt) {
 }
 
 // ---------------------------------------------------------------- night
-async function night(collapsed) {
+async function night(collapsed, camp = false) {
   if (busy) return; busy = true; mode = 'talk'; endFishing();
   if (collapsed) ui.toast(S.cal.minute >= 1440 ? 'It is midnight. Sato is asleep on her feet.' : 'Sato has worked herself to a standstill.', 3000);
   await ui.fade(true, 700);
-  if (S.mine) sim.leaveMine(S);
-  const rep = sim.sleep(S, { collapsed }); sim.claimGoals(S);
+  const atCamp = camp && map.city && S.mine && sim.campNear(S) >= 0;
+  if (S.mine && !atCamp) sim.leaveMine(S);
+  const rep = atCamp ? sim.campSleep(S, { collapsed }) : sim.sleep(S, { collapsed }); sim.claimGoals(S);
   if (S.flags.partner && NPCS[S.flags.partner]) {            // a partner waters some of the field before she wakes
     let k = 0; for (const t of S.fields.farm.tiles) { if (k >= 12) break; if (t.till && t.crop && !t.crop.dead && !t.wet) { t.wet = true; k++; } }
     if (k) (rep.notes ||= []).push(`${NPCS[S.flags.partner].short || NPCS[S.flags.partner].name} watered ${k} plants before you woke.`);
   }
-  busy = false; await go({ map: 'house', x: 2.6, y: 2.6, dir: 0 }, { quick: true }); busy = true;
-  save(); sfx('morning');
+  busy = false; if (atCamp) { const c = S.mine.camps[rep.camp]; await go({ map: 'ruins', x: c.x + 1.5, y: c.y + 2.5, dir: 0 }, { quick: true }); } else await go({ map: 'house', x: 2.6, y: 2.6, dir: 0 }, { quick: true }); busy = true;
+  if (atCamp) { sim.campSave(S); save(true); } else save(); sfx('morning');
   const f = festivalToday(), SK = ['spring', 'summer', 'autumn', 'winter'];
   const head = rep.newYear ? `A new year on Eden. Year ${S.cal.year} begins.` : rep.seasonChanged ? `${['Spring', 'Summer', 'Autumn', 'Winter'][S.cal.season]} has come to the river chamber.` : collapsed ? 'She wakes in her own bed, with no memory of getting there, and half her strength.' : '';
   if (f) (rep.notes ||= []).push(`${f.name} today. ${f.blurb}`);
@@ -1054,7 +1169,7 @@ function frame(now) {
     }
     // the clock
     clock += dt;
-    while (clock >= MIN_SECONDS) { clock -= MIN_SECONDS; const r = sim.tick(S, 1); if (S.cal.minute % 10 === 0) { refreshHud(); placeNpcs(); W.setTime(S.cal.minute, S.weather, map); setMood({ night: S.cal.minute > 1170 }); checkEvents(); } if (r.collapsed) { night(true); break; } }
+    while (clock >= MIN_SECONDS) { clock -= MIN_SECONDS; const r = sim.tick(S, 1); if (S.cal.minute % 10 === 0) { refreshHud(); if (!homeBedtime()) placeNpcs(); W.setTime(S.cal.minute, S.weather, map); setMood({ night: S.cal.minute > 1170 }); checkEvents(); } if (r.collapsed) { night(true); break; } }
     if (map.ruins) ruinsTick(dt);
     if (fishing) fishTick(dt);
     botsTick(dt); moveNpcs(dt);
@@ -1064,7 +1179,7 @@ function frame(now) {
       promptT = 0.12; current = probe();
       const s = sim.selected(S), [tx, ty] = target(), it = s && ITEMS[s.id];
       const onField = !map.ruins && (fieldAt(tx, ty) || pastureAt(tx, ty)) && it && (it.kind === 'tool' || it.kind === 'seed');
-      W.setCursor(tx, ty, !!onField || (map.ruins && current && /^(Search|Break)/.test(current.label)));
+      W.setCursor(tx, ty, !!onField || (map.ruins && current && /^(Search|Break|Open|Crack|Check)/.test(current.label)));
       ui.prompt(current && current.label ? `<kbd>E</kbd>${current.label}` : '');
     }
   } else { me.moving = false; W.setCursor(0, 0, false); if (mode !== 'play') ui.prompt(''); }
@@ -1088,7 +1203,7 @@ function bindInput() {
     if (e.code === 'F1') { e.preventDefault(); return openMenu('help'); }
     if (e.repeat) return;
     if (e.code === 'KeyM') { if (mapOpen()) ui.closeWin(); else toggleMap(); return; }
-    if (e.code === 'KeyP') return toggleJournal();   // the town map (music: the menu's button)
+    if (e.code === 'KeyP') return toggleJournal();   // the Farm journal (M: the town map; music: the menu's button)
     if (e.code === 'KeyE' || e.code === 'Enter') return pressE();
     if (e.code === 'Space') { e.preventDefault(); return pressUse(); }
     if (ui.windowOpen() || ui.talking()) return;
@@ -1125,7 +1240,7 @@ async function begin(state, fresh) {
   S = state; $('title').hidden = true; startMusic(); $('hud').hidden = false; mode = 'talk';
   if (fresh) { await ui.fade(true, 400); $('hud').hidden = true; ui.fade(false, 600); await ui.say(story.INTRO); $('hud').hidden = false; }
   mode = 'play';
-  const p = S.player, m = allMaps()[p.map] ? p.map : 'farm';
+  const p = S.player, m = p.map === 'ruins' && S.mine && S.mine.mode === 'city' ? 'ruins' : allMaps()[p.map] ? p.map : 'farm';   // a camp save resumes in the city
   await go(fresh || p.x == null ? { map: 'farm' } : { map: m, x: p.x, y: p.y, dir: p.dir });
   if (fresh) save();
 }

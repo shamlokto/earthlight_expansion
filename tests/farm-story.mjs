@@ -2,7 +2,7 @@
 // festivals, the opening, the radio, signs, the guide, the Memory Room, fishing and the Old World.
 //   node tests/farm-story.mjs
 import * as story from '../js/farm/story.js';
-const { NPCS, whereIs, talkLines, giftLine, giftTier, EVENTS, FESTIVALS, INTRO, DAY1, RADIO, SIGNS, HELP, MUSEUM, FISHING, RUINS, ROMANCE, QUESTS } = story;
+const { NPCS, whereIs, talkLines, giftLine, giftTier, EVENTS, FESTIVALS, INTRO, DAY1, RADIO, SIGNS, HELP, MUSEUM, FISHING, RUINS, SHUTTLE, ROMANCE, QUESTS } = story;
 
 let failures = 0, checks = 0;
 const check = (cond, what) => { checks++; if (!cond) { failures++; if (failures <= 60) console.log('FAIL', what); } };
@@ -65,7 +65,7 @@ const RELICS = ['photo', 'teacup', 'book', 'watch', 'toy', 'medal', 'seedtin', '
 const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king', 'cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi'];
 const CROPS = ['turnip', 'potato', 'cucumber', 'strawberry', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach', 'moonflower'];
 const GIFTABLE = [...CROPS, 'egg', 'milk_s', 'milk_m', 'milk_l', ...FISH, 'herb', 'berry', 'mushroom', 'frostcap', 'comet_ice', 'nickel_iron', 'silica', 'copper', 'titanium', 'platinum',
-  'scrap', 'alloy', 'crystal', ...RELICS, 'bread', 'soup', 'pie', 'tea', 'tonic',
+  'scrap', 'alloy', 'crystal', ...RELICS, 'old_coin', 'teddy_bear', 'film_camera', 'credit_chip', 'data_core', 'bread', 'soup', 'pie', 'tea', 'tonic',
   'tin_lantern', 'gear_brooch', 'pipe_whistle', 'cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi', 'shiitake', 'pale_oyster', 'glowcap', 'deep_truffle', 'pump_part', 'lamp_kit', 'diary_page', 'undercroft_stew', 'fish_grill', 'honey_toast', 'wild_apple', 'cherry', 'peach', 'pine_nut', 'mushroom_skewer'];
 // 2026-11-19: Market Lane's spots, rooms and goods
 for (const x of ('village.lane village.bakeryfront village.tailorfront village.floristfront village.garagefront village.radiofront village.millbridge village.trialbeds ' +
@@ -455,8 +455,13 @@ check(Object.keys(FISHING.caught).sort().join() === [...FISH].sort().join(), 'FI
 for (const f of FISH) { check(isText(FISHING.caught[f], 110), `FISHING.caught.${f}`); count(FISHING.caught[f]); }
 check(/old hollin/i.test(FISHING.caught.fish_king), 'the king of the lake is Old Hollin');
 
-for (const k of ['arrive', 'deeper', 'monster']) {
-  check(Array.isArray(RUINS[k]) && RUINS[k].length === 3 && new Set(RUINS[k]).size === 3, `RUINS.${k}: three lines`);
+// the Old World is one big city a trip (2026-11-20): no 'deeper' lines; news for each of the three zones
+check(!RUINS.deeper, 'RUINS: no levels to go deeper into');
+for (const k of ['first', 'zone', 'zoneFirst']) { check(Array.isArray(RUINS[k]) && RUINS[k].length === 3 && new Set(RUINS[k]).size === 3, `RUINS.${k}: three lines`); for (const s of RUINS[k] || []) { check(isText(s, 240) && !/\blevel\b|deeper|way down/i.test(s), `RUINS.${k}: ${s}`); count(s); } }
+check(isText(RUINS.vault) && isText(SHUTTLE.tow) && SHUTTLE.hull && isText(SHUTTLE.hull[50]) && isText(SHUTTLE.hull[25]) && /12 cr/.test(SHUTTLE.tally(12, 3)), 'RUINS.vault, the tow, hull warnings, the trip tally');
+for (const id of ['old_coin', 'teddy_bear', 'film_camera', 'credit_chip', 'data_core']) { check(isText(RUINS.finds && RUINS.finds[id], 140), `RUINS.finds.${id}`); count(RUINS.finds[id]); }
+for (const k of ['arrive', 'monster']) {
+  check(Array.isArray(RUINS[k]) && RUINS[k].length >= 3 && new Set(RUINS[k]).size === RUINS[k].length, `RUINS.${k}: three lines or more`);
   for (const s of RUINS[k] || []) { check(isText(s, 140), `RUINS.${k}: ${s}`); count(s); }
 }
 check(Object.keys(RUINS.relic).sort().join() === [...RELICS].sort().join(), 'RUINS.relic covers exactly the ten relics');

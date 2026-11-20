@@ -49,7 +49,7 @@ const DRAWN = {
   sapling: `<path d="M14 54h36l-4-10H18Z" fill="#a8783f" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/><path d="M32 44V20" stroke="#6b4a2a" stroke-width="3"/><path d="M32 30c-12 0-14-12-14-12 10 0 14 6 14 12Zm0-6c10 0 14-10 14-10-10 0-14 4-14 10Z" fill="#6fbf5a" stroke="${INK}" stroke-width="1.5"/>`,
   fodder: `<rect x="10" y="22" width="44" height="30" rx="6" fill="#e0c060" stroke="${INK}" stroke-width="2"/><path d="M10 32h44M10 42h44" stroke="#b08a2e" stroke-width="2"/><path d="M22 22v30M42 22v30" stroke="#a3402e" stroke-width="3"/>`,
 };
-const KIND_COLOR = { material: '#c9b28a', artisan: '#e0a83a', craft: '#c96a9a', fruit: '#d8564a', sapling: '#5f9a3a', placeable: '#5f7f8f', part: '#8a98a6', keepsake: '#c98ab0', tool: '#6f7f95', seed: '#8a6f3d', crop: '#4f9a3a', animal: '#d9c79a', fish: '#3f7fa8', forage: '#7a9a4a', ore: '#77736d', relic: '#b08d3c', food: '#c9853a', stock: '#a37a4f' };
+const KIND_COLOR = { material: '#c9b28a', artisan: '#e0a83a', craft: '#c96a9a', fruit: '#d8564a', sapling: '#5f9a3a', placeable: '#5f7f8f', part: '#8a98a6', keepsake: '#c98ab0', tool: '#6f7f95', seed: '#8a6f3d', crop: '#4f9a3a', animal: '#d9c79a', fish: '#3f7fa8', forage: '#7a9a4a', ore: '#77736d', relic: '#b08d3c', valuable: '#d4a63a', food: '#c9853a', stock: '#a37a4f' };
 // Round fruit and forage drawn in their own colour when the art pack has no picture yet.
 const ROUND = { star_plum: '#9a5ad8', comet_ice: '#cfeefa', star_metal: '#c9d2dc', colony_feast: '#e0782a', founders_cake: '#e8c46a', cherry: '#c8102e', peach: '#ffa48a', apple: '#d8362a', persimmon: '#f07a1a', wild_apple: '#d8a03a', wild_grape: '#5a2f7a', chestnut: '#7a4a2a', pine_nut: '#a07a4a', honeycomb: '#f0b32a', winter_root: '#efe2c8', bamboo_shoot: '#c9d27a', wild_mint: '#58c08a', fiddlehead: '#7a9a3a', matsutake: '#e8d8b8' };
 const roundIcon = (c, id) => id === 'honeycomb' ? `<path d="M20 18h12l6 10-6 10H20l-6-10Z M38 28h12l6 10-6 10H38l-6-10Z M20 38h12l6 10-6 10H20l-6-10Z" fill="${c}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`
@@ -205,7 +205,7 @@ export function menu(state, hooks, tab = 'bag') {
     } else if (tab === 'records') {
       const g = sim.goalState(state), L = state.ledger, st = state.stats || {};
       h += `<h3>First steps</h3>` + sim.GOALS.map((q, i) => `<div class="fm-row"><div><b>${g[i].done ? '✔' : '○'} ${esc(q.title)}</b><span>${esc(q.hint)}</span></div></div>`).join('');
-      h += `<h3>The farm</h3><p>Earned from shipping: ${(L.earned || 0).toLocaleString()} cr · Animals: ${state.animals.length} · Deepest level of the Old World: ${st.deepest || 0}</p>`;
+      h += `<h3>The farm</h3><p>Earned from shipping: ${(L.earned || 0).toLocaleString()} cr · Animals: ${state.animals.length} · Old World trips: ${(state.city && state.city.trips) || 0}${state.city && state.city.trips ? ` (farthest: ${['the suburbs', 'downtown', 'the core'][state.city.best || 0]})` : ''}</p>`;
       h += `<h3>Memory Room</h3><p>${sim.museumCount(state)} of 10 kinds of old-world finds given to the village.</p>`;
       const fl = Object.entries(state.fishLog || {}); h += `<h3>Fish caught</h3><p>${fl.length ? fl.map(([id, n]) => `${icon(id)} ${esc(ITEMS[id].name)} × ${n}`).join(' &nbsp; ') : 'None yet.'}</p>`;
       const sh = Object.entries(L.shipped || {}); h += `<h3>Shipped so far</h3><p>${sh.length ? sh.map(([id, n]) => `${icon(id)} ${esc(ITEMS[id] ? ITEMS[id].name : id)} × ${n}`).join(' &nbsp; ') : 'Nothing yet.'}</p>`;
@@ -298,7 +298,7 @@ function todayTab(state, extra) {
     <div><span>${WEATHER_ICON[state.weather]} Today: ${state.weather}</span><span>${WEATHER_ICON[state.weatherTomorrow]} Tomorrow: ${state.weatherTomorrow}</span></div>
     <div><b class="fm-big">${p.money.toLocaleString()} cr</b><span>Stamina ${p.stamina}/${p.maxStamina}${buff ? ' · <span class="fm-ok">♨ onsen glow: tools cost 1 less today</span>' : ''}</span></div></div>`;
   if (fc) h += `<p class="fm-dim">Forecast: ${esc(fc)}</p>`;
-  h += `<div class="fm-stats fm-strength"><span>Max stamina <b>${p.maxStamina}</b>/${sim.MAX_STAMINA_CAP}</span><span>★ Star-plums found <b>${sim.starPlumsFound(state)}</b>/10</span><span>eaten <b>${(state.stats && state.stats.starPlums) || 0}</b></span>${['colony_feast', 'founders_cake'].map((id) => `<span>${state.flags['ate_' + id] ? '✓' : '○'} ${esc(ITEMS[id].name)}</span>`).join('')}</div>`;
+  h += `<div class="fm-stats fm-strength"><span>Max stamina <b>${p.maxStamina}</b>/${sim.MAX_STAMINA_CAP}</span><span>★ Star-plums found <b>${sim.starPlumsFound(state)}</b>/10</span><span>Star-plums eaten <b>${(state.stats && state.stats.starPlums) || 0}</b></span>${['colony_feast', 'founders_cake'].map((id) => `<span>${state.flags['ate_' + id] ? '✓' : '○'} ${esc(ITEMS[id].name)}</span>`).join('')}</div>`;
   h += `<h3>The Hollin field</h3>${fieldSummary(state, 'farm')}`;
   h += `<h3>Greenhouse</h3>${state.flags.greenhouse ? fieldSummary(state, 'greenhouse') : '<p class="fm-dim">Still a wreck. Ruess can repair it (4,000 cr and 120 lumber).</p>'}`;
   const g = state.pasture.grass, sown = g.filter(Boolean).length, rg = g.filter((x) => x === 3).length;
@@ -332,7 +332,7 @@ function holdings(state) {
   for (const k of ['lumber', 'fodder', 'feed']) if (state.stock[k]) add({ id: k, n: state.stock[k] }, 'stores');
   return [...m.values()];
 }
-const KIND_NAME = { tool: 'Tool', seed: 'Seeds', crop: 'Crop', animal: 'From the animals', fish: 'Fish', forage: 'Forage', fruit: 'Fruit', sapling: 'Sapling', placeable: 'Farm gear', part: 'Robot part', ore: 'Salvage', relic: 'Old-world find', food: 'Food', keepsake: 'Keepsake', stock: 'Stores' };
+const KIND_NAME = { tool: 'Tool', seed: 'Seeds', crop: 'Crop', animal: 'From the animals', fish: 'Fish', forage: 'Forage', fruit: 'Fruit', sapling: 'Sapling', placeable: 'Farm gear', part: 'Robot part', ore: 'Salvage', relic: 'Old-world find', valuable: 'Old-world valuable', food: 'Food', keepsake: 'Keepsake', stock: 'Stores' };
 function examineText(state, id) {
   const it = ITEMS[id], facts = [];
   if (it.kind === 'tool' && state.player.toolLevel[id]) facts.push(`Your level: ${TOOL_LEVELS[state.player.toolLevel[id]]}.`);

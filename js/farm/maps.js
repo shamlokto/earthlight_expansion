@@ -432,7 +432,7 @@ function central() {
   m.prop('vent', 30, 9); m.prop('vent', 38, 12); m.prop('vent', 20, 48); m.prop('vent', 48, 48);
   // the lift terminal at the south end of the avenue
   m.prop('lift_kiosk', 33, 52, { w: 3, d: 2, act: 'liftup', label: 'Lift to the Lantern Ring' });
-  m.spot('central.lift', 34.5, 50.5).spot('central.homes', 19.5, 43.6);
+  m.spot('central.lift', 34.5, 50.5).spot('central.homes', 21.6, 44.4);
   m.prop('signpost', 31, 49, { act: 'sign', sign: 'central.plaza' });
   m.start = [34.5, 50.5];
   m.areas = [['The great window', 34.5, 2.5], ['The plaza', 34.5, 31.5], ['Grand Market', 11.5, 32], ['Arrivals', 56, 32.3], ['Canal', 22, 38.4], ['Lift terminal', 34.5, 54.3], ['Gardens', 9, 18.5], ['Space dock: shuttle to Earth', 8, 4.6],
@@ -562,11 +562,11 @@ function interiors() {
   return out;
 }
 
-// The Old World site, built from the sim's grid (state.mine): 0 empty, 1 rubble, 2 way down, 3 wall.
-// A site from the sim's grid (state.mine): the Old World (mode 'earth': rubble, walls of ruin, haze) or a
-// belt sector (mode 'belt': asteroid rocks to drill, great unbreakable rocks, a dark dust lane).
+// A map from the sim's grid (state.mine): the belt (mode 'belt') or the Old World city (mode 'city'). The old
+// levels-style site (below) is only kept for odd states; trips no longer make one.
 export function ruinsMap(mine) {
   if (mine.mode === 'belt') return beltMap(mine);
+  if (mine.mode === 'city') return cityMap(mine);
   const belt = false;
   const m = new MapDef('ruins', mine.w + 2, mine.h + 3, belt ? 'v' : 'a', { name: belt ? `The belt, sector ${mine.depth || 1}` : `The Old World, level ${mine.depth || mine.floor || 1}`, ruins: true, belt, earth: !belt });
   m.fill(0, 0, m.w - 1, 0, 'x'); m.fill(0, 0, 0, m.h - 1, 'x'); m.fill(m.w - 1, 0, m.w - 1, m.h - 1, 'x'); m.fill(0, m.h - 1, m.w - 1, m.h - 1, 'x');
@@ -577,6 +577,29 @@ export function ruinsMap(mine) {
   }
   m.prop(belt ? 'launch_pad' : 'shuttle_pad', 8, mine.h + 1, { solid: false, act: 'liftup' });
   m.start = [8.5, mine.h + 1.5];
+  return m;
+}
+
+// The Old World city ruins (sim.js cityLayout, 2026-11-20): one big map a trip, cell (x, y) at tile (x + 1, y + 1). The
+// ground is asphalt streets, ash lots, overgrowth and toxic pools ('t', walkable: the sim wears the hull there); every
+// solid cell blocks (MapDef.block). The towers are props (stretched to their footprints); the small things (cars, buses,
+// rubble, lockers, safes, counters, billboards, debris) and the gas are placed near Sato by main.js as she walks.
+const CITY_GROUND = { 0: 'm', 1: 'a', 2: 'o', 3: 'm', 4: 'm', 5: 'a', 6: 't', 7: 'g', 8: 'a', 9: 'm', 10: 'a', 11: 'a', 12: 'a', 13: 'a', 14: 'a' };
+const CITY_SOLID_CELLS = new Set([2, 3, 4, 5, 8, 10, 11, 12, 13, 14]);
+function cityMap(mine) {
+  const W = mine.w + 2, H = mine.h + 2;
+  const m = new MapDef('ruins', W, H, 'x', { name: 'The Old World', ruins: true, belt: false, earth: true, city: true, ver: 'city' + mine.seed });
+  m.origin = [1, 1];
+  for (let y = 0; y < mine.h; y++) for (let x = 0; x < mine.w; x++) {
+    const c = mine.cells[y * mine.w + x], i = (y + 1) * W + x + 1;
+    m.g[i] = x === 0 || y === 0 || x === mine.w - 1 || y === mine.h - 1 ? 'a' : CITY_GROUND[c] || 'a';
+    if (CITY_SOLID_CELLS.has(c)) m.block[i] = 1;
+  }
+  for (const [k, t] of (mine.towers || []).entries()) m.prop('ruin_tower', t.x + 1, t.y + 1, { w: t.w, d: t.d, hgt: 1 + t.h * 0.85, seed: k });
+  const [px, py] = mine.pad || [48, 67];
+  m.prop('shuttle_pad', px + 1, py + 1, { solid: false, act: 'liftup', label: 'The shuttle' });
+  m.prop('shuttle', px + 3, py - 1, { w: 3, d: 3, rot: -Math.PI / 2, act: 'liftup', label: 'The shuttle' });
+  m.start = [px + 1.5, py + 1.5];
   return m;
 }
 
@@ -791,6 +814,7 @@ function homeRooms(all) {
   door('shelter', 'lower', 29, 6, "The Thornes' shelter"); HOMES.shelter.flag = 'ld_enclave';
   hatch('venn', 'lower', 24, 35, "Venn's cabin"); hatch('wick', 'lower', 10, 22, "Wick's hut"); hatch('hana', 'lower', 10, 56, "Hana's loft");
   all.central.buildings.find((b) => b.x === 17 && b.y === 39).homeFlag = 'ld_rehoused';
+  all.central.areas.push(['Housing rows', 51, 45.3]);   // the map names the rows once (the houses with people in them say whose)
   const HOUSE_HOME = { 'central.house_1': 'thornes', 'central.house_3': 'general', 'central.house_4': 'moraine' };   // the boarded-up notes on doors that are homes now
   for (const p of [...all.village.props, ...all.central.props]) if (p.act === 'house') { const k = HOUSE_HOME[p.house] || String(p.house).replace(/^home_/, ''); if (HOMES[k]) p.home = k; }
   return out;

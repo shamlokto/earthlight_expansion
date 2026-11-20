@@ -137,16 +137,18 @@ export function route(fromMap, fx, fy, toMap, tx, ty) {
 }
 
 // ---------------------------------------------------------------- the day plan
-// Spots that are somebody's post: they stay to the end of it, and set off early to be on time for the next.
-export const DUTY = /\.(counter|desk|altar|teacher|pupil|stage|office|exchange|press)$|^central\.dock$|^hangar\.floor$/;
-const offset = (k) => (k <= 1 ? [0, 0] : [Math.cos(k * 2.2) * 1.1, Math.sin(k * 2.2) * 0.9 + 0.3]);
+// Spots that are somebody's post: they stay to the end of it, and set off early to be there on the hour. Other places they leave
+// when the hour comes, or sooner if a post later in the day needs it (planDay works the deadlines backwards).
+export const DUTY = /\.(counter|desk|altar|teacher|pupil|stage|office|exchange|press)$|^central\.dock$|^hangar\.floor$|^school\.floor$/;
+// Where the k-th person sharing a spot stands: the spot, then places round it (the old offsets first), always on open ground.
+const RING = [[0, 0], ...[2, 3, 4, 5, 6, 7].map((k) => [Math.cos(k * 2.2) * 1.1, Math.sin(k * 2.2) * 0.9 + 0.3]), ...Array.from({ length: 12 }, (_, i) => [Math.cos(i * 0.5236) * 1.7, Math.sin(i * 0.5236) * 1.4])];
 const spotCache = new Map();
 function pointOf(spot, k) {
   const ck = spot + '#' + k; if (spotCache.has(ck)) return spotCache.get(ck);
   const at = findSpot(spot); if (!at) { spotCache.set(ck, null); return null; }
-  const m = allMaps()[at.map], [ox, oy] = offset(k); let x = at.x + ox, y = at.y + oy;
-  if (m.solid(x, y) || !walkable(grid(m), Math.floor(x), Math.floor(y))) { x = at.x; y = at.y; }
-  const p = { map: at.map, x, y }; spotCache.set(ck, p); return p;
+  const m = allMaps()[at.map], G = grid(m), got = []; let p = { map: at.map, x: at.x, y: at.y };
+  for (const [ox, oy] of RING) { const x = at.x + ox, y = at.y + oy; if ((ox || oy) && (m.solid(x, y) || !walkable(G, Math.floor(x), Math.floor(y)) || m.postNear(x, y, 0.3))) continue; if (got.some(([a, b]) => Math.hypot(a - x, b - y) < 0.75)) continue; got.push([x, y]); if (got.length === Math.max(1, k)) { p = { map: at.map, x, y }; break; } }
+  spotCache.set(ck, p); return p;
 }
 // sched(id, minute) → { spot, vis } | null (vis: seen there; off: in bed or sheltering out of sight). Samples every 10 minutes,
 // 6:00 to midnight, and plans every walk so it ends on time for a post and starts on time from one.
@@ -163,14 +165,18 @@ export function planDay(ids, sched) {
     }
   }
   for (const id of ids) {
-    const P = plan[id]; let A = 0;
-    P.stops.forEach((st, i) => {
-      st.at = st.spot ? pointOf(st.spot, st.k) : null; st.D = st.A = Math.max(st.T, A); A = Math.max(A, st.A);
-      const prev = P.stops[i - 1]; if (!prev) return;
-      if (!st.at || !prev.at || (prev.spot === st.spot && prev.at.map === st.at.map && Math.hypot(prev.at.x - st.at.x, prev.at.y - st.at.y) < 0.3)) return;   // nothing to walk
-      const r = route(prev.at.map, prev.at.x, prev.at.y, st.at.map, st.at.x, st.at.y); if (!r) return;   // no way: they simply arrive (the old behaviour)
-      const D = Math.max(DUTY.test(prev.spot) ? st.T : st.T - r.minutes, prev.D === undefined ? 0 : prev.A);
-      st.D = D; st.A = D + r.minutes; st.route = r; A = st.A;
+    const P = plan[id], S = P.stops;
+    // the walks first (they depend only on the two places), then the latest each must arrive to make every later post on time
+    S.forEach((st, i) => { st.at = st.spot ? pointOf(st.spot, st.k) : null; const prev = S[i - 1]; st.need = DUTY.test(st.spot) ? st.T : Infinity;
+      if (!prev || !st.at || !prev.at || (prev.spot === st.spot && prev.at.map === st.at.map && Math.hypot(prev.at.x - st.at.x, prev.at.y - st.at.y) < 0.3)) return;   // nothing to walk
+      st.route = route(prev.at.map, prev.at.x, prev.at.y, st.at.map, st.at.x, st.at.y); st.shuffle = prev.spot === st.spot; });   // no route: they simply arrive
+    for (let i = S.length - 1; i > 0; i--) { const st = S[i], prev = S[i - 1]; if (st.route && !DUTY.test(prev.spot)) prev.need = Math.min(prev.need, st.need - st.route.minutes); }
+    let A = 0;
+    S.forEach((st, i) => {
+      const prev = S[i - 1];
+      if (!st.route) { st.D = st.A = Math.max(st.T, A); A = st.A; return; }
+      const r = st.route, D = st.shuffle || DUTY.test(prev.spot) ? Math.max(st.T, A) : Math.max(DUTY.test(st.spot) ? st.T - r.minutes : Math.min(st.T, st.need - r.minutes), A);   // to a post: there on the hour; elsewhere: off when the hour comes (sooner if a later post needs it)
+      st.D = D; st.A = D + r.minutes; A = st.A;
       let t = D; st.segs = r.legs.map((l, j) => { const s = { map: l.map, pts: l.pts, len: l.len, t0: t, t1: t + l.len / TILES_PER_MIN }; t = s.t1 + (r.wait[j] || 0); return s; });
     });
   }

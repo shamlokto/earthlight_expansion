@@ -131,7 +131,7 @@ item('titanium', 'Titanium ore', 'ore', 'Light, stubborn ore from sector 4 out. 
 item('platinum', 'Platinum nugget', 'ore', 'A heavy, soft-shining nugget of the platinum metals, deep in the belt.', { sell: 260,
   detail: 'Platinum, iridium and osmium, fused into a nugget the size of a thumb, from belt sector 8 out. It sells very well, Moraine adores it, and one tips the rock-splitter hammer head.' });
 
-// Old-world artefacts from the ruins, cheapest first. `depth` is the shallowest site they turn up in.
+// Old-world artefacts from the ruins, cheapest first. `depth` is from the old levels design (1 suburbs .. 12 the core); sim.OLD_FINDS has the city odds.
 export const RELICS = [
   ['photo', 'Faded photograph', 80, 1, 'Strangers smiling under a blue sky.'],
   ['teacup', 'Porcelain cup', 120, 1, 'Not a chip on it, somehow.'],
@@ -144,6 +144,13 @@ export const RELICS = [
   ['datachip', 'Data chip', 500, 10, 'A sealed chip from before the fall.'],
   ['ring', 'Gold ring', 600, 12, 'Engraved inside: two names and a date.'],
 ].map(([id, name, sell, depth, desc]) => { item(id, name, 'relic', desc, { sell }); return { id, depth }; });
+
+// More old-world finds from the city ruins (2026-11-20): kind 'valuable' (they sell; some make good gifts).
+item('old_coin', 'Old coin', 'valuable', 'A tarnished old-world coin. Collectors on Eden pay for them.', { sell: 50, detail: 'Bronze, worn smooth, from a country that is not on any map now. They turn up everywhere in the city ruins: in rubble, in car trunks, by the handful in tower safes.' });
+item('teddy_bear', 'Teddy bear', 'valuable', 'A worn teddy bear with one button eye. Somebody loved it very much.', { sell: 90, detail: 'Found in suburban rubble and in lockers. The children in the Undercroft would give anything for one; so, secretly, would the Professor.' });
+item('film_camera', 'Film camera', 'valuable', 'A chunky old film camera. The shutter still clicks.', { sell: 240, detail: 'From downtown shop counters and lockers, and the core. Ruess wants to know how it works; Calloway wants to know what was on the film.' });
+item('credit_chip', 'Credit chip', 'valuable', 'An old-world credit chip. The Ashfall Exchange still honours them.', { sell: 80, detail: 'A sealed chip of old-world money, which the Exchange converts at a rate nobody quite understands. From lockers and safes in the city ruins.' });
+item('data_core', 'Data core', 'valuable', 'A crystal data core from the sealed vault, humming faintly.', { sell: 800, detail: 'A whole archive in a block of crystal, taken from the sealed vault deep in the core of the city ruins, past its spore-brute. Ruess would trade his workshop for one. Almost.' });
 
 item('bread', 'Bread', 'food', 'Restores 20 stamina.', { stamina: 20 });
 // Home cooking (the kitchen): better than shop food, and worth more in the bin than the raw goods.
@@ -253,16 +260,16 @@ const DETAIL = {
   scrap: 'Twisted metal from the Old World ruins and the near belt. Ruess wants five for every Alloy upgrade, and he never says no to more.',
   alloy: 'Good structural alloy, broken from asteroid rocks from belt sector 5 out. Five go into a Starsteel upgrade; three into the Pallas filters.',
   crystal: 'A drive crystal from the belt: in medium boulders from sector 10 out, and in large and huge boulders anywhere. Starsteel tools need one.',
-  photo: 'Strangers smiling under a blue sky, faded to sepia. Found in the shallowest ruins; the Memory Room keeps one.',
-  teacup: 'A porcelain cup without a chip on it, somehow. Found in the shallow ruins.',
-  book: 'An old-world book whose pages still turn. Found from level 2 of the ruins.',
-  watch: 'A pocket watch stopped at a quarter past four. Found from level 3; Ruess loves to tinker with them.',
-  toy: 'A wind-up tin robot. It still walks. Found from level 4.',
-  medal: 'Somebody earned this once. Found from level 5; give it to the Memory Room rather than to the General.',
-  seedtin: 'A rusted tin of seeds from old Earth. Found from level 6.',
-  musicbox: 'A music box that plays a tune nobody remembers. Found from level 8.',
-  datachip: 'A sealed data chip from before the fall. Found from level 10; Ruess would give anything to read it.',
-  ring: 'A gold ring engraved with two names and a date. Found from level 12, the deepest of the finds.',
+  photo: 'Strangers smiling under a blue sky, faded to sepia. Found all over the city ruins, mostly in the suburbs; the Memory Room keeps one.',
+  teacup: 'A porcelain cup without a chip on it, somehow. Found in the city ruins, mostly in the suburbs.',
+  book: 'An old-world book whose pages still turn. Found in the city ruins, in rubble and on shop counters.',
+  watch: 'A pocket watch stopped at a quarter past four. Found in the city ruins, more often downtown; Ruess loves to tinker with them.',
+  toy: 'A wind-up tin robot. It still walks. Found in the city ruins, downtown and in the core.',
+  medal: 'Somebody earned this once. Found downtown and in the core of the city ruins; give it to the Memory Room rather than to the General.',
+  seedtin: 'A rusted tin of seeds from old Earth. Found in the city ruins, more often in the core, and always in the sealed vault.',
+  musicbox: 'A music box that plays a tune nobody remembers. Found downtown and in the core of the city ruins, now and then in the sealed vault.',
+  datachip: 'A sealed data chip from before the fall. Found downtown and in the core of the city ruins; Ruess would give anything to read it.',
+  ring: 'A gold ring engraved with two names and a date. Found in the core of the city ruins, in tower safes, and sometimes in the sealed vault.',
   bread: 'A round loaf from Seln\'s store, baked in the hydroponics oven at dawn. Also the crust of a fruit tart and the base of honey toast.',
   omelette: 'Egg and milk, folded soft, cooked in your own kitchen.',
   salad: 'Two different vegetables, crisp from the field.',
