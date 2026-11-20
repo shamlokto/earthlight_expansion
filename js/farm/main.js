@@ -700,8 +700,8 @@ function hullBar(on) {
 function cityPlace(i) {
   const m = S.mine, c = m.cells[i], x = i % m.w, y = Math.floor(i / m.w), kind = CITY_PROP[c];
   if (c === 4) { if (m.cells[i - m.w] === 4) return; W.place('cy' + i, kind, x + 1.5, y + 2.5, { w: 1, d: 3, seed: i }); }
-  else if (kind) { const o = W.place('cy' + i, kind, x + 1.5, y + 1.5, { seed: i, scale: c === 11 ? 0.7 : 1 }); if (c === 5 || c === 14) o.rotation.y = i % 6;   // billboards, lockers, counters, safes and the vault face +Z, towards the camera }
-  else if (c === 6 && (x + y) % 2 === 0) W.place('cy' + i, 'toxic_pool', x + 1.5, y + 1.5, { seed: i });
+  else if (kind) { const o = W.place('cy' + i, kind, x + 1.5, y + 1.5, { seed: i, scale: c === 11 ? 0.7 : 1 }); if (c === 5 || c === 14) o.rotation.y = i % 6; }   // billboards, lockers, counters, safes and the vault face +Z, towards the camera
+  else if (c === 6 && x % 2 === 0 && y % 2 === 0) W.place('cy' + i, 'toxic_pool', x + 1.5, y + 1.5, { seed: i });
   else if (m.haz[i] && (x + y) % 2 === 0) W.place('cy' + i, 'haze', x + 1.5, y + 1.5, { hazard: 1 });
   else return;
   cityPlaced.add(i);
@@ -761,7 +761,7 @@ function citySearch(x, y) {
   if (r.star) { sfx('good'); ui.celebrate(r.msg); }
   if (r.credits) { floatText(x + 1.5, y + 1.5, `+${r.credits} cr`); sfx('pick'); }
   ui.gainedToast(r.gained);
-  for (const g of r.gained || []) if (ITEMS[g.id].kind === 'relic' || ITEMS[g.id].kind === 'valuable') { sfx('good'); const t = story.RUINS.relic[g.id]; if (t) ui.toast(t, 5200); break; }
+  for (const g of r.gained || []) if (ITEMS[g.id].kind === 'relic' || ITEMS[g.id].kind === 'valuable') { sfx('good'); const t = story.RUINS.relic[g.id] || (story.RUINS.finds && story.RUINS.finds[g.id]); if (t) ui.toast(t, 5200); break; }
   if (r.kind === 'vault') ui.toast(story.RUINS.vault, 5200);
   if (r.msg && !r.star && !(r.gained || []).length && !r.credits) ui.toast(r.msg);
   refreshHud(); hullBar(true); if (r.fainted) night(true);

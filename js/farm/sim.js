@@ -1018,7 +1018,7 @@ export function cityMove(state, x, y) {
 }
 // Old-world finds: [id, weight in the suburbs, downtown, the core]. The rarer ones come further in (and from safes and lockers).
 export const OLD_FINDS = [
-  ['old_coin', 6, 5, 4], ['photo', 5, 3, 2], ['teacup', 4, 3, 2], ['teddy_bear', 3, 3, 2], ['book', 3, 3, 2], ['vinyl_record', 2, 3, 3],
+  ['old_coin', 6, 5, 4], ['photo', 5, 3, 2], ['teacup', 4, 3, 2], ['teddy_bear', 3, 3, 2], ['book', 3, 3, 2], ['record', 1, 2, 2],
   ['watch', 1, 3, 3], ['toy', 1, 2, 2], ['film_camera', 0.5, 2, 3], ['medal', 0.3, 1.5, 2], ['musicbox', 0.2, 1, 2], ['seedtin', 0.2, 0.8, 1.5],
   ['datachip', 0, 0.6, 1.5], ['ring', 0, 0.4, 1.2], ['credit_chip', 0.5, 1.5, 2],
 ];

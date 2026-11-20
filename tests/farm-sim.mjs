@@ -530,7 +530,7 @@ function script(s, days = 12) {
   check(r2.rare > r0.rare && safe2.rare > r2.rare, 'the rare finds come further in, and from safes');
   check(car.cr > 2 && safe0.cr > 30 && safe0.items >= 1 && safe2.worth > safe0.worth && lock.items > 0.6, `cars hold credits, safes always pay (${safe0.worth.toFixed(0)}–${safe2.worth.toFixed(0)} cr a safe), lockers mostly hold something`);
   check(vault.worth > 1500 && vault.items >= 5, `the sealed vault is the big prize (${vault.worth.toFixed(0)} cr)`);
-  check(['old_coin', 'vinyl_record', 'teddy_bear', 'film_camera', 'credit_chip', 'data_core'].every((id) => ITEMS[id] && ITEMS[id].sell > 0 && ITEMS[id].kind === 'valuable'), 'the new old-world valuables sell');
+  check(['old_coin', 'teddy_bear', 'film_camera', 'credit_chip', 'data_core'].every((id) => ITEMS[id] && ITEMS[id].sell > 0 && ITEMS[id].kind === 'valuable'), 'the new old-world valuables sell');
   check(sim.OLD_FINDS.every(([id]) => ITEMS[id]) && RELICS.every((r) => sim.OLD_FINDS.some(([id]) => id === r.id)), 'every relic can still be found');
 
   // searching: one stamina, once a spot, credits to the purse; a bad search costs nothing

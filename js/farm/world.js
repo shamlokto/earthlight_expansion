@@ -916,7 +916,7 @@ export class World {
       o.position.set(p.x + p.w / 2, p.onWater ? -0.18 : 0, p.y + p.d / 2);
       if (p.rot && (o.userData.is3d || kind === 'fence')) o.rotation.y = p.rot;
       if (o.userData.turn) o.rotation.y = Math.PI / 2;
-      R.add(o); p.obj = o; if (kind === 'tree' || kind === 'pine' || kind === 'bush') this.tallProps.push(o);
+      R.add(o); p.obj = o; if (kind === 'tree' || kind === 'pine' || kind === 'bush' || kind === 'ruin_tower') this.tallProps.push(o);   // city towers fade too
       if (kind === 'tree' && p.fruit && this.wildFruitShown && this.wildFruitShown(map, p)) {     // a fruiting wild tree: fruit in the canopy
         const col = { plum: 0x7a2f6a, loquat: 0xf0a830, mulberry: 0x3a1838, wild_apple: 0xc8402a, chestnut: 0x8a5a2a, yuzu: 0xf2d23a }[p.fruit] || 0xd04030;
         const fg = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.5 }), geo = new THREE.SphereGeometry(0.11, 8, 6), sc = p.scale || 1;

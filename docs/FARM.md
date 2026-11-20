@@ -820,13 +820,12 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   finds come from `OLD_FINDS` (the ten relics plus the new valuables, rarer ones further in and from lockers and
   safes). The vault: a data core, a ring or music box, two credit chips, a seed tin, 200–300 cr × the zone, and a
   star-plum the first two times ever (`flags.plum_ruins10`, `plum_ruins20`, as the old levels 10 and 20 had).
-* **New items** (kind `valuable`, sell): `old_coin` 50, `teddy_bear` 90, `vinyl_record` 140, `film_camera` 240,
-  `credit_chip` 80, `data_core` 800. Gifts: Ruess loves the data core and likes the camera; Yui and Maris love
-  vinyl records, Yui likes teddy bears; Fenn loves teddy bears; Vashti likes the camera and old coins; Moraine loves
-  old coins; Marrow likes old coins. Reused: `photo`, `teacup`, `book`, `watch`, `toy`, `medal`, `seedtin`,
+* **New items** (kind `valuable`, sell): `old_coin` 50, `teddy_bear` 90, `film_camera` 240,
+  `credit_chip` 80, `data_core` 800. Gifts: Ruess loves the data core (the pocket watch is now a like) and likes the camera;
+  Yui and Maris love old records (the existing `record`, now also a city find); Fenn loves teddy bears; Moraine and Marrow like old coins. Reused: `record` (the salvaged vinyl record), `photo`, `teacup`, `book`, `watch`, `toy`, `medal`, `seedtin`,
   `musicbox`, `datachip`, `ring`, `scrap`, `battery`.
 * **Economy.** A city trip on 60 stamina (the 60 spots nearest the pad and the creatures outside the core) is worth
-  about 1,900 cr against about 950 cr for 60 Field-hammer blows in belt sector 5 (tests/farm-sim.mjs measures both):
+  about 2,100 cr against about 950 cr for 60 Field-hammer blows in belt sector 5 (tests/farm-sim.mjs measures both):
   more, with more risk (the hull, the tow fee, the shuttle fare). A full clear including the core and the vault is
   worth several thousand.
 * **The HUD** shows the zone, the hull and the credits found (`The core · hull 72/100 · found 340 cr`) and a hull bar
@@ -843,5 +842,5 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
 Art slots added (models; each has a procedural stand-in in js/farm/cityworld.js): `ruin_tower`, `ruin_car`,
 `ruin_bus`, `ruin_rubble`, `ruin_billboard`, `ruin_locker`, `ruin_vault` (also the safes, smaller), `shop_counter`,
 `toxic_pool`, `shuttle_pad` (as before), and the creatures `rad_hound`, `glow_slime`, `rust_crawler`, `smog_wraith`,
-`spore_brute`. Icons `icons/old_coin`, `icons/vinyl_record`, `icons/teddy_bear`, `icons/film_camera`,
+`spore_brute`. Icons `icons/old_coin`, `icons/teddy_bear`, `icons/film_camera`,
 `icons/credit_chip`, `icons/data_core`. Texture `textures/asphalt` (optional).

@@ -147,7 +147,6 @@ export const RELICS = [
 
 // More old-world finds from the city ruins (2026-11-20): kind 'valuable' (they sell; some make good gifts).
 item('old_coin', 'Old coin', 'valuable', 'A tarnished old-world coin. Collectors on Eden pay for them.', { sell: 50, detail: 'Bronze, worn smooth, from a country that is not on any map now. They turn up everywhere in the city ruins: in rubble, in car trunks, by the handful in tower safes.' });
-item('vinyl_record', 'Vinyl record', 'valuable', 'A black disc of old-world music in a faded sleeve.', { sell: 140, detail: 'Grooves of somebody\'s favourite song. Nobody on Eden has a player, which has never stopped anyone wanting one. From shop counters and car seats, more often downtown.' });
 item('teddy_bear', 'Teddy bear', 'valuable', 'A worn teddy bear with one button eye. Somebody loved it very much.', { sell: 90, detail: 'Found in suburban rubble and in lockers. The children in the Undercroft would give anything for one; so, secretly, would the Professor.' });
 item('film_camera', 'Film camera', 'valuable', 'A chunky old film camera. The shutter still clicks.', { sell: 240, detail: 'From downtown shop counters and lockers, and the core. Ruess wants to know how it works; Calloway wants to know what was on the film.' });
 item('credit_chip', 'Credit chip', 'valuable', 'An old-world credit chip. The Ashfall Exchange still honours them.', { sell: 80, detail: 'A sealed chip of old-world money, which the Exchange converts at a rate nobody quite understands. From lockers and safes in the city ruins.' });
