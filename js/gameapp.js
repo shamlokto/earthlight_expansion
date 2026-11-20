@@ -838,14 +838,19 @@ async function phaseEvents() {
   if (!ev) return;
   battle.phaseEvent = null;
   busy = true;
-  log(`<b>${battle.info.custom ? 'The cannons fired' : 'Buccaneer Cannon fired'}</b>${ev.hit.length ? ': ' + ev.hit.map((u) => `<span class="${side(u.army)}">${nameOf(u)}</span>`).join(', ') + ' destroyed' : ''}`);
+  const named = (list) => list.map((u) => `<span class="${side(u.army)}">${nameOf(u)}</span>`).join(', ');
+  if (ev.say) {   // the colony's aimed cannon: it only fires when Eden has machines in its band
+    const dead = ev.hit.filter((u) => u.hp <= 0), hurt = ev.hit.filter((u) => u.hp > 0);
+    log(`<b>${ev.say}</b>${[dead.length ? named(dead) + ' destroyed' : '', hurt.length ? named(hurt) + ' badly hit' : ''].filter(Boolean).map((t) => ' ' + t).join(';')}`);
+  } else log(`<b>${battle.info.custom ? 'The cannons fired' : 'Buccaneer Cannon fired'}</b>${ev.hit.length ? ': ' + named(ev.hit) + ' destroyed' : ''}`);
   await alerts([EV.cannon]);
   if (sound) sound.playSfx(0x3F);
   // the modern board sweeps a beam down each lane; the classic one flashes the lanes' hexes
-  if (!board.classic && board.laneBlast) await board.laneBlast(ev.cannons, battle.info.rows);
+  const beams = ev.cannons.flatMap((c) => (c.cols || [c.x]).map((x) => ({ x, y: c.y })));   // a band: a beam per column
+  if (!board.classic && board.laneBlast) await board.laneBlast(beams, battle.info.rows);
   else {
     const cells = [];
-    for (const c of ev.cannons) for (let y = c.y; y <= battle.info.rows; y++) cells.push([c.x, y]);
+    for (const c of beams) for (let y = c.y; y <= battle.info.rows; y++) cells.push([c.x, y]);
     await flash(cells, 'rgba(255,240,200,.75)');
   }
   busy = false;

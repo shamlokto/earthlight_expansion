@@ -56,17 +56,45 @@ export function detachBurner(b, u) { u.burner = false; }
 export function liveCannons(b) {
   return (b.cannons || []).filter((c) => c.tower !== null && b.units[c.tower].hp > 0);
 }
-export function inLane(b, x, y) {
-  return liveCannons(b).some((c) => c.x === x && y >= c.y && y < CANNON_ROWS);
+// A cannon's lane: its column (or `cols`, a band), from its row down. An aimed cannon (the colony's,
+// `aim`: mission.cannons) only ever shoots at Eden's machines, so it is a lane only for army 0.
+const laneHas = (c, x, y) => (c.cols ? c.cols.includes(x) : c.x === x) && y >= c.y && y < CANNON_ROWS;
+export function inLane(b, x, y, army) {
+  return liveCannons(b).some((c) => laneHas(c, x, y) && (!c.aim || army === undefined || army === 0));
 }
 
-// Destroys what is in the lanes; returns { cannons, hit } or null when nothing fired.
+// The colony's aimed cannon (mission.cannons `aim`): it fires once a round, as Eden's phase ends
+// (whatever Eden left standing in the band), and only when something of Eden's is there; each hit
+// takes `aim` HP or half the machine's HP, whichever is more (a light machine is wrecked, a heavy one
+// crippled; two stops kill anything). Cargo dies with a carrier.
+function aimedHit(b, u, c) {
+  const dmg = Math.max(c.aim, Math.ceil(b.type(u).hp / 2));
+  u.hp = Math.max(0, u.hp - dmg);
+  if (!u.hp) for (const k of b.cargo(u)) k.hp = 0;
+}
+
+// Fires what is armed; returns { cannons, hit, say? } or null when nothing fired. The ROM's cannons
+// (and the expansion campaign's) destroy every unit in their lanes, of either army, at every phase
+// change; an aimed one (above) stays silent with nobody of Eden's in its band.
 export function fireCannons(b) {
   const live = liveCannons(b);
   if (!live.length) return null;
-  const hit = b.alive().filter((u) => live.some((c) => c.x === u.x && u.y >= c.y && u.y < CANNON_ROWS));
-  for (const u of hit) destroy(b, u);
-  return { cannons: live, hit };
+  const fired = [], hit = [];
+  let say = null;
+  for (const c of live) {
+    if (c.aim) {
+      if (b.army !== 1) continue;   // Eden's phase has just ended
+      const in_ = b.alive().filter((u) => u.eden && u.army === 0 && laneHas(c, u.x, u.y));
+      if (!in_.length) continue;
+      for (const u of in_) aimedHit(b, u, c);
+      fired.push(c); hit.push(...in_); say = say || c.say || 'The fortress cannon fires!';
+      continue;
+    }
+    fired.push(c);
+    for (const u of b.alive()) if (laneHas(c, u.x, u.y) && !hit.includes(u)) { destroy(b, u); hit.push(u); }
+  }
+  if (!fired.length) return null;
+  return say ? { cannons: fired, hit, say } : { cannons: fired, hit };
 }
 
 function destroy(b, u) {

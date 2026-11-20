@@ -138,50 +138,62 @@ rest: share = clamp((n + 4) / 44, 0.2, 1) for n guardians fielded → 31 machine
 ### 2b. Hesk's Stronghold (4 × 4 screens, 59 × 40 playable: the size of the expansion's finale, Kessrin / Nineveh)
 
 A nameless rock beyond the far belt: an asteroid fortress in the north-east (asteroid body, a wall ring, an inner
-deck court), its **harbour mouth** opening south-west (ships can sail in), a **west gate** (craft, through the
-meteoroid belt) and a **south gate** under the **fortress cannon** (fires straight down column 54 from row 19 at
-every phase change while its tower stands, as the Nineveh's). Eight turrets on the court's mounts. Three approach
-lanes from Eden's staging corner (south-west): the **meteoroid belt** in the north (craft only, slow, three narrow
-gaps), **the Gullet** between two asteroid ridges (fast, mined at its head, with plasma clouds), and the open
-**south lane** under the cannon.
+deck court), its **harbour mouth** opening south-west (ships can sail in: the straight way to the Verdict's berth), a
+**west gate** (craft, through the meteoroid belt) and a **south gate**, with the **gun tower** (Adzam, 54,18) outside it.
+Eight turrets on the court's mounts. Three approach lanes from Eden's staging corner (south-west): the **meteoroid belt**
+in the north (craft only, slow, three narrow gaps), **the Gullet** between two asteroid ridges (fast, mined at its head,
+with plasma clouds), and the open **south lane**.
 
-Objective: **sink the Verdict** (Major Hesk's Leviathan, level 9) within **30 turns**. She arrives **last, on turn
-15**, in the court. Before that, wiping out what is on the map wins nothing (`awaitArrivals`). Lost if the General's
+**The fortress cannon** (owner, 2026-11-20: "The cannon lane is silly. It shoots at nothing." / "The fortress cannon is of
+no threat."): it covers the **harbour lane**, a band of three columns (44–46) from the harbour mouth (row 13) to the south
+edge, so the straight way in to the Verdict runs under it. Colony-only aim (`mission.cannons` `aim` 8, `cols`, `say`;
+`ExpansionBattle` takes them only for `mission.colony`; `events.js fireCannons`): it fires **once a round, as Eden's phase
+ends**, and only when Eden has machines in the band: every one of them takes 8 HP or half its hull, whichever is more (a
+light machine is wrecked, a heavy one crippled; two stops kill anything; cargo dies with its carrier). Hesk's own machines
+are never hit. Empty lane: no shot, no log line. The log reads *The fortress cannon fires down the harbour lane!* and who
+was destroyed or badly hit; the board shows the band (as the Buccaneer's lanes) and the beam sweeps each column. Kill the
+tower and it is silent (two Cyclops Kai, a Directorate Talos and a mine guard it; 8 HP). The briefing names the lane and
+the tower: dash through, go round, or silence the tower first. Eden's AI keeps out of the band; Hesk's no longer needs to.
+The base game's and the expansion campaign's cannons are unchanged (destroy everything in the column at every phase change).
+
+Objective: **sink the Verdict** (Major Hesk's Leviathan, level 9) within **35 turns** (was 30). She arrives **last, on
+turn 15**, in the court. Before that, wiping out what is on the map wins nothing (`awaitArrivals`). Lost if the General's
 machine falls, the turn limit passes, Eden is wiped out, or retreats.
 
 Legend as above, plus `g` turrets (Dragon/Hydra), `m` mines (Pandora/Wisp), `T` the cannon's tower (Adzam),
-`e` the garrison (holding until turns 6–12), `z` **the ambush** (asleep until turn 6 or until shot at),
-`3` turn-3 wave behind the General, `6` turn 6 (north), `9` turn 9 (east), `c` turn 12 (behind again),
-`V` the Verdict and `f` her escort (turn 15), `o` Eden's first 40 start hexes (the General at 7,35).
+`e` the garrison (holding until turns 6–12), `z` **the ambush** (asleep until turn 8 or until shot at), `r` the
+reinforcements (only when Hesk has had time), `3` turn-3 wave behind the General, `9` turn 9 (east), `c` turn 12
+(behind again), `V` the Verdict and `f` her escort (turn 15), `o` Eden's first 40 start hexes (the General at 7,35).
+The cannon's band is columns 44–46, rows 13–40 (the mine `m` at 45,16 sits in it).
 
 ```
- 1 ...6.......6...6...6.......6.....6.....6...AAAAAAAAAAAe....
- 2 .......6.................6................AAAAAAAWAAAAA....
+ 1 ...........................................AAAAAAAAAAAe....
+ 2 ..........................................AAAAAAAWAAAAA....
  3 ..........MMMMMMM.MMMMM.M...............AAAAeAWWWWWWWAAAA..
  4 .........MMMMMMMM.MMMMM.MMMMM.MMMMMMM..AAAAAWWWWWgWWWWWeAA.
  5 .........MMMMMMMM.MMMMM.MMMMM.MMMMMMMM.AAAAWWWgDDDDfgWWWAA.
  6 .........MMMMMMMM..MMMM..MMMM..MMMMMMMADDeAWWDDfDDDeDDWWAAA
- 7 ...........MMMMMMM.MMMMM.MMMMM.MMMMMMMAAeADmDDDDeDVDDfWWAAA
- 8 .......................M.MMMMM.MMMMM..AAAAWWDgfDDeDDDgDWWAA
- 9 .....................................AAAAAAWWDeDfDDffDWWAAA
-10 .6....................................AAAAAWWDDDDfDDeDWWAAA
-11 ......AAA.............................AAAAAWWDDgDDDgDWWWAAA
-12 ......AAA.............................AAAAAADDDDWgWWWWWAAAA
-13 .c.....A...............................AAAAAeDeeWWWDWAAAAA.
+ 7 ...........MMMMMMM.MMMMM.MMMMM.MMMMMMMAAAADmDDDDeDVDDfWWAAA
+ 8 .......................M.MMMMM.MMMMM..AAAAWWDgfrrerDDgDWWAA
+ 9 .....................................AAAAAAWWrerfrrffDWWAAA
+10 ......................................AAAAAWWrrrrfrreDWWAAA
+11 ......AAA.............................AAAAAWWDrgrrrgDWWWAAA
+12 ......AAA.............................AAAAAADDDrWgWWWWWAAAA
+13 .c.....A...............................AAAAAeDDDWWWDWAAAAA.
 14 ..............................AAAAA....AAA...eAAAWAeAAAAAA.
-15 ..........................AAAAAAzAA.....AAe..DAAAAAADAAAA..
-16 c.....................AAAAAzAAAAAA...........AAAAAAAmAA....
-17 ................AAAAAzAAzAAAAAAA.........m..AAAAAAAADD.....
-18 c...........AAAzAAzAAAAAAAAA............m.......A....T....9
-19 .3......AAAAAAAAAAAAAA............M........................
+15 ..........................AAAAAAAAA.....AAe..DAAAAAADAAAA..
+16 c.....................AAAAAzAAAAAA..........mAAAAAAAmAA....
+17 ................AAAAAAAAzAAAAAAA............AAAAAAAADD.....
+18 ............AAAzAAzAAAAAAAAA............m.......A....T....9
+19 .3......AAAAAAAAAAAAAA............M.................e.e....
 20 c.......AAAAAAAAAA.................M..m..................9.
-21 .........AAA..........PPz...........M......................
-22 3.3...................zzP..........m.M....................9
+21 .........AAA..........PPP...........M......................
+22 3.3...................PzP............M....................9
 23 ..MMM..................P......z.........AAA................
-24 c.MMM........................PzP....AAzAAAA..............9.
+24 c.MMM........................PPP....AAAAAAA..............9.
 25 3..M.........................PPzAzAAAAAAAA.................
-26 ............................AAzAAAAAAAAA................9.9
-27 3.......................AAAzAAAAAAAA....................M..
+26 ............................AAAAAAAAAAAA................9.9
+27 ........................AAAAAAAAAAAA....................M..
 28 ....................AzAAzAAAAAAA.......................MMM.
 29 ................AAAAAAAAAAAA...........................MMM.
 30 ................AAAAAAAA.................................9.
@@ -193,22 +205,26 @@ Legend as above, plus `g` turrets (Dragon/Hydra), `m` mines (Pandora/Wisp), `T` 
 36 ...ooooooo..................GGG.........................9..
 37 ...ooooooo...................G......AAA....................
 38 .....ooo............................AAA....................
-39 .................3...................A.....................
-40 ...............c...3c.3.c3.3.c..c..........................
+39 .....................................A.....................
+40 ...................3c.3..3...c..c..........................
 ```
+
+Tuning (owner, 2026-11-20: "It's too hard ... Even bring 96 units, I lost 20."): 80 machines (was 108), every level 1–2
+lower except the capital ships and the Verdict, 10 ambushers (was 18, and they sleep to turn 8, was 6), three waves before
+Hesk (the bribed cartel's north wave is gone), two capital ships before the Verdict (Varr's Tiamat and Osk's Nodens; Quill
+now leads the second trap in an Iris carrier, no longer a capital), 35 turns.
 
 | Group | Turn | Machines (cargo counted) |
 |---|---|---|
-| garrison | on the map | 31: 4 Dragon + 4 Hydra turrets, 6 mines, the gun tower, Tiamat *Commodore Varr*, Asura-II, Hannibal, Corvus, Directorate Talos ×4, Talos ×2, Cyclops Kai ×2, Fenrir Kai ×2, Crane Kai ×2 |
-| ambush | asleep until 6 | 18 on the ridges and in the plasma: Directorate Medusa ×4, Mars Kai ×4, Cyclops ×2, Phoibos ×2, Titan Kai ×2, Athena Kai ×2, Lobster Kai ×2 |
-| trap | 3 | 12, from the west and south edges behind the staging area: Selene (+2 Cranes), Lobster ×3, Crane ×2, Brontes ×2, Horus ×2 |
-| north | 6 | 12, the bribed cartel: Hastur (+2), Asura-II ×2, Cerberus ×2, Gulon ×2, Palmyra, Lobster Kai ×2 |
-| east | 9 | 10: Nodens *Captain Osk*, Regulus ×2, Directorate Talos ×3, Pallas *ex-Eden* ×2, Medusa ×2 |
-| trap 2 | 12 | 12, behind again: Iris (+2 Horus), Mars ×3, Talos ×2, Phoibos ×2, Cyclops Kai ×2 |
-| Hesk | 15 | 13: **the Verdict** (+2 Athena Kai), Azoras *the General's old flagship*, Selene Kai *Sato's old command* (+2), Asura-II Kai ×2, Fenrir Kai ×2, Athena Kai ×2 |
+| garrison | on the map | 29: 4 Dragon + 4 Hydra turrets (5), 5 mines (4), the gun tower, Tiamat *Commodore Varr* (7), Asura-II, Hannibal, Corvus, Directorate Talos ×3, Cyclops Kai ×2 (the tower's guard), Fenrir Kai ×2, Crane Kai ×2 (5), Talos ×2 (4) |
+| ambush | asleep until 8 | 10 on the ridges and in the plasma (4): Directorate Medusa ×2, Mars Kai ×2, Cyclops ×2, Phoibos, Titan Kai, Athena Kai, Lobster Kai |
+| trap | 3 | 9, from the west and south edges behind the staging area (4): Selene (+2 Cranes), Lobster ×2, Crane, Brontes ×2, Horus |
+| east | 9 | 10: Nodens *Captain Osk* (7), Regulus ×2, Directorate Talos ×3, Pallas *ex-Eden* ×2 (5), Medusa ×2 (4) |
+| trap 2 | 12 | 9, behind again: Iris *Deputy Director Quill* (+2 Horus) (5), Mars ×2, Phoibos (4), Talos, Cyclops Kai ×2 (5) |
+| Hesk | 15 | 13: **the Verdict** (9, +2 Athena Kai), Azoras *the General's old flagship* (8), Selene Kai *Sato's old command* (8, +2), Asura-II Kai ×2, Fenrir Kai ×2, Athena Kai ×2 (6) |
 
-**108 enemy machines in all**, never more than about 60 on the map at once. Not scaled (strong and desperate);
-Easy: two levels lower. Levels 5–7, the Verdict 9.
+**80 enemy machines in all**. Not scaled (strong and desperate); Easy: two levels lower. Levels 4–6, the capitals 7–8,
+the Verdict 9.
 
 ## 3. The ending: Justice for Eden
 
@@ -369,7 +385,9 @@ and levels. The test's 3 games each with the fixed 60: strong 3 / 3 won, 15–18
 With the old leash (no closing up: the ring drifts east after the picket) the same new ambush gave the middling fleet 11 of
 12 but the strong one only 4 of 12, every loss the wave behind (turn 13) reaching a General left alone: a late wave from
 behind punishes a fleet that chases. The test checks a strong 40 wins at least 80% of its games, a middling one at least
-half, and a won ambush costs a strong fleet at most 20 machines on average (a middling one 26). Tuning history: the General
+once, and a won ambush costs a strong fleet at most 20 machines on average (a middling one 30). (2026-11-20: the test now
+reseeds its dice for each kind of game, so changing one map no longer reshuffles the others; with that, the unchanged
+ambush gives the middling fleet 2 of 8 at HEAD and after the stronghold change alike: its old 3 / 3 was the dice; was "at least half", 26.) Tuning history: the General
 first stood on the west edge of the column (the turn-5 wave behind killed him); the waves came on turns 1/3/5/7 (too
 dense); then 1 (holding to turn 3) / 4 / 8 / 6 with hold 12; now as above (owner, 2026-11-16). The rear wave on turn 13
 with a 12- or 13-turn hold was tried: it either never mattered or the General had one turn to answer it.
@@ -444,26 +462,39 @@ middling ones lost.
 
 ### 7d. Phase 2: Hesk's stronghold, changed
 
-Same map and objective (**sink the Verdict**, 30 turns). Decision: the objective stays the Verdict alone, not "every
-capital ship and the Verdict": on a 59 × 40 map with 30 turns, a damaged pressing-on fleet hunting five capitals across the
+Same map and objective (**sink the Verdict**, 35 turns since 2026-11-20). Decision: the objective stays the Verdict alone, not "every
+capital ship and the Verdict": on a 59 × 40 map, a damaged pressing-on fleet hunting the capitals across the
 belt would turn the finale into a chase; the capitals instead stand between the General and Hesk. Capital ships besides the
-Verdict: **Tiamat *Commodore Varr*** (the court, garrison), **Nodens *Captain Osk*** (east, turn 9), **Artemis *the Ledger
-(Deputy Director Quill)*** (new: with the trap behind on turn 12), **Azoras** (with the Verdict, turn 15), and when the rock
-has had time, **Asura-II Kai *Directorate cruisers*** among the reinforcements. 109 machines at `reinforce` 0 (two Directorate
-cruisers in the court were tried and dropped: the AI's strong strike went from 2 wins in 6 to 0 in 10).
+Verdict (two before her since 2026-11-20): **Tiamat *Commodore Varr*** (the court, garrison), **Nodens *Captain Osk***
+(east, turn 9), **Azoras** (with the Verdict, turn 15), and when the rock has had time, **Asura-II Kai *Directorate
+cruisers*** among the reinforcements. (Quill's Artemis *the Ledger* with the turn-12 trap was dropped on 2026-11-20; Quill
+leads that trap in an Iris.) 80 machines at `reinforce` 0.
 
-**Reinforcement** (`reinforce` n, at most 3): the first 8 × n of the 24 `reinforcements` (the court and the harbour,
-`r` on the map; three of them cruisers) join the garrison and every enemy but the Verdict is n levels higher (at most 9):
-117 / 125 / 133 machines.
+**Reinforcement** (`reinforce` n, at most 3): the first 6 × n (`reinforceStep`, was 8: scaled with the garrison) of the
+18 `reinforcements` (the court and the harbour, `r` on the map; three of them cruisers) join the garrison and every enemy
+but the Verdict is n levels higher (at most 9): 86 / 92 / 98 machines.
 
-AI against AI (the test's careful General): a strong full strike 1 of 3 (as before the change); reinforced once, and
-pressing on with 30 machines at 70% HP, 0 of 6 each in the tuning runs: pressing on is the gamble, regrouping the safer road.
+AI against AI after the 2026-11-20 tuning (the test's careful General holds at the staging corner, everything else
+advances; 3 games each, old map in brackets):
+
+| Fleet | Won | Machines lost |
+|---|---|---|
+| strong 40 (level 9, heavy) | 3/3 (1/3) | 17, 23, 19 (old: 18 in the win) |
+| strong 40, reinforced once | 3/3 (0/3) | 20, 21, 29 |
+| 45, heavy mix, level 7 | 3/3 (1/3) | 11, 14, 22 (old: 19 in the win) |
+| 45, heavy mix, level 8 | 3/3 (2/3) | 13, 16, 20 (old: 27, 20) |
+| 96, light mix, level 6, 8 escorts kept on the General | 3/3 (3/3) | 24, 19, 29 (old: 40, 56, 43) |
+| 45–50, light mix, level 7–8 | 0/3 | the General falls on turns 14–18 (as on the old map) |
+| weak 8 | 0/3 | all |
+
+With the careful AI alone, a 96-machine light fleet leaves the General unguarded in the corner and loses him to the turn-12
+trap (old map: on turn 16); a player keeps a guard on him. A light fleet (mostly 8-HP machines) is still not enough.
 
 ### 7e. Numbers (`RECKONING`)
 
 `ambushSize` 60, `ambushLevel` 5, `ambushTiers` [2, 1, 0] (2026-11-18: a fixed picket; they replace `ambushRatio` 1.5, `ambushLevels` 2,
 `ambushLighter` 2 and `ambushFloor` 12), `survivorsCap` 20, `counterDelay` 12 days, `afterCounter` 10 days,
-`reinforceStep` 8, `reinforceMax` 3, `strikeRetry` 30 days (unchanged).
+`reinforceStep` 6 (was 8, 2026-11-20: the stronghold's garrison is smaller), `reinforceMax` 3, `strikeRetry` 30 days (unchanged).
 
 ### 7f. Interface
 
@@ -485,5 +516,5 @@ ambush's briefing. How to play: a paragraph on the strike (spoiler-light).
 Files: `js/colony/reckoning.js` (stages, `generalReady`, `strikePhase`, the choice, the results), `js/colony/battle.js`
 (`ambushMission`, `counterMission`, `strongholdMission` options, `commandReckoning` 'strike'), `js/colony/rules.js`,
 `js/colony/main.js`, `js/colony/ui.js`, `js/expansion/battle.js` (`survivors`), `js/gameapp.js`,
-`missions/colony/ambush.json` (new), `siege.json` (`counter`), `stronghold.json` (Quill's Artemis, `reinforcements`),
+`missions/colony/ambush.json` (new), `siege.json` (`counter`), `stronghold.json` (`reinforcements`; 2026-11-20: the aimed cannon, 80 machines),
 `tools/colony-reckoning-maps.mjs`, `tests/colony-reckoning.mjs`.

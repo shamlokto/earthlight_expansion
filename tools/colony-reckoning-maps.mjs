@@ -309,91 +309,95 @@ function stronghold() {
   cv.blob(30, 36, 1, 'G'); cv.blob(46, 33, 1, 'G'); cv.blob(38, 38, 1, 'A'); cv.blob(57, 28, 1, 'M');
   cv.set(54, 18, 'D');   // the cannon tower's pad
   cv.blob(8, 12, 1, 'A'); cv.blob(4, 24, 1, 'M');
-  const cannon = { x: 54, y: 19, tower: [54, 18] };
+  // The fortress cannon (owner, 2026-11-20: "it shoots at nothing" / "of no threat"): its tower stands at
+  // the south gate, but the gun covers the harbour mouth, the straight way in to the Verdict's berth:
+  // a band of three columns (44-46) from the mouth (row 13) to the south edge. Colony-only aim
+  // (events.js): it fires as Eden's phase ends, only when Eden has machines in the band, 8 HP or half
+  // the machine's HP, whichever is more. Kill the tower and it is silent.
+  const cannon = { x: 45, y: 13, cols: [44, 45, 46], tower: [54, 18], aim: 8, say: 'The fortress cannon fires down the harbour lane!' };
   // Eden's staging area: the south-west corner
   const home = homeSlots(cv, (x, y) => x <= 15 && y >= 29, { x: 7, y: 35 }, new Set());
   const L = (type, x, y, level, extra = {}) => ({ type, x, y, level, ...extra });
+  // Tuning (owner, 2026-11-20: "too hard ... even bring 96 units, I lost 20"): 80 machines (was 108),
+  // every level 1-2 lower but Hesk's capital ships and the Verdict, 10 ambushers (was 18), three waves
+  // before Hesk (was four), two capital ships before the Verdict (was three), 35 turns (was 30).
   const garrison = [
-    ...[[47, 5], [53, 5], [46, 8], [54, 8]].map(([x, y]) => L(23, x, y, 6)), ...[[48, 11], [52, 11], [50, 4], [50, 12]].map(([x, y]) => L(24, x, y, 6)),
-    L(17, 42, 17, 5), L(17, 39, 20, 5), L(18, 41, 18, 5), L(17, 44, 7, 5), L(18, 53, 16, 5), L(17, 36, 22, 5),   // mines in the mouth, the Gullet's head and the gates
+    ...[[47, 5], [53, 5], [46, 8], [54, 8]].map(([x, y]) => L(23, x, y, 5)), ...[[48, 11], [52, 11], [50, 4], [50, 12]].map(([x, y]) => L(24, x, y, 5)),
+    L(17, 45, 16, 4), L(18, 41, 18, 4), L(17, 39, 20, 4), L(17, 44, 7, 4), L(18, 53, 16, 4),   // mines: in the cannon's band at the mouth, the Gullet's head, the gates
     L(57, cannon.tower[0], cannon.tower[1], 0, { name: 'Gun tower' }),
-    L(30, 50, 8, 7, { name: 'Tiamat · Commodore Varr', hold: 12 }), L(31, 47, 9, 6, { hold: 10 }), L(39, 52, 6, 6, { hold: 10 }), L(42, 49, 7, 6, { hold: 10 }),
-    L(60, 45, 13, 6, { hold: 8 }), L(60, 43, 15, 6, { hold: 8 }), L(60, 41, 7, 6, { hold: 8 }), L(60, 52, 14, 6, { hold: 8 }),
-    L(2, 46, 14, 5, { hold: 8 }), L(2, 42, 6, 5, { hold: 8 }), L(70, 48, 13, 6, { hold: 8 }), L(70, 47, 13, 6, { hold: 8 }),
-    L(71, 55, 1, 6, { hold: 10 }), L(71, 53, 10, 6, { hold: 10 }), L(67, 45, 3, 6, { hold: 6 }), L(67, 56, 4, 6, { hold: 6 }),
+    L(30, 50, 8, 7, { name: 'Tiamat · Commodore Varr', hold: 12 }), L(31, 47, 9, 5, { hold: 10 }), L(39, 52, 6, 5, { hold: 10 }), L(42, 49, 7, 5, { hold: 10 }),
+    L(60, 45, 13, 5, { hold: 8 }), L(60, 43, 15, 5, { hold: 8 }), L(60, 52, 14, 5, { hold: 12 }),
+    L(2, 46, 14, 4, { hold: 8 }), L(2, 42, 6, 4, { hold: 8 }),
+    L(70, 53, 19, 5, { hold: 12 }), L(70, 55, 19, 5, { hold: 12 }),   // the tower's guard, under it on the open void
+    L(71, 55, 1, 5, { hold: 10 }), L(71, 53, 10, 5, { hold: 10 }), L(67, 45, 3, 5, { hold: 6 }), L(67, 56, 4, 5, { hold: 6 }),
   ];
-  // the ambush: asleep on the ridges and in the plasma until turn 6, or until someone shoots at them
-  const amb = (type, x, y, level = 6) => L(type, x, y, level, { hold: 6, wakes: true });
+  // the ambush: asleep on the ridges and in the plasma until turn 8, or until someone shoots at them
+  const amb = (type, x, y, level = 4) => L(type, x, y, level, { hold: 8, wakes: true });
   const ambush = [
-    amb(80, 16, 18), amb(80, 22, 17), amb(69, 28, 16), amb(69, 33, 15), amb(16, 19, 18), amb(15, 25, 17),
-    amb(80, 22, 28), amb(80, 28, 27), amb(69, 34, 25), amb(69, 39, 24), amb(16, 25, 28), amb(15, 31, 26),
-    amb(68, 24, 22), amb(68, 31, 24), amb(73, 23, 22), amb(73, 31, 23), amb(66, 25, 21), amb(66, 32, 25),
+    amb(80, 16, 18), amb(69, 28, 16), amb(16, 19, 18), amb(15, 25, 17),
+    amb(80, 22, 28), amb(69, 34, 25), amb(16, 25, 28),
+    amb(68, 24, 22), amb(73, 31, 23), amb(66, 32, 25),
   ];
   const trap1 = [   // turn 3: behind the General, the west edge and the south edge
-    L(38, 1, 22, 5, { cargo: [9, 9] }), L(8, 1, 25, 5), L(8, 2, 19, 5), L(8, 1, 27, 5), L(9, 3, 22, 5),
-    L(10, 20, 40, 5), L(10, 23, 40, 5), L(12, 26, 40, 5), L(12, 18, 39, 5), L(9, 28, 40, 5),
-  ];
-  const north = [   // turn 6: the bribed cartel, out of the north
-    L(33, 20, 1, 6, { cargo: [8, 8] }), L(31, 8, 2, 6), L(31, 34, 1, 6), L(50, 4, 1, 5), L(50, 28, 1, 5),
-    L(51, 12, 1, 5), L(51, 40, 1, 5), L(41, 16, 1, 5), L(66, 26, 2, 6), L(66, 2, 10, 6),
+    L(38, 1, 22, 4, { cargo: [9, 9] }), L(8, 1, 25, 4), L(8, 2, 19, 4), L(9, 3, 22, 4),
+    L(10, 20, 40, 4), L(10, 23, 40, 4), L(12, 26, 40, 4),
   ];
   const east = [   // turn 9: Captain Osk, from the east
-    L(32, 59, 22, 7, { name: 'Nodens · Captain Osk' }), L(40, 59, 26, 6), L(40, 59, 18, 6), L(60, 58, 30, 6), L(60, 58, 24, 6),
-    L(60, 58, 20, 6), L(62, 59, 32, 6, { name: 'Pallas · ex-Eden' }), L(62, 59, 34, 6, { name: 'Pallas · ex-Eden' }), L(3, 57, 36, 5), L(3, 57, 26, 5),
+    L(32, 59, 22, 7, { name: 'Nodens · Captain Osk' }), L(40, 59, 26, 5), L(40, 59, 18, 5), L(60, 58, 30, 5), L(60, 58, 24, 5),
+    L(60, 58, 20, 5), L(62, 59, 32, 5, { name: 'Pallas · ex-Eden' }), L(62, 59, 34, 5, { name: 'Pallas · ex-Eden' }), L(3, 57, 36, 4), L(3, 57, 26, 4),
   ];
-  const trap2 = [   // turn 12: the trap closes again behind
-    L(35, 1, 16, 6, { cargo: [12, 12] }), L(0, 1, 20, 5), L(0, 2, 13, 5), L(0, 16, 40, 5), L(2, 21, 40, 6),
-    L(2, 25, 40, 6), L(15, 1, 18, 5), L(15, 30, 40, 5), L(70, 1, 24, 6), L(70, 33, 40, 6),
+  const trap2 = [   // turn 12: the trap closes again behind, Deputy Director Quill's carrier leading it
+    L(35, 1, 16, 5, { name: 'Iris · Deputy Director Quill', cargo: [12, 12] }), L(0, 1, 20, 4), L(0, 2, 13, 4), L(2, 21, 40, 5),
+    L(15, 30, 40, 4), L(70, 1, 24, 5), L(70, 33, 40, 5),
   ];
   const hesk = [   // turn 15: Major Hesk's flagship and the last of the General's old fleet
     L(59, 51, 7, 9, { name: 'Verdict · Major Hesk', cargo: [73, 73] }),
     L(61, 49, 9, 8, { name: 'Azoras · the General\'s old flagship' }), L(58, 53, 9, 8, { name: 'Selene Kai · Sato\'s old command', cargo: [74, 74] }),
-    L(72, 48, 6, 7), L(72, 54, 7, 7), L(71, 47, 8, 7), L(71, 52, 9, 7), L(73, 50, 10, 7), L(73, 52, 5, 7),
+    L(72, 48, 6, 6), L(72, 54, 7, 6), L(71, 47, 8, 6), L(71, 52, 9, 6), L(73, 50, 10, 6), L(73, 52, 5, 6),
   ];
-  // Capital ships (owner, 2026-11-16): Varr's Tiamat in the court, Osk's Nodens from the east (turn 9),
-  // Quill's Artemis closing the trap on turn 12, the Azoras with the Verdict (turn 15); Directorate
-  // cruisers (Asura-II Kai) lead the reinforcements when the rock has had time.
-  const su = new Set([...garrison, ...ambush, ...trap1, ...north, ...east, ...trap2, ...hesk].map((u) => `${u.x},${u.y}`));
+  // Capital ships before the Verdict (owner, 2026-11-16; two since 2026-11-20): Varr's Tiamat in the
+  // court and Osk's Nodens from the east (turn 9); the Azoras comes with the Verdict (turn 15), and
+  // Directorate cruisers (Asura-II Kai) lead the reinforcements when the rock has had time.
+  const su = new Set([...garrison, ...ambush, ...trap1, ...east, ...trap2, ...hesk].map((u) => `${u.x},${u.y}`));
   const pickAny = (test, centre, n) => {   // deck or void, nearest `centre` first
     const c = [];
     for (let y = 1; y <= cv.rows; y++) for (let x = 1; x <= cv.cols - 1; x++) if (test(x, y) && cv.ok(x, y) && cv.get(x, y) <= 4 && !su.has(`${x},${y}`)) c.push({ x, y });
     c.sort((a, b) => dist(a, centre) - dist(b, centre) || a.y - b.y || a.x - b.x);
     const out = c.slice(0, n); for (const h of out) su.add(`${h.x},${h.y}`); return out;
   };
-  const q = pickAny((x, y) => x <= 2 && y >= 10 && y <= 30, { x: 1, y: 22 }, 1)[0];
-  trap2.unshift(L(34, q.x, q.y, 7, { name: 'Artemis · the Ledger (Deputy Director Quill)' }));
   // The base reinforces (a regroup, a failed assault): js/colony/battle.js strongholdMission takes the
   // first RECKONING.reinforceStep x n of these into the garrison (and every enemy +n levels, at most 9).
-  const rTypes = [72, 60, 80, 73, 70, 68, 60, 80, 72, 66, 69, 71, 31, 60, 80, 73, 72, 70, 42, 68, 60, 80, 73, 67];
-  const reinforcements = pickAny((x, y) => x >= 38 && y <= 22, { x: 49, y: 10 }, rTypes.length).map((h, i) => L(rTypes[i], h.x, h.y, rTypes[i] === 72 ? 7 : 6, { hold: rTypes[i] === 72 ? 12 : 8, ...(rTypes[i] === 72 ? { name: 'Asura-II Kai · Directorate cruiser' } : {}) }));
+  const rTypes = [72, 60, 80, 73, 70, 68, 60, 80, 72, 66, 69, 71, 31, 60, 80, 73, 72, 70];
+  const reinforcements = pickAny((x, y) => x >= 38 && y <= 22, { x: 49, y: 10 }, rTypes.length).map((h, i) => L(rTypes[i], h.x, h.y, rTypes[i] === 72 ? 6 : 5, { hold: rTypes[i] === 72 ? 12 : 8, ...(rTypes[i] === 72 ? { name: 'Asura-II Kai · Directorate cruiser' } : {}) }));
   const units = [...garrison, ...ambush].map((u) => ({ ...u, army: 1 }));
   const arrivals = [
-    { turn: 2, army: 1, wave: 'trap', units: trap1 }, { turn: 5, army: 1, wave: 'north', units: north },
+    { turn: 2, army: 1, wave: 'trap', units: trap1 },
     { turn: 8, army: 1, wave: 'east', units: east }, { turn: 11, army: 1, wave: 'trap2', units: trap2 },
     { turn: 14, army: 1, wave: 'hesk', units: hesk },
   ];
   const mission = {
     version: 1, name: 'HESK', title: 'Hesk\'s Stronghold', chapter: 'The Reckoning · II',
     screensW: 4, screensH: 4, pairs: PAIRS.map((p) => [...p]), grid: grid(cv), units, arrivals, cannons: [cannon],
-    objective: { kind: 'flagship', type: 59 }, turnLimit: 30, flee: true, noFlee: true, awaitArrivals: true, music: 29,
-    goal: 'Sink Major Hesk\'s flagship, the Verdict, within 30 turns. She comes out on turn 15. If the General falls, it is over.',
+    objective: { kind: 'flagship', type: 59 }, turnLimit: 35, flee: true, noFlee: true, awaitArrivals: true, music: 29,
+    goal: 'Sink Major Hesk\'s flagship, the Verdict, within 35 turns. She comes out on turn 15. If the General falls, it is over.',
     home, generalAt: [7, 35], reinforcements,
     briefing: [
       'The rock has no name on any chart. Hesk bought that too.',
       'Inside it sits everything his circle could buy: Directorate hulls, cartel crews, turrets on every mount, and the last of the machines the General sold to keep Eden breathing.',
       'There is one way to end this: the Verdict, Hesk\'s flagship. She is not in the harbour yet. When she comes, sink her.',
       'They know we are coming. Expect them behind us as well as in front.',
+      'The fortress cannon covers the harbour mouth, the straight way in to the Verdict\'s berth. Its gun tower stands outside the south gate, guarded. Silence the tower, or do not stop under the gun.',
     ].join('\n\n'),
     strategy: [
-      'Three ways in: the meteoroid belt in the north (craft only, slow), the Gullet between the two ridges (fast, and too quiet), and the open south lane under the fortress cannon.',
-      'The cannon fires straight down column 54 at every phase change while its tower stands. Cross it; never end a move in it.',
-      'Waves: behind you on turn 3, out of the north on turn 6, from the east on turn 9, behind you again on turn 12, and the Verdict herself on turn 15.',
-    'Capital ships: Varr\'s Tiamat in the court, Osk\'s Nodens from the east, Quill\'s Artemis behind you on turn 12, the Azoras with the Verdict (and Directorate cruisers if Hesk has had time to reinforce). Only the Verdict has to sink.',
+      'Three ways in: the meteoroid belt in the north (craft only, slow, round to the west gate), the Gullet between the two ridges (fast, and too quiet), and the open south lane, round to the south gate.',
+      'The harbour lane: the fortress cannon covers columns 44 to 46 from the harbour mouth (row 13) to the south edge, shown on the board. It fires as your phase ends, at every machine of yours left standing in the lane: a light machine is wrecked, a heavy one loses half its hull. It is silent while the lane is empty. Dash through it, go round, or destroy the gun tower first (south of the fortress at column 54, row 18, with two Cyclops and a mine beside it).',
+      'Waves: behind you on turn 3, from the east on turn 9, behind you again on turn 12, and the Verdict herself on turn 15.',
+      'Capital ships: Varr\'s Tiamat in the court, Osk\'s Nodens from the east, the Azoras with the Verdict (and Directorate cruisers if Hesk has had time to reinforce). Only the Verdict has to sink.',
     ],
     transmission: 'I gave the order once to save the Union from a scandal. I will give it again to save myself, General. Come in.',
   };
   const marks = [...units.map((u) => ({ x: u.x, y: u.y, mark: u.wakes ? 'z' : [23, 24].includes(u.type) ? 'g' : [17, 18].includes(u.type) ? 'm' : u.type === 57 ? 'T' : 'e' })),
-    ...trap1.map((u) => ({ ...u, mark: '3' })), ...north.map((u) => ({ ...u, mark: '6' })), ...east.map((u) => ({ ...u, mark: '9' })),
+    ...trap1.map((u) => ({ ...u, mark: '3' })), ...east.map((u) => ({ ...u, mark: '9' })),
     ...trap2.map((u) => ({ ...u, mark: 'c' })), ...reinforcements.map((u) => ({ ...u, mark: 'r' })), ...hesk.map((u) => ({ ...u, mark: u.type === 59 ? 'V' : 'f' })), ...home.slice(0, 40).map(([x, y]) => ({ x, y, mark: 'o' }))];
   return { mission, ascii: cv.ascii(marks) };
 }

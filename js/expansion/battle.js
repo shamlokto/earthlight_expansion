@@ -65,10 +65,13 @@ export class ExpansionBattle extends Battle {
     this.boosted = new Map();
     // map events on expansion maps: cannons that fire straight down their column at every phase
     // change while their tower stands (events.js fireCannons, as the Buccaneer's on map 19);
-    // mission.cannons [{ x, y, tower: [x, y] }], the tower being the unit standing there
+    // mission.cannons [{ x, y, tower: [x, y] }], the tower being the unit standing there. The
+    // colony's cannons only (mission.colony) may be aimed: `aim` (HP per hit), `cols` (the lane's
+    // band) and `say` (the log line): they fire only at Eden's machines in the band (events.js).
     if (mission.cannons) this.cannons = mission.cannons.map((c) => {
       const t = this.units.find((u) => u.hp > 0 && !u.carrier && u.x === c.tower[0] && u.y === c.tower[1]);
-      return { x: c.x, y: c.y, tower: t ? t.id : null };
+      const aimed = mission.colony && c.aim ? { aim: c.aim, cols: c.cols || [c.x], say: c.say } : {};
+      return { x: c.x, y: c.y, tower: t ? t.id : null, ...aimed };
     });
   }
 

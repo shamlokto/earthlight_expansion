@@ -83,7 +83,7 @@ class Brain {
   // units the AI moves itself ($02:894B): not structures (types $34+) or type $12
   mobile(u) { return this.mine(u) && u.type !== 0x12 && (u.type < 0x34 || u.type >= 58); }   // 58+: expansion machines
   free(u) { return !this.done.has(u) && !u.moved && !u.acted; }
-  blocked(x, y) { return this.lanes && inLane(this.b, x, y); }
+  blocked(x, y) { return this.lanes && inLane(this.b, x, y, this.army); }
   // Expansion: dormant until attacked or until its hold turn, whichever comes first (the Nineveh,
   // units.json `wakes: 'attacked'`, and every unit inside her hull, mission `wakes: true`; rules.js
   // attack sets `engaged`): a dormant unit only fires from where it stands. Once engaged the Nineveh
