@@ -7,6 +7,7 @@ import { CROPS } from './data.js';
 import { cropStage } from './sim.js';
 import { lowerProp } from './lowerworld.js';
 import { laneProp, laneBuilding, flowerHead, LANE_PROPS, LANE_BUILDINGS, LANE_CROP_COLOR, LANE_CROP_H } from './laneworld.js';
+import { homeProp, HOME_PROPS } from './homeworld.js';
 import { ColonySky, buildSurroundings, colonyProp, buildingExtras, COLONY_KINDS, Bots, mergeStatic, lightPools, setColonyTime, U as HAZE } from './colony.js';
 
 const GROUND_TEX = { v: 'dust_lane', f: 'soil_dry', p: 'path_dirt', c: 'cobble', s: 'sand', k: 'wood_floor', a: 'ash_ground', o: 'stone_floor', h: 'hay', b: 'wood_floor', d: 'deck_floor' };
@@ -148,7 +149,7 @@ const BUILDING = {
   orbital_elevator: { model: ['orbital_elevator'], facade: 'buildings/orbital_elevator', elevator: true, uniform: true, tall: true },
 };
 // Market Lane, the fold and the hives (2026-11-19): built stand-ins in laneworld.js until their models arrive.
-Object.assign(PROPS, LANE_PROPS); Object.assign(BUILDING, LANE_BUILDINGS); Object.assign(CROP_COLOR, LANE_CROP_COLOR); Object.assign(CROP_H, LANE_CROP_H);
+Object.assign(PROPS, LANE_PROPS, HOME_PROPS); Object.assign(BUILDING, LANE_BUILDINGS); Object.assign(CROP_COLOR, LANE_CROP_COLOR); Object.assign(CROP_H, LANE_CROP_H);
 const FRUIT_COLOR = { apple: 0xd8362a, peach: 0xffa48a, cherry: 0xc8102e, persimmon: 0xf07a1a };
 const BLOSSOM = { apple: 0xfbe3ea, peach: 0xf7a8c0, cherry: 0xffc6d9, persimmon: 0xf3f0d6 };
 
@@ -544,7 +545,7 @@ export class World {
         break;
       }
       case 'charge_terminal': g.add(box(0.12, 1.1, 0.12, std({ color: 0x5d6a77 })), box(0.7, 0.5, 0.18, std({ color: 0xe9edf0, metalness: 0.2 }), 0, 1.0), box(0.5, 0.3, 0.02, new THREE.MeshBasicMaterial({ color: 0x7dffb0 }), 0, 1.1, 0.1), box(0.9, 0.3, 0.4, std({ color: 0x3c4650 }), 0, 0, 0.4)); break;
-      case 'house_door': if (o.act === 'house') { const pl = std({ color: 0x9a7a52 }); const a = box(1.1, 0.14, 0.05, pl, 0, 0.9, 0.53); a.rotation.z = 0.5; const b2 = box(1.1, 0.14, 0.05, pl, 0, 0.9, 0.53); b2.rotation.z = -0.5; g.add(a, b2, box(0.5, 0.3, 0.02, std({ color: 0xf2ead6 }), 0.0, 1.5, 0.54)); } break;
+      case 'house_door': if (o.act === 'house' && !o.home) { const pl = std({ color: 0x9a7a52 }); const a = box(1.1, 0.14, 0.05, pl, 0, 0.9, 0.53); a.rotation.z = 0.5; const b2 = box(1.1, 0.14, 0.05, pl, 0, 0.9, 0.53); b2.rotation.z = -0.5; g.add(a, b2, box(0.5, 0.3, 0.02, std({ color: 0xf2ead6 }), 0.0, 1.5, 0.54)); } break;
       case 'starglow': { const c = ball(0.13, new THREE.MeshBasicMaterial({ color: 0xc89cff }), 0, 0.3, 0, 1); c.castShadow = false; const h = ball(0.3, new THREE.MeshBasicMaterial({ color: 0xb07aff, transparent: true, opacity: 0.3, depthWrite: false }), 0, 0.3, 0, 1); h.castShadow = false; g.add(c, h); break; }
       case 'field_chest': g.add(box(0.85, 0.5, 0.58, std({ color: 0x5f7f8f, metalness: 0.3, roughness: 0.6 })), box(0.89, 0.14, 0.62, std({ color: 0x8a6a45 }), 0, 0.5), box(0.12, 0.1, 0.04, new THREE.MeshBasicMaterial({ color: 0xffd36a }), 0, 0.38, 0.3), box(0.89, 0.05, 0.05, dark, 0, 0.12, 0.3), box(0.89, 0.05, 0.05, dark, 0, 0.12, -0.3)); break;
       case 'charger': { const c = colonyProp('solar_panel', { w: 1 }, { spin: [], glow: [] }); if (c) g.add(c); break; }
@@ -643,7 +644,7 @@ export class World {
         for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const arm = box(0.32, 0.03, 0.04, SLATE(), x * 0.16, 0.02, z * 0.16); arm.rotation.y = x * z * 0.78; d0.add(arm, cyl(0.12, 0.12, 0.02, std({ color: 0xdfe6ea, transparent: true, opacity: 0.6 }), x * 0.28, 0.04, z * 0.28, 12)); }
         g.add(d0); break;
       }
-      default: { const c = lowerProp(kind, o) || laneProp(kind, o) || colonyProp(kind, o, this.colonyFx || undefined); g.add(c || box(0.6, 0.6, 0.6, std({ color: 0x999999 }))); }
+      default: { const c = lowerProp(kind, o) || laneProp(kind, o) || homeProp(kind, o) || colonyProp(kind, o, this.colonyFx || undefined); g.add(c || box(0.6, 0.6, 0.6, std({ color: 0x999999 }))); }
     }
     if (kind === 'memorial' || kind === 'bench') for (const c of g.children) c.position.x += 0.5;
     return g;

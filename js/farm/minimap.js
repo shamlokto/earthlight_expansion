@@ -102,6 +102,7 @@ function villagers(mapId) {
   const st = hooks.get(), out = [];
   if (!st.S) return out;
   if (st.map && st.map.id === mapId) { for (const [id, n] of st.npcs || []) out.push({ id, x: n.actor.x, y: n.actor.y }); return out; }
+  if (st.people) return st.people().filter((p) => p.map === mapId);   // where each is now, walks included (paths.js)
   const c = hooks.ctx ? hooks.ctx() : null; if (!c) return out;
   for (const id of story.VILLAGERS || Object.keys(story.NPCS).filter((k) => k !== 'sato')) {
     const w = story.whereIs(id, c), at = w && findSpot(w.spot);
@@ -112,7 +113,8 @@ function villagers(mapId) {
 function whereAmI() {                                             // { map, x, y } on an outdoor map, or null (the Old World)
   const { map, me } = hooks.get(); if (!map || !me || map.ruins) return null;
   if (!map.indoor) return { map: map.id, x: me.x, y: me.y };
-  const o = outsideOf(map.id); return { map: o.map, x: o.x, y: o.y - 0.6 };
+  let o = outsideOf(map.id); for (let k = 0; k < 3 && allMaps()[o.map] && allMaps()[o.map].indoor; k++) o = outsideOf(o.map);   // rooms behind a shop: the shop's door
+  return { map: o.map, x: o.x, y: o.y - 0.6 };
 }
 const nameOf = (id) => { const st = hooks.get(), n = story.NPCS[id]; return st.S && st.S.npc[id] && st.S.npc[id].met ? n.short || n.name : '???'; };
 const colourOf = (id) => (story.NPCS[id].look && story.NPCS[id].look.top) || '#fff';
@@ -129,6 +131,8 @@ function drawScreen(t) {
   const label = (txt, x, y, font, fill = '#2b2118', halo = 'rgba(255,250,235,.9)') => { g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3.5; g.strokeStyle = halo; g.strokeText(txt, x, y); g.fillStyle = fill; g.fillText(txt, x, y); };
   for (const [txt, x, y] of m.areas || []) label(txt, x * s, y * s, `italic 600 ${Math.max(10, s * 0.95)}px "Spectral", Georgia, serif`, '#4a5a3a');
   for (const b of m.buildings) if (b.label) { const lines = b.label.length > 14 && b.w * s < 110 ? b.label.replace(/^(\S+\s\S+)\s/, '$1\n').split('\n') : [b.label]; lines.forEach((l, i) => label(l, (b.x + b.w / 2) * s, (b.y + b.d / 2) * s + (i - (lines.length - 1) / 2) * s * 1.05, `600 ${Math.max(9, Math.min(13, s * 0.92))}px "IBM Plex Sans", sans-serif`)); }
+  const fl = (hooks.get().S && hooks.get().S.flags) || {};
+  for (const b of m.buildings) if (b.homeLabel && (!b.homeFlag || fl[b.homeFlag])) label('⌂ ' + b.homeLabel, (b.x + b.w / 2) * s, (b.y + b.d) * s + s * 0.15, `italic 600 ${Math.max(8, Math.min(12, s * 0.8))}px "IBM Plex Sans", sans-serif`, '#7a3a5a');   // whose home is upstairs or behind (§15)
   for (const p of m.props) if (p.label && p.kind !== 'memorial') label(p.label, (p.x + p.w / 2) * s, (p.y + p.d + 0.7) * s, `600 ${Math.max(9, s * 0.8)}px "IBM Plex Sans", sans-serif`, '#24565a');
   for (const e of m.exits) { const to = allMaps()[e.to.map], x = ((e.x0 + e.x1) / 2 + 0.5) * s, y = ((e.y0 + e.y1) / 2 + 0.5) * s; const nm = '➜ ' + (to ? to.name.split(' · ')[0] : e.to.map); label(nm, Math.min(cw - 50, Math.max(50, x)), Math.min(ch - 10, Math.max(10, y + (e.y0 === 0 ? s * 0.9 : e.y0 >= m.h - 1 ? -s * 0.9 : 0))), `700 ${Math.max(10, s * 0.85)}px "Chakra Petch", sans-serif`, '#7a5410'); }
   open.dots = [];

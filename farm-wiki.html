@@ -81,6 +81,7 @@
     import * as sim from './js/farm/sim.js';
     import * as story from './js/farm/story.js';
     import { lookPortrait } from './js/farm/lookportrait.js';
+    import { HOMES, allMaps } from './js/farm/maps.js';
     const $ = (s) => document.querySelector(s);
     const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const get = async (u) => { try { const r = await fetch(u); return r.ok ? r.json() : null; } catch { return null; } };
@@ -110,14 +111,18 @@
 
     // ---- people
     const R = story.ROMANCE || { candidates: [] };
+    allMaps(); const WHERE = { village: 'Willowfall', central: 'Eden Central', lower: 'the Lower deck', store: 'behind the store', ranch: 'at the ranch', workshop: 'above the Workshop', church: 'behind the church', hangar: 'in the hangar' };
+    const homeOf = (id) => { if (id === 'thorne' || id === 'moth') return "The Thornes' shelter in the enclave; after the move, the Thornes' house in Eden Central"; const k = story.homeKey(id, { ld_pumps: 1, ld_works: 1 }), h = k && HOMES[k]; return h ? `${h.label}, ${WHERE[h.map] || h.map}` : ''; };
     const person = (id) => { const n = story.NPCS[id]; if (!n) return ''; const love = R.candidates.includes(id);
       return `<div class="card">${face(id)}<div><b>${esc(n.name)}${love ? '<span class="tag">♥ romance</span>' : ''}</b><div class="t">${esc(n.title || '')}</div>
+        ${homeOf(id) ? `<div class="t">Home: ${esc(homeOf(id))}</div>` : ''}
         ${n.birthday ? `<div class="t">Birthday: ${esc(seasonName(n.birthday.season))} ${n.birthday.day}</div>` : ''}
         ${n.loves && n.loves.length ? `<div class="g"><b style="display:inline;font-size:12.5px">Loves</b> ${n.loves.map((x) => esc(name(x))).join(', ')}</div>` : ''}
         ${n.likes && n.likes.length ? `<div class="g">Likes ${n.likes.slice(0, 6).map((x) => esc(name(x))).join(', ')}</div>` : ''}
         ${n.dislikes && n.dislikes.length ? `<div class="g">Dislikes ${n.dislikes.map((x) => esc(name(x))).join(', ')}</div>` : ''}</div></div>`; };
     const ids = Object.keys(story.NPCS).filter((k) => k !== 'sato');
     add('people', 'People of Willowfall and Eden Central', `<p class="lead">Talk every day, bring gifts and do favours. ${(story.ROMANCE || { candidates: [] }).candidates.length} of them can become more than friends. Market Lane, Willowfall's new east end, is home to Pia the tailor, Lark the baker, Noor of the Seedhouse, Tika the mechanic and Vesna of Radio Willowfall. Pastor Ines and Constable Fenn live and work in Eden Central, down the lift; Tobias Venn, Agnes Thorne, Moth and Ansel Wick live further down still, on the Lower deck, where Hana Corvel, Venn's apprentice, has come back to the Works.</p>
+      <p>Everybody has a home, and walks there and back: a cottage on Willow Lane or across the Mill Bridge, rooms behind a shop, a flat in Eden Central, a cabin in the Undercroft rock. Knock, and if they are in and awake and you are friends enough (4 hearts; 3 with the open-house sort: Marrow, Seln, Corran, Oduya, Lark, Pastor Ines, Agnes and Moth), they let you in. Late at night only a sweetheart is let in. A chat at someone's home is worth a little extra once a day.</p>
       <div class="cards">${person('sato')}${ids.map(person).join('')}</div>`);
 
     // ---- love

@@ -215,7 +215,7 @@ export function ensure(s) {
   const obj = (o, k) => { if (!o[k] || typeof o[k] !== 'object' || Array.isArray(o[k])) o[k] = {}; };
   arr(s.player, 'basket'); arr(s, 'chests'); arr(s, 'panels'); arr(s, 'robots'); arr(s, 'fruitTrees');
   obj(s, 'cooked'); obj(s, 'foraged'); obj(s, 'flags'); obj(s, 'museum'); obj(s, 'fishLog');
-  arr(s, 'mill'); arr(s, 'hydro'); obj(s, 'solarYard'); arr(s.solarYard, 'slots'); obj(s, 'stats');
+  arr(s, 'mill'); arr(s, 'hydro'); obj(s, 'solarYard'); arr(s.solarYard, 'slots'); obj(s, 'stats'); obj(s, 'visits');   // homes visited, by day (§15)
   if (!s.miner || typeof s.miner !== 'object' || !Number.isFinite(s.miner.charge)) s.miner = null;
   if (!Array.isArray(s.storage)) s.storage = new Array(STORAGE_SIZE).fill(null);
   if (!Array.isArray(s.fridge)) s.fridge = new Array(FRIDGE_SIZE).fill(null);
@@ -2268,4 +2268,27 @@ export function playHubCup(state, phases) {
   state.flags[key] = true; state.player.money += prize; state.stats.hubCups = (state.stats.hubCups || 0) + (place === 1 ? 1 : 0);
   if (place === 1 && !countItem(state, 'hub_cup') && !state.flags.hubcup_won) { addItem(state, 'hub_cup', 1); state.flags.hubcup_won = true; }
   return { ok: true, throws, score, rivals, place, prize, msg: place === 1 ? `First place! ${score} points. The Hub Cup is yours, and ${prize} cr.` : `${['', '', 'Second', 'Third'][place] || 'A good try'}: ${score} points. ${prize} cr.` };
+}
+
+// ---------------------------------------------------------------- visiting homes (docs/FARM.md §15)
+// The door opens when they are in and awake, it is not late, and Sato is close enough: 4 hearts, or 3 with the open-house
+// sort (the warden, the shopkeepers who keep a kettle on, the baker, the pastor, Agnes and Moth). A sweetheart is always let in,
+// late or not; a partner has moved to the farm. presence comes from story.presence: 'home' | 'out' | 'asleep' | 'away'.
+export const VISIT_HEARTS = 4, VISIT_FRIENDLY_HEARTS = 3, VISIT_LATE = 21 * 60, VISIT_BONUS = 2;
+export const VISIT_FRIENDLY = ['marrow', 'seln', 'corran', 'oduya', 'lark', 'calloway', 'thorne', 'moth'];
+export function visitRule(state, npcId, presence) {
+  const f = state.flags || {}, close = f.sweet === npcId;
+  if (f.partner === npcId) return { ok: false, why: 'moved' };
+  if (presence === 'asleep') return { ok: false, why: 'asleep' };
+  if (presence !== 'home') return { ok: false, why: 'out' };
+  if (state.cal.minute >= VISIT_LATE && !close) return { ok: false, why: 'late' };
+  if (!close && hearts(state, npcId) < (VISIT_FRIENDLY.includes(npcId) ? VISIT_FRIENDLY_HEARTS : VISIT_HEARTS)) return { ok: false, why: 'shy' };
+  return { ok: true, why: 'open' };
+}
+// The first chat at someone's home on a day is worth a little extra (+2, on top of the usual first talk).
+export function homeVisit(state, npcId) {
+  ensure(state); const n = npcOf(state, npcId); if (!n) return fail('There is nobody here.', { first: false });
+  const d = absDay(state); if (state.visits[npcId] === d) return { ok: true, first: false };
+  state.visits[npcId] = d; n.love = clamp(n.love + VISIT_BONUS, 0, 100); n.met = true;
+  return { ok: true, first: true };
 }

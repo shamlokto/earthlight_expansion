@@ -1397,5 +1397,24 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   sleep(d); sleep(d);
   check(d.duckNest.eggs === 0 && d.bin.some((x) => x.id === 'duck_egg' && x.n === 2), 'the animals robot empties the duck nest into the bin');
 }
+// ---------------------------------------------------------------- visiting homes (docs/FARM.md §15)
+{
+  const s = newGame({ seed: 77 }), love = (id, h) => { s.npc[id].love = h * 10; };
+  s.cal.minute = 18 * 60;
+  love('mori', 3); check(sim.visitRule(s, 'mori', 'home').why === 'shy', 'three hearts is not close enough for the doctor');
+  love('mori', 4); check(sim.visitRule(s, 'mori', 'home').ok, 'four hearts and he is in: the door opens');
+  love('marrow', 3); check(sim.visitRule(s, 'marrow', 'home').ok && sim.VISIT_FRIENDLY.includes('marrow'), 'the warden keeps an open house at three hearts');
+  love('marrow', 2); check(sim.visitRule(s, 'marrow', 'home').why === 'shy', 'but not at two');
+  love('mori', 10); check(sim.visitRule(s, 'mori', 'out').why === 'out' && sim.visitRule(s, 'mori', 'away').why === 'out' && sim.visitRule(s, 'mori', 'asleep').why === 'asleep', 'nobody opens when out or asleep, however fond');
+  s.cal.minute = 21 * 60 + 30; check(sim.visitRule(s, 'mori', 'home').why === 'late', 'late at night the door stays shut');
+  s.flags.sweet = 'mori'; check(sim.visitRule(s, 'mori', 'home').ok, '...except to a sweetheart');
+  love('lark', 0); check(sim.visitRule(s, 'mori', 'home').ok && sim.visitRule(s, 'lark', 'home').why === 'late', 'the sweetheart rule is only for the sweetheart');
+  s.flags.partner = 'mori'; check(sim.visitRule(s, 'mori', 'home').why === 'moved', 'a partner has moved to the farm');
+  s.cal.minute = 16 * 60; love('yui', 5); const before = s.npc.yui.love, a = sim.homeVisit(s, 'yui'), b = sim.homeVisit(s, 'yui');
+  check(a.first && !b.first && s.npc.yui.love === before + sim.VISIT_BONUS, 'a visit is worth a little extra, once a day');
+  sleep(s); check(sim.homeVisit(s, 'yui').first, 'and again tomorrow');
+  const old = JSON.parse(saveState(newGame({ seed: 5 }))); delete old.visits; const O = loadState(JSON.stringify(old));
+  check(O && O.visits && typeof O.visits === 'object' && sim.homeVisit(O, 'seln').first, 'an old save loads and can visit');
+}
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

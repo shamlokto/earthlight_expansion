@@ -734,15 +734,80 @@ Object.assign(CENTRAL_HOUSES, {
   home_noor: 'Noor\'s cottage. Every windowsill is a seed tray. A label on the door reads "Asante. Please do not water the porch."',
 });
 
+// ---------------------------------------------------------------- homes (2026-11-19: "every main character has a home")
+// Each villager's home is an interior `home_<key>`: through a building's door tile, a back door in a shop, or a hatch in the
+// Undercroft's rock. `home_<key>.<npc>` is where each one stands at home (story.HOMES says who lives where). Everything here is
+// added after the maps are built, so no old tile, spot, door or prop index moves (saves keep their meaning).
+export const HOMES = {};                // key → { key, room, map, x, y, label, back? }: where its door is, for the map and the walkers
+const HOME_COLOURS = { lark: '#d9534f', vesna: '#5b4a7a', pia: '#2f6f73', tika: '#2e8f8a', noor: '#9bb07a', marrow: '#5a4a6e', mori: '#9fb4c8', yui: '#b06a7a', oduya: '#e07b24', maris: '#3a78b8', kestrel: '#7a4f2a', seln: '#3f8f5a', corran: '#8c3b2e', ruess: '#6b5a48', general: '#3d4a63', moraine: '#7a1f2b', fenn: '#24406e', calloway: '#3fa7a3', vashti: '#55604a', venn: '#5d6b4e', wick: '#3f5f6f', hana: '#c8553d', thorne: '#86485a', moth: '#e8b44a' };
+function homeRooms(all) {
+  const out = {}, C = HOME_COLOURS;
+  const mk = (key, name, w, h, floor, who, fn, o = {}) => { const m = room('home_' + key, w, h, name, floor); Object.assign(m, { home: key }, o); fn(m, C[who[0][0]]); for (const [id, x, y] of who) m.spot(`home_${key}.${id}`, x, y); out[m.id] = m; return m; };
+  const door = (key, map, x, y, label) => { all[map].doors.push({ x, y, to: { map: 'home_' + key }, kind: 'home', home: key, lock: null }); HOMES[key] = { key, room: 'home_' + key, map, x, y, label }; };
+  const back = (key, map, x, label) => { all[map].prop('home_door', x, 0, { act: 'home', home: key, tint: C[key] }); out['home_' + key].backTo = { map, x: x + 0.5, y: 1.6, dir: 0 }; HOMES[key] = { key, room: 'home_' + key, map, x, y: 1, label, back: true }; };
+  const hatch = (key, map, x, y, label) => { all[map].prop('home_door', x, y, { act: 'home', home: key, solid: false, label, tint: C[key] }); door(key, map, x, y, label); };
+  const tag = (map, bx, by, label, rename) => { const b = all[map].buildings.find((q) => q.x === bx && q.y === by); if (rename) b.label = label; else b.homeLabel = label; };
+  const bed = (m, x, y, tint) => m.prop('quilt_bed', x, y, { d: 2, tint }), frames = (m, x, w, tint) => m.prop('wall_frames', x, 0, { w, tint, solid: false });
+  // Market Lane's cottages, across the Mill Bridge
+  mk('lark', "Lark's cottage", 9, 7, 'b', [['lark', 6.5, 4.5]], (m, c) => { bed(m, 0, 0, c); m.prop('oven', 2, 0, { w: 2 }); m.prop('kitchen', 4, 0, { w: 2 }); m.prop('shelf', 7, 0, { w: 2 }); m.prop('flour_sacks', 8, 3); m.prop('tea_table', 5, 3, { tint: c }); m.prop('chair', 4, 3, { solid: false }); m.prop('rug', 2, 3, { solid: false, w: 2, d: 2 }); m.prop('plantpot', 8, 5); frames(m, 2, 3, '#e9b35a'); });
+  mk('vesna', "Vesna's flat", 9, 7, 'b', [['vesna', 5.5, 3.5]], (m, c) => { m.prop('record_shelf', 0, 0, { w: 2 }); bed(m, 8, 0, c); m.prop('speaker', 0, 3); m.prop('speaker', 0, 5); m.prop('sofa', 2, 5, { w: 2 }); m.prop('mic_stand', 6, 3, { solid: false }); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 }); m.prop('lamp', 7, 0); m.prop('tea_table', 6, 5, { tint: '#e05c8a' }); frames(m, 2, 3, '#e05c8a'); });
+  mk('pia', "Pia's cottage", 9, 7, 'b', [['pia', 4.5, 3.5]], (m, c) => { bed(m, 0, 0, c); m.prop('dress_form', 2, 0); m.prop('bolt_shelf', 6, 0, { w: 2 }); m.prop('sewing_table', 6, 3, { w: 2 }); m.prop('armchair', 1, 4, { tint: '#6b2a45' }); m.prop('tea_table', 2, 4, { tint: '#e8c45a' }); m.prop('plantpot', 8, 5); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 }); frames(m, 3, 2, '#6b2a45'); });
+  mk('tika', "Tika's place", 9, 7, 'o', [['tika', 3.5, 3.5]], (m, c) => { m.prop('tool_wall', 0, 0, { w: 2 }); bed(m, 8, 0, c); m.prop('engine_block', 0, 4, { w: 2 }); m.prop('crate', 6, 0); m.prop('cargo_crate', 7, 5); m.prop('lamp', 5, 0); m.prop('tea_table', 5, 3, { tint: '#e2553a' }); m.prop('rug', 2, 2, { solid: false, w: 2, d: 2 }); frames(m, 2, 2, '#e2553a'); });
+  mk('noor', "Noor's cottage", 9, 7, 'o', [['noor', 5.5, 3.5]], (m, c) => { m.prop('seed_drawers', 0, 0, { w: 2 }); bed(m, 8, 0, c); m.prop('flower_bed', 0, 4, { w: 2 }); m.prop('flower_bed', 7, 4, { w: 2 }); m.prop('plantpot', 3, 0); m.prop('plantpot', 5, 0); m.prop('bookstack', 6, 0); m.prop('tea_table', 4, 3, { tint: '#b9a3d9' }); frames(m, 2, 1, '#b9a3d9'); }, { glass: true });
+  // Willow Lane's cottages, the flat over the Courier Post, the Guardians' quarters
+  mk('marrow', "Marrow's cottage", 10, 7, 'b', [['marrow', 6.5, 4.5]], (m, c) => { bed(m, 0, 0, c); m.prop('shelf', 2, 0, { w: 2, model: 'bookshelf' }); m.prop('lamp', 7, 0); m.prop('bookstack', 9, 0); m.prop('armchair', 8, 3, { tint: c }); m.prop('tea_table', 7, 3, { tint: '#c9a14a' }); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 }); m.prop('plantpot', 0, 5); frames(m, 4, 3, '#c9a14a'); });
+  mk('mori', "Dr. Mori's house", 9, 7, 'b', [['mori', 5.5, 3.5]], (m, c) => { m.prop('shelf', 0, 0, { w: 2, model: 'bookshelf' }); m.prop('desk', 2, 0, { w: 2 }); m.prop('bookstack', 4, 0); m.prop('plantpot', 5, 0, { scale: 0.8 }); bed(m, 8, 0, c); m.prop('armchair', 0, 4, { tint: '#4a5560' }); m.prop('tea_table', 1, 4, { tint: '#f2f2ee' }); m.prop('lamp', 7, 0); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 }); });
+  mk('yui', "Yui's cottage", 9, 7, 'b', [['yui', 4.5, 4.5]], (m, c) => { m.prop('shelf', 0, 0, { w: 2, model: 'bookshelf' }); m.prop('shelf', 2, 0, { w: 2, model: 'bookshelf' }); bed(m, 8, 0, c); m.prop('bookstack', 5, 0); m.prop('bookstack', 0, 4); m.prop('bookstack', 8, 5); m.prop('armchair', 6, 3, { tint: c }); m.prop('tea_table', 7, 3, { tint: '#f3dfa8' }); m.prop('lamp', 6, 0); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 }); });
+  mk('oduya', "Oduya's cottage", 10, 7, 'b', [['oduya', 1.5, 1.6]], (m, c) => { m.prop('kitchen', 0, 0, { w: 3 }); m.prop('fridge', 3, 0); m.prop('shelf', 4, 0, { w: 2 }); bed(m, 9, 0, c); m.prop('table', 5, 4); m.prop('chair', 4, 4, { solid: false }); m.prop('chair', 6, 4, { solid: false }); m.prop('crate', 0, 4); m.prop('crate', 0, 5, { scale: 0.85 }); frames(m, 6, 2, c); });
+  mk('maris', "Maris's flat", 8, 6, 'b', [['maris', 3.5, 2.5]], (m, c) => { bed(m, 0, 0, c); m.prop('cargo_crate', 6, 0); m.prop('lamp', 5, 0); m.prop('storage_box', 7, 3); m.prop('armchair', 1, 3, { tint: '#d9d2c0' }); m.prop('tea_table', 2, 3, { tint: '#e07b24' }); frames(m, 2, 3, '#e0a030'); });
+  mk('kestrel', "Kestrel's quarters", 9, 7, 'd', [['kestrel', 4.5, 3.5]], (m, c) => { m.prop('star_window', 0, 0, { w: 9, solid: false }); bed(m, 0, 0, c); m.prop('lockers', 2, 0, { w: 2 }); m.prop('telescope_stand', 8, 0); m.prop('tea_table', 6, 3, { tint: '#d8b860' }); m.prop('armchair', 7, 3, { tint: '#39404a' }); m.prop('colony_planter', 8, 5); frames(m, 4, 2, '#d8b860'); }, { colonyRoom: true });
+  // quarters behind or above a shop: in through a door at the back of the shop
+  mk('seln', "Seln's rooms", 8, 6, 'b', [['seln', 3.5, 3.5]], (m, c) => { m.prop('kitchen', 0, 0, { w: 2 }); bed(m, 7, 0, c); m.prop('plantpot', 3, 0); m.prop('hydro_tower', 0, 4); m.prop('tea_table', 4, 2, { tint: '#e9d9a8' }); m.prop('armchair', 5, 2, { tint: '#6b5540' }); frames(m, 2, 2, c); });
+  mk('corran', 'The ranch house', 9, 7, 'b', [['corran', 5.5, 4.5]], (m, c) => { bed(m, 0, 0, c); m.prop('radio', 2, 0); m.prop('storage_box', 8, 0); m.prop('armchair', 7, 3, { tint: c }); m.prop('tea_table', 6, 3, { tint: '#f0f0ec' }); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 }); m.prop('plantpot', 0, 5); frames(m, 3, 3, '#4b4a3a'); });
+  mk('ruess', "Ruess's rooms", 9, 7, 'b', [['ruess', 2.5, 4.4]], (m, c) => { m.prop('shelf', 0, 0, { w: 2 }); m.prop('bookstack', 2, 0); m.prop('bookstack', 3, 0, { scale: 0.8 }); bed(m, 8, 0, c); m.prop('workbench', 0, 3, { d: 2 }); m.prop('crate', 7, 5); m.prop('armchair', 5, 3, { tint: c }); m.prop('tea_table', 4, 3, { tint: '#9a9da3' }); m.prop('lamp', 7, 0); frames(m, 4, 3, '#5a7a9a'); });
+  mk('vashti', "Vashti's bunk", 8, 6, 'd', [['vashti', 3.5, 2.5]], (m, c) => { m.prop('bunk', 0, 0, { d: 2, tint: c }); m.prop('cargo_crate', 2, 0); m.prop('crate', 3, 0); m.prop('lamp', 5, 0); m.prop('storage_box', 6, 0); m.prop('workbench', 7, 2, { d: 2 }); frames(m, 4, 1, '#3b2a20'); });
+  // Eden Central: the empty houses that were waiting for somebody, and a flat on the canal
+  mk('general', "The General's house", 10, 7, 'b', [['general', 3.5, 4.5]], (m, c) => { m.prop('piano', 0, 0, { w: 2, sheet: true }); m.prop('shelf', 3, 0, { w: 2, model: 'bookshelf' }); m.prop('lamp', 8, 0); bed(m, 9, 0, c); m.prop('armchair', 6, 3, { tint: c }); m.prop('tea_table', 5, 3, { tint: '#d9b38c' }); m.prop('rug', 2, 3, { solid: false, w: 2, d: 2 }); m.prop('crate', 0, 5); m.prop('crate', 1, 5, { scale: 0.8 }); frames(m, 5, 3, '#8a7a5a'); }, { colonyRoom: 'warm' });
+  mk('moraine', "Moraine's house", 10, 7, 'b', [['moraine', 5.5, 4.5]], (m, c) => { bed(m, 0, 0, c); m.prop('case', 2, 0); m.prop('case', 3, 0); m.prop('lamp', 8, 0); m.prop('armchair', 7, 3, { tint: '#b8922e' }); m.prop('tea_table', 6, 3, { tint: '#b8922e' }); m.prop('cargo_crate', 9, 4); m.prop('cargo_crate', 9, 5, { scale: 0.85 }); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 }); frames(m, 4, 3, '#b8922e'); }, { colonyRoom: 'warm' });
+  mk('fenn', "Fenn's flat", 8, 6, 'd', [['fenn', 3.5, 2.5]], (m, c) => { bed(m, 0, 0, c); m.prop('lockers', 2, 0, { w: 1 }); m.prop('plantpot', 7, 0); m.prop('crate', 7, 4); m.prop('tea_table', 5, 2, { tint: '#c9a14a' }); m.prop('armchair', 6, 2, { tint: c }); frames(m, 3, 2, '#c9a14a'); }, { colonyRoom: true });
+  mk('calloway', 'The vicarage', 8, 6, 'o', [['calloway', 2.5, 3.5]], (m, c) => { m.prop('shelf', 0, 0, { w: 2, model: 'bookshelf' }); m.prop('plantpot', 2, 0); m.prop('plantpot', 0, 4); m.prop('candle_stand', 5, 0); bed(m, 7, 0, c); m.prop('tea_table', 3, 2, { tint: '#f3cfb4' }); m.prop('armchair', 4, 2, { tint: '#363a48' }); frames(m, 3, 2, c); }, { colonyRoom: 'warm' });
+  mk('thornes', "The Thornes' house", 10, 7, 'b', [['thorne', 3.5, 2.5], ['moth', 7.5, 3.5]], (m, c) => { bed(m, 0, 0, c); bed(m, 9, 0, C.moth); m.prop('kitchen', 2, 0, { w: 2 }); m.prop('calendar_board', 4, 0); m.prop('lamp', 8, 0); m.prop('tea_table', 5, 3, { tint: '#c9b48a' }); m.prop('chair', 4, 3, { solid: false }); m.prop('chair', 6, 3, { solid: false }); m.prop('plantpot', 0, 5); frames(m, 5, 3, C.moth); }, { colonyRoom: 'warm' });
+  // the Undercroft: the enclave shelter, and hatches in the rock
+  mk('shelter', "The Thornes' shelter", 8, 6, 'o', [['thorne', 2.5, 2.5], ['moth', 5.5, 3.5]], (m, c) => { m.prop('bunk', 0, 0, { d: 2, tint: c }); m.prop('bunk', 7, 0, { d: 2, tint: C.moth }); m.prop('crate', 2, 0); m.prop('stove', 3, 0); m.prop('calendar_board', 5, 0); m.prop('lamp', 6, 0); m.prop('tea_table', 3, 3, { tint: '#c9b48a' }); frames(m, 4, 2, C.moth); });
+  mk('venn', "Venn's cabin", 8, 6, 'd', [['venn', 4.5, 2.5]], (m, c) => { m.prop('bunk', 0, 0, { d: 2, tint: c }); m.prop('terminal', 2, 0); m.prop('stove', 5, 0); m.prop('crate', 6, 0); m.prop('workbench', 7, 2, { d: 2 }); m.prop('tea_table', 3, 3, { tint: '#9a7a52' }); m.prop('lamp', 2, 3); });
+  mk('wick', "Wick's hut", 8, 6, 'o', [['wick', 3.5, 3.5]], (m, c) => { bed(m, 0, 0, c); m.prop('fish_tank', 2, 0, { w: 2 }); m.prop('radio', 4, 0); m.prop('tea_table', 5, 2, { tint: '#c8ccd0' }); m.prop('armchair', 6, 2, { tint: c }); m.prop('crate', 7, 4); frames(m, 4, 2, '#4a8a9a'); });
+  mk('hana', "Hana's loft", 8, 6, 'd', [['hana', 2.5, 2.5]], (m, c) => { m.prop('tool_wall', 0, 0, { w: 2 }); m.prop('crate', 2, 0); m.prop('crate', 0, 4, { scale: 0.85 }); m.prop('lamp', 6, 0); m.prop('bunk', 7, 0, { d: 2, tint: c }); m.prop('shrooms', 5, 4, { solid: false }); m.prop('tea_table', 4, 2, { tint: '#e0403a' }); frames(m, 3, 3, c); });
+  // and their doors
+  for (const [key, x, label] of [['lark', 66, "Lark's cottage"], ['vesna', 72, "Vesna's flat"], ['pia', 81, "Pia's cottage"], ['tika', 86, "Tika's place"], ['noor', 92, "Noor's cottage"]]) { door(key, 'village', x, 46, label); tag('village', x - 2, 42, label, true); }
+  for (const [key, bx, label] of [['marrow', 4, "Marrow's cottage"], ['mori', 11, "Dr. Mori's house"], ['yui', 18, "Yui's cottage"], ['oduya', 25, "Oduya's cottage"]]) { door(key, 'village', bx + 2, 46, label); tag('village', bx, 42, label, true); }
+  door('maris', 'village', 23, 39, "Maris's flat"); tag('village', 20, 35, "Maris's flat upstairs");
+  door('kestrel', 'village', 54, 6, "Kestrel's quarters"); tag('village', 51, 2, "Kestrel's quarters");
+  back('seln', 'store', 2, "Seln's rooms"); back('corran', 'ranch', 1, 'The ranch house'); back('ruess', 'workshop', 8, "Ruess's rooms");
+  back('calloway', 'church', 11, 'The vicarage'); back('vashti', 'hangar', 15, "Vashti's bunk");
+  door('general', 'central', 66, 43, "The General's house"); tag('central', 64, 39, "The General's house", true);
+  door('moraine', 'central', 6, 50, "Moraine's house"); tag('central', 4, 46, "Moraine's house", true);
+  door('fenn', 'central', 41, 43, "Fenn's flat"); tag('central', 38, 39, "Fenn's flat");
+  door('thornes', 'central', 19, 43, "The Thornes' house"); tag('central', 17, 39, "The Thornes' house"); HOMES.thornes.flag = 'ld_rehoused';
+  door('shelter', 'lower', 29, 6, "The Thornes' shelter"); HOMES.shelter.flag = 'ld_enclave';
+  hatch('venn', 'lower', 24, 35, "Venn's cabin"); hatch('wick', 'lower', 10, 22, "Wick's hut"); hatch('hana', 'lower', 10, 56, "Hana's loft");
+  all.central.buildings.find((b) => b.x === 17 && b.y === 39).homeFlag = 'ld_rehoused';
+  const HOUSE_HOME = { 'central.house_1': 'thornes', 'central.house_3': 'general', 'central.house_4': 'moraine' };   // the boarded-up notes on doors that are homes now
+  for (const p of [...all.village.props, ...all.central.props]) if (p.act === 'house') { const k = HOUSE_HOME[p.house] || String(p.house).replace(/^home_/, ''); if (HOMES[k]) p.home = k; }
+  return out;
+}
+export const homeAt = (key) => HOMES[key] || null;
+
 let cache = null;
 export function allMaps() {
   if (!cache) cache = { farm: farm(), village: village(), hill: hill(), ...central(), ...interiors(), lower: lower() };
   if (!cache.bakery) Object.assign(cache, laneRooms(cache));          // Market Lane's rooms, the fold and the duck house
+  if (!cache.home_lark) Object.assign(cache, homeRooms(cache));       // everybody's homes
   return cache;
 }
 // Where a door leads: inside, just above the room's exit tile; and back out to the door tile.
 export function doorTarget(map) { const m = allMaps()[map]; return { map, x: m.exitTile[0] + 0.5, y: m.exitTile[1] - 0.6, dir: 1 }; }
 export function outsideOf(interior) {
+  const r = allMaps()[interior]; if (r && r.backTo) return { ...r.backTo };   // rooms behind a shop open back into it
   for (const m of Object.values(allMaps())) for (const d of m.doors) if (d.to.map === interior) return { map: m.id, x: d.x + 0.5, y: d.y + 0.6, dir: 0 };
   return { map: 'farm', x: 6.5, y: 8.5, dir: 0 };
 }
@@ -761,6 +826,7 @@ export const LOWER_ZONES = ['landing', 'lights', 'pumps', 'catacombs', 'enclave'
 // The Undercroft's signs and notices (like MAP_SIGNS above: they are not people's spots).
 const LOWER_SIGNS = {
   'lower.lift': 'LOWER DECK. LANDING 3. Machinery, cisterns, catacombs. NO PUBLIC ACCESS. (Underneath, in chalk: "Lift stops here anyway. T.V.")',
+  'lower.terminal': 'RESTORATION TERMINAL (the green screen beside this sign). Face it and press E to fund projects: work lights first, then the pumps, the catacombs and beyond. Each one is done by morning. To buy parts or chat, talk to Venn at his bench instead.',
   'lower.barrier': 'A work barrier across the passage, and beyond it nothing but dark and the sound of dripping water. A tag on it reads: NEEDS LIGHT. ASK AT THE TERMINAL.',
   'lower.gallery': 'THE GALLERY. West: pump halls. East: the old crypts (catacombs). North wall: SECTOR NINE. AUTHORISED PERSONNEL ONLY. The paint is newer than the wall.',
   'lower.pumpdoor': 'A pressure bulkhead, shut. Water seeps under it. A stencil: PUMP HALLS. FLOODED. A newer note: "Not flooded. Thinking about it. T.V."',
@@ -794,7 +860,7 @@ function lower() {
   const lamp = (x, y, zone) => m.prop('glow_lamp', x, y, { zone });
   // the landing: the lift, Venn's terminal and bench, the first log
   m.prop('lower_lift', 26, 39, { w: 3, d: 3, act: 'lift', label: 'Lift' });
-  m.prop('terminal', 31, 36, { act: 'restore', label: 'Restoration terminal' }); m.prop('workbench', 33, 37, { d: 2 });
+  m.prop('terminal', 29, 36, { act: 'restore', label: 'Restoration terminal' }); m.prop('signpost', 30, 36, { act: 'sign', sign: 'lower.terminal' }); m.prop('workbench', 33, 37, { d: 2 });   // the terminal stands well clear of Venn's bench, so E reaches it and not him
   m.prop('terminal', 23, 36, { act: 'terminal', log: 'quarantine', label: 'Old terminal' });
   m.prop('signpost', 24, 39, { act: 'sign', sign: 'lower.lift' }); m.prop('cargo_crate', 32, 41); m.prop('cargo_crate', 22, 41, { scale: 0.8 });
   lamp(23, 38, 'landing'); lamp(32, 39, 'landing'); lamp(29, 35, 'landing');
@@ -831,7 +897,7 @@ function lower() {
   m.prop('stove', 36, 8, { act: 'sign', sign: 'lower.enclave', label: 'The stove' }); m.prop('noticeboard', 30, 8, { w: 2, act: 'sign', sign: 'lower.rota', label: 'The rota' });
   m.prop('terminal', 51, 2, { act: 'terminal', log: 'catacombs', label: 'Warden\'s second terminal' }); m.prop('crate', 47, 3); m.prop('crate', 48, 3, { scale: 0.8 }); m.prop('table', 40, 8);
   for (const [x, y] of [[28, 9], [34, 7], [41, 9], [46, 8], [51, 6]]) lamp(x, y, 'enclave');
-  m.spot('lower.landing', 25, 37.6).spot('undercroft.counter', 31.5, 37.4).spot('lower.gallery', 27.5, 24.5).spot('lower.pumps', 6.5, 36.6).spot('lower.pumphouse', 11.5, 36.4)
+  m.spot('lower.landing', 25, 37.6).spot('undercroft.counter', 32.4, 37.6).spot('lower.gallery', 27.5, 24.5).spot('lower.pumps', 6.5, 36.6).spot('lower.pumphouse', 11.5, 36.4)
     .spot('lower.sump', 7.5, 10.8).spot('lower.catacombs', 48, 20.6).spot('lower.beds', 48.2, 29.6).spot('lower.enclave', 31.5, 7.2).spot('lower.kettle', 37.5, 9.6);
   lowerTwo(m);
   m.water = 'lower'; m.start = [27.5, 37.6];
