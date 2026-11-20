@@ -11,7 +11,7 @@ import { homeProp, HOME_PROPS } from './homeworld.js';
 import { cityProp, CITY_PROPS } from './cityworld.js';
 import { ColonySky, buildSurroundings, colonyProp, buildingExtras, COLONY_KINDS, Bots, mergeStatic, lightPools, setColonyTime, U as HAZE } from './colony.js';
 
-const GROUND_TEX = { v: 'dust_lane', f: 'soil_dry', p: 'path_dirt', c: 'cobble', s: 'sand', k: 'wood_floor', a: 'ash_ground', o: 'stone_floor', h: 'hay', b: 'wood_floor', d: 'deck_floor', m: 'asphalt' };
+const GROUND_TEX = { v: 'dust_lane', f: 'soil_dry', p: 'path_dirt', c: 'cobble', s: 'sand', k: 'wood_floor', a: 'ash_ground', o: 'stone_floor', h: 'hay', b: 'wood_floor', d: 'deck_floor', m: 'asphalt', n: 'moss' };
 const SEASON_KEY = ['spring', 'summer', 'autumn', 'winter'];
 const CROP_COLOR = { turnip: '#f1ece0', potato: '#c9a56a', cucumber: '#3f8a3a', strawberry: '#d5283c', tomato: '#d8362a', corn: '#f0c93c', onion: '#d8b25e', pumpkin: '#e8812a', carrot: '#ee7a22', eggplant: '#5b2c7a', sweetpotato: '#b0546a', spinach: '#2f7a35', moonflower: '#cfe6ff' };
 const CROP_H = { corn: 1.7, tomato: 1.1, cucumber: 1.0, eggplant: 0.9, moonflower: 0.9, pumpkin: 0.7 };
@@ -862,8 +862,7 @@ export class World {
       }
       if (c === 'r') { const m = new THREE.Mesh(tiles(cells, 1.7, true), std({ map: art.tex('cliff_rock', { repeat: 1 }) })); m.castShadow = m.receiveShadow = true; R.add(m); continue; }
       if (c === 't') {                                   // the city's toxic pools: a sunken bed under a glowing lime surface
-        R.add(new THREE.Mesh(tiles(cells, -0.3), std({ color: 0x2a3424 })));
-        const m = new THREE.Mesh(tiles(cells, 0.02), new THREE.MeshStandardMaterial({ color: 0x8ef05a, emissive: 0x4ab02a, emissiveIntensity: 0.7, transparent: true, opacity: 0.88, roughness: 0.2 })); m.receiveShadow = true; R.add(m); continue;
+        const m = new THREE.Mesh(tiles(cells, 0, false, 0.25), std({ map: art.tex('ash_ground', { repeat: 1 }), color: 0x8a8a7a })); m.receiveShadow = true; R.add(m); continue;   // plain scorched ground: only the pool models glow
       }
       if (c === 'w') {
         const bed = new THREE.Mesh(tiles(cells, -0.5), std({ color: 0x2a3a34 })); R.add(bed);

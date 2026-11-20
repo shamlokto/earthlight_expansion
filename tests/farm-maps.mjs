@@ -68,7 +68,7 @@ for (const seed of [1, 2, 3, 5, 8, 13, 21, 34]) {
   check(camps.length >= 2 && camps.length <= 4 && camps.some((c) => c.zone === 0 && Math.hypot(c.x - 48, c.y - 67) < 25) && new Set(camps.map((c) => c.zone)).size === camps.length, `city ${seed}: ${camps.length} safe spots, one per zone, one near the pad`);
   check(camps.every((c) => reachCell(c.y * W + c.x) && !mine.haz[c.y * W + c.x] && mine.cells[c.y * W + c.x] === 0), `city ${seed}: every safe spot is reachable cleared ground with no gas`);
   check(mine.monsters.every((r) => camps.every((c) => Math.hypot(r.x - c.x, r.y - c.y) >= 3)), `city ${seed}: no creature starts inside a safe spot`);
-  check(m.at(Math.floor(m.start[0]), Math.floor(m.start[1])) === 'm' && m.g.includes('t') && m.g.includes('g') && m.props.filter((p) => p.kind === 'ruin_tower').length >= 30, `city ${seed}: streets, toxic pools, overgrowth and towers`);
+  check(m.at(Math.floor(m.start[0]), Math.floor(m.start[1])) === 'm' && m.g.includes('t') && m.g.includes('n') && m.props.filter((p) => p.kind === 'ruin_tower').length >= 30, `city ${seed}: streets, toxic pools, overgrowth and towers`);
 }
 // the belt: one long map built from the sim's grid, the pad at the south, a marker buoy pair and signs on every sector line
 for (const seed of [1, 7, 31]) {

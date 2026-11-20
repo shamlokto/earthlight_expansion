@@ -528,7 +528,7 @@ function script(s, days = 12) {
   const r0 = loot('rubble', 0), r2 = loot('rubble', 2), car = loot('car', 1), safe0 = loot('safe', 1), safe2 = loot('safe', 2), lock = loot('locker', 1), vault = loot('vault', 2, 50);
   check(r0.worth > 3 && r0.worth < 40 && r2.worth > r0.worth, `rubble: a little, more in the core (${r0.worth.toFixed(0)} → ${r2.worth.toFixed(0)} cr a pile)`);
   check(r2.rare > r0.rare && safe2.rare > r2.rare, 'the rare finds come further in, and from safes');
-  check(car.cr > 2 && safe0.cr > 30 && safe0.items >= 1 && safe2.worth > safe0.worth && lock.items > 0.6, `cars hold credits, safes always pay (${safe0.worth.toFixed(0)}–${safe2.worth.toFixed(0)} cr a safe), lockers mostly hold something`);
+  check(car.cr > 1 && safe0.cr > 15 && safe0.items >= 1 && safe2.worth > safe0.worth && lock.items > 0.6, `cars hold credits, safes always pay (${safe0.worth.toFixed(0)}–${safe2.worth.toFixed(0)} cr a safe), lockers mostly hold something`);
   check(vault.worth > 1500 && vault.items >= 5, `the sealed vault is the big prize (${vault.worth.toFixed(0)} cr)`);
   check(['old_coin', 'teddy_bear', 'film_camera', 'credit_chip', 'data_core'].every((id) => ITEMS[id] && ITEMS[id].sell > 0 && ITEMS[id].kind === 'valuable'), 'the new old-world valuables sell');
   check(sim.OLD_FINDS.every(([id]) => ITEMS[id]) && RELICS.every((r) => sim.OLD_FINDS.some(([id]) => id === r.id)), 'every relic can still be found');
@@ -578,15 +578,15 @@ function script(s, days = 12) {
   zr = sim.cityMove(z, 48, 3); check(zr.zone === 2 && zr.first && z.city.best === 2, 'the core'); sim.cityMove(z, 48, 66); sim.enterCity(z); zr = sim.cityMove(z, 48, 40); check(zr.changed && !zr.first, 'not news twice');
 
   // a trip's worth: everything near enough on 60 stamina, against a belt trip of 60 hammer blows
-  const tripCity = () => { const t = rich(50); t.player.money = 0; sim.enterCity(t); const M = t.mine; let worth = 0; const near = M.spots.filter((p) => p.kind !== 'vault').sort((x, y) => Math.hypot(x.i % M.w - 48, Math.floor(x.i / M.w) - 67) - Math.hypot(y.i % M.w - 48, Math.floor(y.i / M.w) - 67)).slice(0, 60);
+  const tripCity = (k) => { const t = rich(50 + k); t.player.money = 0; sim.enterCity(t); const M = t.mine; let worth = 0; const near = M.spots.filter((p) => p.kind !== 'vault').sort((x, y) => Math.hypot(x.i % M.w - 48, Math.floor(x.i / M.w) - 67) - Math.hypot(y.i % M.w - 48, Math.floor(y.i / M.w) - 67)).slice(0, 60);
     for (const p of near) { const x = p.i % M.w, y = Math.floor(p.i / M.w); t.player.stamina = 100; const rr = sim.searchSpot(t, x, y); worth += rr.credits || 0; for (const f of rr.gained || []) worth += (ITEMS[f.id].sell || 0) * f.n; for (let k = 0; k < t.player.inv.length; k++) if (t.player.inv[k] && ITEMS[t.player.inv[k].id].kind !== 'tool') t.player.inv[k] = null; }
     for (let i = M.monsters.length - 1; i >= 0; i--) if (M.monsters[i].zone < 2) { const rr = sim.defeatMonster(t, i); worth += rr.credits; for (const f of rr.gained) worth += (ITEMS[f.id].sell || 0) * f.n; }
     return worth; };
   const tripBelt = () => { const t = rich(51); t.belt = { seed: 51, gone: {}, reached: 5 }; sim.enterBelt(t, 5); const M = t.mine; let worth = 0, blows = 0; const lv = t.player.toolLevel.hammer || 1;
     for (let i = M.cells.length - 1; i >= 0 && blows < 60; i--) { if (!sim.isRock(M.cells[i]) || !sim.rockHits(M.cells[i], lv)) continue; let rr; do { t.player.stamina = 100; rr = sim.hitRock(t, i % M.w, Math.floor(i / M.w)); blows++; } while (rr.ok && !rr.broke); for (const f of rr.gained || []) worth += (ITEMS[f.id].sell || 0) * f.n; for (let k = 0; k < t.player.inv.length; k++) if (t.player.inv[k] && ITEMS[t.player.inv[k].id].kind !== 'tool') t.player.inv[k] = null; }
     return worth; };
-  let wc = 0, wb = 0; for (let k = 0; k < 6; k++) { wc += tripCity(); wb += tripBelt(); }
-  check(wc > wb * 0.9 && wc < wb * 2.5, `a city trip is worth about a belt trip or a bit more (city ${Math.round(wc / 6)} cr, belt ${Math.round(wb / 6)} cr, on 60 stamina)`);
+  let wc = 0, wb = 0; for (let k = 0; k < 12; k++) { wc += tripCity(k); wb += tripBelt(); } wc /= 2; wb /= 2;
+  check(wc > wb * 1.3 && wc < wb * 2.0, `a city trip is worth about a belt trip or a bit more (city ${Math.round(wc / 6)} cr, belt ${Math.round(wb / 6)} cr, on 60 stamina)`);
   console.log(`  trip worth on 60 stamina: city ${Math.round(wc / 6)} cr, belt (sector 5) ${Math.round(wb / 6)} cr`);
 
   // camps (safe spots): build (3 scrap + 100 cr), sleep there (the night runs, the hull is mended, the trip goes on), save and load there, fly home

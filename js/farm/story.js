@@ -1928,6 +1928,7 @@ export const RUINS = {
     'Downtown for the first time. Towers broken off at the third or fourth floor, shop counters still standing in the shopfronts. Watch for the smog-wraiths: they drink the Pallas\'s charge.',
     'The core. Everything glows faintly, and the craters are full of something lime-green. Somewhere in here is a sealed vault, and something big guarding it.',
   ],
+  goal: (m) => (m.camps && m.camps.some((c) => c.built) ? { title: 'Find treasure', hint: 'Your camp is safe: sleep, save or fly home from it. Or walk back to the shuttle.' } : { title: 'Find treasure', hint: m.zone === 2 ? 'The core: richest finds, toughest creatures. The vault is here somewhere.' : 'Search cars, rubble, lockers and safes. Green rings are safe spots for a camp.' }),
   vault: 'The sealed vault groans open. Inside, on steel shelves, the things somebody thought worth saving from the end of the world.',
   monster: [
     'Pest control. Carry on.',

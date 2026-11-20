@@ -87,12 +87,14 @@ export function hud(state, extra = {}) {
   $('hPlace').textContent = extra.place || '';
   const g = sim.goalState(state), next = sim.GOALS.find((q, i) => !g[i].done);
   const qh = extra.quest ? `<b>Favour for ${esc(extra.quest.who)}</b><span>${esc(extra.quest.text)}</span>` : '';
-  $('hGoal').innerHTML = (next ? `<b>${esc(next.title)}</b><span>${esc(next.hint)}</span>` : '') + qh; $('hGoal').hidden = !next && !qh;
+  if (extra.trip) { $('hGoal').innerHTML = `<b>${esc(extra.trip.title)}</b><span>${esc(extra.trip.hint)}</span>`; $('hGoal').hidden = false; }   // on Earth: the trip's goal, not the farm's
+  else { $('hGoal').innerHTML = (next ? `<b>${esc(next.title)}</b><span>${esc(next.hint)}</span>` : '') + qh; $('hGoal').hidden = !next && !qh; }
   let h = '';
   p.inv.forEach((s, i) => {
     let tag = '';
     if (s) { const it = ITEMS[s.id]; tag = it.kind === 'tool' ? (s.id === 'can' ? `<i>${p.water}</i>` : (p.toolLevel[s.id] > 1 ? `<i>${'★'.repeat(p.toolLevel[s.id] - 1)}</i>` : '')) : (s.n > 1 ? `<i>${s.n}</i>` : ''); }
-    h += `<button class="fm-slot${i === p.sel ? ' sel' : ''}" data-slot="${i}" title="${s ? esc(ITEMS[s.id].name) : ''}">${s ? icon(s.id) : ''}${tag}<u>${i < 9 ? i + 1 : i === 9 ? 0 : ''}</u></button>`;
+    const off = extra.trip && s && ITEMS[s.id].kind === 'tool';   // on Earth the farm tools stay in the rucksack, dimmed: the Pallas does the work
+    h += `<button class="fm-slot${i === p.sel && !extra.trip ? ' sel' : ''}" data-slot="${i}" title="${s ? esc(ITEMS[s.id].name) + (off ? ' (not used on Earth)' : '') : ''}"${off ? ' style="opacity:.32;filter:grayscale(1)"' : ''}>${s ? icon(s.id) : ''}${tag}<u>${i < 9 ? i + 1 : i === 9 ? 0 : ''}</u></button>`;
   });
   const bar = $('bar'); bar.innerHTML = h;
   // 25–30 slots: two even rows on a wide screen; on a phone rows of ten, the slots shrunk to fit.
@@ -100,7 +102,7 @@ export function hud(state, extra = {}) {
   const size = Math.max(26, Math.min(narrow ? 44 : 52, Math.floor((innerWidth * 0.96 - 14 - 5 * (cols - 1)) / cols)));
   bar.style.setProperty('--cols', cols); bar.style.setProperty('--slot', size + 'px'); bar.classList.add('grid');
   $('hud').style.setProperty('--barH', (bar.offsetHeight || 64) + 'px');
-  const s = p.inv[p.sel]; $('hHeld').textContent = s ? ITEMS[s.id].name + (ITEMS[s.id].kind === 'tool' && p.toolLevel[s.id] ? ` · ${TOOL_LEVELS[p.toolLevel[s.id]]}` : '') : 'Empty hands';
+  const s = p.inv[p.sel]; $('hHeld').textContent = extra.held != null ? extra.held : s ? ITEMS[s.id].name + (ITEMS[s.id].kind === 'tool' && p.toolLevel[s.id] ? ` · ${TOOL_LEVELS[p.toolLevel[s.id]]}` : '') : 'Empty hands';
 }
 export function prompt(text) { const e = $('prompt'); e.hidden = !text; if (text) e.innerHTML = text; }
 let toastT = 0;
@@ -169,7 +171,7 @@ export function shop(state, shopId, keeper, onChange) {
   return new Promise((res) => {
     const draw = () => {
       const stock = sim.shopStock(state, shopId), bg = art.url('scenes/shop_' + shopId);
-      const body = openWin(sim.SHOPS[shopId].name, `<div class="fm-shop"${bg ? ` style="--bg:url(${bg})"` : ''}><div class="fm-shophead">${keeper ? face(keeper) : '<div class="fm-face fm-terminal">◈</div>'}<div><b>${keeper ? esc(NPCS[keeper].name) : 'Vending terminal'}</b><span>${state.player.money.toLocaleString()} cr</span></div></div>` +
+      const body = openWin(sim.SHOPS[shopId].name, `<div class="fm-shop"${bg ? ` style="--bg:url(${new URL(bg, document.baseURI).href})"` : ''}><div class="fm-shophead">${keeper ? face(keeper) : '<div class="fm-face fm-terminal">◈</div>'}<div><b>${keeper ? esc(NPCS[keeper].name) : 'Vending terminal'}</b><span>${state.player.money.toLocaleString()} cr</span></div></div>` +
         (stock.length ? stock.map((s) => `<div class="fm-row${s.can ? '' : ' no'}"><div><b>${esc(s.label)}</b><span>${esc(s.desc || '')}${s.needs ? ' · needs ' + esc(s.needs) : ''}${!s.can && s.why ? ` · <em>${esc(s.why)}</em>` : ''}</span></div><button data-key="${esc(s.key)}" ${s.can ? '' : 'disabled'}>${s.price.toLocaleString()} cr</button></div>`).join('') : '<p class="fm-dim">Nothing for sale today.</p>') + '</div>', () => res());
       body.onclick = (e) => { const b = e.target.closest('button[data-key]'); if (!b) return; const r = sim.buy(state, shopId, b.dataset.key, 1); toast(r.msg || (r.ok ? 'Bought.' : 'You cannot buy that.')); onChange && onChange(); draw(); };
     };

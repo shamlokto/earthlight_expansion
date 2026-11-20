@@ -113,7 +113,7 @@ function recover(e, where) {
 }
 window.addEventListener('error', (ev) => recover(ev.error || ev.message, 'error'));
 window.addEventListener('unhandledrejection', (ev) => recover(ev.reason, 'promise'));
-function refreshHud() { const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
+function refreshHud() { const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: 'Pallas · Space fires · F Hydra' } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
 // ---------------------------------------------------------------- people
@@ -652,7 +652,8 @@ function ruinsTick(dt) {
   hurtT -= dt; fireCd -= dt; slashCd -= dt; hydraCd -= dt; dashCd -= dt; dashT -= dt;
   if (me.group) me.group.visible = !(hurtT > 0 && Math.floor(hurtT * 12) % 2);
   for (const mon of [...monsters]) {
-    const ex = me.x - mon.x, ey = me.y - mon.y, d = Math.hypot(ex, ey) || 0.01; if (map.city && d > 26) continue; mon.wob += dt; mon.t -= dt;
+    const ex = me.x - mon.x, ey = me.y - mon.y, d = Math.hypot(ex, ey) || 0.01; if (map.city && d > 26) { mon.wob += dt; const hx = mon.home[0] - mon.x, hy = mon.home[1] - mon.y, far = hx * hx + hy * hy > 9, nx = mon.x + (far ? Math.sign(hx) : Math.cos(mon.wob * 0.4)) * 0.3 * dt, ny = mon.y + (far ? Math.sign(hy) : Math.sin(mon.wob * 0.5)) * 0.3 * dt; if (!blocked(nx, ny) && !inCamp(nx, ny)) { mon.x = nx; mon.y = ny; } mon.state = 'wander'; mon.o.position.set(mon.x, mon.drain ? 0.25 + Math.sin(mon.wob * 2.2) * 0.12 : 0, mon.y); continue; }   // far away: a slow idle amble near home
+    mon.wob += dt; mon.t -= dt;
     let sp = 0, tx = 0, ty = 0;
     if (mon.kind === 'drone') {                                            // drones keep their distance and lob slow orbs
       if (d < 7) { const want = d < 3 ? -1 : d > 4.5 ? 1 : 0; tx = ex / d * want + Math.cos(mon.wob) * 0.6; ty = ey / d * want + Math.sin(mon.wob * 1.3) * 0.6; sp = 1.3; mon.shotT -= dt; if (mon.shotT <= 0) { mon.shotT = 2.4 + Math.random(); spawnBolt(mon.x, mon.y, ex, ey, 'enemy'); floatText(mon.x, mon.y, '!'); } }
@@ -700,9 +701,11 @@ function hullBar(on) {
 }
 function cityPlace(i) {
   const m = S.mine, c = m.cells[i], x = i % m.w, y = Math.floor(i / m.w), kind = CITY_PROP[c];
+  if (x === 0 || y === 0 || x === m.w - 1 || y === m.h - 1) return;   // the edge ring is drawn by the backdrop, not as a row of slabs
   if (c === 4) { if (m.cells[i - m.w] === 4) return; W.place('cy' + i, kind, x + 1.5, y + 2.5, { w: 1, d: 3, seed: i }); }
   else if (kind) { const o = W.place('cy' + i, kind, x + 1.5, y + 1.5, { seed: i, scale: c === 11 ? 0.7 : 1 }); if (c === 5 || c === 14) o.rotation.y = i % 6; }   // billboards, lockers, counters, safes and the vault face +Z, towards the camera
-  else if (c === 6 && x % 2 === 0 && y % 2 === 0) W.place('cy' + i, 'toxic_pool', x + 1.5, y + 1.5, { seed: i });
+  else if (c === 6) W.place('cy' + i, 'toxic_pool', x + 1.5, y + 1.5, { seed: i, scale: 1.05 + (i % 3) * 0.05 });
+  else if (c === 7 && ((i * 2654435761 >>> 28) < 6 || ((x + y) % 2 === 0 && [1, -1, m.w, -m.w].some((d) => m.cells[i + d] !== 7)))) { const o = W.place('cy' + i, 'weed', x + 1.2 + (i % 5) * 0.12, y + 1.2 + (i % 7) * 0.09, { scale: 0.7 + (i % 4) * 0.15 }); o.rotation.y = i; }   // tufts in the overgrowth   // tufts, thicker along the moss's edges to soften them
   else if (m.haz[i] && (x + y) % 2 === 0) W.place('cy' + i, 'haze', x + 1.5, y + 1.5, { hazard: 1 });
   else return;
   cityPlaced.add(i);
@@ -779,12 +782,14 @@ async function flyHome() {
   while (t < T && !skip) {
     await new Promise((r) => requestAnimationFrame(r)); const now = performance.now(); t += Math.min(0.1, (now - last) / 1000); last = now; window.__farmFly = t;
     if (t < 0.8) { const k = t / 0.8; g.scale.set(1 + 0.2 * k, 1 - 0.5 * k, 1 + 0.2 * k); g.rotation.x = 0.3 * k; }          // crouch, limbs folding in
-    else if (!flashed) { flashed = true; W.puff(x0, y0, 0xffffff, 26, 1.0); W.puff(x0, y0, 0x8ff4ff, 16, 1.3); W.shake = 0.15; sfx('zap'); g.visible = false; jet.visible = true; }
-    if (t >= 0.8) {
-      const k = Math.min(1, (t - 0.8) / 0.5), w = wings(); jet.scale.setScalar(0.5 + 0.5 * k); if (w) w.scale.set(0.05 + 0.95 * k, 1, 1);
+    else if (t < 1.05) { const k = (t - 0.8) / 0.25; g.scale.setScalar(Math.max(0.05, 1 - k)); jet.visible = true; jet.scale.setScalar(0.05 + 0.45 * k); if (!flashed) { flashed = true; W.puff(x0, y0, 0xffffff, 26, 1.0); W.puff(x0, y0, 0x8ff4ff, 16, 1.3); W.puff(x0, y0, 0xff9ab0, 10, 0.6); W.shake = 0.15; sfx('zap'); } }   // the mech shrinks into the flash as the jet grows out of it
+    else if (g.visible) { g.visible = false; W.puff(x0, y0, 0xffffff, 10, 1.4); }
+    if (t >= 1.05) {
+      const k = Math.min(1, (t - 1.05) / 0.35), w = wings(); jet.scale.setScalar(0.5 + 0.5 * k); if (w) w.scale.set(0.05 + 0.95 * k, 1, 1);
       const f = Math.max(0, t - 1.4); jet.position.set(x0 + Math.sin(f * 1.4) * f * 0.8, 0.2 + f * f * 1.6, y0 - f * f * 3.2);
       jet.rotation.set(-Math.min(0.45, f * 0.35), Math.sin(f * 1.4) * 0.25, Math.sin(f * 1.6) * 0.6);                // climb and bank
       me.y = Math.max(2, y0 - f * f * 2.6);                                                                               // the camera follows a little
+      if (f > 0 && Math.random() < 0.7) W.puff(jet.position.x, jet.position.z + 0.6, Math.random() < 0.5 ? 0x8ff4ff : 0xffffff, 2, jet.position.y + 0.4);   // an engine trail
     }
   }
   removeEventListener('keydown', onKey, true); removeEventListener('pointerdown', onKey, true);

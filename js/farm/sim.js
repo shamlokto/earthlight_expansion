@@ -855,9 +855,9 @@ const SPOT_OF = { 5: 'rubble', 3: 'car', 4: 'bus', 10: 'locker', 11: 'safe', 12:
 export function cityZone(x, y) { const d = Math.hypot(x - CITY_PAD[0], (y - CITY_PAD[1]) * 1.2); return d < 30 ? 0 : d < 58 ? 1 : 2; }
 // The creatures: base stats in the suburbs; cityMonster scales them by zone (hp +50%, damage +35% a zone).
 export const CITY_MONSTERS = {
-  rad_hound: { name: 'rad-hound', hp: 2, dmg: 4, speed: 2.4, sight: 7, credits: [2, 6], drops: { scrap: 0.2, battery: 0.05 } },
-  glow_slime: { name: 'glow-slime', hp: 3, dmg: 5, speed: 0.8, sight: 5, split: true, credits: [2, 7], drops: { battery: 0.08, silica: 0.15 } },
-  rust_crawler: { name: 'rust-crawler', hp: 5, dmg: 7, speed: 1.3, sight: 6, armour: true, credits: [3, 9], drops: { scrap: 0.5, alloy: 0.12, copper: 0.1 } },
+  rad_hound: { name: 'rad-hound', hp: 2, dmg: 4, speed: 2.4, sight: 7, credits: [2, 6], drops: { scrap: 0.15, battery: 0.03 } },
+  glow_slime: { name: 'glow-slime', hp: 3, dmg: 5, speed: 0.8, sight: 5, split: true, credits: [2, 7], drops: { battery: 0.04, silica: 0.15 } },
+  rust_crawler: { name: 'rust-crawler', hp: 5, dmg: 7, speed: 1.3, sight: 6, armour: true, credits: [3, 9], drops: { scrap: 0.35, alloy: 0.06, copper: 0.06 } },
   smog_wraith: { name: 'smog-wraith', hp: 3, dmg: 3, speed: 1.1, sight: 7, drain: true, float: true, credits: [4, 10], drops: { comet_ice: 0.12, crystal: 0.05 } },
   spore_brute: { name: 'spore-brute', hp: 16, dmg: 12, speed: 0.75, sight: 6, boss: true, credits: [40, 80], drops: { seedtin: 0.5, crystal: 0.5, alloy: 1 } },
 };
@@ -914,7 +914,7 @@ export function cityLayout(seed) {
     const rad = 1.2 + r() * (z === 2 ? 2.2 : 1.4);
     for (let y = Math.floor(cy - rad - 1); y <= cy + rad + 1; y++) for (let x = Math.floor(cx - rad - 1); x <= cx + rad + 1; x++) {
       if (!inb(x, y) || cells[at(x, y)] === 2) continue; const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
-      if (d < rad) cells[at(x, y)] = 6; else if (d < rad + 1 && r() < 0.3) cells[at(x, y)] = r() < 0.4 ? 5 : 14;
+      if (d < rad) cells[at(x, y)] = 6; else if (d < rad + 1 && r() < 0.18) cells[at(x, y)] = r() < 0.5 ? 5 : 14;
     }
   }
   // overgrowth: weeds and vines take back the streets, most of all in the suburbs
@@ -933,7 +933,7 @@ export function cityLayout(seed) {
       else if (k < 0.062) set(x, y, 5);
     } else if (c === 1 || c === 7) {
       const kerb = [[0, -1], [0, 1], [-1, 0], [1, 0]].some(([a, b]) => get(x + a, y + b) === 0), k = r();
-      if (kerb && k < 0.018) set(x, y, 8); else if (k < 0.03) set(x, y, 5); else if (k < 0.04) set(x, y, 14);
+      if (kerb && k < 0.018) set(x, y, 8); else if (k < 0.03) set(x, y, 5);
     }
   }
   // by the towers: shop counters downtown, lockers anywhere, safes that tumbled out of the tall ones
@@ -988,7 +988,7 @@ export function cityLayout(seed) {
     const kind = SPOT_OF[cells[i]]; if (!kind) continue;
     if (kind === 'bus' && cells[i - w] === 4) continue;                          // one spot a bus (its north end)
     if ((kind === 'car' || kind === 'bus') && r() > 0.55) continue;
-    if (kind === 'rubble' && r() > 0.3) { cells[i] = 14; continue; }          // most heaps are just heaps
+    if (kind === 'rubble' && r() > 0.3) { const nb = DIRS.map(([dx, dy]) => cells[i + dy * w + dx]); cells[i] = nb.includes(2) && r() < 0.5 ? 14 : nb.every((c) => c === 0) ? 0 : 1; continue; }   // most heaps are cleared away; a few slabs stay by the towers
     if (open(i) || (kind === 'bus' && [i + w, i + 2 * w].some(open))) spots.push({ i, kind });
     else if (kind === 'vault') { cells[i] = 14; vault = -1; }
   }
@@ -1037,20 +1037,20 @@ export function cityMove(state, x, y) {
 // Old-world finds: [id, weight in the suburbs, downtown, the core]. The rarer ones come further in (and from safes and lockers).
 export const OLD_FINDS = [
   ['old_coin', 6, 5, 4], ['photo', 5, 3, 2], ['teacup', 4, 3, 2], ['teddy_bear', 3, 3, 2], ['book', 3, 3, 2], ['record', 1, 2, 2],
-  ['watch', 1, 3, 3], ['toy', 1, 2, 2], ['film_camera', 0.5, 2, 3], ['medal', 0.3, 1.5, 2], ['musicbox', 0.2, 1, 2], ['seedtin', 0.2, 0.8, 1.5],
-  ['datachip', 0, 0.6, 1.5], ['ring', 0, 0.4, 1.2], ['credit_chip', 0.5, 1.5, 2],
+  ['watch', 1, 2, 3], ['toy', 1, 2, 2], ['film_camera', 0.3, 1.2, 3], ['medal', 0.3, 1, 2], ['musicbox', 0.1, 0.6, 2], ['seedtin', 0.1, 0.5, 1.5],
+  ['datachip', 0, 0.3, 1.5], ['ring', 0, 0.2, 1.2], ['credit_chip', 0.4, 1, 2],
 ];
 function oldFind(state, z, rare = 0) { return OLD_FINDS[pick(state, OLD_FINDS.map((e, k) => e[1 + z] * (k >= 6 ? 1 + rare : 1)))][0]; }
 // What a spot gives up: { items: [[id, n]], credits }. Credits grow by half a zone further in.
 export function cityLoot(state, kind, zone) {
-  const z = clamp(int(zone) ? zone : 0, 0, 2), k = 1 + 0.5 * z, items = [], cr = (a, b) => Math.round((a + rnd(state) * (b - a)) * k), q = rnd(state);
+  const z = clamp(int(zone) ? zone : 0, 0, 2), k = (1 + 0.5 * z) * 0.7, items = [], cr = (a, b) => Math.round((a + rnd(state) * (b - a)) * k), q = rnd(state);
   let credits = 0;
-  if (kind === 'rubble') { if (q < 0.3) items.push(['scrap', 1]); else if (q < 0.36) items.push(['battery', 1]); else if (q < 0.43) items.push([oldFind(state, z), 1]); else if (q < 0.53) credits = cr(3, 12); }
-  else if (kind === 'car' || kind === 'bus') { if (q < 0.2) items.push(['scrap', 1]); else if (q < 0.45) credits = cr(4, 15); else if (q < 0.53) items.push([oldFind(state, z), 1]); }
-  else if (kind === 'counter') { if (rnd(state) < 0.6) credits = cr(8, 30); if (q < 0.25) items.push([oldFind(state, z), 1]); }
-  else if (kind === 'locker') { if (q < 0.45) items.push([oldFind(state, z, 1), 1]); else if (q < 0.6) items.push(['credit_chip', 1]); else if (q < 0.75) items.push(['battery', 1]); }
-  else if (kind === 'safe') { credits = cr(30, 80); items.push([oldFind(state, z, 2), 1]); if (q < 0.4) items.push(['old_coin', 2 + rint(state, 3)]); }
-  else if (kind === 'vault') { credits = cr(200, 300); items.push(['data_core', 1], [rnd(state) < 0.5 ? 'ring' : 'musicbox', 1], ['credit_chip', 2], ['seedtin', 1]); }
+  if (kind === 'rubble') { if (q < 0.25) items.push(['scrap', 1]); else if (q < 0.28) items.push(['battery', 1]); else if (q < 0.31) items.push([oldFind(state, z), 1]); else if (q < 0.41) credits = cr(3, 10); }
+  else if (kind === 'car' || kind === 'bus') { if (q < 0.18) items.push(['scrap', 1]); else if (q < 0.38) credits = cr(3, 10); else if (q < 0.42) items.push([oldFind(state, z), 1]); }
+  else if (kind === 'counter') { if (rnd(state) < 0.6) credits = cr(5, 20); if (q < 0.14) items.push([oldFind(state, z), 1]); }
+  else if (kind === 'locker') { if (q < 0.3) items.push([oldFind(state, z), 1]); else if (q < 0.4) items.push(['credit_chip', 1]); else if (q < 0.6) items.push(['battery', 1]); }
+  else if (kind === 'safe') { credits = cr(15, 40); items.push([oldFind(state, z, 1), 1]); if (q < 0.25) items.push(['old_coin', 2 + rint(state, 3)]); }
+  else if (kind === 'vault') { credits = cr(280, 420); items.push(['data_core', 1], [rnd(state) < 0.5 ? 'ring' : 'musicbox', 1], ['credit_chip', 2], ['seedtin', 1]); }
   return { items, credits };
 }
 const SPOT_NAMES = { rubble: 'the rubble', car: 'the car', bus: 'the bus', counter: 'the shop counter', locker: 'the locker', safe: 'the safe', vault: 'the sealed vault' };
@@ -1073,7 +1073,7 @@ export function searchSpot(state, x, y) {
 // A creature flees or fizzles: credits (by zone) and maybe materials. A big glow-slime splits into two small ones.
 function cityDefeat(state, m, index) {
   const q = m.monsters[index], b = CITY_MONSTERS[q.kind]; m.monsters.splice(index, 1); state.stats.monsters++;
-  const credits = q.small ? 1 + rint(state, 3) : Math.round((b.credits[0] + rnd(state) * (b.credits[1] - b.credits[0])) * (1 + 0.5 * q.zone));
+  const credits = q.small ? 1 + rint(state, 3) : Math.round((b.credits[0] + rnd(state) * (b.credits[1] - b.credits[0])) * (1 + 0.5 * q.zone) * 0.6);
   const drops = q.small ? [] : Object.entries(b.drops).filter(([, p]) => rnd(state) < p).map(([id]) => [id, 1]);
   const res = take(state, drops, { ok: true, gained: [], credits, kind: q.kind, spawned: [] });
   state.player.money += credits; m.credits += credits;
