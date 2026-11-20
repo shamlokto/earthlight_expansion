@@ -580,7 +580,7 @@ export class Board {
     };
     if (b.cannons && b.cannons.length && st.inLane) {
       const lanes = [];
-      for (const c of b.cannons) for (let y = c.y; y <= b.info.rows; y++) if (st.inLane(b, c.x, y)) lanes.push([c.x, y]);
+      for (const c of b.cannons) for (const x of c.cols || [c.x]) for (let y = c.y; y <= b.info.rows; y++) if (st.inLane(b, x, y)) lanes.push([x, y]);
       area(lanes, `rgba(255,110,40,${0.14 + 0.06 * Math.sin(sec * 3)})`, 'rgba(255,140,60,.35)');
     }
     if (st.threat) {

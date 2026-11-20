@@ -42,7 +42,7 @@ export const RECKONING = {
   survivorsCap: 20,        // the picket's survivors who follow the fleet home and strike Eden (a regroup)
   counterDelay: 12,        // days after going home before the picket and its reinforcements strike Eden
   afterCounter: 10,        // days after holding the counterstrike before the strike can go again
-  reinforceStep: 8,        // machines the rock gains each time Hesk has time (a regroup, a failed assault) ...
+  reinforceStep: 6,        // machines the rock gains each time Hesk has time (a regroup, a failed assault) ...
   reinforceMax: 3,         // ... at most this many times (each also +1 level for every enemy)
   blockade: 1.2,           // market prices are held at least this high while the siege waits
   remind: 7,               // days between the blockade's reminders

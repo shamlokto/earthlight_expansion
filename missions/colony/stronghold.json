@@ -84,98 +84,91 @@
    "type": 23,
    "x": 47,
    "y": 5,
-   "level": 6,
+   "level": 5,
    "army": 1
   },
   {
    "type": 23,
    "x": 53,
    "y": 5,
-   "level": 6,
+   "level": 5,
    "army": 1
   },
   {
    "type": 23,
    "x": 46,
    "y": 8,
-   "level": 6,
+   "level": 5,
    "army": 1
   },
   {
    "type": 23,
    "x": 54,
    "y": 8,
-   "level": 6,
+   "level": 5,
    "army": 1
   },
   {
    "type": 24,
    "x": 48,
    "y": 11,
-   "level": 6,
+   "level": 5,
    "army": 1
   },
   {
    "type": 24,
    "x": 52,
    "y": 11,
-   "level": 6,
+   "level": 5,
    "army": 1
   },
   {
    "type": 24,
    "x": 50,
    "y": 4,
-   "level": 6,
+   "level": 5,
    "army": 1
   },
   {
    "type": 24,
    "x": 50,
    "y": 12,
-   "level": 6,
-   "army": 1
-  },
-  {
-   "type": 17,
-   "x": 42,
-   "y": 17,
    "level": 5,
    "army": 1
   },
   {
    "type": 17,
-   "x": 39,
-   "y": 20,
-   "level": 5,
+   "x": 45,
+   "y": 16,
+   "level": 4,
    "army": 1
   },
   {
    "type": 18,
    "x": 41,
    "y": 18,
-   "level": 5,
+   "level": 4,
+   "army": 1
+  },
+  {
+   "type": 17,
+   "x": 39,
+   "y": 20,
+   "level": 4,
    "army": 1
   },
   {
    "type": 17,
    "x": 44,
    "y": 7,
-   "level": 5,
+   "level": 4,
    "army": 1
   },
   {
    "type": 18,
    "x": 53,
    "y": 16,
-   "level": 5,
-   "army": 1
-  },
-  {
-   "type": 17,
-   "x": 36,
-   "y": 22,
-   "level": 5,
+   "level": 4,
    "army": 1
   },
   {
@@ -199,7 +192,7 @@
    "type": 31,
    "x": 47,
    "y": 9,
-   "level": 6,
+   "level": 5,
    "hold": 10,
    "army": 1
   },
@@ -207,7 +200,7 @@
    "type": 39,
    "x": 52,
    "y": 6,
-   "level": 6,
+   "level": 5,
    "hold": 10,
    "army": 1
   },
@@ -215,7 +208,7 @@
    "type": 42,
    "x": 49,
    "y": 7,
-   "level": 6,
+   "level": 5,
    "hold": 10,
    "army": 1
   },
@@ -223,7 +216,7 @@
    "type": 60,
    "x": 45,
    "y": 13,
-   "level": 6,
+   "level": 5,
    "hold": 8,
    "army": 1
   },
@@ -231,15 +224,7 @@
    "type": 60,
    "x": 43,
    "y": 15,
-   "level": 6,
-   "hold": 8,
-   "army": 1
-  },
-  {
-   "type": 60,
-   "x": 41,
-   "y": 7,
-   "level": 6,
+   "level": 5,
    "hold": 8,
    "army": 1
   },
@@ -247,15 +232,15 @@
    "type": 60,
    "x": 52,
    "y": 14,
-   "level": 6,
-   "hold": 8,
+   "level": 5,
+   "hold": 12,
    "army": 1
   },
   {
    "type": 2,
    "x": 46,
    "y": 14,
-   "level": 5,
+   "level": 4,
    "hold": 8,
    "army": 1
   },
@@ -263,31 +248,31 @@
    "type": 2,
    "x": 42,
    "y": 6,
+   "level": 4,
+   "hold": 8,
+   "army": 1
+  },
+  {
+   "type": 70,
+   "x": 53,
+   "y": 19,
    "level": 5,
-   "hold": 8,
+   "hold": 12,
    "army": 1
   },
   {
    "type": 70,
-   "x": 48,
-   "y": 13,
-   "level": 6,
-   "hold": 8,
-   "army": 1
-  },
-  {
-   "type": 70,
-   "x": 47,
-   "y": 13,
-   "level": 6,
-   "hold": 8,
+   "x": 55,
+   "y": 19,
+   "level": 5,
+   "hold": 12,
    "army": 1
   },
   {
    "type": 71,
    "x": 55,
    "y": 1,
-   "level": 6,
+   "level": 5,
    "hold": 10,
    "army": 1
   },
@@ -295,7 +280,7 @@
    "type": 71,
    "x": 53,
    "y": 10,
-   "level": 6,
+   "level": 5,
    "hold": 10,
    "army": 1
   },
@@ -303,7 +288,7 @@
    "type": 67,
    "x": 45,
    "y": 3,
-   "level": 6,
+   "level": 5,
    "hold": 6,
    "army": 1
   },
@@ -311,7 +296,7 @@
    "type": 67,
    "x": 56,
    "y": 4,
-   "level": 6,
+   "level": 5,
    "hold": 6,
    "army": 1
   },
@@ -319,17 +304,8 @@
    "type": 80,
    "x": 16,
    "y": 18,
-   "level": 6,
-   "hold": 6,
-   "wakes": true,
-   "army": 1
-  },
-  {
-   "type": 80,
-   "x": 22,
-   "y": 17,
-   "level": 6,
-   "hold": 6,
+   "level": 4,
+   "hold": 8,
    "wakes": true,
    "army": 1
   },
@@ -337,17 +313,8 @@
    "type": 69,
    "x": 28,
    "y": 16,
-   "level": 6,
-   "hold": 6,
-   "wakes": true,
-   "army": 1
-  },
-  {
-   "type": 69,
-   "x": 33,
-   "y": 15,
-   "level": 6,
-   "hold": 6,
+   "level": 4,
+   "hold": 8,
    "wakes": true,
    "army": 1
   },
@@ -355,8 +322,8 @@
    "type": 16,
    "x": 19,
    "y": 18,
-   "level": 6,
-   "hold": 6,
+   "level": 4,
+   "hold": 8,
    "wakes": true,
    "army": 1
   },
@@ -364,8 +331,8 @@
    "type": 15,
    "x": 25,
    "y": 17,
-   "level": 6,
-   "hold": 6,
+   "level": 4,
+   "hold": 8,
    "wakes": true,
    "army": 1
   },
@@ -373,17 +340,8 @@
    "type": 80,
    "x": 22,
    "y": 28,
-   "level": 6,
-   "hold": 6,
-   "wakes": true,
-   "army": 1
-  },
-  {
-   "type": 80,
-   "x": 28,
-   "y": 27,
-   "level": 6,
-   "hold": 6,
+   "level": 4,
+   "hold": 8,
    "wakes": true,
    "army": 1
   },
@@ -391,17 +349,8 @@
    "type": 69,
    "x": 34,
    "y": 25,
-   "level": 6,
-   "hold": 6,
-   "wakes": true,
-   "army": 1
-  },
-  {
-   "type": 69,
-   "x": 39,
-   "y": 24,
-   "level": 6,
-   "hold": 6,
+   "level": 4,
+   "hold": 8,
    "wakes": true,
    "army": 1
   },
@@ -409,17 +358,8 @@
    "type": 16,
    "x": 25,
    "y": 28,
-   "level": 6,
-   "hold": 6,
-   "wakes": true,
-   "army": 1
-  },
-  {
-   "type": 15,
-   "x": 31,
-   "y": 26,
-   "level": 6,
-   "hold": 6,
+   "level": 4,
+   "hold": 8,
    "wakes": true,
    "army": 1
   },
@@ -427,26 +367,8 @@
    "type": 68,
    "x": 24,
    "y": 22,
-   "level": 6,
-   "hold": 6,
-   "wakes": true,
-   "army": 1
-  },
-  {
-   "type": 68,
-   "x": 31,
-   "y": 24,
-   "level": 6,
-   "hold": 6,
-   "wakes": true,
-   "army": 1
-  },
-  {
-   "type": 73,
-   "x": 23,
-   "y": 22,
-   "level": 6,
-   "hold": 6,
+   "level": 4,
+   "hold": 8,
    "wakes": true,
    "army": 1
   },
@@ -454,17 +376,8 @@
    "type": 73,
    "x": 31,
    "y": 23,
-   "level": 6,
-   "hold": 6,
-   "wakes": true,
-   "army": 1
-  },
-  {
-   "type": 66,
-   "x": 25,
-   "y": 21,
-   "level": 6,
-   "hold": 6,
+   "level": 4,
+   "hold": 8,
    "wakes": true,
    "army": 1
   },
@@ -472,8 +385,8 @@
    "type": 66,
    "x": 32,
    "y": 25,
-   "level": 6,
-   "hold": 6,
+   "level": 4,
+   "hold": 8,
    "wakes": true,
    "army": 1
   }
@@ -488,130 +401,44 @@
      "type": 38,
      "x": 1,
      "y": 22,
-     "level": 5,
+     "level": 4,
      "cargo": [9,9]
     },
     {
      "type": 8,
      "x": 1,
      "y": 25,
-     "level": 5
+     "level": 4
     },
     {
      "type": 8,
      "x": 2,
      "y": 19,
-     "level": 5
-    },
-    {
-     "type": 8,
-     "x": 1,
-     "y": 27,
-     "level": 5
+     "level": 4
     },
     {
      "type": 9,
      "x": 3,
      "y": 22,
-     "level": 5
+     "level": 4
     },
     {
      "type": 10,
      "x": 20,
      "y": 40,
-     "level": 5
+     "level": 4
     },
     {
      "type": 10,
      "x": 23,
      "y": 40,
-     "level": 5
+     "level": 4
     },
     {
      "type": 12,
      "x": 26,
      "y": 40,
-     "level": 5
-    },
-    {
-     "type": 12,
-     "x": 18,
-     "y": 39,
-     "level": 5
-    },
-    {
-     "type": 9,
-     "x": 28,
-     "y": 40,
-     "level": 5
-    }
-   ]
-  },
-  {
-   "turn": 5,
-   "army": 1,
-   "wave": "north",
-   "units": [
-    {
-     "type": 33,
-     "x": 20,
-     "y": 1,
-     "level": 6,
-     "cargo": [8,8]
-    },
-    {
-     "type": 31,
-     "x": 8,
-     "y": 2,
-     "level": 6
-    },
-    {
-     "type": 31,
-     "x": 34,
-     "y": 1,
-     "level": 6
-    },
-    {
-     "type": 50,
-     "x": 4,
-     "y": 1,
-     "level": 5
-    },
-    {
-     "type": 50,
-     "x": 28,
-     "y": 1,
-     "level": 5
-    },
-    {
-     "type": 51,
-     "x": 12,
-     "y": 1,
-     "level": 5
-    },
-    {
-     "type": 51,
-     "x": 40,
-     "y": 1,
-     "level": 5
-    },
-    {
-     "type": 41,
-     "x": 16,
-     "y": 1,
-     "level": 5
-    },
-    {
-     "type": 66,
-     "x": 26,
-     "y": 2,
-     "level": 6
-    },
-    {
-     "type": 66,
-     "x": 2,
-     "y": 10,
-     "level": 6
+     "level": 4
     }
    ]
   },
@@ -631,57 +458,57 @@
      "type": 40,
      "x": 59,
      "y": 26,
-     "level": 6
+     "level": 5
     },
     {
      "type": 40,
      "x": 59,
      "y": 18,
-     "level": 6
+     "level": 5
     },
     {
      "type": 60,
      "x": 58,
      "y": 30,
-     "level": 6
+     "level": 5
     },
     {
      "type": 60,
      "x": 58,
      "y": 24,
-     "level": 6
+     "level": 5
     },
     {
      "type": 60,
      "x": 58,
      "y": 20,
-     "level": 6
+     "level": 5
     },
     {
      "type": 62,
      "x": 59,
      "y": 32,
-     "level": 6,
+     "level": 5,
      "name": "Pallas · ex-Eden"
     },
     {
      "type": 62,
      "x": 59,
      "y": 34,
-     "level": 6,
+     "level": 5,
      "name": "Pallas · ex-Eden"
     },
     {
      "type": 3,
      "x": 57,
      "y": 36,
-     "level": 5
+     "level": 4
     },
     {
      "type": 3,
      "x": 57,
      "y": 26,
-     "level": 5
+     "level": 4
     }
    ]
   },
@@ -691,72 +518,48 @@
    "wave": "trap2",
    "units": [
     {
-     "type": 34,
-     "x": 1,
-     "y": 21,
-     "level": 7,
-     "name": "Artemis · the Ledger (Deputy Director Quill)"
-    },
-    {
      "type": 35,
      "x": 1,
      "y": 16,
-     "level": 6,
+     "level": 5,
+     "name": "Iris · Deputy Director Quill",
      "cargo": [12,12]
     },
     {
      "type": 0,
      "x": 1,
      "y": 20,
-     "level": 5
+     "level": 4
     },
     {
      "type": 0,
      "x": 2,
      "y": 13,
-     "level": 5
-    },
-    {
-     "type": 0,
-     "x": 16,
-     "y": 40,
-     "level": 5
+     "level": 4
     },
     {
      "type": 2,
      "x": 21,
      "y": 40,
-     "level": 6
-    },
-    {
-     "type": 2,
-     "x": 25,
-     "y": 40,
-     "level": 6
-    },
-    {
-     "type": 15,
-     "x": 1,
-     "y": 18,
      "level": 5
     },
     {
      "type": 15,
      "x": 30,
      "y": 40,
-     "level": 5
+     "level": 4
     },
     {
      "type": 70,
      "x": 1,
      "y": 24,
-     "level": 6
+     "level": 5
     },
     {
      "type": 70,
      "x": 33,
      "y": 40,
-     "level": 6
+     "level": 5
     }
    ]
   },
@@ -792,58 +595,61 @@
      "type": 72,
      "x": 48,
      "y": 6,
-     "level": 7
+     "level": 6
     },
     {
      "type": 72,
      "x": 54,
      "y": 7,
-     "level": 7
+     "level": 6
     },
     {
      "type": 71,
      "x": 47,
      "y": 8,
-     "level": 7
+     "level": 6
     },
     {
      "type": 71,
      "x": 52,
      "y": 9,
-     "level": 7
+     "level": 6
     },
     {
      "type": 73,
      "x": 50,
      "y": 10,
-     "level": 7
+     "level": 6
     },
     {
      "type": 73,
      "x": 52,
      "y": 5,
-     "level": 7
+     "level": 6
     }
    ]
   }
  ],
  "cannons": [
   {
-   "x": 54,
-   "y": 19,
-   "tower": [54,18]
+   "x": 45,
+   "y": 13,
+   "cols": [44,45,46],
+   "tower": [54,18],
+   "aim": 8,
+   "say": "The fortress cannon fires down the harbour lane!"
   }
  ],
  "objective": {
   "kind": "flagship",
   "type": 59
  },
- "turnLimit": 30,
+ "turnLimit": 35,
  "flee": true,
  "noFlee": true,
  "awaitArrivals": true,
  "music": 29,
- "goal": "Sink Major Hesk's flagship, the Verdict, within 30 turns. She comes out on turn 15. If the General falls, it is over.",
+ "goal": "Sink Major Hesk's flagship, the Verdict, within 35 turns. She comes out on turn 15. If the General falls, it is over.",
  "home": [
   [7,35,1],
   [7,34,1],
@@ -1032,7 +838,7 @@
    "type": 72,
    "x": 49,
    "y": 10,
-   "level": 7,
+   "level": 6,
    "hold": 12,
    "name": "Asura-II Kai · Directorate cruiser"
   },
@@ -1040,56 +846,56 @@
    "type": 60,
    "x": 48,
    "y": 10,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 80,
    "x": 49,
    "y": 11,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 73,
    "x": 50,
    "y": 11,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 70,
    "x": 49,
    "y": 8,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 68,
    "x": 48,
    "y": 9,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 60,
    "x": 50,
    "y": 9,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 80,
    "x": 51,
    "y": 9,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 72,
    "x": 47,
    "y": 10,
-   "level": 7,
+   "level": 6,
    "hold": 12,
    "name": "Asura-II Kai · Directorate cruiser"
   },
@@ -1097,56 +903,56 @@
    "type": 66,
    "x": 51,
    "y": 10,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 69,
    "x": 47,
    "y": 11,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 71,
    "x": 51,
    "y": 11,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 31,
    "x": 48,
    "y": 12,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 60,
    "x": 48,
    "y": 8,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 80,
    "x": 51,
    "y": 8,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 73,
    "x": 46,
    "y": 9,
-   "level": 6,
+   "level": 5,
    "hold": 8
   },
   {
    "type": 72,
    "x": 46,
    "y": 10,
-   "level": 7,
+   "level": 6,
    "hold": 12,
    "name": "Asura-II Kai · Directorate cruiser"
   },
@@ -1154,58 +960,16 @@
    "type": 70,
    "x": 52,
    "y": 10,
-   "level": 6,
-   "hold": 8
-  },
-  {
-   "type": 42,
-   "x": 46,
-   "y": 11,
-   "level": 6,
-   "hold": 8
-  },
-  {
-   "type": 68,
-   "x": 46,
-   "y": 12,
-   "level": 6,
-   "hold": 8
-  },
-  {
-   "type": 60,
-   "x": 47,
-   "y": 12,
-   "level": 6,
-   "hold": 8
-  },
-  {
-   "type": 80,
-   "x": 49,
-   "y": 6,
-   "level": 6,
-   "hold": 8
-  },
-  {
-   "type": 73,
-   "x": 47,
-   "y": 7,
-   "level": 6,
-   "hold": 8
-  },
-  {
-   "type": 67,
-   "x": 48,
-   "y": 7,
-   "level": 6,
+   "level": 5,
    "hold": 8
   }
  ],
- "briefing": "The rock has no name on any chart. Hesk bought that too.\n\nInside it sits everything his circle could buy: Directorate hulls, cartel crews, turrets on every mount, and the last of the machines the General sold to keep Eden breathing.\n\nThere is one way to end this: the Verdict, Hesk's flagship. She is not in the harbour yet. When she comes, sink her.\n\nThey know we are coming. Expect them behind us as well as in front.",
+ "briefing": "The rock has no name on any chart. Hesk bought that too.\n\nInside it sits everything his circle could buy: Directorate hulls, cartel crews, turrets on every mount, and the last of the machines the General sold to keep Eden breathing.\n\nThere is one way to end this: the Verdict, Hesk's flagship. She is not in the harbour yet. When she comes, sink her.\n\nThey know we are coming. Expect them behind us as well as in front.\n\nThe fortress cannon covers the harbour mouth, the straight way in to the Verdict's berth. Its gun tower stands outside the south gate, guarded. Silence the tower, or do not stop under the gun.",
  "strategy": [
-  "Three ways in: the meteoroid belt in the north (craft only, slow), the Gullet between the two ridges (fast, and too quiet), and the open south lane under the fortress cannon.",
-  "The cannon fires straight down column 54 at every phase change while its tower stands. Cross it; never end a move in it.",
-  "Waves: behind you on turn 3, out of the north on turn 6, from the east on turn 9, behind you again on turn 12, and the Verdict herself on turn 15.",
-  "Capital ships: Varr's Tiamat in the court, Osk's Nodens from the east, Quill's Artemis behind you on turn 12, the Azoras with the Verdict (and Directorate cruisers if Hesk has had time to reinforce). Only the Verdict has to sink."
+  "Three ways in: the meteoroid belt in the north (craft only, slow, round to the west gate), the Gullet between the two ridges (fast, and too quiet), and the open south lane, round to the south gate.",
+  "The harbour lane: the fortress cannon covers columns 44 to 46 from the harbour mouth (row 13) to the south edge, shown on the board. It fires as your phase ends, at every machine of yours left standing in the lane: a light machine is wrecked, a heavy one loses half its hull. It is silent while the lane is empty. Dash through it, go round, or destroy the gun tower first (south of the fortress at column 54, row 18, with two Cyclops and a mine beside it).",
+  "Waves: behind you on turn 3, from the east on turn 9, behind you again on turn 12, and the Verdict herself on turn 15.",
+  "Capital ships: Varr's Tiamat in the court, Osk's Nodens from the east, the Azoras with the Verdict (and Directorate cruisers if Hesk has had time to reinforce). Only the Verdict has to sink."
  ],
  "transmission": "I gave the order once to save the Union from a scandal. I will give it again to save myself, General. Come in."
 }

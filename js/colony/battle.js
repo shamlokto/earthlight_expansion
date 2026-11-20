@@ -379,7 +379,7 @@ export function strongholdMission(state, base, opts = {}) {
   }
   const eden = placeEden(state, base, gs, [], hpOver, true);
   const up = (list) => list.map((u) => (u.type === 59 || !reinforce ? u : { ...u, level: Math.min(9, (u.level || 0) + reinforce) }));
-  const extra = (base.reinforcements || []).slice(0, (R.RECKONING.reinforceStep || 8) * reinforce).map((u) => ({ ...u, army: 1 }));
+  const extra = (base.reinforcements || []).slice(0, (R.RECKONING.reinforceStep || 6) * reinforce).map((u) => ({ ...u, army: 1 }));
   const foes = easyLevels(state, up([...base.units, ...extra].map(strip)));
   const arrivals = base.arrivals.map((a) => ({ turn: a.turn, army: a.army, wave: a.wave, units: easyLevels(state, up(a.units.map(strip))) }));
   const n = foes.reduce((t, u) => t + 1 + (u.cargo || []).length, 0) + arrivals.reduce((t, a) => t + a.units.reduce((k, u) => k + 1 + (u.cargo || []).length, 0), 0);
