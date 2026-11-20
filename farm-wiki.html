@@ -61,6 +61,15 @@
     dialog { border: 0; padding: 0; background: transparent; max-width: 96vw; }
     dialog img { max-width: 96vw; max-height: 90vh; border-radius: 10px; display: block; }
     dialog::backdrop { background: rgba(0, 0, 0, .8); }
+    figure.map { margin: 0 0 26px; }
+    figure.map canvas { display: block; width: 100%; height: auto; border: 1px solid var(--edge); border-radius: 10px; cursor: zoom-in; background: var(--paper-2); }
+    figure.map figcaption { font-size: 14px; margin-top: 6px; }
+    figure.map small, figure.map .t { color: var(--dim); }
+    figure.map details { margin-top: 6px; font-size: 13px; } figure.map summary { cursor: pointer; font: 600 13px var(--f-display); color: var(--gold); }
+    figure.map ul { padding-left: 18px; } .maporder { padding-left: 22px; margin: 4px 0; }
+    .maplegend { font-size: 13px; color: var(--dim); } .maplegend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin: 0 3px 0 6px; }
+    #mapzoom > div { max-width: 96vw; max-height: 92vh; overflow: auto; border-radius: 10px; }
+    #mapzoom img { display: block; max-width: none; max-height: none; border-radius: 0; }
     footer { text-align: center; color: var(--dim); font-size: 13px; padding: 30px 16px; }
     @media (max-width: 600px) { th { position: static; } .card img.face { width: 60px; height: 76px; } }
   </style>
@@ -75,6 +84,7 @@
   <nav class="toc" id="toc"></nav>
   <main id="main"><p class="lead">Loading the wiki from the game's data…</p></main>
   <dialog id="zoom"><img alt=""></dialog>
+  <dialog id="mapzoom"><div><img alt="Map at full size"></div></dialog>
   <footer>Built from the game's own data files, so it always matches the version you play. Nothing here needs the original ROM.</footer>
   <script type="module">
     import { ITEMS, CROPS, SEASONS } from './js/farm/data.js';
@@ -155,6 +165,89 @@
     // ---- fishing and the Old World
     add('fishing', 'Fishing', `<p class="lead">Face water, Space to cast, wait for the float to dip, Space again. Rain and the hill lake are best; Ruess can upgrade the rod.</p>
       <div class="tw"><table><tr><th>Fish</th><th>About</th><th class="n">Sells</th></tr>${(story.FISH || []).map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc((story.FISHING && story.FISHING.caught && story.FISHING.caught[id]) || (ITEMS[id] && ITEMS[id].desc) || '')}</td><td class="n">${ITEMS[id] && ITEMS[id].sell ? ITEMS[id].sell + ' cr' : ''}</td></tr>`).join('')}</table></div>`);
+    // ---- maps: drawn live from js/farm/maps.js (colours copied from js/farm/minimap.js, which can't be imported here: it pulls in three.js)
+    const mapJobs = [];
+    {
+      const GROUND = { g: '#93c870', f: '#a8805a', p: '#e6d3a4', c: '#ddd5c4', s: '#ecdfb2', w: '#72b9de', k: '#bb8c5a', r: '#8c877f', o: '#c4c0b6', h: '#dcc06c', b: '#b48a5c', d: '#c6d0d6', a: '#8c877e', x: '#33302c' };
+      const ROOF = { gov_office: '#8ea3b8', exchange: '#9a5ab0', arrivals: '#a3b0ba', apartment: '#9fb0bf', townhouse: '#d98a6a', observatory: '#eef1f3', onsen_house: '#c9583a', house: '#e0905a', barn: '#c8553e', coop: '#dca85e', silo: '#a3b0ba', greenhouse: '#c3eaee', store: '#ea8762', cafe: '#8299b4', workshop: '#cba36c', hall: '#c45c4a', ranch: '#bc543f', clinic: '#f2efe8', library: '#9378b4', pumphouse: '#93a7b4', post: '#e6c454', guard: '#7393ac', lift: '#8c7c6c', orbital_elevator: '#5fb3b0', school: '#f2c230', church: '#3fa7a3', safety_depot: '#e0782a', bakery: '#d9534f', tailor: '#5a8f92', seedhouse: '#cfeee0', garage: '#8a98a2', radio_station: '#5b4a7a', fold: '#9a8a70', duckhouse: '#7ab0d8' };
+      const SKIP = new Set(['nothing', 'hull_wall', 'glass_roof', 'hull_window', 'bay_window', 'work_barrier', 'bulkhead', 'tarp', 'vault_door', 'flowers', 'reeds', 'house_door', 'home_door']);
+      const DOT = { tree: '#5a9a48', pine: '#3f7a4a', bush: '#6aa858', lantern: '#ffd36a', colony_lamp: '#ffd36a', glow_lamp: '#9cf0c8', fountain: '#8fd3e8', hydro_tower: '#5fae4a', water_tank: '#f3ecdc', fan_tower: '#f3ecdc', well: '#9a9790', lift_kiosk: '#5fb3b0', liftpad: '#5fb3b0', lower_lift: '#5fb3b0', vent: '#9aa3a8', scarecrow: '#c9a26e', plantpot: '#7aa060' };
+      const BOX = { market_stall: '#f08a6c', cargo_crate: '#d9a35a', crate: '#d9a35a', noticeboard: '#c9a26e', memorial: '#a9a69d', bench: '#a07a4a', bin: '#a07a4a', solar_panel: '#2c4f8c', landing_pad: '#8a96a0', trader_ship: '#7a1f2b', shuttle: '#3a78b8', shuttle_gate: '#e0782a', onsen_pool: '#8fd3e8', vent_bath: '#8fd3e8', mushroom_bed: '#6a4a32', shelter: '#a08a6a', works_hall: '#8a7c6c', zero_g_arena: '#6a6aa8', decimator_ring: '#5a5a62', pump_station: '#7a98a6', terminal: '#3a8a6a', reactor_console: '#c86a3a', crypt_wall: '#6a6460', catacomb_arch: '#8a7f72', fabricator: '#b08a4a', scrap_bin: '#7a6a50', haybale: '#dcc06c', radio_mast: '#c0c4c8' };
+      const roomName = (id) => { const r = allMaps()[id]; return r ? r.name.split(' · ')[0] : id; };
+      const LIFT = { liftdown: '⇣ Lift: Eden Central and the Lower deck', liftup: '⇡ Lift: Willowfall (and down to the Lower deck)', lift: '⇡ Lift: Eden Central and Willowfall', shuttle: '✈ Shuttle to Earth (the Old World)' };
+      const P = sim.LOWER_PROJECTS || [], PR = sim.PUMP_REPAIRS || [];
+      const projNo = (id) => P.findIndex((p) => p.id === id) + 1;
+      const gateName = (flag) => { const id = flag.replace(/^ld_/, ''), p = P.find((q) => q.id === id), r = PR.find((q) => q.id === id);
+        return p ? `${projNo(id)}. ${p.name}` : r ? `${r.name} (${r.parts} pump parts)` : id === 'vault' ? 'The round door: the vault' : id; };
+      const GATE_COL = ['#e8483a', '#e0782a', '#d9a020', '#5fae4a', '#2e8f8a', '#3a78b8', '#7a4fb0', '#c84a8a', '#555'];
+      const T = 14;
+      function drawMap(cv, m) {
+        cv.width = m.w * T; cv.height = m.h * T; const g = cv.getContext('2d'), F = m.floods || [];
+        const flooded = (x, y) => F.some((f) => x >= f.x0 && x <= f.x1 && y >= f.y0 && y <= f.y1);
+        for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { const k = flooded(x, y) ? 'w' : m.at(x, y); g.fillStyle = m.under && k === 'r' ? '#1d2126' : GROUND[k] || '#999'; g.fillRect(x * T, y * T, T + 0.5, T + 0.5); }
+        for (const f of m.fields || (m.field ? [m.field] : [])) { g.fillStyle = 'rgba(80,50,25,.25)'; for (let y = 0; y < f.h; y++) g.fillRect(f.x * T, (f.y + y) * T + T * 0.45, f.w * T, 2); }
+        const rr = (x, y, w, h, r) => { g.beginPath(); g.roundRect(x, y, w, h, r); };
+        for (const p of m.props) {
+          if (SKIP.has(p.kind)) continue;
+          const cx = (p.x + p.w / 2) * T, cy = (p.y + p.d / 2) * T, k = p.kind;
+          if (k === 'fence') { g.strokeStyle = '#8a6a45'; g.lineWidth = 2; g.beginPath(); if (p.rot) { g.moveTo(cx, cy - T / 2); g.lineTo(cx, cy + T / 2); } else { g.moveTo(cx - T / 2, cy); g.lineTo(cx + T / 2, cy); } g.stroke(); }
+          else if (k === 'pipe_run') { g.strokeStyle = '#8fb1b8'; g.lineWidth = 3; g.beginPath(); if (p.d > p.w) { g.moveTo(cx, p.y * T); g.lineTo(cx, (p.y + p.d) * T); } else { g.moveTo(p.x * T, cy); g.lineTo((p.x + p.w) * T, cy); } g.stroke(); }
+          else if (k === 'signpost') { g.fillStyle = '#6a4a2a'; g.fillRect(cx - 1.5, cy - T * 0.2, 3, T * 0.6); g.fillStyle = '#ffe9a8'; g.strokeStyle = '#6a4a2a'; g.lineWidth = 1.5; rr(cx - T * 0.4, cy - T * 0.45, T * 0.8, T * 0.4, 2); g.fill(); g.stroke(); }
+          else if (DOT[k] && p.w * p.d < 2) { const r = (k === 'tree' || k === 'pine' ? 0.5 : k.includes('lamp') || k === 'lantern' ? 0.16 : 0.36) * T * Math.min(1.3, p.scale || 1); g.fillStyle = DOT[k]; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill(); }
+          else if (DOT[k]) { g.fillStyle = DOT[k]; g.beginPath(); g.arc(cx, cy, Math.min(p.w, p.d) * T * 0.45, 0, 7); g.fill(); }
+          else { g.fillStyle = BOX[k] || 'rgba(110,100,90,.75)'; rr(p.x * T + 1.5, p.y * T + 1.5, p.w * T - 3, p.d * T - 3, 2); g.fill(); }
+        }
+        for (const b of m.buildings) {
+          const x = b.x * T, y = b.y * T, w = b.w * T, h = b.d * T;
+          g.fillStyle = 'rgba(0,0,0,.18)'; rr(x + 3, y + 4, w, h, 6); g.fill();
+          g.fillStyle = ROOF[b.kind] || (b.kind.startsWith('cottage') ? ['#e6a070', '#7fa3c4', '#d98a6a', '#8fb38a'][b.kind.charCodeAt(8) % 4] : '#c9a06a');
+          rr(x, y, w, h, 6); g.fill(); g.strokeStyle = 'rgba(60,40,25,.55)'; g.lineWidth = 1.5; g.stroke();
+        }
+        const doorMarks = [...m.doors.map((d) => [d.x, d.y, String(d.to.map).startsWith('home_')]), ...m.props.filter((p) => p.kind === 'house_door' || p.kind === 'home_door').map((p) => [Math.floor(p.x), Math.floor(p.y), true])];
+        for (const [x, y, home] of doorMarks) { g.fillStyle = home ? '#7a3a5a' : '#5a3a24'; g.fillRect(x * T + 2, y * T - 2, T - 4, 5); }
+        // gates and floods (the Lower deck)
+        const label = (txt, x, y, px, fill = '#2b2118', weight = 600, style = '') => { g.font = `${style} ${weight} ${px}px "IBM Plex Sans", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3.5; g.lineJoin = 'round'; g.strokeStyle = 'rgba(255,250,235,.92)'; g.strokeText(txt, x, y); g.fillStyle = fill; g.fillText(txt, x, y); };
+        const clampX = (txt, x, px) => { g.font = `700 ${px}px "IBM Plex Sans", sans-serif`; const hw = g.measureText(txt).width / 2 + 4; return Math.min(cv.width - hw, Math.max(hw, x)); };
+        F.forEach((f) => { g.strokeStyle = '#1f6f9a'; g.setLineDash([4, 3]); g.lineWidth = 2; g.strokeRect(f.x0 * T, f.y0 * T, (f.x1 - f.x0 + 1) * T, (f.y1 - f.y0 + 1) * T); g.setLineDash([]); });
+        (m.gates || []).forEach((q) => { const i = Math.max(0, projNo(q.flag.slice(3)) - 1), col = q.flag === 'ld_vault' ? GATE_COL[8] : GATE_COL[i];
+          g.fillStyle = col; g.globalAlpha = 0.85; g.fillRect(q.x0 * T, q.y0 * T, (q.x1 - q.x0 + 1) * T, (q.y1 - q.y0 + 1) * T); g.globalAlpha = 1;
+          g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.setLineDash([3, 3]); g.strokeRect(q.x0 * T + 1, q.y0 * T + 1, (q.x1 - q.x0 + 1) * T - 2, (q.y1 - q.y0 + 1) * T - 2); g.setLineDash([]); });
+        // labels: areas, buildings, labelled props, doors' homes, exits, lifts, then gate names on top
+        for (const [txt, x, y] of m.areas || []) label(txt, clampX(txt, x * T, 15), y * T, 15, '#3d5030', 600, 'italic');
+        for (const b of m.buildings) if (b.label) label(b.label, (b.x + b.w / 2) * T, (b.y + b.d / 2) * T, b.w < 5 ? 10 : 12);
+        const seen = new Set();
+        for (const p of m.props) if (p.label && !SKIP.has(p.kind) && !LIFT[p.act] && p.kind !== 'memorial' && !seen.has(p.label) && seen.add(p.label)) label(p.label, clampX(p.label, (p.x + p.w / 2) * T, 10), (p.y + p.d) * T + 7, 10, '#24565a', 600);
+        for (const b of m.buildings) if (b.homeLabel) label('⌂ ' + b.homeLabel, (b.x + b.w / 2) * T, (b.y + b.d) * T + 8, 10, '#7a3a5a', 600, 'italic');
+        for (const p of m.props) if (LIFT[p.act] && !seen.has(p.act) && seen.add(p.act)) { const t = LIFT[p.act]; label(t, clampX(t, (p.x + p.w / 2) * T, 12), p.act === 'lift' ? (p.y + p.d / 2) * T : (p.y + p.d) * T + 9, 12, '#7a5410', 700); }
+        for (const e of m.exits) { const to = allMaps()[e.to.map], t = '➜ ' + (to ? to.name.split(' · ')[0] : e.to.map), x = ((e.x0 + e.x1) / 2 + 0.5) * T, y = ((e.y0 + e.y1) / 2 + 0.5) * T;
+          g.fillStyle = '#b8790f'; g.fillRect(e.x0 * T, e.y0 * T, (e.x1 - e.x0 + 1) * T, (e.y1 - e.y0 + 1) * T);
+          label(t, clampX(t, x - (e.x0 >= m.w - 1 ? 40 : e.x0 === 0 ? -40 : 0), 13), Math.min(cv.height - 10, Math.max(10, y + (e.y0 === 0 ? T : e.y0 >= m.h - 1 ? -T : 0))), 13, '#7a5410', 700); }
+        (m.gates || []).forEach((q) => { const t = gateName(q.flag), vert = q.y1 - q.y0 > q.x1 - q.x0, x = ((q.x0 + q.x1) / 2 + 0.5) * T, y = ((q.y0 + q.y1) / 2 + 0.5) * T, i = Math.max(0, projNo(q.flag.slice(3)) - 1);
+          label(t, clampX(t, x, 12), vert ? y - T * 2.4 : y - T * 0.9, 12, q.flag === 'ld_vault' ? GATE_COL[8] : GATE_COL[i], 700); });
+        F.forEach((f) => { const t = '≈ ' + gateName(f.flag) + ' drains it'; label(t, clampX(t, ((f.x0 + f.x1) / 2 + 0.5) * T, 10), (f.y1 + 1) * T + 6, 10, '#1f6f9a', 700); });
+      }
+      const MAPS = [
+        ['farm', 'The Hollin field: the farmhouse yard and the first field (west), the pasture and pond, and since the farm grew east, the East Terrace, the fold and the duck pond. The south road goes to Willowfall; the hill road runs out of the east edge to Terrace Hill.'],
+        ['village', 'Willowfall on the Lantern Ring: Market Street and Lantern Square, the river, Willow Lane and Fountain Park, the lift plaza, and in the east Market Lane, the Mill Bridge and the Lane cottages.'],
+        ['hill', 'Terrace Hill: the onsen, the hill lake, the orbital elevator (its door leads to Vashti\'s hangar and the belt), the orchard terraces and the falls.'],
+        ['central', 'Eden Central on the Main deck, under the glass roof: the space dock with the shuttle to Earth (north-west), the plaza, the Grand Market, Arrivals, the canal, the side streets and the lift terminal.'],
+        ['lower', 'The Undercroft (Lower deck), as you first find it. Coloured bars are the barriers and doors the restoration projects open (the number is the project); dashed blue boxes are flooded tunnels the pumps drain.'],
+      ];
+      const signList = (m) => m.props.filter((p) => p.kind === 'signpost' && p.sign).map((p) => `<li><b>${p.x},${p.y}</b> ${esc((story.SIGNS || {})[p.sign] || p.sign)}</li>`).join('');
+      const doorList = (m) => [...m.doors.filter((d) => !String(d.to.map).startsWith('home_')).map((d) => { const b = m.buildings.find((q) => q.to && q.to.map === d.to.map); const l = b && b.label ? b.label : d.kind, r = roomName(d.to.map); return l === r ? `${esc(l)} (door)` : `${esc(l)} → ${esc(r)}`; }),
+        ...m.exits.map((e) => `edge at ${e.x0}${e.x1 !== e.x0 ? '–' + e.x1 : ''},${e.y0}${e.y1 !== e.y0 ? '–' + e.y1 : ''} → ${esc(roomName(e.to.map))}`),
+        ...new Set(m.props.filter((p) => LIFT[p.act]).map((p) => esc(LIFT[p.act].slice(2))))].join(' · ');
+      const lowerOrder = `<h3>Restoration order</h3><ol class="maporder">${P.map((p) => { const gate = (allMaps().lower.gates || []).find((q) => q.flag === 'ld_' + p.id); return `<li><b>${esc(p.name)}</b>${p.after ? ` <span class="t">(after ${esc(P.find((q) => q.id === p.after).name)}${p.trust ? '; needs the families\' trust' : ''})</span>` : ''}: ${gate ? `opens the barrier at ${gate.x0},${gate.y0}` : p.id === 'rehouse' ? 'no barrier here; the families move up to Eden Central\'s empty houses' : 'no barrier'}.</li>`; }).join('')}</ol>
+        <p>Pumps fitted by hand: ${PR.map((r) => `${esc(r.name)} (${r.parts} parts)`).join(', ')}. The round door to the vault (grey bar) opens at the end of the story.</p>`;
+      const legend = `<p class="maplegend"><i style="background:${GROUND.g}"></i>grass <i style="background:${GROUND.f}"></i>field <i style="background:${GROUND.p}"></i>path <i style="background:${GROUND.c}"></i>cobble <i style="background:${GROUND.d}"></i>deck plate <i style="background:${GROUND.o}"></i>stone floor <i style="background:${GROUND.w}"></i>water <i style="background:${GROUND.s}"></i>sand <i style="background:${GROUND.k}"></i>planks <i style="background:#1d2126"></i>rock · <i style="background:#5a3a24"></i>door <i style="background:#7a3a5a"></i>home door <i style="background:#b8790f"></i>exit <i style="background:#ffe9a8;border:1px solid #6a4a2a"></i>signpost. Tap or click a map to see it full size.</p>`;
+      const all = allMaps();
+      add('maps', 'Maps', `<p class="lead">The outdoor maps, drawn from the game's own map data.</p>${legend}
+        ${MAPS.filter(([id]) => all[id]).map(([id, cap]) => { const m = all[id]; return `<figure class="map"><h3>${esc(m.name.split(' · ').join(', '))}</h3><canvas data-map="${id}" style="max-width:${Math.round(m.w / m.h * 760)}px" aria-label="Map of ${esc(m.name)}"></canvas>
+          <figcaption>${esc(cap)} <span class="t">${m.w} × ${m.h} tiles.</span><br><small>Ways in and out: ${doorList(m)}</small>${id === 'lower' ? lowerOrder : ''}
+          <details><summary>Signposts (${m.props.filter((p) => p.kind === 'signpost').length})</summary><ul>${signList(m)}</ul></details></figcaption></figure>`; }).join('')}`);
+      mapJobs.push(() => { for (const cv of document.querySelectorAll('canvas[data-map]')) { try { drawMap(cv, all[cv.dataset.map]); } catch (e) { console.error('map', cv.dataset.map, e); } } });
+    }
+
     // ---- Eden Central
     const PLACES = [
       ['The lift', 'Willowfall\'s lift plaza drops down the spoke to the Main deck in 20 minutes; the terminal is at the south end of the avenue.'],
@@ -169,7 +262,7 @@
       ['Second Dawn Church', 'Pastor Ines Calloway\'s church, open day and night, with 312 memorial candles for those lost in the siege (light one with E), a stained-glass window and her tomato garden beside it.'],
       ['The safety depot', 'Constable Aldo Fenn\'s peacekeeping and rescue post: front desk, lockers, rescue drones and a deck map that is all green. Lost hens are returned on Thursdays.'],
       ['The school', 'Small desks, a blackboard and cubbies with no names on them yet. It waits, ready and quiet, for its first pupils.'],
-      ['Empty houses', 'Six locked houses on the side streets. Try the doors; each has a story, and a future.'],
+      ['Empty houses', 'Six locked houses on the side streets. Try the doors; each has a story. Four become homes for the Lower deck\'s families once they move up.'],
     ];
     add('central', 'Eden Central', `<p class="lead">The Main deck city under the glass roof, down the spoke lift from Willowfall. It never rains here.</p>
       <div class="cards">${PLACES.map(([t, d]) => `<div class="card"><div><b>${esc(t)}</b><div class="g">${d}</div></div></div>`).join('')}</div>`);
@@ -178,7 +271,7 @@
     if (sim.LOWER_PROJECTS) {
       const MU = Object.values((await import('./js/farm/data.js')).MUSHROOMS || {}), LL = (await import('./js/farm/data.js')).LOWER_LOGS || [];
       add('lower', 'The Lower deck: the Undercroft', `<p class="lead">The spoke lift goes all the way down: past Eden Central to the Lower deck, the colony's machinery, cisterns and old crypts. In the war the Directorate closed it as a "quarantine"; something went wrong down there, and the colony was told it was a Galt attack. Now it is dark, damp and humming, and a few people never left. No combat, just lamps, pumps, mushrooms, fish, neighbours and, at the end, the truth.</p>
-        <h3>Restoration projects</h3><p>Fund them at <b>Tobias Venn's terminal</b> by the lift landing, one at a time; each is done by the next morning, and the deck changes: lamps come on, tunnels drain, doors open. Venn's bench makes lamp kits (4 scrap, 1 copper ore, 120 cr) and pump parts (3 nickel-iron, 1 copper ore, 180 cr).</p>
+        <h3>Restoration projects</h3><p>Fund them at the <b>restoration terminal</b> on the lift landing (the green screen with a signpost beside it; Venn's bench is a few steps east), one at a time; each is done by the next morning, and the deck changes: lamps come on, tunnels drain, doors open. Venn's bench makes lamp kits (4 scrap, 1 copper ore, 120 cr) and pump parts (3 nickel-iron, 1 copper ore, 180 cr).</p>
         <div class="tw"><table><tr><th>Project</th><th>Needs</th><th class="n">Credits</th><th>Opens</th></tr>${sim.LOWER_PROJECTS.map((p) => `<tr><td>${esc(p.name)}</td><td>${p.req.map(([id, n]) => `${n} ${esc(name(id).toLowerCase())}`).join(', ')}${p.lumber ? `, ${p.lumber} lumber` : ''}${p.trust ? '; the families\' trust (4 favours for the enclave, 5 hearts with Agnes)' : ''}</td><td class="n">${p.price.toLocaleString()}</td><td>${esc(p.desc)}</td></tr>`).join('')}</table></div>
         <p>Pumps: ${sim.PUMP_REPAIRS.map((r) => `<b>${esc(r.name)}</b> (fit ${r.parts} pump parts: drains ${r.id === 'pump2' ? 'the north tunnel to the Sump' : r.id === 'pump3' ? 'the way to the old pump room' : 'the sill of the round door'})`).join(' · ')}.</p>
         <h3>Fishing in the pump halls</h3><p>No weather below decks. Cave fish all day; glowfish if you are patient (more in the Sump); pipe eels come out after six in the evening. The basins sometimes give up a pump part. The legendary <b>abyss koi</b> rises only in the deep Sump, after eight at night, to an Alloy rod or better.</p>
@@ -218,7 +311,6 @@
     add('ruins', 'The Old World', `<p>Juno Maris's courier shuttle flies from the Eden Central space dock (or book at the Arrivals desk) down to the ruins of human civilisation on Earth's surface: ${sim.SHUTTLE_FARE} cr a trip, free once she is at 5 hearts. Sato goes down in her <b>Pallas</b>. <b>Space</b> fires its rifle, and up close swings the beam sabre. <b>F</b> sets down the <b>Hydra</b> autoturret, <b>Shift</b> boosts, and <b>E</b> searches rubble. Creatures wind up before they lunge; a hit costs a little stamina, never more. One pile on every level hides the way down, and deeper levels hold rarer finds. Green and yellow haze drains stamina until Ruess fits the Pallas air filters. Earth rubble gives scrap, batteries and relics; ore comes from the belt.</p>
       <h3>Finds for the Memory Room</h3><div class="tw"><table><tr><th>Find</th><th>About</th><th class="n">Sells</th></tr>${(story.RELICS || []).map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc((story.RUINS && story.RUINS.relic && story.RUINS.relic[id]) || '')}</td><td class="n">${ITEMS[id] && ITEMS[id].sell ? ITEMS[id].sell + ' cr' : ''}</td></tr>`).join('')}</table></div>`);
 
-    // ---- festivals and places
     // ---- Market Lane, the fold and the hives (2026-11-19)
     {
       const MA = sim.MACHINES || {}, row = (a) => `<tr>${a.map((c) => `<td>${c}</td>`).join('')}</tr>`, lane = ['pia', 'lark', 'noor', 'tika', 'vesna'].filter((k) => story.NPCS[k]);
@@ -235,6 +327,10 @@
 
     $('#main').innerHTML = sections.map((s) => `<section id="${s.id}"><h2>${esc(s.title)}</h2>${s.html}</section>`).join('');
     $('#toc').innerHTML = sections.map((s) => `<a href="#${s.id}">${esc(s.title)}</a>`).join('');
+    // maps: draw once the fonts are in (or after a second), then click to see full size
+    await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1000))]);
+    for (const f of mapJobs) f();
+    const mz = $('#mapzoom'); document.addEventListener('click', (e) => { const c = e.target.closest('canvas[data-map]'); if (c) { mz.querySelector('img').src = c.toDataURL(); mz.showModal(); } else if (e.target.closest('#mapzoom')) mz.close(); });
     // item filter
     const kf = $('#kf'), q = $('#q'); let kind = '';
     const apply = () => { const t = q.value.trim().toLowerCase(); for (const tr of document.querySelectorAll('#itab tr[data-k]')) tr.hidden = (kind && tr.dataset.k !== kind) || (t && !tr.dataset.n.includes(t)); };
