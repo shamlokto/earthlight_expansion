@@ -141,5 +141,28 @@ for (const s of ['central.school', 'central.church', 'central.depot', 'school.bo
     }
   }
 }
+// opening-hours signs and mailboxes (2026-11-20)
+{
+  const { HOURS_SIGNS, MAILBOXES, HOMES, lowerState } = await import('../js/farm/maps.js');
+  lowerState(maps.lower, Object.fromEntries(['ld_lights', 'ld_pumps', 'ld_pump2', 'ld_pump3', 'ld_catacombs', 'ld_enclave', 'ld_works'].map((k) => [k, true])));   // the whole deck open
+  for (const place of Object.keys(story.PLACES)) {
+    const sg = HOURS_SIGNS.find((q) => q.place === place); check(!!sg, `${place} has an opening-hours sign`); if (!sg) continue;
+    const m = maps[sg.map], st = m.start || [m.exitTile[0] + 0.5, m.exitTile[1] - 0.6];
+    check(sg.p.act === 'hours' && near(reach(m, st[0], st[1]), sg.x, sg.y), `${place}: the sign can be reached`);
+    check(!m.doors.some((d) => d.x === sg.x && d.y === sg.y) && !m.solid(sg.x, sg.y), `${place}: the sign is not on a doorway`);
+    const t = story.hoursSign(place); check(typeof t === 'string' && t.startsWith(story.PLACES[place].name) && t.length < 400, `${place}: the sign has words`);
+    if (story.PLACES[place].keeper) check(!t.includes(story.NPCS[story.PLACES[place].keeper].name) || place === 'undercroft', `${place}: the sign names the place, not who runs it`);
+  }
+  check(/Sun closed/.test(story.hoursSign('store')) && /Thu closed/.test(story.hoursSign('ranch')) && /Wed closed/.test(story.hoursSign('workshop')) && /Mon closed/.test(story.hoursSign('library')) && /10:00–22:00/.test(story.hoursSign('cafe')), 'the hours come from the schedules, closed days and all');
+  for (const H of Object.values(HOMES)) {
+    const mb = MAILBOXES.find((q) => q.home === H.key); check(!!mb, `${H.label} has a mailbox`); if (!mb) continue;
+    const m = maps[mb.map], st = m.start || [m.exitTile[0] + 0.5, m.exitTile[1] - 0.6];
+    check(mb.p.act === 'mail' && near(reach(m, st[0], st[1]), mb.x, mb.y) && Math.abs(mb.x - H.x) + Math.abs(mb.y - H.y) <= 3, `${H.label}: the mailbox is by the door and can be reached`);
+    check(!m.doors.some((d) => d.x === mb.x && d.y === mb.y), `${H.label}: the mailbox is not on a doorway`);
+  }
+  lowerState(maps.lower, Object.fromEntries(['ld_lights', 'ld_pumps', 'ld_pump2', 'ld_pump3', 'ld_catacombs', 'ld_enclave', 'ld_works'].map((k) => [k, true])));
+  const paths = await import('../js/farm/paths.js');
+  for (const x of [...HOURS_SIGNS, ...MAILBOXES]) { const m = maps[x.map], d = m.doors.length ? m.doors.reduce((a, q) => (Math.hypot(q.x - x.x, q.y - x.y) < Math.hypot(a.x - x.x, a.y - x.y) ? q : a)) : null; if (d && Math.hypot(d.x - x.x, d.y - x.y) < 4) { const st = m.start || [m.exitTile[0] + 0.5, m.exitTile[1] - 0.6]; check(paths.distance(m, d.x + 0.5, d.y + 0.5, st[0], st[1]) < Infinity, `${x.map}: the door at ${d.x},${d.y} is still open to walkers beside the ${x.place || x.home} ${x.place ? 'sign' : 'mailbox'}`); } }
+}
 console.log(failures ? `${failures} of ${checks} checks failed` : `farm-maps: all ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

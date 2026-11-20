@@ -16,6 +16,7 @@ export const HOME_PROPS = {
   quilt_bed: { model: 'quilt_bed', h: 0.9, fit: 'stretch' }, bunk: { model: 'bunk', h: 1.7, fit: 'stretch' }, armchair: { model: 'armchair', h: 1.0, fit: 'foot' },
   tea_table: { model: 'tea_table', h: 0.8, fit: 'foot' }, bookstack: { model: 'bookstack', h: 0.7, fit: 'foot' }, wall_frames: { model: 'wall_frames', h: 0.8, fit: 'stretch' },
   piano: { model: 'piano', h: 1.3, fit: 'stretch' }, fish_tank: { model: 'fish_tank', h: 1.2, fit: 'stretch' }, home_door: { h: 2.1 },
+  mailbox: { model: 'mailbox', h: 1.2, fit: 'foot' }, hours_sign: { model: 'hours_sign', h: 1.3, fit: 'foot' },
 };
 
 // o: the prop's options (w, d, tint, sheet). Returns null for kinds it does not know.
@@ -77,6 +78,21 @@ export function homeProp(kind, o = {}) {
       g.add(box(0.9, 2.0, 0.08, DARK(), 0, 0, -0.5), box(0.74, 1.86, 0.06, c, 0, 0.02, -0.46), ball(0.04, mat(0xc9a14a, { metalness: 0.7, roughness: 0.3 }), 0.24, 0.95, -0.42));
       g.add(box(0.36, 0.26, 0.03, CREAM(), 0, 1.45, -0.42), ball(0.08, lit(0xffd9a0, 1.4), 0.55, 1.75, -0.42));
       const mt = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.45), mat(0x8a5a3a)); mt.rotation.x = -Math.PI / 2; mt.position.set(0, 0.02, -0.15); g.add(mt);
+      break;
+    }
+    case 'mailbox': {                                     // a post with a round-topped box in the owner's colour and a little red flag
+      const c = tint(o, 0x4f7a9a);
+      g.add(cyl(0.05, 0.06, 0.85, DARK()), box(0.42, 0.26, 0.3, c, 0, 0.85), cyl(0.15, 0.15, 0.42, c, 0, 1.06, 0, 12), box(0.3, 0.04, 0.02, mat(0x222222), 0, 1.0, 0.16));
+      g.children[g.children.length - 2].rotation.z = Math.PI / 2; g.children[g.children.length - 2].position.y = 1.1;
+      const f = box(0.04, 0.22, 0.04, mat(0xd8402a), 0.23, 0.95); f.rotation.z = -0.3; g.add(f, box(0.12, 0.08, 0.02, mat(0xd8402a), 0.3, 1.13));
+      g.add(box(0.36, 0.1, 0.02, CREAM(), 0, 0.68, 0.06));          // the name plate
+      break;
+    }
+    case 'hours_sign': {                                  // a small standing board with a clock face: the opening hours
+      g.add(box(0.06, 0.8, 0.06, DARK(), -0.3, 0), box(0.06, 0.8, 0.06, DARK(), 0.3, 0), box(0.74, 0.6, 0.06, WOOD(), 0, 0.62), box(0.64, 0.5, 0.02, CREAM(), 0, 0.67, 0.035));
+      g.add(cyl(0.11, 0.11, 0.02, mat(0xffffff), -0.18, 0.88, 0.05, 16), box(0.01, 0.08, 0.01, mat(0x222222), -0.18, 0.93, 0.07), box(0.06, 0.01, 0.01, mat(0x222222), -0.16, 0.97, 0.07));
+      g.children[g.children.length - 3].rotation.x = Math.PI / 2;
+      for (let i = 0; i < 4; i++) g.add(box(0.26, 0.025, 0.01, mat(0x6a5a4a), 0.12, 0.75 + i * 0.08, 0.05));
       break;
     }
     default: return null;

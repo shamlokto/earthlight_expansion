@@ -126,8 +126,10 @@ export const FORAGE = [
 const FISH_ODDS = { farm: [70, 25, 5], village: [55, 35, 10], hill: [35, 40, 25], lower: [0, 0, 0], sump: [0, 0, 0] };   // the Undercroft's waters: underFish()   // small, medium, large
 const SEASON_FISH = ['fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'];
 const GIFT = { loved: 8, liked: 4, neutral: 1, disliked: -4 };
-// What a gift is worth: by tier, tripled on a birthday, times `share` (a mailbox gift is worth 80%), rounded, never to nothing.
-export function giftDelta(tier, isBirthday, share = 1) { const b = (own(GIFT, tier) ? GIFT[tier] : GIFT.neutral) * (isBirthday ? 3 : 1) * share, r = Math.round(b); return r === 0 ? Math.sign(b) : r; }
+// What a gift is worth: by tier, tripled on a birthday, times `share` (a mailbox gift is worth 80%; a later gift the same day a
+// quarter), rounded; a loved, liked or disliked gift never rounds to nothing.
+export function giftDelta(tier, isBirthday, share = 1) { const t = own(GIFT, tier) ? tier : 'neutral', b = GIFT[t] * (isBirthday ? 3 : 1) * share, r = Math.round(b); return r === 0 && t !== 'neutral' ? Math.sign(b) : r; }
+export const LATER_GIFT_SHARE = 0.25;   // a second (third…) gift on the same day: a quarter of the effect, gains and losses alike
 const UPGRADE_COST = [null, null, { price: 800, req: [['scrap', 5]] }, { price: 2500, req: [['alloy', 5], ['crystal', 1]] }];
 const TOOL_FX = { hoe: 'till', can: 'water', sickle: 'cut', hammer: 'smash', axe: 'chop' };
 const WEATHER_NOTE = { sun: 'The sun-line is bright and clear.', rain: 'It is raining.', storm: 'A storm is rattling the chamber. The shops are shut.', snow: 'It is snowing.' };
@@ -218,6 +220,7 @@ export function ensure(s) {
   arr(s.player, 'basket'); arr(s, 'chests'); arr(s, 'panels'); arr(s, 'robots'); arr(s, 'fruitTrees');
   obj(s, 'cooked'); obj(s, 'foraged'); obj(s, 'flags'); obj(s, 'museum'); obj(s, 'fishLog');
   arr(s, 'mill'); arr(s, 'hydro'); obj(s, 'solarYard'); arr(s.solarYard, 'slots'); obj(s, 'stats'); obj(s, 'visits');   // homes visited, by day (§15)
+  for (const n of Object.values(s.npc || {})) if (n && typeof n === 'object') { delete n.giftsWeek; delete n.weekGifts; }   // an old weekly gift count, no longer used
   if (!s.miner || typeof s.miner !== 'object' || !Number.isFinite(s.miner.charge)) s.miner = null;
   if (!Array.isArray(s.storage)) s.storage = new Array(STORAGE_SIZE).fill(null);
   if (!Array.isArray(s.fridge)) s.fridge = new Array(FRIDGE_SIZE).fill(null);
@@ -807,13 +810,12 @@ export function gift(state, npcId, slot, tier, isBirthday, share = 1) {
   if (!n) return no('There is nobody there.');
   if (!s) return no('You have nothing in your hands to give.');
   if (ITEMS[s.id].kind === 'tool') return no('You cannot give your tools away.');
-  if (n.gifted) return no('One gift a day is plenty.');
-  const before = n.love, name = ITEMS[s.id].name;
-  n.love = clamp(n.love + giftDelta(tier, isBirthday, share), 0, 100);
+  const later = !!n.gifted, before = n.love, name = ITEMS[s.id].name;   // the first gift of the day counts in full, later ones a quarter
+  n.love = clamp(n.love + giftDelta(tier, isBirthday, share * (later ? LATER_GIFT_SHARE : 1)), 0, 100);
   n.gifted = true; if (share === 1) n.met = true;
   takeFromSlot(state, slot, 1);
   state.stats.gifts++;
-  return { ok: true, msg: `You gave the ${name.toLowerCase()}.`, delta: n.love - before };
+  return { ok: true, msg: `You gave the ${name.toLowerCase()}.`, delta: n.love - before, later };
 }
 export function addLove(state, npcId, n) {
   const who = npcOf(state, npcId);

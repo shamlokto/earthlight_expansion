@@ -105,7 +105,7 @@ Do not use Lt. Arkin (he may have died in the player's campaign) or name the Gen
 * **Upgrades**: Ruess upgrades a tool overnight (level 2: 800 + 5 scrap; level 3: 2500 + 5 alloy
   + 1 crystal) and repairs the greenhouse (4000 + 120 lumber). Seln sells bigger rucksacks
   (10 → 15 slots 1500, → 20 slots 4000).
-* **Friendship** 0–100 per villager (10 points a heart): first talk of the day +2; one gift a day:
+* **Friendship** 0–100 per villager (10 points a heart): first talk of the day +2; gifts (the first of the day to each person in full, later ones that day a quarter, rounded, a non-neutral gift never to nothing):
   loved +8, liked +4, neutral +1, disliked −4; ×3 on their birthday. Events at heart thresholds.
 * **Money**: starts at 500 credits ("cr").
 
@@ -762,3 +762,16 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
 * Old saves: `ensure()` adds `state.visits`. Tests: farm-maps (every spot pair, spot to every portal, a full day planned for
   everybody each weekday, early and late in the story, counters on time), farm-story (homes in every schedule, lines, presence),
   farm-sim (door rules, the daily bonus, old saves).
+* **Opening-hours signs and mailboxes** (owner, 2026-11-20). An `hours_sign` prop (act `hours`, `place`) stands beside the door of
+  every public place in `story.PLACES` (shops, the clinic, the library, the Hangar, the Hall, the Guardians' Post, the office, the
+  Exchange, the church, the depot, Arrivals, the Grand Market, Venn's bench). E reads the place's name and its hours by day, closed
+  days included: `story.hoursSign` reads them off `whereIs` (a fine ordinary day with the current flags), so they cannot drift and
+  follow the story. It does not say who runs the place. A `mailbox` (act `mail`, `home`) stands by every home's door (by the back
+  door for rooms behind a shop); E shows whose it is, or with something giftable in hand leaves it as a gift (`sim.mailGift`): 80%
+  of handing it over (`MAIL_SHARE`, tiers and birthdays included), counted as that day's gift. They mention it next time they
+  talk (`story.MAIL_LINES` by tier). A partner's old mailbox carries the moved card. Both props are placed last, on free ground
+  beside the door, and never where they would block the way in (`maps.signsAndMail`, `HOURS_SIGNS`, `MAILBOXES`).
+* **Gifts later in the day** (owner, 2026-11-20): the first gift of the day to a person counts in full; any more that day count a
+  quarter each (`LATER_GIFT_SHARE`, gains and losses alike; a loved, liked or disliked gift never rounds to nothing; the birthday
+  words only for the first). There is no weekly limit. A mailbox gift is the day's first gift like any other: later mailbox gifts
+  are 80% of a quarter. Old saves: any old weekly gift count is dropped by `ensure()`.

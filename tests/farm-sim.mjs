@@ -691,7 +691,8 @@ function script(s, days = 12) {
   let r = sim.gift(s, 'ruess', slot, 'loved', false);
   check(r.ok && r.delta === 8 && r.msg && s.npc.ruess.love === 8 && s.npc.ruess.gifted && s.npc.ruess.met && countItem(s, 'turnip') === 19, 'loved +8');
   r = act(sim.gift(s, 'ruess', slot, 'loved', false));
-  check(!r.ok && r.delta === 0 && s.npc.ruess.love === 8 && countItem(s, 'turnip') === 19, 'one gift a day');
+  check(r.ok && r.later && r.delta === 2 && s.npc.ruess.love === 10 && countItem(s, 'turnip') === 18, 'a second gift the same day: a quarter (+2)');
+  r = sim.gift(s, 'ruess', slot, 'loved', false); check(r.later && r.delta === 2, 'and no worse for a third'); s.npc.ruess.love = 8;
   check(sim.gift(s, 'marrow', slot, 'liked', false).delta === 4 && sim.gift(s, 'corran', slot, 'neutral', false).delta === 1, 'liked +4, neutral +1');
   s.npc.oduya.love = 20; r = sim.gift(s, 'oduya', slot, 'disliked', false);
   check(r.ok && r.delta === -4 && s.npc.oduya.love === 16, 'disliked -4');
@@ -1415,6 +1416,21 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   sleep(s); check(sim.homeVisit(s, 'yui').first, 'and again tomorrow');
   const old = JSON.parse(saveState(newGame({ seed: 5 }))); delete old.visits; const O = loadState(JSON.stringify(old));
   check(O && O.visits && typeof O.visits === 'object' && sim.homeVisit(O, 'seln').first, 'an old save loads and can visit');
+}
+// ---------------------------------------------------------------- gifts later in the day, and the mailbox (2026-11-20)
+{
+  const D = sim.giftDelta, Q = sim.LATER_GIFT_SHARE, M = sim.MAIL_SHARE;
+  check(D('loved', false) === 8 && D('loved', false, Q) === 2 && D('liked', false, Q) === 1 && D('neutral', false, Q) === 0 && D('disliked', false, Q) === -1, 'later gifts: a quarter, gains and losses alike');
+  check(D('loved', false, M) === 6 && D('liked', false, M) === 3 && D('neutral', false, M) === 1 && D('disliked', false, M) === -3 && D('loved', true, M) === 19, 'the mailbox: 80%, tiers and birthdays included');
+  check(D('loved', false, M * Q) === 2 && D('liked', false, M * Q) === 1 && D('disliked', false, M * Q) === -1, 'a later mailbox gift: 80% of a quarter, never nothing for a loved gift');
+  const s = newGame({ seed: 31 }); addItem(s, 'turnip', 10); const slot = s.player.inv.findIndex((x) => x && x.id === 'turnip');
+  let r = sim.mailGift(s, 'yui', slot, 'loved', false);
+  check(r.ok && r.delta === 6 && s.npc.yui.gifted && s.npc.yui.mail === 'loved' && countItem(s, 'turnip') === 9 && /mailbox/.test(r.msg), 'a loved gift in the mailbox: +6, and she will remember');
+  r = sim.gift(s, 'yui', slot, 'loved', false); check(r.ok && r.later && r.delta === 2, 'the mailbox gift was the first of the day');
+  r = sim.mailGift(s, 'yui', slot, 'liked', false); check(r.ok && r.later && r.delta === 1, 'another in the mailbox: 80% of a quarter');
+  check(!sim.mailGift(s, 'yui', 99, 'loved', false).ok, 'nothing in hand, nothing posted');
+  sleep(s); s.npc.yui.love = 50; r = sim.mailGift(s, 'yui', slot, 'disliked', true); check(r.ok && !r.later && r.delta === -10, 'a new day: a disliked birthday gift by post, -10');
+  const old = JSON.parse(saveState(newGame({ seed: 8 }))); old.npc.seln.giftsWeek = 2; const O = loadState(JSON.stringify(old)); check(O && O.npc.seln.giftsWeek === undefined, 'an old weekly gift count is dropped');
 }
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

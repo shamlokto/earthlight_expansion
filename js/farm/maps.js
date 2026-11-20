@@ -802,18 +802,25 @@ export const HOURS_SIGNS = [], MAILBOXES = [];
 function signsAndMail(all) {
   const taken = (m, x, y) => m.solid(x, y) || m.at(x, y) === 'w' || m.at(x, y) === 'f' || m.postNear(x + 0.5, y + 0.5, 0.75) || m.doors.some((d) => Math.abs(d.x - x) + Math.abs(d.y - y) < 1) || m.exits.some((e) => x >= e.x0 - 1 && x <= e.x1 + 1 && y >= e.y0 - 1 && y <= e.y1 + 1)
     || m.props.some((p) => p.kind !== 'nothing' && p.w * p.d < 40 && x >= Math.floor(p.x) && x < Math.floor(p.x) + p.w && y >= Math.floor(p.y) && y < Math.floor(p.y) + p.d) || (m.exitTile && Math.abs(m.exitTile[0] - x) <= 1 && y >= m.exitTile[1] - 1);
-  const put = (map, x, y, offs, kind, o) => { const m = all[map]; for (const [dx, dy] of offs) { const tx = x + dx, ty = y + dy; if (taken(m, tx, ty)) continue; const p = m.prop(kind, tx, ty, o); return { map, x: tx, y: ty, p }; } return null; };
+  // Can everyone still get from the door to the map's way in, round posts as well (people use the same rule)?
+  const open = (m, x, y) => { const free = (i, j) => !m.solid(i, j) && !m.posts.some(([px, py, pr]) => Math.abs(px - i - 0.5) < 1.5 && Math.abs(py - j - 0.5) < 1.5 && Math.hypot(px - i - 0.5, py - j - 0.5) < pr + 0.22);
+    const st = m.start || [m.exitTile[0] + 0.5, m.exitTile[1] - 0.6], goal = Math.floor(st[1]) * m.w + Math.floor(st[0]), seen = new Uint8Array(m.w * m.h), q = [y * m.w + x]; seen[q[0]] = 1;
+    while (q.length) { const k = q.pop(); if (k === goal) return true; const i = k % m.w, j = (k - i) / m.w; for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = (j + dj) * m.w + i + di; if (i + di < 0 || i + di >= m.w || j + dj < 0 || j + dj >= m.h || seen[n] || !free(i + di, j + dj)) continue; seen[n] = 1; q.push(n); } }
+    return false; };
+  const put = (map, x, y, offs, kind, o, door) => { const m = all[map]; for (const [dx, dy] of offs) { const tx = x + dx, ty = y + dy; if (taken(m, tx, ty)) continue; const p = m.prop(kind, tx, ty, o);
+    if (!door || open(m, door[0], door[1])) return { map, x: tx, y: ty, p };
+    m.props.pop(); m.posts.pop(); } return null; };   // it would block the way: try the next place
   const SIDE = [[-2, 0], [2, 0], [-3, 0], [3, 0], [-2, 1], [2, 1], [-1, 1], [1, 1], [-3, 1], [3, 1], [0, 2]];
   const doorOf = (map, room) => all[map].doors.find((d) => d.to.map === room);
   for (const [place, map, room] of [['store', 'village', 'store'], ['cafe', 'village', 'cafe'], ['workshop', 'village', 'workshop'], ['hall', 'village', 'hall'], ['ranch', 'village', 'ranch'], ['clinic', 'village', 'clinic'], ['library', 'village', 'library'],
     ['bakery', 'village', 'bakery'], ['tailor', 'village', 'tailor'], ['florist', 'village', 'florist'], ['garage', 'village', 'garage'], ['radio', 'village', 'radio'], ['guard', 'village', 'home_kestrel'],
     ['office', 'central', 'office'], ['exchange', 'central', 'exchange'], ['church', 'central', 'church'], ['depot', 'central', 'depot'], ['arrivals', 'central', 'arrivals']]) {
-    const d = doorOf(map, room), r = d && put(map, d.x, d.y, SIDE, 'hours_sign', { act: 'hours', place }); if (r) HOURS_SIGNS.push({ place, ...r });
+    const d = doorOf(map, room), r = d && put(map, d.x, d.y, SIDE, 'hours_sign', { act: 'hours', place }, [d.x, d.y]); if (r) HOURS_SIGNS.push({ place, ...r });
   }
-  for (const [place, map, x, y] of [['grandmarket', 'central', 18, 25], ['undercroft', 'lower', 32, 39]]) { const r = put(map, x, y, [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [0, -1], [2, 0]], 'hours_sign', { act: 'hours', place }); if (r) HOURS_SIGNS.push({ place, ...r }); }
+  for (const [place, map, x, y] of [['grandmarket', 'central', 18, 25], ['undercroft', 'lower', 32, 39]]) { const r = put(map, x, y, [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [0, -1], [2, 0]], 'hours_sign', { act: 'hours', place }, [x, y]); if (r) HOURS_SIGNS.push({ place, ...r }); }
   for (const H of Object.values(HOMES)) {
     const offs = H.back ? [[-1, 0], [1, 0], [-1, 1], [1, 1], [-2, 1], [2, 1], [-2, 0], [-3, 0]] : [[1, 0], [-1, 0], [1, 1], [-1, 1], [2, 0], [-2, 0], [2, 1], [-2, 1]];
-    const r = put(H.map, H.x, H.y, offs, 'mailbox', { act: 'mail', home: H.key, tint: HOME_COLOURS[H.key] || HOME_COLOURS[H.key === 'thornes' || H.key === 'shelter' ? 'thorne' : H.key] });
+    const r = put(H.map, H.x, H.y, offs, 'mailbox', { act: 'mail', home: H.key, tint: HOME_COLOURS[H.key] || HOME_COLOURS[H.key === 'thornes' || H.key === 'shelter' ? 'thorne' : H.key] }, [H.x, H.y]);
     if (r) MAILBOXES.push({ home: H.key, ...r });
   }
 }
