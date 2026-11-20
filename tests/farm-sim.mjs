@@ -586,7 +586,7 @@ function script(s, days = 12) {
     for (let i = M.cells.length - 1; i >= 0 && blows < 60; i--) { if (!sim.isRock(M.cells[i]) || !sim.rockHits(M.cells[i], lv)) continue; let rr; do { t.player.stamina = 100; rr = sim.hitRock(t, i % M.w, Math.floor(i / M.w)); blows++; } while (rr.ok && !rr.broke); for (const f of rr.gained || []) worth += (ITEMS[f.id].sell || 0) * f.n; for (let k = 0; k < t.player.inv.length; k++) if (t.player.inv[k] && ITEMS[t.player.inv[k].id].kind !== 'tool') t.player.inv[k] = null; }
     return worth; };
   let wc = 0, wb = 0; for (let k = 0; k < 12; k++) { wc += tripCity(k); wb += tripBelt(); } wc /= 2; wb /= 2;
-  check(wc > wb * 0.9 && wc < wb * 2.5, `a city trip is worth about a belt trip or a bit more (city ${Math.round(wc / 6)} cr, belt ${Math.round(wb / 6)} cr, on 60 stamina)`);
+  check(wc > wb * 1.3 && wc < wb * 2.0, `a city trip is worth about a belt trip or a bit more (city ${Math.round(wc / 6)} cr, belt ${Math.round(wb / 6)} cr, on 60 stamina)`);
   console.log(`  trip worth on 60 stamina: city ${Math.round(wc / 6)} cr, belt (sector 5) ${Math.round(wb / 6)} cr`);
 
   // camps (safe spots): build (3 scrap + 100 cr), sleep there (the night runs, the hull is mended, the trip goes on), save and load there, fly home

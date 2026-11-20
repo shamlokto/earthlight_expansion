@@ -705,7 +705,7 @@ function cityPlace(i) {
   if (c === 4) { if (m.cells[i - m.w] === 4) return; W.place('cy' + i, kind, x + 1.5, y + 2.5, { w: 1, d: 3, seed: i }); }
   else if (kind) { const o = W.place('cy' + i, kind, x + 1.5, y + 1.5, { seed: i, scale: c === 11 ? 0.7 : 1 }); if (c === 5 || c === 14) o.rotation.y = i % 6; }   // billboards, lockers, counters, safes and the vault face +Z, towards the camera
   else if (c === 6) W.place('cy' + i, 'toxic_pool', x + 1.5, y + 1.5, { seed: i, scale: 1.05 + (i % 3) * 0.05 });
-  else if (c === 7 && (i * 2654435761 >>> 28) < 6) { const o = W.place('cy' + i, 'weed', x + 1.2 + (i % 5) * 0.12, y + 1.2 + (i % 7) * 0.09, { scale: 0.7 + (i % 4) * 0.15 }); o.rotation.y = i; }   // tufts in the overgrowth
+  else if (c === 7 && ((i * 2654435761 >>> 28) < 6 || ((x + y) % 2 === 0 && [1, -1, m.w, -m.w].some((d) => m.cells[i + d] !== 7)))) { const o = W.place('cy' + i, 'weed', x + 1.2 + (i % 5) * 0.12, y + 1.2 + (i % 7) * 0.09, { scale: 0.7 + (i % 4) * 0.15 }); o.rotation.y = i; }   // tufts in the overgrowth   // tufts, thicker along the moss's edges to soften them
   else if (m.haz[i] && (x + y) % 2 === 0) W.place('cy' + i, 'haze', x + 1.5, y + 1.5, { hazard: 1 });
   else return;
   cityPlaced.add(i);

@@ -825,7 +825,7 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   Yui and Maris love old records (the existing `record`, now also a city find); Fenn loves teddy bears; Moraine and Marrow like old coins. Reused: `record` (the salvaged vinyl record), `photo`, `teacup`, `book`, `watch`, `toy`, `medal`, `seedtin`,
   `musicbox`, `datachip`, `ring`, `scrap`, `battery`.
 * **Economy.** A city trip on 60 stamina (the 60 spots nearest the pad and the creatures outside the core) is worth
-  about 2,200 cr against about 950 cr for 60 Field-hammer blows in belt sector 5 (tests/farm-sim.mjs measures both):
+  about 1,600 cr (1.6–1.8×) against about 935 cr for 60 Field-hammer blows in belt sector 5 (tests/farm-sim.mjs measures both):
   more, with more risk (the hull, the tow fee, the shuttle fare). A full clear including the core and the vault is
   worth several thousand.
 * **Safe spots and camps** (owner, 2026-11-20, later). `cityLayout` places three safe spots a trip, one per zone

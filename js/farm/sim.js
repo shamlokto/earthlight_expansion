@@ -855,8 +855,8 @@ const SPOT_OF = { 5: 'rubble', 3: 'car', 4: 'bus', 10: 'locker', 11: 'safe', 12:
 export function cityZone(x, y) { const d = Math.hypot(x - CITY_PAD[0], (y - CITY_PAD[1]) * 1.2); return d < 30 ? 0 : d < 58 ? 1 : 2; }
 // The creatures: base stats in the suburbs; cityMonster scales them by zone (hp +50%, damage +35% a zone).
 export const CITY_MONSTERS = {
-  rad_hound: { name: 'rad-hound', hp: 2, dmg: 4, speed: 2.4, sight: 7, credits: [2, 6], drops: { scrap: 0.2, battery: 0.05 } },
-  glow_slime: { name: 'glow-slime', hp: 3, dmg: 5, speed: 0.8, sight: 5, split: true, credits: [2, 7], drops: { battery: 0.08, silica: 0.15 } },
+  rad_hound: { name: 'rad-hound', hp: 2, dmg: 4, speed: 2.4, sight: 7, credits: [2, 6], drops: { scrap: 0.15, battery: 0.03 } },
+  glow_slime: { name: 'glow-slime', hp: 3, dmg: 5, speed: 0.8, sight: 5, split: true, credits: [2, 7], drops: { battery: 0.04, silica: 0.15 } },
   rust_crawler: { name: 'rust-crawler', hp: 5, dmg: 7, speed: 1.3, sight: 6, armour: true, credits: [3, 9], drops: { scrap: 0.35, alloy: 0.06, copper: 0.06 } },
   smog_wraith: { name: 'smog-wraith', hp: 3, dmg: 3, speed: 1.1, sight: 7, drain: true, float: true, credits: [4, 10], drops: { comet_ice: 0.12, crystal: 0.05 } },
   spore_brute: { name: 'spore-brute', hp: 16, dmg: 12, speed: 0.75, sight: 6, boss: true, credits: [40, 80], drops: { seedtin: 0.5, crystal: 0.5, alloy: 1 } },
@@ -1045,11 +1045,11 @@ function oldFind(state, z, rare = 0) { return OLD_FINDS[pick(state, OLD_FINDS.ma
 export function cityLoot(state, kind, zone) {
   const z = clamp(int(zone) ? zone : 0, 0, 2), k = (1 + 0.5 * z) * 0.7, items = [], cr = (a, b) => Math.round((a + rnd(state) * (b - a)) * k), q = rnd(state);
   let credits = 0;
-  if (kind === 'rubble') { if (q < 0.3) items.push(['scrap', 1]); else if (q < 0.36) items.push(['battery', 1]); else if (q < 0.39) items.push([oldFind(state, z), 1]); else if (q < 0.51) credits = cr(3, 12); }
-  else if (kind === 'car' || kind === 'bus') { if (q < 0.2) items.push(['scrap', 1]); else if (q < 0.45) credits = cr(3, 10); else if (q < 0.51) items.push([oldFind(state, z), 1]); }
-  else if (kind === 'counter') { if (rnd(state) < 0.6) credits = cr(5, 20); if (q < 0.2) items.push([oldFind(state, z), 1]); }
-  else if (kind === 'locker') { if (q < 0.35) items.push([oldFind(state, z), 1]); else if (q < 0.5) items.push(['credit_chip', 1]); else if (q < 0.75) items.push(['battery', 1]); }
-  else if (kind === 'safe') { credits = cr(20, 60); items.push([oldFind(state, z, 1), 1]); if (q < 0.4) items.push(['old_coin', 2 + rint(state, 3)]); }
+  if (kind === 'rubble') { if (q < 0.25) items.push(['scrap', 1]); else if (q < 0.28) items.push(['battery', 1]); else if (q < 0.31) items.push([oldFind(state, z), 1]); else if (q < 0.41) credits = cr(3, 10); }
+  else if (kind === 'car' || kind === 'bus') { if (q < 0.18) items.push(['scrap', 1]); else if (q < 0.38) credits = cr(3, 10); else if (q < 0.42) items.push([oldFind(state, z), 1]); }
+  else if (kind === 'counter') { if (rnd(state) < 0.6) credits = cr(5, 20); if (q < 0.14) items.push([oldFind(state, z), 1]); }
+  else if (kind === 'locker') { if (q < 0.3) items.push([oldFind(state, z), 1]); else if (q < 0.4) items.push(['credit_chip', 1]); else if (q < 0.6) items.push(['battery', 1]); }
+  else if (kind === 'safe') { credits = cr(15, 40); items.push([oldFind(state, z, 1), 1]); if (q < 0.25) items.push(['old_coin', 2 + rint(state, 3)]); }
   else if (kind === 'vault') { credits = cr(280, 420); items.push(['data_core', 1], [rnd(state) < 0.5 ? 'ring' : 'musicbox', 1], ['credit_chip', 2], ['seedtin', 1]); }
   return { items, credits };
 }
