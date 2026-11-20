@@ -3973,5 +3973,45 @@
    0.9988
   ],
   "note": "item"
+ },
+ "old_coin": {
+  "file": "old_coin.glb",
+  "tris": 3000,
+  "size": [
+   0.9989,
+   1.0,
+   0.0809
+  ],
+  "note": "item; thin bronze leaf coin standing on its edge, face toward +Z"
+ },
+ "data_core": {
+  "file": "data_core.glb",
+  "tris": 3500,
+  "size": [
+   0.9993,
+   0.9992,
+   1.0
+  ],
+  "note": "item; solid blue crystal core with cyan circuit lines on a silver stand"
+ },
+ "camp": {
+  "file": "camp.glb",
+  "tris": 12000,
+  "size": [
+   0.9923,
+   0.4388,
+   1.0
+  ],
+  "note": "earth prop; Sato's ruins camp: tent (door on +Z), stone fire ring, crate and striped windbreak on a round grass patch"
+ },
+ "pallas_jet": {
+  "file": "pallas_jet.glb",
+  "tris": 16000,
+  "size": [
+   1.0,
+   0.2847,
+   0.8767
+  ],
+  "note": "Pallas jet form; crimson-magenta/white with orange accents and cyan canopy, nose on +Z, wings along X"
  }
 }

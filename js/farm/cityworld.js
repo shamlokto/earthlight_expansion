@@ -30,7 +30,7 @@ export const CITY_PROPS = {
   smog_wraith: { model: 'smog_wraith', h: 1.0, hover: 0.9, turn: true },   // the model's tail touches y = 0: lifted 0.45 here, and main.js bobs it
   spore_brute: { model: 'spore_brute', h: 1.6, turn: true },
   searched_mark: { h: 0.2 },
-  camp_spot: { h: 0.4 }, camp: { h: 1.2 }, pallas_jet: { h: 1.2 },   // safe spots, a built camp, the Pallas's flight form (procedural)
+  camp_spot: { h: 0.4 }, camp: { model: 'camp', h: 1.3, maxW: 2.2 }, pallas_jet: { model: 'pallas_jet', h: 1.0, maxW: 2.2 },   // the art pack's camp and jet when they land; else built here   // safe spots, a built camp, the Pallas's flight form (procedural)
 };
 export const CITY_MONSTER_KINDS = new Set(['rad_hound', 'glow_slime', 'rust_crawler', 'smog_wraith', 'spore_brute']);
 
@@ -170,4 +170,67 @@ export function cityProp(kind, o = {}) {
     default: return null;
   }
   return g;
+}
+
+// ---------------------------------------------------------------- the Pallas folds into its flight form (2026-11-20)
+// The Pallas model (pallas.glb) is one mesh, normalised to 1 tall (feet at y = 0, front +Z). For the transform it is
+// cut by bounds into a body, two legs (below the hips, |x| < 0.19) and two arms with their weapons (|x| ≥ 0.19, below the
+// shoulders), each on a pivot at its joint, and two wings are added at the back. pose(k) runs the fold from 0 (standing)
+// to 1 (flight-ready): the legs fold up behind, the arms sweep back along the sides, the body tilts forward to level and
+// the wings slide out. The procedural robot (no model) folds its own limb groups the same way. restore() puts it back.
+const HIP = 0.36, SHOULDER = 0.6, ARM_X = 0.19;
+function splitGeometry(geo) {
+  const g = geo.index ? geo.toNonIndexed() : geo, pos = g.attributes.position, parts = { body: [], legL: [], legR: [], armL: [], armR: [] };
+  for (let t = 0; t < pos.count / 3; t++) {
+    let cx = 0, cy = 0; for (let k = 0; k < 3; k++) { cx += pos.getX(t * 3 + k) / 3; cy += pos.getY(t * 3 + k) / 3; }
+    const side = cx < 0 ? 'L' : 'R';
+    parts[cy < SHOULDER && cy > 0.06 && Math.abs(cx) >= ARM_X ? 'arm' + side : cy < HIP && Math.abs(cx) < ARM_X ? 'leg' + side : 'body'].push(t);
+  }
+  const out = {};
+  for (const [name, tris] of Object.entries(parts)) {
+    const sub = new THREE.BufferGeometry();
+    for (const [an, attr] of Object.entries(g.attributes)) { const n = attr.itemSize, arr = new Float32Array(tris.length * 3 * n); tris.forEach((t, i) => { for (let k = 0; k < 3 * n; k++) arr[i * 3 * n + k] = attr.array[t * 3 * n + k]; }); sub.setAttribute(an, new THREE.BufferAttribute(arr, n)); }
+    out[name] = sub;
+  }
+  return out;
+}
+let SPLIT = null;
+export function pallasFold(actor) {
+  let mesh = null; actor.body && actor.body.traverse((q) => { if (q.isMesh && !mesh && q.geometry && q.geometry.attributes.position.count > 1000) mesh = q; });
+  const limbs = actor.body && actor.body.userData.limbs;
+  const wingMat = new THREE.MeshStandardMaterial({ color: 0xf2f0ec, roughness: 0.5 }), tipMat = new THREE.MeshStandardMaterial({ color: 0x9a1f3a, roughness: 0.5 });
+  const makeWings = (scale) => { const w = new THREE.Group(); for (const s of [-1, 1]) { const p = new THREE.Group(), m = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.025, 0.16), wingMat), tip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.03, 0.17), tipMat); m.position.x = s * 0.25; tip.position.x = s * 0.47; p.add(m, tip); p.userData.side = s; w.add(p); } w.scale.setScalar(scale); return w; };
+  if (mesh) {                                            // the model: cut into parts on pivots
+    if (!SPLIT) SPLIT = splitGeometry(mesh.geometry);
+    const rig = new THREE.Group(); rig.position.copy(mesh.position); rig.quaternion.copy(mesh.quaternion); rig.scale.copy(mesh.scale);
+    const tilt = new THREE.Group(); rig.add(tilt);
+    const part = (name, px, py) => { const p = new THREE.Group(); p.position.set(px, py, 0); const m = new THREE.Mesh(SPLIT[name], mesh.material); m.position.set(-px, -py, 0); m.castShadow = true; p.add(m); tilt.add(p); return p; };
+    tilt.add(new THREE.Mesh(SPLIT.body, mesh.material));
+    const legL = part('legL', -0.1, HIP), legR = part('legR', 0.1, HIP), armL = part('armL', -ARM_X, SHOULDER), armR = part('armR', ARM_X, SHOULDER);
+    const wings = makeWings(1); wings.position.set(0, 0.62, -0.2); tilt.add(wings);
+    mesh.parent.add(rig); mesh.visible = false;
+    return {
+      pose(k, wk) {
+        const e = (a) => Math.min(1, Math.max(0, a)), kl = e(k * 1.6), ka = e(k * 1.4 - 0.15), kb = e(k * 1.3 - 0.3);
+        legL.rotation.x = legR.rotation.x = 1.7 * kl; legL.position.z = legR.position.z = -0.05 * kl;
+        armL.rotation.x = armR.rotation.x = 1.25 * ka; armL.rotation.z = 0.25 * ka; armR.rotation.z = -0.25 * ka;
+        tilt.rotation.x = 1.35 * kb; tilt.position.set(0, 0.22 * kb, 0.15 * kb);
+        for (const p of wings.children) { p.scale.x = Math.max(0.02, e(wk)); p.rotation.z = p.userData.side * 0.15 * (1 - e(wk)); }
+      },
+      restore() { mesh.parent && mesh.parent.remove(rig); mesh.visible = true; },
+    };
+  }
+  if (limbs) {                                           // the procedural robot: its own limb groups
+    const b = actor.body, wings = makeWings(2.2); wings.position.set(0, 1.7, -0.4); b.add(wings);
+    return {
+      pose(k, wk) {
+        const e = (a) => Math.min(1, Math.max(0, a));
+        limbs.L.rotation.x = limbs.R.rotation.x = 1.7 * e(k * 1.6); limbs.A.rotation.x = limbs.B.rotation.x = 1.25 * e(k * 1.4 - 0.15);
+        b.rotation.x = 1.35 * e(k * 1.3 - 0.3);
+        for (const p of wings.children) p.scale.x = Math.max(0.02, e(wk));
+      },
+      restore() { b.remove(wings); for (const l of Object.values(limbs)) l.rotation.set(0, 0, 0); b.rotation.x = 0; },
+    };
+  }
+  return { pose(k) { actor.group.scale.set(1, 1 - 0.4 * k, 1); }, restore() { actor.group.scale.set(1, 1, 1); } };   // a picture: just a crouch
 }

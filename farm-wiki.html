@@ -67,6 +67,14 @@
     figure.map small, figure.map .t { color: var(--dim); }
     figure.map details { margin-top: 6px; font-size: 13px; } figure.map summary { cursor: pointer; font: 600 13px var(--f-display); color: var(--gold); }
     figure.map ul { padding-left: 18px; } .maporder { padding-left: 22px; margin: 4px 0; }
+    i.sw { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin: 0 3px 0 6px; }
+    #itab td.it b { font: 600 14px var(--f-display); } #itab td.it small { display: block; color: var(--dim); font-size: 12px; margin-left: 36px; }
+    #itab td.it .ico, #itab td.it .fake { float: left; } #itab td.src { font-size: 12.5px; color: var(--dim); } #itab details { font-size: 13px; color: var(--dim); } #itab summary { cursor: pointer; color: var(--gold); font-size: 12px; }
+    @media (max-width: 600px) { #itab tr:first-child { display: none; } #itab tr { display: grid; grid-template-columns: 1fr auto auto; gap: 2px 10px; border-bottom: 1px solid var(--edge); padding: 8px 0; }
+      #itab td { border: 0; padding: 0 4px; } #itab td.ab, #itab td.src { grid-column: 1 / -1; } #itab td.it { grid-column: 1; grid-row: 1; } #itab tr[hidden] { display: none; } }
+    .enemy .badge { width: 96px; height: 96px; border-radius: 50%; flex: none; display: grid; place-items: center; font: 700 26px var(--f-display); color: #fff; box-shadow: inset 0 -6px 12px rgba(0,0,0,.25); overflow: hidden; }
+    .enemy .badge:has(img) { background: radial-gradient(circle at 50% 40%, #fffaf0, var(--paper-2) 70%) !important; box-shadow: inset 0 0 0 1px var(--edge); } .enemy .badge img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .enemy dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 8px; margin: 6px 0 0; font-size: 12.5px; } .enemy dt { color: var(--dim); } .enemy dd { margin: 0; }
     .maplegend { font-size: 13px; color: var(--dim); } .maplegend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin: 0 3px 0 6px; }
     #mapzoom > div { max-width: 96vw; max-height: 92vh; overflow: auto; border-radius: 10px; }
     #mapzoom img { display: block; max-width: none; max-height: none; border-radius: 0; }
@@ -132,7 +140,7 @@
         ${n.dislikes && n.dislikes.length ? `<div class="g">Dislikes ${n.dislikes.map((x) => esc(name(x))).join(', ')}</div>` : ''}</div></div>`; };
     const ids = Object.keys(story.NPCS).filter((k) => k !== 'sato');
     add('people', 'People of Willowfall and Eden Central', `<p class="lead">Talk every day, bring gifts and do favours. ${(story.ROMANCE || { candidates: [] }).candidates.length} of them can become more than friends. Market Lane, Willowfall's new east end, is home to Pia the tailor, Lark the baker, Noor of the Seedhouse, Tika the mechanic and Vesna of Radio Willowfall. Pastor Ines and Constable Fenn live and work in Eden Central, down the lift; Tobias Venn, Agnes Thorne, Moth and Ansel Wick live further down still, on the Lower deck, where Hana Corvel, Venn's apprentice, has come back to the Works.</p>
-      <p>Everybody has a home, and walks there and back: a cottage on Willow Lane or across the Mill Bridge, rooms behind a shop, a flat in Eden Central, a cabin in the Undercroft rock. Knock, and if they are in and awake and you are friends enough (4 hearts; 3 with the open-house sort: Marrow, Seln, Corran, Oduya, Lark, Pastor Ines, Agnes and Moth), they let you in. Late at night only a sweetheart is let in. A chat at someone's home is worth a little extra once a day.</p>
+      <p>Everybody has a home and walks there and back, through doors, the farm gate and the lift: see <a href="#homes">Homes and visiting</a> for who lives where and when they let you in.</p>
       <div class="cards">${person('sato')}${ids.map(person).join('')}</div>`);
 
     // ---- love
@@ -140,6 +148,31 @@
       <p>A love story starts only when you have seen that person's heart events, done <b>two favours</b> for them and reached <b>8 hearts</b>: then, after a conversation, they say how they feel. At <b>10 hearts</b>, the <b>Earthlight pendant</b> from Queen Moraine's barge asks the question, and the wedding follows under the lanterns of the square. Your partner then shares the farm, waits on the porch at dawn and in the evening, and waters some of the field before you wake.</p>
       <p><b>Romance candidates:</b> ${R.candidates.map((c) => esc(story.NPCS[c] ? story.NPCS[c].name : c)).join(', ')}.</p>
       ${R.pendant ? `<p class="lead">${esc(R.pendant)}</p>` : ''}`);
+
+    // ---- homes, visits, mailboxes and gifts (sim.visitRule, homeVisit, mailGift, giftDelta; story.HOMES)
+    {
+      const fr = sim.VISIT_FRIENDLY || [], late = sim.VISIT_LATE || 1260, hh = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+      const nm = (id) => (story.NPCS[id] ? story.NPCS[id].short || story.NPCS[id].name : id);
+      const homeRows = ids.filter((id) => homeOf(id)).map((id) => `<tr><td>${esc(story.NPCS[id].name)}</td><td>${esc(homeOf(id))}</td><td class="n">${fr.includes(id) ? sim.VISIT_FRIENDLY_HEARTS : sim.VISIT_HEARTS} ♥</td></tr>`).join('');
+      const share = sim.LATER_GIFT_SHARE || 0.25, mail = sim.MAIL_SHARE || 0.8, gd = (t, k) => (sim.giftDelta ? sim.giftDelta(t, false, k) : '');
+      const giftRows = ['loved', 'liked', 'neutral', 'disliked'].map((t) => `<tr><td>${t[0].toUpperCase() + t.slice(1)}</td><td class="n">${gd(t, 1)}</td><td class="n">${gd(t, share)}</td><td class="n">${gd(t, mail)}</td><td class="n">${sim.giftDelta ? sim.giftDelta(t, true, 1) : ''}</td></tr>`).join('');
+      add('homes', 'Homes and visiting', `<p class="lead">Everyone has a home and walks to wherever they are due next, on time for every shift. Stand still near a walker and they stop for a word. The town map (M) marks whose home is whose.</p>
+        <h3>Knocking</h3><ul>
+        <li>The door opens if they are <b>at home and awake</b>, it is <b>before ${hh(late)}</b>, and you have <b>${sim.VISIT_HEARTS} hearts</b> with them, or <b>${sim.VISIT_FRIENDLY_HEARTS}</b> with the open-house sort: ${fr.map((id) => esc(nm(id))).join(', ')}.</li>
+        <li>Your <b>sweetheart</b> always lets you in, late or not. A partner has moved to the farm; their old door has a card on it.</li>
+        <li>Otherwise you get a note on the door (out), a sleepy voice (asleep), a kind no (not friends enough yet) or "it is late".</li>
+        <li>The <b>first chat at someone's home each day</b> is worth +${sim.VISIT_BONUS || 2} friendship, on top of the usual first talk.</li>
+        <li>Stay too long and your host <b>sees you out</b>: at their bedtime, at ${hh(late)} (unless you are their sweetheart), or when they have to go out, they say goodnight and walk you to the door.</li></ul>
+        <h3>Mailboxes and gifts</h3><p>Every home has a named mailbox by its door (by the back door for rooms behind a shop). E with a gift in hand leaves it there: it counts as that day's gift and is worth <b>${Math.round(mail * 100)}%</b> of handing it over, and they mention it next time you talk. The <b>first gift of the day</b> to someone counts in full; any more that day count <b>a quarter</b> each (gains and losses alike). Birthdays triple the first gift. There is no weekly limit.</p>
+        <div class="tw"><table><tr><th>Gift</th><th class="n">First of the day</th><th class="n">Later that day</th><th class="n">Mailbox</th><th class="n">Birthday</th></tr>${giftRows}</table></div>
+        <h3>Who lives where</h3><div class="tw"><table><tr><th>Person</th><th>Home</th><th class="n">Hearts to visit</th></tr>${homeRows}</table></div>`);
+      // opening hours, read off the schedules exactly as the in-game signs are (story.hoursSign)
+      if (story.PLACES && story.hoursSign) {
+        const rows = Object.keys(story.PLACES).map((k) => { const t = story.hoursSign(k, k === 'undercroft' ? { flags: { ld_lights: true } } : {}); if (!t) return ''; const [n, ...rest] = t.split('\n'); return `<tr><td><b>${esc(n)}</b></td><td>${rest.map(esc).join('<br>')}</td></tr>`; }).join('');
+        add('hours', 'Opening hours', `<p class="lead">A signboard stands by the door of every public place. It reads the hours off the keeper's own timetable, so it is always right; a shop opens on the hour, once its keeper is at the counter. These are the hours on an ordinary fine day.</p>
+          <div class="tw"><table><tr><th>Place</th><th>Hours</th></tr>${rows}</table></div>`);
+      }
+    }
 
     // ---- crops
     const crops = Object.values(CROPS);
@@ -156,17 +189,48 @@
       </table></div>`);
 
     // ---- items
-    const KIND = { tool: 'Tools', seed: 'Seeds', crop: 'Crops', animal: 'Animal goods', fish: 'Fish', forage: 'Forage', ore: 'Materials', relic: 'Old-world finds', food: 'Food', keepsake: 'Keepsakes', stock: 'Farm stock', material: 'Wool and yarn', artisan: 'Artisan goods', craft: 'Crafted gifts' };
+    const KIND = { tool: 'Tools', seed: 'Seeds', crop: 'Crops', animal: 'Animal goods', fish: 'Fish', forage: 'Forage', fruit: 'Fruit', sapling: 'Saplings', placeable: 'Things to set down', part: 'Parts', ore: 'Materials', relic: 'Old-world relics', valuable: 'Old-world valuables', food: 'Food', keepsake: 'Keepsakes', stock: 'Farm stock', material: 'Wool and yarn', artisan: 'Artisan goods', craft: 'Crafted gifts' };
     const kinds = [...new Set(Object.values(ITEMS).map((i) => i.kind))];
-    const itemRows = Object.values(ITEMS).map((i) => `<tr data-k="${i.kind}" data-n="${esc(i.name.toLowerCase())}"><td>${ico(i.id)}${esc(i.name)}</td><td>${esc(KIND[i.kind] || i.kind)}</td><td>${esc(i.detail || i.desc || '')}</td><td class="n">${i.sell ? i.sell + ' cr' : ''}</td><td class="n">${i.stamina ? '+' + i.stamina : ''}</td></tr>`).join('');
-    add('items', 'Items', `<div class="filter" id="kf"><input id="q" placeholder="Search…" size="14"><button class="on" data-k="">All</button>${kinds.map((k) => `<button data-k="${k}">${esc(KIND[k] || k)}</button>`).join('')}</div>
-      <div class="tw"><table id="itab"><tr><th>Item</th><th>Kind</th><th>About</th><th class="n">Sells</th><th class="n">Stamina</th></tr>${itemRows}</table></div>`);
+    // where each item comes from, read off the game's own tables (shops, crops, fish, forage, belt, Earth, recipes, machines)
+    const SRC = {}, from = (id, txt) => { if (!ITEMS[id]) return; (SRC[id] = SRC[id] || new Set()).add(txt); };
+    {
+      const DD = await import('./js/farm/data.js'), placeName = (k) => (sim.SHOPS[k] && sim.SHOPS[k].name) || (story.PLACES && story.PLACES[k] && story.PLACES[k].name) || k;
+      const flags = { fold: 1, duckhouse: 1, eastfield: 1, feed_mill: 1, ld_lights: 1, ld_pumps: 1, ld_catacombs: 1, ld_enclave: 1, ld_works: 1, venn_key: 1 };
+      for (const k of [...Object.keys(sim.SHOPS || {}), 'bakery', 'tailor', 'florist', 'garage', 'radio']) for (let se = 0; se < 4; se++) {
+        try { const st = sim.newGame({ seed: 1 }); Object.assign(st.flags, flags); st.cal.season = se; for (const e of sim.shopStock(st, k) || []) { const id = e.give || e.key; if (ITEMS[id]) from(id, placeName(k)); } } catch { /* a shop that needs more state */ }
+      }
+      for (const c of Object.values(CROPS)) from(c.id, `Grown (${c.seasons.length > 3 ? 'spring to autumn' : c.seasons.map(seasonName).join(', ')})`);
+      for (const id of story.FISH || []) from(id, 'Fishing'); for (const id of ['cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi']) from(id, 'Fishing below decks');
+      (sim.FORAGE || []).forEach((list, se) => list.forEach(([id]) => from(id, `Forage on the hill (${seasonName(se)})`)));
+      for (const [id, sec] of sim.BELT_ORES || []) from(id, `The belt (from sector ${sec})`);
+      for (const [id] of sim.OLD_FINDS || []) from(id, 'Earth city ruins');
+      ['data_core', 'credit_chip', 'old_coin'].forEach((id) => from(id, 'Earth city ruins'));
+      for (const [k, m] of Object.entries(sim.CITY_MONSTERS || {})) for (const id of Object.keys(m.drops || {})) from(id, `Dropped by the ${m.name}`);
+      for (const r of [...(sim.RECIPES || [])]) from(r.id, 'Cooking');
+      for (const r of sim.LANE_RECIPES || []) from(r.id, 'Cooking');
+      for (const w of sim.WORKS_RECIPES || []) { const m = w[6] || {}; if (m.give) from(m.give, 'The Works press'); }
+      for (const m of Object.values(sim.MACHINES || {})) for (const [, [o]] of Object.entries(m.takes || {})) from(o, m.name);
+      from('honey', 'Beehive');
+      for (const m of Object.values(DD.MUSHROOMS || {})) from(m.id, 'Catacomb beds');
+      for (const k of Object.keys(DD.FRUIT_TREES || {})) from(k, 'Your fruit trees'); for (const k of Object.keys(DD.WILD_TREES || {})) from(k, 'Wild fruit trees');
+      for (const [ids, txt] of [[['hoe', 'can', 'sickle', 'hammer', 'axe'], 'You start with it; Ruess upgrades it'], [['egg'], 'Hens (the coop)'], [['milk_s', 'milk_m', 'milk_l'], 'Cows, with the milker'], [['goat_milk', 'goat_milk_l'], 'Goats, with the milker'],
+        [['wool', 'fine_wool'], 'Sheep, with the clippers'], [['duck_egg', 'duck_feather'], 'Ducks (the duck house)'], [['battery_full'], 'A battery charged in a solar charger or the solar yard'], [['lumber'], 'Chopping branches and stumps with the axe'],
+        [['yarn_scarf'], "Pia knits it from three skeins"], [['log_tape'], 'Lower deck terminals'], [['diary_page'], 'Moth'], [['ring_shard'], 'Opening the vault'], [['hub_cup'], 'Winning the Hub Cup']]) for (const id of ids) from(id, txt);
+    }
+    const itemRows = Object.values(ITEMS).map((i) => { const src = SRC[i.id] ? [...SRC[i.id]].slice(0, 5).join(' · ') : '';
+      return `<tr data-k="${i.kind}" data-n="${esc((i.name + ' ' + (i.desc || '') + ' ' + src).toLowerCase())}"><td class="it">${ico(i.id)}<b>${esc(i.name)}</b><small>${esc(KIND[i.kind] || i.kind)}</small></td>
+        <td class="ab">${esc(i.desc || '')}${i.detail && i.detail !== i.desc ? `<details><summary>More</summary>${esc(i.detail)}</details>` : ''}</td><td class="src">${esc(src)}</td>
+        <td class="n">${i.sell ? i.sell + ' cr' : ''}</td><td class="n">${i.stamina ? '+' + i.stamina : ''}</td></tr>`; }).join('');
+    add('items', 'Items', `<p class="lead">All ${Object.keys(ITEMS).length} things Sato can carry, straight from the game's item list. Search by name, description or where it comes from, or pick a kind.</p>
+      <div class="filter" id="kf"><input id="q" placeholder="Search…" size="14"><button class="on" data-k="">All</button>${kinds.map((k) => `<button data-k="${k}">${esc(KIND[k] || k)}</button>`).join('')}</div>
+      <div class="tw"><table id="itab"><tr><th>Item</th><th>About</th><th>Where to get it</th><th class="n">Sells</th><th class="n">Stamina</th></tr>${itemRows}</table></div>`);
 
     // ---- fishing and the Old World
     add('fishing', 'Fishing', `<p class="lead">Face water, Space to cast, wait for the float to dip, Space again. Rain and the hill lake are best; Ruess can upgrade the rod.</p>
       <div class="tw"><table><tr><th>Fish</th><th>About</th><th class="n">Sells</th></tr>${(story.FISH || []).map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc((story.FISHING && story.FISHING.caught && story.FISHING.caught[id]) || (ITEMS[id] && ITEMS[id].desc) || '')}</td><td class="n">${ITEMS[id] && ITEMS[id].sell ? ITEMS[id].sell + ' cr' : ''}</td></tr>`).join('')}</table></div>`);
     // ---- maps: drawn live from js/farm/maps.js (colours copied from js/farm/minimap.js, which can't be imported here: it pulls in three.js)
     const mapJobs = [];
+    const CITY_SEED = 20261120;                       // the sample Earth city in the Maps section
     {
       const GROUND = { g: '#93c870', f: '#a8805a', p: '#e6d3a4', c: '#ddd5c4', s: '#ecdfb2', w: '#72b9de', k: '#bb8c5a', r: '#8c877f', o: '#c4c0b6', h: '#dcc06c', b: '#b48a5c', d: '#c6d0d6', a: '#8c877e', x: '#33302c' };
       const ROOF = { gov_office: '#8ea3b8', exchange: '#9a5ab0', arrivals: '#a3b0ba', apartment: '#9fb0bf', townhouse: '#d98a6a', observatory: '#eef1f3', onsen_house: '#c9583a', house: '#e0905a', barn: '#c8553e', coop: '#dca85e', silo: '#a3b0ba', greenhouse: '#c3eaee', store: '#ea8762', cafe: '#8299b4', workshop: '#cba36c', hall: '#c45c4a', ranch: '#bc543f', clinic: '#f2efe8', library: '#9378b4', pumphouse: '#93a7b4', post: '#e6c454', guard: '#7393ac', lift: '#8c7c6c', orbital_elevator: '#5fb3b0', school: '#f2c230', church: '#3fa7a3', safety_depot: '#e0782a', bakery: '#d9534f', tailor: '#5a8f92', seedhouse: '#cfeee0', garage: '#8a98a2', radio_station: '#5b4a7a', fold: '#9a8a70', duckhouse: '#7ab0d8' };
@@ -244,8 +308,32 @@
       add('maps', 'Maps', `<p class="lead">The outdoor maps, drawn from the game's own map data.</p>${legend}
         ${MAPS.filter(([id]) => all[id]).map(([id, cap]) => { const m = all[id]; return `<figure class="map"><h3>${esc(m.name.split(' · ').join(', '))}</h3><canvas data-map="${id}" style="max-width:${Math.round(m.w / m.h * 760)}px" aria-label="Map of ${esc(m.name)}"></canvas>
           <figcaption>${esc(cap)} <span class="t">${m.w} × ${m.h} tiles.</span><br><small>Ways in and out: ${doorList(m)}</small>${id === 'lower' ? lowerOrder : ''}
-          <details><summary>Signposts (${m.props.filter((p) => p.kind === 'signpost').length})</summary><ul>${signList(m)}</ul></details></figcaption></figure>`; }).join('')}`);
-      mapJobs.push(() => { for (const cv of document.querySelectorAll('canvas[data-map]')) { try { drawMap(cv, all[cv.dataset.map]); } catch (e) { console.error('map', cv.dataset.map, e); } } });
+          <details><summary>Signposts (${m.props.filter((p) => p.kind === 'signpost').length})</summary><ul>${signList(m)}</ul></details></figcaption></figure>`; }).join('')}
+        ${sim.cityLayout ? `<figure class="map" id="citymap"><h3>Earth: a sample city ruin</h3><canvas data-map="city" data-city="${CITY_SEED}" style="max-width:${Math.round((sim.CITY_W || 96) / (sim.CITY_H || 72) * 760)}px" aria-label="A sample Earth city map"></canvas>
+          <figcaption>The city on Earth is generated anew for every trip, so there is no fixed chart of it (the game's map screen says so too). This is one sample, drawn by the game's own generator (<code>cityLayout(${CITY_SEED})</code>): the shuttle pad at the south edge, the suburbs round it, downtown beyond, and the core in the far north. Every city has the same shape of things: ${(sim.CITY_ZONES || []).join(', ').toLowerCase()}, one safe spot for a camp in each zone, and one sealed vault in the core.
+          <span class="t">${sim.CITY_W} × ${sim.CITY_H} tiles.</span><br><small><i class="sw" style="background:#5d5b5f"></i>street <i class="sw" style="background:#9a948a"></i>ash lot <i class="sw" style="background:#6f8f4a"></i>overgrowth <i class="sw" style="background:#cfc8bb"></i>building <i class="sw" style="background:#b6e33a"></i>toxic pool <i class="sw" style="background:rgba(170,210,60,.55)"></i>gas <i class="sw" style="background:#ffd36a"></i>treasure spot <i class="sw" style="background:#e8483a"></i>creature <i class="sw" style="background:#9a4fd0"></i>spore-brute <i class="sw" style="background:#3fd08a"></i>safe spot (camp)</small></figcaption></figure>` : ''}`);
+      mapJobs.push(() => { for (const cv of document.querySelectorAll('canvas[data-map]:not([data-city])')) { try { drawMap(cv, all[cv.dataset.map]); } catch (e) { console.error('map', cv.dataset.map, e); } } });
+      // the Earth city: one sample from the game's generator, zones, camps, the vault, creatures
+      mapJobs.push(() => { const cv = document.querySelector('canvas[data-city]'); if (!cv) return; try {
+        const L = sim.cityLayout(CITY_SEED), T = 10, g = cv.getContext('2d'), C = sim.CITY_CELL; cv.width = L.w * T; cv.height = L.h * T;
+        const COL = { [C.street]: '#5d5b5f', [C.lot]: '#9a948a', [C.tower]: '#cfc8bb', [C.car]: '#b0503a', [C.bus]: '#d89a30', [C.rubble]: '#7a6a58', [C.pool]: '#b6e33a', [C.green]: '#6f8f4a', [C.sign]: '#c9b860', [C.pad]: '#5fb3b0', [C.locker]: '#6a7a8a', [C.safe]: '#3a3a40', [C.counter]: '#c08a5a', [C.vault]: '#ffd36a', [C.debris]: '#3a3632' };
+        for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) { const c = L.cells[y * L.w + x]; g.fillStyle = COL[c] || '#888'; g.fillRect(x * T, y * T, T + 0.5, T + 0.5); if (L.haz[y * L.w + x]) { g.fillStyle = 'rgba(170,210,60,.38)'; g.fillRect(x * T, y * T, T, T); } }
+        for (const t of L.towers) { g.strokeStyle = 'rgba(40,36,30,.6)'; g.lineWidth = 1.5; g.strokeRect(t.x * T + 0.75, t.y * T + 0.75, t.w * T - 1.5, t.d * T - 1.5); }
+        // zone borders: a dashed white line wherever the zone changes between neighbouring tiles
+        g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath();
+        for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) { const z = sim.cityZone(x + 0.5, y + 0.5); if (x + 1 < L.w && sim.cityZone(x + 1.5, y + 0.5) !== z) { g.moveTo((x + 1) * T, y * T); g.lineTo((x + 1) * T, (y + 1) * T); } if (y + 1 < L.h && sim.cityZone(x + 0.5, y + 1.5) !== z) { g.moveTo(x * T, (y + 1) * T); g.lineTo((x + 1) * T, (y + 1) * T); } }
+        g.stroke(); g.setLineDash([]);
+        for (const sp of L.spots) { const x = (sp.i % L.w + 0.5) * T, y = (Math.floor(sp.i / L.w) + 0.5) * T; g.fillStyle = sp.kind === 'vault' ? '#ffd36a' : 'rgba(255,211,106,.95)'; g.beginPath(); g.arc(x, y, sp.kind === 'vault' ? T * 0.7 : T * 0.22, 0, 7); g.fill(); }
+        for (const q of L.monsters) { g.fillStyle = q.kind === 'spore_brute' ? '#9a4fd0' : '#e8483a'; g.strokeStyle = '#fff'; g.lineWidth = 1; g.beginPath(); g.arc((q.x + 0.5) * T, (q.y + 0.5) * T, q.kind === 'spore_brute' ? T * 0.6 : T * 0.32, 0, 7); g.fill(); g.stroke(); }
+        const label = (txt, x, y, px, fill) => { g.font = `700 ${px}px "IBM Plex Sans", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 4; g.strokeStyle = 'rgba(20,18,14,.85)'; g.strokeText(txt, x, y); g.fillStyle = fill; g.fillText(txt, x, y); };
+        const KIND = { plaza: 'Plaza', rooftop: 'Rooftop', bunker: 'Bunker' };
+        for (const c of L.camps) { const x = (c.x + 0.5) * T, y = (c.y + 0.5) * T; g.strokeStyle = '#3fd08a'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, (sim.CAMP_R || 3) * T, 0, 7); g.stroke(); g.fillStyle = 'rgba(63,208,138,.25)'; g.fill(); label(`⛺ ${KIND[c.kind] || c.kind} camp`, x, y - (sim.CAMP_R || 3) * T - 9, 13, '#9dffcf'); }
+        const [px, py] = L.pad; label('Shuttle pad', (px + 0.5) * T, (py - 1.6) * T, 14, '#bff4f2');
+        if (L.vault >= 0) label('Sealed vault', (L.vault % L.w + 0.5) * T, (Math.floor(L.vault / L.w) + 1.9) * T, 12, '#ffd36a');
+        // zone names, placed along the boulevard north of the pad
+        const zy = [[0, py - 12], [1, py - 36], [2, 6]];
+        for (const [z, y] of zy) label((sim.CITY_ZONES || [])[z] || '', (px + 0.5) * T, y * T, 18, '#fff3d6');
+      } catch (e) { console.error('city map', e); } });
     }
 
     // ---- Eden Central
@@ -308,12 +396,34 @@
     add('robots', 'Field-units and batteries', `<p>Ruess builds up to <b>${sim.MAX_ROBOTS || 7}</b> Field-units (${(sim.shopStock(sim.newGame({ seed: 1 }), 'workshop').find((e) => e.key === 'robot') || { price: 1000 }).price.toLocaleString()} cr each, paid once). Each has a job, set by talking to it on the farm or from the <b>Robots tab</b> of the farm journal (P): <b>Water</b>, <b>Harvest</b>, <b>Animals</b>, <b>Batteries</b> or <b>Rest</b>. They work at dawn on a battery (charge 0–100); a day's work costs 25 to 40.</p>
       <p>The <b>Batteries</b> job makes a unit the crew's battery keeper. Each morning, before the others start, it swaps a charged battery into its own pack if it is at ${sim.KEEP_BELOW || 60}% or less, then into the lowest units at ${sim.KEEP_BELOW || 60}% or less (and the mining unit), up to 2 + its skill level of them (3 at skill 1, 7 at skill 5), +60 each, for 15 charge of its own. It takes charged batteries from the solar chargers on the farm first, then the storage box, leaves each flat one where the charged one was, and carries flat batteries from the storage box to empty charger slots. With no charged batteries it says so in the morning report. Two chargers and one keeper keep a crew of seven running most days.</p>`);
 
-    add('ruins', 'The Old World', `<p>Juno Maris's courier shuttle flies from the Eden Central space dock (or book at the Arrivals desk) down to the ruins of human civilisation on Earth's surface: ${sim.SHUTTLE_FARE} cr a trip, free once she is at 5 hearts. The shuttle lands on a pad at the edge of one big ruined city, a new one every trip, and Sato walks her <b>Pallas</b> anywhere in it. Near the pad are the <b>suburbs</b> (little houses, overgrown yards), then <b>downtown</b> (broken towers, shopfronts, gas), and far to the north the glowing industrial <b>core</b>, where the creatures are toughest and the finds richest. <b>Space</b> fires its rifle, and up close swings the beam sabre. <b>F</b> sets down the <b>Hydra</b> autoturret, <b>Shift</b> boosts, and <b>E</b> searches rubble, car trunks, shop counters, lockers and safes. A <b>sealed vault</b> in the core is guarded by a spore-brute.</p>
-      <p>The Pallas has a <b>hull</b> bar: creatures, gas pockets and toxic pools wear it down (the air filters from Ruess keep the gas out and stiffen the hull). Walk back to the shuttle to fly home with everything; if the hull gives out, Maris tows you home: an hour, some stamina and a ${sim.TOW_FEE} cr tow fee. Beaten creatures flee or fizzle and drop credits and sometimes materials.</p>
-      <p><b>Safe spots</b>: every city has three, a plaza near the pad, a rooftop downtown and a bunker in the core, marked by a green ring that no creature will cross. Build a <b>camp</b> there (${(sim.CAMP_COST || {}).scrap} scrap and ${(sim.CAMP_COST || {}).credits} cr) and you can sleep (the night passes as at home and the hull is mended), save the game (loading resumes at the camp), or fly home: the Pallas folds into its flight form and takes you to the space dock with everything you found, no penalty.</p>
-      <h3>Creatures</h3><div class="tw"><table><tr><th>Creature</th><th>Habits</th><th class="n">Hull damage (suburbs → core)</th></tr>${Object.entries(sim.CITY_MONSTERS || {}).map(([k, m]) => `<tr><td>${esc(m.name)}</td><td>${esc({ rad_hound: 'Fast and weak; everywhere.', glow_slime: 'Slow; a big one splits in two.', rust_crawler: 'Armoured: bolts glance off, the sabre bites.', smog_wraith: 'Floats up and drains the hull. Downtown and the core.', spore_brute: 'The mini-boss: guards the vault in the core.' }[k] || '')}</td><td class="n">${sim.cityMonster(k, 0).dmg} → ${sim.cityMonster(k, 2).dmg}</td></tr>`).join('')}</table></div>
-      <h3>Old-world valuables</h3><div class="tw"><table><tr><th>Find</th><th>About</th><th class="n">Sells</th></tr>${['old_coin', 'teddy_bear', 'record', 'film_camera', 'credit_chip', 'data_core'].filter((id) => ITEMS[id]).map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc(ITEMS[id].desc)}</td><td class="n">${ITEMS[id].sell} cr</td></tr>`).join('')}</table></div>
-      <h3>Finds for the Memory Room</h3><div class="tw"><table><tr><th>Find</th><th>About</th><th class="n">Sells</th></tr>${(story.RELICS || []).map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc((story.RUINS && story.RUINS.relic && story.RUINS.relic[id]) || '')}</td><td class="n">${ITEMS[id] && ITEMS[id].sell ? ITEMS[id].sell + ' cr' : ''}</td></tr>`).join('')}</table></div>`);
+    // ---- Earth: the city ruins (sim.js cityLayout, CITY_MONSTERS, cityLoot, OLD_FINDS, camps)
+    {
+      const CC = sim.CAMP_COST || { scrap: 3, credits: 100 }, ZN = sim.CITY_ZONES || ['The suburbs', 'Downtown', 'The core'];
+      const sample = sim.cityLayout ? sim.cityLayout(CITY_SEED) : null, cnt = {}; if (sample) for (const sp of sample.spots) cnt[sp.kind] = (cnt[sp.kind] || 0) + 1;
+      const SPOTS = [['rubble', 'Rubble piles', 'Scrap, now and then a battery, an old-world find or a few credits.'], ['car', 'Car and bus trunks', 'Scrap or a few credits; sometimes a find. About half the wrecks have a trunk worth opening.'],
+        ['counter', 'Shop counters', 'Downtown: the till (credits) and sometimes a find.'], ['locker', 'Lockers', 'An old-world find, a credit chip or a battery.'], ['safe', 'Safes', 'Tumbled out of the tall towers: credits, always a find (rarer ones likelier), sometimes a stack of old coins.'],
+        ['vault', 'The sealed vault', 'One, in the core, guarded by a spore-brute: a data core, a ring or music box, two credit chips, a seed tin, a heap of credits, and the first two times ever a star-plum.']];
+      const tot = (z) => (sim.OLD_FINDS || []).reduce((a, e) => a + e[1 + z], 0);
+      add('ruins', 'Earth: the city ruins', `<p class="lead">Juno Maris's courier shuttle flies from the Eden Central space dock (or book at the Arrivals desk) down to a ruined city on Earth's surface: ${sim.SHUTTLE_FARE} cr a trip, free once Maris is at 5 hearts. The city is different every trip: one big map, ${sim.CITY_W} × ${sim.CITY_H} tiles, that Sato roams in her <b>Pallas</b>. There is a <a href="#citymap">sample map</a> in the Maps section.</p>
+        <h3>Zones</h3><ul><li><b>${esc(ZN[0])}</b> round the landing pad in the south: little houses in overgrown yards; the creatures are weakest.</li><li><b>${esc(ZN[1])}</b>: broken towers, shopfronts, craters with toxic pools and pockets of gas.</li><li><b>${esc(ZN[2])}</b> in the far north: the glowing industrial heart, toughest creatures (half again as strong each zone in), richest finds, and the sealed vault.</li></ul>
+        <h3>The Pallas</h3><p><b>Space</b> fires the rifle (it aims gently at the nearest creature ahead); up close it swings the beam sabre. <b>F</b> sets down the <b>Hydra</b> autoturret, <b>Shift</b> boosts, and <b>E</b> searches. The <b>hull</b> is ${sim.HULL_MAX} (${sim.HULL_FILTERS} once Ruess fits the air filters): creature hits wear it down, a toxic pool takes 3 a second and gas 1 (nothing with the filters). Walk back to the shuttle to fly home (20 minutes) with everything. If the hull gives out, Maris <b>tows</b> you home: ${sim.TOW_MINUTES} minutes, 20 stamina and a ${sim.TOW_FEE} cr tow fee. Farm tools are greyed out on the hotbar on Earth.</p>
+        <h3>Safe spots and camps</h3><p>Every city has three safe spots, one per zone: a plaza near the pad, a rooftop downtown and a bunker entrance in the core, cleared ground with a green ring that no creature crosses. E there builds a <b>camp</b> (${CC.scrap} scrap and ${CC.credits} cr): a tent, a scrap windbreak and a fire. At your camp you can <b>sleep</b> (the night passes as at home, crops and animals and all, and you wake with the hull mended), <b>save</b> (loading puts you back at the camp), or <b>fly home</b>: the Pallas crouches, folds into its flight form and climbs away to the space dock in 30 minutes with everything you found, no penalty.</p>
+        <h3>Treasure</h3><p>Searching costs 1 stamina; each spot gives up its goods once. Credits go straight to your purse, and the HUD keeps the trip's tally. A trip's take on 60 stamina is about one and a half to two times a belt trip on the same stamina (the game's tests check it), with more risk; a full clear down to the vault is worth several thousand.</p>
+        <div class="tw"><table><tr><th>Spot</th><th>What it gives</th><th class="n">In the sample city</th></tr>${SPOTS.map(([k, n, d]) => `<tr><td><b>${n}</b></td><td>${d}</td><td class="n">${cnt[k] || 0}</td></tr>`).join('')}</table></div>
+        <h3>Old-world finds</h3><p>The chance of each find when a spot gives one, by zone (safes and lockers favour the rare ones).</p>
+        <div class="tw"><table><tr><th>Find</th><th>Kind</th><th class="n">${ZN.map(esc).join('</th><th class="n">')}</th><th class="n">Sells</th></tr>${(sim.OLD_FINDS || []).map((e) => `<tr><td>${ico(e[0])}${esc(name(e[0]))}</td><td>${esc(KIND[ITEMS[e[0]] && ITEMS[e[0]].kind] || '')}</td>${[0, 1, 2].map((z) => `<td class="n">${e[1 + z] ? Math.max(1, Math.round(e[1 + z] / tot(z) * 100)) + '%' : '–'}</td>`).join('')}<td class="n">${ITEMS[e[0]] && ITEMS[e[0]].sell ? ITEMS[e[0]].sell + ' cr' : ''}</td></tr>`).join('')}${ITEMS.data_core ? `<tr><td>${ico('data_core')}${esc(name('data_core'))}</td><td>${esc(KIND.valuable)}</td><td class="n">–</td><td class="n">–</td><td class="n">vault</td><td class="n">${ITEMS.data_core.sell} cr</td></tr>` : ''}</table></div>
+        <p>Relics can be sold, given, or donated to the <b>Memory Room</b> in the Village Hall. The creatures are listed under <a href="#enemies">Creatures</a>.</p>`);
+      // ---- creatures: every enemy in the game (only Earth has them; the belt and the Lower deck have none)
+      const LOOK = { rad_hound: ['#3d3d42', 'A scrappy mutant pup, dark-coated, with glowing green spots and eyes.'], glow_slime: ['#b8d83a', 'A glowing yellow-green blob sitting in its own puddle.'], rust_crawler: ['#b0582a', 'A many-legged beetle in plates of rust-red armour.'], smog_wraith: ['#8a82a8', 'A lilac puff of smog with violet eyes and a curling tail.'], spore_brute: ['#4f6a32', 'A hulking brute under a spotted mushroom cap, grown over with moss.'] };
+      const HAB = { rad_hound: 'Fast and weak, in packs; everywhere.', glow_slime: 'Slow. A big one splits into two small ones when beaten.', rust_crawler: 'Armoured: rifle bolts glance off for half damage; the sabre bites.', smog_wraith: 'Floats up close and drains the hull instead of biting.', spore_brute: 'The mini-boss: one guards the sealed vault, sometimes a second roams the core.' };
+      const where = (k) => { const z = (sim.CITY_MIX || []).map((m, i) => (m[k] ? i : -1)).filter((i) => i >= 0); return k === 'spore_brute' ? ZN[2] + ' (by the vault)' : z.map((i) => ZN[i]).join(', '); };
+      const enemy = ([k, m]) => { const a = sim.cityMonster(k, 0), c = sim.cityMonster(k, 2), [col, look] = LOOK[k] || ['#888', ''];
+        return `<div class="card enemy"><div class="badge" style="background:${col}" data-l="${esc(m.name.slice(0, 2).toUpperCase())}"><img src="art/farm/wiki/creatures/${k}.webp" alt="${esc(m.name)}" loading="lazy" onerror="this.parentNode.textContent=this.parentNode.dataset.l"></div><div><b>${esc(m.name[0].toUpperCase() + m.name.slice(1))}</b><div class="t">${esc(look)}</div><div class="g">${esc(HAB[k] || '')}</div>
+          <dl><dt>Found</dt><dd>${esc(where(k))}</dd>${m.boss ? `<dt>Health</dt><dd>${c.hp}</dd><dt>Hull damage</dt><dd>${c.dmg} a hit</dd>` : `<dt>Health</dt><dd>${a.hp} → ${c.hp} (suburbs → core)</dd><dt>Hull damage</dt><dd>${a.dmg} → ${c.dmg} a hit</dd>`}<dt>Speed</dt><dd>${m.speed} tiles a second</dd><dt>Sight</dt><dd>${m.sight} tiles</dd>
+          <dt>Drops</dt><dd>${m.credits[0]}–${m.credits[1]} cr (more further in)${Object.keys(m.drops || {}).length ? '; ' + Object.entries(m.drops).map(([id, p]) => `${esc(name(id).toLowerCase())} ${Math.round(p * 100)}%`).join(', ') : ''}</dd></dl></div></div>`; };
+      add('enemies', 'Creatures', `<p class="lead">Only Earth has creatures: things born of the war's radiation and gas. The belt has rocks and air to worry about, never monsters, and the Lower deck has no combat at all. Beaten creatures flee or fizzle (no gore) and leave credits and sometimes materials. Each city holds about ${(sim.CITY_MONSTER_COUNT || []).join(' / ')} of them in the suburbs / downtown / the core.</p>
+        <div class="cards">${Object.entries(sim.CITY_MONSTERS || {}).map(enemy).join('')}</div>`);
+    }
 
     // ---- Market Lane, the fold and the hives (2026-11-19)
     {
