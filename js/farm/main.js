@@ -783,7 +783,7 @@ async function flyHome() {
   const fold = pallasFold(me), wings = () => jet.children[0] && jet.children[0].userData.wings; let t = 0, last = performance.now(), flashed = false;
   window.__farmFly = 0;
   while (t < T && !skip) {
-    await new Promise((r) => requestAnimationFrame(r)); const now = performance.now(); t += Math.min(0.1, (now - last) / 1000); last = now; window.__farmFly = t;
+    await new Promise((r) => requestAnimationFrame(r)); const now = performance.now(); if (!window.__farmFlyHold) t += Math.min(0.1, (now - last) / 1000); last = now; window.__farmFly = t;   // (__farmFlyHold: a test hook that pauses it for screenshots)
     if (t < 1.5) { fold.pose(t / 1.35, (t - 0.95) / 0.45); if (t > 0.3 && Math.random() < 0.25) W.puff(x0 + (Math.random() - 0.5) * 0.8, y0, 0xdfe6ea, 1, 0.3); }   // legs fold, arms sweep back, the body levels, wings out
     else if (!flashed) { flashed = true; fold.pose(1, 1); W.puff(x0, y0, 0xffffff, 18, 1.0); W.puff(x0, y0, 0x8ff4ff, 10, 1.1); W.shake = 0.1; sfx('zap'); g.visible = false; jet.visible = true; jet.scale.setScalar(0.9); }   // a brief flash: the jet takes over
     if (t >= 1.5) {
@@ -1136,8 +1136,8 @@ async function night(collapsed, camp = false) {
   const head = rep.newYear ? `A new year on Eden. Year ${S.cal.year} begins.` : rep.seasonChanged ? `${['Spring', 'Summer', 'Autumn', 'Winter'][S.cal.season]} has come to the river chamber.` : collapsed ? 'She wakes in her own bed, with no memory of getting there, and half her strength.' : '';
   if (f) (rep.notes ||= []).push(`${f.name} today. ${f.blurb}`);
   await ui.fade(false, 500);
-  await ui.report(S, rep, { head, scene: rep.seasonChanged ? 'season_' + SK[S.cal.season] : !S.flags.sawMorning ? 'morning' : null });
-  sim.setFlag(S, 'sawMorning');
+  await ui.report(S, rep, { head: atCamp && !rep.newYear && !rep.seasonChanged ? 'Sato wakes in her tent at the camp. The Pallas has mended overnight, and the farm carried on without her.' : head, scene: rep.seasonChanged ? 'season_' + SK[S.cal.season] : atCamp ? null : !S.flags.sawMorning ? 'morning' : null });   // no farmhouse bedroom picture when she wakes on Earth
+  if (!atCamp) sim.setFlag(S, 'sawMorning');
   busy = false; mode = 'play'; refreshHud();
 }
 function goals() { for (const g of sim.claimGoals(S)) { ui.toast(`Done: ${g.title}  (+${g.reward} cr)`, 3600); sfx('good'); } refreshHud(); }

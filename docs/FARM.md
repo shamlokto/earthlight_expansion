@@ -839,8 +839,9 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   `player.map = 'ruins'` at the camp; `loadState` keeps a city trip only for such a save, otherwise it drops the trip and
   puts Sato at the space dock); and **Fly home** (`cityHome(state, 'fly')`, only at a built camp: 30 minutes, no
   penalty, the loot kept). Flying home plays the Pallas's transformation (main.js `flyHome`, about 3.6 s, E, Space or a
-  tap skips it): the mech crouches and folds, a flash, and its flight form (`pallas_jet`, procedural in cityworld.js,
-  wings sweeping out) lifts off, banks and climbs north with the camera following, then the screen fades and she lands
+  tap skips it): the Pallas's own parts fold (cityworld.js `pallasFold` cuts the one-mesh `pallas` model by bounds into a body,
+  legs and arms on joint pivots: the legs fold up behind, the arms sweep back, the body tilts forward to level and wings
+  slide out from the back), a brief flash hands over to its flight form (the `pallas_jet` model, or a procedural jet) that lifts off, banks and climbs north with the camera following, then the screen fades and she lands
   at Eden Central's space dock.
 * **The HUD** shows the zone, the hull and the credits found (`The core · hull 72/100 · found 340 cr`) and a hull bar
   under it. The minimap works on the city (streets dark, toxic pools lime, tower footprints pale); the map screen (M)
@@ -853,7 +854,7 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   `belt` or `city`) and puts Sato back at the space dock. `state.city = { trips, best }`; `stats.deepest` is no longer
   used.
 
-Art slots added (models; each has a procedural stand-in in js/farm/cityworld.js): `camp_spot`, `camp`, `pallas_jet` (procedural only so far), `ruin_tower`, `ruin_car`,
+Art slots added (models; each has a procedural stand-in in js/farm/cityworld.js): `camp_spot` (procedural), `camp`, `pallas_jet` (models from the art pack, procedural fallbacks), `ruin_tower`, `ruin_car`,
 `ruin_bus`, `ruin_rubble`, `ruin_billboard`, `ruin_locker`, `ruin_vault` (also the safes, smaller), `shop_counter`,
 `toxic_pool`, `shuttle_pad` (as before), and the creatures `rad_hound`, `glow_slime`, `rust_crawler`, `smog_wraith`,
 `spore_brute`. Icons `icons/old_coin`, `icons/teddy_bear`, `icons/film_camera`,
