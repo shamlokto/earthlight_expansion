@@ -35,8 +35,8 @@ Cast (all canon to this project; portraits in `art/colony/portrait/`):
 | `corran` | Abel Corran, retired gunnery chief; bald, white moustache, loud, soft-hearted. | **Corran's Ranch** (chickens, cows, feed, milker, brush) | `w_corran.webp` |
 | `oduya` | Tem Oduya, dockyard engineer turned cook; headlamp, orange overalls. | **The Hangar** café (meals) | `w_oduya.webp` |
 | `maris` | Juno Maris, courier pilot; orange headband, cheerful. | Collects the shipping bin at 17:00; wanders the village | `w_maris.webp` |
-| `vashti` | Nell Vashti, salvage hunter; red bandana, braid, few words. | At the **Wreck** on the hill (the mine) | `w_vashti.webp` |
-| `moraine` | Queen Moraine of the Ashfall Cartel; trader now, still a queen. | Her barge is at the village dock on **Saturdays** (rare seeds, tonic) | `svg:moraine` (js/expansion/portraits.js) |
+| `vashti` | Nell Vashti, salvage hunter; red bandana, braid, few words. | Her hangar, up the orbital elevator (belt trips start there) | `w_vashti.webp` |
+| `moraine` | Queen Moraine of the Ashfall Cartel; trader now, still a queen. | Trades from her ship at Eden Central's space dock on **Saturdays** (rare seeds, tonic) | `svg:moraine` (js/expansion/portraits.js) |
 | `calloway` | Pastor Ines Calloway, once a field chaplain on the gates; silvering bun, round glasses, teal stole. Gentle, wry. | **Second Dawn Church**, Eden Central (§10) | `art/farm/people/calloway_front.webp` |
 | `fenn` | Constable Aldo Fenn, a siege cadet turned peacetime constable; navy uniform, peaked cap, badge. Dutiful, stiff, soft-hearted. | **Safety depot**, Eden Central (§10) | `art/farm/people/fenn_front.webp` |
 | `venn` | Tobias Venn, the Directorate engineer who stayed to seal what he built; oil-dark coat, goggles, greying early. Gruff, decent. | **Restoration terminal** at the Lower deck lift landing; Venn's bench (§12) | built figure (`art/farm/people/venn_front.webp` when rendered) |
@@ -218,7 +218,7 @@ export const HELP = [ { title, body } ];                 // the How to play page
 ```
 
 Spots (the UI resolves them to map positions): `farm.porch`, `farm.bin`, `farm.gate`, `farm.pond`,
-`farm.field` · `village.square`, `village.memorial`, `village.bridge`, `village.dock`,
+`farm.field` · `village.square`, `village.memorial`, `village.bridge`,
 `village.bench`, `village.storefront`, `village.cafefront`, `village.hallfront`,
 `village.workshopfront`, `village.ranchyard`, `village.river` · `hill.wreck`, `hill.lake`,
 `hill.overlook` · `store.counter`, `store.floor`, `ranch.counter`, `workshop.counter`,
@@ -263,9 +263,9 @@ existing game is used.
 
 ## 6. The colony look, the bigger town and the map (owner, 2026-11-18)
 
-* **Willowfall** (`maps.js`, 64×52): Market Street with stalls, Lantern Square, the hydroponics
+* **Willowfall** (`maps.js`, 64×52; 96×52 since Market Lane, §13): Market Street with stalls, Lantern Square, the hydroponics
   garden, the lift kiosk plaza (sign `village.lift`, kept in `maps.js`), the river with the road
-  bridge, a footbridge and the dock, the ranch/clinic/library lane, Willow Lane's cottages, Fountain
+  bridge and a footbridge, the ranch/clinic/library lane, Willow Lane's cottages, Fountain
   Park and a solar yard. Ground code `d` is deck plating. `map.areas` names districts for the map;
   `map.bots` are the maintenance bots' routes (cosmetic).
 * **The cylinder** (`colony.js`): the land curves up and over (procedural patchwork, haze shared
@@ -277,8 +277,8 @@ existing game is used.
   `lift_kiosk`, `water_tank`, `wind_turbine_small`, `noticeboard`, `fountain`, `fan_tower`,
   `market_stall`; buildings `cottage_c`, `cottage_d`, `pumphouse`, `post_office` (kind `post`),
   `guard_post` (kind `guard`).
-* **Map** (`minimap.js`): M or the map button opens the town map (tabs for the three outdoor
-  maps); a north-up minimap with a view cone sits under the clock outdoors. Music is in the menu.
+* **Map** (`minimap.js`): M or the map button opens the town map (a tab for each outdoor
+  map: the farm, Willowfall, Terrace Hill, Eden Central, the Undercroft); a north-up minimap with a view cone sits under the clock outdoors. Music is in the menu.
 
 ## 7. More things to own and do (owner, 2026-11-18: "more items are needed in the end to make the game fun")
 
@@ -347,9 +347,6 @@ the robots' moods and every item's long text are in `data.js`. Old saves load: `
   a few sensible mappings, a built shape for tools, else its icon on a card, with the item's `detail`
   text and facts: price, stamina, season, recipes, who loves it) and **Collections** (shipped, fish,
   Memory Room, recipes cooked, forage found). Every item in `data.js` has a `detail` text.
-* **Willowfall harbour**: the river widens into a basin at the dock (x 45–57, y 26–31) with a quay and
-  a pier; Moraine's barge (prop `barge`, `turned: true`) is moored along it, turned to the river and
-  scaled to its 5×3 berth.
 
 Art slots (all optional): models `onsen_pool`, `onsen_house`, `field_chest`, `farm_bot`,
 `solar_charger` (falls back to `solar_panel`), `sapling`, `fruit_tree_apple`, `fruit_tree_peach`,
@@ -391,12 +388,8 @@ every new item id.
   on the first visit, and one visit from the General once he is her sweetheart or partner.
   Willowfall has no dock any more: the old basin is the riverside walk (`village.riverside`).
 * **Empty houses** in Eden Central (locked; E reads a line, `maps.CENTRAL_HOUSES`): `central.house_1`
-  … `central.house_6`. Future: what these houses could become —
-  1. a new villager's home (a newcomer who moves down from the Middle deck);
-  2. Sato's town flat (a second bed and a storage box near the market, bought from the Housing Office);
-  3. a shop (a tea house, a tailor, a seed library);
-  4. a Memory Room annex for the larger Old World finds;
-  5. a festival hall for a new Main deck festival.
+  … `central.house_6`. The enclave's families move into houses 1, 2, 5 and 6 after the rehousing (§12, `sim.FAMILIES`);
+  houses 3 and 4 stay locked.
 * **Silo and feed mill** (farm): E at the silo's hatch (`feed_sacks`, act `silo`) opens a window:
   vegetables in for fodder (`siloAdd`: 1 crop = 3 fodder). Ruess builds the **feed mill** (`feed_mill`,
   1,500 cr + 40 lumber, once, `flags.feed_mill`; drawn beside the silo at `farm.millAt`, model slot
@@ -436,11 +429,9 @@ for those buildings; icons `icons/star_plum`, `icons/colony_feast`, `icons/found
 * **Three new buildings** in Eden Central (`maps.js` central(); building kinds and model slots `school`, `church`,
   `safety_depot`; models keep their proportions, `BUILDING[kind].uniform`; built stand-ins in `World.buildCivic`):
   * **The school** (north-west, by the gardens; interior `school`): small desks, a blackboard ('school.board'), cubbies
-    with empty name cards ('school.cubbies'), a teacher's desk. There are no children in the game yet: it stands ready
-    and quiet. Pastor Ines sits in it on Wednesdays planning the first assembly; Constable Fenn checks its locks at eight
-    every morning (spot `school.floor`). **Future hook**: the first pupils (a family moving down from the Middle deck,
-    or children from the Lower deck), a teacher, lessons as a festival or events, the Constable's box of crayons and
-    Fenn's toy-box favour paying off, a school bell at 8:30.
+    with empty name cards ('school.cubbies'), a teacher's desk. It stands empty until the Lower deck's families move up
+    (§12: Agnes teaches, Moth and five more pupils fill the desks on school days). Pastor Ines sits in it on Wednesdays
+    planning the first assembly; Constable Fenn checks its locks at eight every morning (spot `school.floor`).
   * **Second Dawn Church** (north, off the avenue; interior `church`: pews, the altar, two memorial candle stands with
     act `candles` for the 312 lost in the siege (`story.CHURCH.candles`), a stained-glass window, a lectern) and the
     pastor's garden (`central.churchgarden`). **Pastor Ines Calloway** (`calloway`): Tue–Sat altar 9–12 and 15–18,
@@ -566,7 +557,7 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   plays `story.LOWER.arrive` (`flags.ld_visited`). Map `lower` (maps.js `lower()`, 56×44, `under: true`, walls are rock tiles
   drawn as hull-plate walls only where they face a room; no sky, no weather, no surroundings: `World.setTime` has an `under`
   branch, and `lightUnder()` moves five real point lights to the nearest lit lamps, with a soft one on Sato).
-* **Restoration projects** (`sim.LOWER_PROJECTS`, funded at the **restoration terminal** by the lift, act `restore`, window
+* **Restoration projects** (`sim.LOWER_PROJECTS`, funded at the **restoration terminal** on the landing (29,36, with sign `lower.terminal` beside it, clear of Venn's bench at 33,37), act `restore`, window
   `ui.projectWindow`; one at a time, `state.lower.pending`, finished overnight in `sleep()` → `flags.ld_<id>` and a note):
   1. **Work lights at the landing**: 1,200 cr, 8 scrap, 2 lamp kits. Clears the barrier; the gallery's lamps.
   2. **The Pump Halls**: 3,500 cr, 2 pump parts, 3 copper ore, 4 nickel-iron, 20 lumber. Drains the west tunnel; pump one runs.
@@ -609,7 +600,7 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   the stencil on the sealed round door, three of Pim's war diary pages and one of Moth's own (`diaryPage`: Moth gives the next
   page on a first talk, one a day, by hearts 0/2/4/6). Terminals give a `log_tape`, pages a `diary_page`. Read in the farm
   journal's new **Logs** tab, with the restoration's progress.
-* **The vault door** stands in the gallery's north wall, sealed (act `vault`: a teaser and the `ninefold` log).
+* **The vault door** stands in the gallery's north wall, sealed (act `vault`); it opens in release 2 (§14).
 * Music `music/undercroft` (sfx.js `trackFor`, day and night); minimap tab "The Undercroft"; wiki section; How to play page.
 * Art slots used (docs/LOWER-DECK-ART.md): items and icons for all thirteen ids; props `lower_lift`, `pump_station`,
   `mushroom_bed`, `catacomb_arch`, `shelter`, `glow_lamp`, `terminal`, `vault_door` (and the `works_hall` slot), each with a
@@ -639,7 +630,8 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   Square (noticeboard `village.lane`, flower stalls). The river runs on east under the **Mill Bridge** to the **Lane cottages** (homes;
   E at the door reads a note, `CENTRAL_HOUSES.home_<id>`) and Noor's trial beds. Interiors `bakery`, `tailor`, `florist`, `garage`,
   `radio`. Built stand-ins: `js/farm/laneworld.js` (model slots in `LANE_PROPS` / `LANE_BUILDINGS`).
-* **The farm grows east** (44×34 → 64×34, old coordinates unchanged; a gap in the old tree line just south of the hill road): the
+* **The farm grows east** (44×34 → 64×34, old coordinates unchanged; a gap in the old tree line just south of the hill road; the
+  hill road now runs on to the farm's new east edge, where the exit to Terrace Hill is, at x 63, y 8–9, with sign `farm.hill`): the
   **East Terrace** field (`state.fields.east`, 12×10 at `FIELD_ORIGINS.east` [48, 13], rubble until Ruess clears it: 3,000 cr + 40
   lumber, `flags.eastfield`; the robots work it too), the old **fold** (Ruess: 5,000 cr + 60 lumber, `flags.fold`; interior `fold`,
   trough act `feedfold`) and the **duck house** by the new east pond (2,000 cr + 30 lumber, `flags.duckhouse`; interior `duckhouse`,
