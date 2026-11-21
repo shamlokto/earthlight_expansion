@@ -49,6 +49,7 @@
     th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--edge); vertical-align: middle; }
     th { font: 600 13px var(--f-display); color: var(--dim); background: var(--paper-2); vertical-align: bottom; }
     th.n { text-align: right; }
+    .fans { font-size: 12.5px; color: #b0405e; margin-top: 2px; } .fans.liked { color: var(--dim); }
     .finder { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; } .finder select { font: 600 14px var(--f-display); padding: 6px 10px; border: 1px solid var(--edge); border-radius: 999px; background: var(--paper-2); color: var(--ink); } .finder b { font: 700 18px var(--f-display); min-width: 52px; font-variant-numeric: tabular-nums; } .finder input { flex: 1 1 220px; accent-color: var(--gold); }
     td:first-child:has(img.ico) { white-space: nowrap; } #itab td:first-child { white-space: normal; } td:first-child img.ico, td:first-child .fake { margin-right: 6px; }
     td { vertical-align: top; } td.n, th.n { white-space: nowrap; }
@@ -115,6 +116,7 @@
     const name = (id) => (ITEMS[id] ? ITEMS[id].name : id);
     const ico = (id) => { const u = url('icons/' + id) || (ITEMS[id] && ITEMS[id].kind === 'seed' && url('icons/seedbag')); return u ? `<img class="ico" src="${u}" alt="" loading="lazy">` : `<span class="fake">${esc(name(id).slice(0, 2))}</span>`; };
     const qty = (id, n) => { const w = name(id).toLowerCase(); if (n > 1 && w.startsWith('battery')) return `${n} ${w.includes('charged') && !w.includes('empty') ? 'charged batteries' : 'empty batteries'}`; return `${n} ${esc(n > 1 && /(kit|part|nugget|brooch|whistle|lantern|bag|tape|page|egg|chip|coin)$/.test(w) ? w + 's' : w)}`; };
+    const shortName = (id) => (id === 'general' ? 'the General' : story.NPCS[id] ? story.NPCS[id].short || story.NPCS[id].name : id);
     const crf = (v) => Number(v).toLocaleString('en') + ' cr';
     const seasonName = (s) => (typeof s === 'number' ? SEASONS[s] : s);
     // expression portraits (art/farm/people/portraits/index.json): the neutral bust on the card, and a strip of faces for the main cast
@@ -156,7 +158,8 @@
     const ids = Object.keys(story.NPCS).filter((k) => k !== 'sato');
     add('people', 'People of Willowfall and Eden Central', `<p class="lead">Talk every day, bring gifts and do favours. ${(story.ROMANCE || { candidates: [] }).candidates.length} of them can become more than friends. Market Lane, Willowfall's new east end, is home to Pia the tailor, Lark the baker, Noor of the Seedhouse, Tika the mechanic and Vesna of Radio Willowfall. Pastor Ines and Constable Fenn live and work in Eden Central, down the lift; Tobias Venn, Agnes Thorne, Moth and Ansel Wick live further down still, on the Lower deck, where Hana Corvel, Venn's apprentice, has come back to the Works.</p>
       <p>Everybody has a home and walks there and back, through doors, the farm gate and the lift: see <a href="#homes">Homes and visiting</a> for who lives where and when they let you in.</p>
-      <div class="cards">${person('sato')}${ids.map(person).join('')}</div>`);
+      <div class="cards">${person('sato')}${ids.map(person).join('')}</div>
+      <h3>Birthdays</h3><p class="t">A gift on someone's birthday counts three times over.</p><div class="tw"><table><tr><th>Season</th><th>Birthdays</th></tr>${[0, 1, 2, 3].map((se) => `<tr><td><b>${esc(SEASONS[se])}</b></td><td>${['sato', ...ids].filter((id) => story.NPCS[id].birthday && seasonName(story.NPCS[id].birthday.season) === SEASONS[se]).sort((a, b) => story.NPCS[a].birthday.day - story.NPCS[b].birthday.day).map((id) => `${story.NPCS[id].birthday.day}: ${esc(shortName(id).replace(/^the G/, 'The G'))}`).join(' · ')}</td></tr>`).join('')}</table></div>`);
 
     // ---- love
     add('love', 'Love', `<p>Friendship grows from talking (once a day), gifts (loved ones count most, birthdays triple; the first gift of the day to someone counts in full, any more that day a quarter; a gift left in their <b>mailbox</b>, by every home's door, counts 80%) and <b>favours</b>: now and then someone asks Sato for something, and bringing it is worth more than any gift.</p>
@@ -320,9 +323,11 @@
         [['wool', 'fine_wool'], 'Sheep, with the clippers'], [['duck_egg', 'duck_feather'], 'Ducks (the duck house)'], [['battery_full'], 'A battery charged in a solar charger or the solar yard'], [['lumber'], 'Chopping branches and stumps with the axe'],
         [['yarn_scarf'], "Pia knits it from three skeins"], [['log_tape'], 'Lower deck terminals'], [['diary_page'], 'Moth'], [['ring_shard'], 'Opening the vault'], [['hub_cup'], 'Winning the Hub Cup']]) for (const id of ids) from(id, txt);
     }
+    const LOVED_BY = {}, LIKED_BY = {}; for (const [pid, n] of Object.entries(story.NPCS)) { if (pid === 'sato') continue; for (const x of n.loves || []) (LOVED_BY[x] = LOVED_BY[x] || []).push(shortName(pid)); for (const x of n.likes || []) (LIKED_BY[x] = LIKED_BY[x] || []).push(shortName(pid)); }
     const itemRows = Object.values(ITEMS).map((i) => { const src = SRC[i.id] ? [...SRC[i.id]].slice(0, 5).join(' · ') : '';
-      return `<tr data-k="${i.kind}" data-n="${esc((i.name + ' ' + (i.desc || '') + ' ' + src).toLowerCase())}"><td class="it">${ico(i.id)}<b>${esc(i.name)}</b><small>${esc(KIND[i.kind] || i.kind)}</small></td>
-        <td class="ab">${esc(i.desc || '')}${i.detail && i.detail !== i.desc ? `<details><summary>More</summary>${esc(i.detail)}</details>` : ''}</td><td class="src">${esc(src)}</td>
+      const fans = (LOVED_BY[i.id] ? `<div class="fans">♥ Loved by ${esc(LOVED_BY[i.id].join(', '))}</div>` : '') + (LIKED_BY[i.id] ? `<div class="fans liked">Liked by ${esc(LIKED_BY[i.id].join(', '))}</div>` : '');
+      return `<tr data-k="${i.kind}" data-n="${esc((i.name + ' ' + (i.desc || '') + ' ' + src + ' ' + (LOVED_BY[i.id] || []).join(' ') + ' ' + (LIKED_BY[i.id] || []).join(' ')).toLowerCase())}"><td class="it">${ico(i.id)}<b>${esc(i.name)}</b><small>${esc(KIND[i.kind] || i.kind)}</small></td>
+        <td class="ab">${esc(i.desc || '')}${fans}${i.detail && i.detail !== i.desc ? `<details><summary>More</summary>${esc(i.detail)}</details>` : ''}</td><td class="src">${esc(src)}</td>
         <td class="n">${i.sell ? crf(i.sell) : ''}</td><td class="n">${i.stamina ? '+' + i.stamina : ''}</td></tr>`; }).join('');
     add('items', 'Items', `<p class="lead">All ${Object.keys(ITEMS).length} things Sato can carry, straight from the game's item list. Search by name, description or where it comes from, or pick a kind.</p>
       <div class="filter" id="kf"><input id="q" placeholder="Search…" size="14"><button class="on" data-k="">All</button>${kinds.map((k) => `<button data-k="${k}">${esc(KIND[k] || k)}</button>`).join('')}</div>
