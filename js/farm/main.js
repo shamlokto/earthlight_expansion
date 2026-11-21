@@ -558,7 +558,7 @@ async function stargaze() {
 }
 function hydroProbe(p) {
   const k = sim.hydroAt(S, p.tower), h = k >= 0 ? S.hydro[k] : null, s = sim.selected(S);
-  if (!h) return { label: `Hydroponic tower ${p.tower + 1}`, run: () => ui.toast('Rent this tower from Seln\'s store (600 cr for the season).') };
+  if (!h) return { label: `Hydroponic tower ${p.tower + 1}`, run: () => ui.toast('Rent this tower from Seln\'s store (300 cr for the season).') };
   if (h.crop && sim.cropStage(h.crop) === 3) return { label: `Harvest the ${CROPS[h.crop.id].name.toLowerCase()}`, run: () => { const r = sim.hydroHarvest(S, p.tower); if (r.ok) { sfx('pick'); pickedToast(r); drawPlaced(); } else ui.toast(r.msg); refreshHud(); } };
   if (!h.crop && s && ITEMS[s.id].kind === 'seed' && ITEMS[s.id].crop) return { label: `Plant ${ITEMS[s.id].name.toLowerCase()} in tower ${p.tower + 1}`, run: () => { const r = sim.hydroPlant(S, p.tower); ui.toast(r.msg); if (r.ok) { sfx('drop'); drawPlaced(); } refreshHud(); } };
   return { label: `Your tower ${p.tower + 1}`, run: () => ui.toast(h.crop ? `${CROPS[h.crop.id].name}: ${Math.max(0, CROPS[h.crop.id].days - h.crop.age)} more day(s). The mist does the watering.` : 'Your tower is empty. Hold a seed bag and press E to plant it.') };
@@ -918,7 +918,11 @@ function probe() {                                   // → { label, run } for E
   if (map.ruins) return map.city && S.mine.mode === 'city' ? cityProbe(tx, ty) : null;
   { const tp = propAt(tx, ty); if (tp && tp.act === 'restore') return { label: 'Use the restoration terminal (fund projects)', run: () => act(tp) }; }   // the terminal wins over anyone standing near it
   const near = nearestNpc(1.5);
-  if (near) return { label: `Talk to ${S.npc[near] && S.npc[near].met ? NPCS[near].short || NPCS[near].name : 'the stranger'}`, run: () => talkTo(near) };
+  // 2026-11-21: a passer-by no longer steals E from the thing Sato is facing (the lift, a door, a sign, a mailbox): they win only when
+  // they stand in front of her, or there is nothing to use there. Shop counters keep the keeper (talk to buy).
+  const facing = propAt(tx, ty), np = near && npcs.get(near), inFront = np && Math.hypot(np.actor.x - (tx + 0.5), np.actor.y - (ty + 0.5)) < 0.95;
+  const doorHere = !map.belt && (map.doors || []).some((q) => (q.x === tx && q.y === ty) || (q.x === Math.floor(me.x) && q.y === Math.floor(me.y)));
+  if (near && (inFront || ((!facing || !facing.act || facing.act === 'counter') && !doorHere))) return { label: `Talk to ${S.npc[near] && S.npc[near].met ? NPCS[near].short || NPCS[near].name : 'the stranger'}`, run: () => talkTo(near) };
   const pu = pupils.find((q) => Math.hypot(q.a.x - me.x, q.a.y - me.y) < 1.3);
   if (pu) return { label: `Say hello to ${pu.name}`, run: () => { pu.a.face(me.x, me.y); ui.say([{ who: 'narrator', text: pick(story.LOWER.pupils) }]); } };
   const nb = nearestBot(1.4);

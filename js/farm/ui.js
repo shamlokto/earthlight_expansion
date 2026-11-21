@@ -79,6 +79,7 @@ export function icon(id) {
 export { lookPortrait };
 export function face(who) {
   const n = NPCS[who]; if (!n) return '';
+  const px = portraitUrl(who); if (px) return `<div class="fm-face"><img src="${px}" alt="" style="object-fit:cover;object-position:50% 8%"></div>`;   // the new neutral bust (expressions.js)
   const own = art.url(`people/${who}_portrait`) || art.url(`people/${who}_front`); if (own) return `<div class="fm-face"><img src="${own}" alt=""></div>`;
   if (n.portrait && n.portrait.startsWith('art/farm/people/') && !art.has(`people/${who}_front`)) return `<div class="fm-face" style="display:grid;place-items:center;background:${n.look.top};color:#fff;font:700 26px var(--f-display)">${esc((n.short || n.name)[0])}</div>`;   // no portrait yet: an initial in their colours
   if (n.portrait && n.portrait.startsWith('svg:')) return `<div class="fm-face">${svgPortrait(n.portrait.slice(4))}</div>`;
@@ -139,9 +140,11 @@ export const talking = () => !!dlgResolve || !$('choice').hidden;
 function showLine() {
   const l = dlgLines[dlgIndex], n = NPCS[l.who];
   if (l.art) scene(l.art);
-  $('dFace').innerHTML = n ? face(l.who) : ''; $('dFace').hidden = !n;
-  // the speaker: an expression bust when there is one (expressions.js: the line's `ex`, its nearest, neutral), else the full-body front picture
-  const bu = n && portraitUrl(l.who, l.ex), su = bu || (n && art.url(`people/${l.who}_front`)), sd = $('dStand'); sd.hidden = !su;
+  // the speaker: an expression bust when there is one (expressions.js: the line's `ex`, its nearest, neutral), else the full-body front picture;
+  // the small face by the name shows the same expression (2026-11-21), so the two never disagree
+  const bu = n && portraitUrl(l.who, l.ex);
+  $('dFace').innerHTML = !n ? '' : bu ? `<div class="fm-face"><img src="${bu}" alt="" style="object-fit:cover;object-position:50% 8%"></div>` : face(l.who); $('dFace').hidden = !n;
+  const su = bu || (n && art.url(`people/${l.who}_front`)), sd = $('dStand'); sd.hidden = !su;
   if (su && sd.dataset.src !== su) { if (sd.dataset.who !== l.who) warmPerson(l.who); sd.dataset.who = l.who; sd.dataset.src = su; sd.innerHTML = `<img src="${su}" alt="">`; sd.className = (l.who === 'sato' ? 'left' : 'right') + (l.who === 'moth' ? ' child' : '') + (bu ? ' bust' : ''); }
   $('dName').textContent = n ? n.name : ''; $('dName').hidden = !n;
   $('dialog').className = 'fm-dialog' + (n ? '' : ' narr');
@@ -318,7 +321,7 @@ function todayTab(state, extra) {
   h += `<h3>Pasture</h3><p>${sown ? `${sown} patches of grass, <b>${rg}</b> ripe to cut for fodder.` : 'No grass sown yet.'} Stores: ${state.stock.fodder} fodder · ${state.stock.feed} hen feed · ${state.stock.lumber} lumber.</p>`;
   h += `<h3>Animals</h3>` + (state.animals.length ? state.animals.map((a) => `<div class="fm-row"><div><b>${{ cow: '🐄', goat: '🐐', sheep: '🐑', duck: '🦆' }[a.kind] || '🐔'} ${esc(a.name)}</b><span>fed ${yes(a.fed)} · ${a.kind === 'cow' || a.kind === 'goat' ? `milked ${yes(a.milked)} · brushed ${yes(a.brushed)}` : a.kind === 'sheep' ? `fleece ${a.fleece >= 3 ? 'ready to shear' : `${a.fleece || 0}/3`} · brushed ${yes(a.brushed)}` : a.kind === 'duck' ? 'lays a duck egg tomorrow if fed' : 'lays an egg tomorrow if fed'} · said hello ${yes(a.talked)}</span></div>${hearts(a.love)}</div>`).join('') + (state.eggs ? `<p>${state.eggs} egg${state.eggs > 1 ? 's' : ''} waiting in the coop.</p>` : '') : '<p class="fm-dim">No animals yet. Corran sells chickens and cows.</p>');
   const R = state.robots || [];
-  h += `<h3>Field-units</h3>` + (R.length ? R.map((r, i) => `<div class="fm-row"><div><b>🤖 ${esc(r.name)} · ${esc(ROBOT_JOBS[r.job] || r.job)}</b><span>skill ${sim.robotLevel(r)} (${r.job === 'animals' ? 'tends every animal' : r.job === 'rest' ? 'resting' : 'reaches ' + sim.robotReach(r) + ' tiles'}) · “${esc(sim.robotMood(state, i))}”${r.done ? ` · did ${r.done} this morning` : ''}</span></div><span class="fm-batt"><i style="width:${r.charge}%" class="${r.charge < 30 ? 'low' : ''}"></i><u>${r.charge}%</u></span></div>`).join('') : '<p class="fm-dim">None yet. Ruess leases them at the Workshop (300 cr).</p>');
+  h += `<h3>Field-units</h3>` + (R.length ? R.map((r, i) => `<div class="fm-row"><div><b>🤖 ${esc(r.name)} · ${esc(ROBOT_JOBS[r.job] || r.job)}</b><span>skill ${sim.robotLevel(r)} (${r.job === 'animals' ? 'tends every animal' : r.job === 'rest' ? 'resting' : 'reaches ' + sim.robotReach(r) + ' tiles'}) · “${esc(sim.robotMood(state, i))}”${r.done ? ` · did ${r.done} this morning` : ''}</span></div><span class="fm-batt"><i style="width:${r.charge}%" class="${r.charge < 30 ? 'low' : ''}"></i><u>${r.charge}%</u></span></div>`).join('') : '<p class="fm-dim">None yet. Ruess leases them at the Workshop (1,000 cr each).</p>');
   if (R.length) h += `<p>${crewLine(state)} <a class="fm-link" data-tab="robots">Robots tab ›</a></p>`;
   const P = state.panels || [];
   if (P.length) h += `<p>Solar chargers: ${P.map((x) => `[${x.slots.map((b) => (b === 'battery_full' ? '🔋' : b ? '▫ charging' : '·')).join(' ')}]`).join(' ')} · batteries in your rucksack: ${sim.countItem(state, 'battery_full')} charged, ${sim.countItem(state, 'battery')} empty.</p>`;
@@ -326,7 +329,7 @@ function todayTab(state, extra) {
   h += `<h3>Fruit trees</h3>` + (T.length ? T.map((t) => { const d = FRUIT_TREES[t.kind], st = sim.treeStage(state, t), left = TREE_DAYS - sim.treeAge(state, t); return `<div class="fm-row"><div><b>${icon(d.fruit)} ${esc(d.name)}</b><span>${st < 2 ? `${st ? 'young tree' : 'sapling'}, ${left} day${left > 1 ? 's' : ''} to go` : sim.fruitReady(state, t) ? '<span class="fm-ok">a fruit is ready to pick</span>' : state.cal.season === d.season ? 'picked today' : `fruits in ${SEASONS[d.season].toLowerCase()}`}</span></div></div>`; }).join('') : '<p class="fm-dim">None yet. Seln sells saplings (2,500 cr), any season but winter.</p>');
   const hy = state.hydro || [], yard = (state.solarYard && state.solarYard.slots) || [];
   h += `<h3>Silo, mill and the village</h3><p>Silo: ${state.stock.fodder} fodder · ${state.stock.feed} hen feed.${state.flags.feed_mill ? ` Feed mill hopper: ${sim.millCount(state)}/${sim.millCap(state)}.` : ' No feed mill yet (Ruess builds one).'}</p>`;
-  h += `<p>Solar yard: ${yard.length ? `${yard.filter((b) => b === 'battery_full').length} charged, ${yard.filter((b) => b === 'battery').length} charging` : 'none of your batteries'}. Hydroponic towers: ${hy.length ? hy.map((t) => `#${t.tower + 1} ${t.crop ? `${esc(CROPS[t.crop.id].name)}${sim.cropStage(t.crop) === 3 ? ' <span class="fm-ok">ripe</span>' : ` (${CROPS[t.crop.id].days - t.crop.age} days)`}` : 'empty'}`).join(' · ') : 'none rented (Seln, 600 cr a season)'}.</p>`;
+  h += `<p>Solar yard: ${yard.length ? `${yard.filter((b) => b === 'battery_full').length} charged, ${yard.filter((b) => b === 'battery').length} charging` : 'none of your batteries'}. Hydroponic towers: ${hy.length ? hy.map((t) => `#${t.tower + 1} ${t.crop ? `${esc(CROPS[t.crop.id].name)}${sim.cropStage(t.crop) === 3 ? ' <span class="fm-ok">ripe</span>' : ` (${CROPS[t.crop.id].days - t.crop.age} days)`}` : 'empty'}`).join(' · ') : 'none rented (Seln, 300 cr a season)'}.</p>`;
   const up = state.pending.upgrade, q = state.flags.quest;
   h += `<h3>Errands</h3><p>${up ? `Ruess is working on your ${esc(TOOL_LEVELS[up.level])} ${esc(ITEMS[up.tool].name.toLowerCase())}; ready tomorrow.` : 'No tool at the Workshop.'}</p>`;
   h += `<p>${q && NPCS[q.npc] && ITEMS[q.item] ? `Favour for ${esc(NPCS[q.npc].short || NPCS[q.npc].name)}: ${q.n} × ${esc(ITEMS[q.item].name)} (you have ${sim.countItem(state, q.item)}).` : 'No favour asked of you just now.'}</p>`;
@@ -379,7 +382,7 @@ const JOB_NOTE = { water: 'waters dry plants', harvest: 'puts ripe crops in the 
 function robotsTab(state, msg) {
   const R = state.robots || [], full = sim.countItem(state, 'battery_full');
   let h = `<h3>Field-units (${R.length}/${sim.MAX_ROBOTS})</h3>`;
-  if (!R.length) return h + '<p class="fm-dim">None yet. Ruess leases them at the Workshop (300 cr).</p>';
+  if (!R.length) return h + '<p class="fm-dim">None yet. Ruess leases them at the Workshop (1,000 cr each).</p>';
   h += `<p>${crewLine(state)}</p>`;
   if (!R.some((r) => r.job === 'batteries')) h += `<p class="fm-dim">Tip: give one unit the <b>Batteries</b> job. Each morning it swaps charged batteries from your farm's solar chargers (and the storage box) into any unit at or under ${sim.KEEP_BELOW}%, up to 2 + its skill level of them, puts the flat ones on the chargers to fill again, and looks after its own battery too.</p>`;
   if (msg) h += `<p class="fm-kready">${esc(msg)}</p>`;
