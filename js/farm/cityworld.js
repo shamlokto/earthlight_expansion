@@ -31,7 +31,7 @@ export const CITY_PROPS = {
   spore_brute: { model: 'spore_brute', h: 1.6, turn: true },
   searched_mark: { h: 0.2 },
   spot_glint: { h: 0.4, hover: 0.5 },   // the sparkle over a treasure spot not yet searched (gold for safes and the vault)
-  camp_spot: { h: 0.4 }, camp: { model: 'camp', h: 1.3, maxW: 2.2 }, pallas_jet: { model: 'pallas_jet', h: 1.0, maxW: 2.2 },   // the art pack's camp and jet when they land; else built here   // safe spots, a built camp, the Pallas's flight form (procedural)
+  camp_spot: { h: 0.4 }, camp: { model: 'camp', h: 1.3, maxW: 2.2, fire: [0.2, 0.6, 0.5] }, pallas_jet: { model: 'pallas_jet', h: 1.0, maxW: 2.2 },   // the art pack's camp and jet when they land; else built here   // safe spots, a built camp, the Pallas's flight form (procedural)
 };
 export const CITY_MONSTER_KINDS = new Set(['rad_hound', 'glow_slime', 'rust_crawler', 'smog_wraith', 'spore_brute']);
 
