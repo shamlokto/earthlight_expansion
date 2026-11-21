@@ -987,7 +987,7 @@ export function cityLayout(seed) {
   for (let i = 0; i < w * h; i++) {
     const kind = SPOT_OF[cells[i]]; if (!kind) continue;
     if (kind === 'bus' && cells[i - w] === 4) continue;                          // one spot a bus (its north end)
-    if ((kind === 'car' || kind === 'bus') && r() > 0.55) continue;
+    // every car, bus and remaining rubble pile can be searched (the owner: nothing that looks searchable should not be)
     if (kind === 'rubble' && r() > 0.3) { const nb = DIRS.map(([dx, dy]) => cells[i + dy * w + dx]); cells[i] = nb.includes(2) && r() < 0.5 ? 14 : nb.every((c) => c === 0) ? 0 : 1; continue; }   // most heaps are cleared away; a few slabs stay by the towers
     if (open(i) || (kind === 'bus' && [i + w, i + 2 * w].some(open))) spots.push({ i, kind });
     else if (kind === 'vault') { cells[i] = 14; vault = -1; }
@@ -1045,12 +1045,12 @@ function oldFind(state, z, rare = 0) { return OLD_FINDS[pick(state, OLD_FINDS.ma
 export function cityLoot(state, kind, zone) {
   const z = clamp(int(zone) ? zone : 0, 0, 2), k = (1 + 0.5 * z) * 0.7, items = [], cr = (a, b) => Math.round((a + rnd(state) * (b - a)) * k), q = rnd(state);
   let credits = 0;
-  if (kind === 'rubble') { if (q < 0.25) items.push(['scrap', 1]); else if (q < 0.28) items.push(['battery', 1]); else if (q < 0.31) items.push([oldFind(state, z), 1]); else if (q < 0.41) credits = cr(3, 10); }
-  else if (kind === 'car' || kind === 'bus') { if (q < 0.18) items.push(['scrap', 1]); else if (q < 0.38) credits = cr(3, 10); else if (q < 0.42) items.push([oldFind(state, z), 1]); }
-  else if (kind === 'counter') { if (rnd(state) < 0.6) credits = cr(5, 20); if (q < 0.14) items.push([oldFind(state, z), 1]); }
-  else if (kind === 'locker') { if (q < 0.3) items.push([oldFind(state, z), 1]); else if (q < 0.4) items.push(['credit_chip', 1]); else if (q < 0.6) items.push(['battery', 1]); }
-  else if (kind === 'safe') { credits = cr(15, 40); items.push([oldFind(state, z, 1), 1]); if (q < 0.25) items.push(['old_coin', 2 + rint(state, 3)]); }
-  else if (kind === 'vault') { credits = cr(280, 420); items.push(['data_core', 1], [rnd(state) < 0.5 ? 'ring' : 'musicbox', 1], ['credit_chip', 2], ['seedtin', 1]); }
+  if (kind === 'rubble') { if (q < 0.25) items.push(['scrap', 1]); else if (q < 0.28) items.push(['battery', 1]); else if (q < 0.37) items.push([oldFind(state, z), 1]); else if (q < 0.45) credits = cr(3, 10); }
+  else if (kind === 'car' || kind === 'bus') { if (q < 0.18) items.push(['scrap', 1]); else if (q < 0.33) credits = cr(3, 10); else if (q < 0.44) items.push([oldFind(state, z, 0.5), 1]); }
+  else if (kind === 'counter') { if (rnd(state) < 0.6) credits = cr(5, 20); if (q < 0.35) items.push([oldFind(state, z, 0.5), 1]); }
+  else if (kind === 'locker') { if (q < 0.5) items.push([oldFind(state, z, 1), 1]); else if (q < 0.62) items.push(['credit_chip', 1]); else if (q < 0.6) items.push(['battery', 1]); }
+  else if (kind === 'safe') { credits = cr(15, 40); items.push([oldFind(state, z, 2), 1], [oldFind(state, z, 2), 1]); if (q < 0.35) items.push(['old_coin', 2 + rint(state, 3)]); }
+  else if (kind === 'vault') { credits = cr(280, 420); items.push(['data_core', 1], [rnd(state) < 0.5 ? 'ring' : 'musicbox', 1], ['credit_chip', 2], ['seedtin', 1], ['film_camera', 1], ['old_coin', 3]); }
   return { items, credits };
 }
 const SPOT_NAMES = { rubble: 'the rubble', car: 'the car', bus: 'the bus', counter: 'the shop counter', locker: 'the locker', safe: 'the safe', vault: 'the sealed vault' };

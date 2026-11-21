@@ -825,7 +825,8 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   Yui and Maris love old records (the existing `record`, now also a city find); Fenn loves teddy bears; Moraine and Marrow like old coins. Reused: `record` (the salvaged vinyl record), `photo`, `teacup`, `book`, `watch`, `toy`, `medal`, `seedtin`,
   `musicbox`, `datachip`, `ring`, `scrap`, `battery`.
 * **Economy.** A city trip on 60 stamina (the 60 spots nearest the pad and the creatures outside the core) is worth
-  about 1,600 cr (1.6–1.8×) against about 935 cr for 60 Field-hammer blows in belt sector 5 (tests/farm-sim.mjs measures both):
+  about 2,200 cr (2.3–2.5×, owner 2026-11-21: "the Earth trip should earn more"; most of it old-world finds: rubble 9%, cars 11%,
+  counters 35%, lockers 50% and safes two rarer finds each, the vault also a film camera and coins) against about 935 cr for 60 Field-hammer blows in belt sector 5 (tests/farm-sim.mjs measures both):
   more, with more risk (the hull, the tow fee, the shuttle fare). A full clear including the core and the vault is
   worth several thousand.
 * **Safe spots and camps** (owner, 2026-11-20, later). `cityLayout` places three safe spots a trip, one per zone
@@ -843,6 +844,12 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   legs and arms on joint pivots: the legs fold up behind, the arms sweep back, the body tilts forward to level and wings
   slide out from the back), a brief flash hands over to its flight form (the `pallas_jet` model, or a procedural jet) that lifts off, banks and climbs north with the camera following, then the screen fades and she lands
   at Eden Central's space dock.
+* **Finding treasure** (owner 2026-11-21: "I don't know what is searchable and what isn't"). Every car, bus and remaining
+  rubble pile is a spot (plain debris slabs look different and are never searchable). An unsearched spot has a bobbing
+  sparkle with a soft halo and a faint light column over it (`spot_glint`; gold over safes and the vault); a searched one
+  loses it, gets a small green ring and its prop goes grey and dim. The minimap shows unsearched spots within 20 tiles as
+  pale dots (gold for safes and the vault). **R** (when not holding food) scans: columns of light over every unsearched
+  spot within 16 tiles and a count, 8 s cooldown.
 * **The HUD** shows the zone, the hull and the credits found (`The core · hull 72/100 · found 340 cr`) and a hull bar
   under it. The minimap works on the city (streets dark, toxic pools lime, tower footprints pale); the map screen (M)
   says there is no chart of a city that shifts every trip.

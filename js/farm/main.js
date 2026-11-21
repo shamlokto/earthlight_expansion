@@ -115,7 +115,7 @@ function recover(e, where) {
 }
 window.addEventListener('error', (ev) => recover(ev.error || ev.message, 'error'));
 window.addEventListener('unhandledrejection', (ev) => recover(ev.reason, 'promise'));
-function refreshHud() { const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: 'Pallas · Space fires · F Hydra' } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
+function refreshHud() { const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: 'Pallas · Space fires · F Hydra · R scan' } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
 // ---------------------------------------------------------------- people
@@ -711,12 +711,14 @@ function cityPlace(i) {
   else if (m.haz[i] && (x + y) % 2 === 0) W.place('cy' + i, 'haze', x + 1.5, y + 1.5, { hazard: 1 });
   else return;
   cityPlaced.add(i);
-  const s = m.spots.find((q) => q.i === i); if (s && s.open) W.place('cs' + i, 'searched_mark', x + 1.5, y + (c === 4 ? 2.5 : 1.5));
+  const s = m.spots.find((q) => q.i === i), sy = y + (c === 4 ? 2.5 : 1.5);
+  if (s && s.open) { W.place('cs' + i, 'searched_mark', x + 1.5, sy); emptied(W.tileObjs.get('cy' + i)); }
+  else if (s) W.place('cg' + i, 'spot_glint', x + 1.5, sy, { gold: s.kind === 'safe' || s.kind === 'vault' });
 }
 function cityStream(force) {
   const m = S.mine; if (!m || (!force && Math.hypot(me.x - cityAt[0], me.y - cityAt[1]) < 3)) return; cityAt = [me.x, me.y];
   const R = 19, cx = me.x - 1, cy = me.y - 1;
-  for (const i of [...cityPlaced]) { const x = i % m.w, y = Math.floor(i / m.w); if (Math.abs(x - cx) > R + 4 || Math.abs(y - cy) > R + 4) { W.unplace('cy' + i); W.unplace('cs' + i); cityPlaced.delete(i); } }
+  for (const i of [...cityPlaced]) { const x = i % m.w, y = Math.floor(i / m.w); if (Math.abs(x - cx) > R + 4 || Math.abs(y - cy) > R + 4) { W.unplace('cy' + i); W.unplace('cs' + i); W.unplace('cg' + i); cityPlaced.delete(i); } }
   for (let y = Math.max(0, Math.floor(cy - R)); y <= Math.min(m.h - 1, cy + R); y++) for (let x = Math.max(0, Math.floor(cx - R)); x <= Math.min(m.w - 1, cx + R); x++) { const i = y * m.w + x; if (!cityPlaced.has(i)) cityPlace(i); }
 }
 function cityMonsterObj(ref) {
@@ -802,10 +804,20 @@ async function flyHome() {
   sfx('door'); await ui.say([{ who: 'narrator', text: r.msg }, { who: 'narrator', text: story.SHUTTLE.tally(r.credits, r.finds) }]); mode = 'play';
   await go({ map: 'central', x: 7.5, y: 16.5, dir: 0 });
 }
+// A searched spot looks emptied: its prop goes grey and dim (again a moment later, for a model that loads late).
+function emptied(o) { if (!o) return; const go = () => o.traverse((q) => { if (q.isMesh && q.material && !q.userData.emptied) { q.material = q.material.clone(); if (q.material.color) q.material.color.multiplyScalar(0.42); q.userData.emptied = true; } }); go(); setTimeout(go, 700); setTimeout(go, 2000); }
+// R on Earth (when not holding food): the Pallas pings the treasure within 16 tiles, a column of light over each for a moment. 8 s cooldown.
+let scanCd = 0;
+function cityScan() {
+  const now = performance.now(); if (now < scanCd) return ui.toast(`The scanner is recharging (${Math.ceil((scanCd - now) / 1000)} s).`, 1200);
+  scanCd = now + 8000; const m = S.mine; let n = 0; sfx('zap');
+  for (const s of m.spots) { if (s.open) continue; const x = s.i % m.w + 1.5, y = Math.floor(s.i / m.w) + (m.cells[s.i] === 4 ? 2.5 : 1.5); if (Math.hypot(x - me.x, y - me.y) > 16) continue; n++; const gold = s.kind === 'safe' || s.kind === 'vault'; for (let k = 0; k < 3; k++) setTimeout(() => W.puff(x, y, gold ? 0xffd36a : 0x8ff4ff, 6, 1.6), k * 380); }
+  ui.toast(n ? `Scan: ${n} thing${n > 1 ? 's' : ''} worth searching nearby. Follow the sparkles.` : 'Scan: nothing worth searching within range.', 2600);
+}
 function citySearch(x, y) {
   const r = sim.searchSpot(S, x, y); if (!r.ok) return ui.toast(r.msg);
   const m = S.mine, i = y * m.w + x, bus = m.cells[i] === 4; me.swing = 1; sfx('dig');
-  W.puff(x + 1.5, y + (bus ? 2.5 : 1.5), 0x9a958c, 10, 0.4); W.place('cs' + i, 'searched_mark', x + 1.5, y + (bus ? 2.5 : 1.5));
+  W.puff(x + 1.5, y + (bus ? 2.5 : 1.5), 0x9a958c, 10, 0.4); W.place('cs' + i, 'searched_mark', x + 1.5, y + (bus ? 2.5 : 1.5)); W.unplace('cg' + i); emptied(W.tileObjs.get('cy' + i));
   if (r.star) { sfx('good'); ui.celebrate(r.msg); }
   if (r.credits) { floatText(x + 1.5, y + 1.5, `+${r.credits} cr`); sfx('pick'); }
   ui.gainedToast(r.gained);
@@ -1217,7 +1229,7 @@ function bindInput() {
     if (ui.windowOpen() || ui.talking()) return;
     keys.add(e.code);
     if (/^Digit\d$/.test(e.code)) selectSlot(e.code === 'Digit0' ? 9 : +e.code.slice(5) - 1);
-    if (e.code === 'KeyR') { const s = sim.selected(S); if (s && (ITEMS[s.id].stamina || ITEMS[s.id].maxUp)) { const r = sim.eat(S, S.player.sel); if (r.celebrate) { sfx('good'); ui.celebrate(r.msg); floatText(me.x, me.y, '★'); } else ui.toast(r.msg || 'That was good.'); if (r.ok) sfx('pick'); refreshHud(); } }
+    if (e.code === 'KeyR') { const s = sim.selected(S); if (map && map.city && S.mine && mode === 'play' && !(s && (ITEMS[s.id].stamina || ITEMS[s.id].maxUp))) cityScan(); else if (s && (ITEMS[s.id].stamina || ITEMS[s.id].maxUp)) { const r = sim.eat(S, S.player.sel); if (r.celebrate) { sfx('good'); ui.celebrate(r.msg); floatText(me.x, me.y, '★'); } else ui.toast(r.msg || 'That was good.'); if (r.ok) sfx('pick'); refreshHud(); } }
     if (map && map.belt && e.code === 'KeyF') minerToggle(); else if (map && map.ruins && e.code === 'KeyF') placeHydra();
     if (map && map.earth && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) pallasDash();
     if (e.code === 'KeyQ') W.yaw -= Math.PI / 4; if (e.code === 'KeyC') W.yaw += Math.PI / 4;

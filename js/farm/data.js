@@ -411,6 +411,53 @@ const UNDER_FISH = [
   ['abyss_koi', 'Abyss koi', 1800, 0, 'Legendary: a deep-blue koi with silver star speckles.', 'Somebody kept koi in the cisterns before the war, and one of them never stopped growing. It rises only in the deep Sump, after eight at night, to a rod of Alloy or better. Wick has seen it twice.'],
 ];
 for (const [id, name, sell, , desc, detail] of UNDER_FISH) item(id, name, 'fish', desc, { sell, detail });
+// ---------------------------------------------------------------- more fish (2026-11-21): a ladder from common to legendary
+// [id, name, sale, desc, detail]. Where and when they bite is FISH_TABLE below; sim.js fish() and underFish() read it.
+const MORE_FISH = [
+  ['fish_reedling', 'Reedling', 40, 'A small olive fish from the reeds of the farm pond.', 'It lives among the reeds of the farm pond and nowhere else on the ring: whoever dug the pond brought a bucket of them from somewhere and never wrote down where. Common, plucky and good grilled.'],
+  ['fish_dawnscale', 'Dawnscale', 150, 'A rose-gold fish that only rises at dawn.', 'When the sun-line warms from grey to gold, dawnscales come up in the village river and the hill lake to catch the first light on their scales. Before nine in the morning, or not at all.'],
+  ['fish_rainbarb', 'Rain barb', 130, 'A whiskered barb that bites in the rain.', 'The colony rain is pumped, filtered and let fall from the sun-line on a schedule, and the barbs know the schedule better than the weather office does. Any water under the sky, in rain or storm.'],
+  ['fish_lantern_cat', 'Lantern catfish', 170, 'A night catfish with two amber spots like lamps.', 'It comes up the village river and the Eden Central canal after eight at night, when the street lamps are lit, and the two amber spots behind its eyes glow back at them.'],
+  ['fish_spokerun', 'Spokerun salmon', 320, 'A strong silver salmon that runs the river. Needs an Alloy rod.', 'The river runs round the ring under the spokes, and so do these: the first crews swore a spokerun could swim the whole Lantern Ring in a week. A Field rod snaps on them; an Alloy rod holds.'],
+  ['fish_paneray', 'Paneray', 340, 'A little glass-pale ray from the canal. Needs an Alloy rod.', 'It lies flat under the canal bridges of Eden Central, where the light comes down through the deck panes, and looks like one more pane. It takes an Alloy rod to lift it off the bottom.'],
+  ['fish_stormgar', 'Stormglass gar', 420, 'A needle-nosed gar that only bites in a storm. Needs an Alloy rod.', 'When the chamber storms and the sun-line flickers, the gar comes up to hunt in any water under the sky, with lightning running down its flank. It bites hard: an Alloy rod or better.'],
+  ['fish_cloudfin', 'Cloudfin', 360, 'A pearl-grey lake fish with misty trailing fins. Needs an Alloy rod.', 'It lives deep in the hill lake and rises where the mist off Terrace Falls drifts over the water. The founders let the fry go the year they built the falls. An Alloy rod or better.'],
+  ['fish_cistern_sturgeon', 'Cistern sturgeon', 400, 'An armoured grey sturgeon from the deep cisterns. Needs an Alloy rod.', 'It has been growing in the Lower deck cisterns since before the war and has the plates to prove it. Mostly in the Sump, now and then in the pump hall basins; an Alloy rod or better.'],
+  ['fish_earthlight_trout', 'Earthlight trout', 680, 'A trout patterned like Earth seen from orbit. Needs a Starsteel rod.', 'Blue sea, green land and white cloud along its flank: holding one is like holding Earth as the carrier crews saw it, out of the port. The hill lake, best after dark. Only a Starsteel rod lands one.'],
+  ['fish_sailfin', 'Sun-line sailfin', 650, 'A golden fish with a great glowing sail. Needs a Starsteel rod.', 'It rides the village river with its sail raised to the sun-line, and it is the fastest thing in the water on the ring. Best between nine and six; only a Starsteel rod keeps up with it.'],
+  ['fish_halo_eel', 'Halo eel', 620, 'A midnight-blue eel with a ring of silver light. Needs a Starsteel rod.', 'It curls into a ring in the Eden Central canal, as if it had heard about the habitat and approved. Pastor Ines says it comes to the church steps at night. A Starsteel rod only.'],
+  ['fish_deep_angler', 'Cistern angler', 600, 'A dark angler fish with a teal lure. Needs a Starsteel rod.', 'It dangles its little teal light in the deep Sump and waits for something curious. Wick calls it "the other lamp man". It bites after six in the evening, and only a Starsteel rod brings it up.'],
+  ['fish_ferryman', 'The Ferryman', 2200, 'Legendary: the great black river fish of Willowfall.', 'They say he swam in the water tanks of the first ship and slid out into the river the day it was filled, and that he has carried the homesick down to the end of the ring ever since. He rises at night or in rain, to a Starsteel rod, and almost never.'],
+  ['fish_mochi', 'Lady Mochi', 1500, 'Legendary: a plump pearl-and-gold carp from the farm pond.', 'Somebody farmed here before Sato and fed one carp too many rice cakes. Lady Mochi is still in the pond, enormous and serene, and rises at dawn to an Alloy rod or better when she is in the mood. She mostly is not.'],
+  ['fish_admiral', 'Admiral Brass', 2400, 'Legendary: the brass-scaled pike of the Eden Central canal.', 'Commissioned, says the constable\'s lost-property list, on the day the canal opened, and on patrol ever since, with an old hook in his lip like a medal. He rises in storms and after dark, to a Starsteel rod only.'],
+];
+for (const [id, name, sell, desc, detail] of MORE_FISH) item(id, name, 'fish', desc, { sell, detail });
+// Where each fish beyond the basic five bites. at: weight by water ('farm' the pond, 'village' the river, 'hill' the lake,
+// 'canal' Eden Central, 'lower' the pump hall basins, 'sump'), in the units of sim.js FISH_ODDS; rod: the rod it needs
+// (1 Field, 2 Alloy, 3 Starsteel); up: extra weight per rod tier above that; when: it only bites then ('dawn' before 9:00,
+// 'day' 9:00-18:00, 'night' from 20:00 (underground from 18:00), 'wet' rain or storm, 'storm'); boost: times that much then.
+// legend: a legendary, its chance a cast instead of a weight.
+export const FISH_TABLE = {
+  fish_reedling: { at: { farm: 30 }, rod: 1, up: 0 },
+  fish_dawnscale: { at: { village: 14, hill: 10 }, rod: 1, when: 'dawn' },
+  fish_rainbarb: { at: { farm: 12, village: 10, hill: 8, canal: 12 }, rod: 1, when: 'wet' },
+  fish_lantern_cat: { at: { village: 12, canal: 16 }, rod: 1, when: 'night' },
+  fish_spokerun: { at: { village: 16 }, rod: 2 },
+  fish_paneray: { at: { canal: 16 }, rod: 2 },
+  fish_stormgar: { at: { farm: 12, village: 14, hill: 14, canal: 14 }, rod: 2, when: 'storm' },
+  fish_cloudfin: { at: { hill: 14 }, rod: 2 },
+  fish_cistern_sturgeon: { at: { sump: 16, lower: 6 }, rod: 2 },
+  fish_earthlight_trout: { at: { hill: 14 }, rod: 3, boost: { night: 2 } },
+  fish_sailfin: { at: { village: 14 }, rod: 3, boost: { day: 1.5 } },
+  fish_halo_eel: { at: { canal: 14 }, rod: 3, boost: { night: 1.5 } },
+  fish_deep_angler: { at: { sump: 14 }, rod: 3, when: 'night' },
+  fish_king: { at: { hill: 1 }, rod: 2, legend: 0.003, boost: { wet: 2 } },
+  fish_mochi: { at: { farm: 1 }, rod: 2, legend: 0.006, when: 'dawn' },
+  fish_ferryman: { at: { village: 1 }, rod: 3, legend: 0.003, boost: { night: 2, wet: 2 } },
+  fish_admiral: { at: { canal: 1 }, rod: 3, legend: 0.003, boost: { storm: 3, night: 1.5 } },
+};
+// The rare ones' grand entrances.
+export const LEGEND_FISH = Object.keys(FISH_TABLE).filter((id) => FISH_TABLE[id].legend).concat(['abyss_koi']);
 // Mushrooms: no season, no watering. days to the first flush; regrow: days between flushes (0 = once); flushes in all.
 export const MUSHROOMS = {
   shiitake: { id: 'shiitake', name: 'Shiitake', days: 6, regrow: 3, flushes: 4, yield: 2, sell: 90, weight: 36 },
