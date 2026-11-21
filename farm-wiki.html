@@ -49,6 +49,7 @@
     th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--edge); vertical-align: middle; }
     th { font: 600 13px var(--f-display); color: var(--dim); background: var(--paper-2); vertical-align: bottom; }
     th.n { text-align: right; }
+    .finder { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; } .finder select { font: 600 14px var(--f-display); padding: 6px 10px; border: 1px solid var(--edge); border-radius: 999px; background: var(--paper-2); color: var(--ink); } .finder b { font: 700 18px var(--f-display); min-width: 52px; font-variant-numeric: tabular-nums; } .finder input { flex: 1 1 220px; accent-color: var(--gold); }
     td:first-child:has(img.ico) { white-space: nowrap; } #itab td:first-child { white-space: normal; } td:first-child img.ico, td:first-child .fake { margin-right: 6px; }
     td { vertical-align: top; } td.n, th.n { white-space: nowrap; }
     details.sched { border-bottom: 1px solid var(--edge); padding: 6px 0; } details.sched summary { cursor: pointer; } details.sched table { margin: 6px 0 4px; } details.sched td:first-child { width: 120px; white-space: nowrap; } .slot { display: grid; grid-template-columns: 96px 1fr; gap: 8px; } .slot > span:first-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -128,13 +129,17 @@
       ['village_market', 'Market Street, Willowfall'], ['village_square', 'Lantern Square'], ['colony_overhead', 'Look up: the colony curves overhead'], ['village_night', 'Willowfall at night'],
       ['house', 'The farmhouse'], ['barn', 'The barn'], ['cafe', 'The Hangar canteen'], ['clinic', "Dr. Mori's clinic"], ['hill', 'Terrace Hill'], ['orbital_elevator', 'The orbital elevator on Terrace Hill'], ['belt_run', 'The asteroid belt'], ['ruins_fight', 'The Old World: the Pallas at work'], ['map', 'The town map'],
       ['central_arrivals', 'Eden Central: the Arrivals hall and the safety depot'], ['central_school', 'Eden Central school'], ['school_inside', 'The empty classroom'], ['central_church', 'Second Dawn Church'], ['church_inside', 'Inside the church: the memorial candles'], ['central_depot', 'The safety depot'], ['depot_inside', 'Inside the safety depot'], ['arrivals_hall', 'The Arrivals hall'], ['people_new', 'Pastor Ines and Constable Fenn']];
-    const scenes = Object.keys(art).filter((k) => k.startsWith('scenes/') && k !== 'scenes/title').map((k) => [url(k), k.slice(7).replace(/_/g, ' ')]);
+    const SCENE_CAP = { descent: 'The shuttle goes down to Earth', hall_memory: 'The Memory Room, full', heart10: 'Ten hearts', intro1: 'The opening: the last battle', intro2: 'The opening: the fleets stand down', intro3: 'The opening: the hangar deck', intro4: 'The opening: the Upper deck', intro5: 'The opening: the Hollin field', morning: 'Morning on the farm',
+      ruins: 'The ruined city', ruins_fight: 'The Pallas in the ruins', townmap: 'The town map', upperdeck: 'The Upper deck', wedding: 'The wedding', season_spring: 'The farm in spring', season_summer: 'The farm in summer', season_autumn: 'The farm in autumn', season_winter: 'The farm in winter' };
+    const sceneCap = (k) => { if (SCENE_CAP[k]) return SCENE_CAP[k]; if (k.startsWith('festival_')) { const f = story.FESTIVALS.find((x) => x.id === k.slice(9) || (k === 'festival_yearend' && x.id === 'yearsend')); return f ? f.name : k; }
+      if (k.startsWith('shop_')) { const id = k.slice(5); return (sim.SHOPS[id] && sim.SHOPS[id].name) || (story.PLACES[id] && story.PLACES[id].name) || id; } return k.replace(/_/g, ' '); };
+    const scenes = Object.keys(art).filter((k) => k.startsWith('scenes/') && k !== 'scenes/title').map((k) => [url(k), sceneCap(k.slice(7))]);
     add('gallery', 'Pictures', `<p class="lead">Screenshots from the game, then the story pictures.</p>
       <div class="gallery">${SHOTS.map(([f, c]) => `<figure><img src="art/farm/wiki/${f}.webp" alt="${esc(c)}" loading="lazy"><figcaption>${esc(c)}</figcaption></figure>`).join('')}</div>
       <h3>Story pictures</h3><div class="gallery">${scenes.map(([u, c]) => `<figure><img src="${u}" alt="${esc(c)}" loading="lazy"><figcaption>${esc(c)}</figcaption></figure>`).join('')}</div>`);
 
     // ---- story
-    add('story', 'Story', `<p class="lead">${story.INTRO.map((l) => esc(l.text)).join(' ')}</p>`);
+    add('story', 'Story', `<div class="lead">${story.INTRO.map((l) => l.who === 'narrator' || !story.NPCS[l.who] ? `<p>${esc(l.text)}</p>` : `<p style="padding-left:1.2em"><b style="font-style:normal">${esc(story.NPCS[l.who].short || story.NPCS[l.who].name)}:</b> “${esc(l.text)}”</p>`).join('')}</div>`);
 
     // ---- people
     const R = story.ROMANCE || { candidates: [] };
@@ -204,7 +209,7 @@
       office: 'off the plaza, Eden Central', exchange: 'off the plaza, Eden Central', arrivals: 'Eden Central', school: 'Eden Central', church: 'Eden Central', depot: 'Eden Central', hangar: 'top of the orbital elevator, Terrace Hill' };
     const whereRoom = (k) => ROOM_AT[k] || (doorOf[k] ? OUT[doorOf[k][0]] : '');
     const spotText = (sp, id) => { const k = spotMap[sp] || sp.split('.')[0], tail = sp.split('.')[1] || '';
-      if (k.startsWith('home_')) return k === 'home_' + id || (k === 'home_thornes' && (id === 'thorne' || id === 'moth')) ? 'At home' : `Visiting ${roomName(k)}`;
+      if (k.startsWith('home_')) { const at = doorOf[k] ? `${roomName(k)}, ${OUT[doorOf[k][0]]}` : roomName(k); return k === 'home_' + id || (k === 'home_thornes' && (id === 'thorne' || id === 'moth')) ? `At home <small>(${esc(at)})</small>` : `Visiting ${esc(at)}`; }
       if (OUT[k]) { const m = MAPS[k], xy = m.spots[sp]; if (tail.endsWith('front')) { const inside = Object.keys(doorOf).find((r) => doorOf[r][0] === k && MAPS[r] && (r === tail.slice(0, -5) || MAPS[r].doorKind === tail.slice(0, -5))) || tail.slice(0, -5); return `Outside ${MAPS[inside] ? roomName(inside) : inside}, ${OUT[k]}`; }
         const w = SPOT_WORD[tail] || tail, ar = xy && (k === 'village' || k === 'central') ? areaAt(k, xy[0], xy[1]) : ''; return `${w[0].toUpperCase() + w.slice(1)}${ar && !w.toLowerCase().includes(ar.toLowerCase()) ? ` (${ar})` : ''}, ${OUT[k]}`; }
       const w = tail === k ? '' : IN_WORD[tail] ?? tail; return `${roomName(k)}${w ? ', ' + w : ''}${whereRoom(k) ? ` <small>(${esc(whereRoom(k))})</small>` : ''}`; };
@@ -229,8 +234,8 @@
       <li><b>Festivals:</b> shops shut and the whole village gathers at the festival from an hour before it starts (see Festivals).</li>
       <li><b>Your partner</b> lives at the farm: on the porch 6:00–8:00 and 20:00–22:00, then at their usual work.</li>
       <li>Times for the Lower deck folk (Venn, Wick, Hana, Agnes Thorne and Moth) are for when it is fully restored and the Thornes have moved up to Eden Central; before that they keep closer to the lift and the enclave.</li></ul>
-      <h3>Who is where right now?</h3><p><select id="wd">${DAYS.map((d, i) => `<option value="${i}">${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i]}</option>`).join('')}</select>
-      <input id="wt" type="range" min="360" max="1430" step="10" value="720" style="vertical-align:middle;width:min(320px,60vw)"> <b id="wtl">12:00</b></p>
+      <h3>Who is where right now?</h3><p class="finder"><select id="wd">${DAYS.map((d, i) => `<option value="${i}">${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i]}</option>`).join('')}</select>
+      <b id="wtl">12:00</b><input id="wt" type="range" min="360" max="1430" step="10" value="720" aria-label="Time of day"></p>
       <div class="tw"><table id="wnow"></table></div>
       <h3>Everyone's week</h3><p class="t" style="color:var(--dim)">Tap a name to open their timetable.</p>${schedCards}`);
     // ---- crops
@@ -410,7 +415,7 @@
           <figcaption>${esc(cap)} <span class="t">${m.w} × ${m.h} tiles.</span><br><small>Ways in and out: ${doorList(m)}</small>${id === 'lower' ? lowerOrder : ''}
           <details><summary>Signposts (${m.props.filter((p) => p.kind === 'signpost').length})</summary><ul>${signList(m)}</ul></details></figcaption></figure>`; }).join('')}
         ${sim.cityLayout ? `<figure class="map" id="citymap"><h3>Earth: a sample city ruin</h3><canvas data-map="city" data-city="${CITY_SEED}" style="max-width:${Math.round((sim.CITY_W || 96) / (sim.CITY_H || 72) * 760)}px" aria-label="A sample Earth city map"></canvas>
-          <figcaption>The city on Earth is generated anew for every trip, so there is no fixed chart of it (the game's map screen says so too). This is one sample, drawn by the game's own generator (<code>cityLayout(${CITY_SEED})</code>): the shuttle pad at the south edge, the suburbs round it, downtown beyond, and the core in the far north. Every city has the same shape of things: ${(sim.CITY_ZONES || []).join(', ').toLowerCase()}, one safe spot for a camp in each zone, and one sealed vault in the core.
+          <figcaption>The city on Earth is generated anew for every trip, so there is no fixed chart of it. This is one sample, made by the same generator the game uses: the shuttle pad at the south edge, the suburbs round it, downtown beyond, and the core in the far north. Every city has the same shape of things: ${(sim.CITY_ZONES || []).join(', ').toLowerCase()}, one safe spot for a camp in each zone, and one sealed vault in the core.
           <span class="t">${sim.CITY_W} × ${sim.CITY_H} tiles.</span><br><small><i class="sw" style="background:#5d5b5f"></i>street <i class="sw" style="background:#9a948a"></i>ash lot <i class="sw" style="background:#6f8f4a"></i>overgrowth <i class="sw" style="background:#cfc8bb"></i>building <i class="sw" style="background:#b6e33a"></i>toxic pool <i class="sw" style="background:rgba(170,210,60,.55)"></i>gas <i class="sw" style="background:#ffd36a"></i>treasure spot <i class="sw" style="background:#e8483a"></i>creature <i class="sw" style="background:#9a4fd0"></i>spore-brute <i class="sw" style="background:#3fd08a"></i>safe spot (camp)</small></figcaption></figure>` : ''}`);
       mapJobs.push(() => { for (const cv of document.querySelectorAll('canvas[data-map]:not([data-city])')) { try { drawMap(cv, all[cv.dataset.map]); } catch (e) { console.error('map', cv.dataset.map, e); } } });
       // the Earth city: one sample from the game's generator, zones, camps, the vault, creatures
@@ -516,7 +521,7 @@
       // ---- creatures: every enemy in the game (only Earth has them; the belt and the Lower deck have none)
       const LOOK = { rad_hound: ['#3d3d42', 'A scrappy mutant pup, dark-coated, with glowing green spots and eyes.'], glow_slime: ['#b8d83a', 'A glowing yellow-green blob sitting in its own puddle.'], rust_crawler: ['#b0582a', 'A many-legged beetle in plates of rust-red armour.'], smog_wraith: ['#8a82a8', 'A lilac puff of smog with violet eyes and a curling tail.'], spore_brute: ['#4f6a32', 'A hulking brute under a spotted mushroom cap, grown over with moss.'] };
       const HAB = { rad_hound: 'Fast and weak, in packs; everywhere.', glow_slime: 'Slow. A big one splits into two small ones when beaten.', rust_crawler: 'Armoured: rifle bolts glance off for half damage; the sabre bites.', smog_wraith: 'Floats up close and drains the hull instead of biting.', spore_brute: 'The mini-boss: one guards the sealed vault, sometimes a second roams the core.' };
-      const where = (k) => { const z = (sim.CITY_MIX || []).map((m, i) => (m[k] ? i : -1)).filter((i) => i >= 0); return k === 'spore_brute' ? ZN[2] + ' (by the vault)' : z.map((i) => ZN[i]).join(', '); };
+      const where = (k) => { const z = (sim.CITY_MIX || []).map((m, i) => (m[k] ? i : -1)).filter((i) => i >= 0); return k === 'spore_brute' ? ZN[2] + ' (by the vault)' : z.map((i, j) => (j ? ZN[i].toLowerCase() : ZN[i])).join(', '); };
       const enemy = ([k, m]) => { const a = sim.cityMonster(k, 0), c = sim.cityMonster(k, 2), [col, look] = LOOK[k] || ['#888', ''];
         return `<div class="card enemy"><div class="badge" style="background:${col}" data-l="${esc(m.name.slice(0, 2).toUpperCase())}"><img src="art/farm/wiki/creatures/${k}.webp" alt="${esc(m.name)}" loading="lazy" onerror="this.parentNode.textContent=this.parentNode.dataset.l"></div><div><b>${esc(m.name[0].toUpperCase() + m.name.slice(1))}</b><div class="t">${esc(look)}</div><div class="g">${esc(HAB[k] || '')}</div>
           <dl><dt>Found</dt><dd>${esc(where(k))}</dd>${m.boss ? `<dt>Health</dt><dd>${c.hp}</dd><dt>Hull damage</dt><dd>${c.dmg} a hit</dd>` : `<dt>Health</dt><dd>${a.hp} → ${c.hp} (suburbs → core)</dd><dt>Hull damage</dt><dd>${a.dmg} → ${c.dmg} a hit</dd>`}<dt>Speed</dt><dd>${m.speed} tiles a second</dd><dt>Sight</dt><dd>${m.sight} tiles</dd>
@@ -535,7 +540,7 @@
         <h3>Machines</h3><table><tr><th>Machine</th><th>From</th><th>Takes</th><th>Makes by morning</th></tr>
         ${Object.entries(MA).map(([id, m]) => row([`${ico(id)} ${esc(m.name)}`, id === 'beehive' ? 'the Seedhouse' : "Brandt's Garage", Object.keys(m.takes).length ? [...new Set(Object.keys(m.takes))].map((x) => esc(name(x))).join(', ') : 'nothing', id === 'beehive' ? 'honey every 3 days (2 with flowers near), spring to autumn' : [...new Set(Object.values(m.takes).map(([o]) => o))].map((x) => esc(name(x))).join(', ')])).join('')}</table>`);
     }
-    add('festivals', 'Festivals', `<div class="cards">${story.FESTIVALS.map((f) => `<div class="card">${url('scenes/festival_' + (f.id === 'yearsend' ? 'yearend' : f.id)) ? `<img class="face" style="width:110px;height:70px;object-position:center" src="${url('scenes/festival_' + (f.id === 'yearsend' ? 'yearend' : f.id))}" alt="">` : ''}<div><b>${esc(f.name)}</b><div class="t">${esc(seasonName(f.season))} ${f.day}</div><div class="g">${esc(f.blurb)}</div></div></div>`).join('')}</div>`);
+    add('festivals', 'Festivals', `<div class="cards">${[...story.FESTIVALS].sort((a, b) => a.season - b.season || a.day - b.day).map((f) => `<div class="card">${url('scenes/festival_' + (f.id === 'yearsend' ? 'yearend' : f.id)) ? `<img class="face" style="width:110px;height:70px;object-position:center" src="${url('scenes/festival_' + (f.id === 'yearsend' ? 'yearend' : f.id))}" alt="">` : ''}<div><b>${esc(f.name)}</b><div class="t">${esc(seasonName(f.season))} ${f.day}</div><div class="g">${esc(f.blurb)}</div></div></div>`).join('')}</div>`);
     add('help', 'How to play', `<div class="help">${story.HELP.map((h) => `<div><h3>${esc(h.title)}</h3><p>${esc(h.body)}</p></div>`).join('')}</div>`);
     add('art', 'About the art', `<p>Everything in Sato's Harvest is original. The 3D models (${Object.keys(models).length} of them) were made by turning anime-style concept pictures into textured meshes. The story pictures, film clips, skies and icons were generated from our own prompts. The cast's look comes from the colony game's portraits. Prompts and scripts are in <code>tools/art/farm/</code>.</p>`);
 
@@ -551,7 +556,7 @@
     // who is where right now
     { const wd = $('#wd'), wt = $('#wt'), out = $('#wnow'), lab = $('#wtl');
       const draw = () => { const d = +wd.value, m = +wt.value; lab.textContent = hhm(m);
-        out.innerHTML = '<tr><th>Person</th><th>Where</th></tr>' + Object.keys(SCHED).map((id) => { const b = SCHED[id][d].find(([a, z]) => m >= a && m < z); return `<tr><td>${esc(story.NPCS[id].name)}</td><td>${b ? b[2] : '<span style="color:var(--dim)">Asleep at home</span>'}</td></tr>`; }).join(''); };
+        out.innerHTML = '<tr><th>Person</th><th>Where</th></tr>' + Object.keys(SCHED).map((id) => { const b = SCHED[id][d].find(([a, z]) => m >= a && m < z); return `<tr><td>${esc(story.NPCS[id].name)}${(R.candidates || []).includes(id) ? ' <span style="color:#c94a6a">♥</span>' : ''}</td><td>${b ? b[2] : '<span style="color:var(--dim)">Asleep at home</span>'}</td></tr>`; }).join(''); };
       wd.addEventListener('change', draw); wt.addEventListener('input', draw); draw(); }
     // item filter
     const kf = $('#kf'), q = $('#q'); let kind = '';
