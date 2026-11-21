@@ -395,7 +395,7 @@ function collectionsTab(state) {
   const L = state.ledger, chip = (id, n, have = true) => `<span class="fm-chip${have ? '' : ' no'}">${have ? icon(id) : '<span class="fm-ico fm-fake" style="background:#bbb">?</span>'} ${have ? esc(ITEMS[id].name) : '???'}${n ? ` × ${n}` : ''}</span>`;
   const sh = Object.entries(L.shipped || {}).filter(([id]) => ITEMS[id]);
   let h = `<h3>Shipped (${sh.length} kinds · ${(L.earned || 0).toLocaleString()} cr earned)</h3><div class="fm-chips">${sh.length ? sh.map(([id, n]) => chip(id, n)).join('') : '<p class="fm-dim">Nothing yet.</p>'}</div>`;
-  const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king', 'cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi'], fl = state.fishLog || {};
+  const FISH = Object.keys(ITEMS).filter((id) => ITEMS[id].kind === 'fish'), fl = state.fishLog || {};   // every fish, the new ones too
   h += `<h3>Fish log (${FISH.filter((f) => fl[f]).length}/${FISH.length})</h3><div class="fm-chips">${FISH.map((f) => chip(f, fl[f], !!fl[f])).join('')}</div>`;
   h += `<h3>Memory Room (${sim.museumCount(state)}/${RELICS.length})</h3><div class="fm-chips">${RELICS.map((r) => chip(r.id, 0, !!(state.museum || {})[r.id])).join('')}</div>`;
   const ck = state.cooked || {};

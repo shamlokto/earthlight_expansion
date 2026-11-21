@@ -1867,7 +1867,9 @@ export const HELP = [
 // ------------------------------------------------------------------ the Memory Room, fishing, the Old World
 
 export const RELICS = ['photo', 'teacup', 'book', 'watch', 'toy', 'medal', 'seedtin', 'musicbox', 'datachip', 'ring'];
-export const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king'];
+export const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king',
+  'fish_reedling', 'fish_dawnscale', 'fish_rainbarb', 'fish_lantern_cat', 'fish_spokerun', 'fish_paneray', 'fish_stormgar', 'fish_cloudfin',
+  'fish_earthlight_trout', 'fish_sailfin', 'fish_halo_eel', 'fish_mochi', 'fish_ferryman', 'fish_admiral'];   // the waters under the sky (the Lower deck's: wiki, §12)
 
 export const MUSEUM = {
   intro: 'This is the Memory Room. Whatever you bring up from the Old World, I will show one of each, so the children know what was lost. And what was good.',
@@ -3705,13 +3707,13 @@ Object.assign(FISHING.caught, {
   fish_stormgar: 'A stormglass gar, crackling faintly. Your hair stands up a little.',
   fish_cloudfin: 'A cloudfin. Its fins drift in the air like the mist off Terrace Falls.',
   fish_cistern_sturgeon: 'A cistern sturgeon, armoured and ancient. It has seen the war and is not impressed by you.',
-  fish_earthlight_trout: 'An Earthlight trout. Blue sea, green land, white cloud: a whole Earth on its flank, for a moment, in your hands.',
+  fish_earthlight_trout: 'An Earthlight trout: blue sea, green land, white cloud. A whole Earth in your hands.',
   fish_sailfin: 'A sun-line sailfin! Its great sail blazes gold and the whole river seems brighter for it.',
   fish_halo_eel: 'A halo eel, curled into a perfect ring of silver light. Somebody at the church will want to hear about this.',
   fish_deep_angler: 'A cistern angler, its little teal lamp still lit. Wick would call it the other lamp man.',
-  fish_ferryman: 'The Ferryman. Black as the river at night, with a pale bone face. He looks at Sato for a long moment, as if checking her name against a list.',
+  fish_ferryman: 'The Ferryman, black as the river at night. He looks at Sato as if checking her name on a list.',
   fish_mochi: 'Lady Mochi! Round, gold and pearl, and plainly expecting a rice cake.',
-  fish_admiral: 'Admiral Brass himself, scarred and gleaming, an old hook in his lip like a medal. He seems to be inspecting you.',
+  fish_admiral: 'Admiral Brass, scarred and gleaming, an old hook in his lip like a medal. He inspects you.',
 });
 FISH.push('cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi');
 
