@@ -3140,7 +3140,9 @@ HELP.push({
 {
   const pg = (t) => HELP.find((p) => p.title === t);
   const love = pg('Love'); if (love && !/Lark/.test(love.body)) love.body = love.body.replace(/^Six people can become more than friends: the General, Professor Ruess, Commander Kestrel, Dr\. Mori, Oduya the canteen chef and Yui the librarian\./, 'Eight people can become more than friends: the General, Professor Ruess, Commander Kestrel, Dr. Mori, Oduya, Yui the librarian, Lark the baker and Vesna of the radio.');
-  const fest = pg('Seasons and festivals'); if (fest) fest.body = fest.body.replace('Winter: nothing grows outdoors.', 'Winter: kale, frost leeks and snowbells from the Seedhouse.');
+  // 2026-11-21: the whole list, with the Seedhouse crops and all six festivals
+  const fest = pg('Seasons and festivals'); if (fest) fest.body = 'Four seasons of 30 days; year 1 starts on a Monday.\n\nSpring: turnip, potato, cucumber, strawberry, cabbage*, snap pea*, tulip*.\nSummer: tomato, corn, onion, pumpkin, bell pepper*, melon*, sunflower*.\nAutumn: carrot, eggplant, sweet potato, spinach, beet*, cranberry*, cosmos*.\nWinter: kale*, frost leek*, snowbell*.\n* from the Seedhouse. Moonflower, from Moraine, grows spring to autumn.\n\nFestivals (shops shut; go and join in):\nSpring 18, Planting Day, the square, 10:00.\nSummer 10, Bloom Fair, Market Lane, 10:00.\nSummer 24, Lantern Night, the bridge, 18:00.\nAutumn 9, Harvest Fair, the square, 10:00.\nAutumn 19, Hub Cup, the Lower deck arena, 10:00.\nWinter 30, Year\'s End, the square, 18:00.';
+  const day = pg('The day'); if (day) day.body = day.body.replace(' (fishing costs 1; a swing that does nothing is free)', ' (a swing that does nothing is free)');
 }
 
 // ------------------------------------------------------------------ star-plums and the Main deck (2026-11-18)
