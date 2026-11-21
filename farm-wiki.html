@@ -49,7 +49,7 @@
     th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--edge); vertical-align: middle; }
     th { font: 600 13px var(--f-display); color: var(--dim); background: var(--paper-2); vertical-align: bottom; }
     th.n { text-align: right; }
-    .fans { font-size: 12.5px; color: #b0405e; margin-top: 2px; } .fans.liked { color: var(--dim); }
+    .fans { font-size: 12.5px; color: #b0405e; margin-top: 2px; } @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fans:not(.liked) { color: #f08aa5; } } .fans.liked { color: var(--dim); }
     .finder { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; } .finder select { font: 600 14px var(--f-display); padding: 6px 10px; border: 1px solid var(--edge); border-radius: 999px; background: var(--paper-2); color: var(--ink); } .finder b { font: 700 18px var(--f-display); min-width: 52px; font-variant-numeric: tabular-nums; } .finder input { flex: 1 1 220px; accent-color: var(--gold); }
     td:first-child:has(img.ico) { white-space: nowrap; } #itab td:first-child { white-space: normal; } td:first-child img.ico, td:first-child .fake { margin-right: 6px; }
     td { vertical-align: top; } td.n, th.n { white-space: nowrap; }
@@ -152,7 +152,7 @@
         ${homeOf(id) ? `<div class="t">Home: ${esc(homeOf(id))}</div>` : ''}
         ${story.HOMES && story.HOMES[id] ? `<div class="t"><a href="#when-${id}">When and where to find them</a></div>` : ''}
         ${n.birthday ? `<div class="t">Birthday: ${esc(seasonName(n.birthday.season))} ${n.birthday.day}</div>` : ''}
-        ${n.loves && n.loves.length ? `<div class="g"><b style="display:inline;font-size:12.5px">Loves</b> ${n.loves.map((x) => esc(name(x))).join(', ')}</div>` : ''}
+        ${(() => { const lv = story.giftTier ? Object.keys(ITEMS).filter((x) => story.giftTier(id, x) === 'loved') : n.loves || []; return lv.length ? `<div class="g"><b style="display:inline;font-size:12.5px">Loves</b> ${lv.map((x) => esc(name(x))).join(', ')}</div>` : ''; })()}
         ${n.likes && n.likes.length ? `<div class="g">Likes ${n.likes.slice(0, 6).map((x) => esc(name(x))).join(', ')}</div>` : ''}
         ${n.dislikes && n.dislikes.length ? `<div class="g">Dislikes ${n.dislikes.map((x) => esc(name(x))).join(', ')}</div>` : ''}</div></div>`; };
     const ids = Object.keys(story.NPCS).filter((k) => k !== 'sato');
@@ -215,7 +215,7 @@
       if (k.startsWith('home_')) { const at = doorOf[k] ? `${roomName(k)}, ${OUT[doorOf[k][0]]}` : roomName(k); return k === 'home_' + id || (k === 'home_thornes' && (id === 'thorne' || id === 'moth')) ? `At home <small>(${esc(at)})</small>` : `Visiting ${esc(at)}`; }
       if (OUT[k]) { const m = MAPS[k], xy = m.spots[sp]; if (tail.endsWith('front')) { const inside = Object.keys(doorOf).find((r) => doorOf[r][0] === k && MAPS[r] && (r === tail.slice(0, -5) || MAPS[r].doorKind === tail.slice(0, -5))) || tail.slice(0, -5); return `Outside ${MAPS[inside] ? roomName(inside) : inside}, ${OUT[k]}`; }
         const w = SPOT_WORD[tail] || tail, ar = xy && (k === 'village' || k === 'central') ? areaAt(k, xy[0], xy[1]) : ''; return `${w[0].toUpperCase() + w.slice(1)}${ar && !w.toLowerCase().includes(ar.toLowerCase()) ? ` (${ar})` : ''}, ${OUT[k]}`; }
-      const w = tail === k ? '' : IN_WORD[tail] ?? tail; return `${roomName(k)}${w ? ', ' + w : ''}${whereRoom(k) ? ` <small>(${esc(whereRoom(k))})</small>` : ''}`; };
+      const w = tail === k ? '' : IN_WORD[tail] ?? tail, wr = whereRoom(k), rn = roomName(k); return `${rn}${w ? ', ' + w : ''}${wr && !rn.includes(wr) ? ` <small>(${esc(wr)})</small>` : ''}`; };
     const ALL_FLAGS = { ld_lights: 1, ld_pumps: 1, ld_pump2: 1, ld_catacombs: 1, ld_enclave: 1, ld_rehoused: 1, ld_works: 1, ld_vents: 1, ld_arena: 1, ld_vault: 1 };
     const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const dayPlan = (id, wd, year = 1) => { const out = []; for (let m = 360; m < 1440; m += 10) { const w = story.whereIs(id, { season: 0, day: 3, year, weekday: wd, minute: m, weather: 'sun', festival: null, flags: ALL_FLAGS }), t = w ? spotText(w.spot, id) : null;
@@ -323,7 +323,7 @@
         [['wool', 'fine_wool'], 'Sheep, with the clippers'], [['duck_egg', 'duck_feather'], 'Ducks (the duck house)'], [['battery_full'], 'A battery charged in a solar charger or the solar yard'], [['lumber'], 'Chopping branches and stumps with the axe'],
         [['yarn_scarf'], "Pia knits it from three skeins"], [['log_tape'], 'Lower deck terminals'], [['diary_page'], 'Moth'], [['ring_shard'], 'Opening the vault'], [['hub_cup'], 'Winning the Hub Cup']]) for (const id of ids) from(id, txt);
     }
-    const LOVED_BY = {}, LIKED_BY = {}; for (const [pid, n] of Object.entries(story.NPCS)) { if (pid === 'sato') continue; for (const x of n.loves || []) (LOVED_BY[x] = LOVED_BY[x] || []).push(shortName(pid)); for (const x of n.likes || []) (LIKED_BY[x] = LIKED_BY[x] || []).push(shortName(pid)); }
+    const LOVED_BY = {}, LIKED_BY = {}; for (const pid of Object.keys(story.NPCS)) { if (pid === 'sato') continue; for (const x of Object.keys(ITEMS)) { const t = story.giftTier ? story.giftTier(pid, x) : 'neutral'; if (t === 'loved') (LOVED_BY[x] = LOVED_BY[x] || []).push(shortName(pid)); else if (t === 'liked') (LIKED_BY[x] = LIKED_BY[x] || []).push(shortName(pid)); } }   // story.giftTier: the game's own tastes, extras included
     const itemRows = Object.values(ITEMS).map((i) => { const src = SRC[i.id] ? [...SRC[i.id]].slice(0, 5).join(' · ') : '';
       const fans = (LOVED_BY[i.id] ? `<div class="fans">♥ Loved by ${esc(LOVED_BY[i.id].join(', '))}</div>` : '') + (LIKED_BY[i.id] ? `<div class="fans liked">Liked by ${esc(LIKED_BY[i.id].join(', '))}</div>` : '');
       return `<tr data-k="${i.kind}" data-n="${esc((i.name + ' ' + (i.desc || '') + ' ' + src + ' ' + (LOVED_BY[i.id] || []).join(' ') + ' ' + (LIKED_BY[i.id] || []).join(' ')).toLowerCase())}"><td class="it">${ico(i.id)}<b>${esc(i.name)}</b><small>${esc(KIND[i.kind] || i.kind)}</small></td>
