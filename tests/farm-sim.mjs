@@ -1512,5 +1512,18 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   sleep(s); s.npc.yui.love = 50; r = sim.mailGift(s, 'yui', slot, 'disliked', true); check(r.ok && !r.later && r.delta === -10, 'a new day: a disliked birthday gift by post, -10');
   const old = JSON.parse(saveState(newGame({ seed: 8 }))); old.npc.seln.giftsWeek = 2; const O = loadState(JSON.stringify(old)); check(O && O.npc.seln.giftsWeek === undefined, 'an old weekly gift count is dropped');
 }
+// ---------------------------------------------------------------- Memories (2026-11-21)
+{
+  const story = await import('../js/farm/story.js');
+  const s = newGame({ seed: 12 }); check(s.memories && s.memories.intro && s.memories.intro.d === 1, 'a new game remembers the opening');
+  s.cal.day = 5; sim.setFlag(s, 'ev_yui3'); sim.setFlag(s, 'fest_planting_1'); sim.setFlag(s, 'partner', 'yui');
+  check(s.memories.ev_yui3 && s.memories.ev_yui3.d === 5 && s.memories.fest_planting && s.memories.wed_yui, 'a scene is remembered with its day when its flag is set');
+  check(sim.memoryDate(s.memories.ev_yui3) === 'Spring 5, Year 1' && sim.memoryDate({ unknown: true }) === 'Date not recorded', 'memory dates read well');
+  s.cal.day = 9; sim.setFlag(s, 'ev_yui3'); check(s.memories.ev_yui3.d === 5, 'the first time is the one remembered');
+  const before = saveState(s); for (const m of story.memoryCatalogue()) m.lines(); sim.syncMemories(s); check(saveState(s) === before, 'replaying the lines changes nothing in the save');
+  const old = JSON.parse(saveState(newGame({ seed: 3 }))); delete old.memories; Object.assign(old.flags, { ev_seln3: true, confess_mori: true, partner: 'mori', fest_harvest_1: true, ld_visited: true, day1: true });
+  const O = loadState(JSON.stringify(old));
+  check(O && ['ev_seln3', 'confess_mori', 'wed_mori', 'fest_harvest', 'lower_arrive', 'day1', 'intro'].every((k) => O.memories[k]) && O.memories.ev_seln3.unknown && !O.memories.ev_yui3, 'an old save finds its memories in its flags, date not recorded');
+}
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);
