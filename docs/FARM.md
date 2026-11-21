@@ -939,6 +939,9 @@ picture gets `ui.icon()`'s drawn fish in the species' colours, with a gold ring 
 
 ## 16. Memories (owner, 2026-11-21: "a Memories section where important events can be replayed")
 
+* **The love stories come first and are complete** (owner): for each of the eight, every heart event, the confession, Sweethearts
+  (the sweet talk, unlocked by saying yes: `flags.sweet`), the proposal and the wedding, and Life on the farm together (the
+  partner's dawn and evening words, unlocked by the wedding), each locked until it has happened in this save, with its hint.
 * **What is kept**: every story scene, the first time it plays: every heart event (`ev_<id>`, the Lower deck's scenes too), each
   love story's confession (`confess_<id>`) and its proposal and wedding (`wed_<id>`, by `flags.partner`), every festival
   (`fest_<id>`, any year), the opening (`intro`), Marrow at the gate (`day1`), the first ride down to the Lower deck

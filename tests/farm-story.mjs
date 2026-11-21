@@ -655,12 +655,19 @@ for (const id of ['lark', 'vesna']) check(EVENTS.filter((e) => e.npc === id).len
   const sim = await import('../js/farm/sim.js'); const cat = story.memoryCatalogue(), ids = new Set(cat.map((m) => m.id));
   check(ids.size === cat.length && cat.length >= 80, `every memory has its own id (${cat.length})`);
   for (const m of cat) { check(isText(m.title, 90) && isText(m.hint, 200) && ['story', 'festivals'].concat(Object.keys(NPCS)).includes(m.group) && NPCS[m.who], `${m.id}: a title, a hint, a group and a face`); const L = m.lines(); check(Array.isArray(L) && L.length >= 2 && L.every((l) => l && isText(l.text, 400)), `${m.id}: the lines to replay`); }
-  for (const e of EVENTS) { check(ids.has('ev_' + e.id) && sim.memoryOfFlag('ev_' + e.id) === 'ev_' + e.id, `heart event ${e.id} is a memory, kept by its flag`); const m = cat.find((x) => x.id === 'ev_' + e.id); check(m.hint.startsWith(`Reach ${e.hearts} hearts with ${NPCS[e.npc].short || NPCS[e.npc].name}`), `${e.id}: the locked hint reads "${m.hint}"`); }
+  for (const e of EVENTS) { check(ids.has('ev_' + e.id) && sim.memoryOfFlag('ev_' + e.id) === 'ev_' + e.id, `heart event ${e.id} is a memory, kept by its flag`); const m = cat.find((x) => x.id === 'ev_' + e.id); check(m.hint.startsWith(`Reach ${e.hearts} hearts with ${e.npc === 'general' ? 'the General' : NPCS[e.npc].short || NPCS[e.npc].name}`), `${e.id}: the locked hint reads "${m.hint}"`); }
   for (const e of story.LOWER_SCENES) check(ids.has('ev_' + e.id), `Lower deck scene ${e.id} is a memory`);
   for (const f of FESTIVALS) check(ids.has('fest_' + f.id) && sim.memoryOfFlag(`fest_${f.id}_3`) === 'fest_' + f.id, `festival ${f.id} is a memory, whatever the year`);
   for (const id of ROMANCE.candidates) check(ids.has('confess_' + id) && ids.has('wed_' + id) && sim.memoryOfFlag('partner', id) === 'wed_' + id && sim.memoryOfFlag('confess_' + id) === 'confess_' + id, `${id}: the confession and the wedding are memories`);
   for (const [flag, id] of [['day1', 'day1'], ['ld_visited', 'lower_arrive'], ['ld_vault', 'vault'], ['descended', 'earth_first']]) check(sim.memoryOfFlag(flag) === id && ids.has(id), `${flag} keeps the memory ${id}`);
   check(ids.has('intro') && cat.find((m) => m.id === 'wed_yui').lines().some((l) => l.art === 'wedding'), 'the opening is a memory; the wedding replays with its picture');
+  // the love stories, complete and first: each candidate's heart events, confession, sweethearts, proposal and wedding, life together
+  check(ROMANCE.candidates.every((id, i) => cat[0] && [...new Set(cat.map((m) => m.group))].indexOf(id) === i), 'the love stories come first, in order');
+  for (const id of ROMANCE.candidates) {
+    const mine = cat.filter((m) => m.group === id).map((m) => m.id), want = [...EVENTS.filter((e) => e.npc === id).map((e) => 'ev_' + e.id), 'confess_' + id, 'sweet_' + id, 'wed_' + id, 'partner_' + id];
+    check(want.every((w) => mine.includes(w)) && mine.length === want.length, `${id}: every love-story scene is a memory (${mine.join(', ')})`);
+    check(sim.memoryOfFlag('sweet', id) === 'sweet_' + id && sim.memoriesOfFlag('partner', id).join() === `wed_${id},partner_${id}`, `${id}: sweethearts and marriage unlock their memories`);
+  }
   check(cat.find((m) => m.id === 'confess_yui').hint === 'Reach 8 hearts with Yui, see their heart events and do them two favours.', 'a love story\'s hint says what it takes');
 }
 console.log(`conversations: ${VILLAGERS.map((id) => `${id} ${convs[id].size}`).join(', ')}`);

@@ -833,7 +833,7 @@ export function addLove(state, npcId, n) {
 export function setFlag(state, key, value = true) {
   if (typeof key !== 'string' || !key || key === '__proto__') return fail('That is not a flag.');
   state.flags[key] = value;
-  const mem = memoryOfFlag(key, value); if (mem) remember(state, mem);   // a scene just played: keep it in Memories
+  for (const mem of memoriesOfFlag(key, value)) remember(state, mem);   // a scene just played: keep it in Memories
   return { ok: true };
 }
 
@@ -2580,8 +2580,11 @@ export function memoryOfFlag(key, value = true) {
   if (/^ev_/.test(key) || /^confess_/.test(key)) return key;
   const f = /^fest_(.+)_\d+$/.exec(key); if (f) return 'fest_' + f[1];
   if (key === 'partner' && typeof value === 'string') return 'wed_' + value;
-  return MEMORY_BEATS[key] || null;
+  if (key === 'sweet' && typeof value === 'string') return 'sweet_' + value;
+  return Object.hasOwn(MEMORY_BEATS, key) ? MEMORY_BEATS[key] : null;
 }
+// A wedding also opens the memory of married life on the farm (the partner's words at dawn and in the evening).
+export const memoriesOfFlag = (key, value = true) => { const id = memoryOfFlag(key, value); return !id ? [] : id.startsWith('wed_') ? [id, 'partner_' + id.slice(4)] : [id]; };
 export function remember(state, id) {
   if (!state.memories || typeof state.memories !== 'object') state.memories = {};
   if (!id || state.memories[id]) return false;
@@ -2591,7 +2594,7 @@ export function remember(state, id) {
 export function syncMemories(state, dated = true) {
   const M = state.memories || (state.memories = {}); let n = 0;
   if (!M.intro) { M.intro = state.cal && state.cal.year === 1 && state.cal.season === 0 && state.cal.day === 1 ? { y: 1, s: 0, d: 1 } : { unknown: true }; n++; }   // everybody saw the opening
-  for (const [k, v] of Object.entries(state.flags || {})) { const id = memoryOfFlag(k, v); if (id && !M[id]) { M[id] = dated && state.cal ? { y: state.cal.year, s: state.cal.season, d: state.cal.day } : { unknown: true }; n++; } }
+  for (const [k, v] of Object.entries(state.flags || {})) for (const id of memoriesOfFlag(k, v)) { if (!M[id]) { M[id] = dated && state.cal ? { y: state.cal.year, s: state.cal.season, d: state.cal.day } : { unknown: true }; n++; } }
   return n;
 }
 export const memoryDate = (m) => (!m ? '' : m.unknown ? 'Date not recorded' : `${SEASONS[m.s]} ${m.d}, Year ${m.y}`);

@@ -408,12 +408,12 @@ function collectionsTab(state) {
 // Memories (2026-11-21): every scene, by person, with the story and the festivals; seen ones replay, the rest are locked with a hint.
 function memoriesTab(state) {
   const cat = memoryCatalogue(), M = state.memories || {}, seen = cat.filter((m) => M[m.id]).length;
-  const groups = ['story', 'festivals', ...Object.keys(NPCS).filter((id) => id !== 'sato' && cat.some((m) => m.group === id))];
+  const groups = [...new Set(cat.map((m) => m.group))];   // the love stories first, then the story, the festivals and everybody else
   const pic = (m) => { const u = portraitUrl(m.who, m.ex); return u ? `<img src="${u}" alt="">` : face(m.who).replace(/^<div class="fm-face"[^>]*>/, '').replace(/<\/div>$/, ''); };
   let h = `<p class="fm-lead">Scenes you have seen, to see again. Nothing changes when you replay one. <b>${seen}</b> of ${cat.length}.</p>`;
   for (const g of groups) {
     const list = cat.filter((m) => m.group === g); if (!list.length) continue;
-    const title = g === 'story' ? 'The story' : g === 'festivals' ? 'Festivals' : NPCS[g].name;
+    const title = g === 'story' ? 'The story' : g === 'festivals' ? 'Festivals' : NPCS[g].name + (cat.some((m) => m.group === g && m.love) ? ' ♥' : '');
     h += `<h3 class="fm-memh">${esc(title)} <small>${list.filter((m) => M[m.id]).length}/${list.length}</small></h3><div class="fm-mems">`;
     for (const m of list) { const r = M[m.id];
       h += r ? `<button class="fm-mem" data-mem="${m.id}"><span class="fm-memp">${pic(m)}</span><span><b>${esc(m.title)}</b><i>${esc(sim.memoryDate(r))}</i></span></button>`

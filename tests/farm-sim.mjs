@@ -1521,6 +1521,10 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   check(sim.memoryDate(s.memories.ev_yui3) === 'Spring 5, Year 1' && sim.memoryDate({ unknown: true }) === 'Date not recorded', 'memory dates read well');
   s.cal.day = 9; sim.setFlag(s, 'ev_yui3'); check(s.memories.ev_yui3.d === 5, 'the first time is the one remembered');
   const before = saveState(s); for (const m of story.memoryCatalogue()) m.lines(); sim.syncMemories(s); check(saveState(s) === before, 'replaying the lines changes nothing in the save');
+  { const t = newGame({ seed: 40 }), love = story.memoryCatalogue().filter((m) => m.love || story.ROMANCE.candidates.includes(m.group)).map((m) => m.id);
+    check(love.length >= 48 && love.every((id) => !t.memories[id]), `every love-story memory starts locked (${love.length})`);
+    sim.setFlag(t, 'confess_lark'); sim.setFlag(t, 'sweet', 'lark'); check(t.memories.confess_lark && t.memories.sweet_lark && !t.memories.wed_lark && !t.memories.partner_lark, 'a confession and saying yes unlock those two, not the wedding');
+    sim.setFlag(t, 'partner', 'lark'); check(t.memories.wed_lark && t.memories.partner_lark && !t.memories.wed_vesna, 'the wedding unlocks the wedding and life together, for that person only'); }
   const old = JSON.parse(saveState(newGame({ seed: 3 }))); delete old.memories; Object.assign(old.flags, { ev_seln3: true, confess_mori: true, partner: 'mori', fest_harvest_1: true, ld_visited: true, day1: true });
   const O = loadState(JSON.stringify(old));
   check(O && ['ev_seln3', 'confess_mori', 'wed_mori', 'fest_harvest', 'lower_arrive', 'day1', 'intro'].every((k) => O.memories[k]) && O.memories.ev_seln3.unknown && !O.memories.ev_yui3, 'an old save finds its memories in its flags, date not recorded');
