@@ -223,6 +223,7 @@ export function ensure(s) {
   arr(s.player, 'basket'); arr(s, 'chests'); arr(s, 'panels'); arr(s, 'robots'); arr(s, 'fruitTrees');
   obj(s, 'cooked'); obj(s, 'foraged'); obj(s, 'flags'); obj(s, 'museum'); obj(s, 'fishLog');
   arr(s, 'mill'); arr(s, 'hydro'); obj(s, 'solarYard'); arr(s.solarYard, 'slots'); obj(s, 'stats'); obj(s, 'visits');   // homes visited, by day (§15)
+  obj(s, 'memories'); syncMemories(s, false);   // scenes seen (Memories); an old save's are found from its flags, date unknown
   for (const n of Object.values(s.npc || {})) if (n && typeof n === 'object') { delete n.giftsWeek; delete n.weekGifts; }   // an old weekly gift count, no longer used
   if (!s.miner || typeof s.miner !== 'object' || !Number.isFinite(s.miner.charge)) s.miner = null;
   if (!Array.isArray(s.storage)) s.storage = new Array(STORAGE_SIZE).fill(null);
@@ -832,6 +833,7 @@ export function addLove(state, npcId, n) {
 export function setFlag(state, key, value = true) {
   if (typeof key !== 'string' || !key || key === '__proto__') return fail('That is not a flag.');
   state.flags[key] = value;
+  for (const mem of memoriesOfFlag(key, value)) remember(state, mem);   // a scene just played: keep it in Memories
   return { ok: true };
 }
 
@@ -2512,7 +2514,7 @@ export function openVault(state) {
   if (!v.ok) return fail(`The door will not move yet: ${[!v.key && 'Venn\'s last log has the code', !v.power && 'the lock ring needs a feed from the Works', !v.drained && 'the gallery pump must drain the sill'].filter(Boolean).join('; ')}.`, v);
   const L = lowerOf(state); for (const id of VAULT_LOGS) if (L.logs[id] == null) L.logs[id] = absDay(state);
   addItem(state, 'ring_shard', 1); state.player.maxStamina += 10; state.player.stamina = state.player.maxStamina;
-  state.flags.ld_vault = true; L.vaultDay = absDay(state);
+  state.flags.ld_vault = true; L.vaultDay = absDay(state); remember(state, 'vault');
   return { ok: true, first: true, msg: 'The round door is open. Max stamina +10, and a slice of ring three is yours.' };
 }
 
@@ -2568,3 +2570,31 @@ export function mailGift(state, npcId, slot, tier, isBirthday) {
   const n = npcOf(state, npcId); n.mail = own(GIFT, tier) ? tier : 'neutral'; state.stats.mailed = (state.stats.mailed || 0) + 1;
   return { ...r, msg: `You leave the ${ITEMS[s.id].name.toLowerCase()} in the mailbox.` };
 }
+
+// ---------------------------------------------------------------- Memories (2026-11-21: replay the scenes you have seen)
+// state.memories = { id: { y, s, d } | { unknown: true } }. The ids are story.memoryCatalogue()'s; each scene's own flag says it
+// played (heart events ev_<id>, confess_<id>, a festival's fest_<id>_<year>, the wedding by flags.partner, and a few story beats).
+const MEMORY_BEATS = { day1: 'day1', ld_visited: 'lower_arrive', ld_vault: 'vault', descended: 'earth_first' };
+export function memoryOfFlag(key, value = true) {
+  if (!value || typeof key !== 'string') return null;
+  if (/^ev_/.test(key) || /^confess_/.test(key)) return key;
+  const f = /^fest_(.+)_\d+$/.exec(key); if (f) return 'fest_' + f[1];
+  if (key === 'partner' && typeof value === 'string') return 'wed_' + value;
+  if (key === 'sweet' && typeof value === 'string') return 'sweet_' + value;
+  return Object.hasOwn(MEMORY_BEATS, key) ? MEMORY_BEATS[key] : null;
+}
+// A wedding also opens the memory of married life on the farm (the partner's words at dawn and in the evening).
+export const memoriesOfFlag = (key, value = true) => { const id = memoryOfFlag(key, value); return !id ? [] : id.startsWith('wed_') ? [id, 'partner_' + id.slice(4)] : [id]; };
+export function remember(state, id) {
+  if (!state.memories || typeof state.memories !== 'object') state.memories = {};
+  if (!id || state.memories[id]) return false;
+  state.memories[id] = state.cal ? { y: state.cal.year, s: state.cal.season, d: state.cal.day } : { unknown: true }; return true;
+}
+// Everything the flags say has been seen; dated today when `dated`, else "date unknown" (an old save).
+export function syncMemories(state, dated = true) {
+  const M = state.memories || (state.memories = {}); let n = 0;
+  if (!M.intro) { M.intro = state.cal && state.cal.year === 1 && state.cal.season === 0 && state.cal.day === 1 ? { y: 1, s: 0, d: 1 } : { unknown: true }; n++; }   // everybody saw the opening
+  for (const [k, v] of Object.entries(state.flags || {})) for (const id of memoriesOfFlag(k, v)) { if (!M[id]) { M[id] = dated && state.cal ? { y: state.cal.year, s: state.cal.season, d: state.cal.day } : { unknown: true }; n++; } }
+  return n;
+}
+export const memoryDate = (m) => (!m ? '' : m.unknown ? 'Date not recorded' : `${SEASONS[m.s]} ${m.d}, Year ${m.y}`);

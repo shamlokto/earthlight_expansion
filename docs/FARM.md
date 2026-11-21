@@ -936,3 +936,25 @@ fish (Field-rod ones) also in the forest bento and the colony feast. Loves: Marr
 Pastor Ines the halo eel, Dr. Mori the Earthlight trout, Wick the cistern angler; likes: the General the dawnscale, Oduya
 the spokerun, Constable Fenn the lantern catfish. Icons: `icons/<id>` in the art pack (the cloudfin's is still to come); a fish with no
 picture gets `ui.icon()`'s drawn fish in the species' colours, with a gold ring for a legendary.
+
+## 16. Memories (owner, 2026-11-21: "a Memories section where important events can be replayed")
+
+* **The love stories come first and are complete** (owner): for each of the eight, every heart event, the confession, Sweethearts
+  (the sweet talk, unlocked by saying yes: `flags.sweet`), the proposal and the wedding, and Life on the farm together (the
+  partner's dawn and evening words, unlocked by the wedding), each locked until it has happened in this save, with its hint.
+* **What is kept**: every story scene, the first time it plays: every heart event (`ev_<id>`, the Lower deck's scenes too), each
+  love story's confession (`confess_<id>`) and its proposal and wedding (`wed_<id>`, by `flags.partner`), every festival
+  (`fest_<id>`, any year), the opening (`intro`), Marrow at the gate (`day1`), the first ride down to the Lower deck
+  (`lower_arrive`), the vault (`vault`) and the first landing on Earth (`earth_first`). `state.memories = { id: { y, s, d } }`.
+  `sim.setFlag` remembers a scene as its flag is set (`memoryOfFlag`, `remember`); `ensure()` and `syncMemories` find an old
+  save's memories in its flags, as "Date not recorded".
+* **The list** (`story.memoryCatalogue()`): id, group (a person, the story, the festivals), whose face, a title, a hint for a
+  locked entry ("Reach 7 hearts with Yui, and meet them at the right place and time."), the lines and the scene picture.
+* **The journal's Memories tab** (P, or "Look through your memories" at the farmhouse bed): by group, each with a face from the
+  expression portraits (the scene's mood), the title and the date; unseen ones are silhouettes with their hint, so it is a
+  collection too ("12 of 84"). Choosing one replays the scene (`replayMemory`): only the dialogue runs, with the same lines,
+  faces and picture, so nothing in the save changes; choices are not replayed (they were never part of the scene's lines).
+  Then it returns to the journal.
+* Tests: farm-story (every heart event, Lower deck scene, festival and love story is a memory with a title, lines and a hint,
+  kept by its flag; the hints read right), farm-sim (remembered on the day, first time only, dates, replay changes nothing,
+  an old save's backfill).

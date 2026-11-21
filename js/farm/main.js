@@ -1036,7 +1036,7 @@ async function act(p) {
     case 'kitchen': if (!S.flags.kitchen) ui.say([{ who: 'narrator', text: 'A cold stove and a dry sink. Prof. Ruess at the Workshop can refit the kitchen.' }]); else ui.kitchenWindow(S, (r) => { if (r && r.ok) sfx('good'); refreshHud(); }); break;
     case 'calendar': { const f = story.FESTIVALS.filter((x) => x.season === S.cal.season && x.day >= S.cal.day); const bd = Object.values(NPCS).filter((n) => n.id !== 'sato' && n.birthday && n.birthday.season === S.cal.season && n.birthday.day >= S.cal.day && S.npc[n.id] && S.npc[n.id].met); ui.say([{ who: 'narrator', text: `The noticeboard. ${f.length ? 'Coming up: ' + f.map((x) => `${x.name} on day ${x.day}`).join(', ') + '.' : 'No more festivals this season.'} ${bd.length ? 'Birthdays: ' + bd.map((n) => `${n.short || n.name} on day ${n.birthday.day}`).join(', ') + '.' : ''}` }]); break; }
     case 'radio': { const l = S.flags.ld_vault && sim.absDay(S) % 2 ? story.RADIO_VAULT : story.RADIO[S.weatherTomorrow] || story.RADIO.sun; ui.say([{ who: 'narrator', text: 'The radio crackles. ' + (Array.isArray(l) ? l[(S.cal.day + S.cal.season) % l.length] : l) }]); break; }
-    case 'bed': { mode = 'talk'; const i = await ui.choose('The bed', ['Sleep until morning', 'Save the game', 'Not yet']); mode = 'play'; if (i === 0) await night(false); else if (i === 1) { save(); ui.toast('Saved.'); } break; }
+    case 'bed': { mode = 'talk'; const i = await ui.choose('The bed', ['Sleep until morning', 'Save the game', 'Look through your memories', 'Not yet']); mode = 'play'; if (i === 0) await night(false); else if (i === 1) { save(); ui.toast('Saved.'); } else if (i === 2) toggleJournal('memories'); break; }
     case 'feedfold': { const a = sim.feedAll(S, 'goat'), b = sim.feedAll(S, 'sheep'), ok = a.ok || b.ok; ui.toast(ok ? 'You filled the troughs.' : (S.animals.some((x) => x.kind === 'goat' || x.kind === 'sheep') ? a.msg || b.msg : 'The fold is empty. Corran sells goats and sheep.')); if (ok) sfx('drop'); break; }
     case 'feedduck': { const r = sim.feedAll(S, 'duck'); ui.toast(r.msg || (r.ok ? 'Fed.' : 'Nothing to feed.')); if (r.ok) sfx('drop'); break; }
     case 'duckeggs': { const r = sim.collectDuckEggs(S); if (r.ok) { sfx('pick'); ui.gainedToast(r.gained); } else ui.toast(r.msg); drawDuckEggs(); break; }
@@ -1213,7 +1213,16 @@ function pressE() { if (ui.advance()) return; if (mode !== 'play' || busy || ui.
 function pressUse() { if (ui.advance()) return; if (mode !== 'play' || busy || ui.windowOpen()) return; use(); }
 function openMenu(tab) { if (mode !== 'play' || busy || ui.talking()) return; ui.menu(S, { change: refreshHud, save: () => { save(); ui.toast('Saved.'); }, export: exportSave, title: () => { save(); location.reload(); }, music: () => ui.toast(music(!musicPlaying()) ? 'Music on.' : 'Music off.'), musicVolume, setMusicVolume }, tab); }
 // P or the pause button: the Farm journal (the clock stops while any window is open).
-function toggleJournal(tab) { if (ui.journalOpen()) return ui.closeWin(); if (mode !== 'play' || busy || ui.talking() || ui.windowOpen()) return; ui.journal(S, { tab, place: map ? map.name : '', change: refreshHud }); }
+function toggleJournal(tab) { if (ui.journalOpen()) return ui.closeWin(); if (mode !== 'play' || busy || ui.talking() || ui.windowOpen()) return; sim.syncMemories(S); ui.journal(S, { tab, place: map ? map.name : '', change: refreshHud, replay: replayMemory }); }
+// Memories: a seen scene, played again exactly as it was (its lines, faces and picture), read-only: only the dialogue runs, so no
+// flag, friendship, item or choice changes; then back to the journal.
+async function replayMemory(id) {
+  const m = story.memoryCatalogue().find((x) => x.id === id); if (!m || !S.memories || !S.memories[id]) return;
+  ui.closeWin(); mode = 'talk';
+  try { if (m.art) ui.scene(m.art); await ui.say([{ who: 'narrator', text: `A memory: ${m.title}. (${sim.memoryDate(S.memories[id])})` }, ...m.lines()], { keepScene: !!m.art }); }
+  finally { ui.scene(null); mode = 'play'; }
+  toggleJournal('memories');
+}
 function exportSave() { save(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([sim.saveState(S)], { type: 'application/json' })); a.download = `satos-harvest-y${S.cal.year}-${['spring', 'summer', 'autumn', 'winter'][S.cal.season]}${S.cal.day}.json`; a.click(); }
 function bindInput() {
   addEventListener('keydown', (e) => {
@@ -1286,6 +1295,6 @@ async function boot() {
   const firstGesture = () => { removeEventListener('pointerdown', firstGesture, true); removeEventListener('keydown', firstGesture, true); if (mode === 'title') startMusic(); };
   addEventListener('pointerdown', firstGesture, true); addEventListener('keydown', firstGesture, true);
   requestAnimationFrame(frame);
-  window.__farm = { get plan() { return plan; }, whereNow, paths, get npcs() { return npcs; }, get S() { return S; }, get W() { return W; }, get me() { return me; }, get map() { return map; }, go, sim, night, get mode() { return mode; }, ui, drawPlaced, get bots() { return bots; }, probe: () => probe(), use: () => use(), toggleJournal, talkBot };
+  window.__farm = { replayMemory,  get plan() { return plan; }, whereNow, paths, get npcs() { return npcs; }, get S() { return S; }, get W() { return W; }, get me() { return me; }, get map() { return map; }, go, sim, night, get mode() { return mode; }, ui, drawPlaced, get bots() { return bots; }, probe: () => probe(), use: () => use(), toggleJournal, talkBot };
 }
 boot();
