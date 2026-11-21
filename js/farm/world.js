@@ -677,6 +677,7 @@ export class World {
         holder.add(m);
       });
       if (def.lamp) { const pl = new THREE.PointLight(0xffc878, 0, 9, 1.6); pl.position.y = def.lamp; holder.add(pl); holder.userData.lamp = pl; }
+      if (def.fire) { const pl = new THREE.PointLight(0xffa050, 6, 6, 1.6); pl.position.set(...def.fire); holder.add(pl); }   // a model with a campfire glows like the hand-built one
     } else fallback();
     if (def.hover && !(mname && art.hasModel(mname))) holder.userData.hover = def.hover;
     if (kind === 'onsen_pool') holder.add(this.steamCloud(fw, fd));
