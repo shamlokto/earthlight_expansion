@@ -47,7 +47,11 @@
     .tag { display: inline-block; font: 600 11px var(--f-display); padding: 1px 7px; border-radius: 10px; background: #c84a6a; color: #fff; margin-left: 4px; vertical-align: 1px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--edge); vertical-align: middle; }
-    th { font: 600 13px var(--f-display); color: var(--dim); position: sticky; top: 46px; background: var(--paper); }
+    th { font: 600 13px var(--f-display); color: var(--dim); background: var(--paper-2); vertical-align: bottom; }
+    th.n { text-align: right; }
+    td:first-child:has(img.ico) { white-space: nowrap; } #itab td:first-child { white-space: normal; } td:first-child img.ico, td:first-child .fake { margin-right: 6px; }
+    td { vertical-align: top; } td.n, th.n { white-space: nowrap; }
+    details.sched { border-bottom: 1px solid var(--edge); padding: 6px 0; } details.sched summary { cursor: pointer; } details.sched table { margin: 6px 0 4px; } details.sched td:first-child { width: 120px; white-space: nowrap; }
     td.n { text-align: right; font-variant-numeric: tabular-nums; }
     .tw { overflow-x: auto; }
     img.ico { width: 30px; height: 30px; object-fit: contain; vertical-align: middle; margin-right: 6px; }
@@ -79,7 +83,7 @@
     #mapzoom > div { max-width: 96vw; max-height: 92vh; overflow: auto; border-radius: 10px; }
     #mapzoom img { display: block; max-width: none; max-height: none; border-radius: 0; }
     footer { text-align: center; color: var(--dim); font-size: 13px; padding: 30px 16px; }
-    @media (max-width: 600px) { th { position: static; } .card img.face { width: 60px; height: 76px; } }
+    @media (max-width: 600px) { .card img.face { width: 60px; height: 76px; } }
   </style>
 </head>
 <body>
@@ -111,7 +115,6 @@
     const seasonName = (s) => (typeof s === 'number' ? SEASONS[s] : s);
     // expression portraits (art/farm/people/portraits/index.json): the neutral bust on the card, and a strip of faces for the main cast
     const PX = await fetch('art/farm/people/portraits/index.json').then((r) => (r.ok ? r.json() : {})).catch(() => ({})), PXB = 'art/farm/people/portraits/';
-    const exStrip = (id) => { const o = PX[id]; if (!o || Object.keys(o).length < 3) return ''; return `<div class="g" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${Object.entries(o).map(([e, f]) => `<img src="${PXB + f}" title="${esc(e)}" alt="${esc(e)}" loading="lazy" style="width:38px;height:38px;object-fit:cover;object-position:50% 12%;border-radius:50%;background:#0001">`).join('')}</div>`; };
     const face = (id) => { const n = story.NPCS[id]; if (PX[id] && PX[id].neutral) return `<img class="face" src="${PXB + PX[id].neutral}" alt="" loading="lazy" style="object-fit:cover;object-position:top">`; const u = url(`people/${id}_portrait`) || url(`people/${id}_front`) || (n && n.portrait && !n.portrait.startsWith('svg:') && !n.portrait.startsWith('look:') && !(story.UNDERFOLK || []).includes(id) ? n.portrait : ''); return u ? `<img class="face" src="${u}" alt="" loading="lazy">` : n && n.portrait && n.portrait.startsWith('look:') ? `<div class="face" style="overflow:hidden">${lookPortrait(n)}</div>` : '<div class="face"></div>'; };
     const sections = [];
     const add = (id, title, html) => sections.push({ id, title, html });
@@ -132,12 +135,11 @@
 
     // ---- people
     const R = story.ROMANCE || { candidates: [] };
-    allMaps(); const WHERE = { village: 'Willowfall', central: 'Eden Central', lower: 'the Lower deck', store: 'behind the store', ranch: 'at the ranch', workshop: 'above the Workshop', church: 'behind the church', hangar: 'in the hangar' };
+    const MAPS = allMaps(); const WHERE = { village: 'Willowfall', central: 'Eden Central', lower: 'the Lower deck', store: 'behind the store', ranch: 'at the ranch', workshop: 'above the Workshop', church: 'behind the church', hangar: 'in the hangar' };
     const homeOf = (id) => { if (id === 'thorne' || id === 'moth') return "The Thornes' shelter in the enclave; after the move, the Thornes' house in Eden Central"; const k = story.homeKey(id, { ld_pumps: 1, ld_works: 1 }), h = k && HOMES[k]; return h ? `${h.label}, ${WHERE[h.map] || h.map}` : ''; };
     const person = (id) => { const n = story.NPCS[id]; if (!n) return ''; const love = R.candidates.includes(id);
       return `<div class="card">${face(id)}<div><b>${esc(n.name)}${love ? '<span class="tag">♥ romance</span>' : ''}</b><div class="t">${esc(n.title || '')}</div>
         ${homeOf(id) ? `<div class="t">Home: ${esc(homeOf(id))}</div>` : ''}
-        ${exStrip(id)}
         ${n.birthday ? `<div class="t">Birthday: ${esc(seasonName(n.birthday.season))} ${n.birthday.day}</div>` : ''}
         ${n.loves && n.loves.length ? `<div class="g"><b style="display:inline;font-size:12.5px">Loves</b> ${n.loves.map((x) => esc(name(x))).join(', ')}</div>` : ''}
         ${n.likes && n.likes.length ? `<div class="g">Likes ${n.likes.slice(0, 6).map((x) => esc(name(x))).join(', ')}</div>` : ''}
@@ -179,12 +181,72 @@
       }
     }
 
+    // ---- where to find everyone, read off the schedules (story.whereIs) and the maps' own spots and area names
+    const OUT = { village: 'Willowfall', central: 'Eden Central', hill: 'Terrace Hill', farm: 'the farm', lower: 'the Lower deck' };
+    const SPOT_WORD = { river: 'by the river', riverside: 'on the riverside', bench: 'on the bench by the river', bridge: 'on the bridge', square: 'in Lantern Square', memorial: 'at the memorial',
+      ranchyard: 'in the ranch yard', lane: 'on Market Lane', millbridge: 'on the Mill Bridge', trialbeds: 'at the trial beds', lift: 'by the lift', wreck: 'at the old wreck', lake: 'by the hill lake', overlook: 'at the overlook',
+      onsen: 'at the Terrace Onsen', terraces: 'on the orchard terraces', summit: 'on the summit', falls: 'at Terrace Falls', porch: 'on the farmhouse porch', bin: 'at the shipping bin', gate: 'at the farm gate', pond: 'by the pond',
+      field: 'in the field', east: 'at the east field and hives', plaza: 'in the plaza', arrivals: 'in the Arrivals hall', dock: 'at the space dock', schoolyard: 'in the schoolyard', churchgarden: 'in the church garden', homes: 'at home in the housing rows',
+      office: "in the Governor's office", exchange: 'at the Ashfall Exchange', gallery: 'at the great window', landing: 'on the landing by the lift', pumps: 'in the pump halls', pumphouse: 'in the old pump room', sump: 'down in the Sump',
+      catacombs: 'in the catacombs', beds: 'at the mushroom beds', enclave: 'in the enclave', kettle: 'by the enclave kettle', works: 'in the Works', press: 'at the Works press', vents: 'at the vent bath', reactor: 'by the reactor', vault: 'at the vault',
+      arena: 'in the Zero-G Arena', stands: 'in the arena stands', stands2: 'in the arena stands', arenagate: 'at the arena gate' };
+    const IN_WORD = { counter: 'at the counter', desk: 'at the desk', floor: '', bench: 'at the workbench', table: 'at a table', table1: 'at a table', table2: 'at a table', table3: 'at a table', stage: 'on the stage', altar: 'at the altar', pew: 'in a pew', teacher: 'teaching', pupil: 'in class' };
+    const spotMap = {}; for (const [k, m] of Object.entries(MAPS)) for (const sp of Object.keys(m.spots || {})) spotMap[sp] = k;
+    const doorOf = {}; for (const [k, m] of Object.entries(MAPS)) if (OUT[k]) for (const d of m.doors || []) if (d.to && d.to.map) doorOf[d.to.map] = [k, d.x, d.y];
+    const areaAt = (k, x, y) => { const a = (MAPS[k].areas || []).reduce((b, q) => { const d = (q[1] - x) ** 2 + (q[2] - y) ** 2; return !b || d < b[0] ? [d, q[0]] : b; }, null); return a ? a[1] : ''; };
+    const roomName = (k) => (MAPS[k] ? MAPS[k].name.split(' · ')[0] : k);
+    const ROOM_AT = { store: 'Market Street, Willowfall', cafe: 'Market Street, Willowfall', workshop: 'off Lantern Square, Willowfall', hall: 'Lantern Square, Willowfall', ranch: 'the west end of Willow Lane, Willowfall',
+      clinic: 'by Fountain Park, Willowfall', library: 'by Fountain Park, Willowfall', bakery: 'Market Lane, Willowfall', tailor: 'Market Lane, Willowfall', florist: 'Market Lane, Willowfall', garage: 'Market Lane, Willowfall', radio: 'Market Lane, Willowfall',
+      office: 'off the plaza, Eden Central', exchange: 'off the plaza, Eden Central', arrivals: 'Eden Central', school: 'Eden Central', church: 'Eden Central', depot: 'Eden Central', hangar: 'top of the orbital elevator, Terrace Hill' };
+    const whereRoom = (k) => ROOM_AT[k] || (doorOf[k] ? OUT[doorOf[k][0]] : '');
+    const spotText = (sp, id) => { const k = spotMap[sp] || sp.split('.')[0], tail = sp.split('.')[1] || '';
+      if (k.startsWith('home_')) return k === 'home_' + id || (k === 'home_thornes' && (id === 'thorne' || id === 'moth')) ? 'At home' : `Visiting ${roomName(k)}`;
+      if (OUT[k]) { const m = MAPS[k], xy = m.spots[sp]; if (tail.endsWith('front')) { const inside = Object.keys(doorOf).find((r) => doorOf[r][0] === k && MAPS[r] && (r === tail.slice(0, -5) || MAPS[r].doorKind === tail.slice(0, -5))) || tail.slice(0, -5); return `Outside ${MAPS[inside] ? roomName(inside) : inside}, ${OUT[k]}`; }
+        const w = SPOT_WORD[tail] || tail, ar = xy && (k === 'village' || k === 'central') ? areaAt(k, xy[0], xy[1]) : ''; return `${w[0].toUpperCase() + w.slice(1)}${ar && !w.toLowerCase().includes(ar.toLowerCase()) ? ` (${ar})` : ''}, ${OUT[k]}`; }
+      const w = tail === k ? '' : IN_WORD[tail] ?? tail; return `${roomName(k)}${w ? ', ' + w : ''}${whereRoom(k) ? ` <small>(${esc(whereRoom(k))})</small>` : ''}`; };
+    const ALL_FLAGS = { ld_lights: 1, ld_pumps: 1, ld_pump2: 1, ld_catacombs: 1, ld_enclave: 1, ld_rehoused: 1, ld_works: 1, ld_vents: 1, ld_arena: 1, ld_vault: 1 };
+    const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayPlan = (id, wd, year = 1) => { const out = []; for (let m = 360; m < 1440; m += 10) { const w = story.whereIs(id, { season: 0, day: 3, year, weekday: wd, minute: m, weather: 'sun', festival: null, flags: ALL_FLAGS }), t = w ? spotText(w.spot, id) : null;
+      const last = out[out.length - 1]; if (last && last[2] === t) last[1] = m + 10; else out.push([m, m + 10, t]); } return out.filter((b) => b[2]); };
+    const hhm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+    const planHtml = (pl) => pl.map(([a, b, t]) => `<div><span style="display:inline-block;min-width:92px;font-variant-numeric:tabular-nums">${hhm(a)}–${hhm(b)}</span>${t}</div>`).join('') || '<div>Not about today</div>';
+    const SCHED = {};
+    const schedRows = (id) => { const plans = DAYS.map((_, wd) => dayPlan(id, wd)); SCHED[id] = plans.map((pl) => pl.map(([a, b, t]) => [a, b, t])); const groups = [];
+      plans.forEach((pl, wd) => { const h = planHtml(pl), g = groups.find((x) => x.h === h); if (g) g.d.push(wd); else groups.push({ h, d: [wd] }); });
+      const y2 = DAYS.map((_, wd) => planHtml(dayPlan(id, wd, 2))).map((h, wd) => (h !== planHtml(plans[wd]) ? DAYS[wd] : null)).filter(Boolean);
+      return groups.map((g) => `<tr><td><b>${g.d.map((d) => DAYS[d]).join(', ')}</b></td><td>${g.h}</td></tr>`).join('') + (y2.length ? `<tr><td><b>From year 2</b></td><td>${y2.join(', ')}: ${y2.map((d) => planHtml(dayPlan(id, DAYS.indexOf(d), 2))).join('')}</td></tr>` : ''); };
+    const H0 = story.HOMES || {};
+    const schedCards = ['sato', ...ids].filter((id) => H0[id]).map((id) => { const n = story.NPCS[id], h = H0[id];
+      return `<details class="sched"><summary><b>${esc(n.name)}</b>${(R.candidates || []).includes(id) ? ' <span class="tag">♥</span>' : ''} <small style="color:var(--dim)">· up ${hhm(h.wake)}, bed ${hhm(h.bed)}${h.when ? ' · ' + ({ ld_pumps: 'once the pump halls run', ld_works: 'once the Works are lit', ld_enclave: 'once you reach the enclave', ld_catacombs: 'once the catacombs are lit' }[h.when] || '') : ''}</small></summary>
+        <div class="tw"><table><tr><th>Days</th><th>Where, on an ordinary fine day</th></tr>${schedRows(id)}</table></div></details>`; }).join('');
+    add('where', 'Where to find everyone', `<p class="lead">Each person's week, straight from the game's own timetables. Walking time is included: if a block says 9:00, they are on their way a little before.</p>
+      <ul><li><b>Rain or snow:</b> nobody but Vashti climbs Terrace Hill; whoever would be up there waits on the bench by the river instead (Ruess waits outside his Workshop).</li>
+      <li><b>Storm:</b> everyone stays home, except at the Hangar canteen, which stays open. Below decks there is no weather.</li>
+      <li><b>Festivals:</b> shops shut and the whole village gathers at the festival from an hour before it starts (see Festivals).</li>
+      <li><b>Your partner</b> lives at the farm: on the porch 6:00–8:00 and 20:00–22:00, then at their usual work.</li>
+      <li>Times for the Lower deck folk (Venn, Wick, Hana, Agnes Thorne and Moth) are for when it is fully restored and the Thornes have moved up to Eden Central; before that they keep closer to the lift and the enclave.</li></ul>
+      <h3>Who is where right now?</h3><p><select id="wd">${DAYS.map((d, i) => `<option value="${i}">${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i]}</option>`).join('')}</select>
+      <input id="wt" type="range" min="360" max="1430" step="10" value="720" style="vertical-align:middle;width:min(320px,60vw)"> <b id="wtl">12:00</b></p>
+      <div class="tw"><table id="wnow"></table></div>
+      <h3>Everyone's week</h3><p class="t" style="color:var(--dim)">Tap a name to open their timetable.</p>${schedCards}`);
     // ---- crops
     const crops = Object.values(CROPS);
+    // money from one seed bag (a 3×3 patch, base price), worked out the way the game grows it: sown on day 1, ready the morning
+    // after `days` watered nights, a regrowing crop ripe again every `regrow`; a one-harvest crop is resown the day it is picked;
+    // everything still in the ground dies the night its last season ends (30 days a season).
+    const cropMath = (c, span) => { const last = span * 30, one = c.sell * 9;
+      if (c.regrow) { const n = c.days + 1 <= last ? 1 + Math.floor((last - 1 - c.days) / c.regrow) : 0; return { n, bags: 1, profit: n * one - c.bag }; }
+      const n = Math.floor((last - 1) / c.days); return { n, bags: n, profit: n * (one - c.bag) }; };
+    const ghDay = (c) => (c.regrow ? (c.sell * 9) / c.regrow : (c.sell * 9 - c.bag) / c.days);   // the greenhouse never stops: the long-run rate
+    const crRows = crops.map((c) => { const span = c.seasons.length, m = cropMath(c, span), once = c.sell * 9 * (c.regrow ? 1 + Math.floor((29 - c.days) / c.regrow) : 1) - (c.bag || 0);
+      return { c, span, m, once, perDay: m.profit / (span * 30), gh: ghDay(c) }; }).sort((a, b) => a.c.seasons[0] - b.c.seasons[0] || b.perDay - a.perDay);
+    const best = {}; for (const r of crRows) for (const se of r.c.seasons) if (!best[se] || r.perDay > best[se].perDay) best[se] = r;
+    const cr = (v) => Math.round(v).toLocaleString('en') + ' cr';
     add('crops', 'Crops', `<p class="lead">A seed bag sows a 3×3 patch. A crop grows one day for each night it was watered; rain waters the whole field. Out-of-season crops die when the season turns. The greenhouse grows anything, any time.</p>
-      <div class="tw"><table><tr><th>Crop</th><th>Season</th><th class="n">Days</th><th class="n">Regrows</th><th class="n">Sells for</th><th class="n">Seed bag</th><th class="n">Bag earns*</th></tr>
-      ${crops.map((c) => `<tr><td>${ico(c.id)}${esc(c.name)}</td><td>${c.seasons.length > 3 ? 'Spring to autumn' : c.seasons.map(seasonName).join(', ')}</td><td class="n">${c.days}</td><td class="n">${c.regrow ? 'every ' + c.regrow : '–'}</td><td class="n">${c.sell} cr</td><td class="n">${c.bag ? c.bag + ' cr' : '–'}</td><td class="n">${c.sell * 9 * (c.regrow ? 1 + Math.floor((30 - c.days) / c.regrow) : 1) - (c.bag || 0)} cr</td></tr>`).join('')}
-      </table></div><p class="t" style="font-size:12.5px;color:var(--dim)">* Nine plants sown on day 1 of their season and watered every day, minus the bag.</p>`);
+      <p><b>Best money per day, per patch:</b> ${[0, 1, 2, 3].filter((se) => best[se]).map((se) => `${esc(SEASONS[se])}: <b>${esc(best[se].c.name)}</b> (${cr(best[se].perDay)} a day)`).join(' · ')}. Every patch you plant adds the same again, so ten patches of turnips earn ten times the turnip figure.</p>
+      <div class="tw"><table><tr><th>Crop</th><th>Season</th><th class="n">Days</th><th class="n">Regrows</th><th class="n">Sells for</th><th class="n">Seed bag</th><th class="n">One bag earns¹</th><th class="n">Harvests a season²</th><th class="n">Season profit²</th><th class="n">Profit a day²</th><th class="n">Greenhouse a day³</th></tr>
+      ${crRows.map(({ c, span, m, once, perDay, gh }) => `<tr><td>${ico(c.id)}${esc(c.name)}</td><td>${span > 1 ? c.seasons.map(seasonName).join(', ') : esc(seasonName(c.seasons[0]))}</td><td class="n">${c.days}</td><td class="n">${c.regrow ? 'every ' + c.regrow : '–'}</td><td class="n">${c.sell} cr</td><td class="n">${c.bag ? c.bag + ' cr' : '–'}</td><td class="n">${cr(once)}</td><td class="n">${m.n}${c.regrow ? '' : ` <small>(${m.bags} bags)</small>`}</td><td class="n">${cr(m.profit)}</td><td class="n"><b>${cr(perDay)}</b></td><td class="n">${cr(gh)}</td></tr>`).join('')}
+      </table></div><p class="t" style="font-size:12.5px;color:var(--dim)">All for one patch of nine plants at the base price, watered every day, seed costs taken off. ¹ Sown once on day 1 of its season and left to regrow. ² Sown on day 1 and kept going all season: a one-harvest crop is resown with a new bag the day it is picked, a regrowing crop keeps giving until the season ends${crRows.some((r) => r.span > 1) ? ' (a crop that lasts several seasons counts all of them)' : ''}; profit a day is that season's profit over its 30 days. ³ In the greenhouse there is no season to end, so this is the steady rate once it is going.</p>`);
 
     // ---- recipes
     const book = sim.RECIPES || [];
@@ -208,7 +270,11 @@
     const fishRod = (id) => (FISH_TABLE[id] ? ['', 'Field', 'Alloy', 'Starsteel'][FISH_TABLE[id].rod] : id === 'fish_king' || id === 'abyss_koi' ? 'Alloy' : 'Field');
     const SRC = {}, from = (id, txt) => { if (!ITEMS[id]) return; (SRC[id] = SRC[id] || new Set()).add(txt); };
     {
-      const DD = await import('./js/farm/data.js'), placeName = (k) => (sim.SHOPS[k] && sim.SHOPS[k].name) || (story.PLACES && story.PLACES[k] && story.PLACES[k].name) || k;
+      const DD = await import('./js/farm/data.js'), baseName = (k) => (sim.SHOPS[k] && sim.SHOPS[k].name) || (story.PLACES && story.PLACES[k] && story.PLACES[k].name) || k;
+      // where the shop is and when it is open (the same words as its signboard)
+      const SHOP_AT = { barge: "Moraine: her ship at the space dock on Saturdays, the Ashfall Exchange in Eden Central other days", grandmarket: 'the plaza, Eden Central; never closes', undercroft: 'the landing by the lift, Lower deck', works: 'the Works, Lower deck; never closes' };
+      const hoursOf = (k) => { const t = story.hoursSign && story.PLACES && story.PLACES[k === 'barge' ? 'exchange' : k] && story.hoursSign(k === 'barge' ? 'exchange' : k, { flags: { ld_lights: true } }); const l = t && t.split('\n')[1]; return l && /\d/.test(l) ? l.replace(/^[^:]*: /, '').replace(/\.$/, '') : ''; };
+      const placeName = (k) => { const at = SHOP_AT[k] || whereRoom(k), h = k === 'grandmarket' || k === 'works' ? '' : hoursOf(k); return `${baseName(k)}${at || h ? ` (${[at, h].filter(Boolean).join('; ')})` : ''}`; };
       const flags = { fold: 1, duckhouse: 1, eastfield: 1, feed_mill: 1, ld_lights: 1, ld_pumps: 1, ld_catacombs: 1, ld_enclave: 1, ld_works: 1, venn_key: 1 };
       for (const k of [...Object.keys(sim.SHOPS || {}), 'bakery', 'tailor', 'florist', 'garage', 'radio']) for (let se = 0; se < 4; se++) {
         try { const st = sim.newGame({ seed: 1 }); Object.assign(st.flags, flags); st.cal.season = se; for (const e of sim.shopStock(st, k) || []) { const id = e.give || e.key; if (ITEMS[id]) from(id, placeName(k)); } } catch { /* a shop that needs more state */ }
@@ -217,8 +283,10 @@
       for (const id of [...(story.FISH || []), 'cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi', 'fish_cistern_sturgeon', 'fish_deep_angler']) from(id, `Fishing: ${fishWhere(id) || 'any water'}`);
       (sim.FORAGE || []).forEach((list, se) => list.forEach(([id]) => from(id, `Forage on the hill (${seasonName(se)})`)));
       for (const [id, sec] of sim.BELT_ORES || []) from(id, `The belt (from sector ${sec})`);
-      for (const [id] of sim.OLD_FINDS || []) from(id, 'Earth city ruins');
-      ['data_core', 'credit_chip', 'old_coin'].forEach((id) => from(id, 'Earth city ruins'));
+      const ZN = sim.CITY_ZONES || ['the suburbs', 'downtown', 'the core'];
+      for (const [id, ...w] of sim.OLD_FINDS || []) { const z = w.map((v, i) => [v, i]).filter(([v]) => v > 0), top = z.reduce((a, b) => (b[0] > a[0] ? b : a));
+        from(id, `Earth city ruins: search rubble, cars, buses, counters, lockers and safes in ${z.map(([, i]) => ZN[i].toLowerCase()).join(', ')}${z.length > 1 ? `; most often in ${ZN[top[1]].toLowerCase()}` : ''}${w[0] < 0.5 ? '; rare' : ''}`); }
+      from('data_core', 'Earth city ruins: the sealed vaults in the core'); from('credit_chip', 'Earth city ruins: safes and vaults');
       for (const [k, m] of Object.entries(sim.CITY_MONSTERS || {})) for (const id of Object.keys(m.drops || {})) from(id, `Dropped by the ${m.name}`);
       for (const r of [...(sim.RECIPES || [])]) from(r.id, 'Cooking');
       for (const r of sim.LANE_RECIPES || []) from(r.id, 'Cooking');
@@ -461,6 +529,11 @@
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1000))]);
     for (const f of mapJobs) f();
     const mz = $('#mapzoom'); document.addEventListener('click', (e) => { const c = e.target.closest('canvas[data-map]'); if (c) { mz.querySelector('img').src = c.toDataURL(); mz.showModal(); } else if (e.target.closest('#mapzoom')) mz.close(); });
+    // who is where right now
+    { const wd = $('#wd'), wt = $('#wt'), out = $('#wnow'), lab = $('#wtl');
+      const draw = () => { const d = +wd.value, m = +wt.value; lab.textContent = hhm(m);
+        out.innerHTML = '<tr><th>Person</th><th>Where</th></tr>' + Object.keys(SCHED).map((id) => { const b = SCHED[id][d].find(([a, z]) => m >= a && m < z); return `<tr><td>${esc(story.NPCS[id].name)}</td><td>${b ? b[2] : '<span style="color:var(--dim)">Asleep at home</span>'}</td></tr>`; }).join(''); };
+      wd.addEventListener('change', draw); wt.addEventListener('input', draw); draw(); }
     // item filter
     const kf = $('#kf'), q = $('#q'); let kind = '';
     const apply = () => { const t = q.value.trim().toLowerCase(); for (const tr of document.querySelectorAll('#itab tr[data-k]')) tr.hidden = (kind && tr.dataset.k !== kind) || (t && !tr.dataset.n.includes(t)); };
