@@ -5,7 +5,7 @@ import { portraitUrl, warmPerson, loadPortraits } from './expressions.js';
 import * as art from './art.js';
 import { ITEMS, CROPS, SEASONS, TOOL_LEVELS, FRUIT_TREES, TREE_DAYS, ROBOT_JOBS, RELICS } from './data.js';
 import * as sim from './sim.js';
-import { NPCS, HELP, FESTIVALS, RADIO } from './story.js';
+import { NPCS, HELP, FESTIVALS, RADIO, memoryCatalogue } from './story.js';
 import { LOGS as LOG_TEXT } from './story.js';
 import { LOWER_LOGS } from './data.js';
 import { portrait as svgPortrait } from '../expansion/portraits.js';
@@ -405,6 +405,23 @@ function collectionsTab(state) {
   return h;
 }
 // The Logs tab: what the Undercroft's terminals, walls and Moth's pages have told Sato, in story order; and the restoration.
+// Memories (2026-11-21): every scene, by person, with the story and the festivals; seen ones replay, the rest are locked with a hint.
+function memoriesTab(state) {
+  const cat = memoryCatalogue(), M = state.memories || {}, seen = cat.filter((m) => M[m.id]).length;
+  const groups = ['story', 'festivals', ...Object.keys(NPCS).filter((id) => id !== 'sato' && cat.some((m) => m.group === id))];
+  const pic = (m) => { const u = portraitUrl(m.who, m.ex); return u ? `<img src="${u}" alt="">` : face(m.who).replace(/^<div class="fm-face"[^>]*>/, '').replace(/<\/div>$/, ''); };
+  let h = `<p class="fm-lead">Scenes you have seen, to see again. Nothing changes when you replay one. <b>${seen}</b> of ${cat.length}.</p>`;
+  for (const g of groups) {
+    const list = cat.filter((m) => m.group === g); if (!list.length) continue;
+    const title = g === 'story' ? 'The story' : g === 'festivals' ? 'Festivals' : NPCS[g].name;
+    h += `<h3 class="fm-memh">${esc(title)} <small>${list.filter((m) => M[m.id]).length}/${list.length}</small></h3><div class="fm-mems">`;
+    for (const m of list) { const r = M[m.id];
+      h += r ? `<button class="fm-mem" data-mem="${m.id}"><span class="fm-memp">${pic(m)}</span><span><b>${esc(m.title)}</b><i>${esc(sim.memoryDate(r))}</i></span></button>`
+        : `<div class="fm-mem locked"><span class="fm-memp">${pic(m)}</span><span><b>???</b><i>${esc(m.hint)}</i></span></div>`; }
+    h += '</div>';
+  }
+  return h;
+}
 function logsTab(state) {
   const got = (state.lower && state.lower.logs) || {}, n = LOWER_LOGS.filter((l) => got[l.id] != null).length;
   let h = `<h3>Recovered logs (${n}/${LOWER_LOGS.length})</h3><p class="fm-dim">From the terminals and walls of the Lower deck, and the diary pages Moth brings you. More are still down there, and something behind the round door.</p>`;
@@ -429,18 +446,19 @@ export function projectWindow(state, onChange) {
 }
 export function journal(state, opts = {}) {
   let tab = opts.tab || 'today', sel = null;
-  const tabs = [['today', 'Today'], ['robots', 'Robots'], ['items', 'Items'], ['collections', 'Collections'], ['logs', 'Logs']];
+  const tabs = [['today', 'Today'], ['robots', 'Robots'], ['items', 'Items'], ['collections', 'Collections'], ['logs', 'Logs'], ['memories', 'Memories']];
   let msg = '';
   journalIsOpen = true;
   const draw = () => {
     stopViewer();
     const h = `<nav class="fm-tabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('')}<span class="fm-paused">⏸ Paused · P or Esc to go back</span></nav>` +
-      (tab === 'today' ? todayTab(state, opts) : tab === 'robots' ? robotsTab(state, msg) : tab === 'items' ? itemsTab(state, sel) : tab === 'logs' ? logsTab(state) : collectionsTab(state));
+      (tab === 'today' ? todayTab(state, opts) : tab === 'robots' ? robotsTab(state, msg) : tab === 'items' ? itemsTab(state, sel) : tab === 'logs' ? logsTab(state) : tab === 'memories' ? memoriesTab(state) : collectionsTab(state));
     msg = '';
     const body = openWin('Farm journal', h, () => { journalIsOpen = false; stopViewer(); }, 'journal');
     body.onclick = (e) => {
       const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; return draw(); }
       const x = e.target.closest('[data-ex]'); if (x) { sel = x.dataset.ex; return draw(); }
+      const mm = e.target.closest('[data-mem]'); if (mm && opts.replay) return opts.replay(mm.dataset.mem);
       const after = (r) => { msg = r.msg || ''; opts.change && opts.change(); draw(); };
       const j = e.target.closest('[data-job]'); if (j) { const [i, job] = j.dataset.job.split(':'); return after(sim.setRobotJob(state, +i, job)); }
       const g = e.target.closest('[data-give]'); if (g) return after(sim.chargeRobot(state, +g.dataset.give));

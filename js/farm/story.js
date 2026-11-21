@@ -4214,3 +4214,27 @@ export function moodLines(lines, scene, npc) {
 export function taggedLines() { const out = []; (function w(v) { if (Array.isArray(v)) v.forEach(w); else if (v && typeof v === 'object') { if (typeof v.text === 'string' && v.ex) out.push(v); else for (const k of Object.keys(v)) w(v[k]); } })({ EVENTS, ROMANCE, FESTIVALS }); return out; }
 // The close of a heart event: in the love stories from seven hearts the last thing they say is loved; otherwise, from three, joyful.
 for (const e of EVENTS) { const own = e.lines.filter((l) => l.who === e.npc); const last = own[own.length - 1]; if (last && !last.ex && e.hearts >= 3) last.ex = ROMANCE.candidates.includes(e.npc) && e.hearts >= 7 ? 'loved' : 'joyful'; }
+
+// ------------------------------------------------------------------ Memories (2026-11-21): every scene, to see again from the journal
+// One entry per scene: id (the same as sim.memoryOfFlag gives), group (a person's id, 'story' or 'festivals'), who (whose face),
+// title, hint (how to see it, for a locked entry), lines() (exactly what plays), art (the scene picture, if it had one).
+const SEASON_WORDS = ['Spring', 'Summer', 'Autumn', 'Winter'];
+const firstWords = (lines, n = 9) => { const l = (lines || []).find((x) => x.who === 'narrator') || (lines || [])[0]; if (!l) return ''; const w = l.text.split(/\s+/); return w.slice(0, n).join(' ').replace(/[,.;:]$/, '') + (w.length > n ? '…' : ''); };
+const narr = (arr) => arr.map((t) => (typeof t === 'string' ? { who: 'narrator', text: t } : t));
+export function memoryCatalogue() {
+  const out = [], nm = (id) => (NPCS[id] && (NPCS[id].short || NPCS[id].name)) || id;
+  out.push({ id: 'intro', group: 'story', who: 'sato', title: 'The opening: the Hollin field', hint: 'The start of the game.', lines: () => INTRO, art: INTRO[0] && INTRO[0].art });
+  out.push({ id: 'day1', group: 'story', who: 'marrow', title: 'Marrow at the gate', hint: 'Your first morning at the farm.', lines: () => DAY1 });
+  for (const e of EVENTS) out.push({ id: 'ev_' + e.id, group: e.npc, who: e.npc, ex: (e.lines.filter((l) => l.who === e.npc).pop() || {}).ex, title: `${e.hearts} hearts: ${firstWords(e.lines)}`, hint: `Reach ${e.hearts} hearts with ${nm(e.npc)}${e.flag ? ', further on in the story' : ''}, and meet them at the right place and time.`, lines: () => e.lines, art: e.id === 'general10' ? 'heart10' : undefined, hearts: e.hearts });
+  for (const e of LOWER_SCENES || []) out.push({ id: 'ev_' + e.id, group: 'story', who: e.npc, title: `${nm(e.npc)}: ${firstWords(e.lines, 7)}`, hint: `Later in the Lower deck's story, with ${nm(e.npc)}.`, lines: () => e.lines });
+  for (const id of ROMANCE.candidates) {
+    const P = ROMANCE.people[id];
+    out.push({ id: 'confess_' + id, group: id, who: id, ex: 'shy', title: 'The confession', hint: `Reach 8 hearts with ${nm(id)}, see their heart events and do them two favours.`, lines: () => moodLines(P.confess, 'confess', id), love: true });
+    out.push({ id: 'wed_' + id, group: id, who: id, ex: 'loved', title: 'The proposal and the wedding', hint: `Be ${nm(id)}'s sweetheart at 10 hearts, and give them the Earthlight pendant.`, lines: () => [...moodLines(P.propose, 'propose', id), { who: 'narrator', text: 'And then, under the lanterns of the square:', art: 'wedding' }, ...moodLines(P.wedding, 'wedding', id)], love: true });
+  }
+  for (const f of FESTIVALS) out.push({ id: 'fest_' + f.id, group: 'festivals', who: (f.lines.find((l) => NPCS[l.who] && l.who !== 'sato') || {}).who || 'marrow', title: f.name, hint: `${f.name}: ${SEASON_WORDS[f.season]} ${f.day}${f.flag ? ', once the Lower deck is restored that far' : ''}. Be there during the festival.`, lines: () => f.lines, art: 'festival_' + ({ yearsend: 'yearend' }[f.id] || f.id) });
+  out.push({ id: 'lower_arrive', group: 'story', who: 'venn', title: 'Down to the Lower deck', hint: 'Ride the spoke lift all the way down.', lines: () => narr(LOWER.arrive) });
+  out.push({ id: 'vault', group: 'story', who: 'thorne', title: 'The vault opens', hint: 'Restore the Lower deck and open the round door.', lines: () => VAULT.open });
+  out.push({ id: 'earth_first', group: 'story', who: 'sato', title: 'The first landing on Earth', hint: "Take Maris's shuttle down to the Old World.", lines: () => narr(RUINS.first) });
+  return out;
+}
