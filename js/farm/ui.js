@@ -57,6 +57,13 @@ const roundIcon = (c, id) => id === 'honeycomb' ? `<path d="M20 18h12l6 10-6 10H
   : id === 'matsutake' ? `<path d="M12 30c0-16 40-16 40 0Z" fill="#a8743f" stroke="${INK}" stroke-width="2"/><path d="M26 30h12l3 24H23Z" fill="${c}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`
   : ['bamboo_shoot', 'fiddlehead', 'wild_mint', 'winter_root'].includes(id) ? `<path d="M32 56C18 44 22 20 32 8c10 12 14 36 0 48Z" fill="${c}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/><path d="M32 52V16" stroke="${INK}" stroke-width="1.5" opacity=".5"/>`
   : `<circle cx="32" cy="36" r="18" fill="${c}" stroke="${INK}" stroke-width="2"/><ellipse cx="25" cy="29" rx="5" ry="4" fill="#fff" opacity=".45"/><path d="M32 18c2-6 6-9 10-9-1 5-5 8-10 9Z" fill="#5fae4a" stroke="${INK}" stroke-width="1.5"/>`;
+// A fish the art pack has no picture for yet: a fish shape in its own colours (body, fin; a gold ring for a legendary).
+const FISH_TINT = { fish_reedling: ['#7d8f4a', '#c9d49a'], fish_dawnscale: ['#e89a7a', '#ffd3a8'], fish_rainbarb: ['#6f8aa3', '#cfe3f2'], fish_lantern_cat: ['#5a4632', '#ffb84a'],
+  fish_spokerun: ['#c9ced6', '#ee7d5a'], fish_paneray: ['#bfe6ea', '#86c4cc'], fish_stormgar: ['#3f4a5c', '#c8a8ff'], fish_cloudfin: ['#d9dde3', '#f6f8fb'],
+  fish_cistern_sturgeon: ['#7a7466', '#a8925f'], fish_earthlight_trout: ['#2f6fb0', '#5fbf6a'], fish_sailfin: ['#e8b830', '#fff3b0'], fish_halo_eel: ['#1f2a5a', '#e6eeff'],
+  fish_deep_angler: ['#2c2f38', '#5fe3d0'], fish_ferryman: ['#1e1e24', '#f0e6d0'], fish_mochi: ['#f4efe2', '#e8c46a'], fish_admiral: ['#b08d3c', '#e8d28a'] };
+const fishIcon = (id) => { const [b, f] = FISH_TINT[id] || ['#5f8fb0', '#a9cfe3'], legend = /^Legendary/.test(ITEMS[id].desc || '');
+  return `${legend ? '<circle cx="32" cy="32" r="28" fill="none" stroke="#e8b830" stroke-width="3" opacity=".8"/>' : ''}<path d="M44 32 58 20v24Z" fill="${f}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/><path d="M26 22c4-6 10-6 12 0Z" fill="${f}" stroke="${INK}" stroke-width="1.5"/><ellipse cx="28" cy="32" rx="20" ry="11" fill="${b}" stroke="${INK}" stroke-width="2"/><path d="M14 36c8 4 20 4 30-2" stroke="${f}" stroke-width="2.5" fill="none" opacity=".8"/><circle cx="17" cy="29" r="2.5" fill="#fff"/><circle cx="16.5" cy="29" r="1.2" fill="${INK}"/>`; };
 export function icon(id) {
   const it = ITEMS[id]; if (!it) return '';
   const u = art.url('icons/' + id) || (it.kind === 'crop' ? art.url(`sprites/crop_${id}_2`) : null);
@@ -65,6 +72,7 @@ export function icon(id) {
   if (DRAWN[id]) return S(DRAWN[id]);
   if (it.kind === 'sapling') return S(DRAWN.sapling);
   if (ROUND[id]) return S(roundIcon(ROUND[id], id));
+  if (it.kind === 'fish') return S(fishIcon(id));
   const ab = it.name.replace(/[^A-Za-z ]/g, '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || it.name.slice(0, 2);
   return `<span class="fm-ico fm-fake" style="background:${KIND_COLOR[it.kind] || '#666'}">${it.kind === 'seed' ? '✿' : esc(ab)}</span>`;
 }

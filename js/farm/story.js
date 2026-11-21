@@ -25,7 +25,7 @@ export const NPCS = {
     look: { skin: '#d9b38c', hair: '#2a2420', top: '#3d4a63', bottom: '#2b2f3a', style: 'short' },
     birthday: { season: 3, day: 12 },
     loves: ['strawberry', 'soup', 'bread', 'pie'],
-    likes: ['tea', 'potato', 'tomato', 'egg', 'milk_m', 'fish_s', 'fish_m', 'book'],
+    likes: ['tea', 'fish_dawnscale', 'tomato', 'egg', 'milk_m', 'fish_s', 'fish_m', 'book'],
     dislikes: ['medal', 'scrap', 'tonic'],
   },
   ruess: {
@@ -41,7 +41,7 @@ export const NPCS = {
     id: 'marrow', name: 'Warden Ilse Marrow', short: 'Marrow', title: 'Warden of Willowfall', portrait: P + 'marrow.webp',
     look: { skin: '#e6c9b0', hair: '#d5d8dc', top: '#5a4a6e', bottom: '#33303c', style: 'bun' },
     birthday: { season: 3, day: 3 },
-    loves: ['photo', 'book', 'strawberry', 'tea'],
+    loves: ['photo', 'book', 'strawberry', 'tea', 'fish_ferryman'],
     likes: ['teacup', 'musicbox', 'old_coin', 'turnip', 'spinach', 'soup', 'herb', 'moonflower'],
     dislikes: ['scrap', 'alloy', 'tonic'],
   },
@@ -68,7 +68,7 @@ export const NPCS = {
     look: { skin: '#6e4630', hair: '#1a1614', top: '#e07b24', bottom: '#c96a1c', style: 'cap' },
     birthday: { season: 2, day: 15 },
     loves: ['tomato', 'onion', 'mushroom', 'fish_l', 'fish_autumn'],
-    likes: ['egg', 'milk_m', 'potato', 'eggplant', 'herb', 'corn', 'fish_m', 'fish_summer'],
+    likes: ['egg', 'milk_m', 'potato', 'eggplant', 'herb', 'fish_spokerun', 'fish_m', 'fish_summer'],
     dislikes: ['scrap', 'tonic', 'datachip'],
     shop: 'cafe',
   },
@@ -104,7 +104,7 @@ Object.assign(NPCS, {
     id: 'kestrel', name: 'Commander Rell Kestrel', short: 'Kestrel', title: "Commander of the Guardians' wing, Upper deck", portrait: P + 'w_kestrel.webp',
     look: { skin: '#e2bd9a', hair: '#d8b860', top: '#7a4f2a', bottom: '#39404a', style: 'short' },
     birthday: { season: 1, day: 28 },
-    loves: ['pie', 'corn', 'fish_summer', 'datachip'],
+    loves: ['pie', 'corn', 'fish_summer', 'datachip', 'fish_sailfin'],
     likes: ['bread', 'tea', 'egg', 'tomato', 'strawberry', 'toy', 'medal', 'fish_m'],
     dislikes: ['scrap', 'spinach', 'frostcap'],
   },
@@ -112,7 +112,7 @@ Object.assign(NPCS, {
     id: 'mori', name: 'Dr. Haruto Mori', short: 'Dr. Mori', title: 'Doctor of the Willowfall clinic', portrait: 'art/farm/people/mori_front.webp',
     look: { skin: '#e3c3a2', hair: '#22201e', top: '#f2f2ee', bottom: '#4a5560', style: 'short' },
     birthday: { season: 2, day: 3 },
-    loves: ['tea', 'herb', 'soup', 'teacup'],
+    loves: ['tea', 'herb', 'soup', 'teacup', 'fish_earthlight_trout'],
     likes: ['mushroom', 'spinach', 'carrot', 'egg', 'milk_s', 'berry', 'book', 'fish_winter'],
     dislikes: ['tonic', 'scrap', 'alloy'],
     shop: 'clinic',
@@ -130,7 +130,7 @@ Object.assign(NPCS, {
     id: 'calloway', name: 'Pastor Ines Calloway', short: 'Pastor Ines', title: 'Pastor of Second Dawn Church, Eden Central', portrait: 'art/farm/people/calloway_front.webp',
     look: { skin: '#f3cfb4', hair: '#b4b7c0', top: '#363a48', bottom: '#2b2e38', style: 'bun' },
     birthday: { season: 0, day: 14 },
-    loves: ['tomato', 'teacup', 'herb', 'soup'],
+    loves: ['tomato', 'teacup', 'herb', 'soup', 'fish_halo_eel'],
     likes: ['bread', 'tea', 'egg', 'strawberry', 'carrot', 'book', 'musicbox', 'milk_m'],
     dislikes: ['tonic', 'scrap', 'medal'],
   },
@@ -139,7 +139,7 @@ Object.assign(NPCS, {
     look: { skin: '#c99a74', hair: '#2a2830', top: '#24406e', bottom: '#1e2636', style: 'cap' },
     birthday: { season: 2, day: 26 },
     loves: ['pie', 'toy', 'sweetpotato', 'fish_winter', 'teddy_bear'],
-    likes: ['tea', 'bread', 'soup', 'corn', 'potato', 'watch', 'egg', 'fish_s'],
+    likes: ['tea', 'bread', 'soup', 'corn', 'fish_lantern_cat', 'watch', 'egg', 'fish_s'],
     dislikes: ['tonic', 'onion', 'berry'],
   },
 });
@@ -3259,7 +3259,7 @@ Object.assign(NPCS, {
     id: 'wick', name: 'Ansel Wick', short: 'Wick', title: 'Keeper of the pump halls, who knows every fish', portrait: 'art/farm/people/wick_front.webp',
     look: { skin: '#b98a6a', hair: '#9aa0a6', top: '#3f5f6f', bottom: '#2f3a40', style: 'cap' },
     birthday: { season: 1, day: 13 },
-    loves: ['fish_king', 'abyss_koi', 'tea', 'fish_grill'],
+    loves: ['fish_king', 'abyss_koi', 'tea', 'fish_grill', 'fish_deep_angler'],
     likes: ['cave_fish', 'glowfish', 'pipe_eel', 'fish_s', 'fish_m', 'bread', 'herb', 'soup'],
     dislikes: ['scrap', 'tonic', 'glowcap'],
   },
@@ -3694,6 +3694,25 @@ FISHING.caught.cave_fish = 'A cave fish, white as a candle. It has no eyes and s
 FISHING.caught.glowfish = 'A glowfish! It glows a soft cyan in your hands, then dims, embarrassed.';
 FISHING.caught.pipe_eel = 'A pipe eel, long and grey and furious about it.';
 FISHING.caught.abyss_koi = 'The abyss koi. Deep blue, silver-speckled, older than the war. She looks at you, and you both hold very still.';
+// 2026-11-21: the new fish (data.js MORE_FISH, FISH_TABLE)
+Object.assign(FISHING.caught, {
+  fish_reedling: 'A reedling, olive and indignant, with a bit of reed still in its mouth.',
+  fish_dawnscale: 'A dawnscale! It holds the first light of the sun-line in every scale.',
+  fish_rainbarb: 'A rain barb, whiskers twitching. It was expecting you; the rain was on the schedule.',
+  fish_lantern_cat: 'A lantern catfish. Its two amber spots blink at you like a pair of porch lamps.',
+  fish_spokerun: 'A spokerun salmon, all muscle. It has swum halfway round the ring to be this annoyed.',
+  fish_paneray: 'A paneray, flat and clear as a window. You can see your own hand through it.',
+  fish_stormgar: 'A stormglass gar, crackling faintly. Your hair stands up a little.',
+  fish_cloudfin: 'A cloudfin. Its fins drift in the air like the mist off Terrace Falls.',
+  fish_cistern_sturgeon: 'A cistern sturgeon, armoured and ancient. It has seen the war and is not impressed by you.',
+  fish_earthlight_trout: 'An Earthlight trout. Blue sea, green land, white cloud: a whole Earth on its flank, for a moment, in your hands.',
+  fish_sailfin: 'A sun-line sailfin! Its great sail blazes gold and the whole river seems brighter for it.',
+  fish_halo_eel: 'A halo eel, curled into a perfect ring of silver light. Somebody at the church will want to hear about this.',
+  fish_deep_angler: 'A cistern angler, its little teal lamp still lit. Wick would call it the other lamp man.',
+  fish_ferryman: 'The Ferryman. Black as the river at night, with a pale bone face. He looks at Sato for a long moment, as if checking her name against a list.',
+  fish_mochi: 'Lady Mochi! Round, gold and pearl, and plainly expecting a rice cake.',
+  fish_admiral: 'Admiral Brass himself, scarred and gleaming, an old hook in his lip like a medal. He seems to be inspecting you.',
+});
 FISH.push('cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi');
 
 

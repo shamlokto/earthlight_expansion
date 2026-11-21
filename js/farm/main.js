@@ -1116,7 +1116,7 @@ function use() {                                     // Space: the held tool or 
 }
 
 // ---------------------------------------------------------------- fishing
-function cast(tx, ty) { fishing = { place: waterPlace(map, tx, ty), phase: 'wait', t: 1.6 + Math.random() * 4.5, x: tx + 0.5, y: ty + 0.5 }; fishing.o = W.place('float', null, fishing.x, fishing.y, { procKind: 'float', h0: -0.08 }); me.play('fish', 30); sfx('water'); ui.toast('Line out. Wait for the float to dip…', 1800); }
+function cast(tx, ty) { fishing = { place: waterPlace(map, tx, ty), phase: 'wait', t: (1.6 + Math.random() * 4.5) * ([1, 1, 0.85, 0.7][S.player.toolLevel.rod] || 1), x: tx + 0.5, y: ty + 0.5 }; fishing.o = W.place('float', null, fishing.x, fishing.y, { procKind: 'float', h0: -0.08 }); me.play('fish', 30); sfx('water'); ui.toast('Line out. Wait for the float to dip…', 1800); }
 function endFishing() { if (fishing) { W.unplace('float'); fishing = null; if (me) me.act = null; } }
 function pullLine() {
   if (fishing.phase !== 'bite') { endFishing(); return ui.toast('Too soon. The line comes back empty.'); }

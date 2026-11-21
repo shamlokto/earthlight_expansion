@@ -3,6 +3,7 @@
 // ruins, fishing, forage, gifts, goals, and a 120-day soak of random actions.   node tests/farm-sim.mjs
 import * as sim from '../js/farm/sim.js';
 import { ITEMS, CROPS, SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, TOOL_LEVELS, FIELD_SIZES, PASTURE_SIZE, RELICS } from '../js/farm/data.js';
+import { FISH_TABLE, LEGEND_FISH } from '../js/farm/data.js';
 const { newGame, saveState, loadState, useTool, harvest, sleep, ship, buy, shopStock, addItem, countItem, removeItem } = sim;
 
 let failures = 0, checks = 0;
@@ -663,12 +664,74 @@ function script(s, days = 12) {
   check(hill2.share('fish_king') > 0.001 && hill2.share('fish_king') < 0.008 && hill3.got.fish_king > 0 && !farm3.got.fish_king && !cast('village', 3, 'rain').got.fish_king, `Old Hollin: hill lake only, about 0.3% (${hill2.share('fish_king').toFixed(3)})`);
   const rain = cast('hill', 1, 'rain');
   check(rain.value > hill.value && rain.share('fish_s') < hill.share('fish_s'), `rain helps: ${hill.value.toFixed(0)} -> ${rain.value.toFixed(0)}`);
-  for (let q = 0; q < 4; q++) { const c2 = cast('village', 2, 'sun', q, 1500), want = ['fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'][q]; check(c2.got[want] > 0 && Object.keys(c2.got).every((id) => ['fish_s', 'fish_m', 'fish_l', want].includes(id)), `${SEASONS[q]}: ${ITEMS[want].name}`); }
+  for (let q = 0; q < 4; q++) { const c2 = cast('village', 2, 'sun', q, 1500), want = ['fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'][q]; check(c2.got[want] > 0 && Object.keys(c2.got).every((id) => ['fish_s', 'fish_m', 'fish_l', want].includes(id) || (FISH_TABLE[id] && FISH_TABLE[id].at.village)), `${SEASONS[q]}: ${ITEMS[want].name}`); }   // and the river's own fish
   // the rod upgrade
   const u = rich(70); buy(u, 'store', 'rod');
   check(buy(u, 'workshop', 'up_rod').ok && countItem(u, 'rod') === 0, 'Ruess takes the rod');
   const rep = sleep(u);
   check(u.player.toolLevel.rod === 2 && countItem(u, 'rod') === 1 && rep.notes.includes('Ruess finished your Alloy fishing rod.') && !shopStock(u, 'store').some((e) => e.key === 'rod'), 'an Alloy rod');
+}
+
+// ---------------------------------------------------------------- more fish (2026-11-21): the ladder, the rods, the money
+
+{
+  const FISH = Object.keys(ITEMS).filter((id) => ITEMS[id].kind === 'fish');
+  check(FISH.length >= 28 && FISH.every((id) => ITEMS[id].sell > 0 && ITEMS[id].desc && ITEMS[id].detail), `${FISH.length} fish, each with a price, a description and a detail line`);
+  check(Object.keys(FISH_TABLE).every((id) => ITEMS[id] && ITEMS[id].kind === 'fish' && [1, 2, 3].includes(FISH_TABLE[id].rod) && Object.keys(FISH_TABLE[id].at).every((p) => sim.FISH_PLACES.includes(p))), 'FISH_TABLE: real fish, real waters, real rods');
+  const WATERS = ['farm', 'village', 'hill', 'canal', 'lower', 'sump'];
+  check(WATERS.every((p) => sim.FISH_PLACES.includes(p)), 'six waters: the pond, the river, the hill lake, the canal, the basins, the Sump');
+  // every water, weather, season and hour on one rod: what bites
+  const sweep = (level, n = 250) => {
+    const got = {}; let seed = 300 + 1000 * level;
+    for (const place of WATERS) for (const weather of ['sun', 'rain', 'storm']) for (let season = 0; season < 4; season++) for (const minute of [400, 700, 1100, 1300]) {
+      const g = newGame({ seed: seed++ }); addItem(g, 'rod', 1); select(g, 'rod'); g.player.toolLevel.rod = level; g.weather = weather; g.cal.season = season; g.cal.minute = minute;
+      for (let i = 0; i < n; i++) { g.player.stamina = 100; const r = sim.fish(g, place); if (!r.ok) continue; const f = r.gained[0].id; got[f] = (got[f] || 0) + 1; removeItem(g, f, 1); }
+    }
+    return got;
+  };
+  const by = [null, sweep(1), sweep(2), sweep(3)], total = (g) => Object.values(g).reduce((a, b) => a + b, 0);
+  const missing = FISH.filter((id) => !by[3][id]);
+  check(!missing.length, `every fish is catchable somewhere on a Starsteel rod (missing: ${missing.join(', ') || 'none'})`);
+  for (const level of [1, 2]) {
+    const early = Object.keys(by[level]).filter((id) => FISH_TABLE[id] && FISH_TABLE[id].rod > level);
+    check(!early.length, `a ${TOOL_LEVELS[level]} rod never lands a fish that needs a better one (${early.join(', ') || 'none'})`);
+  }
+  check(!by[1].abyss_koi && !by[1].fish_king && by[2].fish_spokerun && by[2].fish_paneray && by[2].fish_cloudfin && by[2].fish_cistern_sturgeon && !by[2].fish_earthlight_trout && !by[2].fish_ferryman, 'Alloy opens the premium fish, Starsteel the best');
+  check(Object.keys(FISH_TABLE).every((id) => FISH_TABLE[id].rod === 1 ? by[1][id] > 0 : !by[1][id]), 'the Field rod already has the everyday new fish');
+  // legendaries: rare, one a water (the pond, the river, the lake, the canal, the Sump)
+  check(LEGEND_FISH.length >= 5 && new Set(LEGEND_FISH.map((id) => (FISH_TABLE[id] ? Object.keys(FISH_TABLE[id].at)[0] : 'sump'))).size === LEGEND_FISH.length, 'a legendary for each main water');
+  for (const id of LEGEND_FISH) check(by[3][id] > 0 && by[3][id] / total(by[3]) < 0.004 && ITEMS[id].sell >= 1200 && /^Legendary/.test(ITEMS[id].desc), `${ITEMS[id].name}: legendary and rare (${(100 * by[3][id] / total(by[3])).toFixed(2)}% of all Starsteel casts)`);
+  const best = (place, level, weather, minute, n = 4000) => { const g = newGame({ seed: 400 }); addItem(g, 'rod', 1); select(g, 'rod'); g.player.toolLevel.rod = level; g.weather = weather; g.cal.minute = minute; let k = 0; for (let i = 0; i < n; i++) { g.player.stamina = 100; const f = sim.fish(g, place).gained[0].id; if (LEGEND_FISH.includes(f)) k++; removeItem(g, f, 1); } return k / n; };
+  const ferry = best('village', 3, 'rain', 1300), admiral = best('canal', 3, 'storm', 1300), mochi = best('farm', 2, 'sun', 400);
+  check(ferry > 0 && ferry < 0.02 && admiral > 0 && admiral < 0.02 && mochi > 0 && mochi < 0.02, `even at their best hour a legendary is under 2% a cast (Ferryman ${ferry.toFixed(3)}, Admiral ${admiral.toFixed(3)}, Lady Mochi ${mochi.toFixed(3)})`);
+  check(best('farm', 2, 'sun', 900) === 0 && best('village', 2, 'rain', 1300, 2000) === 0, 'Lady Mochi only at dawn; the Ferryman only on Starsteel');
+  // credits a stamina, over the year: sun 60%, rain 30%, storm 10%, five hours of the day
+  const worth = (place, level) => { let v = 0, st = 0;
+    for (const [weather, share] of [['sun', 6], ['rain', 3], ['storm', 1]]) for (let season = 0; season < 4; season++) for (const minute of [380, 600, 900, 1150, 1300]) {
+      const g = newGame({ seed: 500 + 100 * level + 10 * season + minute + weather.length }); addItem(g, 'rod', 1); select(g, 'rod'); g.player.toolLevel.rod = level; g.weather = weather; g.cal.season = season; g.cal.minute = minute;
+      for (let i = 0; i < share * 40; i++) { g.player.stamina = 100; const r = sim.fish(g, place); const f = r.gained[0].id; v += ITEMS[f].sell; st += 100 - g.player.stamina; removeItem(g, f, 1); }
+    }
+    return v / st; };
+  const W = Object.fromEntries(WATERS.map((p) => [p, [0, 1, 2, 3].map((l) => (l ? worth(p, l) : 0))]));
+  for (const p of WATERS) check(W[p][1] < W[p][2] && W[p][2] < W[p][3], `${p}: every rod pays more a stamina (${W[p].slice(1).map((v) => v.toFixed(0)).join(' < ')})`);
+  const main = (l) => (W.village[l] + W.hill[l] + W.canal[l]) / 3, top = Math.max(...WATERS.map((p) => W[p][3]));
+  check(main(2) / main(1) > 1.35 && main(3) / main(2) > 1.25, `the river, lake and canal: Alloy +${Math.round(100 * (main(2) / main(1) - 1))}%, Starsteel +${Math.round(100 * (main(3) / main(2) - 1))}% a stamina`);
+  console.log(`  fishing, cr a stamina (Field / Alloy / Starsteel): ${WATERS.map((p) => `${p} ${W[p].slice(1).map((v) => v.toFixed(0)).join('/')}`).join(', ')}`);
+  // the bands: a Starsteel day (100 stamina) against a good crop day and a full Earth day
+  const crop = Math.max(...Object.values(CROPS).map((c) => { const h = c.regrow ? 1 + Math.floor((DAYS_PER_SEASON - c.days) / c.regrow) : Math.floor(DAYS_PER_SEASON / c.days); return (h * c.sell - (c.regrow ? 1 : h) * c.bag / 9) / DAYS_PER_SEASON; })) * FIELD_SIZES.farm[0] * FIELD_SIZES.farm[1];
+  let earth = 0; for (let k = 0; k < 6; k++) { const t = newGame({ seed: 600 + k }); while (t.player.inv.length < 30) t.player.inv.push(null); t.player.slots = 30; t.player.money = 0; sim.enterCity(t); const M = t.mine; let w = 0;
+    for (let i = M.monsters.length - 1; i >= 0; i--) { const rr = sim.defeatMonster(t, i); w += rr.credits; for (const f of rr.gained) w += (ITEMS[f.id].sell || 0) * f.n; }
+    const spots = M.spots.slice().sort((a, b) => Math.floor(a.i / M.w) - Math.floor(b.i / M.w));   // every creature, then 100 searches from the core (north) down: the vault too
+    let used = 0; for (const p of spots) { if (used >= 100) break; t.player.stamina = 100; const rr = sim.searchSpot(t, p.i % M.w, Math.floor(p.i / M.w)); if (!rr.ok) continue; used += 100 - t.player.stamina; w += rr.credits || 0; for (const f of rr.gained || []) w += (ITEMS[f.id].sell || 0) * f.n; for (let q = 0; q < t.player.inv.length; q++) if (t.player.inv[q] && ITEMS[t.player.inv[q].id].kind !== 'tool') t.player.inv[q] = null; }
+    earth += w / 6; }
+  check(top * 100 > crop * 0.9 && top * 100 < crop * 1.6, `a Starsteel day of fishing (${Math.round(top * 100)} cr on 100 stamina) is about a good crop day (${Math.round(crop)} cr)`);
+  check(top * 100 < earth, `but not better than a day on Earth (${Math.round(earth)} cr)`);
+  check(main(1) * 100 < crop * 0.8, 'a Field rod is a side line, not a living');
+  console.log(`  a day on 100 stamina: Field rod ${Math.round(main(1) * 100)} cr, Alloy ${Math.round(main(2) * 100)}, Starsteel ${Math.round(main(3) * 100)} (best water ${Math.round(top * 100)}); a good crop day ${Math.round(crop)}; Earth ${Math.round(earth)}`);
+  // the new fish in the kitchen and in the villagers' hearts
+  const k = newGame({ seed: 13 }); k.flags.kitchen = true; addItem(k, 'fish_spokerun', 1); let r = sim.cook(k, 'fish_grill'); check(r.ok && countItem(k, 'fish_spokerun') === 0, 'grilled fish takes a premium fish too');
+  addItem(k, 'fish_mochi', 1); r = act(sim.cook(k, 'fish_grill')); check(!r.ok && countItem(k, 'fish_mochi') === 1, 'nobody grills a legendary');
+  const kk = newGame({ seed: 14 }); kk.flags.kitchen = true; addItem(kk, 'fish_reedling', 1); addItem(kk, 'mushroom', 1); addItem(kk, 'pumpkin', 1); check(sim.cook(kk, 'forest_bento').ok, 'a reedling goes in a forest bento');
 }
 
 // ---------------------------------------------------------------- forage

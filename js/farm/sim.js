@@ -42,7 +42,8 @@ const MUSHROOMS = ['mushroom', 'frostcap', 'shiitake', 'pale_oyster'];
 const CAVE_SHROOMS = ['shiitake', 'pale_oyster', 'glowcap'], CAVE_FISH = ['cave_fish', 'glowfish', 'pipe_eel'];
 const VEG = ['turnip', 'potato', 'cucumber', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach'];
 const FISH_IDS = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'cave_fish', 'glowfish', 'pipe_eel',
-  ...Object.keys(FISH_TABLE).filter((id) => !FISH_TABLE[id].legend)];   // any fish but the legendaries
+  ...Object.keys(FISH_TABLE).filter((id) => FISH_TABLE[id].rod === 1)];   // the everyday fish (a Field rod's catch)
+const ANY_FISH = [...FISH_IDS, ...Object.keys(FISH_TABLE).filter((id) => FISH_TABLE[id].rod > 1 && !FISH_TABLE[id].legend)];   // any fish but the legendaries
 const MILK = ['milk_s', 'milk_m', 'milk_l'];
 // Each recipe: a list of ingredient slots; each slot is satisfied by any one of its ids. Different slots
 // of the same group must use different items (a salad is two DIFFERENT vegetables).
@@ -50,9 +51,9 @@ export const RECIPES = [
   { id: 'omelette', name: 'Omelette', needs: [['egg'], MILK] },
   { id: 'salad', name: 'Garden salad', needs: [VEG, VEG] },
   { id: 'veg_soup', name: 'Vegetable soup', needs: [VEG, VEG, VEG] },
-  { id: 'fish_grill', name: 'Grilled fish', needs: [FISH_IDS] },
+  { id: 'fish_grill', name: 'Grilled fish', needs: [ANY_FISH] },
   { id: 'berry_jam', name: 'Berry jam', needs: [['berry'], ['berry'], ['berry']], same: true },
-  { id: 'cooked_meal', name: 'Colony bento', needs: [FISH_IDS, ['egg'], VEG] },
+  { id: 'cooked_meal', name: 'Colony bento', needs: [ANY_FISH, ['egg'], VEG] },
   // 2026-11-18: mountain food and fruit
   { id: 'mint_tea', name: 'Mint tea', needs: [['wild_mint'], ['herb']] },
   { id: 'grape_juice', name: 'Grape juice', needs: [['wild_grape'], ['wild_grape'], ['wild_grape']], same: true },
@@ -617,7 +618,7 @@ function planRecipe(state, r) {
 }
 export function recipeBook(state) {
   const groupOf = (id) => (RECIPE_GROUPS.find(([, ids]) => ids.includes(id)) || ['Other'])[0];
-  return RECIPES.map((r) => { const p = state.flags.kitchen ? planRecipe(state, r) : null; return { id: r.id, name: r.name, desc: ITEMS[r.id].desc, group: groupOf(r.id), can: !!p, uses: p ? p.map((x) => ITEMS[x].name) : null, cooked: (state.cooked && state.cooked[r.id]) || 0, needs: r.needs.map((slot) => (slot.length === 1 ? ITEMS[slot[0]].name : slot === VEG ? 'any vegetable' : slot === FISH_IDS ? 'any fish' : slot === MILK ? 'any milk' : slot === FRUITS ? 'any fruit' : slot.map((x) => ITEMS[x].name).join(' or '))) }; });
+  return RECIPES.map((r) => { const p = state.flags.kitchen ? planRecipe(state, r) : null; return { id: r.id, name: r.name, desc: ITEMS[r.id].desc, group: groupOf(r.id), can: !!p, uses: p ? p.map((x) => ITEMS[x].name) : null, cooked: (state.cooked && state.cooked[r.id]) || 0, needs: r.needs.map((slot) => (slot.length === 1 ? ITEMS[slot[0]].name : slot === VEG ? 'any vegetable' : slot === ANY_FISH ? 'any fish' : slot === FISH_IDS ? 'any everyday fish' : slot === MILK ? 'any milk' : slot === FRUITS ? 'any fruit' : slot.map((x) => ITEMS[x].name).join(' or '))) }; });
 }
 export function cook(state, recipeId) {
   if (!state.flags.kitchen) return fail('The kitchen needs a refit first. Ruess can do it.');
@@ -1414,15 +1415,47 @@ export function fish(state, place) {
   if (place === 'lower' || place === 'sump') return underFish(state, place);
   const level = state.player.toolLevel.rod, wet = state.weather === 'rain' || state.weather === 'storm';
   const [s, m, l] = FISH_ODDS[place], seasonal = SEASON_FISH[state.cal.season];
-  // Better rods and rain move the odds from small fish to large and seasonal ones.
-  const weights = [s * (1 - 0.25 * (level - 1)) * (wet ? 0.7 : 1), m, l * (1 + 0.5 * (level - 1)), (6 + 7 * (level - 1)) * (place === 'hill' ? 1.5 : 1) * (wet ? 1.5 : 1)];
-  const king = rnd(state) < (wet ? 0.006 : 0.003) && place === 'hill' && level >= 2;
-  const id = king ? 'fish_king' : ['fish_s', 'fish_m', 'fish_l', seasonal][pick(state, weights)];
+  // Better rods and rain move the odds from small fish to large and seasonal ones; the water's own species join them (FISH_TABLE).
+  const ids = ['fish_s', 'fish_m', 'fish_l', seasonal];
+  const lv = TOP_FISH_AT.has(place) ? Math.min(level, 2) : level;   // where a Starsteel rod has fish of its own, they are its gain, not more carp
+  const weights = [s * (1 - 0.25 * (lv - 1)) * (wet ? 0.7 : 1), m, l * (1 + 0.4 * (lv - 1)), (6 + 6 * (lv - 1)) * (place === 'hill' ? 1.5 : 1) * (wet ? 1.5 : 1)];
+  const legend = legendBite(state, place, level, false);
+  if (!legend) moreFish(state, place, level, false, ids, weights);
+  const id = legend || ids[pick(state, weights)];
   if (!addItem(state, id, 1).ok) return no('Your rucksack is full, so you let it go.');
   state.stats.fishCaught++;
   state.fishLog[id] = (state.fishLog[id] || 0) + 1;
-  return spend(state, toolCost(state, 2), { ok: true, msg: king ? 'Old Hollin himself! The whole village will hear of this.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
+  return spend(state, toolCost(state, 2), { ok: true, legend: !!legend, msg: legend ? LEGEND_MSG[id] : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
 }
+const TOP_FISH_AT = new Set(Object.values(FISH_TABLE).filter((f) => f.rod === 3 && !f.legend).flatMap((f) => Object.keys(f.at)));
+const LEGEND_MSG = {
+  fish_king: 'Old Hollin himself! The whole village will hear of this.', fish_mochi: 'Lady Mochi! She looks up at you as if you were late with her breakfast.',
+  fish_ferryman: 'The Ferryman! The river goes very quiet, as if it were waiting.', fish_admiral: 'Admiral Brass! He comes up out of the canal like a ship of the line.',
+};
+// The conditions a FISH_TABLE row talks about, for this water and hour (underground: no weather, and night comes at six).
+function fishNow(state, under) {
+  const m = state.cal.minute, w = under ? 'sun' : state.weather;
+  return { dawn: m < 540, day: m >= 540 && m < 1080, night: m >= (under ? 1080 : 1200), wet: w === 'rain' || w === 'storm', storm: w === 'storm' };
+}
+const fishBoost = (f, now) => Object.entries(f.boost || {}).reduce((a, [k, x]) => (now[k] ? a * x : a), 1);
+// A legendary on this cast, or null: one roll each for the ones that live here and would bite now.
+function legendBite(state, place, level, under) {
+  const now = fishNow(state, under);
+  for (const [id, f] of Object.entries(FISH_TABLE)) {
+    if (!f.legend || !f.at[place] || level < f.rod || (f.when && !now[f.when])) continue;
+    if (rnd(state) < f.legend * fishBoost(f, now)) return id;
+  }
+  return null;
+}
+// Adds this water's own species that bite now (on a good enough rod) to the pick.
+function moreFish(state, place, level, under, ids, weights) {
+  const now = fishNow(state, under);
+  for (const [id, f] of Object.entries(FISH_TABLE)) {
+    if (f.legend || !f.at[place] || level < f.rod || (f.when && !now[f.when])) continue;
+    ids.push(id); weights.push(f.at[place] * (1 + (f.up ?? 0.1) * (level - f.rod)) * fishBoost(f, now));
+  }
+}
+export const FISH_PLACES = Object.keys(FISH_ODDS);
 
 // Three to six things a day, on 14 spots; rarer kinds turn up less often.
 function rollForage(state) {
@@ -2365,10 +2398,11 @@ function underFish(state, place) {
   const koi = sump && level >= 2 && m >= 1200 && rnd(state) < (level >= 3 ? 0.015 : 0.008);
   const ids = ['cave_fish', 'glowfish', 'pipe_eel', 'pump_part'];
   const w = [(sump ? 40 : 62) * (1 - 0.2 * (level - 1)), (sump ? 34 : 22) * (1 + 0.3 * (level - 1)), (eve ? 22 : 5) * (1 + 0.3 * (level - 1)), sump ? 3 : 6];
+  if (!koi) moreFish(state, place, level, true, ids, w);   // the cistern sturgeon and the angler (FISH_TABLE)
   const id = koi ? 'abyss_koi' : ids[pick(state, w)];
   if (!addItem(state, id, 1).ok) return fail('Your rucksack is full, so you let it go.', { gained: [] });
   if (id !== 'pump_part') { state.stats.fishCaught++; state.fishLog[id] = (state.fishLog[id] || 0) + 1; }
-  return spend(state, toolCost(state, 2), { ok: true, msg: koi ? 'The abyss koi! The whole hall seems to hold its breath.' : id === 'pump_part' ? 'Not a fish: a pump part, green with age. Venn will be pleased.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
+  return spend(state, toolCost(state, 2), { ok: true, legend: koi, msg: koi ? 'The abyss koi! The whole hall seems to hold its breath.' : id === 'pump_part' ? 'Not a fish: a pump part, green with age. Venn will be pleased.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
 }
 
 // ---------------------------------------------------------------- the Undercroft, release 2 (docs/FARM.md §14)

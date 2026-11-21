@@ -434,7 +434,7 @@ function central() {
   m.prop('lift_kiosk', 33, 52, { w: 3, d: 2, act: 'liftup', label: 'Lift to the Lantern Ring' });
   m.spot('central.lift', 34.5, 50.5).spot('central.homes', 21.6, 44.4);
   m.prop('signpost', 31, 49, { act: 'sign', sign: 'central.plaza' });
-  m.start = [34.5, 50.5];
+  m.start = [34.5, 50.5]; m.water = 'canal';   // the canal has its own fish (sim.js FISH_ODDS)
   m.areas = [['The great window', 34.5, 2.5], ['The plaza', 34.5, 31.5], ['Grand Market', 11.5, 32], ['Arrivals', 56, 32.3], ['Canal', 22, 38.4], ['Lift terminal', 34.5, 54.3], ['Gardens', 9, 18.5], ['Space dock: shuttle to Earth', 8, 4.6],
     ['School', 23, 13.6], ['Church', 43, 13.6], ['Safety depot', 65.5, 28.6]];
   m.bots = [[[34.5, 6], [34.5, 49]], [[3, 33.5], [66, 33.5]], [[3, 43.5], [66, 43.5]], [[3, 2.5], [66, 2.5]], [[5, 50.5], [64, 50.5]]];

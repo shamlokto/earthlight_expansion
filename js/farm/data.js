@@ -36,7 +36,7 @@ item('can', 'Watering can', 'tool', 'Wets tilled soil. Fill it at any water.');
 item('sickle', 'Sickle', 'tool', 'Cuts weeds, dead crops and ripe pasture grass.');
 item('hammer', 'Hammer', 'tool', 'Breaks rocks and flattens empty soil.');
 item('axe', 'Axe', 'tool', 'Chops branches and stumps into lumber.');
-item('rod', 'Fishing rod', 'tool', 'Catches fish at any water. Better rods land bigger fish.');
+item('rod', 'Fishing rod', 'tool', 'Catches fish at any water. Better rods land bigger and rarer fish.');
 item('milker', 'Milker', 'tool', 'Milks a fed cow once a day.');
 item('brush', 'Brush', 'tool', 'Cows like a good brushing.');
 
@@ -59,7 +59,7 @@ item('fish_spring', 'Blossom dace', 'fish', 'Runs only in spring.', { sell: 110 
 item('fish_summer', 'Sunline perch', 'fish', 'Basks under the summer sun-line.', { sell: 120 });
 item('fish_autumn', 'Copper eel', 'fish', 'An autumn eel the colour of old wire.', { sell: 150 });
 item('fish_winter', 'Frost char', 'fish', 'Caught only in the cold.', { sell: 180 });
-item('fish_king', 'Old Hollin', 'fish', 'The old king of the hill lake.', { sell: 1200 });
+item('fish_king', 'Old Hollin', 'fish', 'Legendary: the old king of the hill lake.', { sell: 1200 });
 
 item('herb', 'Hill herb', 'forage', 'A fragrant herb from the hill.', { sell: 40 });
 item('berry', 'Wild berry', 'forage', 'Sweet and sharp. Good to eat.', { sell: 30, stamina: 5 });
@@ -202,7 +202,7 @@ const DETAIL = {
   sickle: 'A short curved blade for weeds, dead crops and ripe pasture grass. It never touches a living crop, so swing freely.',
   hammer: 'A heavy hand hammer. Breaks field rocks, and at Alloy level the big boulders too; it also flattens soil you tilled by mistake.',
   axe: 'A felling axe with a nicked edge. Branches and stumps give lumber, and trees on the farm and the hill fall in a few swings and grow back in two weeks.',
-  rod: 'A fishing rod from Seln\'s store, bamboo and salvaged line. Cast at any water and pull when the float dips; Ruess can make it land bigger fish.',
+  rod: 'A fishing rod from Seln\'s store, bamboo and salvaged line. Cast at any water and pull when the float dips. Ruess can rework it: an Alloy rod holds the premium fish (spokerun, paneray, cloudfin, stormglass gar, cistern sturgeon) and the first legendaries, a Starsteel rod the best of all (Earthlight trout, sailfin, halo eel, cistern angler, the Ferryman, Admiral Brass), and better rods get a bite sooner.',
   milker: 'A hand milker from Corran\'s ranch. A fed cow gives one bottle a day; happier cows give bigger bottles.',
   brush: 'A stiff cow brush. One good brushing a day makes a cow fonder of you, and fond cows give large milk.',
   turnip: 'The colony\'s first-season crop: fast, forgiving and a little peppery. Four days from seed in spring, the classic first harvest.',
@@ -423,10 +423,10 @@ const MORE_FISH = [
   ['fish_stormgar', 'Stormglass gar', 420, 'A needle-nosed gar that only bites in a storm. Needs an Alloy rod.', 'When the chamber storms and the sun-line flickers, the gar comes up to hunt in any water under the sky, with lightning running down its flank. It bites hard: an Alloy rod or better.'],
   ['fish_cloudfin', 'Cloudfin', 360, 'A pearl-grey lake fish with misty trailing fins. Needs an Alloy rod.', 'It lives deep in the hill lake and rises where the mist off Terrace Falls drifts over the water. The founders let the fry go the year they built the falls. An Alloy rod or better.'],
   ['fish_cistern_sturgeon', 'Cistern sturgeon', 400, 'An armoured grey sturgeon from the deep cisterns. Needs an Alloy rod.', 'It has been growing in the Lower deck cisterns since before the war and has the plates to prove it. Mostly in the Sump, now and then in the pump hall basins; an Alloy rod or better.'],
-  ['fish_earthlight_trout', 'Earthlight trout', 680, 'A trout patterned like Earth seen from orbit. Needs a Starsteel rod.', 'Blue sea, green land and white cloud along its flank: holding one is like holding Earth as the carrier crews saw it, out of the port. The hill lake, best after dark. Only a Starsteel rod lands one.'],
-  ['fish_sailfin', 'Sun-line sailfin', 650, 'A golden fish with a great glowing sail. Needs a Starsteel rod.', 'It rides the village river with its sail raised to the sun-line, and it is the fastest thing in the water on the ring. Best between nine and six; only a Starsteel rod keeps up with it.'],
-  ['fish_halo_eel', 'Halo eel', 620, 'A midnight-blue eel with a ring of silver light. Needs a Starsteel rod.', 'It curls into a ring in the Eden Central canal, as if it had heard about the habitat and approved. Pastor Ines says it comes to the church steps at night. A Starsteel rod only.'],
-  ['fish_deep_angler', 'Cistern angler', 600, 'A dark angler fish with a teal lure. Needs a Starsteel rod.', 'It dangles its little teal light in the deep Sump and waits for something curious. Wick calls it "the other lamp man". It bites after six in the evening, and only a Starsteel rod brings it up.'],
+  ['fish_earthlight_trout', 'Earthlight trout', 600, 'A trout patterned like Earth seen from orbit. Needs a Starsteel rod.', 'Blue sea, green land and white cloud along its flank: holding one is like holding Earth as the carrier crews saw it, out of the port. The hill lake, best after dark. Only a Starsteel rod lands one.'],
+  ['fish_sailfin', 'Sun-line sailfin', 580, 'A golden fish with a great glowing sail. Needs a Starsteel rod.', 'It rides the village river with its sail raised to the sun-line, and it is the fastest thing in the water on the ring. Best between nine and six; only a Starsteel rod keeps up with it.'],
+  ['fish_halo_eel', 'Halo eel', 560, 'A midnight-blue eel with a ring of silver light. Needs a Starsteel rod.', 'It curls into a ring in the Eden Central canal, as if it had heard about the habitat and approved. Pastor Ines says it comes to the church steps at night. A Starsteel rod only.'],
+  ['fish_deep_angler', 'Cistern angler', 540, 'A dark angler fish with a teal lure. Needs a Starsteel rod.', 'It dangles its little teal light in the deep Sump and waits for something curious. Wick calls it "the other lamp man". It bites after six in the evening, and only a Starsteel rod brings it up.'],
   ['fish_ferryman', 'The Ferryman', 2200, 'Legendary: the great black river fish of Willowfall.', 'They say he swam in the water tanks of the first ship and slid out into the river the day it was filled, and that he has carried the homesick down to the end of the ring ever since. He rises at night or in rain, to a Starsteel rod, and almost never.'],
   ['fish_mochi', 'Lady Mochi', 1500, 'Legendary: a plump pearl-and-gold carp from the farm pond.', 'Somebody farmed here before Sato and fed one carp too many rice cakes. Lady Mochi is still in the pond, enormous and serene, and rises at dawn to an Alloy rod or better when she is in the mood. She mostly is not.'],
   ['fish_admiral', 'Admiral Brass', 2400, 'Legendary: the brass-scaled pike of the Eden Central canal.', 'Commissioned, says the constable\'s lost-property list, on the day the canal opened, and on patrol ever since, with an old hook in his lip like a medal. He rises in storms and after dark, to a Starsteel rod only.'],
@@ -442,19 +442,19 @@ export const FISH_TABLE = {
   fish_dawnscale: { at: { village: 14, hill: 10 }, rod: 1, when: 'dawn' },
   fish_rainbarb: { at: { farm: 12, village: 10, hill: 8, canal: 12 }, rod: 1, when: 'wet' },
   fish_lantern_cat: { at: { village: 12, canal: 16 }, rod: 1, when: 'night' },
-  fish_spokerun: { at: { village: 16 }, rod: 2 },
-  fish_paneray: { at: { canal: 16 }, rod: 2 },
+  fish_spokerun: { at: { village: 11 }, rod: 2 },
+  fish_paneray: { at: { canal: 11 }, rod: 2 },
   fish_stormgar: { at: { farm: 12, village: 14, hill: 14, canal: 14 }, rod: 2, when: 'storm' },
-  fish_cloudfin: { at: { hill: 14 }, rod: 2 },
-  fish_cistern_sturgeon: { at: { sump: 16, lower: 6 }, rod: 2 },
-  fish_earthlight_trout: { at: { hill: 14 }, rod: 3, boost: { night: 2 } },
-  fish_sailfin: { at: { village: 14 }, rod: 3, boost: { day: 1.5 } },
-  fish_halo_eel: { at: { canal: 14 }, rod: 3, boost: { night: 1.5 } },
-  fish_deep_angler: { at: { sump: 14 }, rod: 3, when: 'night' },
+  fish_cloudfin: { at: { hill: 10 }, rod: 2 },
+  fish_cistern_sturgeon: { at: { sump: 10, lower: 5 }, rod: 2 },
+  fish_earthlight_trout: { at: { hill: 6 }, rod: 3, boost: { night: 2 } },
+  fish_sailfin: { at: { village: 6 }, rod: 3, boost: { day: 1.5 } },
+  fish_halo_eel: { at: { canal: 7 }, rod: 3, boost: { night: 1.5 } },
+  fish_deep_angler: { at: { sump: 9 }, rod: 3, when: 'night' },
   fish_king: { at: { hill: 1 }, rod: 2, legend: 0.003, boost: { wet: 2 } },
   fish_mochi: { at: { farm: 1 }, rod: 2, legend: 0.006, when: 'dawn' },
-  fish_ferryman: { at: { village: 1 }, rod: 3, legend: 0.003, boost: { night: 2, wet: 2 } },
-  fish_admiral: { at: { canal: 1 }, rod: 3, legend: 0.003, boost: { storm: 3, night: 1.5 } },
+  fish_ferryman: { at: { village: 1 }, rod: 3, legend: 0.0025, boost: { night: 2, wet: 2 } },
+  fish_admiral: { at: { canal: 1 }, rod: 3, legend: 0.0025, boost: { storm: 3, night: 1.5 } },
 };
 // The rare ones' grand entrances.
 export const LEGEND_FISH = Object.keys(FISH_TABLE).filter((id) => FISH_TABLE[id].legend).concat(['abyss_koi']);
