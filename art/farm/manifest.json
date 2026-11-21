@@ -291,13 +291,48 @@
    "w": 256,
    "h": 256
   },
+  "icons/fish_admiral": {
+   "file": "icons/fish_admiral.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/fish_autumn": {
    "file": "icons/fish_autumn.webp",
    "w": 256,
    "h": 256
   },
+  "icons/fish_cistern_sturgeon": {
+   "file": "icons/fish_cistern_sturgeon.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_dawnscale": {
+   "file": "icons/fish_dawnscale.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_deep_angler": {
+   "file": "icons/fish_deep_angler.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_earthlight_trout": {
+   "file": "icons/fish_earthlight_trout.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_ferryman": {
+   "file": "icons/fish_ferryman.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/fish_grill": {
    "file": "icons/fish_grill.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_halo_eel": {
+   "file": "icons/fish_halo_eel.webp",
    "w": 256,
    "h": 256
   },
@@ -311,8 +346,38 @@
    "w": 256,
    "h": 256
   },
+  "icons/fish_cloudfin": {
+   "file": "icons/fish_cloudfin.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_lantern_cat": {
+   "file": "icons/fish_lantern_cat.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/fish_m": {
    "file": "icons/fish_m.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_mochi": {
+   "file": "icons/fish_mochi.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_paneray": {
+   "file": "icons/fish_paneray.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_rainbarb": {
+   "file": "icons/fish_rainbarb.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_reedling": {
+   "file": "icons/fish_reedling.webp",
    "w": 256,
    "h": 256
   },
@@ -321,8 +386,23 @@
    "w": 256,
    "h": 256
   },
+  "icons/fish_sailfin": {
+   "file": "icons/fish_sailfin.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_spokerun": {
+   "file": "icons/fish_spokerun.webp",
+   "w": 256,
+   "h": 256
+  },
   "icons/fish_spring": {
    "file": "icons/fish_spring.webp",
+   "w": 256,
+   "h": 256
+  },
+  "icons/fish_stormgar": {
+   "file": "icons/fish_stormgar.webp",
    "w": 256,
    "h": 256
   },

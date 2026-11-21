@@ -96,6 +96,7 @@ Do not use Lt. Arkin (he may have died in the player's campaign) or name the Gen
 * **Fishing**, her other great love: the rod (600; Ruess upgrades it) at any water. Cast, wait for
   the float to dip, pull. Silverfin, river trout, chamber carp (35/75/130), a special fish for
   each season, and the legendary **Old Hollin** in the hill lake. Rain and the lake are best.
+  Since 2026-11-21 every water has fish of its own (§17).
 * **Forage** on the hill, new each day: herb (spring, summer; 40), berry (summer; 30, edible),
   mushroom (autumn; 70), frostcap (winter; 60).
 * **Upgrades**: Ruess upgrades a tool overnight (level 2: 800 + 5 scrap; level 3: 2500 + 5 alloy
@@ -181,7 +182,7 @@ gift(state, npcId, slot, tier, isBirthday) -> { ok, msg, delta }
 addLove(state, npcId, n);  setFlag(state, key, value=true)
 // the wreck and the lake
 enterMine(state, floor=1) -> state.mine;  hitRock(state, x, y) -> { ok, msg?, broke, gained, hatch: bool };  leaveMine(state)
-fish(state, place /* 'farm' | 'village' | 'hill' */) -> { ok, msg, gained }   // called when the player hooks a bite
+fish(state, place /* sim.FISH_PLACES: 'farm' | 'village' | 'hill' | 'canal' | 'lower' | 'sump' */) -> { ok, msg, gained, legend }   // called when the player hooks a bite
 pickForage(state, spot) -> { ok, msg, gained }
 // the night
 sleep(state, { collapsed = false } = {}) -> { earned, shipped: [ {id, n, value} ], notes: [ 'text', … ], seasonChanged: bool, newYear: bool }
@@ -569,6 +570,8 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
 * **Fishing** (`sim.fish(state, 'lower' | 'sump')`, the water body from `maps.waterPlace`): no weather; cave fish (45 cr,
   common), glowfish (100, uncommon, more in the Sump), pipe eel (140, mostly after 18:00), a pump part now and then in the basins,
   and the legendary **abyss koi** (1,800): only in the Sump, after 20:00, Alloy rod or better, about 0.8% a cast (1.5% Starsteel).
+  Since 2026-11-21 also the **cistern sturgeon** (400, Alloy, mostly the Sump) and the **cistern angler** (540, Starsteel, the
+  Sump from 18:00); see §17.
 * **Mushrooms** (`data.MUSHROOMS`, `state.lower.beds`, `plantBed` / `harvestBed`, 8 beds, act `bed`): a spore bag rolls the kind
   (shiitake 36, pale oyster 36, glowcap 22, deep truffle 6). No watering, no seasons, a day a night.
   | Mushroom | first flush | then every | flushes | per flush | sells |
@@ -825,7 +828,8 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   Yui and Maris love old records (the existing `record`, now also a city find); Fenn loves teddy bears; Moraine and Marrow like old coins. Reused: `record` (the salvaged vinyl record), `photo`, `teacup`, `book`, `watch`, `toy`, `medal`, `seedtin`,
   `musicbox`, `datachip`, `ring`, `scrap`, `battery`.
 * **Economy.** A city trip on 60 stamina (the 60 spots nearest the pad and the creatures outside the core) is worth
-  about 1,600 cr (1.6–1.8×) against about 935 cr for 60 Field-hammer blows in belt sector 5 (tests/farm-sim.mjs measures both):
+  about 2,200 cr (2.3–2.5×, owner 2026-11-21: "the Earth trip should earn more"; most of it old-world finds: rubble 9%, cars 11%,
+  counters 35%, lockers 50% and safes two rarer finds each, the vault also a film camera and coins) against about 935 cr for 60 Field-hammer blows in belt sector 5 (tests/farm-sim.mjs measures both):
   more, with more risk (the hull, the tow fee, the shuttle fare). A full clear including the core and the vault is
   worth several thousand.
 * **Safe spots and camps** (owner, 2026-11-20, later). `cityLayout` places three safe spots a trip, one per zone
@@ -843,6 +847,12 @@ families never came up. Tone: cozy and mysterious, never grim; **no combat on th
   legs and arms on joint pivots: the legs fold up behind, the arms sweep back, the body tilts forward to level and wings
   slide out from the back), a brief flash hands over to its flight form (the `pallas_jet` model, or a procedural jet) that lifts off, banks and climbs north with the camera following, then the screen fades and she lands
   at Eden Central's space dock.
+* **Finding treasure** (owner 2026-11-21: "I don't know what is searchable and what isn't"). Every car, bus and remaining
+  rubble pile is a spot (plain debris slabs look different and are never searchable). An unsearched spot has a bobbing
+  sparkle with a soft halo and a faint light column over it (`spot_glint`; gold over safes and the vault); a searched one
+  loses it, gets a small green ring and its prop goes grey and dim. The minimap shows unsearched spots within 20 tiles as
+  pale dots (gold for safes and the vault). **R** (when not holding food) scans: columns of light over every unsearched
+  spot within 16 tiles and a count, 8 s cooldown.
 * **The HUD** shows the zone, the hull and the credits found (`The core · hull 72/100 · found 340 cr`) and a hull bar
   under it. The minimap works on the city (streets dark, toxic pools lime, tower footprints pale); the map screen (M)
   says there is no chart of a city that shifts every trip.
@@ -872,3 +882,57 @@ Art slots added (models; each has a procedural stand-in in js/farm/cityworld.js)
   loved (love stories, 7+) or joyful. The wiki's people cards use the neutral bust and show a strip of faces when there are some.
   Tests (farm-story): every tag is a known name, every speaker has some face, fallbacks, and index.json's files exist (skipped
   while there is no index).
+
+## 17. More fish, and rods worth upgrading (owner, 2026-11-21: "There aren't enough types of fish, and I earned so little. Adding a few more premium fish would be great because upgrading fishrods needs to be worth it.")
+
+Sixteen new fish, data in `data.js` `MORE_FISH` (name, price, desc, detail) and `FISH_TABLE` (where, rod, when); `sim.fish()` and
+`underFish()` add the ones that live in the water and bite now to the old pick, and roll each legendary that lives there
+first. Waters (`sim.FISH_PLACES`): `farm` (the pond, also the duck pond), `village` (the river), `hill` (the lake, the
+stream, the falls pool), `canal` (Eden Central: `maps.central` sets `m.water = 'canal'`), `lower` and `sump`. Times:
+dawn before 9:00, day 9:00 to 18:00, night from 20:00 (below decks from 18:00).
+
+| Fish | Id | Where and when | Rod | Sells |
+|---|---|---|---|---|
+| Reedling | `fish_reedling` | the pond, any time | Field | 40 |
+| Dawnscale | `fish_dawnscale` | the river and the lake, before 9:00 | Field | 150 |
+| Rain barb | `fish_rainbarb` | pond, river, lake, canal, in rain or storm | Field | 130 |
+| Lantern catfish | `fish_lantern_cat` | the river and the canal, from 20:00 | Field | 170 |
+| Spokerun salmon | `fish_spokerun` | the river | Alloy | 320 |
+| Paneray | `fish_paneray` | the canal | Alloy | 340 |
+| Cloudfin | `fish_cloudfin` | the hill lake | Alloy | 360 |
+| Stormglass gar | `fish_stormgar` | pond, river, lake, canal, in a storm | Alloy | 420 |
+| Cistern sturgeon | `fish_cistern_sturgeon` | the Sump (and now and then the basins) | Alloy | 400 |
+| Earthlight trout | `fish_earthlight_trout` | the hill lake, twice as often at night | Starsteel | 600 |
+| Sun-line sailfin | `fish_sailfin` | the river, best by day | Starsteel | 580 |
+| Halo eel | `fish_halo_eel` | the canal, best at night | Starsteel | 560 |
+| Cistern angler | `fish_deep_angler` | the Sump, from 18:00 | Starsteel | 540 |
+| **Lady Mochi** (legendary) | `fish_mochi` | the pond, before 9:00, 0.6% a cast | Alloy | 1,500 |
+| **The Ferryman** (legendary) | `fish_ferryman` | the river, 0.25% a cast, ×2 at night, ×2 in rain | Starsteel | 2,200 |
+| **Admiral Brass** (legendary) | `fish_admiral` | the canal, 0.25%, ×3 in a storm, ×1.5 at night | Starsteel | 2,400 |
+
+Old Hollin (hill lake, Alloy, 0.3%, ×2 in rain) is now a `FISH_TABLE` row too; the abyss koi stays in `underFish()`.
+Every legendary's `desc` starts "Legendary:". Where a Starsteel rod has fish of its own (river, lake, canal), the old
+shift from small fish to carp and season fish stops at Alloy and the Starsteel gain is the premium fish; at the pond it
+goes on. Better rods also get a bite sooner (`main.js cast()`: the wait × 0.85 Alloy, × 0.7 Starsteel).
+
+Income a stamina over a year (sun 60%, rain 30%, storm 10%, five hours of the day; a cast costs 2), measured by
+`tests/farm-sim.mjs`:
+
+| Water | Field | Alloy | Starsteel |
+|---|---|---|---|
+| pond | 28 (was 29) | 35 (35) | 40 (42) |
+| river | 36 (33) | 54 (39) | 74 (45) |
+| hill lake | 42 (42) | 61 (50) | 75 (56) |
+| canal | 37 (29: it fished as the pond) | 55 (35) | 73 (42) |
+| basins | 35 (35) | 46 (38) | 51 (42) |
+| Sump | 40 (40) | 59 (44) | 70 (49) |
+
+So on the river, lake and canal Alloy pays about +45% and Starsteel another +30% (before: +21% and +12%). A Starsteel day
+of fishing (100 stamina, about 7,500 cr) is about a good crop day (a full field of the best crop, about 6,000 cr a day) and
+under a full day in the Earth ruins (about 9,800 cr). The test checks those bands.
+
+Uses: any fish but a legendary goes in grilled fish and the colony bento ("any fish", `ANY_FISH` in sim.js); the everyday
+fish (Field-rod ones) also in the forest bento and the colony feast. Loves: Marrow the Ferryman, Kestrel the sailfin,
+Pastor Ines the halo eel, Dr. Mori the Earthlight trout, Wick the cistern angler; likes: the General the dawnscale, Oduya
+the spokerun, Constable Fenn the lantern catfish. Icons: `icons/<id>` in the art pack (the cloudfin's is still to come); a fish with no
+picture gets `ui.icon()`'s drawn fish in the species' colours, with a gold ring for a legendary.

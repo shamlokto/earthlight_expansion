@@ -184,6 +184,7 @@ function drawMini(t) {
   const yaw = st.W ? st.W.yaw : 0, a = Math.atan2(-Math.cos(yaw), -Math.sin(yaw));
   const gr = g.createRadialGradient(W / 2, W / 2, 2, W / 2, W / 2, W * 0.42); gr.addColorStop(0, 'rgba(255,250,220,.55)'); gr.addColorStop(1, 'rgba(255,250,220,0)');
   g.fillStyle = gr; g.beginPath(); g.moveTo(W / 2, W / 2); g.arc(W / 2, W / 2, W * 0.42, a - 0.55, a + 0.55); g.closePath(); g.fill();
+  if (m.city && st.S.mine && st.S.mine.spots) for (const sp of st.S.mine.spots) { if (sp.open) continue; const M = st.S.mine, sx = sp.i % M.w + 1.5, sy = Math.floor(sp.i / M.w) + 1.5; if (Math.abs(sx - cx) > 20 || Math.abs(sy - cy) > 20) continue; const [x, y] = P(sx, sy), gold = sp.kind === 'safe' || sp.kind === 'vault'; g.fillStyle = gold ? '#ffd36a' : '#bff8ff'; g.strokeStyle = 'rgba(30,22,14,.7)'; g.lineWidth = 1; g.beginPath(); g.arc(x, y, gold ? 3 : 2.2, 0, 7); g.fill(); g.stroke(); }   // treasure not yet searched, within 20 tiles
   for (const [id, n] of st.npcs || []) { const [x, y] = P(n.actor.x, n.actor.y); if (x < -4 || y < -4 || x > W + 4 || y > W + 4) continue; g.fillStyle = colourOf(id); g.strokeStyle = '#2b2118'; g.lineWidth = 1.2; g.beginPath(); g.arc(x, y, 3.4, 0, 7); g.fill(); g.stroke(); }
   const p = (t / 900) % 1; g.fillStyle = `rgba(232,72,58,${0.5 * (1 - p)})`; g.beginPath(); g.arc(W / 2, W / 2, 4 + p * 9, 0, 7); g.fill();
   g.fillStyle = '#e8483a'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(W / 2, W / 2, 4.5, 0, 7); g.fill(); g.stroke();

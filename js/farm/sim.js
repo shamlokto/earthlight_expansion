@@ -22,7 +22,7 @@
 //  * Stamina at 0: the action still happens and the result carries fainted: true.
 //  * Ruins: cells (7,11) (the lift) is always open; walls never cut an open cell off from it.
 //    Finds that do not fit in a full rucksack are left behind (the result says so).
-import { SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, ITEMS, CROPS, TOOL_LEVELS, FIELD_SIZES, PASTURE_SIZE, RELICS, FESTIVAL_DAYS, FRUIT_TREES, TREE_DAYS, WILD_TREES, SATO_BIRTHDAY, ROBOT_NAMES, ROBOT_JOBS, ROBOT_MOODS } from './data.js';
+import { SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, ITEMS, CROPS, TOOL_LEVELS, FIELD_SIZES, PASTURE_SIZE, RELICS, FESTIVAL_DAYS, FRUIT_TREES, TREE_DAYS, WILD_TREES, SATO_BIRTHDAY, ROBOT_NAMES, ROBOT_JOBS, ROBOT_MOODS, FISH_TABLE } from './data.js';
 import { MUSHROOMS as BED_CROPS, LOWER_LOGS } from './data.js';
 
 export const NPC_IDS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui', 'calloway', 'fenn', 'venn', 'thorne', 'moth', 'wick'];
@@ -41,7 +41,9 @@ const FRUITS = ['cherry', 'peach', 'apple', 'persimmon', 'wild_apple', 'wild_gra
 const MUSHROOMS = ['mushroom', 'frostcap', 'shiitake', 'pale_oyster'];
 const CAVE_SHROOMS = ['shiitake', 'pale_oyster', 'glowcap'], CAVE_FISH = ['cave_fish', 'glowfish', 'pipe_eel'];
 const VEG = ['turnip', 'potato', 'cucumber', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach'];
-const FISH_IDS = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'cave_fish', 'glowfish', 'pipe_eel'];
+const FISH_IDS = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'cave_fish', 'glowfish', 'pipe_eel',
+  ...Object.keys(FISH_TABLE).filter((id) => FISH_TABLE[id].rod === 1)];   // the everyday fish (a Field rod's catch)
+const ANY_FISH = [...FISH_IDS, ...Object.keys(FISH_TABLE).filter((id) => FISH_TABLE[id].rod > 1 && !FISH_TABLE[id].legend)];   // any fish but the legendaries
 const MILK = ['milk_s', 'milk_m', 'milk_l'];
 // Each recipe: a list of ingredient slots; each slot is satisfied by any one of its ids. Different slots
 // of the same group must use different items (a salad is two DIFFERENT vegetables).
@@ -49,9 +51,9 @@ export const RECIPES = [
   { id: 'omelette', name: 'Omelette', needs: [['egg'], MILK] },
   { id: 'salad', name: 'Garden salad', needs: [VEG, VEG] },
   { id: 'veg_soup', name: 'Vegetable soup', needs: [VEG, VEG, VEG] },
-  { id: 'fish_grill', name: 'Grilled fish', needs: [FISH_IDS] },
+  { id: 'fish_grill', name: 'Grilled fish', needs: [ANY_FISH] },
   { id: 'berry_jam', name: 'Berry jam', needs: [['berry'], ['berry'], ['berry']], same: true },
-  { id: 'cooked_meal', name: 'Colony bento', needs: [FISH_IDS, ['egg'], VEG] },
+  { id: 'cooked_meal', name: 'Colony bento', needs: [ANY_FISH, ['egg'], VEG] },
   // 2026-11-18: mountain food and fruit
   { id: 'mint_tea', name: 'Mint tea', needs: [['wild_mint'], ['herb']] },
   { id: 'grape_juice', name: 'Grape juice', needs: [['wild_grape'], ['wild_grape'], ['wild_grape']], same: true },
@@ -123,7 +125,7 @@ export const FORAGE = [
   [['mushroom', 4], ['chestnut', 3], ['wild_apple', 3], ['matsutake', 0.5]],
   [['frostcap', 4], ['pine_nut', 3], ['winter_root', 3]],
 ];
-const FISH_ODDS = { farm: [70, 25, 5], village: [55, 35, 10], hill: [35, 40, 25], lower: [0, 0, 0], sump: [0, 0, 0] };   // the Undercroft's waters: underFish()   // small, medium, large
+const FISH_ODDS = { farm: [70, 25, 5], village: [55, 35, 10], hill: [35, 40, 25], canal: [50, 38, 12], lower: [0, 0, 0], sump: [0, 0, 0] };   // the Undercroft's waters: underFish()   // small, medium, large
 const SEASON_FISH = ['fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'];
 const GIFT = { loved: 8, liked: 4, neutral: 1, disliked: -4 };
 // What a gift is worth: by tier, tripled on a birthday, times `share` (a mailbox gift is worth 80%; a later gift the same day a
@@ -616,7 +618,7 @@ function planRecipe(state, r) {
 }
 export function recipeBook(state) {
   const groupOf = (id) => (RECIPE_GROUPS.find(([, ids]) => ids.includes(id)) || ['Other'])[0];
-  return RECIPES.map((r) => { const p = state.flags.kitchen ? planRecipe(state, r) : null; return { id: r.id, name: r.name, desc: ITEMS[r.id].desc, group: groupOf(r.id), can: !!p, uses: p ? p.map((x) => ITEMS[x].name) : null, cooked: (state.cooked && state.cooked[r.id]) || 0, needs: r.needs.map((slot) => (slot.length === 1 ? ITEMS[slot[0]].name : slot === VEG ? 'any vegetable' : slot === FISH_IDS ? 'any fish' : slot === MILK ? 'any milk' : slot === FRUITS ? 'any fruit' : slot.map((x) => ITEMS[x].name).join(' or '))) }; });
+  return RECIPES.map((r) => { const p = state.flags.kitchen ? planRecipe(state, r) : null; return { id: r.id, name: r.name, desc: ITEMS[r.id].desc, group: groupOf(r.id), can: !!p, uses: p ? p.map((x) => ITEMS[x].name) : null, cooked: (state.cooked && state.cooked[r.id]) || 0, needs: r.needs.map((slot) => (slot.length === 1 ? ITEMS[slot[0]].name : slot === VEG ? 'any vegetable' : slot === ANY_FISH ? 'any fish' : slot === FISH_IDS ? 'any everyday fish' : slot === MILK ? 'any milk' : slot === FRUITS ? 'any fruit' : slot.map((x) => ITEMS[x].name).join(' or '))) }; });
 }
 export function cook(state, recipeId) {
   if (!state.flags.kitchen) return fail('The kitchen needs a refit first. Ruess can do it.');
@@ -987,7 +989,7 @@ export function cityLayout(seed) {
   for (let i = 0; i < w * h; i++) {
     const kind = SPOT_OF[cells[i]]; if (!kind) continue;
     if (kind === 'bus' && cells[i - w] === 4) continue;                          // one spot a bus (its north end)
-    if ((kind === 'car' || kind === 'bus') && r() > 0.55) continue;
+    // every car, bus and remaining rubble pile can be searched (the owner: nothing that looks searchable should not be)
     if (kind === 'rubble' && r() > 0.3) { const nb = DIRS.map(([dx, dy]) => cells[i + dy * w + dx]); cells[i] = nb.includes(2) && r() < 0.5 ? 14 : nb.every((c) => c === 0) ? 0 : 1; continue; }   // most heaps are cleared away; a few slabs stay by the towers
     if (open(i) || (kind === 'bus' && [i + w, i + 2 * w].some(open))) spots.push({ i, kind });
     else if (kind === 'vault') { cells[i] = 14; vault = -1; }
@@ -1045,12 +1047,12 @@ function oldFind(state, z, rare = 0) { return OLD_FINDS[pick(state, OLD_FINDS.ma
 export function cityLoot(state, kind, zone) {
   const z = clamp(int(zone) ? zone : 0, 0, 2), k = (1 + 0.5 * z) * 0.7, items = [], cr = (a, b) => Math.round((a + rnd(state) * (b - a)) * k), q = rnd(state);
   let credits = 0;
-  if (kind === 'rubble') { if (q < 0.25) items.push(['scrap', 1]); else if (q < 0.28) items.push(['battery', 1]); else if (q < 0.31) items.push([oldFind(state, z), 1]); else if (q < 0.41) credits = cr(3, 10); }
-  else if (kind === 'car' || kind === 'bus') { if (q < 0.18) items.push(['scrap', 1]); else if (q < 0.38) credits = cr(3, 10); else if (q < 0.42) items.push([oldFind(state, z), 1]); }
-  else if (kind === 'counter') { if (rnd(state) < 0.6) credits = cr(5, 20); if (q < 0.14) items.push([oldFind(state, z), 1]); }
-  else if (kind === 'locker') { if (q < 0.3) items.push([oldFind(state, z), 1]); else if (q < 0.4) items.push(['credit_chip', 1]); else if (q < 0.6) items.push(['battery', 1]); }
-  else if (kind === 'safe') { credits = cr(15, 40); items.push([oldFind(state, z, 1), 1]); if (q < 0.25) items.push(['old_coin', 2 + rint(state, 3)]); }
-  else if (kind === 'vault') { credits = cr(280, 420); items.push(['data_core', 1], [rnd(state) < 0.5 ? 'ring' : 'musicbox', 1], ['credit_chip', 2], ['seedtin', 1]); }
+  if (kind === 'rubble') { if (q < 0.25) items.push(['scrap', 1]); else if (q < 0.28) items.push(['battery', 1]); else if (q < 0.37) items.push([oldFind(state, z), 1]); else if (q < 0.45) credits = cr(3, 10); }
+  else if (kind === 'car' || kind === 'bus') { if (q < 0.18) items.push(['scrap', 1]); else if (q < 0.33) credits = cr(3, 10); else if (q < 0.44) items.push([oldFind(state, z, 0.5), 1]); }
+  else if (kind === 'counter') { if (rnd(state) < 0.6) credits = cr(5, 20); if (q < 0.35) items.push([oldFind(state, z, 0.5), 1]); }
+  else if (kind === 'locker') { if (q < 0.5) items.push([oldFind(state, z, 1), 1]); else if (q < 0.62) items.push(['credit_chip', 1]); else if (q < 0.6) items.push(['battery', 1]); }
+  else if (kind === 'safe') { credits = cr(15, 40); items.push([oldFind(state, z, 2), 1], [oldFind(state, z, 2), 1]); if (q < 0.35) items.push(['old_coin', 2 + rint(state, 3)]); }
+  else if (kind === 'vault') { credits = cr(280, 420); items.push(['data_core', 1], [rnd(state) < 0.5 ? 'ring' : 'musicbox', 1], ['credit_chip', 2], ['seedtin', 1], ['film_camera', 1], ['old_coin', 3]); }
   return { items, credits };
 }
 const SPOT_NAMES = { rubble: 'the rubble', car: 'the car', bus: 'the bus', counter: 'the shop counter', locker: 'the locker', safe: 'the safe', vault: 'the sealed vault' };
@@ -1413,15 +1415,47 @@ export function fish(state, place) {
   if (place === 'lower' || place === 'sump') return underFish(state, place);
   const level = state.player.toolLevel.rod, wet = state.weather === 'rain' || state.weather === 'storm';
   const [s, m, l] = FISH_ODDS[place], seasonal = SEASON_FISH[state.cal.season];
-  // Better rods and rain move the odds from small fish to large and seasonal ones.
-  const weights = [s * (1 - 0.25 * (level - 1)) * (wet ? 0.7 : 1), m, l * (1 + 0.5 * (level - 1)), (6 + 7 * (level - 1)) * (place === 'hill' ? 1.5 : 1) * (wet ? 1.5 : 1)];
-  const king = rnd(state) < (wet ? 0.006 : 0.003) && place === 'hill' && level >= 2;
-  const id = king ? 'fish_king' : ['fish_s', 'fish_m', 'fish_l', seasonal][pick(state, weights)];
+  // Better rods and rain move the odds from small fish to large and seasonal ones; the water's own species join them (FISH_TABLE).
+  const ids = ['fish_s', 'fish_m', 'fish_l', seasonal];
+  const lv = TOP_FISH_AT.has(place) ? Math.min(level, 2) : level;   // where a Starsteel rod has fish of its own, they are its gain, not more carp
+  const weights = [s * (1 - 0.25 * (lv - 1)) * (wet ? 0.7 : 1), m, l * (1 + 0.4 * (lv - 1)), (6 + 6 * (lv - 1)) * (place === 'hill' ? 1.5 : 1) * (wet ? 1.5 : 1)];
+  const legend = legendBite(state, place, level, false);
+  if (!legend) moreFish(state, place, level, false, ids, weights);
+  const id = legend || ids[pick(state, weights)];
   if (!addItem(state, id, 1).ok) return no('Your rucksack is full, so you let it go.');
   state.stats.fishCaught++;
   state.fishLog[id] = (state.fishLog[id] || 0) + 1;
-  return spend(state, toolCost(state, 2), { ok: true, msg: king ? 'Old Hollin himself! The whole village will hear of this.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
+  return spend(state, toolCost(state, 2), { ok: true, legend: !!legend, msg: legend ? LEGEND_MSG[id] : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
 }
+const TOP_FISH_AT = new Set(Object.values(FISH_TABLE).filter((f) => f.rod === 3 && !f.legend).flatMap((f) => Object.keys(f.at)));
+const LEGEND_MSG = {
+  fish_king: 'Old Hollin himself! The whole village will hear of this.', fish_mochi: 'Lady Mochi! She looks up at you as if you were late with her breakfast.',
+  fish_ferryman: 'The Ferryman! The river goes very quiet, as if it were waiting.', fish_admiral: 'Admiral Brass! He comes up out of the canal like a ship of the line.',
+};
+// The conditions a FISH_TABLE row talks about, for this water and hour (underground: no weather, and night comes at six).
+function fishNow(state, under) {
+  const m = state.cal.minute, w = under ? 'sun' : state.weather;
+  return { dawn: m < 540, day: m >= 540 && m < 1080, night: m >= (under ? 1080 : 1200), wet: w === 'rain' || w === 'storm', storm: w === 'storm' };
+}
+const fishBoost = (f, now) => Object.entries(f.boost || {}).reduce((a, [k, x]) => (now[k] ? a * x : a), 1);
+// A legendary on this cast, or null: one roll each for the ones that live here and would bite now.
+function legendBite(state, place, level, under) {
+  const now = fishNow(state, under);
+  for (const [id, f] of Object.entries(FISH_TABLE)) {
+    if (!f.legend || !f.at[place] || level < f.rod || (f.when && !now[f.when])) continue;
+    if (rnd(state) < f.legend * fishBoost(f, now)) return id;
+  }
+  return null;
+}
+// Adds this water's own species that bite now (on a good enough rod) to the pick.
+function moreFish(state, place, level, under, ids, weights) {
+  const now = fishNow(state, under);
+  for (const [id, f] of Object.entries(FISH_TABLE)) {
+    if (f.legend || !f.at[place] || level < f.rod || (f.when && !now[f.when])) continue;
+    ids.push(id); weights.push(f.at[place] * (1 + (f.up ?? 0.1) * (level - f.rod)) * fishBoost(f, now));
+  }
+}
+export const FISH_PLACES = Object.keys(FISH_ODDS);
 
 // Three to six things a day, on 14 spots; rarer kinds turn up less often.
 function rollForage(state) {
@@ -2364,10 +2398,11 @@ function underFish(state, place) {
   const koi = sump && level >= 2 && m >= 1200 && rnd(state) < (level >= 3 ? 0.015 : 0.008);
   const ids = ['cave_fish', 'glowfish', 'pipe_eel', 'pump_part'];
   const w = [(sump ? 40 : 62) * (1 - 0.2 * (level - 1)), (sump ? 34 : 22) * (1 + 0.3 * (level - 1)), (eve ? 22 : 5) * (1 + 0.3 * (level - 1)), sump ? 3 : 6];
+  if (!koi) moreFish(state, place, level, true, ids, w);   // the cistern sturgeon and the angler (FISH_TABLE)
   const id = koi ? 'abyss_koi' : ids[pick(state, w)];
   if (!addItem(state, id, 1).ok) return fail('Your rucksack is full, so you let it go.', { gained: [] });
   if (id !== 'pump_part') { state.stats.fishCaught++; state.fishLog[id] = (state.fishLog[id] || 0) + 1; }
-  return spend(state, toolCost(state, 2), { ok: true, msg: koi ? 'The abyss koi! The whole hall seems to hold its breath.' : id === 'pump_part' ? 'Not a fish: a pump part, green with age. Venn will be pleased.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
+  return spend(state, toolCost(state, 2), { ok: true, legend: koi, msg: koi ? 'The abyss koi! The whole hall seems to hold its breath.' : id === 'pump_part' ? 'Not a fish: a pump part, green with age. Venn will be pleased.' : `You caught a ${lower(id)}.`, gained: [{ id, n: 1 }] });
 }
 
 // ---------------------------------------------------------------- the Undercroft, release 2 (docs/FARM.md §14)

@@ -30,11 +30,12 @@ export const CITY_PROPS = {
   smog_wraith: { model: 'smog_wraith', h: 1.0, hover: 0.9, turn: true },   // the model's tail touches y = 0: lifted 0.45 here, and main.js bobs it
   spore_brute: { model: 'spore_brute', h: 1.6, turn: true },
   searched_mark: { h: 0.2 },
+  spot_glint: { h: 0.4, hover: 0.5 },   // the sparkle over a treasure spot not yet searched (gold for safes and the vault)
   camp_spot: { h: 0.4 }, camp: { model: 'camp', h: 1.3, maxW: 2.2 }, pallas_jet: { model: 'pallas_jet', h: 1.0, maxW: 2.2 },   // the art pack's camp and jet when they land; else built here   // safe spots, a built camp, the Pallas's flight form (procedural)
 };
 export const CITY_MONSTER_KINDS = new Set(['rad_hound', 'glow_slime', 'rust_crawler', 'smog_wraith', 'spore_brute']);
 
-let concreteTex = null;
+let concreteTex = null, glintTex = null;
 function concrete() {                                   // a soft grey-beige concrete with stains, made once
   if (concreteTex) return concreteTex;
   const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
@@ -106,6 +107,14 @@ export function cityProp(kind, o = {}) {
       break;
     }
     case 'searched_mark': { const r = new THREE.Mesh(new THREE.RingGeometry(0.18, 0.24, 16), glow(0x7dffb0, { transparent: true, opacity: 0.6, side: THREE.DoubleSide })); r.rotation.x = -Math.PI / 2; r.position.y = 0.05; g.add(r); break; }
+    case 'spot_glint': {                                 // a soft bobbing sparkle with a halo, visible from a distance
+      const c = o.gold ? 0xffd36a : 0xbff8ff, s = o.gold ? 1.35 : 1;
+      const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.11 * s, 0), glow(c)); star.position.y = 1.15; star.castShadow = false; star.userData.spin = true; g.add(star);
+      if (!glintTex) { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d'), gr = x.createRadialGradient(32, 32, 1, 32, 32, 31); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); glintTex = new THREE.CanvasTexture(cv); }
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glintTex, color: c, transparent: true, opacity: o.gold ? 0.95 : 0.8, depthWrite: false })); halo.scale.setScalar(0.75 * s); halo.position.y = 1.15; g.add(halo);
+      const ray = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.05, 0.9, 6, 1, true), glow(c, { transparent: true, opacity: 0.35, depthWrite: false })); ray.position.y = 0.6; g.add(ray);
+      break;
+    }
     case 'camp_spot': {                                  // a safe spot: a soft green ring on the ground and a little shield beacon
       const r = new THREE.Mesh(new THREE.RingGeometry(2.7, 2.9, 40), glow(0x7dffb0, { transparent: true, opacity: 0.45, side: THREE.DoubleSide })); r.rotation.x = -Math.PI / 2; r.position.y = 0.04; g.add(r);
       g.add(cyl(0.05, 0.06, 1.1, std({ color: 0x8a98a6, metalness: 0.4 }), 1.2, 0, -1.2, 8), ball(0.11, glow(0x7dffb0), 1.2, 1.18, -1.2));

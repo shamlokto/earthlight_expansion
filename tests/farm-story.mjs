@@ -62,7 +62,9 @@ const MAPS = new Set(['farm', 'village', 'hill', 'store', 'ranch', 'workshop', '
 const TIERS = new Set(['loved', 'liked', 'neutral', 'disliked']);
 const WEATHERS = ['sun', 'rain', 'storm', 'snow'];
 const RELICS = ['photo', 'teacup', 'book', 'watch', 'toy', 'medal', 'seedtin', 'musicbox', 'datachip', 'ring'];
-const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king', 'cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi'];
+const FISH = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'fish_king', 'cave_fish', 'glowfish', 'pipe_eel', 'abyss_koi',
+  'fish_reedling', 'fish_dawnscale', 'fish_rainbarb', 'fish_lantern_cat', 'fish_spokerun', 'fish_paneray', 'fish_stormgar', 'fish_cloudfin', 'fish_cistern_sturgeon',
+  'fish_earthlight_trout', 'fish_sailfin', 'fish_halo_eel', 'fish_deep_angler', 'fish_ferryman', 'fish_mochi', 'fish_admiral'];   // 2026-11-21: the new fish
 const CROPS = ['turnip', 'potato', 'cucumber', 'strawberry', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach', 'moonflower'];
 const GIFTABLE = [...CROPS, 'egg', 'milk_s', 'milk_m', 'milk_l', ...FISH, 'herb', 'berry', 'mushroom', 'frostcap', 'comet_ice', 'nickel_iron', 'silica', 'copper', 'titanium', 'platinum',
   'scrap', 'alloy', 'crystal', ...RELICS, 'old_coin', 'teddy_bear', 'film_camera', 'credit_chip', 'data_core', 'bread', 'soup', 'pie', 'tea', 'tonic',
