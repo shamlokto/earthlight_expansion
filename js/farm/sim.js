@@ -22,7 +22,7 @@
 //  * Stamina at 0: the action still happens and the result carries fainted: true.
 //  * Ruins: cells (7,11) (the lift) is always open; walls never cut an open cell off from it.
 //    Finds that do not fit in a full rucksack are left behind (the result says so).
-import { SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, ITEMS, CROPS, TOOL_LEVELS, FIELD_SIZES, PASTURE_SIZE, RELICS, FESTIVAL_DAYS, FRUIT_TREES, TREE_DAYS, WILD_TREES, SATO_BIRTHDAY, ROBOT_NAMES, ROBOT_JOBS, ROBOT_MOODS } from './data.js';
+import { SEASONS, WEEKDAYS, DAYS_PER_SEASON, DAY_START, DAY_END, ITEMS, CROPS, TOOL_LEVELS, FIELD_SIZES, PASTURE_SIZE, RELICS, FESTIVAL_DAYS, FRUIT_TREES, TREE_DAYS, WILD_TREES, SATO_BIRTHDAY, ROBOT_NAMES, ROBOT_JOBS, ROBOT_MOODS, FISH_TABLE } from './data.js';
 import { MUSHROOMS as BED_CROPS, LOWER_LOGS } from './data.js';
 
 export const NPC_IDS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui', 'calloway', 'fenn', 'venn', 'thorne', 'moth', 'wick'];
@@ -41,7 +41,8 @@ const FRUITS = ['cherry', 'peach', 'apple', 'persimmon', 'wild_apple', 'wild_gra
 const MUSHROOMS = ['mushroom', 'frostcap', 'shiitake', 'pale_oyster'];
 const CAVE_SHROOMS = ['shiitake', 'pale_oyster', 'glowcap'], CAVE_FISH = ['cave_fish', 'glowfish', 'pipe_eel'];
 const VEG = ['turnip', 'potato', 'cucumber', 'tomato', 'corn', 'onion', 'pumpkin', 'carrot', 'eggplant', 'sweetpotato', 'spinach'];
-const FISH_IDS = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'cave_fish', 'glowfish', 'pipe_eel'];
+const FISH_IDS = ['fish_s', 'fish_m', 'fish_l', 'fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter', 'cave_fish', 'glowfish', 'pipe_eel',
+  ...Object.keys(FISH_TABLE).filter((id) => !FISH_TABLE[id].legend)];   // any fish but the legendaries
 const MILK = ['milk_s', 'milk_m', 'milk_l'];
 // Each recipe: a list of ingredient slots; each slot is satisfied by any one of its ids. Different slots
 // of the same group must use different items (a salad is two DIFFERENT vegetables).
@@ -123,7 +124,7 @@ export const FORAGE = [
   [['mushroom', 4], ['chestnut', 3], ['wild_apple', 3], ['matsutake', 0.5]],
   [['frostcap', 4], ['pine_nut', 3], ['winter_root', 3]],
 ];
-const FISH_ODDS = { farm: [70, 25, 5], village: [55, 35, 10], hill: [35, 40, 25], lower: [0, 0, 0], sump: [0, 0, 0] };   // the Undercroft's waters: underFish()   // small, medium, large
+const FISH_ODDS = { farm: [70, 25, 5], village: [55, 35, 10], hill: [35, 40, 25], canal: [50, 38, 12], lower: [0, 0, 0], sump: [0, 0, 0] };   // the Undercroft's waters: underFish()   // small, medium, large
 const SEASON_FISH = ['fish_spring', 'fish_summer', 'fish_autumn', 'fish_winter'];
 const GIFT = { loved: 8, liked: 4, neutral: 1, disliked: -4 };
 // What a gift is worth: by tier, tripled on a birthday, times `share` (a mailbox gift is worth 80%; a later gift the same day a
