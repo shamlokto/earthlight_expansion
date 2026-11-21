@@ -18,7 +18,8 @@
     body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.55 var(--f-body); }
     a { color: var(--gold); }
     header.hero { position: relative; min-height: 340px; display: grid; align-items: end; color: #fff8e6; background: #2b3a2a center/cover; }
-    header.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(10, 8, 5, .82), rgba(10, 8, 5, .1) 70%); }
+    header.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(10, 8, 5, .85), rgba(10, 8, 5, .45) 75%, rgba(10, 8, 5, .25)), linear-gradient(90deg, rgba(10, 8, 5, .45), transparent 70%); }
+    header.hero h1, header.hero p, .eyebrow { text-shadow: 0 1px 3px rgba(0, 0, 0, .6); }
     header.hero > div { position: relative; z-index: 1; padding: 28px max(16px, 5vw); max-width: 1100px; }
     .eyebrow { font: 600 12px var(--f-display); letter-spacing: .2em; text-transform: uppercase; color: #f0cf7a; }
     h1 { font: 700 clamp(34px, 6vw, 60px)/1.05 var(--f-display); margin: 6px 0 10px; }
@@ -41,14 +42,14 @@
     .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
     .card { background: var(--paper-2); border: 1px solid var(--edge); border-radius: 12px; padding: 12px; display: flex; gap: 12px; }
     .card img.face { width: 76px; height: 96px; object-fit: cover; object-position: top; border-radius: 8px; flex: none; background: #1a2238; }
-    .card b { font: 600 15px var(--f-display); display: block; }
+    .card > div > b:first-child { font: 600 15px var(--f-display); display: block; }
     .card .t { font-size: 13px; color: var(--dim); }
     .card .g { font-size: 12.5px; margin-top: 6px; }
     .tag { display: inline-block; font: 600 11px var(--f-display); padding: 1px 7px; border-radius: 10px; background: #c84a6a; color: #fff; margin-left: 4px; vertical-align: 1px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--edge); vertical-align: middle; }
     th { font: 600 13px var(--f-display); color: var(--dim); background: var(--paper-2); vertical-align: bottom; }
-    th.n { text-align: right; }
+    th.n { text-align: right; } table.hev td[rowspan] { vertical-align: top; border-right: 1px solid var(--edge); } th[data-sort]::after { content: attr(data-sort); font-size: 10px; margin-left: 3px; }
     .fans { font-size: 12.5px; color: #b0405e; margin-top: 2px; } @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fans:not(.liked) { color: #f08aa5; } } .fans.liked { color: var(--dim); }
     .finder { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; } .finder select { font: 600 14px var(--f-display); padding: 6px 10px; border: 1px solid var(--edge); border-radius: 999px; background: var(--paper-2); color: var(--ink); } .finder b { font: 700 18px var(--f-display); min-width: 52px; font-variant-numeric: tabular-nums; } .finder input { flex: 1 1 220px; accent-color: var(--gold); }
     td:first-child:has(img.ico) { white-space: nowrap; } #itab td:first-child { white-space: normal; } td:first-child img.ico, td:first-child .fake { margin-right: 6px; }
@@ -86,7 +87,7 @@
     #mapzoom > div { max-width: 96vw; max-height: 92vh; overflow: auto; border-radius: 10px; }
     #mapzoom img { display: block; max-width: none; max-height: none; border-radius: 0; }
     footer { text-align: center; color: var(--dim); font-size: 13px; padding: 30px 16px; }
-    @media (max-width: 600px) { .card img.face { width: 60px; height: 76px; } }
+    @media (max-width: 600px) { .card img.face { width: 60px; height: 76px; } #crops table td:first-child, #crops table th:first-child, #fishing table.sortable td:first-child, #fishing table.sortable th:first-child { position: sticky; left: 0; z-index: 1; background: var(--paper); box-shadow: 1px 0 0 var(--edge); } #crops table th:first-child, #fishing table.sortable th:first-child { background: var(--paper-2); } }
   </style>
 </head>
 <body>
@@ -94,13 +95,13 @@
     <div class="eyebrow">Earth Light · after the war · the wiki</div>
     <h1>Sato's Harvest</h1>
     <p>Captain Mira Sato handed in her bars after Major Hesk's defeat and bought the old Hollin field on Eden's Upper deck. She has never grown anything. She means to learn.</p>
-    <div class="btns"><a href="farm.html">▶ Play</a><a class="ghost" href="#gallery">Pictures</a><a class="ghost" href="#people">People</a><a class="ghost" href="#crops">Crops</a><a class="ghost" href="#items">Items</a></div>
+    <div class="btns"><a href="farm.html">▶ Play</a><a class="ghost" href="#gallery">Pictures</a><a class="ghost" href="#people">People</a><a class="ghost" href="#where">Where to find them</a><a class="ghost" href="#hearts">Heart events</a><a class="ghost" href="#crops">Crops</a><a class="ghost" href="#items">Items</a></div>
   </div></header>
   <nav class="toc" id="toc"></nav>
   <main id="main"><p class="lead">Loading the wiki from the game's data…</p></main>
   <dialog id="zoom"><img alt=""></dialog>
   <dialog id="mapzoom"><div><img alt="Map at full size"></div></dialog>
-  <footer>Built from the game's own data files, so it always matches the version you play. Nothing here needs the original ROM.</footer>
+  <footer>Built from the game's own data files, so it always matches the version you play.</footer>
   <script type="module">
     import { ITEMS, CROPS, SEASONS, FISH_TABLE } from './js/farm/data.js';
     import * as sim from './js/farm/sim.js';
@@ -164,6 +165,7 @@
     // ---- love
     add('love', 'Love', `<p>Friendship grows from talking (once a day), gifts (loved ones count most, birthdays triple; the first gift of the day to someone counts in full, any more that day a quarter; a gift left in their <b>mailbox</b>, by every home's door, counts 80%) and <b>favours</b>: now and then someone asks Sato for something, and bringing it is worth more than any gift.</p>
       <p>A love story starts only when you have seen that person's heart events, done <b>two favours</b> for them and reached <b>8 hearts</b>: then, after a conversation, they say how they feel. At <b>10 hearts</b>, the <b>Earthlight pendant</b> from Queen Moraine's barge asks the question, and the wedding follows under the lanterns of the square. Your partner then shares the farm, waits on the porch at dawn and in the evening, and waters some of the field before you wake.</p>
+      <p>Where and when each heart event plays: see <a href="#hearts">Heart events</a>.</p>
       <p><b>Memories.</b> Every scene you see (heart events, confessions, weddings, festivals, the big story moments) is kept in the farm journal's <b>Memories</b> tab (P, or the farmhouse bed), to replay whenever you like; nothing changes when you do. Scenes you have not seen yet show as silhouettes with a hint.</p>
       <p><b>Romance candidates:</b> ${R.candidates.map((c) => esc(story.NPCS[c] ? story.NPCS[c].name : c)).join(', ')}.</p>
       ${R.pendant ? `<p class="lead">${esc(R.pendant)}</p>` : ''}`);
@@ -241,6 +243,24 @@
       <b id="wtl">12:00</b><input id="wt" type="range" min="360" max="1430" step="10" value="720" aria-label="Time of day"></p>
       <div class="tw"><table id="wnow"></table></div>
       <h3>Everyone's week</h3><p class="t" style="color:var(--dim)">Tap a name to open their timetable.</p>${schedCards}`);
+    // ---- heart events: when they can play, worked out the way the game checks (main.js: on that map, the person there, enough hearts, inside the hours)
+    {
+      const FLAG_TXT = { ld_lights: 'after the work lights', ld_pumps: 'after the Pump Halls', ld_catacombs: 'after the Catacombs', ld_enclave: 'after the Enclave', ld_pump2: 'after the cistern pump', ld_works: 'after the Works', ld_vents: 'after the Thermal Vents', ld_arena: 'after the arena', ld_rehoused: 'once the families have moved up', ld_vault: 'once the vault is open' };
+      const evWhen = (e) => { const days = []; for (let wd = 0; wd < 7; wd++) { if (e.weekday != null && e.weekday !== wd) continue; const bl = []; let a = null;
+          for (let m = 360; m <= 1440; m += 10) { const w = m < 1440 && m >= (e.from ?? 0) && m <= (e.to ?? 1440) && story.whereIs(e.npc, { season: 0, day: 3, year: 2, weekday: wd, minute: m, weather: 'sun', festival: null, flags: ALL_FLAGS }),
+              on = !!(w && (spotMap[w.spot] || w.spot.split('.')[0]) === e.map); if (on && a == null) a = m; if (!on && a != null) { bl.push(`${hhm(a)}–${hhm(m)}`); a = null; } }
+          days.push(bl.join(', ')); }
+        const idx = e.weekday != null ? [e.weekday] : [0, 1, 2, 3, 4, 5, 6], parts = [];
+        for (let i = 0; i < idx.length;) { let j = i; while (j + 1 < idx.length && days[j + 1] === days[i] && idx[j + 1] === idx[j] + 1) j++; if (days[i]) parts.push(`${j > i ? DAYS[idx[i]] + '–' + DAYS[idx[j]] : DAYS[idx[i]]} ${days[i]}`); i = j + 1; }
+        return parts.join(' · ') || `${e.weekday != null ? DAYS[e.weekday] + ' ' : ''}${hhm(e.from ?? 360)}–${hhm(e.to ?? 1440)}`; };
+      const placeOf = (k) => (OUT[k] ? OUT[k][0].toUpperCase() + OUT[k].slice(1) : roomName(k));
+      const evs = [...story.EVENTS, ...(story.LOWER_SCENES || []).filter((e) => e.npc && e.hearts != null)];
+      const who = [...new Set(evs.map((e) => e.npc))].sort((a, b) => ((R.candidates || []).includes(b) - (R.candidates || []).includes(a)) || ids.indexOf(a) - ids.indexOf(b));
+      const rows = who.map((id) => evs.filter((e) => e.npc === id).sort((a, b) => a.hearts - b.hearts).map((e, k, arr) => `<tr>${k === 0 ? `<td rowspan="${arr.length}"><b>${esc(story.NPCS[id] ? story.NPCS[id].name : id)}</b>${(R.candidates || []).includes(id) ? ' <span style="color:#c94a6a">♥</span>' : ''}</td>` : ''}<td class="n">${e.hearts} ♥</td><td>${esc(placeOf(e.map))}</td><td>${esc(evWhen(e))}${e.flag ? ` <small>(${esc(FLAG_TXT[e.flag] || e.flag)})</small>` : ''}</td></tr>`).join('')).join('');
+      add('hearts', 'Heart events', `<p class="lead">At certain hearts a person has something to show you. Walk into the place while they are there, inside the hours, and the scene plays by itself; each plays once, and then it is kept in Memories. The times below are when they are actually there.</p>
+        <p class="t">Not on festival days or in a storm, and on the hill not in the rain. Love stories also need two favours done before the confession at 8 hearts.</p>
+        <div class="tw"><table class="hev"><tr><th>Person</th><th class="n">Hearts</th><th>Where</th><th>When</th></tr>${rows}</table></div>`);
+    }
     // ---- crops
     const crops = Object.values(CROPS);
     // money from one seed bag (a 3×3 patch, base price), worked out the way the game grows it: sown on day 1, ready the morning
@@ -255,8 +275,8 @@
     const best = {}; for (const r of crRows) for (const se of r.c.seasons) if (!best[se] || r.perDay > best[se].perDay) best[se] = r;
     const cr = (v) => Math.round(v).toLocaleString('en') + ' cr';
     add('crops', 'Crops', `<p class="lead">A seed bag sows a 3×3 patch. A crop grows one day for each night it was watered; rain waters the whole field. Out-of-season crops die when the season turns. The greenhouse grows anything, any time.</p>
-      <p><b>Best money per day, per patch:</b> ${[0, 1, 2, 3].filter((se) => best[se]).map((se) => `${esc(SEASONS[se])}: <b>${esc(best[se].c.name)}</b> (${cr(best[se].perDay)} a day)`).join(' · ')}. Every patch you plant adds the same again, so ten patches of turnips earn ten times the turnip figure.</p>
-      <div class="tw"><table><tr><th>Crop</th><th>Season</th><th class="n">Days</th><th class="n">Regrows</th><th class="n">Sells for</th><th class="n">Seed bag</th><th class="n">One bag earns¹</th><th class="n">Harvests a season²</th><th class="n">Season profit²</th><th class="n">Profit a day²</th><th class="n">Greenhouse a day³</th></tr>
+      <p><b>Best money per day, per patch:</b> ${[0, 1, 2, 3].filter((se) => best[se]).map((se) => `${esc(SEASONS[se])}: <b>${esc(best[se].c.name)}</b> (${cr(best[se].perDay)} a day)`).join(' · ')}. Every patch you plant adds the same again, so ten patches of turnips earn ten times the turnip figure. Tap a column heading to sort by it.</p>
+      <div class="tw"><table class="sortable"><tr><th>Crop</th><th>Season</th><th class="n">Days</th><th class="n">Regrows</th><th class="n">Sells for</th><th class="n">Seed bag</th><th class="n">One bag earns¹</th><th class="n">Harvests a season²</th><th class="n">Season profit²</th><th class="n">Profit a day²</th><th class="n">Greenhouse a day³</th></tr>
       ${crRows.map(({ c, span, m, once, perDay, gh }) => `<tr><td>${ico(c.id)}${esc(c.name)}</td><td>${span > 1 ? c.seasons.map(seasonName).join(', ') : esc(seasonName(c.seasons[0]))}</td><td class="n">${c.days}</td><td class="n">${c.regrow ? 'every ' + c.regrow : '–'}</td><td class="n">${crf(c.sell)}</td><td class="n">${c.bag ? crf(c.bag) : '–'}</td><td class="n">${cr(once)}</td><td class="n">${m.n}${c.regrow ? '' : ` <small>(${m.bags} bags)</small>`}</td><td class="n">${cr(m.profit)}</td><td class="n"><b>${cr(perDay)}</b></td><td class="n">${cr(gh)}</td></tr>`).join('')}
       </table></div><p class="t" style="font-size:12.5px;color:var(--dim)">All for one patch of nine plants at the base price, watered every day, seed costs taken off. ¹ Sown once on day 1 of its season and left to regrow. ² Sown on day 1 and kept going all season: a one-harvest crop is resown with a new bag the day it is picked, a regrowing crop keeps giving until the season ends${crRows.some((r) => r.span > 1) ? ' (a crop that lasts several seasons counts all of them)' : ''}; profit a day is that season's profit over its 30 days. ³ In the greenhouse there is no season to end, so this is the steady rate once it is going.</p>`);
 
@@ -329,15 +349,15 @@
       return `<tr data-k="${i.kind}" data-n="${esc((i.name + ' ' + (i.desc || '') + ' ' + src + ' ' + (LOVED_BY[i.id] || []).join(' ') + ' ' + (LIKED_BY[i.id] || []).join(' ')).toLowerCase())}"><td class="it">${ico(i.id)}<b>${esc(i.name)}</b><small>${esc(KIND[i.kind] || i.kind)}</small></td>
         <td class="ab">${esc(i.desc || '')}${fans}${i.detail && i.detail !== i.desc ? `<details><summary>More</summary>${esc(i.detail)}</details>` : ''}</td><td class="src">${esc(src)}</td>
         <td class="n">${i.sell ? crf(i.sell) : ''}</td><td class="n">${i.stamina ? '+' + i.stamina : ''}</td></tr>`; }).join('');
-    add('items', 'Items', `<p class="lead">All ${Object.keys(ITEMS).length} things Sato can carry, straight from the game's item list. Search by name, description or where it comes from, or pick a kind.</p>
+    add('items', 'Items', `<p class="lead">All ${Object.keys(ITEMS).length} things Sato can carry, straight from the game's item list. Search by name, description, where it comes from or who loves it, pick a kind, or tap a column heading (Sells, Stamina) to sort.</p>
       <div class="filter" id="kf"><input id="q" placeholder="Search…" size="14"><button class="on" data-k="">All</button>${kinds.map((k) => `<button data-k="${k}">${esc(KIND[k] || k)}</button>`).join('')}</div>
-      <div class="tw"><table id="itab"><tr><th>Item</th><th>About</th><th>Where to get it</th><th class="n">Sells</th><th class="n">Stamina</th></tr>${itemRows}</table></div>`);
+      <div class="tw"><table id="itab" class="sortable"><tr><th>Item</th><th>About</th><th>Where to get it</th><th class="n">Sells</th><th class="n">Stamina</th></tr>${itemRows}</table></div>`);
 
     // ---- fishing and the Old World
     add('fishing', 'Fishing', `<p class="lead">Face water, Space to cast, wait for the float to dip, Space again. Every water has fish of its own: the farm pond, the village river, the hill lake, the Eden Central canal, and below decks the pump hall basins and the Sump. Weather and the hour matter: some fish rise only at dawn, at night, in rain or in a storm.</p>
       <p><b>Rods.</b> Ruess reworks the rod at the Workshop (Alloy: 800 cr and 5 scrap; Starsteel: 2,500 cr, 5 alloy and a crystal). An Alloy rod holds the premium fish and the first legendaries; a Starsteel rod lands the best of all, and better rods get a bite sooner. Over a year (a cast costs 2 stamina) the river, lake and canal pay about 38 cr a stamina on a Field rod, about 57 on Alloy and about 74 on Starsteel; a full day's fishing on a Starsteel rod pays roughly a good crop day, though a day in the Earth ruins still pays more.</p>
-      <p><b>Legendaries</b>, one a water, and every one of them rare: Lady Mochi in the farm pond, the Ferryman in the river, Old Hollin in the hill lake, Admiral Brass in the canal and the abyss koi in the Sump.</p>
-      <div class="tw"><table><tr><th>Fish</th><th>Where and when</th><th>Rod</th><th>About</th><th class="n">Sells</th></tr>${[...new Set([...(story.FISH || []), 'cave_fish', 'glowfish', 'pipe_eel', 'fish_cistern_sturgeon', 'fish_deep_angler', 'abyss_koi'])].map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc(fishWhere(id).replace(/; (any rod|Alloy rod or better|Starsteel rod)$/, ''))}</td><td>${fishRod(id)}</td><td>${esc((ITEMS[id] && ITEMS[id].detail) || (story.FISHING && story.FISHING.caught && story.FISHING.caught[id]) || (ITEMS[id] && ITEMS[id].desc) || '')}</td><td class="n">${ITEMS[id] && ITEMS[id].sell ? crf(ITEMS[id].sell) : ''}</td></tr>`).join('')}</table></div>`);
+      <p><b>Legendaries</b>, one a water, and every one of them rare: Lady Mochi in the farm pond, the Ferryman in the river, Old Hollin in the hill lake, Admiral Brass in the canal and the abyss koi in the Sump. Tap a column heading to sort the table.</p>
+      <div class="tw"><table class="sortable"><tr><th>Fish</th><th>Where and when</th><th>Rod</th><th>About</th><th class="n">Sells</th></tr>${[...new Set([...(story.FISH || []), 'cave_fish', 'glowfish', 'pipe_eel', 'fish_cistern_sturgeon', 'fish_deep_angler', 'abyss_koi'])].map((id) => `<tr><td>${ico(id)}${esc(name(id))}</td><td>${esc(fishWhere(id).replace(/; (any rod|Alloy rod or better|Starsteel rod)$/, ''))}</td><td>${fishRod(id)}</td><td>${esc((ITEMS[id] && ITEMS[id].detail) || (story.FISHING && story.FISHING.caught && story.FISHING.caught[id]) || (ITEMS[id] && ITEMS[id].desc) || '')}</td><td class="n">${ITEMS[id] && ITEMS[id].sell ? crf(ITEMS[id].sell) : ''}</td></tr>`).join('')}</table></div>`);
     // ---- maps: drawn live from js/farm/maps.js (colours copied from js/farm/minimap.js, which can't be imported here: it pulls in three.js)
     const mapJobs = [];
     const CITY_SEED = 20261120;                       // the sample Earth city in the Maps section
@@ -453,7 +473,7 @@
       ['The Ashfall Exchange', 'Queen Moraine\'s trading house on the plaza, 10 to 6 every day but Saturday (on Saturdays she trades from her ship at the dock).'],
       ['The Grand Market', 'Vending terminals with no keeper: imported seeds of the season at +25%, every sapling in any season, batteries, honeycomb, chestnuts, tonic. They also buy fine food and produce worth 300 cr or more at a fifth above bin prices.'],
       ['The Arrivals hall', 'A clean transit hall with a window band onto the stars, the departures screen and the courier desk, which books Maris\'s shuttle to Earth. Maris lands here on Tuesday and Friday mornings.'],
-      ['The space dock', 'North-west, at the hull: landing pads, cranes, Moraine\'s cartel trader and Maris\'s courier shuttle beside the lit <b>SHUTTLE TO EARTH</b> gate.'],
+      ['The space dock', 'North-west, at the hull: landing pads, cranes, Moraine\'s cartel trader and Maris\'s courier shuttle beside the lit “Shuttle to Earth” gate.'],
       ['The shuttle to Earth', 'Any day, any hour: ' + sim.SHUTTLE_FARE + ' cr a trip, free once Maris is at 5 hearts. Board at the gate or book at the Arrivals desk.'],
       ['Sato\'s Watch', 'The observatory and beacon named for Sato (to her dismay). After 7 in the evening the dome opens for stargazing: +20 stamina once a night.'],
       ['The viewing gallery', 'Benches along the great window. After 7 in the evening a sit restores 20 stamina once a day.'],
@@ -547,14 +567,22 @@
     }
     add('festivals', 'Festivals', `<div class="cards">${[...story.FESTIVALS].sort((a, b) => a.season - b.season || a.day - b.day).map((f) => `<div class="card">${url('scenes/festival_' + (f.id === 'yearsend' ? 'yearend' : f.id)) ? `<img class="face" style="width:110px;height:70px;object-position:center" src="${url('scenes/festival_' + (f.id === 'yearsend' ? 'yearend' : f.id))}" alt="">` : ''}<div><b>${esc(f.name)}</b><div class="t">${esc(seasonName(f.season))} ${f.day}</div><div class="g">${esc(f.blurb)}</div></div></div>`).join('')}</div>`);
     add('help', 'How to play', `<div class="help">${story.HELP.map((h) => `<div><h3>${esc(h.title)}</h3><p>${esc(h.body)}</p></div>`).join('')}</div>`);
-    add('art', 'About the art', `<p>Everything in Sato's Harvest is original. The 3D models (${Object.keys(models).length} of them) were made by turning anime-style concept pictures into textured meshes. The story pictures, film clips, skies and icons were generated from our own prompts. The cast's look comes from the colony game's portraits. Prompts and scripts are in <code>tools/art/farm/</code>.</p>`);
+    add('art', 'About the art', `<p>Everything in Sato's Harvest is original. The 3D models (${Object.keys(models).length} of them) were made by turning anime-style concept pictures into textured meshes. The story pictures, film clips, skies and icons were generated from our own prompts. The cast's look comes from the colony game's portraits, and the dialogue uses ${Object.values(PX).reduce((a, o) => a + Object.keys(o).length, 0)} expression portraits drawn from them (shy, joyful, tearful and more), so faces change with the conversation. Prompts and scripts are in <code>tools/art/farm/</code>.</p>`);
 
     $('#main').innerHTML = sections.map((s) => `<section id="${s.id}"><h2>${esc(s.title)}</h2>${s.html}</section>`).join('');
-    $('#toc').innerHTML = sections.map((s) => `<a href="#${s.id}">${esc(s.title)}</a>`).join('');
+    const TOC_SHORT = { people: 'People', homes: 'Homes', hours: 'Hours', where: 'Where to find', hearts: 'Heart events', lower: 'Lower deck', belt: 'The belt', robots: 'Robots', ruins: 'Earth', lane: 'Market Lane', help: 'How to play', art: 'Art' };
+    $('#toc').innerHTML = sections.map((s) => `<a href="#${s.id}">${esc(TOC_SHORT[s.id] || s.title)}</a>`).join('');
     // maps: draw once the fonts are in (or after a second), then click to see full size
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1000))]);
     for (const f of mapJobs) f();
     const mz = $('#mapzoom'); document.addEventListener('click', (e) => { const c = e.target.closest('canvas[data-map]'); if (c) { mz.querySelector('img').src = c.toDataURL(); mz.showModal(); } else if (e.target.closest('#mapzoom')) mz.close(); });
+    // click a header of a sortable table to sort by it (numbers by value, words A–Z); click again to reverse
+    for (const t of document.querySelectorAll('table.sortable')) { const head = t.rows[0]; let col = -1, dir = 1;
+      head.querySelectorAll('th').forEach((th, i) => { th.style.cursor = 'pointer'; th.title = 'Sort'; th.addEventListener('click', () => {
+        dir = col === i ? -dir : th.classList.contains('n') ? -1 : 1; col = i; const rows = [...t.rows].slice(1);
+        const key = (r) => { const x = r.cells[i].textContent.trim(), n = parseFloat(x.replace(/[^0-9.\-]/g, '')); return th.classList.contains('n') ? (isNaN(n) ? -Infinity : n) : x.toLowerCase(); };
+        rows.sort((a, b) => { const p = key(a), q = key(b); return (p < q ? -1 : p > q ? 1 : 0) * dir; }).forEach((r) => t.tBodies[0].appendChild(r));
+        head.querySelectorAll('th').forEach((h, j) => { h.dataset.sort = j === i ? (dir > 0 ? '▲' : '▼') : ''; }); }); }); }
     // a card's timetable link opens that timetable
     const openWhen = () => { const d = location.hash.startsWith('#when-') && document.getElementById(location.hash.slice(1)); if (d) { d.open = true; d.scrollIntoView(); } };
     addEventListener('hashchange', openWhen); openWhen();
