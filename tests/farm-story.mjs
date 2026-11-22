@@ -50,7 +50,7 @@ const LOVERS = ['general', 'ruess', 'kestrel', 'mori', 'oduya', 'yui', 'lark', '
 const VILLAGERS = Object.keys(CAST).filter((id) => id !== 'sato');
 const MAIN = VILLAGERS.filter((id) => id !== 'moraine');
 const needTalk = (id) => (id === 'moraine' ? 12 : NEWCOMERS.includes(id) ? 22 : 25);
-const SPOTS = new Set(('farm.porch farm.bin farm.gate farm.pond farm.field village.square village.memorial village.bridge village.riverside ' +
+const SPOTS = new Set(('house.partner farm.porch farm.bin farm.gate farm.pond farm.field village.square village.memorial village.bridge village.riverside ' +
   'village.bench village.storefront village.cafefront village.hallfront village.workshopfront village.ranchyard village.river ' +
   'hill.wreck hill.lake hill.overlook hill.onsen central.office central.arrivals central.exchange central.plaza central.dock hangar.floor store.counter store.floor ranch.counter workshop.counter workshop.bench ' +
   'cafe.counter cafe.table1 cafe.table2 cafe.table3 hall.desk hall.floor ' +
@@ -196,7 +196,7 @@ for (const year of [1, 2]) for (let season = 0; season < 4; season++) for (let w
 check(where('sato', { season: 0, day: 1, weekday: 0, minute: 600, weather: 'sun', festival: null }) === null, 'Sato has no schedule');
 check(whereIs('nobody', { season: 0, day: 1, weekday: 0, minute: 600, weather: 'sun', festival: null }) === null, 'unknown npc is nowhere');
 check(whereIs('seln', undefined) === null, 'whereIs survives a missing ctx');
-for (const s of SPOTS) check(seen.has(s), `spot ${s} is used by somebody`);
+for (const s of SPOTS) check(seen.has(s) || s === 'house.partner', `spot ${s} is used by somebody`);   // house.partner: only a partner's evening
 for (const id of MAIN) check(seenBy[id].size >= 4, `${id} gets about (${seenBy[id].size} spots)`);
 
 // Shops: open on the counter at 11:00 and 15:00 on at least five days, shut on the stated day, never in a storm.
@@ -497,7 +497,7 @@ for (const id of LOVERS) {
     const ctx = { season: 1, day: dayFor(1, wd), weekday: wd, minute: m, weather, festival: null, year: 1 };
     const home = (m >= 360 && m < 480) || (m >= 1200 && m < 1320);
     const mine = where(id, { ...ctx, partner: id }), usual = where(id, ctx), other = where(id, { ...ctx, partner: 'nobody' });
-    if (home) check(mine === 'farm.porch', `${id} as partner is on the porch at ${m}`);
+    if (home) check(mine === (m >= 1200 && weather !== 'storm' ? 'house.partner' : 'farm.porch'), `${id} as partner is home at ${m} (the porch at dawn, indoors in the evening)`);
     else check(mine === usual || (usual === HOME(id) && mine === 'farm.porch'), `${id} as partner keeps the usual day at ${m} (free time at the farm, not the old home)`);
     check(other === usual, `${id}: somebody else's partner changes nothing`);
   }
@@ -631,7 +631,7 @@ for (const id of ['lark', 'vesna']) check(EVENTS.filter((e) => e.npc === id).len
   check(story.presence('mori', sc('mori', 700)) === 'out' && story.presence('mori', sc('mori', 1300)) === 'home' && story.presence('mori', sc('mori', 1400)) === 'asleep', 'Dr. Mori: out at the clinic, home in the evening, asleep at night');
   check(story.presence('vesna', sc('vesna', 630)) === 'asleep', 'Vesna sleeps in after the morning show');
   check(story.presence('seln', sc('seln', 700, { weather: 'storm' })) === 'home' && whereIs('seln', sc('seln', 700, { weather: 'storm' })) === null, 'a storm keeps people in at home');
-  check(whereIs('lark', sc('lark', 1230, { partner: 'lark' })).spot === 'farm.porch' && story.homeSpot('lark', { partner: 'lark' }) === 'farm.porch', 'a partner\'s home is the farm');
+  check(whereIs('lark', sc('lark', 1230, { partner: 'lark' })).spot === 'house.partner' && whereIs('lark', sc('lark', 400, { partner: 'lark' })).spot === 'farm.porch' && story.homeSpot('lark', { partner: 'lark' }) === 'farm.porch', 'a partner\'s home is the farm (the porch at dawn, indoors in the evening)');
   check(HOME('thorne') === null && HOME('thorne', { ld_enclave: 1 }) === 'home_shelter.thorne' && HOME('thorne', { ld_enclave: 1, ld_rehoused: 1 }) === 'home_thornes.thorne', 'the Thornes: the enclave shelter, then a house up top');
   check(HOME('wick') === null && HOME('hana') === null, 'nobody is home before they are on the deck');
 }

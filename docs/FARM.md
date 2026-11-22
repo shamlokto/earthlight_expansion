@@ -958,3 +958,16 @@ picture gets `ui.icon()`'s drawn fish in the species' colours, with a gold ring 
 * Tests: farm-story (every heart event, Lower deck scene, festival and love story is a memory with a title, lines and a hint,
   kept by its flag; the hints read right), farm-sim (remembered on the day, first time only, dates, replay changes nothing,
   an old save's backfill).
+
+## 18. A home worth coming back to, and fruit you can see (owner, 2026-11-22: "houses and farmhouses look pretty empty, and there are few upgrades available ... it is unclear whether berries and trees have fruits available to pick ... the goods that I can pick on the mountain are hard to see")
+
+* **Fruit you can see.** Berry bushes and fruit trees show fruit only while there is some to pick. `tools/art/farm/mesh/bare.py` makes a "picked" variant of a model (`bush_bare`, `fruit_tree_<kind>_bare`) by repainting fruit-coloured texels leaf green; `world.js` draws the bare one when `sim.bushReady` / `sim.fruitReady` say no, and a bush swaps to bare the moment it is picked (`World.swapProp`). Wild trees already hid their fruit.
+* **Forage** on the hill bobs and sits on a soft halo and ground ring (gold when it sells for 300 cr or more).
+* **The sprint** (Shift, or the touch stick pushed all the way): 7.4 tiles/s against 3.9, a forward lean, a quicker stride and dust.
+* **Furniture** (`sim.HOME_DECOR`): twelve pieces from the village's makers, each a flag `decor_<id>` and a `when` prop in the farmhouse (solid only once bought: `decorSolid`). Telescope (+10 stamina once a night after 19:00), fish tank (shows your catches), piano (a tune; a partner hums along), double bed (replaces the cot), trophy (on sale after a legendary). Wall paint (Pia) and floor finish (Tika) are one entry each that steps through `HOUSE_PAINT` / `HOUSE_FLOOR`.
+* **The back bedroom** (Ruess, 8,000 cr and 120 lumber, flag `house_back`): a door in the farmhouse's back-left corner, a furnished room `house_back`, and an annex beside the house outside.
+* **Rooms dressed.** Cottage rooms get windows with curtains (daylight follows the clock) and skirting; homes and shops get a coat rack, hanging plant, side table or kitchen dresser where the floor by the door is free (`maps.js dress / dressRoom`). Not the metal rooms or the Undercroft.
+* **Partners** spend the evening (20:00-22:00) inside the farmhouse at `house.partner`, the porch at dawn as before.
+* **Love stories.** 5-heart scenes for Ruess, Kestrel, Mori, Oduya and Yui; a sweethearts' date at 9 hearts for all eight (`sweet: true`, sweethearts or partners only); eight sweet-talk lines each; a short moment with your sweetheart after each festival (`story.FESTIVAL_LOVE`). Memories lists a person's scenes in the order they happen.
+* **Atmosphere.** Seasonal drift on fine days outdoors (petals, leaves, flakes); a porch lamp and fireflies on the farm at night; lane lines on Earth's streets; Lantern Square and the plaza with flower beds and benches.
+* `tests/farm-lint.mjs` fails on code hidden behind a `//` comment on the same line (the festival rewards were lost that way once).
