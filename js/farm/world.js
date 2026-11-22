@@ -214,6 +214,7 @@ export class World {
     this.cursor = new THREE.Mesh(new THREE.RingGeometry(0.36, 0.47, 4, 1, Math.PI / 4), new THREE.MeshBasicMaterial({ color: 0xfff2b8, transparent: true, opacity: 0.85, depthWrite: false }));
     this.cursor.rotation.x = -Math.PI / 2; this.cursor.renderOrder = 5; this.scene.add(this.cursor);
     this.weather = this.makeWeather();
+    this.drift = this.makeDrift();   // seasonal petals, leaves and flakes on fine days (2026-11-22)
     this.season = 0; this.t = 0; this.tileObjs = new Map(); this.actors = new Map();
     window.addEventListener('resize', () => this.resize()); this.resize();
   }
@@ -234,6 +235,14 @@ export class World {
     for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - 0.5) * 40; pos[i * 3 + 1] = Math.random() * 18; pos[i * 3 + 2] = (Math.random() - 0.5) * 40; }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const p = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xcfe6ff, size: 0.09, transparent: true, opacity: 0.7, depthWrite: false }));
+    p.visible = false; p.frustumCulled = false; this.scene.add(p); return p;
+  }
+  makeDrift() {
+    const n = 260, pos = new Float32Array(n * 3), ph = new Float32Array(n);
+    for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - 0.5) * 34; pos[i * 3 + 1] = Math.random() * 9; pos[i * 3 + 2] = (Math.random() - 0.5) * 34; ph[i] = Math.random() * 6.28; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.userData.ph = ph;
+    const cv = document.createElement('canvas'); cv.width = cv.height = 32; const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.beginPath(); x.ellipse(16, 16, 13, 7, 0.6, 0, 7); x.fill();
+    const p = new THREE.Points(g, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(cv), color: 0xffc0d4, size: 0.2, transparent: true, opacity: 0.85, depthWrite: false, alphaTest: 0.05 }));
     p.visible = false; p.frustumCulled = false; this.scene.add(p); return p;
   }
   // minute 360..1440; sets the sun, the sky layers and the tint of every picture sprite.
@@ -272,6 +281,8 @@ export class World {
     if (ruins) this.spriteTint.multiply(col(0xf0dcb0));
     for (const m of this.spriteMats) m.color.copy(this.spriteTint);
     this.weather.visible = !indoor && !ruins && !(map && map.covered) && (wet || snow);   // nothing falls under Eden Central's roof
+    { const se = this.season, fine = !wet && !snow && weather !== 'storm', colonyOut = !indoor && !ruins && !(map && (map.covered || map.under || map.belt)), dayish = h > 6.5 && h < 19.5;
+      this.drift.visible = colonyOut && fine && dayish && se !== 1; this.drift.material.color.set([0xffc6d9, 0xffffff, 0xe0883a, 0xf4f8ff][se]); this.drift.material.size = se === 3 ? 0.22 : 0.42; this.driftSpeed = se === 3 ? 0.45 : 0.6; }
     this.weather.material.size = snow ? 0.16 : 0.07; this.weather.material.color.set(snow ? 0xffffff : 0xa9c6e6);
     this.weatherSpeed = snow ? 2.2 : 19;
     this.night = 1 - day;
@@ -1106,6 +1117,11 @@ export class World {
       fade(b.o, hide, 0.22);
     }
     for (const [k, o] of this.tileObjs) if (o.userData.hover || (o.children[0] && o.children[0].userData.hover)) o.position.y = Math.sin(this.t * 2 + k.length) * 0.08;
+    if (this.drift && this.drift.visible) {                // drifting petals / leaves / flakes: slow fall, a lazy sideways sway
+      const p = this.drift.geometry.attributes.position, ph = this.drift.geometry.userData.ph; this.drift.position.set(px, 0, py);
+      for (let i = 0; i < p.count; i++) { let y = p.getY(i) - this.driftSpeed * dt; if (y < 0) y += 9; p.setY(i, y); p.setX(i, p.getX(i) + Math.sin(this.t * 1.3 + ph[i]) * 0.6 * dt + 0.25 * dt); if (p.getX(i) > 17) p.setX(i, -17); }
+      p.needsUpdate = true;
+    }
     if (this.weather.visible) {
       const p = this.weather.geometry.attributes.position; this.weather.position.set(px, 0, py);
       for (let i = 0; i < p.count; i++) { let y = p.getY(i) - this.weatherSpeed * dt; if (y < 0) y += 18; p.setY(i, y); }
