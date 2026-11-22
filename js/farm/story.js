@@ -4435,3 +4435,9 @@ export const FESTIVAL_LOVE = {
   hubcup: (n, who) => [L('narrator', `${n} cheers louder than anyone in the stands, and then, when you look up, pretends it was somebody else.`), L(who, '...It was me. Obviously it was me. Win next year too.', 'joyful')],
   yearsend: (n, who) => [L('narrator', `As the count reaches midnight and the sun-line flickers back on for the new year, ${n} finds your hand in the crowd.`), L(who, 'Another year. I want all of them. With you.', 'loved'), L('sato', 'Then you shall have them.')],
 };
+
+// ------------------------------------------------------------------ the farmhouse page of the help (2026-11-22)
+HELP.push({
+  title: 'Your farmhouse',
+  body: "The village's makers sell furniture for the farmhouse: Tika (rocking chair, dresser, telescope), Noor (a big plant, a vase), Pia (a double bed, an armchair), Lark (a kitchen shelf), Seln (a fish tank, and a trophy once you land a legendary), Ruess (a stone fireplace) and Vesna (a little grand piano). Each is in its place the next time you go home.\n\nThe telescope gives +10 stamina once a night after seven. Pia repaints the walls and Tika refinishes the floor, as often as you like.\n\nRuess can build a back bedroom (8,000 cr and 120 lumber): a door in the back-left corner.",
+});

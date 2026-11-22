@@ -427,7 +427,7 @@ for (const s of SIGN_SPOTS) { check(isText(SIGNS[s]), `SIGNS['${s}'] (${SIGNS[s]
 for (const s of Object.keys(SIGNS)) check(SPOTS.has(s), `sign spot ${s} is a known spot`);
 check(/orbital elevator/i.test(SIGNS['hill.wreck']) && !/wreck|mine\b|descent/i.test(SIGNS['hill.wreck']), 'the hill sign is the orbital elevator');
 
-check(Array.isArray(HELP) && HELP.length >= 7 && HELP.length <= 16, `HELP has 7-16 pages (${HELP.length})`);
+check(Array.isArray(HELP) && HELP.length >= 7 && HELP.length <= 20, `HELP has 7-20 pages (${HELP.length})`);   // one scrolling page in the journal
 check(HELP.some((p) => p.title === 'Love'), 'HELP has a Love page');
 for (const p of HELP) {
   check(isText(p.title, 50), `HELP title ${p.title}`);
