@@ -21,6 +21,9 @@ const S = {
   zap: () => tone(1400, 300, 0.1, 'sawtooth', 0.05), pop: () => { noise(0.2, 1500, 0.14); tone(300, 80, 0.2, 'square', 0.05); }, bite: () => { tone(900, 900, 0.06, 'square', 0.08); tone(900, 900, 0.06, 'square', 0.08, 0.1); },
   geiger: () => { for (let i = 0; i < 5; i++) tone(2200 + Math.random() * 800, 1800, 0.012, 'square', 0.05, i * 0.05 + Math.random() * 0.04); },
   morning: () => { [392, 494, 587, 784].forEach((f, i) => tone(f, f, 0.5, 'sine', 0.08, i * 0.16)); },
+  // the farmhouse piano (2026-11-22): a short gentle tune of our own, one of three, a soft triangle with a quiet fifth under each note
+  piano: () => { const T = [[523, 587, 659, 587, 523, 440, 392, 440, 523], [659, 784, 659, 587, 523, 587, 659, 523], [392, 440, 523, 587, 523, 440, 392, 330, 392]][Math.floor(Math.random() * 3)];
+    T.forEach((f, i) => { tone(f, f * 0.998, 0.55, 'triangle', 0.09, i * 0.32); tone(f / 1.5, f / 1.5, 0.5, 'sine', 0.035, i * 0.32); }); },
 };
 export function sfx(name) {
   try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); (S[name] || S.pick)(); } catch { /* no audio: fine */ }
