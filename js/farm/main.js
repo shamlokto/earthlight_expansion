@@ -47,7 +47,7 @@ const isBirthday = (id) => { const b = NPCS[id].birthday; return !!b && b.season
 // ---------------------------------------------------------------- maps and movement
 function dynSolid(tx, ty) {
   for (const f of map.fields || (map.field ? [map.field] : [])) { const x = tx - f.x, y = ty - f.y, fd = S.fields[f.id]; if (fd && x >= 0 && y >= 0 && x < fd.w && y < fd.h) { const o = fd.tiles[y * fd.w + x].obj; if (o && o !== 'weed' && o !== 'branch') return true; } }
-  if (map.indoor) for (const p of map.props) if (p.decorSolid && S.flags[p.when] && tx >= Math.floor(p.x) && tx < Math.floor(p.x) + p.w && ty >= Math.floor(p.y) && ty < Math.floor(p.y) + p.d) return true;   // bought furniture
+  if (map.indoor || map.hasDecor) for (const p of map.props) if (p.decorSolid && S.flags[p.when] && tx >= Math.floor(p.x) && tx < Math.floor(p.x) + p.w && ty >= Math.floor(p.y) && ty < Math.floor(p.y) + p.d) return true;   // bought furniture
   if (map.ruins && S.mine) { const x = tx - 1, y = ty - 1; if (x >= 0 && y >= 0 && x < S.mine.w && y < S.mine.h) { const c = S.mine.cells[y * S.mine.w + x]; if (map.belt ? c !== 0 : !map.city && c === 1) return true; } }
   return false;
 }
