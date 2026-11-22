@@ -2249,6 +2249,8 @@ function laneShelves(state, shopId, sell, once, out) {
       apply: () => { state.flags.duckhouse = true; return 'Ruess fixes the duck house by the east pond. "The ramp is regulation width. For a duck."'; } });
     if (!state.flags.house_back) out.push({ key: 'house_back', label: 'Back bedroom extension', desc: 'Ruess knocks through the back-left corner of the farmhouse and builds a bedroom out the back: a bed, a wardrobe, shelves and room to breathe. Somewhere for two, one day.', price: 8000, lumber: 120, needs: '120 lumber', once: true,
       apply: () => { state.flags.house_back = true; return 'By evening there is a new room behind the farmhouse, smelling of sawdust. Ruess hangs the door himself. "It sticks. That is character."'; } });
+    if (!state.flags.hot_tub) out.push({ key: 'hot_tub', label: 'Cedar hot tub', desc: 'A round cedar tub beside the farmhouse, heated off the solar line all day. One long soak each evening from five: +40 stamina.', price: 3500, lumber: 50, req: [['copper', 2]], needs: '50 lumber, 2 copper ore', once: true,
+      apply: () => { state.flags.hot_tub = true; return 'Ruess hoops the last stave and fills the tub. "Cedar. It smells like a forest that has given up worrying."'; } });
     if (!state.flags.cellar) out.push({ key: 'cellar', label: 'Farmhouse cellar', desc: 'Ruess digs out the crawlspace under the farmhouse into a stone cellar with six oak casks. A week in a cask ages cheese, honey or grape juice; three weeks makes it vintage.', price: 6000, lumber: 80, needs: '80 lumber', once: true,
       apply: () => { state.flags.cellar = true; cellarOf(state); return 'Ruess hauls the last of the rubble out by lamplight and rolls six casks down the steps. "Cool, dark, quiet. Like me."'; } });
     else if (!state.flags.cellar_racks) out.push({ key: 'cellar_racks', label: 'Cellar racks', desc: 'Six more casks on racks along the cellar walls: twelve in all.', price: 3000, lumber: 40, req: [['nickel_iron', 4]], needs: '40 lumber, 4 nickel-iron', once: true,
@@ -2785,4 +2787,16 @@ function petOvernight(state, notes, collapsed) {
     const id = PET_GIFTS[rint(state, PET_GIFTS.length)];
     if (addItem(state, id, 1).ok) notes.push(`${name} left a ${ITEMS[id].name.toLowerCase()} by your bed. She looks very pleased with herself.`);
   }
+}
+
+// ---------------------------------------------------------------- the hot tub (2026-11-22)
+// Ruess's cedar tub beside the farmhouse (flag hot_tub): one soak an evening from 17:00, +40 stamina; a partner joins her.
+export const TUB_FROM = 1020;
+export function useHotTub(state) {
+  if (!state.flags.hot_tub) return fail('There is no hot tub.');
+  if (state.cal.minute < TUB_FROM) return fail('The tub heats off the solar line all day. It is ready from five.');
+  if (state.flags.tubDay === absDay(state)) return fail('You have had your soak tonight. The water is cooling under its lid.');
+  state.flags.tubDay = absDay(state); const p = state.player, before = p.stamina; p.stamina = Math.min(p.maxStamina, p.stamina + 40);
+  const who = state.flags.partner;
+  return { ok: true, partner: who || null, gained: p.stamina - before, msg: `${who ? 'You sink into the hot water, and a moment later so does your partner, with a contented groan.' : 'You sink into the hot water up to your chin. Somewhere above the sun-line, the stars come out.'} (+${p.stamina - before} stamina)` };
 }

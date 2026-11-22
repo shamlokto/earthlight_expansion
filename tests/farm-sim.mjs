@@ -1612,5 +1612,14 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   const L = loadState(saveState(g)); check(L && sim.petOf(L) && L.pet.love === g.pet.love, 'the cat survives a save');
   g.pet = 'junk'; sleep(g); check(g.pet === null && !sim.petOf(g), 'a junk pet record is dropped');
 }
+// ---------------------------------------------------------------- the hot tub (2026-11-22)
+{
+  const g = rich(451); addItem(g, 'copper', 2);
+  check(!sim.useHotTub(g).ok && buy(g, 'workshop', 'hot_tub').ok && g.flags.hot_tub, 'Ruess builds the tub');
+  g.player.stamina = 20; g.cal.minute = 900; check(!sim.useHotTub(g).ok, 'not heated before five');
+  g.cal.minute = 1100; let r = sim.useHotTub(g); check(r.ok && g.player.stamina === 60 && !r.partner, 'a soak: +40 stamina');
+  check(!sim.useHotTub(g).ok, 'one soak an evening'); sleep(g); g.cal.minute = 1100; g.flags.partner = 'mori'; g.player.stamina = 90;
+  r = sim.useHotTub(g); check(r.ok && r.partner === 'mori' && g.player.stamina === g.player.maxStamina, 'the next evening, with company, capped at full');
+}
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

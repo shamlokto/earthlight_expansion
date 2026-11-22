@@ -96,7 +96,7 @@ const PROPS = {
   launch_pad: { h: 0.1 }, shuttle_pad: { h: 0.1 },
   // 2026-11-19: the open belt (sector markers, pickup pods, landmarks) and Sato's mining unit; built stand-ins
   sector_buoy: { model: 'jump_buoy', h: 1.7, fit: 'foot' }, sector_sign: { h: 2.6 }, pickup_pod: { h: 2.2 }, mining_bot: { model: 'mining_bot', h: 0.9, fit: 'foot' },
-  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, cellar_hatch: { h: 0.1 }, cat: { model: 'cat', h: 0.62, maxW: 0.8 }, cat_sleep: { model: 'cat', h: 0.48, maxW: 0.62 }, cat_bed: { model: 'cat_bed', h: 0.3, maxW: 0.95 }, cask: { model: 'cask', h: 0.95, maxW: 0.95 }, wine_rack: { model: 'wine_rack', h: 1.9, maxW: 1.9 }, cheese_shelf: { model: 'cheese_shelf', h: 1.6, maxW: 1.0 }, shuttle_gate: { h: 3.4 },
+  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, cellar_hatch: { h: 0.1 }, hot_tub: { h: 0.9 }, cat: { model: 'cat', h: 0.62, maxW: 0.8 }, cat_sleep: { model: 'cat', h: 0.48, maxW: 0.62 }, cat_bed: { model: 'cat_bed', h: 0.3, maxW: 0.95 }, cask: { model: 'cask', h: 0.95, maxW: 0.95 }, wine_rack: { model: 'wine_rack', h: 1.9, maxW: 1.9 }, cheese_shelf: { model: 'cheese_shelf', h: 1.6, maxW: 1.0 }, shuttle_gate: { h: 3.4 },
   hull_window: { h: 12 }, hull_wall: { h: 10 }, glass_roof: { h: 16 }, vending: { model: 'vending', h: 1.9, fit: 'foot' }, feed_sacks: { model: 'feed_sacks', h: 0.8, fit: 'foot' },
   crane: { model: 'dock_crane', h: 5.5, fit: 'foot' },
   bay_window: { h: 10 }, landing_pad: { h: 0.1 }, hazard_stripes: { h: 0.05 }, trader_ship: { model: 'cartel_ship', h: 5.2, fit: 'foot' }, shuttle: { model: 'shuttle', h: 3.8, fit: 'foot' },
@@ -476,6 +476,16 @@ export class World {
         for (const [x, z] of [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]]) g.add(box(0.25, 1.1, 0.25, m, x, 0.2, z));
         for (const c of g.children) { c.position.x += (w - 1) / 2; c.position.z += (d - 1) / 2; } break;
       }
+      case 'hot_tub': {                                  // a round cedar tub, iron hoops, steaming water, a step and a towel
+        const cedar = std({ color: 0xa8683c }), ir = std({ color: 0x3a3632, metalness: 0.6 }), R = 0.85;
+        const tub = new THREE.Mesh(new THREE.CylinderGeometry(R, R * 0.95, 0.8, 24, 1, true), cedar); tub.position.y = 0.4; tub.castShadow = true; g.add(tub);
+        const inner = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.93, R * 0.9, 0.78, 24, 1, true), std({ color: 0x8a5230, side: THREE.BackSide })); inner.position.y = 0.4; g.add(inner);
+        for (const y of [0.15, 0.62]) { const h = new THREE.Mesh(new THREE.TorusGeometry(R + 0.01, 0.025, 6, 32), ir); h.rotation.x = Math.PI / 2; h.position.y = y; g.add(h); }
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(R - 0.03, 0.05, 6, 32), cedar); rim.rotation.x = Math.PI / 2; rim.position.y = 0.8; g.add(rim);
+        const water = new THREE.Mesh(new THREE.CircleGeometry(R * 0.92, 24), new THREE.MeshStandardMaterial({ color: 0x8fd3d0, emissive: 0x2a6f6a, emissiveIntensity: 0.35, transparent: true, opacity: 0.9, roughness: 0.1 })); water.rotation.x = -Math.PI / 2; water.position.y = 0.68; g.add(water);
+        g.add(box(0.7, 0.25, 0.32, cedar, 0, 0, R + 0.12), box(0.36, 0.05, 0.28, std({ color: 0xf2efe6 }), 0.55, 0.81, -0.55));
+        for (const c of g.children) { c.position.x += 0.5; c.position.z += 0.5; } break;
+      }
       case 'cellar_hatch': {                             // a trapdoor in the farmhouse boards; once the cellar is dug, propped open on steps down
         const wd = std({ color: 0x7a5434 }), ir = std({ color: 0x3a3632, metalness: 0.6 }), open = this.flags && this.flags.cellar;
         g.add(box(0.96, 0.03, 0.96, std({ color: 0x5a3c24 }), 0, 0, 0));
@@ -764,6 +774,7 @@ export class World {
     } else fallback();
     if (def.hover && !(mname && art.hasModel(mname))) holder.userData.hover = def.hover;
     if (kind === 'onsen_pool') holder.add(this.steamCloud(fw, fd));
+    if (kind === 'hot_tub') { const sc = this.steamCloud(1.4, 1.4); sc.position.set(0.5, 0.5, 0.5); holder.add(sc); }
     return holder;
   }
   // Wisps of steam that rise and fade over hot water (animated in update()).
@@ -1164,7 +1175,7 @@ export class World {
     if (this.rocks) this.rocks.update(px, py);
     if (this.earthSky) this.earthSky.position.copy(c.position).addScaledVector(EARTH_DIR, 1500);   // always as far away, low over the lane's east side
     for (const f of this.facers) f.rotation.y = this.yaw;
-    for (const m of this.waterMats || []) if (m.userData.u) { m.userData.u.uTime.value = this.t; m.userData.u.uSpark.value = this.map && (this.map.under || this.map.indoor) ? 0.1 : 0.25 + 0.75 * (1 - (this.night || 0));   // no sun to glint underground } else m.map.offset.set(this.t * 0.015, this.t * 0.01);
+    for (const m of this.waterMats || []) if (m.userData.u) { m.userData.u.uTime.value = this.t; m.userData.u.uSpark.value = this.map && (this.map.under || this.map.indoor) ? 0.1 : 0.25 + 0.75 * (1 - (this.night || 0)); } else m.map.offset.set(this.t * 0.015, this.t * 0.01);   // no sun to glint underground
     for (const l of this.lamps || []) l.intensity = (this.night || 0) * 14;
     if (this.flies) { const k = (this.season === 1 || this.season === 0) && (this.minuteNow || 0) >= 1170 ? Math.max(0, (this.night || 0) - 0.35) * 1.6 : 0; /* evenings only, not the dawn */ this.flies.material.opacity = Math.min(1, k); this.flies.visible = k > 0.01;
       if (this.flies.visible) { const p = this.flies.geometry.attributes.position, b = this.flies.geometry.userData.base, ph = this.flies.geometry.userData.ph; for (let i = 0; i < p.count; i++) { p.setX(i, b[i * 3] + Math.sin(this.t * 0.6 + ph[i]) * 0.8); p.setY(i, b[i * 3 + 1] + Math.sin(this.t * 1.1 + ph[i] * 2) * 0.3); p.setZ(i, b[i * 3 + 2] + Math.cos(this.t * 0.5 + ph[i]) * 0.8); } p.needsUpdate = true; } }
