@@ -885,7 +885,7 @@ export class World {
     this.map = map; this.state = state; this.season = state.cal.season; this.flags = state.flags || {};
     freeGeometry(this.root); for (const m of this.waterMats || []) if (m.map && m.map.userData.ownWater) m.map.dispose(); this.root.clear(); this.facers.length = 0; this.spriteMats.length = 0; this.anims.length = 0; this.tileObjs.clear();
     for (const a of this.actors.values()) a.dispose && a.dispose(); this.actors.clear();
-    this.lamps = []; this.waterMats = []; this.tallProps = []; this.steam = []; this.windowGlass = null;
+    this.lamps = []; this.waterMats = []; this.tallProps = []; this.steam = []; this.windowGlass = null; this.flies = null;
     const R = this.root, W = map.w, H = map.h;
     // ground, one merged mesh per kind
     const byKind = {};
@@ -966,6 +966,7 @@ export class World {
       const lampL = o.userData.lamp || (o.children[0] && o.children[0].userData.lamp); if (lampL) this.lamps.push(lampL);
     }
     this.colonyFx = null;
+    if (map.id === 'farm') this.farmNight(R, map);   // the farmhouse's porch lamp and lit windows, fireflies over the field (2026-11-22)
     for (const s of this.spinners) s.o.userData.moving = true;
     if (built.length) mergeStatic(built, R);                   // the built colony props: one mesh per material
     if (pools.length) { this.pools = lightPools(pools); R.add(this.pools); }
@@ -1042,6 +1043,15 @@ export class World {
     }
     R.add(box(W, 0.14, 0.04, frame, W / 2, 0, 0.01), box(0.04, 0.14, H, frame, 0.01, 0, H / 2), box(0.04, 0.14, H, frame, W - 0.01, 0, H / 2));   // skirting
   }
+  farmNight(R, map) {
+    const b = map.buildings.find((q) => q.kind === 'house'); if (!b) return;
+    const lamp = new THREE.PointLight(0xffc878, 0, 9, 1.4); lamp.position.set(b.x + b.w / 2, 2.2, b.y + b.d + 0.6); R.add(lamp); this.lamps.push(lamp);
+    const n = 46, pos = new Float32Array(n * 3), ph = new Float32Array(n), f = map.field || { x: 3, y: 12, w: 30, h: 16 };
+    for (let i = 0; i < n; i++) { pos[i * 3] = f.x + Math.random() * (f.w || 30); pos[i * 3 + 1] = 0.4 + Math.random() * 1.4; pos[i * 3 + 2] = f.y + Math.random() * (f.h || 16); ph[i] = Math.random() * 6.28; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.userData.ph = ph; g.userData.base = pos.slice();
+    const cv = document.createElement('canvas'); cv.width = cv.height = 32; const x = cv.getContext('2d'), gr = x.createRadialGradient(16, 16, 0, 16, 16, 15); gr.addColorStop(0, 'rgba(255,255,200,1)'); gr.addColorStop(0.3, 'rgba(220,255,120,.8)'); gr.addColorStop(1, 'rgba(200,255,100,0)'); x.fillStyle = gr; x.fillRect(0, 0, 32, 32);
+    this.flies = new THREE.Points(g, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(cv), size: 0.35, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); this.flies.frustumCulled = false; R.add(this.flies);
+  }
   // Redraw one map prop in place (a bush just picked bare): same spot, same turn.
   swapProp(p, kind, o2) {
     const old = p.obj; if (!old || !old.parent) return; const n = this.makeProp(kind, { ...p, ...o2 });
@@ -1092,6 +1102,8 @@ export class World {
     for (const f of this.facers) f.rotation.y = this.yaw;
     for (const m of this.waterMats || []) m.map.offset.set(this.t * 0.015, this.t * 0.01);
     for (const l of this.lamps || []) l.intensity = (this.night || 0) * 14;
+    if (this.flies) { const k = this.season === 1 || this.season === 0 ? Math.max(0, (this.night || 0) - 0.35) * 1.6 : 0; this.flies.material.opacity = Math.min(1, k); this.flies.visible = k > 0.01;
+      if (this.flies.visible) { const p = this.flies.geometry.attributes.position, b = this.flies.geometry.userData.base, ph = this.flies.geometry.userData.ph; for (let i = 0; i < p.count; i++) { p.setX(i, b[i * 3] + Math.sin(this.t * 0.6 + ph[i]) * 0.8); p.setY(i, b[i * 3 + 1] + Math.sin(this.t * 1.1 + ph[i] * 2) * 0.3); p.setZ(i, b[i * 3 + 2] + Math.cos(this.t * 0.5 + ph[i]) * 0.8); } p.needsUpdate = true; } }
     if (this.map && this.map.under) this.lightUnder();
     for (const a of this.actors.values()) a.update(dt, this);
     // trees standing between the camera and Sato step aside
