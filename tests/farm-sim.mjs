@@ -1646,5 +1646,15 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   check(b.can && r.ok && countItem(g, 'cellar_platter') === 1 && !countItem(g, 'aged_cheese') && !countItem(g, 'aged_grape_juice'), 'a cellar platter from aged cheese and wine');
   check(sim.OVEN_RECIPES.every((q) => ITEMS[q.id] && ITEMS[q.id].kind === 'food'), 'every oven dish is food');
 }
+// ---------------------------------------------------------------- things for the yard (2026-11-22)
+{
+  const g = rich(481); const sel = (id) => { g.player.sel = g.player.inv.findIndex((q) => q && q.id === id); };
+  check(buy(g, 'store', 'yard_fence', 3).ok && countItem(g, 'yard_fence') === 3, 'three fence sections from Seln');
+  sel('yard_fence'); check(sim.placeItem(g, 'farm', 30, 30).ok && sim.placeItem(g, 'farm', 31, 30).ok && sim.yardAt(g, 'farm', 31, 30) >= 0 && countItem(g, 'yard_fence') === 1, 'two sections set down side by side');
+  check(!sim.placeItem(g, 'farm', 30, 30).ok && !sim.placeItem(g, 'hill', 5, 5).ok, 'not on top of one another, and only on the farm');
+  sel('axe'); const r = sim.pickUpPlaced(g, 'farm', 31, 30); check(r.ok && sim.yardAt(g, 'farm', 31, 30) < 0 && countItem(g, 'yard_fence') === 2, 'the axe takes a section back up');
+  buy(g, 'store', 'yard_path'); sel('yard_path'); check(sim.placeItem(g, 'farm', 32, 31).ok && sim.YARD[g.yard.at(-1).kind].walk, 'stepping stones are walked over');
+  const L = loadState(saveState(g)); check(L && L.yard.length === 2, 'the yard survives a save');
+}
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

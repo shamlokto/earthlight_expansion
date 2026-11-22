@@ -221,7 +221,7 @@ export function loadState(text) {
 export function ensure(s) {
   const arr = (o, k) => { if (!Array.isArray(o[k])) o[k] = []; };
   const obj = (o, k) => { if (!o[k] || typeof o[k] !== 'object' || Array.isArray(o[k])) o[k] = {}; };
-  arr(s.player, 'basket'); arr(s, 'chests'); arr(s, 'panels'); arr(s, 'robots'); arr(s, 'fruitTrees');
+  arr(s.player, 'basket'); arr(s, 'yard'); arr(s, 'chests'); arr(s, 'panels'); arr(s, 'robots'); arr(s, 'fruitTrees');
   obj(s, 'cooked'); obj(s, 'foraged'); obj(s, 'flags'); obj(s, 'museum'); obj(s, 'fishLog');
   arr(s, 'mill'); arr(s, 'hydro'); obj(s, 'solarYard'); arr(s.solarYard, 'slots'); obj(s, 'stats'); obj(s, 'visits');   // homes visited, by day (§15)
   obj(s, 'memories'); syncMemories(s, false);   // scenes seen (Memories); an old save's are found from its flags, date unknown
@@ -677,6 +677,7 @@ function shelves(state, shopId) {
   if (shopId === 'works') { worksShelves(state, sell, out); return out; }
   if (shopId === 'pallas') { pallasShelves(state, out); return out; }
   if (shopId === 'store') {
+    sell('yard_fence', 40); sell('yard_path', 25); sell('yard_planter', 220); sell('yard_lamp', 480);   // things for the yard (2026-11-22)
     for (const c of Object.values(CROPS)) if (c.seasons.length === 1 && c.seasons[0] === state.cal.season && !c.shop) sell(`seed_${c.id}`, c.bag);
     sell('seed_grass', 500); sell('bread', 60); once('rod', 600);
     if (state.flags.ld_catacombs) sell('spore_bag', SPORE_PRICE + 20);
@@ -1567,11 +1568,16 @@ export function basketTake(state, index, n) {
 // Field chests (farm or hill), solar chargers (farm) and fruit trees (farm) each take one tile.
 // The UI checks the ground itself (free grass or dirt, not the field, not a path into a door).
 export const PLACE_MAPS = { field_chest: ['farm', 'hill'], solar_panel: ['farm'] };
+// Things for the yard (2026-11-22): fences, stepping stones, lamps and planters for the farm, from Seln (state.yard,
+// { map, x, y, kind }). Stepping stones are walked over; the rest stand in the way like any placed thing.
+export const YARD = { yard_fence: { model: 'yard_fence' }, yard_path: { model: 'yard_path', walk: true }, yard_lamp: { model: 'lantern' }, yard_planter: {} };
+for (const k of Object.keys(YARD)) PLACE_MAPS[k] = ['farm'];
+export const yardAt = (state, map, x, y) => at(ensure(state).yard, map, x, y);
 const at = (list, map, x, y) => list.findIndex((o) => o.map === map && o.x === x && o.y === y);
 export const chestAt = (state, map, x, y) => at(ensure(state).chests, map, x, y);
 export const panelAt = (state, map, x, y) => at(ensure(state).panels, map, x, y);
 export const fruitTreeAt = (state, map, x, y) => at(ensure(state).fruitTrees, map, x, y);
-export const occupied = (state, map, x, y) => chestAt(state, map, x, y) >= 0 || panelAt(state, map, x, y) >= 0 || fruitTreeAt(state, map, x, y) >= 0 || machineAt(state, map, x, y) >= 0;
+export const occupied = (state, map, x, y) => yardAt(state, map, x, y) >= 0 || chestAt(state, map, x, y) >= 0 || panelAt(state, map, x, y) >= 0 || fruitTreeAt(state, map, x, y) >= 0 || machineAt(state, map, x, y) >= 0;
 // Space with a field chest or a solar charger in hand.
 export function placeItem(state, map, x, y) {
   const s = selected(state);
@@ -1580,6 +1586,7 @@ export function placeItem(state, map, x, y) {
   if (!PLACE_MAPS[s.id].includes(map)) return fail(s.id === 'solar_panel' ? 'The charger goes on your farm.' : 'Field chests go on the farm or the hill.');
   if (occupied(state, map, x, y)) return fail('Something is already standing there.');
   if (MACHINES[s.id]) return placeMachine(state, s.id, map, x, y);
+  if (YARD[s.id]) { const id = s.id; takeFromSlot(state, state.player.sel, 1); state.yard.push({ map, x, y, kind: id }); return { ok: true, msg: `${ITEMS[id].name} set down. The axe takes it back up.`, kind: 'yard', index: state.yard.length - 1 }; }
   const id = s.id; takeFromSlot(state, state.player.sel, 1);
   if (id === 'field_chest') { state.chests.push({ map, x, y, items: new Array(CHEST_SIZE).fill(null) }); return { ok: true, msg: 'You set the field chest down. E opens it; an axe picks it up when it is empty.', kind: 'chest', index: state.chests.length - 1 }; }
   state.panels.push({ map, x, y, slots: [null, null] });
@@ -1588,6 +1595,7 @@ export function placeItem(state, map, x, y) {
 // The axe on an empty chest or charger picks it back up.
 export function pickUpPlaced(state, map, x, y) {
   const s = selected(state); if (!s || s.id !== 'axe') return fail('Use the axe to pry it up.');
+  { const yi = yardAt(state, map, x, y); if (yi >= 0) { const k = state.yard[yi].kind; if (room(state, k) < 1) return fail(FULL); state.yard.splice(yi, 1); addItem(state, k, 1); return { ok: true, msg: `You took up the ${lower(k)}.`, kind: 'yard' }; } }
   const c = chestAt(state, map, x, y), p = panelAt(state, map, x, y), mi = machineAt(state, map, x, y);
   if (mi >= 0 && c < 0 && p < 0) {
     const m = state.machines[mi]; if (m.item || (m.out && m.n)) return fail(`Empty the ${MACHINES[m.kind].name.toLowerCase()} before you move it.`);
