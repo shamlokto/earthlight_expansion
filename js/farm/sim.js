@@ -2621,7 +2621,14 @@ export const HOME_DECOR = [
 ];
 const LEGENDS = ['fish_king', 'fish_mochi', 'fish_ferryman', 'fish_admiral', 'abyss_koi'];
 export const legendCaught = (state) => LEGENDS.filter((id) => (state.fishLog || {})[id]);
+// Wall paint (Pia) and floor finish (Tika) for the farmhouse: change them whenever you like (flags house_paint, house_floor).
+export const HOUSE_PAINT = { cream: ['Cream (as it was)', 0xffffff], sage: ['Sage green', 0xc9dcc0], rose: ['Dusty rose', 0xf0c8c4], sky: ['Sky blue', 0xc4d8ee], butter: ['Butter yellow', 0xf6e6b0], lilac: ['Lilac', 0xdcd0ec] };
+export const HOUSE_FLOOR = { honey: ['Honey (as it was)', 0xffffff], walnut: ['Dark walnut', 0x9a7a62], ash: ['Pale ash', 0xf4ece0], cherry: ['Cherry red', 0xd89a84] };
 function decorStock(state, shopId, out) {
+  const paint = (key, table, flag, shop, price, who) => { if (shopId !== shop) return; for (const [k, [name]] of Object.entries(table)) if ((state.flags[flag] || Object.keys(table)[0]) !== k)
+    out.push({ key: `${key}_${k}`, label: `${key === 'paint' ? 'Paint the farmhouse walls' : 'Refinish the farmhouse floor'}: ${name.replace(' (as it was)', '')}`, desc: `${who} does the farmhouse ${key === 'paint' ? 'walls' : 'floor'} in ${name.toLowerCase()} by tomorrow. Change your mind any time.`, price, once: true,
+      apply: () => { state.flags[flag] = k; return `${who} ${key === 'paint' ? 'rolls on the first coat' : 'sands and oils the boards'}. "${key === 'paint' ? 'It is a different room. Same roof.' : 'Mind the wet patch by the door.'}"`; } }); };
+  paint('paint', HOUSE_PAINT, 'house_paint', 'tailor', 600, 'Pia'); paint('floor', HOUSE_FLOOR, 'house_floor', 'garage', 900, 'Tika');
   for (const [flag, shop, label, desc, price, lumber, done, x = {}] of HOME_DECOR) {
     if (shop !== shopId || state.flags[flag] || (x.needLegend && !legendCaught(state).length)) continue;   // the trophy waits for a legendary catch
     out.push({ key: flag, label: `${label} (for the farmhouse)`, desc, price, ...(lumber ? { lumber, needs: `${lumber} lumber` } : {}), once: true,
