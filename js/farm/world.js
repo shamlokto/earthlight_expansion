@@ -247,7 +247,7 @@ export class World {
   }
   // minute 360..1440; sets the sun, the sky layers and the tint of every picture sprite.
   setTime(minute, weather, map) {
-    const indoor = map && map.indoor, ruins = map && map.ruins, colony = !indoor && !ruins;
+    const indoor = map && map.indoor, ruins = map && map.ruins, colony = !indoor && !ruins; this.minuteNow = minute;
     const h = minute / 60, sm = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
     if (indoor && this.windowGlass) { const d = sm(6, 7.5, h) * (1 - sm(18.5, 20, h)); this.windowGlass.emissive.setHex(d > 0.05 ? 0x9fd4ff : 0x1c2a44); this.windowGlass.emissiveIntensity = 0.15 + 0.55 * d * (weather === 'rain' || weather === 'storm' ? 0.6 : 1); }   // daylight in the windows
     // The colony schedules its light: the sun-line fades up from 6:00 and down from 18:30. (Down in the Old World, a real sun.)
@@ -967,7 +967,7 @@ export class World {
     }
     this.colonyFx = null;
     if (map.id === 'farm') this.farmNight(R, map);
-    if (map.city) this.roadMarks(R, map);              // faded lane lines on the city's streets (2026-11-22)   // the farmhouse's porch lamp and lit windows, fireflies over the field (2026-11-22)
+    if (map.city) this.roadMarks(R, map);              // faded lane lines on the city's streets (2026-11-22); farmNight: the porch lamp and fireflies
     for (const s of this.spinners) s.o.userData.moving = true;
     if (built.length) mergeStatic(built, R);                   // the built colony props: one mesh per material
     if (pools.length) { this.pools = lightPools(pools); R.add(this.pools); }
@@ -1117,7 +1117,7 @@ export class World {
     for (const f of this.facers) f.rotation.y = this.yaw;
     for (const m of this.waterMats || []) m.map.offset.set(this.t * 0.015, this.t * 0.01);
     for (const l of this.lamps || []) l.intensity = (this.night || 0) * 14;
-    if (this.flies) { const k = this.season === 1 || this.season === 0 ? Math.max(0, (this.night || 0) - 0.35) * 1.6 : 0; this.flies.material.opacity = Math.min(1, k); this.flies.visible = k > 0.01;
+    if (this.flies) { const k = (this.season === 1 || this.season === 0) && (this.minuteNow || 0) >= 1170 ? Math.max(0, (this.night || 0) - 0.35) * 1.6 : 0; /* evenings only, not the dawn */ this.flies.material.opacity = Math.min(1, k); this.flies.visible = k > 0.01;
       if (this.flies.visible) { const p = this.flies.geometry.attributes.position, b = this.flies.geometry.userData.base, ph = this.flies.geometry.userData.ph; for (let i = 0; i < p.count; i++) { p.setX(i, b[i * 3] + Math.sin(this.t * 0.6 + ph[i]) * 0.8); p.setY(i, b[i * 3 + 1] + Math.sin(this.t * 1.1 + ph[i] * 2) * 0.3); p.setZ(i, b[i * 3 + 2] + Math.cos(this.t * 0.5 + ph[i]) * 0.8); } p.needsUpdate = true; } }
     if (this.map && this.map.under) this.lightUnder();
     for (const a of this.actors.values()) a.update(dt, this);
