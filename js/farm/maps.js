@@ -509,7 +509,7 @@ function interiors() {
   m.prop('decor_model', 0, 1, { solid: false, when: 'decor_model' }); m.prop('decor_shelf', 11, 5, { solid: false, when: 'decor_shelf' });
   // home decor from the village (2026-11-22, sim.HOME_DECOR: flag decor_<id>); the double bed replaces the cot
   m.props.find((p) => p.kind === 'bed').unless = 'decor_bed'; m.prop('double_bed', 1, 0, { d: 2, act: 'bed', solid: false, when: 'decor_bed' });
-  m.prop('fireplace', 2, 0, { solid: false, decorSolid: true, when: 'decor_fireplace' }); m.prop('piano', 11, 0, { solid: false, decorSolid: true, when: 'decor_piano', act: 'piano' });
+  m.prop('fireplace', 2.3, 0, { solid: false, decorSolid: true, when: 'decor_fireplace' }); m.prop('piano', 11, 0, { solid: false, decorSolid: true, when: 'decor_piano', act: 'piano' });
   m.prop('dresser', 0, 2, { solid: false, decorSolid: true, when: 'decor_dresser', rot: Math.PI / 2 }); m.prop('wall_shelf_jars', 0, 3, { solid: false, when: 'decor_jars', rot: Math.PI / 2 });
   m.prop('big_plant', 0, 6, { solid: false, decorSolid: true, when: 'decor_plant' }); m.prop('aquarium', 11, 3, { solid: false, decorSolid: true, when: 'decor_aquarium', act: 'aquarium', rot: -Math.PI / 2 });
   m.prop('fish_trophy', 11, 4, { solid: false, when: 'decor_trophy', rot: -Math.PI / 2 }); m.prop('telescope', 11, 6, { solid: false, decorSolid: true, when: 'decor_telescope', act: 'telescope', rot: -Math.PI / 2 });

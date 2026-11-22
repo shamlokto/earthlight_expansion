@@ -111,9 +111,9 @@ const PROPS = {
   shelter: { model: 'shelter', h: 3.4, fit: 'foot' }, glow_lamp: { model: 'glow_lamp', h: 1.8 }, terminal: { model: 'terminal', h: 1.3 }, vault_door: { model: 'vault_door', h: 3.2, fit: 'foot' }, works_hall: { model: 'works_hall', h: 4, fit: 'box' },
   fabricator: { h: 2.5 }, vault_door_open: { h: 3.3 }, zero_g_arena: { h: 3.6 }, scrap_bin: { h: 0.9 }, vent_bath: { h: 1.2 }, reactor_console: { h: 2.6 }, decimator_ring: { h: 4 }, decor_lantern: { h: 1.1 },
   // home decor (2026-11-22; Hunyuan3D-2 from HunyuanDiT concept pictures)
-  double_bed: { model: 'double_bed', h: 1.05, maxW: 1.75 }, fireplace: { model: 'fireplace', h: 1.7, maxW: 1.25 }, piano: { model: 'piano', h: 1.35, fit: 'foot' }, dresser: { model: 'dresser', h: 1.7, fit: 'foot' },
+  double_bed: { model: 'double_bed', h: 1.0, maxW: 1.45 }, fireplace: { model: 'fireplace', h: 1.6, maxW: 1.1 }, piano: { model: 'piano', h: 1.35, fit: 'foot' }, dresser: { model: 'dresser', h: 1.7, fit: 'foot' },
   wall_shelf_jars: { model: 'wall_shelf_jars', h: 1.3, fit: 'foot' }, big_plant: { model: 'big_plant', h: 1.6, maxW: 1 }, aquarium: { model: 'aquarium', h: 1.25, fit: 'foot' }, fish_trophy: { model: 'fish_trophy', h: 0.6, maxW: 0.9, hover: 2.4 },
-  telescope: { model: 'telescope', h: 1.35, maxW: 1 }, rocking_chair: { model: 'rocking_chair', h: 1.1, fit: 'foot' }, armchair_big: { model: 'armchair_big', h: 1.05, fit: 'foot' }, flower_vase: { model: 'flower_vase', h: 0.8, maxW: 0.7 }, coat_rack: { model: 'coat_rack', h: 1.7, maxW: 0.9 }, hanging_plant: { model: 'hanging_plant', h: 1.0, maxW: 0.8, hover: 2.4 }, side_table: { model: 'side_table', h: 0.9, maxW: 0.8 }, kitchen_dresser: { model: 'kitchen_dresser', h: 1.1, fit: 'foot' }, wall_painting: { model: 'wall_painting', h: 0.8, maxW: 1.1, hover: 3.0 }, decor_clock: { h: 2.2 }, decor_model: { h: 1.1 }, decor_shelf: { h: 1.6 },
+  telescope: { model: 'telescope', h: 1.35, maxW: 1 }, rocking_chair: { model: 'rocking_chair', h: 1.1, fit: 'foot' }, armchair_big: { model: 'armchair_big', h: 1.05, fit: 'foot' }, flower_vase: { model: 'flower_vase', h: 0.8, maxW: 0.7 }, coat_rack: { model: 'coat_rack', h: 1.7, maxW: 0.9 }, hanging_plant: { model: 'hanging_plant', h: 1.0, maxW: 0.8, hover: 2.4 }, side_table: { model: 'side_table', h: 0.9, maxW: 0.8 }, kitchen_dresser: { model: 'kitchen_dresser', h: 1.1, fit: 'foot' }, decor_clock: { h: 2.2 }, decor_model: { h: 1.1 }, decor_shelf: { h: 1.6 },
   work_barrier: { h: 0.9 }, bulkhead: { h: 2.6 }, tarp: { h: 2.4 }, crypt_wall: { h: 2.2 }, stove: { h: 1.6 }, shrooms: { h: 0.3 },
 };
 const BUILDING = {
@@ -167,6 +167,19 @@ function ball(r, mat, x = 0, y = 0, z = 0, detail = 1) { const m = new THREE.Mes
 const WHITE = () => std({ color: 0xf2f0ea, roughness: 0.55, metalness: 0.1 }), TEAL = () => std({ color: 0x3fa7a3, roughness: 0.5, metalness: 0.2 }), SLATE = () => std({ color: 0x46525e, metalness: 0.4, roughness: 0.5 });
 const glow = (c) => new THREE.MeshBasicMaterial({ color: c });
 let softTex = null;
+let rugT = null;
+function rugTex() {                                       // a woven rag rug: border stripes, a diamond, soft fibre noise
+  if (rugT) return rugT; const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+  x.fillStyle = '#9a3b34'; x.fillRect(0, 0, 256, 256);
+  const band = (i, col) => { x.strokeStyle = col; x.lineWidth = 9; x.strokeRect(i, i, 256 - 2 * i, 256 - 2 * i); };
+  band(8, '#e8c87a'); band(22, '#2f5f73'); band(36, '#e8c87a'); band(52, '#c96a3a');
+  x.fillStyle = '#e8c87a'; x.beginPath(); x.moveTo(128, 70); x.lineTo(186, 128); x.lineTo(128, 186); x.lineTo(70, 128); x.closePath(); x.fill();
+  x.fillStyle = '#2f5f73'; x.beginPath(); x.moveTo(128, 92); x.lineTo(164, 128); x.lineTo(128, 164); x.lineTo(92, 128); x.closePath(); x.fill();
+  x.fillStyle = '#c96a3a'; x.fillRect(118, 118, 20, 20);
+  const d = x.getImageData(0, 0, 256, 256); for (let i = 0; i < d.data.length; i += 4) { const n = ((i * 2654435761) >>> 24) / 255 * 26 - 13 + ((i >> 2) % 256 % 4 === 0 ? -10 : 0); d.data[i] += n; d.data[i + 1] += n; d.data[i + 2] += n; } x.putImageData(d, 0, 0);
+  rugT = new THREE.CanvasTexture(c); rugT.colorSpace = THREE.SRGBColorSpace; rugT.anisotropy = 4; return rugT;
+}
+
 const PANELS = new Map();
 function panelTex(key, w, h, paint) {
   if (PANELS.has(key)) return PANELS.get(key);
@@ -319,7 +332,7 @@ export class World {
       case 'bed': g.add(box(0.95, 0.35, 1.9, wood, 0, 0, 0.45), box(0.9, 0.16, 1.8, std({ color: 0xe9e4d6 }), 0, 0.35, 0.45), box(0.9, 0.18, 1.2, std({ color: 0x38527c }), 0, 0.37, 0.75), box(0.95, 0.9, 0.08, dark, 0, 0, -0.5)); break;
       case 'radio': g.add(box(0.8, 0.7, 0.5, wood), box(0.5, 0.3, 0.3, std({ color: 0x3c3a36 }), 0, 0.7), cyl(0.01, 0.01, 0.5, metal, 0.2, 1.0, 0, 4)); break;
       case 'table': g.add(cyl(0.5, 0.5, 0.06, wood, 0, 0.7, 0, 16), cyl(0.06, 0.1, 0.7, dark)); break;
-      case 'rug': { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), std({ color: 0x8e3a3a })); m.rotation.x = -Math.PI / 2; m.position.set(0.5, 0.02, 0.5); m.receiveShadow = true; g.add(m); break; }
+      case 'rug': { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), std({ map: rugTex(), roughness: 1 })); m.rotation.x = -Math.PI / 2; m.position.set(0.5, 0.02, 0.5); m.receiveShadow = true; g.add(m); break; }   // a woven rug (2026-11-22; was a flat red sheet)
       case 'shelf': g.add(box(1.9, 1.8, 0.4, dark, 0.5), box(1.8, 0.05, 0.42, wood, 0.5, 0.6), box(1.8, 0.05, 0.42, wood, 0.5, 1.2), box(0.3, 0.3, 0.3, std({ color: 0x6f9a4a }), 0.1, 0.65), box(0.3, 0.25, 0.3, std({ color: 0xc9853a }), 0.8, 1.25)); break;
       case 'counter': case 'desk': { const w = o.w || 3; g.add(box(w, 0.95, 0.7, wood, (w - 1) / 2), box(w + 0.1, 0.07, 0.8, dark, (w - 1) / 2, 0.95)); break; }
       case 'trough': { const w = o.w || 2; g.add(box(w, 0.35, 0.5, wood, (w - 1) / 2), box(w - 0.1, 0.05, 0.4, std({ color: o.full ? 0xd4b45a : 0x4a3a28 }), (w - 1) / 2, 0.33)); break; }

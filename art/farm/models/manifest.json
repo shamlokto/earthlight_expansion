@@ -2176,13 +2176,13 @@
  },
  "mulberry": {
   "file": "mulberry.glb",
-  "tris": 4000,
+  "tris": 6000,
   "size": [
    1.0,
-   0.2085,
-   0.9766
+   0.7409,
+   0.9497
   ],
-  "note": "item"
+  "note": "item model (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
  },
  "berry_jam": {
   "file": "berry_jam.glb",
@@ -2606,13 +2606,13 @@
  },
  "pipe_eel": {
   "file": "pipe_eel.glb",
-  "tris": 3500,
+  "tris": 6000,
   "size": [
-   0.8649,
-   0.227,
-   1.0
+   1.0,
+   0.4824,
+   0.3484
   ],
-  "note": "item: grey eel lying coiled flat"
+  "note": "item model (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
  },
  "abyss_koi": {
   "file": "abyss_koi.glb",
@@ -4321,6 +4321,76 @@
    0.7664,
    1.0,
    0.2624
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "coat_rack": {
+  "file": "coat_rack.glb",
+  "tris": 7000,
+  "size": [
+   0.5953,
+   1.0,
+   0.4873
+  ],
+  "note": "home dressing (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "hanging_plant": {
+  "file": "hanging_plant.glb",
+  "tris": 6999,
+  "size": [
+   0.7796,
+   1.0,
+   0.7084
+  ],
+  "note": "home dressing (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "side_table": {
+  "file": "side_table.glb",
+  "tris": 7000,
+  "size": [
+   0.6055,
+   1.0,
+   0.5971
+  ],
+  "note": "home dressing (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "kitchen_dresser": {
+  "file": "kitchen_dresser.glb",
+  "tris": 7000,
+  "size": [
+   1.0,
+   0.8498,
+   0.4574
+  ],
+  "note": "home dressing (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "big_plant": {
+  "file": "big_plant.glb",
+  "tris": 7000,
+  "size": [
+   0.9559,
+   1.0,
+   0.8485
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "fish_trophy": {
+  "file": "fish_trophy.glb",
+  "tris": 7000,
+  "size": [
+   1.0,
+   0.9897,
+   0.2202
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "armchair_big": {
+  "file": "armchair_big.glb",
+  "tris": 9000,
+  "size": [
+   1.0,
+   0.9706,
+   0.7905
   ],
   "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
  }
