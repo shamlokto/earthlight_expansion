@@ -4424,3 +4424,14 @@ export function memoryCatalogue() {
   };
   for (const [id, lines] of Object.entries(MORE)) if (ROMANCE.people[id] && ROMANCE.people[id].sweetTalk.length < 8) ROMANCE.people[id].sweetTalk.push(...lines);
 }
+
+// ------------------------------------------------------------------ festivals with your sweetheart (2026-11-22)
+// After a festival's scene, if Sato has a sweetheart or a partner, a short moment with them. {n}: their name.
+export const FESTIVAL_LOVE = {
+  planting: (n, who) => [L('narrator', `${n} takes the row beside yours without asking, and somehow your two rows meet in the middle.`), L(who, 'Whatever grows here, I want to see it with you. Every spring. That is my row\'s whole wish.', 'shy'), L('sato', 'Then we had better water it together.')],
+  bloom: (n, who) => [L('narrator', `${n} buys a single flower from Noor's stall and tucks it behind your ear, then pretends to be very interested in the cheese judging.`), L(who, 'It suits you. Do not take it off. That is an instruction.', 'embarrassed')],
+  lantern: (n, who) => [L('narrator', `When the lanterns go out on the water, ${n} lights theirs from yours, and the two of them drift off together, bumping gently, all the way to the bend.`), L(who, 'Did you see? They stayed together the whole way.', 'loved'), L('sato', 'I was watching. I was hoping they would.')],
+  harvest: (n, who) => [L('narrator', `${n} stands beside your table all afternoon, telling everyone who passes exactly how hard you worked for every vegetable on it.`), L(who, 'I am not boasting. I am reporting. There is a difference.', 'teasing')],
+  hubcup: (n, who) => [L('narrator', `${n} cheers louder than anyone in the stands, and then, when you look up, pretends it was somebody else.`), L(who, '...It was me. Obviously it was me. Win next year too.', 'joyful')],
+  yearsend: (n, who) => [L('narrator', `As the count reaches midnight and the sun-line flickers back on for the new year, ${n} finds your hand in the crowd.`), L(who, 'Another year. I want all of them. With you.', 'loved'), L('sato', 'Then you shall have them.')],
+};
