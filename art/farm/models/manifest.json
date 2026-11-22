@@ -4233,5 +4233,95 @@
    1.0
   ],
   "note": "item model, made from its icon (2026-11-22)"
+ },
+ "aquarium": {
+  "file": "aquarium.glb",
+  "tris": 9000,
+  "size": [
+   0.9114,
+   1.0,
+   0.6273
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "double_bed": {
+  "file": "double_bed.glb",
+  "tris": 9000,
+  "size": [
+   1.0,
+   0.536,
+   0.8537
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "fireplace": {
+  "file": "fireplace.glb",
+  "tris": 9000,
+  "size": [
+   1.0,
+   0.9879,
+   0.6349
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "flower_vase": {
+  "file": "flower_vase.glb",
+  "tris": 7000,
+  "size": [
+   0.8987,
+   1.0,
+   0.8258
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "piano": {
+  "file": "piano.glb",
+  "tris": 9000,
+  "size": [
+   0.7207,
+   1.0,
+   0.8914
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "telescope": {
+  "file": "telescope.glb",
+  "tris": 7000,
+  "size": [
+   0.854,
+   0.9007,
+   1.0
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "dresser": {
+  "file": "dresser.glb",
+  "tris": 9000,
+  "size": [
+   0.841,
+   1.0,
+   0.3769
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "rocking_chair": {
+  "file": "rocking_chair.glb",
+  "tris": 7000,
+  "size": [
+   0.5673,
+   1.0,
+   0.8417
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "wall_shelf_jars": {
+  "file": "wall_shelf_jars.glb",
+  "tris": 7000,
+  "size": [
+   0.7664,
+   1.0,
+   0.2624
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
  }
 }

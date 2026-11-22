@@ -507,6 +507,14 @@ function interiors() {
   // decor from the Works (2026-11-19, flags decor_<id>): drawn only once made
   m.prop('decor_lantern', 9, 4, { solid: false, when: 'decor_lantern' }); m.prop('decor_clock', 7, 0, { solid: false, when: 'decor_clock' });
   m.prop('decor_model', 0, 1, { solid: false, when: 'decor_model' }); m.prop('decor_shelf', 11, 5, { solid: false, when: 'decor_shelf' });
+  // home decor from the village (2026-11-22, sim.HOME_DECOR: flag decor_<id>); the double bed replaces the cot
+  m.props.find((p) => p.kind === 'bed').unless = 'decor_bed'; m.prop('double_bed', 1, 0, { d: 2, act: 'bed', solid: false, when: 'decor_bed' });
+  m.prop('fireplace', 2, 0, { solid: false, decorSolid: true, when: 'decor_fireplace' }); m.prop('piano', 11, 0, { solid: false, decorSolid: true, when: 'decor_piano', act: 'piano' });
+  m.prop('dresser', 0, 2, { solid: false, decorSolid: true, when: 'decor_dresser', rot: Math.PI / 2 }); m.prop('wall_shelf_jars', 0, 3, { solid: false, when: 'decor_jars', rot: Math.PI / 2 });
+  m.prop('big_plant', 0, 6, { solid: false, decorSolid: true, when: 'decor_plant' }); m.prop('aquarium', 11, 3, { solid: false, decorSolid: true, when: 'decor_aquarium', act: 'aquarium', rot: -Math.PI / 2 });
+  m.prop('fish_trophy', 11, 4, { solid: false, when: 'decor_trophy', rot: -Math.PI / 2 }); m.prop('telescope', 11, 6, { solid: false, decorSolid: true, when: 'decor_telescope', act: 'telescope', rot: -Math.PI / 2 });
+  m.prop('rocking_chair', 5, 3, { solid: false, when: 'decor_rocker', rot: Math.PI }); m.prop('armchair_big', 2, 3, { solid: false, when: 'decor_armchair', rot: Math.PI / 2 });
+  m.prop('flower_vase', 10, 4, { solid: false, when: 'decor_vase' });
   out.house = m;
 
   m = room('barn', 12, 9, 'Barn', 'h');
@@ -765,7 +773,10 @@ export const HOMES = {};                // key → { key, room, map, x, y, label
 const HOME_COLOURS = { lark: '#d9534f', vesna: '#5b4a7a', pia: '#2f6f73', tika: '#2e8f8a', noor: '#9bb07a', marrow: '#5a4a6e', mori: '#9fb4c8', yui: '#b06a7a', oduya: '#e07b24', maris: '#3a78b8', kestrel: '#7a4f2a', seln: '#3f8f5a', corran: '#8c3b2e', ruess: '#6b5a48', general: '#3d4a63', moraine: '#7a1f2b', fenn: '#24406e', calloway: '#3fa7a3', vashti: '#55604a', venn: '#5d6b4e', wick: '#3f5f6f', hana: '#c8553d', thorne: '#86485a', moth: '#e8b44a' };
 function homeRooms(all) {
   const out = {}, C = HOME_COLOURS;
-  const mk = (key, name, w, h, floor, who, fn, o = {}) => { const m = room('home_' + key, w, h, name, floor); Object.assign(m, { home: key }, o); fn(m, C[who[0][0]]); for (const [id, x, y] of who) m.spot(`home_${key}.${id}`, x, y); out[m.id] = m; return m; };
+  const mk = (key, name, w, h, floor, who, fn, o = {}) => { const m = room('home_' + key, w, h, name, floor); Object.assign(m, { home: key }, o); fn(m, C[who[0][0]]); for (const [id, x, y] of who) m.spot(`home_${key}.${id}`, x, y); dress(m); out[m.id] = m; return m; };
+  // 2026-11-22: a little more life by the door of every home: a coat rack, a hanging plant, a side table, wherever the floor is free
+  const dress = (m) => { const busy = (x, y) => m.props.some((p) => x >= Math.floor(p.x) - 0 && x < Math.floor(p.x) + p.w && y >= Math.floor(p.y) && y < Math.floor(p.y) + p.d) || Object.values(m.spots).some(([sx, sy]) => Math.floor(sx) === x && Math.floor(sy) === y) || Math.abs(x - m.exitTile[0]) <= 1;
+    for (const [kind, x, y] of [['coat_rack', m.w - 1, m.h - 2], ['hanging_plant', 0, m.h - 2], ['side_table', m.w - 1, m.h - 3], ['kitchen_dresser', 0, m.h - 3]]) if (!busy(x, y) && !busy(x, y - 1 < 0 ? y : y)) m.prop(kind, x, y, { solid: false, rot: x === 0 ? Math.PI / 2 : -Math.PI / 2 }); };
   const door = (key, map, x, y, label) => { all[map].doors.push({ x, y, to: { map: 'home_' + key }, kind: 'home', home: key, lock: null }); HOMES[key] = { key, room: 'home_' + key, map, x, y, label }; };
   const back = (key, map, x, label) => { all[map].prop('home_door', x, 0, { act: 'home', home: key, tint: C[key] }); out['home_' + key].backTo = { map, x: x + 0.5, y: 1.6, dir: 0 }; HOMES[key] = { key, room: 'home_' + key, map, x, y: 1, label, back: true }; };
   const hatch = (key, map, x, y, label) => { all[map].prop('home_door', x, y, { act: 'home', home: key, solid: false, label, tint: C[key] }); door(key, map, x, y, label); };

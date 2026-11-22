@@ -109,7 +109,11 @@ const PROPS = {
   // 2026-11-19: the Lower deck, the Undercroft (models from docs/LOWER-DECK-ART.md; built stand-ins in lowerworld.js)
   lower_lift: { model: 'lower_lift', h: 3.0, fit: 'foot' }, pump_station: { model: 'pump_station', h: 3.0, fit: 'foot' }, mushroom_bed: { model: 'mushroom_bed', h: 0.9, fit: 'foot' }, catacomb_arch: { model: 'catacomb_arch', h: 3.0, fit: 'stretch' },
   shelter: { model: 'shelter', h: 3.4, fit: 'foot' }, glow_lamp: { model: 'glow_lamp', h: 1.8 }, terminal: { model: 'terminal', h: 1.3 }, vault_door: { model: 'vault_door', h: 3.2, fit: 'foot' }, works_hall: { model: 'works_hall', h: 4, fit: 'box' },
-  fabricator: { h: 2.5 }, vault_door_open: { h: 3.3 }, zero_g_arena: { h: 3.6 }, scrap_bin: { h: 0.9 }, vent_bath: { h: 1.2 }, reactor_console: { h: 2.6 }, decimator_ring: { h: 4 }, decor_lantern: { h: 1.1 }, decor_clock: { h: 2.2 }, decor_model: { h: 1.1 }, decor_shelf: { h: 1.6 },
+  fabricator: { h: 2.5 }, vault_door_open: { h: 3.3 }, zero_g_arena: { h: 3.6 }, scrap_bin: { h: 0.9 }, vent_bath: { h: 1.2 }, reactor_console: { h: 2.6 }, decimator_ring: { h: 4 }, decor_lantern: { h: 1.1 },
+  // home decor (2026-11-22; Hunyuan3D-2 from HunyuanDiT concept pictures)
+  double_bed: { model: 'double_bed', h: 1.05, maxW: 1.75 }, fireplace: { model: 'fireplace', h: 1.7, maxW: 1.25 }, piano: { model: 'piano', h: 1.35, fit: 'foot' }, dresser: { model: 'dresser', h: 1.7, fit: 'foot' },
+  wall_shelf_jars: { model: 'wall_shelf_jars', h: 1.3, fit: 'foot' }, big_plant: { model: 'big_plant', h: 1.6, maxW: 1 }, aquarium: { model: 'aquarium', h: 1.25, fit: 'foot' }, fish_trophy: { model: 'fish_trophy', h: 0.6, maxW: 0.9, hover: 2.4 },
+  telescope: { model: 'telescope', h: 1.35, maxW: 1 }, rocking_chair: { model: 'rocking_chair', h: 1.1, fit: 'foot' }, armchair_big: { model: 'armchair_big', h: 1.05, fit: 'foot' }, flower_vase: { model: 'flower_vase', h: 0.8, maxW: 0.7 }, coat_rack: { model: 'coat_rack', h: 1.7, maxW: 0.9 }, hanging_plant: { model: 'hanging_plant', h: 1.0, maxW: 0.8, hover: 2.4 }, side_table: { model: 'side_table', h: 0.9, maxW: 0.8 }, kitchen_dresser: { model: 'kitchen_dresser', h: 1.1, fit: 'foot' }, wall_painting: { model: 'wall_painting', h: 0.8, maxW: 1.1, hover: 3.0 }, decor_clock: { h: 2.2 }, decor_model: { h: 1.1 }, decor_shelf: { h: 1.6 },
   work_barrier: { h: 0.9 }, bulkhead: { h: 2.6 }, tarp: { h: 2.4 }, crypt_wall: { h: 2.2 }, stove: { h: 1.6 }, shrooms: { h: 0.3 },
 };
 const BUILDING = {
@@ -222,6 +226,7 @@ export class World {
   setTime(minute, weather, map) {
     const indoor = map && map.indoor, ruins = map && map.ruins, colony = !indoor && !ruins;
     const h = minute / 60, sm = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+    if (indoor && this.windowGlass) { const d = sm(6, 7.5, h) * (1 - sm(18.5, 20, h)); this.windowGlass.emissive.setHex(d > 0.05 ? 0x9fd4ff : 0x1c2a44); this.windowGlass.emissiveIntensity = 0.15 + 0.55 * d * (weather === 'rain' || weather === 'storm' ? 0.6 : 1); }   // daylight in the windows
     // The colony schedules its light: the sun-line fades up from 6:00 and down from 18:30. (Down in the Old World, a real sun.)
     const day = ruins ? Math.max(0, Math.min(1, Math.min((h - 5) / 1.0, (20.5 - h) / 1.5))) : sm(5.7, 6.5, h) * (1 - sm(18.0, 19.9, h));
     const dusk = ruins ? Math.max(0, 1 - Math.abs(h - 18.6) / 1.6) : Math.max(0, 1 - Math.abs(h - 18.75) / 1.25) + Math.max(0, 1 - Math.abs(h - 6.1) / 0.7) * 0.5;
@@ -855,7 +860,7 @@ export class World {
     this.map = map; this.state = state; this.season = state.cal.season; this.flags = state.flags || {};
     freeGeometry(this.root); for (const m of this.waterMats || []) if (m.map && m.map.userData.ownWater) m.map.dispose(); this.root.clear(); this.facers.length = 0; this.spriteMats.length = 0; this.anims.length = 0; this.tileObjs.clear();
     for (const a of this.actors.values()) a.dispose && a.dispose(); this.actors.clear();
-    this.lamps = []; this.waterMats = []; this.tallProps = []; this.steam = [];
+    this.lamps = []; this.waterMats = []; this.tallProps = []; this.steam = []; this.windowGlass = null;
     const R = this.root, W = map.w, H = map.h;
     // ground, one merged mesh per kind
     const byKind = {};
@@ -897,6 +902,7 @@ export class World {
       const wm = map.colonyRoom ? std({ color: map.colonyRoom === 'warm' ? 0xf4ecdc : 0xe9eef0, roughness: 0.7 }) : map.glass ? new THREE.MeshStandardMaterial({ color: 0xcfeaf0, transparent: true, opacity: 0.3, roughness: 0.1 }) : std({ map: art.tex(map.id === 'barn' || map.id === 'ranch' ? 'barn_red' : map.id === 'coop' || map.id === 'house' || map.id === 'workshop' ? 'plank_wall' : map.id === 'cafe' ? 'metal_hull' : 'plaster_wall', { repeat: 0.5 }) });
       const hh = map.id === 'church' ? 3.9 : 2.9; R.add(box(W, hh, 0.2, wm, W / 2, 0, -0.1), box(0.2, hh, H, wm, -0.1, 0, H / 2), box(0.2, hh, H, wm, W + 0.1, 0, H / 2));
       if (map.colonyRoom) { const tm = TEAL(); R.add(box(W, 0.22, 0.24, tm, W / 2, 0, -0.08), box(0.24, 0.22, H, tm, -0.08, 0, H / 2), box(0.24, 0.22, H, tm, W + 0.08, 0, H / 2), box(W, 0.08, 0.24, tm, W / 2, hh - 0.08, -0.08)); }
+      if (!map.colonyRoom && !map.glass && !['barn', 'coop', 'fold', 'duckhouse', 'greenhouse'].includes(map.id)) this.roomDressing(R, W, H, hh, map);   // windows and a skirting board (2026-11-22)
       const mat = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.6), std({ color: 0x6f5a3a })); mat.rotation.x = -Math.PI / 2; mat.position.set(map.exitTile[0] + 0.5, 0.02, map.exitTile[1] + 0.6); R.add(mat);
       const lamp = new THREE.PointLight(0xffd9a0, 30, 30, 1.6); lamp.position.set(W / 2, 3.4, H / 2); R.add(lamp);
     }
@@ -995,6 +1001,22 @@ export class World {
   // The belt's rocks, drawn instanced from the sim's grid (state.mine.cells), only those near Sato (see BeltRocks).
   stoneShade(o) { return stoneShade(o); }
   beltField(mine) { if (this.rocks) this.rocks.dispose(); this.rocks = new BeltRocks(this.root, mine); return this.rocks; }
+  // Windows with curtains on the side walls and a skirting board: rooms were bare boxes. Daylight in the panes follows the clock.
+  roomDressing(R, W, H, hh, map) {
+    const hsh = (map.id.length * 7 + W * 3 + H) % 5, curtain = [0xd98c8c, 0x8cb4d9, 0xe0c27a, 0x9cc49a, 0xc9a0d0][hsh];
+    const frame = std({ color: 0x8a5e3c, roughness: 0.8 }), cur = std({ color: curtain, roughness: 0.95 });
+    const glass = new THREE.MeshStandardMaterial({ color: 0xbfe4ff, emissive: 0x9fd4ff, emissiveIntensity: 0.55, roughness: 0.2 }); this.windowGlass = glass;
+    const zs = H >= 8 ? [H * 0.3, H * 0.72] : [H * 0.45];
+    for (const side of [0, 1]) for (const z of zs) {
+      const g = new THREE.Group(), x = side ? W + 0.0 : 0.0, n = side ? -1 : 1;
+      const pane = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.85), glass); pane.rotation.y = n * Math.PI / 2; g.add(pane);
+      g.add(box(0.06, 0.08, 1.04, frame, 0, -0.47, 0), box(0.06, 0.08, 1.04, frame, 0, 0.43, 0), box(0.06, 0.95, 0.07, frame, 0, -0.47, -0.49), box(0.06, 0.95, 0.07, frame, 0, -0.47, 0.49), box(0.05, 0.9, 0.04, frame, 0, -0.45, 0), box(0.05, 0.04, 0.95, frame, 0, -0.02, 0));
+      g.add(box(0.14, 0.06, 1.14, frame, n * 0.04, -0.55, 0));                                  // the sill
+      g.add(box(0.05, 1.05, 0.26, cur, n * 0.05, -0.55, -0.64), box(0.05, 1.05, 0.26, cur, n * 0.05, -0.55, 0.64), box(0.04, 0.05, 1.7, frame, n * 0.05, 0.56, 0));   // curtains and rail
+      g.position.set(x + n * 0.02, 1.75, z); R.add(g);
+    }
+    R.add(box(W, 0.14, 0.04, frame, W / 2, 0, 0.01), box(0.04, 0.14, H, frame, 0.01, 0, H / 2), box(0.04, 0.14, H, frame, W - 0.01, 0, H / 2));   // skirting
+  }
   // Redraw one map prop in place (a bush just picked bare): same spot, same turn.
   swapProp(p, kind, o2) {
     const old = p.obj; if (!old || !old.parent) return; const n = this.makeProp(kind, { ...p, ...o2 });
