@@ -502,3 +502,18 @@ LOWER_LOGS.push(
 );
 FESTIVAL_DAYS.push([2, 19]);            // the Hub Cup in the Zero-G Arena (story.js FESTIVALS; held once the arena is restored)
 item('hub_cup', 'The Hub Cup', 'keepsake', 'A small, dented silver cup on a magnetic base, so it stays put in zero-g.', { detail: 'The Lower deck\'s zero-g ball trophy, first played for in the old training drum. Venn made it from a pump bell. Your name is scratched on the base, under several older names nobody can read.' });
+
+// ---------------------------------------------------------------- the cellar's aged goods (2026-11-22)
+// A cask in the farmhouse cellar ages one cheese, honey or grape juice: 7 days makes it aged (×1.8),
+// 21 days vintage (×3). Their icons are the plain good's with a star badge (iconOf, tier).
+export const CELLAR_GOODS = {
+  cheese: ['Cellar cheese', 'Vintage cheese', 'A wheel of farm cheese that sat a week in your cellar: firmer, nuttier, sharper.', 'Three weeks in the cask. It crumbles into crystals and tastes of the whole year.'],
+  goat_cheese: ['Aged goat cheese', 'Vintage goat cheese', 'A goat cheese that waited a week in the cool: the herbs have sunk all the way in.', 'Three weeks in the cellar have turned it dense and golden. Lark would trade a kidney for it.'],
+  honey: ['Cellar honey', 'Vintage honey', 'A week in the dark and the honey has set creamy and pale.', 'Three weeks: dark amber, thick as toffee, smelling of every flower on the farm.'],
+  grape_juice: ['Grape wine', 'Vintage grape wine', 'Wild-grape juice that worked a week in the cask: light, tart, a little fizzy.', 'Three weeks in oak. Deep red, and Ruess pretends he does not want a bottle.'],
+};
+for (const [base, [aged, vint, da, dv]] of Object.entries(CELLAR_GOODS)) {
+  const b = ITEMS[base];
+  item('aged_' + base, aged, 'artisan', da, { sell: Math.round(b.sell * 1.8), stamina: Math.round((b.stamina || 20) * 1.4), iconOf: base, tier: 1, detail: `${da} Made by leaving ${b.name.toLowerCase()} in a cellar cask for 7 days; leave it 21 and it is vintage.` });
+  item('vintage_' + base, vint, 'artisan', dv, { sell: b.sell * 3, stamina: Math.round((b.stamina || 20) * 1.8), iconOf: base, tier: 2, detail: `${dv} Made by leaving ${b.name.toLowerCase()} in a cellar cask for 21 days.` });
+}

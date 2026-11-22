@@ -4447,3 +4447,13 @@ HELP.push({
   title: 'Refitting the Pallas',
   body: "In Vashti's hangar (up the orbital elevator), the bench by the wall runs a refit gantry over the parked Pallas. Vashti's crew fits seven lines, each for a fee and belt ore: hull plating (+30, then +60 hull, on top of Ruess's air filters), the blaster coil (bolts hit 1.5×, then 2×; mark II punches through a rust-crawler's shell), the sabre emitter (3, then 4 damage, a longer reach), the long-range scanner (24, then 32 tiles, recharging faster), boost thrusters (Shift comes round in 0.6, then 0.4 s), the Hydra turret (faster and further) and sealed treads (toxic pools cost 1 hull, not 3). Mark II of a line needs mark I.",
 });
+
+// ------------------------------------------------------------------ the cellar and the cat (2026-11-22)
+HELP.push({
+  title: 'The cellar',
+  body: "Prof. Ruess can dig the crawlspace under your farmhouse into a stone cellar (6,000 cr, 80 lumber): the trapdoor by the east window leads down. Hold a farm cheese, goat cheese, jar of honey or grape juice and press E at an empty cask to lay it down. After 7 days it is aged (cellar cheese, cellar honey, grape wine: about 1.8× the price); after 21 days it is vintage (3×). E on a full cask tells you how long it has been; take it out whenever you like. Ruess's cellar racks add six more casks.",
+});
+HELP.push({
+  title: 'Your cat',
+  body: "Corran's barn cat had kittens: adopt one at the ranch for 300 cr. The first time you pet her, you name her. Pet her once a day, and hold a fish by her for her bowl once a day; a day with neither and she sulks a little. She naps in her bed by the hearth at night, suns herself on the porch on fine days and potters round the farmhouse otherwise. A cat who loves you leaves little presents by your bed, and keeps you warm on a bad night.",
+});

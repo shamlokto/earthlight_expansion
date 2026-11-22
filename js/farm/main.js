@@ -95,7 +95,7 @@ async function goInner(to, { quick = false } = {}) {
   if (map.id === 'hangar') { const pal = new Actor(W, 'pallas_parked', lookOf('sato'), { pallas: true, tall: 2.5 }); pal.x = 8; pal.y = 4; pal.dir = 0; W.actors.set('pallas_parked', pal); }
   if (map.id === 'coop') drawEggs();
   if (map.under) drawBeds(); if (map.id === 'school') spawnPupils();
-  drawPlaced(); spawnBots();
+  drawPlaced(); spawnBots(); spawnCat();
   placeNpcs(true); refreshHud();
   if (!quick) await ui.fade(false, 220);
   busy = false;
@@ -345,6 +345,41 @@ function botsTick(dt) {
     b.o.position.y = sp && d > 0.1 ? Math.abs(Math.sin(performance.now() / 120 + b.i)) * 0.04 : 0;
   }
 }
+// ---------------------------------------------------------------- the farm cat (2026-11-22, sim.petOf)
+// Where she is: asleep in her bed by the hearth at night (on Sato's bed late on, once she loves her); on the porch on
+// fine days from ten till five; otherwise pottering round the farmhouse. She wanders a little round that spot.
+let cat = null, catCheck = 0;
+const CAT_BED = [3.5, 1.5];
+function catPlan() {
+  const p = sim.petOf(S); if (!p) return null; const m = S.cal.minute;
+  if (m >= 1260 || m < 390) return p.love >= 60 && (m >= 1320 || m < 390) ? { map: 'house', x: 1.5, y: 1.2, sleep: true, up: 0.55 } : { map: 'house', x: CAT_BED[0], y: CAT_BED[1], sleep: true, up: 0.08 };
+  if (m >= 600 && m < 1020 && S.weather === 'sun' && S.cal.season !== 3) return { map: 'farm', x: 7.5, y: 8.7, r: 2.2 };
+  return { map: 'house', x: 5.5, y: 4.5, r: 3 };
+}
+function spawnCat() {
+  if (cat) W.unplace('petcat'); cat = null; catCheck = 4; const s = map && catPlan(); if (!s || s.map !== map.id) return;
+  cat = { o: W.place('petcat', s.sleep ? 'cat_sleep' : 'cat', s.x, s.y), x: s.x, y: s.y, tx: s.x, ty: s.y, wait: 1 + Math.random() * 3, plan: s, purr: 0 };
+  cat.o.position.y = s.up || 0;
+}
+function catTick(dt) {
+  catCheck -= dt; if (catCheck <= 0) { catCheck = 4; const s = map && catPlan(), c = cat && cat.plan, here = s && s.map === map.id; if (!!here !== !!c || (here && (!!s.sleep !== !!c.sleep || s.x !== c.x))) spawnCat(); }
+  if (!cat) return; const o = cat.o; cat.purr -= dt;
+  if (cat.plan.sleep) { o.scale.setScalar(1 + Math.sin(performance.now() / 700) * 0.015); return; }   // breathing
+  cat.wait -= dt;
+  if (cat.wait <= 0) { const a = Math.random() * Math.PI * 2, d = Math.random() * cat.plan.r, nx = cat.plan.x + Math.cos(a) * d, ny = cat.plan.y + Math.sin(a) * d; if (canStand(nx, ny)) { cat.tx = nx; cat.ty = ny; } cat.wait = 3 + Math.random() * 6; }
+  if (cat.purr > 0) { o.rotation.y = Math.atan2(me.x - cat.x, me.y - cat.y); o.position.y = Math.abs(Math.sin(performance.now() / 160)) * 0.02; return; }
+  const dx = cat.tx - cat.x, dy = cat.ty - cat.y, d = Math.hypot(dx, dy);
+  if (d > 0.08) { const st = Math.min(d, dt * 1.1), nx = cat.x + dx / d * st, ny = cat.y + dy / d * st; if (canStand(nx, ny)) { cat.x = nx; cat.y = ny; } else { cat.tx = cat.x; cat.ty = cat.y; } o.position.x = cat.x; o.position.z = cat.y; o.rotation.y = Math.atan2(dx, dy); o.position.y = Math.abs(Math.sin(performance.now() / 110)) * 0.03; }
+  else o.position.y = 0;
+}
+function catProbe() {
+  if (!cat || Math.hypot(cat.x - me.x, cat.y - me.y) > 1.3) return null;
+  const p = sim.petOf(S), held = sim.selected(S), nm = p.name || 'the kitten';
+  if (held && ITEMS[held.id].kind === 'fish' && p.fedDay !== sim.absDay(S)) return { label: `Give ${nm} the ${ITEMS[held.id].name.toLowerCase()}`, run: () => { const r = sim.feedCat(S, held.id); ui.toast(r.msg, 3600); if (r.ok) { sfx('good'); cat.purr = 2.5; floatText(cat.x, cat.y, '♥'); } refreshHud(); } };
+  return { label: cat.plan.sleep ? `Stroke ${nm} (asleep)` : `Pet ${nm}`, run: async () => {
+    if (!p.name) { mode = 'talk'; const i = await ui.choose('The kitten looks up at you, waiting. What will you call her?', sim.PET_NAMES); mode = 'play'; if (!(i >= 0)) return; ui.toast(sim.nameCat(S, sim.PET_NAMES[i]).msg, 3600); }
+    const r = sim.petCat(S); ui.toast(r.msg, 3200); if (cat) cat.purr = 2.5; if (r.ok && !r.again && cat) { sfx('good'); floatText(cat.x, cat.y + 0.2, r.up ? '♥♥' : '♥'); } refreshHud(); } };
+}
 function nearestBot(maxD) { let best = null, bd = maxD; for (const b of bots) { const d = Math.hypot(b.o.position.x - me.x, b.o.position.z - me.y); if (d < bd) { bd = d; best = b; } } return best; }
 async function talkBot(b) {
   const r = S.robots[b.i]; if (!r) return; mode = 'talk'; b.talk = 6;
@@ -527,6 +562,17 @@ async function vaultDoor() {
   mode = 'play'; sfx('good'); ui.celebrate('The vault is open. Every log is in your journal, and a slice of ring three is yours. Max stamina +10.'); refreshHud();
 }
 async function refreshLower() { if (map && map.under) { const at = { map: 'lower', x: me.x, y: me.y, dir: me.dir }; await go(at, { quick: true }); } }
+// A cellar cask (sim.caskInfo): hold a cheese, honey or grape juice to put it in; E on a full one reads its age and draws it out.
+function caskProbe(p) {
+  const info = sim.caskInfo(S, p.cask); if (!info) return null;
+  const held = sim.selected(S);
+  if (info.empty) return held && sim.cellarGood(held.id) ? { label: `Put the ${ITEMS[held.id].name.toLowerCase()} in the cask`, run: () => { const r = sim.caskPut(S, p.cask, held.id); ui.toast(r.msg, 3600); if (r.ok) { sfx('drop'); W.puff(p.x + 0.5, p.y + 0.5, 0xc8a070, 6, 0.6); } refreshHud(); } }
+    : { label: 'An empty oak cask', run: () => ui.toast('Hold a cheese, a goat cheese, a jar of honey or a grape juice to lay it down in the cask.', 3600) };
+  const wait = info.next ? ` · ${info.tier ? 'vintage' : 'aged'} in ${info.next} day${info.next > 1 ? 's' : ''}` : ' · vintage';
+  return { label: `${info.name} (${info.days} day${info.days === 1 ? '' : 's'}${wait})`, run: async () => {
+    if (info.tier < 2) { mode = 'talk'; const i = await ui.choose(`${info.name}, ${info.days} day${info.days === 1 ? '' : 's'} in the cask`, info.tier ? [`Draw out the ${info.name.toLowerCase()} now`, `Leave it to become vintage (${info.next} more day${info.next > 1 ? 's' : ''})`] : [`Leave it to age (${info.next} more day${info.next > 1 ? 's' : ''})`, 'Take it back out anyway']); mode = 'play'; if (i !== (info.tier ? 0 : 1)) return; }
+    const r = sim.caskTake(S, p.cask); ui.toast(r.msg, 3600); if (r.ok) { sfx(r.tier ? 'good' : 'pick'); if (r.tier === 2) floatText(p.x + 0.5, p.y + 0.5, 'vintage!'); } refreshHud(); } };
+}
 function pumpProbe(p) {
   const id = p.pump, run = sim.lowerDone(S, id), rep = sim.PUMP_REPAIRS.find((q) => q.id === id);
   if (run) return { label: `${p.label}: running`, run: () => ui.toast(story.LOWER.pumpRunning) };
@@ -920,6 +966,7 @@ function probe() {                                   // → { label, run } for E
   if (map.ruins && !S.mine) return null;
   if (map.ruins) return map.city && S.mine.mode === 'city' ? cityProbe(tx, ty) : null;
   { const tp = propAt(tx, ty); if (tp && tp.act === 'restore') return { label: 'Use the restoration terminal (fund projects)', run: () => act(tp) }; }   // the terminal wins over anyone standing near it
+  { const c = catProbe(); if (c) return c; }
   const near = nearestNpc(1.5);
   // 2026-11-21: a passer-by no longer steals E from the thing Sato is facing (the lift, a door, a sign, a mailbox): they win only when
   // they stand in front of her, or there is nothing to use there. Shop counters keep the keeper (talk to buy).
@@ -941,6 +988,7 @@ function probe() {                                   // → { label, run } for E
     if (p.act === 'mail') return mailProbe(p.home);
     if (p.act === 'hours') return { label: `Read the opening hours: ${(story.PLACES[p.place] || {}).name || 'sign'}`, run: () => act(p) };
     if (p.act === 'pump') return pumpProbe(p);
+    if (p.act === 'cask') return caskProbe(p);
     if (p.act === 'bed' && p.bed != null) return bedProbe(p);   // a catacomb growing bed (the farmhouse bed has no bed number: it is for sleeping)
     if (p.act === 'terminal') return { label: S.lower && S.lower.logs && S.lower.logs[p.log] != null ? `${p.label} (log recovered)` : p.kind === 'crypt_wall' ? 'Read the scratches on the wall' : `Recover the log from the ${p.label.toLowerCase()}`, run: () => act(p) };
     const L = { telescope: 'Look through the telescope', aquarium: 'Look at the fish tank', piano: 'Play the piano', lift: 'Ride the spoke lift', restore: 'Use the restoration terminal', vault: sim.vaultReady(S).ok ? 'Open the round door' : 'Look at the sealed round door', works: S.flags.ld_works ? 'Use the Works press' : 'Look at the sleeping press', recycle: 'Use the recycling bin', arena: sim.hubCupDay(S) && !S.flags['hubcup_y' + S.cal.year] ? 'Take your five throws in the Hub Cup' : 'Look at the zero-g drum', vents: S.flags.ld_vents ? `Soak in the vent bath (${S.flags.ld_reactor ? 'free' : sim.VENT_PRICE + ' cr'})` : 'Look at the cold bath', reactor: `Work at the reactor console (${sim.reactorDone(S)}/${sim.REACTOR_STEPS.length})`, launch: 'Suit up at the launch cradle: fly out to the belt', refit: 'Use the Pallas refit gantry', shuttle: `Board Maris's shuttle to the Old World (${sim.shuttleFare(S) ? sim.shuttleFare(S) + ' cr' : 'free'})`, liftdown: 'Ride the spoke lift (Eden Central, the Lower deck)', liftup: 'Ride the spoke lift (Willowfall, the Lower deck)', gallery: 'Sit and look out of the great window', house: 'Try the door', silo: 'Open the silo', solaryard: 'Use the solar yard terminal', stargaze: 'Stargaze in the dome', onsen: 'Soak in the onsen', bin: sim.basketHeld(S) ? `Tip the basket into the bin (${sim.basketTotal(S)})` : 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Watch the colony forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', feedfold: 'Fill the fold troughs', feedduck: 'Fill the duck feeder', duckeggs: 'Look in the nest box', lift: 'Ride the orbital elevator', candles: 'Light a memorial candle', museum: 'Look at the Memory Room', books: 'Read a book', storage: 'Open the storage box', fridge: 'Open the fridge', kitchen: 'Cook something', calendar: 'Read the noticeboard' }[p.act];
@@ -954,7 +1002,7 @@ function probe() {                                   // → { label, run } for E
   const b = nearestBeast(1.4); if (b) return { label: `Pet ${S.animals[b.i].name}`, run: () => { const r = sim.petAnimal(S, b.i); ui.toast(r.msg || `${S.animals[b.i].name} seems pleased.`); floatText(b.o.position.x, b.o.position.z, '♥'); } };
   if (map.id === 'hill') for (const f of S.forage || []) { const [x, y] = spotXY(f.spot); if (Math.hypot(x + 0.5 - me.x, y + 0.5 - me.y) < 1.2) return { label: `Pick the ${ITEMS[f.id].name.toLowerCase()}`, run: () => { const r = sim.pickForage(S, f.spot); if (r.ok) { sfx('pick'); pickedToast(r); drawForage(); } else ui.toast(r.msg); refreshHud(); } }; }
   const hd = map.doors.find((q) => q.kind === 'home' && q.x === tx && q.y === ty); if (hd) return homeProbe(hd.home);   // facing someone's front door
-  const d = map.doors.find((q) => q.x === Math.floor(me.x) && q.y === Math.floor(me.y)); if (d && d.kind === 'home') return homeProbe(d.home); if (d) return { label: d.kind === 'orbital_elevator' ? 'Ride the orbital elevator up to the hangar' : d.kind === 'house_back' ? (S.flags.house_back ? 'Go into the back bedroom' : 'Open the back door') : 'Go in', run: () => enterDoor(d) };
+  const d = map.doors.find((q) => q.x === Math.floor(me.x) && q.y === Math.floor(me.y)); if (d && d.kind === 'home') return homeProbe(d.home); if (d) return { label: d.kind === 'orbital_elevator' ? 'Ride the orbital elevator up to the hangar' : d.kind === 'house_back' ? (S.flags.house_back ? 'Go into the back bedroom' : 'Open the back door') : d.kind === 'cellar' ? (S.flags.cellar ? 'Go down to the cellar' : 'Lift the old trapdoor') : 'Go in', run: () => enterDoor(d) };
   return null;
 }
 // Homes (§15): a knock opens the door when they are in and awake, it is not late, and Sato is close enough (sim.visitRule).
@@ -1010,7 +1058,7 @@ async function knock(key, walkedIn = false) {
 }
 function enterDoor(d) {
   if (d.kind === 'home') return knock(d.home, true);
-  if (d.lock && !S.flags[d.lock]) return ui.toast({ fold: 'The old stone fold has no roof, and the gate hangs by one hinge. Prof. Ruess could mend it.', duckhouse: 'The duck house is a tumble of planks by the pond. Prof. Ruess could rebuild it.', house_back: 'The door opens on a cupboard full of old crates. Prof. Ruess could build a bedroom out the back.' }[d.lock] || 'The old greenhouse is a wreck of broken frames. Prof. Ruess could repair it.');
+  if (d.lock && !S.flags[d.lock]) return ui.toast({ fold: 'The old stone fold has no roof, and the gate hangs by one hinge. Prof. Ruess could mend it.', duckhouse: 'The duck house is a tumble of planks by the pond. Prof. Ruess could rebuild it.', house_back: 'The door opens on a cupboard full of old crates. Prof. Ruess could build a bedroom out the back.', cellar: 'The trapdoor lifts on a crawlspace of rubble and cold air. Prof. Ruess could dig it out into a cellar.' }[d.lock] || 'The old greenhouse is a wreck of broken frames. Prof. Ruess could repair it.');
   sfx('door'); go(doorTarget(d.to.map));
   if (d.kind === 'orbital_elevator') ui.toast(story.ELEVATOR.up, 4200);
 }
@@ -1199,14 +1247,14 @@ function frame(now) {
       if (ex) { go(ex.to); return; }
       if (map.indoor && Math.abs(tx - map.exitTile[0]) <= 1 && me.y > map.exitTile[1] + 0.45 && wy > 0.3) { sfx('door'); if (map.id === 'hangar') ui.toast(story.ELEVATOR.down, 4200); go(outsideOf(map.id)); return; }
       const d = map.doors.find((q) => q.x === tx && q.y === ty);
-      if (d && wy < -0.5 && me.y < d.y + 0.45) { doorHold += dt; if (doorHold > 0.18) { doorHold = 0; enterDoor(d); return; } } else doorHold = 0;
+      if (d && !d.hatch && wy < -0.5 && me.y < d.y + 0.45) { doorHold += dt; if (doorHold > 0.18) { doorHold = 0; enterDoor(d); return; } } else doorHold = 0;
     }
     // the clock
     clock += dt;
     while (clock >= MIN_SECONDS) { clock -= MIN_SECONDS; const r = sim.tick(S, 1); if (S.cal.minute % 10 === 0) { refreshHud(); if (!homeBedtime()) placeNpcs(); W.setTime(S.cal.minute, S.weather, map); setMood({ night: S.cal.minute > 1170 }); checkEvents(); } if (r.collapsed) { night(true); break; } }
     if (map.ruins) ruinsTick(dt);
     if (fishing) fishTick(dt);
-    botsTick(dt); moveNpcs(dt);
+    botsTick(dt); catTick(dt); moveNpcs(dt);
     for (const g of forageBob) { const b = g.userData.bob; if (!g.parent) continue; b.t += dt; b.bb.position.y = 0.12 + Math.abs(Math.sin(b.t * 2.2)) * 0.12; const h = g.children[0] && g.children[0].userData.halo; if (h) h.material.opacity = 0.45 + Math.sin(b.t * 3) * 0.25; }
     for (const b of beasts) { b.wait -= dt; if (b.wait <= 0) { const pen = b.pen || map.pen; b.tx = pen[0] + 0.6 + Math.random() * (pen[2] - pen[0]); b.ty = pen[1] + 0.6 + Math.random() * (pen[3] - pen[1]); b.wait = 3 + Math.random() * 6; } const dx = b.tx - b.o.position.x, dy = b.ty - b.o.position.z, d = Math.hypot(dx, dy); if (d > 0.1) { b.o.position.x += dx / d * dt * 0.6; b.o.position.z += dy / d * dt * 0.6; if (!W.facers.includes(b.o.children[0])) b.o.rotation.y = Math.atan2(dx, dy); } }
     // prompt and cursor
@@ -1310,6 +1358,6 @@ async function boot() {
   const firstGesture = () => { removeEventListener('pointerdown', firstGesture, true); removeEventListener('keydown', firstGesture, true); if (mode === 'title') startMusic(); };
   addEventListener('pointerdown', firstGesture, true); addEventListener('keydown', firstGesture, true);
   requestAnimationFrame(frame);
-  window.__farm = { replayMemory,  get plan() { return plan; }, whereNow, paths, get npcs() { return npcs; }, get S() { return S; }, get W() { return W; }, get me() { return me; }, get map() { return map; }, go, sim, night, get mode() { return mode; }, ui, drawPlaced, get bots() { return bots; }, probe: () => probe(), use: () => use(), toggleJournal, talkBot };
+  window.__farm = { replayMemory,  get plan() { return plan; }, whereNow, paths, get npcs() { return npcs; }, get S() { return S; }, get W() { return W; }, get me() { return me; }, get map() { return map; }, go, sim, night, get mode() { return mode; }, ui, drawPlaced, get cat() { return cat; }, get bots() { return bots; }, probe: () => probe(), use: () => use(), toggleJournal, talkBot };
 }
 boot();

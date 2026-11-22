@@ -1,6 +1,7 @@
 // Sato's Harvest: built stand-ins for the villagers' homes (docs/FARM.md §15). Each kind is used until a model arrives under the
 // same name in art/farm/models (HOME_PROPS names the slots); `tint` is the owner's colour. world.js asks here after laneworld.
 import * as THREE from 'three';
+import * as art from './art.js';
 
 const M = new Map();
 const mat = (c, o = {}) => { const k = c + JSON.stringify(o); if (!M.has(k)) M.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, metalness: 0.05, ...o })); return M.get(k); };
@@ -54,8 +55,11 @@ export function homeProp(kind, o = {}) {
     }
     case 'wall_frames': {                                 // photographs and pictures hung high on the back wall
       for (let i = 0; i < w; i++) {
-        const fw2 = 0.42 + (i % 2) * 0.16, fh = 0.36 + ((i + 1) % 2) * 0.14, y = 1.55 + (i % 2) * 0.22;
-        g.add(box(fw2, fh, 0.04, i % 2 ? DARK() : tint(o), i, y, -0.47), box(fw2 - 0.08, fh - 0.08, 0.02, mat([0xe8dcc0, 0xbfd4dc, 0xd8c0a8][i % 3]), i, y + 0.04, -0.44));
+        const fw2 = 0.6 + (i % 2) * 0.18, fh = 0.5 + ((i + 1) % 2) * 0.16, y = 1.32 + (i % 2) * 0.18;   // big enough to see what is in them (2026-11-22)
+        const pics = o.pics ? [1, 2, 3].map((n) => `pictures/${o.pics}_${n}`).filter((k) => art.url(k)) : [], pk = pics.length > 1 || (pics.length && i % 2 === 0) ? art.pic(pics[(i + (o.x | 0)) % pics.length]) : null;   // the owner's own pictures (2026-11-22)
+        g.add(box(fw2, fh, 0.04, i % 2 ? DARK() : tint(o), i, y, -0.47));
+        if (pk) { const pm = new THREE.Mesh(new THREE.PlaneGeometry(fw2 - 0.08, fh - 0.08), new THREE.MeshStandardMaterial({ map: pk.tex, roughness: 0.8 })); pm.position.set(i, y + fh / 2, -0.445); pm.material.map.center.set(0.5, 0.5); pm.material.map.repeat.set(Math.min(1, (fw2 - 0.08) / (fh - 0.08)), Math.min(1, (fh - 0.08) / (fw2 - 0.08))); g.add(pm); }
+        else g.add(box(fw2 - 0.08, fh - 0.08, 0.02, mat([0xe8dcc0, 0xbfd4dc, 0xd8c0a8][i % 3]), i, y + 0.04, -0.44));
       }
       break;
     }

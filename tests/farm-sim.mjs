@@ -1569,5 +1569,48 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   q.flags.pal = 'junk'; check(sim.pallasLevel(q, 'coil') === 0 && sim.hullMax(q) === sim.HULL_MAX, 'a junk refit record reads as stock');
   const L = loadState(saveState(g)); check(L && sim.pallasLevel(L, 'plating') === 1 && sim.pallasLevel(L, 'coil') === 1, 'the refits survive a save');
 }
+// ---------------------------------------------------------------- the farmhouse cellar (2026-11-22)
+{
+  const g = rich(431), keys = () => shopStock(g, 'workshop').map((e) => e.key); addItem(g, 'nickel_iron', 4);
+  check(sim.cellarCasks(g) === 0 && sim.caskInfo(g, 0) === null && !sim.caskPut(g, 0, 'cheese').ok, 'no cellar, no casks');
+  check(keys().includes('cellar') && !keys().includes('cellar_racks'), 'Ruess offers the cellar first');
+  check(buy(g, 'workshop', 'cellar').ok && g.flags.cellar && sim.cellarCasks(g) === 6 && keys().includes('cellar_racks'), 'the cellar: six casks, then racks on offer');
+  addItem(g, 'cheese', 3); addItem(g, 'honey', 1); addItem(g, 'grape_juice', 1);
+  check(sim.caskInfo(g, 0).empty && !sim.caskPut(g, 0, 'egg').ok, 'an egg does not age');
+  let r = sim.caskPut(g, 0, 'cheese'); check(r.ok && countItem(g, 'cheese') === 2 && !sim.caskInfo(g, 0).empty && sim.caskInfo(g, 0).tier === 0, 'a cheese goes in');
+  check(!sim.caskPut(g, 0, 'cheese').ok, 'one good a cask');
+  check(sim.caskPut(g, 1, 'honey').ok && sim.caskPut(g, 2, 'grape_juice').ok && sim.caskPut(g, 3, 'cheese').ok, 'honey, juice and another cheese go in');
+  check(!sim.caskPut(g, 6, 'cheese').ok && sim.caskInfo(g, 6) === null, 'no seventh cask without the racks');
+  const day = (n) => { for (let k = 0; k < n; k++) sleep(g); };
+  day(3); check(sim.caskInfo(g, 0).days === 3 && sim.caskInfo(g, 0).next === 4, 'three days in, four to go');
+  r = sim.caskTake(g, 3); check(r.ok && r.tier === 0 && r.id === 'cheese' && sim.caskInfo(g, 3).empty, 'taken out early, it is plain cheese');
+  day(4); let i = sim.caskInfo(g, 0); check(i.tier === 1 && i.out === 'aged_cheese' && i.next === 14, 'a week: aged, vintage in two more');
+  r = sim.caskTake(g, 1); check(r.ok && r.id === 'aged_honey' && countItem(g, 'aged_honey') === 1, 'cellar honey drawn out');
+  check(ITEMS.aged_cheese.sell > ITEMS.cheese.sell && ITEMS.vintage_cheese.sell > ITEMS.aged_cheese.sell && ITEMS.vintage_grape_juice.name === 'Vintage grape wine', 'aged goods are worth more');
+  day(14); i = sim.caskInfo(g, 0); check(i.tier === 2 && i.out === 'vintage_cheese' && i.next === 0, 'three weeks: vintage');
+  r = sim.caskTake(g, 0); check(r.ok && r.id === 'vintage_cheese' && g.flags.cellar_vintage, 'vintage cheese drawn out');
+  check(buy(g, 'workshop', 'cellar_racks').ok && sim.cellarCasks(g) === 12 && sim.caskInfo(g, 11).empty, 'the racks: twelve casks');
+  g.cellar[4] = { id: 'egg', day: 'x' }; g.cellar[5] = 'junk'; check(sim.caskInfo(g, 4).empty && sim.caskInfo(g, 5).empty, 'junk in a cask reads as empty');
+  const L = loadState(saveState(g)); check(L && sim.caskInfo(L, 2).id === 'grape_juice' && sim.caskInfo(L, 2).tier === 2, 'the casks survive a save');
+  const full = rich(432); buy(full, 'workshop', 'cellar'); addItem(full, 'cheese', 1); sim.caskPut(full, 0, 'cheese'); while (sim.addItem(full, 'stone_never', 1).ok); for (let k = 0; k < full.player.inv.length; k++) if (!full.player.inv[k]) full.player.inv[k] = { id: 'scrap', n: 99 };
+  check(!sim.caskTake(full, 0).ok && !sim.caskInfo(full, 0).empty, 'a full rucksack leaves it in the cask');
+}
+// ---------------------------------------------------------------- the farm cat (2026-11-22)
+{
+  const g = rich(441); const keys = () => shopStock(g, 'ranch').map((e) => e.key);
+  check(!sim.petOf(g) && keys().includes('kitten') && !sim.petCat(g).ok, 'no cat yet; Corran offers a kitten');
+  check(buy(g, 'ranch', 'kitten').ok && sim.petOf(g) && g.flags.pet_cat && !keys().includes('kitten'), 'adopted: no second kitten');
+  check(!sim.adoptCat(g).ok && !sim.nameCat(g, 'Rex').ok && sim.nameCat(g, 'Miso').ok && g.pet.name === 'Miso', 'she takes a name from the list');
+  let r = sim.petCat(g); check(r.ok && g.pet.love === 16 && sim.petCat(g).again && g.pet.love === 16, 'one fuss a day');
+  check(!sim.feedCat(g, 'egg').ok, 'her bowl wants a fish'); addItem(g, 'fish_s', 2);
+  r = sim.feedCat(g, 'fish_s'); check(r.ok && g.pet.love === 26 && countItem(g, 'fish_s') === 1 && !sim.feedCat(g, 'fish_s').ok, 'a fish once a day');
+  sleep(g); sleep(g); check(g.pet.love === 23, 'a day of neglect costs 3 love');
+  g.pet.love = 100; let gifts = 0; for (let k = 0; k < 40; k++) { const rep = sleep(g); sim.petCat(g); if (rep.notes.some((n) => n.includes('by your bed'))) gifts++; }
+  check(gifts > 5 && gifts < 40, `a loved cat leaves gifts some mornings (${gifts} of 40)`);
+  g.player.stamina = 0; const rep = sleep(g, { collapsed: true }); check(g.player.stamina === Math.floor(g.player.maxStamina * 0.75) && rep.notes.some((n) => n.includes('curled up')), 'a loved cat warms a bad night');
+  g.pet.love = 'x'; g.pet.name = 'Rex'; check(sim.petHearts(g) === 0 && sim.petCat(g).ok && g.pet.name === null, 'junk love and names are cleaned');
+  const L = loadState(saveState(g)); check(L && sim.petOf(L) && L.pet.love === g.pet.love, 'the cat survives a save');
+  g.pet = 'junk'; sleep(g); check(g.pet === null && !sim.petOf(g), 'a junk pet record is dropped');
+}
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

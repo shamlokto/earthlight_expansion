@@ -1866,6 +1866,231 @@
    "fps": 16,
    "frames": 81,
    "loop": false
+  },
+  "pictures/calloway_1": {
+   "file": "pictures/calloway_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/calloway_2": {
+   "file": "pictures/calloway_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/corran_1": {
+   "file": "pictures/corran_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/corran_2": {
+   "file": "pictures/corran_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/fenn_1": {
+   "file": "pictures/fenn_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/fenn_2": {
+   "file": "pictures/fenn_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/general_1": {
+   "file": "pictures/general_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/general_2": {
+   "file": "pictures/general_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/hana_1": {
+   "file": "pictures/hana_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/hana_2": {
+   "file": "pictures/hana_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/kestrel_2": {
+   "file": "pictures/kestrel_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/lark_1": {
+   "file": "pictures/lark_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/lark_2": {
+   "file": "pictures/lark_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/maris_2": {
+   "file": "pictures/maris_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/marrow_1": {
+   "file": "pictures/marrow_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/marrow_2": {
+   "file": "pictures/marrow_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/moraine_1": {
+   "file": "pictures/moraine_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/moraine_2": {
+   "file": "pictures/moraine_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/mori_1": {
+   "file": "pictures/mori_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/mori_2": {
+   "file": "pictures/mori_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/noor_1": {
+   "file": "pictures/noor_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/noor_2": {
+   "file": "pictures/noor_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/oduya_1": {
+   "file": "pictures/oduya_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/pia_1": {
+   "file": "pictures/pia_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/pia_2": {
+   "file": "pictures/pia_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/ruess_1": {
+   "file": "pictures/ruess_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/ruess_2": {
+   "file": "pictures/ruess_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/sato_1": {
+   "file": "pictures/sato_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/sato_2": {
+   "file": "pictures/sato_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/sato_3": {
+   "file": "pictures/sato_3.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/seln_1": {
+   "file": "pictures/seln_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/seln_2": {
+   "file": "pictures/seln_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/thornes_1": {
+   "file": "pictures/thornes_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/thornes_2": {
+   "file": "pictures/thornes_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/tika_1": {
+   "file": "pictures/tika_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/tika_2": {
+   "file": "pictures/tika_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/vashti_2": {
+   "file": "pictures/vashti_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/venn_1": {
+   "file": "pictures/venn_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/venn_2": {
+   "file": "pictures/venn_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/vesna_1": {
+   "file": "pictures/vesna_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/vesna_2": {
+   "file": "pictures/vesna_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/wick_1": {
+   "file": "pictures/wick_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/wick_2": {
+   "file": "pictures/wick_2.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/yui_1": {
+   "file": "pictures/yui_1.webp",
+   "w": 256,
+   "h": 256
+  },
+  "pictures/yui_2": {
+   "file": "pictures/yui_2.webp",
+   "w": 256,
+   "h": 256
   }
  }
 }
