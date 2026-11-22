@@ -1529,5 +1529,24 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   const O = loadState(JSON.stringify(old));
   check(O && ['ev_seln3', 'confess_mori', 'wed_mori', 'fest_harvest', 'lower_arrive', 'day1', 'intro'].every((k) => O.memories[k]) && O.memories.ev_seln3.unknown && !O.memories.ev_yui3, 'an old save finds its memories in its flags, date not recorded');
 }
+
+// ---------------------------------------------------------------- the farmhouse (§18): furniture, paint, the back bedroom, the telescope
+{
+  const g = newGame({ seed: 41 }); g.player.money = 200000; g.stock.lumber = 500;
+  const keys = (shop) => shopStock(g, shop).map((e) => e.key);
+  for (const [flag, shop] of sim.HOME_DECOR) if (flag !== 'decor_trophy') check(keys(shop).includes(flag), `${flag} on sale at ${shop}`);
+  check(!keys('store').includes('decor_trophy'), 'the trophy waits for a legendary catch');
+  g.fishLog.fish_mochi = 1; check(keys('store').includes('decor_trophy'), 'the trophy goes on sale after a legendary');
+  const m0 = g.player.money, l0 = g.stock.lumber, r = buy(g, 'garage', 'decor_dresser');
+  check(r.ok && g.flags.decor_dresser === true && g.player.money === m0 - 1800 && g.stock.lumber === l0 - 20, 'a dresser costs 1,800 cr and 20 lumber, and sets its flag');
+  check(!keys('garage').includes('decor_dresser'), 'bought once, gone from the shelf');
+  const p1 = buy(g, 'tailor', 'paint_sage'); check(p1.ok && g.flags.house_paint === 'sage', 'paint: sage next after cream');
+  check(keys('tailor').includes('paint_rose') && !keys('tailor').includes('paint_sage'), 'paint steps on to the next colour');
+  check(buy(g, 'workshop', 'house_back').ok && g.flags.house_back === true && !keys('workshop').includes('house_back'), 'the back bedroom, once');
+  g.flags.decor_telescope = true; g.cal.minute = 900; check(!sim.useTelescope(g).ok, 'no telescope by day');
+  g.cal.minute = 1200; g.player.stamina = 50; const t1 = sim.useTelescope(g); check(t1.ok && g.player.stamina === 60, 'the telescope: +10 stamina at night');
+  check(!sim.useTelescope(g).ok && g.player.stamina === 60, 'once a night');
+  const L = loadState(saveState(g)); check(L && L.flags.decor_dresser && L.flags.house_paint === 'sage' && L.flags.house_back, 'furniture, paint and the back bedroom survive a save');
+}
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);
