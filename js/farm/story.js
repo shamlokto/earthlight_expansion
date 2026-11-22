@@ -4454,14 +4454,6 @@ HELP.push({
 });
 
 // ------------------------------------------------------------------ the cellar and the cat (2026-11-22)
-HELP.push({
-  title: 'The cellar',
-  body: "Prof. Ruess can dig the crawlspace under your farmhouse into a stone cellar (6,000 cr, 80 lumber): the trapdoor by the east window leads down. Hold a farm cheese, goat cheese, jar of honey or grape juice and press E at an empty cask to lay it down. After 7 days it is aged (cellar cheese, cellar honey, grape wine: about 1.8× the price); after 21 days it is vintage (3×). E on a full cask tells you how long it has been; take it out whenever you like. Ruess's cellar racks add six more casks.",
-});
-HELP.push({
-  title: 'Your cat',
-  body: "Corran's barn cat had kittens: adopt one at the ranch for 300 cr. The first time you pet her, you name her. Pet her once a day, and hold a fish by her for her bowl once a day; a day with neither and she sulks a little. She naps in her bed by the hearth at night, suns herself on the porch on fine days and potters round the farmhouse otherwise. A cat who loves you leaves little presents by your bed, and keeps you warm on a bad night.",
-});
 
 
 // ------------------------------------------------------------------ letters in the farm mailbox (2026-11-22, sim.mailOvernight)
@@ -4502,6 +4494,6 @@ export const CARDS = {
   tika: 'Happy birthday! The bike ran for five seconds in your honour.', vesna: 'Happy birthday. Tune in tonight: the first song is yours.', hana: 'Happy birthday. The mushrooms glowed a little brighter today. Coincidence? Probably not.',
 };
 HELP.push({
-  title: 'Letters and the hot tub',
-  body: "The red mailbox by the farm path: friends you have three hearts with sometimes write, often with a little present (Lark's buns, Ruess's batteries, Wick's fish). On your birthday, everyone with four hearts sends a card. The morning report tells you when there is post.\n\nRuess can build a cedar hot tub beside the farmhouse (3,500 cr, 50 lumber, 2 copper). It is heated by five in the evening: one long soak a night, +40 stamina. Partners join you.",
+  title: 'Home comforts',
+  body: "Cellar: Ruess digs one under the farmhouse; the trapdoor is by the east window. Hold cheese, honey or grape juice and press E at a cask: 7 days makes it aged (about 1.8x), 21 vintage (3x).\n\nCat: adopt a kitten at Corran's ranch and name her. Pet her daily and give her a fish; a loved cat leaves presents and keeps you warm on bad nights.\n\nMail: friends with three hearts write now and then, often with a present; on your birthday they send cards. Check the red mailbox by the path.\n\nHot tub: Ruess builds a cedar tub by the house. From five each evening, one soak gives +40 stamina.",
 });
