@@ -1101,6 +1101,7 @@ export class World {
     this.focus.lerp(new THREE.Vector3(px, 0.8, py), Math.min(1, dt * 7));
     const cp = Math.cos(this.pitch), c = this.camera;
     c.position.set(this.focus.x + Math.sin(this.yaw) * cp * d, this.focus.y + Math.sin(this.pitch) * d, this.focus.z + Math.cos(this.yaw) * cp * d);
+    if (this.map && this.map.covered) { const m = this.map; c.position.x = Math.max(1.2, Math.min(m.w - 1.2, c.position.x)); c.position.z = Math.max(1.2, Math.min(m.h - 1.2, c.position.z)); }   // under Eden Central's roof the camera stays inside the hull (it sat in a roof post at the south edge)
     if (this.shake > 0.002) { c.position.x += (Math.random() - 0.5) * this.shake; c.position.y += (Math.random() - 0.5) * this.shake; this.shake *= Math.pow(0.02, dt); } else this.shake = 0;
     const up = indoor ? 0 : Math.max(0, 0.42 - this.pitch) * d * 0.6;   // a low camera tilts up to the land overhead
     c.lookAt(this.focus.x, this.focus.y + up, this.focus.z);
