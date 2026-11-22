@@ -282,6 +282,8 @@ function hill() {
   // the Summit: a stone lookout at the north-east corner, wind turbines along the ridge
   m.fill(54, 2, 60, 7, 'o').fill(51, 7, 53, 9, 'p');
   m.prop('telescope_stand', 57, 3, { label: 'Summit lookout' }); m.prop('bench', 55, 5, { w: 2 }); m.prop('bench', 58, 5, { w: 2 });
+  // 2026-11-22: the summit was a bare slab: lanterns at its corners, flower beds and planters along its edge (no loose flowers: they would pass for forage)
+  m.prop('lantern', 54, 2); m.prop('lantern', 60, 2); m.prop('flower_bed', 54, 6, { w: 2 }); m.prop('flower_bed', 59, 6, { w: 2 }); m.prop('plantpot', 60, 4); m.prop('plantpot', 54, 4);
   m.prop('signpost', 54, 8, { act: 'sign', sign: 'hill.summit' });
   for (const [tx, ty] of [[40, 3], [45, 2], [50, 3]]) m.prop('wind_turbine_small', tx, ty);
   // the Orchard terraces: stepped wild fruit and berry rows east of the path
