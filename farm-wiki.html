@@ -256,10 +256,20 @@
       const placeOf = (k) => (OUT[k] ? OUT[k][0].toUpperCase() + OUT[k].slice(1) : roomName(k));
       const evs = [...story.EVENTS, ...(story.LOWER_SCENES || []).filter((e) => e.npc && e.hearts != null)];
       const who = [...new Set(evs.map((e) => e.npc))].sort((a, b) => ((R.candidates || []).includes(b) - (R.candidates || []).includes(a)) || ids.indexOf(a) - ids.indexOf(b));
-      const rows = who.map((id) => evs.filter((e) => e.npc === id).sort((a, b) => a.hearts - b.hearts).map((e, k, arr) => `<tr>${k === 0 ? `<td rowspan="${arr.length}"><b>${esc(story.NPCS[id] ? story.NPCS[id].name : id)}</b>${(R.candidates || []).includes(id) ? ' <span style="color:#c94a6a">♥</span>' : ''}</td>` : ''}<td class="n">${e.hearts} ♥</td><td>${esc(placeOf(e.map))}</td><td>${esc(evWhen(e))}${e.flag ? ` <small>(${esc(FLAG_TXT[e.flag] || e.flag)})</small>` : ''}</td></tr>`).join('')).join('');
+      const rows = who.map((id) => evs.filter((e) => e.npc === id).sort((a, b) => a.hearts - b.hearts).map((e, k, arr) => `<tr>${k === 0 ? `<td rowspan="${arr.length}"><b>${esc(story.NPCS[id] ? story.NPCS[id].name : id)}</b>${(R.candidates || []).includes(id) ? ' <span style="color:#c94a6a">♥</span>' : ''}</td>` : ''}<td class="n">${e.hearts} ♥</td><td>${esc(placeOf(e.map))}</td><td>${esc(evWhen(e))}${e.flag ? ` <small>(${esc(FLAG_TXT[e.flag] || e.flag)})</small>` : ''}${e.sweet ? ' <small>(a date: only once you are sweethearts)</small>' : ''}</td></tr>`).join('')).join('');
       add('hearts', 'Heart events', `<p class="lead">At certain hearts a person has something to show you. Walk into the place while they are there, inside the hours, and the scene plays by itself; each plays once, and then it is kept in Memories. The times below are when they are actually there.</p>
         <p class="t">Not on festival days or in a storm, and on the hill not in the rain. Love stories also need two favours done before the confession at 8 hearts.</p>
         <div class="tw"><table class="hev"><tr><th>Person</th><th class="n">Hearts</th><th>Where</th><th>When</th></tr>${rows}</table></div>`);
+    }
+    // ---- the farmhouse: decor, paint, the back bedroom (sim.HOME_DECOR, HOUSE_PAINT, HOUSE_FLOOR)
+    if (sim.HOME_DECOR) {
+      const shopName = (k) => (sim.SHOPS[k] && sim.SHOPS[k].name) || k;
+      const rows = sim.HOME_DECOR.map(([flag, shop, label, desc, price, lumber]) => `<tr><td><b>${esc(label)}</b><br><small>${esc(desc)}</small></td><td>${esc(shopName(shop))}</td><td class="n">${crf(price)}${lumber ? `<br><small>+ ${lumber} lumber</small>` : ''}</td></tr>`).join('');
+      add('home', 'Your farmhouse', `<p class="lead">The farmhouse starts with a cot, a stove and not much else. The village's makers sell furniture for it; each piece is in its own place the next time you go home.</p>
+        <ul><li><b>Back bedroom</b> (Ruess, 8,000 cr and 120 lumber): a door in the farmhouse's back-left corner opens on a furnished second room, and a little annex appears beside the house.</li>
+        <li><b>Wall paint</b> (Pia, 600 cr): ${Object.values(sim.HOUSE_PAINT || {}).map((v) => esc(v[0].replace(' (as it was)', '').toLowerCase())).join(', ')}. <b>Floor finish</b> (Tika, 900 cr): ${Object.values(sim.HOUSE_FLOOR || {}).map((v) => esc(v[0].replace(' (as it was)', '').toLowerCase())).join(', ')}. Change either whenever you like.</li>
+        <li>The <b>telescope</b> gives +10 stamina once a night (after 19:00), the <b>fish tank</b> shows off your catches, the <b>piano</b> plays a tune (your partner hums along), and the <b>double bed</b> replaces the cot.</li></ul>
+        <div class="tw"><table><tr><th>Furniture</th><th>Sold at</th><th class="n">Price</th></tr>${rows}</table></div>`);
     }
     // ---- crops
     const crops = Object.values(CROPS);
@@ -570,7 +580,7 @@
     add('art', 'About the art', `<p>Everything in Sato's Harvest is original. The 3D models (${Object.keys(models).length} of them) were made by turning anime-style concept pictures into textured meshes. The story pictures, film clips, skies and icons were generated from our own prompts. The cast's look comes from the colony game's portraits, and the dialogue uses ${Object.values(PX).reduce((a, o) => a + Object.keys(o).length, 0)} expression portraits drawn from them (shy, joyful, tearful and more), so faces change with the conversation. Prompts and scripts are in <code>tools/art/farm/</code>.</p>`);
 
     $('#main').innerHTML = sections.map((s) => `<section id="${s.id}"><h2>${esc(s.title)}</h2>${s.html}</section>`).join('');
-    const TOC_SHORT = { people: 'People', homes: 'Homes', hours: 'Hours', where: 'Where to find', hearts: 'Heart events', lower: 'Lower deck', belt: 'The belt', robots: 'Robots', ruins: 'Earth', lane: 'Market Lane', help: 'How to play', art: 'Art' };
+    const TOC_SHORT = { home: 'Farmhouse', people: 'People', homes: 'Homes', hours: 'Hours', where: 'Where to find', hearts: 'Heart events', lower: 'Lower deck', belt: 'The belt', robots: 'Robots', ruins: 'Earth', lane: 'Market Lane', help: 'How to play', art: 'Art' };
     $('#toc').innerHTML = sections.map((s) => `<a href="#${s.id}">${esc(TOC_SHORT[s.id] || s.title)}</a>`).join('');
     // maps: draw once the fonts are in (or after a second), then click to see full size
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1000))]);

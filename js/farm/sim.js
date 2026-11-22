@@ -2619,7 +2619,7 @@ export const HOME_DECOR = [
   ['decor_aquarium', 'store', 'Fish tank', 'A glass tank on a stand by the east wall. It shows off the fish you have caught (E to look).', 3500, 0, 'Seln and Corran carry the tank in between them, arguing about weed. "Fill it with something you caught yourself," says Seln.', { act: 'aquarium' }],
   ['decor_trophy', 'store', 'Mounted trophy fish', 'Your finest legendary fish, mounted on an oak plaque for the wall. (On sale once you have landed a legendary.)', 1500, 0, 'The plaque goes up on the wall. Visitors will now be told the story whether they ask or not.', { needLegend: true }],
   ['decor_fireplace', 'workshop', 'Stone fireplace', 'Ruess builds a little stone fireplace with a heat-exchanger flue into the back wall. Warm winters, and a fire to sit by.', 4500, 40, 'Ruess lights the first fire himself and refuses to leave until it draws properly. "Eden has never had a fire on purpose. Do not tell Fenn."'],
-  ['decor_piano', 'radio', 'Upright piano', 'An old upright from the Radio Willowfall store room, tuned by Vesna. E to play a tune (your partner hums along).', 6000, 0, 'Vesna tunes the piano with her ear against the wood. "Middle C is a little homesick. So is everyone."', { act: 'piano' }],
+  ['decor_piano', 'radio', 'Little grand piano', 'A small old grand from the Radio Willowfall store room, tuned by Vesna. E to play a tune (your partner hums along).', 6000, 0, 'Vesna tunes the piano with her ear against the wood. "Middle C is a little homesick. So is everyone."', { act: 'piano' }],
 ];
 const LEGENDS = ['fish_king', 'fish_mochi', 'fish_ferryman', 'fish_admiral', 'abyss_koi'];
 export const legendCaught = (state) => LEGENDS.filter((id) => (state.fishLog || {})[id]);

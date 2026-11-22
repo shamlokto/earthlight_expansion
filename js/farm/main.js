@@ -267,7 +267,8 @@ async function checkEvents() {
     const at = findSpot(f.spot), key = `fest_${f.id}_${S.cal.year}`;
     if (at && at.map === map.id && c.minute >= f.from && c.minute <= f.to && !S.flags[key]) {
       sim.setFlag(S, key); mode = 'talk'; ui.scene('festival_' + ({ yearsend: 'yearend' }[f.id] || f.id)); sfx('good'); setMood({ festival: f.id });
-      await ui.say(f.lines); if (f.id === 'hubcup') await hubCup(true); setMood({ festival: null }); reward(f.reward); if (f.id === 'harvest' || f.id === 'lantern') await plumGift(f.id); sim.tick(S, 120); for (const k of Object.keys(NPCS)) if (k !== 'sato' && S.npc[k]) S.npc[k].met = true;
+      await ui.say(f.lines); if (f.id === 'hubcup') await hubCup(true);
+      { const who = S.flags.partner || S.flags.sweet, fl = story.FESTIVAL_LOVE && story.FESTIVAL_LOVE[f.id]; if (who && NPCS[who] && fl) await ui.say(fl(who === 'general' ? 'The General' : NPCS[who].short || NPCS[who].name, who)); }   // your sweetheart at the festival setMood({ festival: null }); reward(f.reward); if (f.id === 'harvest' || f.id === 'lantern') await plumGift(f.id); sim.tick(S, 120); for (const k of Object.keys(NPCS)) if (k !== 'sato' && S.npc[k]) S.npc[k].met = true;
       mode = 'play'; placeNpcs(true); refreshHud(); return;
     }
   }

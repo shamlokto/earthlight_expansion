@@ -885,7 +885,7 @@ export class World {
     this.map = map; this.state = state; this.season = state.cal.season; this.flags = state.flags || {};
     freeGeometry(this.root); for (const m of this.waterMats || []) if (m.map && m.map.userData.ownWater) m.map.dispose(); this.root.clear(); this.facers.length = 0; this.spriteMats.length = 0; this.anims.length = 0; this.tileObjs.clear();
     for (const a of this.actors.values()) a.dispose && a.dispose(); this.actors.clear();
-    this.lamps = []; this.waterMats = []; this.tallProps = []; this.steam = []; this.windowGlass = null;
+    this.lamps = []; this.waterMats = []; this.tallProps = []; this.steam = []; this.windowGlass = null; this.flies = null;
     const R = this.root, W = map.w, H = map.h;
     // ground, one merged mesh per kind
     const byKind = {};
@@ -927,7 +927,7 @@ export class World {
       const wm = map.colonyRoom ? std({ color: map.colonyRoom === 'warm' ? 0xf4ecdc : 0xe9eef0, roughness: 0.7 }) : map.glass ? new THREE.MeshStandardMaterial({ color: 0xcfeaf0, transparent: true, opacity: 0.3, roughness: 0.1 }) : std({ map: art.tex(map.id === 'barn' || map.id === 'ranch' ? 'barn_red' : map.id === 'coop' || map.id === 'house' || map.id === 'workshop' ? 'plank_wall' : map.id === 'cafe' ? 'metal_hull' : 'plaster_wall', { repeat: 0.5 }), color: map.id === 'house' && this.flags && this.flags.house_paint ? (HOUSE_PAINT_TINT[this.flags.house_paint] || 0xffffff) : 0xffffff });
       const hh = map.id === 'church' ? 3.9 : 2.9; R.add(box(W, hh, 0.2, wm, W / 2, 0, -0.1), box(0.2, hh, H, wm, -0.1, 0, H / 2), box(0.2, hh, H, wm, W + 0.1, 0, H / 2));
       if (map.colonyRoom) { const tm = TEAL(); R.add(box(W, 0.22, 0.24, tm, W / 2, 0, -0.08), box(0.24, 0.22, H, tm, -0.08, 0, H / 2), box(0.24, 0.22, H, tm, W + 0.08, 0, H / 2), box(W, 0.08, 0.24, tm, W / 2, hh - 0.08, -0.08)); }
-      if (!map.colonyRoom && !map.glass && !['barn', 'coop', 'fold', 'duckhouse', 'greenhouse'].includes(map.id)) this.roomDressing(R, W, H, hh, map);   // windows and a skirting board (2026-11-22)
+      if (!map.colonyRoom && !map.glass && !['barn', 'coop', 'fold', 'duckhouse', 'greenhouse', 'hangar', 'cafe', 'home_shelter', 'home_venn', 'home_wick', 'home_hana'].includes(map.id)) this.roomDressing(R, W, H, hh, map);   // not the metal rooms, nor the Undercroft's   // windows and a skirting board (2026-11-22)
       const mat = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.6), std({ color: 0x6f5a3a })); mat.rotation.x = -Math.PI / 2; mat.position.set(map.exitTile[0] + 0.5, 0.02, map.exitTile[1] + 0.6); R.add(mat);
       const lamp = new THREE.PointLight(0xffd9a0, 30, 30, 1.6); lamp.position.set(W / 2, 3.4, H / 2); R.add(lamp);
     }
@@ -966,6 +966,8 @@ export class World {
       const lampL = o.userData.lamp || (o.children[0] && o.children[0].userData.lamp); if (lampL) this.lamps.push(lampL);
     }
     this.colonyFx = null;
+    if (map.id === 'farm') this.farmNight(R, map);
+    if (map.city) this.roadMarks(R, map);              // faded lane lines on the city's streets (2026-11-22)   // the farmhouse's porch lamp and lit windows, fireflies over the field (2026-11-22)
     for (const s of this.spinners) s.o.userData.moving = true;
     if (built.length) mergeStatic(built, R);                   // the built colony props: one mesh per material
     if (pools.length) { this.pools = lightPools(pools); R.add(this.pools); }
@@ -1042,6 +1044,27 @@ export class World {
     }
     R.add(box(W, 0.14, 0.04, frame, W / 2, 0, 0.01), box(0.04, 0.14, H, frame, 0.01, 0, H / 2), box(0.04, 0.14, H, frame, W - 0.01, 0, H / 2));   // skirting
   }
+  roadMarks(R, map) {
+    const W = map.w, H = map.h, st = (x, y) => x >= 0 && y >= 0 && x < W && y < H && map.g[y * W + x] === 'm' && !map.block[y * W + x];
+    const mat = new THREE.MeshBasicMaterial({ color: 0xe8dca0, transparent: true, opacity: 0.45, depthWrite: false }), geo = new THREE.PlaneGeometry(0.42, 0.07);
+    const marks = [];
+    // a street two tiles wide gets a dashed line down the middle; runs of at least 4 tiles
+    for (let y = 0; y < H - 1; y++) for (let x = 0; x < W; x++) if (st(x, y) && st(x, y + 1) && !st(x, y - 1) && !st(x, y + 2) && st(x - 1, y) && st(x + 1, y) && (x % 2 === 0)) marks.push([x + 0.5, y + 1, 0]);
+    for (let x = 0; x < W - 1; x++) for (let y = 0; y < H; y++) if (st(x, y) && st(x + 1, y) && !st(x - 1, y) && !st(x + 2, y) && st(x, y - 1) && st(x, y + 1) && (y % 2 === 0)) marks.push([x + 1, y + 0.5, 1]);
+    if (!marks.length) return;
+    const im = new THREE.InstancedMesh(geo, mat, marks.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1), v = new THREE.Vector3();
+    marks.forEach(([x, z, turn], i) => { e.set(-Math.PI / 2, 0, turn ? Math.PI / 2 : 0); q.setFromEuler(e); m4.compose(v.set(x, 0.025, z), q, one); im.setMatrixAt(i, m4); });
+    im.renderOrder = 1; R.add(im);
+  }
+  farmNight(R, map) {
+    const b = map.buildings.find((q) => q.kind === 'house'); if (!b) return;
+    const lamp = new THREE.PointLight(0xffc878, 0, 9, 1.4); lamp.position.set(b.x + b.w / 2, 2.2, b.y + b.d + 0.6); R.add(lamp); this.lamps.push(lamp);
+    const n = 46, pos = new Float32Array(n * 3), ph = new Float32Array(n), f = map.field || { x: 3, y: 12, w: 30, h: 16 };
+    for (let i = 0; i < n; i++) { pos[i * 3] = f.x + Math.random() * (f.w || 30); pos[i * 3 + 1] = 0.4 + Math.random() * 1.4; pos[i * 3 + 2] = f.y + Math.random() * (f.h || 16); ph[i] = Math.random() * 6.28; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.userData.ph = ph; g.userData.base = pos.slice();
+    const cv = document.createElement('canvas'); cv.width = cv.height = 32; const x = cv.getContext('2d'), gr = x.createRadialGradient(16, 16, 0, 16, 16, 15); gr.addColorStop(0, 'rgba(255,255,200,1)'); gr.addColorStop(0.3, 'rgba(220,255,120,.8)'); gr.addColorStop(1, 'rgba(200,255,100,0)'); x.fillStyle = gr; x.fillRect(0, 0, 32, 32);
+    this.flies = new THREE.Points(g, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(cv), size: 0.35, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); this.flies.frustumCulled = false; R.add(this.flies);
+  }
   // Redraw one map prop in place (a bush just picked bare): same spot, same turn.
   swapProp(p, kind, o2) {
     const old = p.obj; if (!old || !old.parent) return; const n = this.makeProp(kind, { ...p, ...o2 });
@@ -1072,7 +1095,9 @@ export class World {
   // ------------------------------------------------------------ frame
   update(dt, px, py) {
     this.t += dt;
-    const indoor = this.map && this.map.indoor, d = indoor ? Math.min(this.dist, 10.5) : this.dist;
+    const indoor = this.map && this.map.indoor, el = this.renderer.domElement, narrow = el.clientWidth < el.clientHeight * 0.75;
+    const d = indoor ? Math.min(this.dist, 10.5) * (narrow ? 1.1 : 1) : this.dist;   // a phone held upright sees a room from further back (2026-11-22)
+    { const want = indoor && narrow ? 56 : 38; if (Math.abs(this.camera.fov - want) > 0.3) { this.camera.fov = want; this.camera.updateProjectionMatrix(); } }   // and wide enough to see the whole room
     this.focus.lerp(new THREE.Vector3(px, 0.8, py), Math.min(1, dt * 7));
     const cp = Math.cos(this.pitch), c = this.camera;
     c.position.set(this.focus.x + Math.sin(this.yaw) * cp * d, this.focus.y + Math.sin(this.pitch) * d, this.focus.z + Math.cos(this.yaw) * cp * d);
@@ -1092,6 +1117,8 @@ export class World {
     for (const f of this.facers) f.rotation.y = this.yaw;
     for (const m of this.waterMats || []) m.map.offset.set(this.t * 0.015, this.t * 0.01);
     for (const l of this.lamps || []) l.intensity = (this.night || 0) * 14;
+    if (this.flies) { const k = this.season === 1 || this.season === 0 ? Math.max(0, (this.night || 0) - 0.35) * 1.6 : 0; this.flies.material.opacity = Math.min(1, k); this.flies.visible = k > 0.01;
+      if (this.flies.visible) { const p = this.flies.geometry.attributes.position, b = this.flies.geometry.userData.base, ph = this.flies.geometry.userData.ph; for (let i = 0; i < p.count; i++) { p.setX(i, b[i * 3] + Math.sin(this.t * 0.6 + ph[i]) * 0.8); p.setY(i, b[i * 3 + 1] + Math.sin(this.t * 1.1 + ph[i] * 2) * 0.3); p.setZ(i, b[i * 3 + 2] + Math.cos(this.t * 0.5 + ph[i]) * 0.8); } p.needsUpdate = true; } }
     if (this.map && this.map.under) this.lightUnder();
     for (const a of this.actors.values()) a.update(dt, this);
     // trees standing between the camera and Sato step aside
