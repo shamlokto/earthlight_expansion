@@ -96,7 +96,7 @@ const PROPS = {
   launch_pad: { h: 0.1 }, shuttle_pad: { h: 0.1 },
   // 2026-11-19: the open belt (sector markers, pickup pods, landmarks) and Sato's mining unit; built stand-ins
   sector_buoy: { model: 'jump_buoy', h: 1.7, fit: 'foot' }, sector_sign: { h: 2.6 }, pickup_pod: { h: 2.2 }, mining_bot: { model: 'mining_bot', h: 0.9, fit: 'foot' },
-  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, shuttle_gate: { h: 3.4 },
+  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, shuttle_gate: { h: 3.4 },
   hull_window: { h: 12 }, hull_wall: { h: 10 }, glass_roof: { h: 16 }, vending: { model: 'vending', h: 1.9, fit: 'foot' }, feed_sacks: { model: 'feed_sacks', h: 0.8, fit: 'foot' },
   crane: { model: 'dock_crane', h: 5.5, fit: 'foot' },
   bay_window: { h: 10 }, landing_pad: { h: 0.1 }, hazard_stripes: { h: 0.05 }, trader_ship: { model: 'cartel_ship', h: 5.2, fit: 'foot' }, shuttle: { model: 'shuttle', h: 3.8, fit: 'foot' },
@@ -475,6 +475,25 @@ export class World {
         g.add(box(w - 0.4, 0.2, d - 0.4, m, 0, 0, 0)); for (const x of [-0.8, 0.8]) g.add(box(0.2, 0.15, d - 0.2, y, x, 0.2, 0));
         for (const [x, z] of [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]]) g.add(box(0.25, 1.1, 0.25, m, x, 0.2, z));
         for (const c of g.children) { c.position.x += (w - 1) / 2; c.position.z += (d - 1) / 2; } break;
+      }
+      case 'refit_console': {                            // the refit gantry's console in Vashti's hangar: a slanted screen, a rack of parts
+        const m = std({ color: 0x46525e, metalness: 0.5 }), y = std({ color: 0xe8b830 });
+        g.add(box(0.8, 0.95, 0.7, m, 0, 0, 0), box(0.84, 0.08, 0.74, y, 0, 0.95, 0));
+        const t = panelTex('refit_console', 256, 160, (x) => { x.fillStyle = '#0b1f2a'; x.fillRect(0, 0, 256, 160); x.strokeStyle = '#7dffe0'; x.lineWidth = 3; x.strokeRect(4, 4, 248, 152);
+          x.fillStyle = '#9ff4ff'; x.font = 'bold 26px sans-serif'; x.textAlign = 'center'; x.fillText('PALLAS · REFIT', 128, 38);
+          x.strokeStyle = '#7dffb0'; x.lineWidth = 2; x.beginPath(); x.arc(128, 98, 30, 0, Math.PI * 2); x.moveTo(128, 68); x.lineTo(128, 128); x.moveTo(98, 98); x.lineTo(158, 98); x.stroke();
+          x.fillStyle = '#ffd36a'; x.font = '15px sans-serif'; x.fillText('7 LINES · BRING ORE', 128, 150); });
+        const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.45), new THREE.MeshBasicMaterial({ map: t })); sc.position.set(0, 1.25, 0.12); sc.rotation.x = -0.5; g.add(sc);
+        g.add(box(0.78, 0.5, 0.06, m, 0, 1.02, -0.02)); g.children.at(-1).rotation.x = -0.5;
+        for (const [k, c] of [[0, 0xb08a5a], [1, 0x9fb4c4], [2, 0xd9773a]]) g.add(box(0.18, 0.14, 0.18, std({ color: c, metalness: 0.4 }), -0.25 + k * 0.25, 1.0, -0.22));
+        break;
+      }
+      case 'refit_gantry': {                             // a rolling gantry over the launch cradle: two yellow towers, a beam, a hanging tool head
+        const w = o.w || 4, m = std({ color: 0x5d6a77, metalness: 0.5 }), y = std({ color: 0xe8b830 }), dk = std({ color: 0x2b3138, metalness: 0.6 });
+        for (const x of [-w / 2 + 0.1, w / 2 - 0.1]) { g.add(box(0.28, 4.4, 0.28, y, x, 0, -1.6), box(0.28, 4.4, 0.28, y, x, 0, 1.6), box(0.2, 0.2, 3.4, m, x, 4.3, 0)); for (let h = 0.9; h < 4; h += 1.1) g.add(box(0.12, 0.12, 3.2, m, x, h, 0)); }
+        g.add(box(w, 0.32, 0.36, y, 0, 4.4, 0.6), box(0.6, 0.3, 0.6, dk, 0.5, 4.08, 0.6), box(0.06, 0.9, 0.06, dk, 0.5, 3.18, 0.6), box(0.34, 0.2, 0.2, m, 0.5, 3.0, 0.6));
+        const lamp = ball(0.09, new THREE.MeshBasicMaterial({ color: 0xffb347 }), 0.5, 2.94, 0.72, 1); lamp.castShadow = false; g.add(lamp);
+        for (const c of g.children) { c.position.x += (w - 1) / 2; c.position.z += 1.5; } break;
       }
       case 'shuttle_gate': {                             // the boarding gate: an orange arch, a lit SHUTTLE TO EARTH board, a beacon
         const gm = std({ color: 0x5d6a77, metalness: 0.4 }), or = std({ color: 0xe0782a });

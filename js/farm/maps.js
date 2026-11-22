@@ -462,7 +462,7 @@ function central() {
   const hg = room('hangar', 16, 12, "Vashti's hangar", 'd');
   hg.prop('hangar_mouth', 2, 0, { w: 12, tileSolid: true, label: 'Hangar mouth' });
   hg.prop('launch_cradle', 6, 2, { w: 4, d: 4, act: 'launch', label: 'Launch cradle' });
-  hg.prop('workbench', 0, 5, { d: 2 }); hg.prop('crate', 15, 8); hg.prop('crate', 15, 9); hg.prop('cargo_crate', 14, 2); hg.prop('cargo_crate', 1, 2, { scale: 0.8 });
+  hg.prop('refit_gantry', 6, 2, { w: 4, solid: false }); hg.prop('refit_console', 0, 4, { act: 'refit', label: 'Pallas refit gantry' }); hg.prop('workbench', 0, 5, { d: 2 }); hg.prop('crate', 15, 8); hg.prop('crate', 15, 9); hg.prop('cargo_crate', 14, 2); hg.prop('cargo_crate', 1, 2, { scale: 0.8 });
   hg.prop('pipe_run', 0, 9, { w: 5 }); hg.prop('noticeboard', 12, 7, { act: 'sign', sign: 'hill.wreck' });
   hg.spot('hangar.floor', 11.5, 6.5);
   const x = room('exchange', 12, 9, 'The Ashfall Exchange', 'd'); x.colonyRoom = true;   // a cartel trade hall: cargo, screens, her counter
