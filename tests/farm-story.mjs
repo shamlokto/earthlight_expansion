@@ -673,6 +673,13 @@ for (const id of ['lark', 'vesna']) check(EVENTS.filter((e) => e.npc === id).len
 }
 console.log(`conversations: ${VILLAGERS.map((id) => `${id} ${convs[id].size}`).join(', ')}`);
 console.log(`requests: ${questCount}, love stories: ${LOVERS.length}`);
+// the cellar's goods take the plain good's taste a step up (2026-11-22)
+for (const id of Object.keys(story.NPCS)) for (const b of ['cheese', 'goat_cheese', 'honey', 'grape_juice']) {
+  const t = story.giftTier(id, b), a = story.giftTier(id, 'aged_' + b), v = story.giftTier(id, 'vintage_' + b), R = { disliked: 0, neutral: 1, liked: 2, loved: 3 };
+  check(R[a] >= R[t] && R[v] >= R[a] && (t === 'disliked' || R[v] >= 2), `${id}: aged and vintage ${b} are at least as welcome as the plain one`);
+}
+check(story.giftTier('ruess', 'aged_grape_juice') === 'loved', 'Ruess has a soft spot for the wine');
+for (const id of Object.keys(story.LETTERS).concat(Object.keys(story.CARDS))) check(story.NPCS[id] && story.LETTERS[id] && story.LETTERS[id].length === 2 && story.LETTERS[id].every((t) => t.length > 40) && story.CARDS[id], `${id}: two letters and a birthday card`);
 console.log(`events: ${EVENTS.length}, festivals: ${FESTIVALS.length}, intro lines: ${INTRO.length}, help pages: ${HELP.length}, words: about ${totalWords}`);
 console.log(failures ? `${failures} of ${checks} checks FAILED` : `farm-story: all ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

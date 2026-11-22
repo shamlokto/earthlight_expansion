@@ -1612,5 +1612,28 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   const L = loadState(saveState(g)); check(L && sim.petOf(L) && L.pet.love === g.pet.love, 'the cat survives a save');
   g.pet = 'junk'; sleep(g); check(g.pet === null && !sim.petOf(g), 'a junk pet record is dropped');
 }
+// ---------------------------------------------------------------- the hot tub (2026-11-22)
+{
+  const g = rich(451); addItem(g, 'copper', 2);
+  check(!sim.useHotTub(g).ok && buy(g, 'workshop', 'hot_tub').ok && g.flags.hot_tub, 'Ruess builds the tub');
+  g.player.stamina = 20; g.cal.minute = 900; check(!sim.useHotTub(g).ok, 'not heated before five');
+  g.cal.minute = 1100; let r = sim.useHotTub(g); check(r.ok && g.player.stamina === 60 && !r.partner, 'a soak: +40 stamina');
+  check(!sim.useHotTub(g).ok, 'one soak an evening'); sleep(g); g.cal.minute = 1100; g.flags.partner = 'mori'; g.player.stamina = 90;
+  r = sim.useHotTub(g); check(r.ok && r.partner === 'mori' && g.player.stamina === g.player.maxStamina, 'the next evening, with company, capped at full');
+}
+// ---------------------------------------------------------------- the farm mailbox (2026-11-22)
+{
+  const g = rich(461); for (const id of sim.NPC_IDS) check(!!ITEMS[sim.LETTER_GIFTS[id]], `${id} has a present to post`);
+  check(sim.mailWaiting(g) === 0 && !sim.readMail(g).ok, 'an empty mailbox');
+  for (let k = 0; k < 30; k++) sleep(g); check(sim.mailWaiting(g) === 0, 'strangers do not write');
+  for (const id of ['lark', 'ruess', 'mori']) g.npc[id].love = 40; g.cal.season = 2; g.cal.day = 1;   // clear of Sato's birthday
+  let notes = 0; for (let k = 0; k < 60 && sim.mailWaiting(g) < 3; k++) if (sleep(g).notes.some((n) => n.includes('mailbox'))) notes++;
+  check(sim.mailWaiting(g) === 3 && notes === 3 && new Set(g.mail.map((m) => m.from)).size === 3, 'friends write, one letter each at a time');
+  const r = sim.readMail(g); check(r.ok && r.letter && sim.mailWaiting(g) === 2 && (!r.letter.item || countItem(g, r.letter.item) >= 1), 'reading a letter takes its present');
+  g.cal.season = 1; g.cal.day = 1; g.mail = []; for (const id of sim.NPC_IDS) g.npc[id].love = 50; sleep(g);
+  check(g.mail.filter((m) => m.card).length === sim.MAIL_MAX, 'birthday cards, up to a full box');
+  g.mail.push({ from: 'nobody', n: 0 }, 'junk', { from: 'lark', n: 9 }); check(sim.mailWaiting(g) === sim.MAIL_MAX, 'junk mail is binned');
+  const L = loadState(saveState(g)); check(L && sim.mailWaiting(L) === sim.MAIL_MAX, 'the mail survives a save');
+}
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);
