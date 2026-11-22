@@ -147,7 +147,7 @@ Object.assign(NPCS, {
 export const VILLAGERS = ['general', 'ruess', 'marrow', 'seln', 'corran', 'oduya', 'maris', 'vashti', 'moraine', 'kestrel', 'mori', 'yui', 'calloway', 'fenn'];
 
 export const SPOTS = [
-  'farm.porch', 'farm.bin', 'farm.gate', 'farm.pond', 'farm.field',
+  'farm.porch', 'farm.bin', 'farm.gate', 'farm.pond', 'farm.field', 'house.partner',
   'village.square', 'village.memorial', 'village.bridge', 'village.riverside', 'village.bench', 'village.storefront',
   'village.cafefront', 'village.hallfront', 'village.workshopfront', 'village.ranchyard', 'village.river',
   'hill.wreck', 'hill.lake', 'hill.overlook', 'hill.onsen', 'central.office', 'central.arrivals', 'central.exchange', 'central.plaza', 'central.dock', 'hangar.floor',
@@ -398,7 +398,7 @@ export function whereIs(npcId, ctx) {
   const fest = festivalOf(ctx);
   // Sato's partner lives at the farm: on the porch at dawn and in the evening (unless a festival is on).
   const atHome = ctx.partner === npcId && ((m >= H(6) && m < H(8)) || (m >= H(20) && m < H(22)));
-  if (atHome && !(fest && m >= fest.from - 60 && m < fest.to)) return { spot: 'farm.porch' };
+  if (atHome && !(fest && m >= fest.from - 60 && m < fest.to)) return { spot: m >= H(20) && ctx.weather !== 'storm' ? 'house.partner' : 'farm.porch' };   // evenings indoors by the lamp (2026-11-22)
   if (fest) {
     // Shops are shut all day; the village gathers from an hour before until the end.
     if (m >= fest.from - 60 && m < fest.to) spot = (FESTIVAL_SPOTS[fest.spot] || FESTIVAL_SPOTS['village.square'])[npcId] || fest.spot;
