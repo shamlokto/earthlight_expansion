@@ -1674,6 +1674,170 @@ EVENTS.push(
   },
 );
 
+// ------------------------------------------------------------------ more of the love stories (2026-11-22)
+// Five-heart scenes for the five whose stories went straight from three to seven, and a "date" for every sweetheart at nine hearts
+// (`sweet: true`: only once that person is Sato's sweetheart or partner). Each is set where and when that person really is.
+EVENTS.push(
+  { id: 'yui5', npc: 'yui', hearts: 5, map: 'hill', weekday: 0, from: H(14), to: H(17),
+    lines: [
+      L('narrator', 'Monday, and the library is shut. Yui sits on the overlook wall with a notebook, swinging her heels over Terrace Hill like a schoolgirl.'),
+      L('yui', 'Oh. You found my day off. I come up here to read things that have no call number.'),
+      L('sato', 'What are you reading?'),
+      L('yui', 'Clouds. The weather crew put them in at four and take them out at six. I have been cataloguing them. This one is a "small, disobedient".', 'joyful'),
+      L('sato', 'And that one?'),
+      L('yui', '...That one is shaped like a turnip. I was not going to say so. I was afraid you would think I had been thinking about you.', 'embarrassed'),
+      L('sato', 'Had you?'),
+      L('yui', 'Shelve that question, please. Under "later". Sit down. You are blocking a cumulus.', 'shy'),
+    ],
+    reward: { love: 4, item: ['tea', 1] } },
+  { id: 'ruess5', npc: 'ruess', hearts: 5, map: 'hill', weekday: 2, from: H(10), to: H(13),
+    lines: [
+      L('narrator', 'The old wreck on Terrace Hill. Ruess has its belly panel off and is lying under it with a torch in his teeth.'),
+      L('ruess', 'Hand me the seven. No, the other seven. The one that is an eight.'),
+      L('sato', 'What is it?'),
+      L('ruess', 'A courier skiff. Mine, once. I flew it into the hill on purpose in the second winter to stop a Galt drone getting at the reservoir.', 'teasing'),
+      L('ruess', 'Everyone says "how brave". It was not brave. I panicked very accurately.'),
+      L('sato', 'And now you are mending it.'),
+      L('ruess', 'Every Wednesday for nine years. It will never fly. That is not the point. The point is that I do not leave things broken that saved me.', 'worried'),
+      L('ruess', '...You are one of those things, by the way. Do not make a face. Hand me the seven.', 'embarrassed'),
+    ],
+    reward: { love: 4, item: ['copper', 2] } },
+  { id: 'kestrel5', npc: 'kestrel', hearts: 5, map: 'village', from: H(11), to: H(13),
+    lines: [
+      L('narrator', 'On the bridge Kestrel is teaching two village children to stand at attention. The children are winning.'),
+      L('kestrel', 'Chin up. No, the chin. That is your whole head. ...Fine. Dismissed. Go and be terrible somewhere else.'),
+      L('kestrel', 'Farmer. You saw none of that.', 'angry'),
+      L('sato', 'You were good with them.'),
+      L('kestrel', 'I was a cadet instructor before I was a commander. Two hundred of them. I can tell you the name of every one who did not come back.', 'sad'),
+      L('kestrel', 'I stopped teaching after the siege. I could not bear to learn any more names.'),
+      L('sato', 'Those two will remember your chin lesson for the rest of their lives.'),
+      L('kestrel', '...Then I suppose I had better learn their names. Walk with me. You can tell me if I am being sentimental and I will deny it.', 'shy'),
+    ],
+    reward: { love: 4, item: ['pie', 1] } },
+  { id: 'mori5', npc: 'mori', hearts: 5, map: 'clinic', from: H(9), to: H(17),
+    lines: [
+      L('narrator', 'The clinic is empty. Dr. Mori is at his desk, very carefully not looking at a small wooden box.'),
+      L('mori', 'Ah. Sato. Nothing is wrong. Sit, if you like. I am doing my least favourite paperwork.'),
+      L('sato', 'What is in the box?'),
+      L('mori', 'Letters. From patients, after. "Thank you for my leg." "Thank you for my father, for the last week, at least." I keep them and I do not read them.', 'sad'),
+      L('mori', 'If I read them I would have to believe them. And then I would have to forgive myself for the ones who did not write.'),
+      L('sato', 'Read one. Just one. I will sit here while you do.'),
+      L('narrator', 'He reads one. It is from a child, in crayon, and it is mostly a drawing of a very tall doctor with a very small dog.'),
+      L('mori', 'I never had a dog. ...I suppose I had better get one, now. Thank you. That was a prescription, you know, what you just did.', 'joyful'),
+    ],
+    reward: { love: 4, item: ['tonic', 1] } },
+  { id: 'oduya5', npc: 'oduya', hearts: 5, map: 'cafe', from: H(14), to: H(17),
+    lines: [
+      L('narrator', 'The quiet hour at the Hangar. Oduya is at the hob with three pots going and a fourth he is pretending not to make.'),
+      L('oduya', 'Taste. No, do not ask what it is. Taste first, ask after. That is the rule of this kitchen.'),
+      L('sato', '...It tastes like a holiday I have never been on.'),
+      L('oduya', 'Groundnut stew. My grandmother\'s, from before the ships. I have never got it right. The peanuts here are grown in a tank by a man called Gerald.', 'teasing'),
+      L('oduya', 'I make it once a year, on her birthday, and give it to whoever is in the room. Today, the room is you.'),
+      L('sato', 'Then happy birthday to her.'),
+      L('oduya', '...You said that like you meant it. Most people just say "lovely" and look for a napkin.', 'surprised'),
+      L('oduya', 'Come back next year. I will have it right by then. Or I will need the same opinion again. Either way.', 'shy'),
+    ],
+    reward: { love: 4, item: ['soup', 1] } },
+
+  // the dates, at nine hearts, once they are your sweetheart
+  { id: 'yui9', npc: 'yui', hearts: 9, sweet: true, map: 'village', from: H(18, 30), to: H(20),
+    lines: [
+      L('narrator', 'The bridge at dusk. Yui is waiting with two cups of tea from the Hangar and a book under her arm, and she has put on lipstick, which she has never once done.'),
+      L('yui', 'I have planned this evening. There is an itinerary. Item one: tea. Item two: I read you something. Item three is classified.', 'shy'),
+      L('sato', 'What are you reading me?'),
+      L('yui', 'The last page of my book. The siege, in the village\'s words. I finished it last night. Your line is at the end.'),
+      L('narrator', 'She reads it aloud, softly, over the river: eleven pages of Corran, four words of Vashti, and at the bottom, "After it was over, I grew turnips."'),
+      L('yui', 'I added one line under yours. It says, "And Yui Hoshino stopped carrying things alone." That is item three.', 'loved'),
+      L('sato', 'That is the best itinerary I have ever been given.'),
+      L('yui', 'Good. Because I have tomorrow\'s written too. It is mostly you.', 'joyful'),
+    ],
+    reward: { love: 4, item: ['book', 1] } },
+  { id: 'general9', npc: 'general', hearts: 9, sweet: true, map: 'cafe', weekday: 5, from: H(13, 30), to: H(15, 30),
+    lines: [
+      L('narrator', 'Saturday at the Hangar. The General has a table by the window and, unprecedented, no papers on it at all.'),
+      L('general', 'I have told my office I am unavailable. They asked if I was ill. I said I was courting. There was a very long silence on the line.', 'embarrassed'),
+      L('sato', 'Is this courting?'),
+      L('general', 'I believe so. I have read about it. One sits opposite the person and stops thinking about water rationing for one hour.'),
+      L('general', 'I have managed eleven minutes. You will have to help me with the rest.', 'teasing'),
+      L('sato', 'Tell me something that is not about the colony.'),
+      L('general', '...I can whistle with two fingers. I learned it as a boy to call the goats. I have not done it in forty years.', 'shy'),
+      L('narrator', 'He does it. The whole Hangar turns round. Oduya drops a ladle. The General looks happier than Sato has ever seen him.'),
+    ],
+    reward: { love: 4, item: ['tea', 1] } },
+  { id: 'ruess9', npc: 'ruess', hearts: 9, sweet: true, map: 'hill', weekday: 2, from: H(13), to: H(15),
+    lines: [
+      L('narrator', 'The overlook. Ruess has brought a basket, a blanket and, inexplicably, a small brass contraption with a crank.'),
+      L('ruess', 'It is a picnic. I have been told picnics are romantic. I have improved it.', 'teasing'),
+      L('sato', 'What does the crank do?'),
+      L('ruess', 'It butters the bread. Evenly. To a tolerance of a tenth of a millimetre. Nobody has ever buttered bread for you to a tenth of a millimetre, have they?'),
+      L('sato', 'Nobody has ever buttered bread for me at all.'),
+      L('ruess', '...Well. That is a disgrace, and it ends today.', 'loved'),
+      L('narrator', 'The machine jams on the second slice. Ruess fixes it, swearing, while Sato laughs until she has to lie down on the blanket.'),
+      L('ruess', 'I am going to build you a better one. I am going to build you a better one of everything. Pass me that spanner, sweetheart.', 'joyful'),
+    ],
+    reward: { love: 4, item: ['bread', 2] } },
+  { id: 'kestrel9', npc: 'kestrel', hearts: 9, sweet: true, map: 'hill', from: H(18), to: H(20),
+    lines: [
+      L('narrator', 'The overlook at the change of the light. Kestrel is out of uniform for the first time Sato has ever seen, in a borrowed jumper two sizes too big.'),
+      L('kestrel', 'Do not say anything about the jumper. It is Corran\'s. Everything I own has rank on it.', 'embarrassed'),
+      L('sato', 'It suits you.'),
+      L('kestrel', 'It does not. ...Thank you.'),
+      L('kestrel', 'I wanted to show you the sky-ring. When the sun-line dims, you can see the far side of Eden light up, house by house. I used to count them on night watch.'),
+      L('narrator', 'They count together: Willowfall, Market Lane, the Lantern Ring curving up and over until the lights are just a sprinkle overhead.'),
+      L('kestrel', 'Four thousand and six. Every one of them still here. I never let myself enjoy that before. I am enjoying it now.', 'loved'),
+      L('kestrel', 'Stay till the last one comes on. That is not an order. That is a request from a woman in a very bad jumper.', 'shy'),
+    ],
+    reward: { love: 4, item: ['pie', 1] } },
+  { id: 'mori9', npc: 'mori', hearts: 9, sweet: true, map: 'hill', weekday: 6, from: H(12), to: H(15),
+    lines: [
+      L('narrator', 'Sunday at the hill lake. Dr. Mori is sitting on a rock with his trousers rolled up and his feet in the water, and beside him, a very small, very scruffy dog.'),
+      L('mori', 'Sato. Meet Prescription. I took my own advice.', 'joyful'),
+      L('sato', 'You named your dog Prescription.'),
+      L('mori', 'I name everything after what it is for. She is for being happy on Sundays. She is extremely effective.'),
+      L('narrator', 'Prescription climbs into Sato\'s lap, turns round three times and goes to sleep as if the matter had been settled long ago.'),
+      L('mori', 'She has decided about you. I decided some time ago, but I am slower, and I write things down first.', 'shy'),
+      L('sato', 'What did you write down?'),
+      L('mori', 'One word. I will tell you what it was when you marry me. ...That was not a proposal. I will do it properly. But that was not not a proposal.', 'embarrassed'),
+    ],
+    reward: { love: 4, item: ['tonic', 1] } },
+  { id: 'oduya9', npc: 'oduya', hearts: 9, sweet: true, map: 'cafe', from: H(20), to: H(22),
+    lines: [
+      L('narrator', 'Late at the Hangar. The last diner has gone. Oduya has turned the chairs up on every table but one, and lit a candle on it.'),
+      L('oduya', 'The kitchen is closed. For everyone else. For you, there is a tasting menu. Seven courses, all very small, all slightly experimental.', 'teasing'),
+      L('sato', 'Is the groundnut stew on it?'),
+      L('oduya', 'Course seven. I got it right, finally. I worked out what was missing. It was not the peanuts. It was somebody to cook it for.', 'loved'),
+      L('narrator', 'It is, Sato will say afterwards, the best thing she has ever eaten, and she has eaten ration bars in a gun deck for nine years, so the bar is not high, but even so.'),
+      L('oduya', 'My grandmother would have liked you. She liked people who ate everything and said thank you to the cook in the right order.'),
+      L('sato', 'What is the right order?'),
+      L('oduya', 'Food first. Then the cook. Then you take the cook home. ...I am joking. Mostly. Help me with the chairs?', 'shy'),
+    ],
+    reward: { love: 4, item: ['soup', 1] } },
+  { id: 'lark9', npc: 'lark', hearts: 9, sweet: true, map: 'village', weekday: 0, from: H(13), to: H(16),
+    lines: [
+      L('narrator', 'Monday, the bakery\'s day off. Lark is on the Mill Bridge with a paper bag and the look of someone about to confess to a crime.'),
+      L('lark', 'I made you a bun. Do not eat it yet. It has a secret inside and the secret is structurally important.', 'embarrassed'),
+      L('sato', 'What is the secret?'),
+      L('lark', 'It is a little paper flag. It says "Lark and Sato" on it. I have been practising the handwriting all week. I ruined forty buns.'),
+      L('lark', 'The ducks on the mill pond are now very well fed and I think they know about us.', 'teasing'),
+      L('narrator', 'Sato eats the bun. The flag is slightly damp and entirely legible. She keeps it in her pocket for the rest of her life.'),
+      L('sato', 'Forty buns?'),
+      L('lark', 'Forty-one. I ate one out of nerves. ...Walk me home the long way? There is a bench by the trial beds that nobody uses but me.', 'shy'),
+    ],
+    reward: { love: 4, item: ['sun_bun', 2] } },
+  { id: 'vesna9', npc: 'vesna', hearts: 9, sweet: true, map: 'hill', weekday: 6, from: H(14), to: H(17),
+    lines: [
+      L('narrator', 'Sunday afternoon on the overlook. Vesna has a battered field radio on her knees and a headset round her neck, and she is grinning like a thief.'),
+      L('vesna', 'Shh. We are live. Well, not live. Recorded. For tonight. It is a special, and you are in it, so try to sound fascinating.', 'teasing'),
+      L('sato', 'What is the special about?'),
+      L('vesna', 'Love songs of the colony. I have nine. I needed a tenth. I am going to make you hum one, and then I am going to play it to four thousand people.'),
+      L('sato', 'Absolutely not.'),
+      L('vesna', 'You have a lovely hum. I have heard you hum to the turnips. It is the only thing on Eden more honest than my show.', 'loved'),
+      L('narrator', 'Sato hums. Badly, then less badly. Vesna holds the microphone very still and does not look away from her once.'),
+      L('vesna', '...I am not going to play it. I am going to keep it. Some things are not for broadcast. You are not for broadcast.', 'shy'),
+    ],
+    reward: { love: 4, item: ['record', 1] } },
+);
+
 EVENTS.push(
   // ---- Pastor Ines: the candles, and the garden.
   {
@@ -4228,7 +4392,7 @@ export function memoryCatalogue() {
   const out = [], nm = (id) => (id === 'general' ? 'the General' : (NPCS[id] && (NPCS[id].short || NPCS[id].name)) || id);
   out.push({ id: 'intro', group: 'story', who: 'sato', title: 'The opening: the Hollin field', hint: 'The start of the game.', lines: () => INTRO, art: INTRO[0] && INTRO[0].art });
   out.push({ id: 'day1', group: 'story', who: 'marrow', title: 'Marrow at the gate', hint: 'Your first morning at the farm.', lines: () => DAY1 });
-  for (const e of EVENTS) out.push({ id: 'ev_' + e.id, group: e.npc, who: e.npc, ex: (e.lines.filter((l) => l.who === e.npc).pop() || {}).ex, title: `${e.hearts} hearts: ${firstWords(e.lines)}`, hint: `Reach ${e.hearts} hearts with ${nm(e.npc)}${e.flag ? ', further on in the story' : ''}, and meet them at the right place and time.`, lines: () => e.lines, art: e.id === 'general10' ? 'heart10' : undefined, hearts: e.hearts });
+  for (const e of EVENTS) out.push({ id: 'ev_' + e.id, group: e.npc, who: e.npc, ex: (e.lines.filter((l) => l.who === e.npc).pop() || {}).ex, title: `${e.hearts} hearts: ${firstWords(e.lines)}`, hint: e.sweet ? `Be ${nm(e.npc)}'s sweetheart, reach ${e.hearts} hearts, and meet them at the right place and time.` : `Reach ${e.hearts} hearts with ${nm(e.npc)}${e.flag ? ', further on in the story' : ''}, and meet them at the right place and time.`, lines: () => e.lines, art: e.id === 'general10' ? 'heart10' : undefined, hearts: e.hearts });
   for (const e of LOWER_SCENES || []) out.push({ id: 'ev_' + e.id, group: 'story', who: e.npc, title: `${nm(e.npc)}: ${firstWords(e.lines, 7)}`, hint: `Later in the Lower deck's story, with ${nm(e.npc)}.`, lines: () => e.lines });
   for (const id of ROMANCE.candidates) {
     const P = ROMANCE.people[id];
@@ -4242,5 +4406,6 @@ export function memoryCatalogue() {
   out.push({ id: 'vault', group: 'story', who: 'thorne', title: 'The vault opens', hint: 'Restore the Lower deck and open the round door.', lines: () => VAULT.open });
   out.push({ id: 'earth_first', group: 'story', who: 'sato', title: 'The first landing on Earth', hint: "Take Maris's shuttle down to the Old World.", lines: () => narr(RUINS.first) });
   const order = (m) => (ROMANCE.candidates.includes(m.group) ? 0 : m.group === 'story' ? 1 : m.group === 'festivals' ? 2 : 3), ci = (m) => ROMANCE.candidates.indexOf(m.group);   // the love stories first
-  return out.map((m, i) => [m, i]).sort((a, b) => order(a[0]) - order(b[0]) || ci(a[0]) - ci(b[0]) || a[1] - b[1]).map(([m]) => m);
+  const step = (m) => (m.hearts != null ? m.hearts : { confess: 8.2, sweet: 8.4, wed: 10.5, partner: 11 }[m.id.split('_')[0]] ?? 0);   // within a person: in the order they happen
+  return out.map((m, i) => [m, i]).sort((a, b) => order(a[0]) - order(b[0]) || ci(a[0]) - ci(b[0]) || (order(a[0]) === 3 || order(a[0]) === 0 ? step(a[0]) - step(b[0]) : 0) || a[1] - b[1]).map(([m]) => m);
 }

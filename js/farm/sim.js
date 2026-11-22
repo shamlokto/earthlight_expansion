@@ -671,7 +671,7 @@ function shelves(state, shopId) {
   const p = state.player, out = [];
   const sell = (id, price, more) => out.push({ key: id, label: ITEMS[id].name, desc: ITEMS[id].desc, price, give: id, ...more });
   const once = (id, price) => { if (!countItem(state, id)) sell(id, price, { once: true }); };
-  if (LANE_SHOPS.has(shopId)) { laneShelves(state, shopId, sell, once, out); return out; }
+  if (LANE_SHOPS.has(shopId)) { laneShelves(state, shopId, sell, once, out); decorStock(state, shopId, out); return out; }
   if (shopId === 'works') { worksShelves(state, sell, out); return out; }
   if (shopId === 'store') {
     for (const c of Object.values(CROPS)) if (c.seasons.length === 1 && c.seasons[0] === state.cal.season && !c.shop) sell(`seed_${c.id}`, c.bag);
@@ -760,6 +760,7 @@ function shelves(state, shopId) {
     sell('tonic', 500);
   }
   if (shopId === 'ranch' || shopId === 'workshop') laneShelves(state, shopId, sell, once, out);
+  decorStock(state, shopId, out);   // home decor (HOME_DECOR)
   return out;
 }
 // Why the player cannot buy n of this, or null.
@@ -2598,3 +2599,40 @@ export function syncMemories(state, dated = true) {
   return n;
 }
 export const memoryDate = (m) => (!m ? '' : m.unknown ? 'Date not recorded' : `${SEASONS[m.s]} ${m.d}, Year ${m.y}`);
+
+// ------------------------------------------------------------------ home decor (2026-11-22: "houses and farmhouses look pretty empty")
+// Furniture for the farmhouse from the village's makers. Each sets the flag decor_<id>; maps.js draws it in its own place in the
+// farmhouse once bought ('when' props). A few do something: the telescope (a look at Earth by night, +10 stamina once a night),
+// the piano (a tune; your partner hums along) and the fish tank (it shows off the fish you have caught).
+// [flag, shop, label, desc, price, lumber, done, extra]
+export const HOME_DECOR = [
+  ['decor_rocker', 'garage', 'Rocking chair', 'Tika rebuilds an old pilot\'s seat into a rocking chair, for the corner by the rug. It creaks in a friendly way.', 1200, 10, 'Tika carries the rocking chair in over one shoulder. "Test it. Gently. It remembers being a cockpit."'],
+  ['decor_dresser', 'garage', 'Dresser and mirror', 'A tall chest of drawers with a round mirror, for the left wall. Finally somewhere for the uniform you never wear.', 1800, 20, 'Tika bolts the dresser to the wall "for the earthquakes". There are no earthquakes on Eden. She does it anyway.'],
+  ['decor_telescope', 'garage', 'Brass telescope', 'A brass telescope on a tripod by the east wall. By night, E for a look at Earth through the window: +10 stamina, once a night.', 3200, 0, 'Tika sets the telescope up and aims it out of the window. "Earth is that way. Probably. I checked twice."', { act: 'telescope' }],
+  ['decor_plant', 'florist', 'Big potted plant', 'A leafy giant in a clay pot, for the corner by the door. Noor will visit it.', 900, 0, 'Noor carries the plant in herself and talks to it the whole way. "It likes the light by the door. Do not move it."'],
+  ['decor_vase', 'florist', 'Vase of flowers', 'Fresh flowers by the kitchen table, changed with the seasons. Noor sees to it.', 450, 0, 'Noor arranges the vase twice, scowls, and arranges it a third time. "There. Now it is a room."'],
+  ['decor_bed', 'tailor', 'Double bed and quilt', 'Pia re-stuffs a double bed and sews a patchwork quilt for it, in place of the narrow cot. Room for two.', 2800, 30, 'Pia makes the bed with hospital corners and stands back. "Now you sleep like a person and not like a crew roster."'],
+  ['decor_armchair', 'tailor', 'Big armchair', 'A plump armchair with a knitted blanket, beside the rug.', 1600, 0, 'Pia drapes the blanket over the armchair just so. "Sit in it in the evenings. That is an order from the tailor."'],
+  ['decor_jars', 'bakery', 'Kitchen shelf and jars', 'A shelf of jars and pots on the left wall: flour, honey, dried herbs, and one jar Lark will not explain.', 700, 10, 'Lark fills the jars before she leaves. One is labelled SECRET in her handwriting. It is sugar.'],
+  ['decor_aquarium', 'store', 'Fish tank', 'A glass tank on a stand by the east wall. It shows off the fish you have caught (E to look).', 3500, 0, 'Seln and Corran carry the tank in between them, arguing about weed. "Fill it with something you caught yourself," says Seln.', { act: 'aquarium' }],
+  ['decor_trophy', 'store', 'Mounted trophy fish', 'Your finest legendary fish, mounted on an oak plaque for the wall. (On sale once you have landed a legendary.)', 1500, 0, 'The plaque goes up on the wall. Visitors will now be told the story whether they ask or not.', { needLegend: true }],
+  ['decor_fireplace', 'workshop', 'Stone fireplace', 'Ruess builds a little stone fireplace with a heat-exchanger flue into the back wall. Warm winters, and a fire to sit by.', 4500, 40, 'Ruess lights the first fire himself and refuses to leave until it draws properly. "Eden has never had a fire on purpose. Do not tell Fenn."'],
+  ['decor_piano', 'radio', 'Upright piano', 'An old upright from the Radio Willowfall store room, tuned by Vesna. E to play a tune (your partner hums along).', 6000, 0, 'Vesna tunes the piano with her ear against the wood. "Middle C is a little homesick. So is everyone."', { act: 'piano' }],
+];
+const LEGENDS = ['fish_king', 'fish_mochi', 'fish_ferryman', 'fish_admiral', 'abyss_koi'];
+export const legendCaught = (state) => LEGENDS.filter((id) => (state.fishLog || {})[id]);
+function decorStock(state, shopId, out) {
+  for (const [flag, shop, label, desc, price, lumber, done, x = {}] of HOME_DECOR) {
+    if (shop !== shopId || state.flags[flag] || (x.needLegend && !legendCaught(state).length)) continue;   // the trophy waits for a legendary catch
+    out.push({ key: flag, label: `${label} (for the farmhouse)`, desc, price, ...(lumber ? { lumber, needs: `${lumber} lumber` } : {}), once: true,
+      apply: () => { state.flags[flag] = true; return done; } });
+  }
+}
+// The telescope: a look at Earth through the farmhouse window, once a night (after 19:00), +10 stamina.
+export function useTelescope(state) {
+  if (!state.flags.decor_telescope) return fail('There is no telescope.');
+  if (state.cal.minute < 1140) return fail('Daylight washes Earth out. Come back after seven in the evening.');
+  if (state.flags.scopeDay === absDay(state)) return fail('You have had your look at Earth tonight. It will still be there tomorrow.');
+  state.flags.scopeDay = absDay(state); const before = state.player.stamina; state.player.stamina = Math.min(state.player.maxStamina, state.player.stamina + 10);
+  return { ok: true, msg: `Earth hangs in the eyepiece, blue and white and very far away. You find the coast where the city is. (+${state.player.stamina - before} stamina)` };
+}

@@ -1,0 +1,31 @@
+<!doctype html><meta charset="utf-8"><title>Model sheet</title>
+<style>body{margin:0;background:#8fa3b0;font:11px sans-serif}#g{display:grid;grid-template-columns:repeat(10,128px);gap:2px}figure{margin:0;background:#9fb3c0;text-align:center}figure img{display:block;width:128px;height:128px}figcaption{height:14px;overflow:hidden;white-space:nowrap}</style>
+<div id="g"></div>
+<script type="importmap">{"imports":{"three":"/js/vendor/three/three.module.min.js"}}</script>
+<script type="module">
+// sheet.html?from=0&n=100 : one 3/4 thumbnail per model in art/farm/models/manifest.json, for a quick look over all of them.
+import * as THREE from 'three';
+import { GLTFLoader } from '/js/vendor/three/addons/GLTFLoader.js';
+const q = new URLSearchParams(location.search), from = +(q.get('from') || 0), n = +(q.get('n') || 100), only = q.get('only'), dir = q.get('dir') || '/art/farm/models/';
+const man = await (await fetch('/art/farm/models/manifest.json')).json();
+let names = Object.keys(man).filter((k) => !k.startsWith('_')); if (only) names = only.split(','); names = names.slice(from, from + n);
+const c = document.createElement('canvas'); c.width = c.height = 256;
+const views = q.get('views') ? [[0.8, 0.55, 1], [0, 0.2, 1], [1, 0.2, 0]] : [[0.8, 0.55, 1]];
+const r = new THREE.WebGLRenderer({ canvas: c, antialias: true, preserveDrawingBuffer: true }); r.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x9fb3c0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x556655, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 2); sun.position.set(2, 3, 2.5); scene.add(sun);
+const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 20); const L = new GLTFLoader();
+for (const name of names) {
+  const fig = document.createElement('figure');
+  try {
+    const gl = await L.loadAsync(dir + ((man[name] && man[name].file) || name + '.glb'));
+    const box = new THREE.Box3().setFromObject(gl.scene), s = box.getSize(new THREE.Vector3()), ctr = box.getCenter(new THREE.Vector3()), R = Math.max(s.x, s.y, s.z);
+    scene.add(gl.scene); let imgs = '';
+    for (const v of views) { const d = new THREE.Vector3(...v).normalize().multiplyScalar(R * 2.4); cam.position.copy(ctr).add(d); cam.lookAt(ctr); r.render(scene, cam); imgs += `<img src="${c.toDataURL()}">`; }
+    scene.remove(gl.scene);
+    fig.innerHTML = `<div style="display:flex">${imgs}</div><figcaption>${name}</figcaption>`;
+  } catch (e) { fig.innerHTML = `<div style="width:128px;height:128px;background:#c66">ERR</div><figcaption>${name}</figcaption>`; }
+  document.getElementById('g').appendChild(fig);
+}
+window.__done = names.length;
+</script>

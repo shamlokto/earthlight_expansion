@@ -2176,13 +2176,13 @@
  },
  "mulberry": {
   "file": "mulberry.glb",
-  "tris": 4000,
+  "tris": 6000,
   "size": [
    1.0,
-   0.2085,
-   0.9766
+   0.7409,
+   0.9497
   ],
-  "note": "item"
+  "note": "item model (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
  },
  "berry_jam": {
   "file": "berry_jam.glb",
@@ -2606,13 +2606,13 @@
  },
  "pipe_eel": {
   "file": "pipe_eel.glb",
-  "tris": 3500,
+  "tris": 6000,
   "size": [
-   0.8649,
-   0.227,
-   1.0
+   1.0,
+   0.4824,
+   0.3484
   ],
-  "note": "item: grey eel lying coiled flat"
+  "note": "item model (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
  },
  "abyss_koi": {
   "file": "abyss_koi.glb",
@@ -3596,13 +3596,13 @@
  },
  "platinum": {
   "file": "platinum.glb",
-  "tris": 3500,
+  "tris": 5000,
   "size": [
-   0.962,
    1.0,
-   0.923
+   0.4327,
+   0.8683
   ],
-  "note": "item; warm white-grey rounded lumpy satin nugget"
+  "note": "item model, made from its icon (2026-11-22)"
  },
  "potato": {
   "file": "potato.glb",
@@ -4013,5 +4013,385 @@
    0.8767
   ],
   "note": "Pallas jet form; crimson-magenta/white with orange accents and cyan canopy, nose on +Z, wings along X"
+ },
+ "bush_bare": {
+  "file": "bush_bare.glb",
+  "tris": 5000,
+  "size": [
+   0.988,
+   0.9625,
+   1.0
+  ],
+  "note": "bush with its fruit picked (bare.py: fruit repainted leaf green)"
+ },
+ "fruit_tree_apple_bare": {
+  "file": "fruit_tree_apple_bare.glb",
+  "tris": 12000,
+  "size": [
+   0.909,
+   1.0,
+   0.7871
+  ],
+  "note": "fruit_tree_apple with its fruit picked (bare.py: fruit repainted leaf green)"
+ },
+ "fruit_tree_peach_bare": {
+  "file": "fruit_tree_peach_bare.glb",
+  "tris": 12000,
+  "size": [
+   0.8637,
+   1.0,
+   0.8383
+  ],
+  "note": "fruit_tree_peach with its fruit picked (bare.py: fruit repainted leaf green)"
+ },
+ "fruit_tree_cherry_bare": {
+  "file": "fruit_tree_cherry_bare.glb",
+  "tris": 12000,
+  "size": [
+   0.8313,
+   1.0,
+   0.8027
+  ],
+  "note": "fruit_tree_cherry with its fruit picked (bare.py: fruit repainted leaf green)"
+ },
+ "fruit_tree_persimmon_bare": {
+  "file": "fruit_tree_persimmon_bare.glb",
+  "tris": 12000,
+  "size": [
+   0.8857,
+   1.0,
+   0.891
+  ],
+  "note": "fruit_tree_persimmon with its fruit picked (bare.py: fruit repainted leaf green)"
+ },
+ "fish_admiral": {
+  "file": "fish_admiral.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.3366,
+   0.1394
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_cistern_sturgeon": {
+  "file": "fish_cistern_sturgeon.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.4449,
+   0.3582
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_cloudfin": {
+  "file": "fish_cloudfin.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.708,
+   0.3336
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_dawnscale": {
+  "file": "fish_dawnscale.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.709,
+   0.3399
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_deep_angler": {
+  "file": "fish_deep_angler.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.7377,
+   0.2944
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_earthlight_trout": {
+  "file": "fish_earthlight_trout.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.6714,
+   0.3345
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_ferryman": {
+  "file": "fish_ferryman.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.7168,
+   0.3513
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_halo_eel": {
+  "file": "fish_halo_eel.glb",
+  "tris": 6000,
+  "size": [
+   0.983,
+   0.1725,
+   1.0
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_lantern_cat": {
+  "file": "fish_lantern_cat.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.7095,
+   0.377
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_mochi": {
+  "file": "fish_mochi.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.8493,
+   0.6289
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_paneray": {
+  "file": "fish_paneray.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.9999,
+   0.2179
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_rainbarb": {
+  "file": "fish_rainbarb.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.7254,
+   0.3425
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_reedling": {
+  "file": "fish_reedling.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.4685,
+   0.2691
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_sailfin": {
+  "file": "fish_sailfin.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.9478,
+   0.3337
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_spokerun": {
+  "file": "fish_spokerun.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.5171,
+   0.1873
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_stormgar": {
+  "file": "fish_stormgar.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.213,
+   0.1781
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "seed_loaf": {
+  "file": "seed_loaf.glb",
+  "tris": 5000,
+  "size": [
+   0.9941,
+   0.8236,
+   1.0
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "aquarium": {
+  "file": "aquarium.glb",
+  "tris": 9000,
+  "size": [
+   0.9114,
+   1.0,
+   0.6273
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "double_bed": {
+  "file": "double_bed.glb",
+  "tris": 9000,
+  "size": [
+   1.0,
+   0.536,
+   0.8537
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "fireplace": {
+  "file": "fireplace.glb",
+  "tris": 9000,
+  "size": [
+   1.0,
+   0.9879,
+   0.6349
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "flower_vase": {
+  "file": "flower_vase.glb",
+  "tris": 7000,
+  "size": [
+   0.8987,
+   1.0,
+   0.8258
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "piano": {
+  "file": "piano.glb",
+  "tris": 9000,
+  "size": [
+   0.7207,
+   1.0,
+   0.8914
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "telescope": {
+  "file": "telescope.glb",
+  "tris": 7000,
+  "size": [
+   0.854,
+   0.9007,
+   1.0
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "dresser": {
+  "file": "dresser.glb",
+  "tris": 9000,
+  "size": [
+   0.841,
+   1.0,
+   0.3769
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "rocking_chair": {
+  "file": "rocking_chair.glb",
+  "tris": 7000,
+  "size": [
+   0.5673,
+   1.0,
+   0.8417
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "wall_shelf_jars": {
+  "file": "wall_shelf_jars.glb",
+  "tris": 7000,
+  "size": [
+   0.7664,
+   1.0,
+   0.2624
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "coat_rack": {
+  "file": "coat_rack.glb",
+  "tris": 7000,
+  "size": [
+   0.5953,
+   1.0,
+   0.4873
+  ],
+  "note": "home dressing (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "hanging_plant": {
+  "file": "hanging_plant.glb",
+  "tris": 6999,
+  "size": [
+   0.7796,
+   1.0,
+   0.7084
+  ],
+  "note": "home dressing (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "side_table": {
+  "file": "side_table.glb",
+  "tris": 7000,
+  "size": [
+   0.6055,
+   1.0,
+   0.5971
+  ],
+  "note": "home dressing (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "kitchen_dresser": {
+  "file": "kitchen_dresser.glb",
+  "tris": 7000,
+  "size": [
+   1.0,
+   0.8498,
+   0.4574
+  ],
+  "note": "home dressing (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "big_plant": {
+  "file": "big_plant.glb",
+  "tris": 7000,
+  "size": [
+   0.9559,
+   1.0,
+   0.8485
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "fish_trophy": {
+  "file": "fish_trophy.glb",
+  "tris": 7000,
+  "size": [
+   1.0,
+   0.9897,
+   0.2202
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "armchair_big": {
+  "file": "armchair_big.glb",
+  "tris": 9000,
+  "size": [
+   1.0,
+   0.9706,
+   0.7905
+  ],
+  "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
  }
 }

@@ -379,9 +379,10 @@ for (const e of EVENTS) {
 }
 const byNpc = (id) => EVENTS.filter((e) => e.npc === id).map((e) => e.hearts).sort((a, b) => a - b).join(',');
 for (const id of LOVERS) check(EVENTS.some((e) => e.npc === id && e.hearts < 8), `${id}: a heart event before the confession`);
-check(byNpc('general') === '2,4,6,8,10', `the General's five events (${byNpc('general')})`);
-for (const id of VILLAGERS) if (id !== 'general') check(byNpc(id) === (['lark', 'vesna'].includes(id) ? '3,5,7' : '3,7'), `${id}: events at 3 and 7 hearts (${byNpc(id)})`);
-check(EVENTS.length === 5 + 2 * (VILLAGERS.length - 1) + 2, `${5 + 2 * (VILLAGERS.length - 1) + 2} events (${EVENTS.length}; Lark and Vesna have a third)`);
+check(byNpc('general') === '2,4,6,8,9,10', `the General's events, and a date at 9 (${byNpc('general')})`);
+for (const e of EVENTS.filter((x) => x.sweet)) check(LOVERS.includes(e.npc) && e.hearts === 9, `${e.id}: a sweethearts' date at 9 hearts, for a love story`);
+for (const id of VILLAGERS) if (id !== 'general') check(byNpc(id) === (LOVERS.includes(id) ? '3,5,7,9' : '3,7'), `${id}: events at ${LOVERS.includes(id) ? '3, 5, 7 and a date at 9' : '3 and 7'} hearts (${byNpc(id)})`);
+{ const want = 6 + VILLAGERS.filter((id) => id !== 'general').reduce((a, id) => a + (LOVERS.includes(id) ? 4 : 2), 0); check(EVENTS.length === want, `${want} events (${EVENTS.length}): 3, 5, 7 and a date for every love story`); }
 
 check(FESTIVALS.length >= 5, `at least five festivals (${FESTIVALS.length})`);
 for (const f of FESTIVALS) {
@@ -608,7 +609,7 @@ const bloom = FESTIVALS.find((f) => f.id === 'bloom');
 check(bloom && LANE.every((id) => bloom.lines.some((l) => l.who === id)) && bloom.lines.some((l) => l.who === 'marrow'), 'all five speak at the Bloom Fair');
 check(LANE.every((id) => FESTIVALS.filter((f) => f.id !== 'bloom').every((f) => near2(f, where(id, { season: f.season, day: f.day, weekday: weekdayOf(f.season, f.day), minute: f.from + 30, weather: 'sun', festival: f.id, year: 1 })))), 'the Lane comes to every festival');
 check(/Bloom Fair/.test(SIGNS['village.square']) && isText(SIGNS['village.lane']) && HELP.some((p) => /Market Lane/.test(p.title)) && /Lark/.test(HELP.find((p) => p.title === 'Love').body), 'the noticeboard, the Lane sign and the guide know about Market Lane');
-for (const id of ['lark', 'vesna']) check(EVENTS.filter((e) => e.npc === id).length === 3 && ROMANCE.people[id].wedding.some((l) => LANE.includes(l.who) && l.who !== id), `${id}: three heart events, and the Lane at the wedding`);
+for (const id of ['lark', 'vesna']) check(EVENTS.filter((e) => e.npc === id).length === 4 && ROMANCE.people[id].wedding.some((l) => LANE.includes(l.who) && l.who !== id), `${id}: four heart events, and the Lane at the wedding`);
 
 // ---------------------------------------------------------------- homes (2026-11-19, docs/FARM.md §15)
 {
@@ -655,7 +656,7 @@ for (const id of ['lark', 'vesna']) check(EVENTS.filter((e) => e.npc === id).len
   const sim = await import('../js/farm/sim.js'); const cat = story.memoryCatalogue(), ids = new Set(cat.map((m) => m.id));
   check(ids.size === cat.length && cat.length >= 80, `every memory has its own id (${cat.length})`);
   for (const m of cat) { check(isText(m.title, 90) && isText(m.hint, 200) && ['story', 'festivals'].concat(Object.keys(NPCS)).includes(m.group) && NPCS[m.who], `${m.id}: a title, a hint, a group and a face`); const L = m.lines(); check(Array.isArray(L) && L.length >= 2 && L.every((l) => l && isText(l.text, 400)), `${m.id}: the lines to replay`); }
-  for (const e of EVENTS) { check(ids.has('ev_' + e.id) && sim.memoryOfFlag('ev_' + e.id) === 'ev_' + e.id, `heart event ${e.id} is a memory, kept by its flag`); const m = cat.find((x) => x.id === 'ev_' + e.id); check(m.hint.startsWith(`Reach ${e.hearts} hearts with ${e.npc === 'general' ? 'the General' : NPCS[e.npc].short || NPCS[e.npc].name}`), `${e.id}: the locked hint reads "${m.hint}"`); }
+  for (const e of EVENTS) { check(ids.has('ev_' + e.id) && sim.memoryOfFlag('ev_' + e.id) === 'ev_' + e.id, `heart event ${e.id} is a memory, kept by its flag`); const m = cat.find((x) => x.id === 'ev_' + e.id); check(m.hint.startsWith(e.sweet ? 'Be ' : `Reach ${e.hearts} hearts with ${e.npc === 'general' ? 'the General' : NPCS[e.npc].short || NPCS[e.npc].name}`), `${e.id}: the locked hint reads "${m.hint}"`); }
   for (const e of story.LOWER_SCENES) check(ids.has('ev_' + e.id), `Lower deck scene ${e.id} is a memory`);
   for (const f of FESTIVALS) check(ids.has('fest_' + f.id) && sim.memoryOfFlag(`fest_${f.id}_3`) === 'fest_' + f.id, `festival ${f.id} is a memory, whatever the year`);
   for (const id of ROMANCE.candidates) check(ids.has('confess_' + id) && ids.has('wed_' + id) && sim.memoryOfFlag('partner', id) === 'wed_' + id && sim.memoryOfFlag('confess_' + id) === 'confess_' + id, `${id}: the confession and the wedding are memories`);
