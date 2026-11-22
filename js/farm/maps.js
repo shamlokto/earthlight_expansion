@@ -593,6 +593,9 @@ function interiors() {
   out.hall = m;
   // 2026-11-22: a little life by the doors of the public rooms too (only where the floor is free)
   for (const k of ['store', 'workshop', 'cafe', 'clinic', 'library', 'hall', 'ranch']) dressRoom(out[k], k === 'cafe' ? ['hanging_plant', 'coat_rack'] : ['hanging_plant', 'side_table']);
+  // the animal rooms: a few farm things along the walls, outside the pens (2026-11-22)
+  for (const k of ['barn']) { const m = out[k]; if (!m) continue; m.prop('crate', 0, 7); m.prop('feed_sacks', 11, 7); m.prop('tool_wall', 0, 0, { w: 2, solid: false }); m.prop('lantern', 11, 0, { solid: false }); }
+  for (const k of ['coop']) { const m = out[k]; if (!m) continue; m.prop('feed_sacks', 0, 5); m.prop('crate', 7, 5); }
   return out;
 }
 
@@ -775,10 +778,12 @@ function laneRooms(all) {
   m = room('fold', 12, 9, 'The fold', 'h');
   m.prop('trough', 2, 0, { w: 8, act: 'feedfold' }); m.prop('haybale', 0, 6); m.prop('haybale', 11, 6); m.prop('haybale', 0, 5, { scale: 0.85 });
   m.pen = [1, 2, 10, 6]; m.beasts = ['goat', 'sheep'];
+  m.prop('crate', 11, 7); m.prop('feed_sacks', 11, 5); m.prop('tool_wall', 10, 0, { w: 2, solid: false }); m.prop('lantern', 0, 0, { solid: false });   // 2026-11-22: a few farm things outside the pen
   out.fold = m;
   m = room('duckhouse', 8, 7, 'Duck house', 'h');
   m.prop('nestbox', 1, 0, { w: 3, act: 'duckeggs' }); m.prop('trough', 5, 0, { w: 2, act: 'feedduck' });
   m.pen = [1, 2, 6, 4]; m.beasts = ['duck'];
+  m.prop('feed_sacks', 0, 5); m.prop('crate', 7, 5);
   out.duckhouse = m;
   all.barn.beasts = ['cow']; all.coop.beasts = ['chicken'];
   return out;
