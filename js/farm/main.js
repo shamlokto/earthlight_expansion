@@ -953,7 +953,7 @@ function probe() {                                   // → { label, run } for E
   const b = nearestBeast(1.4); if (b) return { label: `Pet ${S.animals[b.i].name}`, run: () => { const r = sim.petAnimal(S, b.i); ui.toast(r.msg || `${S.animals[b.i].name} seems pleased.`); floatText(b.o.position.x, b.o.position.z, '♥'); } };
   if (map.id === 'hill') for (const f of S.forage || []) { const [x, y] = spotXY(f.spot); if (Math.hypot(x + 0.5 - me.x, y + 0.5 - me.y) < 1.2) return { label: `Pick the ${ITEMS[f.id].name.toLowerCase()}`, run: () => { const r = sim.pickForage(S, f.spot); if (r.ok) { sfx('pick'); pickedToast(r); drawForage(); } else ui.toast(r.msg); refreshHud(); } }; }
   const hd = map.doors.find((q) => q.kind === 'home' && q.x === tx && q.y === ty); if (hd) return homeProbe(hd.home);   // facing someone's front door
-  const d = map.doors.find((q) => q.x === Math.floor(me.x) && q.y === Math.floor(me.y)); if (d && d.kind === 'home') return homeProbe(d.home); if (d) return { label: d.kind === 'orbital_elevator' ? 'Ride the orbital elevator up to the hangar' : 'Go in', run: () => enterDoor(d) };
+  const d = map.doors.find((q) => q.x === Math.floor(me.x) && q.y === Math.floor(me.y)); if (d && d.kind === 'home') return homeProbe(d.home); if (d) return { label: d.kind === 'orbital_elevator' ? 'Ride the orbital elevator up to the hangar' : d.kind === 'house_back' ? (S.flags.house_back ? 'Go into the back bedroom' : 'Open the back door') : 'Go in', run: () => enterDoor(d) };
   return null;
 }
 // Homes (§15): a knock opens the door when they are in and awake, it is not late, and Sato is close enough (sim.visitRule).
@@ -1009,7 +1009,7 @@ async function knock(key, walkedIn = false) {
 }
 function enterDoor(d) {
   if (d.kind === 'home') return knock(d.home, true);
-  if (d.lock && !S.flags[d.lock]) return ui.toast({ fold: 'The old stone fold has no roof, and the gate hangs by one hinge. Prof. Ruess could mend it.', duckhouse: 'The duck house is a tumble of planks by the pond. Prof. Ruess could rebuild it.' }[d.lock] || 'The old greenhouse is a wreck of broken frames. Prof. Ruess could repair it.');
+  if (d.lock && !S.flags[d.lock]) return ui.toast({ fold: 'The old stone fold has no roof, and the gate hangs by one hinge. Prof. Ruess could mend it.', duckhouse: 'The duck house is a tumble of planks by the pond. Prof. Ruess could rebuild it.', house_back: 'The door opens on a cupboard full of old crates. Prof. Ruess could build a bedroom out the back.' }[d.lock] || 'The old greenhouse is a wreck of broken frames. Prof. Ruess could repair it.');
   sfx('door'); go(doorTarget(d.to.map));
   if (d.kind === 'orbital_elevator') ui.toast(story.ELEVATOR.up, 4200);
 }

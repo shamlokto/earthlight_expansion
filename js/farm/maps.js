@@ -515,7 +515,14 @@ function interiors() {
   m.prop('fish_trophy', 11, 4, { solid: false, when: 'decor_trophy', rot: -Math.PI / 2 }); m.prop('telescope', 11, 6, { solid: false, decorSolid: true, when: 'decor_telescope', act: 'telescope', rot: -Math.PI / 2 });
   m.prop('rocking_chair', 5, 3, { solid: false, when: 'decor_rocker', rot: Math.PI }); m.prop('armchair_big', 2, 3, { solid: false, when: 'decor_armchair', rot: Math.PI / 2 });
   m.prop('flower_vase', 10, 4, { solid: false, when: 'decor_vase' });
+  // the back bedroom (2026-11-22): a door in the back-left corner, shut until Ruess builds the extension (flag house_back)
+  m.prop('home_door', 0, 0, { solid: false, label: 'Back bedroom', tint: 0x9a6a44 }); m.doors.push({ x: 0, y: 0, to: { map: 'house_back' }, kind: 'house_back', lock: 'house_back' });
   out.house = m;
+  m = room('house_back', 9, 7, 'Back bedroom'); m.exitTile = [1, 6];
+  m.prop('quilt_bed', 6, 0, { d: 2, tint: 0xc98a9a }); m.prop('wardrobe', 4, 0, {}); m.prop('lamp', 8, 0, {}); m.prop('dresser', 0, 0, {}); m.prop('rug', 4, 3, { solid: false, w: 2, d: 2 });
+  m.prop('big_plant', 8, 5, {}); m.prop('side_table', 8, 2, { solid: false }); m.prop('armchair_big', 1, 3, { solid: false, rot: Math.PI / 2 }); m.prop('hanging_plant', 0, 4, { solid: false });
+  m.prop('shelf', 2, 0, { model: 'bookshelf' }); m.prop('coat_rack', 0, 6, { solid: false, rot: Math.PI / 2 });
+  out.house_back = m;
 
   m = room('barn', 12, 9, 'Barn', 'h');
   m.prop('trough', 2, 0, { w: 8, act: 'feedcow' }); m.prop('haybale', 0, 6); m.prop('haybale', 11, 6); m.prop('haybale', 11, 5);

@@ -2204,6 +2204,8 @@ function laneShelves(state, shopId, sell, once, out) {
       apply: () => { state.flags.fold = true; return 'Ruess re-roofs the old fold and hangs a new gate. "Goats. Heaven help you. They eat bolts."'; } });
     if (!state.flags.duckhouse) out.push({ key: 'duckhouse', label: 'Duck house', desc: 'A little house with a ramp down to the east pond: room for six ducks, which Corran sells.', price: 2000, lumber: 30, needs: '30 lumber', once: true,
       apply: () => { state.flags.duckhouse = true; return 'Ruess fixes the duck house by the east pond. "The ramp is regulation width. For a duck."'; } });
+    if (!state.flags.house_back) out.push({ key: 'house_back', label: 'Back bedroom extension', desc: 'Ruess knocks through the back-left corner of the farmhouse and builds a bedroom out the back: a bed, a wardrobe, shelves and room to breathe. Somewhere for two, one day.', price: 8000, lumber: 120, needs: '120 lumber', once: true,
+      apply: () => { state.flags.house_back = true; return 'By evening there is a new room behind the farmhouse, smelling of sawdust. Ruess hangs the door himself. "It sticks. That is character."'; } });
     if (!state.flags.eastfield) out.push({ key: 'eastfield', label: 'Clear the East Terrace', desc: 'Ruess clears the old terrace east of the farm and runs the irrigation main out to it: a second field, 12 by 10.', price: 3000, lumber: 40, needs: '40 lumber', once: true,
       apply: () => { state.flags.eastfield = true; ensure(state); return 'By evening the East Terrace has water and a gate. "The rocks are yours. I only moved the big ones."'; } });
   } else if (shopId === 'bakery') {
