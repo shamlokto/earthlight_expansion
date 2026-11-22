@@ -1086,7 +1086,12 @@ for (const id of Object.keys(NPCS)) {
   tierOf[id] = m;
 }
 
+// The cellar's goods (2026-11-22): aged_X and vintage_X take the taste for X a step up (vintage: anyone who did not
+// dislike it likes it, and it is loved by those who liked or loved X); a few have a soft spot for the wine.
+const CELLAR_FANS = { ruess: 'grape_juice', general: 'grape_juice', moraine: 'grape_juice', lark: 'goat_cheese', calloway: 'honey', oduya: 'cheese' };
 export function giftTier(npcId, itemId) {
+  const aged = typeof itemId === 'string' && /^(aged|vintage)_(cheese|goat_cheese|honey|grape_juice)$/.exec(itemId);
+  if (aged) { if (CELLAR_FANS[npcId] === aged[2]) return 'loved'; const t = giftTier(npcId, aged[2]); return t === 'disliked' ? 'neutral' : t === 'loved' || t === 'liked' ? (aged[1] === 'vintage' || t === 'loved' ? 'loved' : 'liked') : aged[1] === 'vintage' ? 'liked' : 'neutral'; }
   const m = tierOf[npcId];
   return (m && typeof itemId === 'string' && Object.prototype.hasOwnProperty.call(m, itemId) && m[itemId]) || 'neutral';
 }
@@ -4457,3 +4462,4 @@ HELP.push({
   title: 'Your cat',
   body: "Corran's barn cat had kittens: adopt one at the ranch for 300 cr. The first time you pet her, you name her. Pet her once a day, and hold a fish by her for her bowl once a day; a day with neither and she sulks a little. She naps in her bed by the hearth at night, suns herself on the porch on fine days and potters round the farmhouse otherwise. A cat who loves you leaves little presents by your bed, and keeps you warm on a bad night.",
 });
+
