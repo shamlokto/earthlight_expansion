@@ -310,7 +310,7 @@ function drawPlaced() {
   S.panels.forEach((p, i) => { if (p.map === map.id) W.place('charger' + i, 'charger', p.x + 0.5, p.y + 0.5, { procKind: 'charge_lights', slots: p.slots }); });
   S.fruitTrees.forEach((t, i) => {
     if (t.map !== map.id) return; const st = sim.treeStage(S, t);
-    W.place('ftree' + i, st === 0 ? 'sapling' : st === 1 ? 'fruit_tree_young' : 'fruit_tree', t.x + 0.5, t.y + 0.5, { model: st === 0 ? 'sapling' : 'fruit_tree_' + t.kind, stage: st, tree: t.kind, fruit: sim.fruitReady(S, t), rot: i * 1.3 });
+    W.place('ftree' + i, st === 0 ? 'sapling' : st === 1 ? 'fruit_tree_young' : 'fruit_tree', t.x + 0.5, t.y + 0.5, { model: st === 0 ? 'sapling' : 'fruit_tree_' + t.kind + (st === 2 && sim.fruitReady(S, t) ? '' : '_bare'), stage: st, tree: t.kind, fruit: sim.fruitReady(S, t), rot: i * 1.3 });
   });
 }
 const BOT_LOOK = [{ color: 0xf2efe6, trim: 0x5fb3b0 }, { color: 0xfde6c8, trim: 0xe07a5f }, { color: 0xe3ecf7, trim: 0x7a8fd8 }];
@@ -400,7 +400,8 @@ async function soakOnsen() {
   sfx('good'); floatText(me.x, me.y, '♨'); ui.toast(r.msg, 4200); refreshHud();
 }
 const spotXY = (spot) => (spot === sim.STAR_SPOT ? STAR_SPOT_XY : FORAGE_SPOTS[spot] || [0, 0]);
-function drawForage() { for (let i = 0; i < FORAGE_SPOTS.length; i++) W.unplace('forage' + i); W.unplace('forage' + sim.STAR_SPOT); for (const f of S.forage || []) { const [x, y] = spotXY(f.spot); if (f.id === 'star_plum') { W.place('forage' + f.spot, 'starglow', x + 0.5, y + 0.5); continue; } const p = art.pic('icons/' + f.id); if (p) { const g = W.place('forage' + f.spot, null, x + 0.5, y + 0.5); g.add(W.billboard(p, ITEMS[f.id].sell >= 300 ? 0.7 : 0.58, {})); } else W.place('forage' + f.spot, null, x + 0.5, y + 0.5, { procKind: 'forage', color: FORAGE_COLOR[f.id] }); } }
+const forageBob = [];   // hill forage that bobs and glows (2026-11-22: easier to spot among the flowers)
+function drawForage() { forageBob.length = 0; for (let i = 0; i < FORAGE_SPOTS.length; i++) W.unplace('forage' + i); W.unplace('forage' + sim.STAR_SPOT); for (const f of S.forage || []) { const [x, y] = spotXY(f.spot); if (f.id === 'star_plum') { W.place('forage' + f.spot, 'starglow', x + 0.5, y + 0.5); continue; } const p = art.pic('icons/' + f.id); if (p) { const g = W.place('forage' + f.spot, null, x + 0.5, y + 0.5), rare = ITEMS[f.id].sell >= 300; g.add(W.proc('forage_glow', { gold: rare })); const bb = W.billboard(p, rare ? 0.95 : 0.8, {}); bb.position.y = 0.12; g.add(bb); g.userData.bob = { bb, t: f.spot * 1.7 }; forageBob.push(g); } else W.place('forage' + f.spot, null, x + 0.5, y + 0.5, { procKind: 'forage', color: FORAGE_COLOR[f.id] }); } }
 
 
 // ---------------------------------------------------------------- star-plums, the lift, the Main deck, the towers (2026-11-18)
@@ -947,7 +948,7 @@ function probe() {                                   // → { label, run } for E
   if (fa && fa.tile.crop && !fa.tile.crop.dead && sim.cropStage(fa.tile.crop) === 3) return { label: `Harvest the ${CROPS[fa.tile.crop.id].name.toLowerCase()}${sim.basketHeld(S) ? ' into the basket' : ''}`, run: () => { const r = sim.harvest(S, fa.f.id, fa.x, fa.y); if (r.ok) { sfx('pick'); pickedToast(r); refreshChanged(fa.f.id, [{ x: fa.x, y: fa.y }]); goals(); } else ui.toast(r.msg); refreshHud(); } };
   const wild = !map.indoor && plantAhead(['tree']);
   if (wild && wild.p.fruit && !felledAt(wild.pi) && sim.wildReady(S, wild.key, wild.p.fruit, !!map.wildShared)) return { label: `Pick ${ITEMS[WILD_TREES[wild.p.fruit].fruit].name.toLowerCase()}`, run: () => { const r = sim.pickWild(S, wild.key, wild.p.fruit, !!map.wildShared); if (r.ok) { sfx('pick'); ui.gainedToast(r.gained); const f = wild.p.obj && wild.p.obj.userData.fruits; if (f) f.visible = false; } else ui.toast(r.msg); refreshHud(); } };
-  const bush = !map.indoor && plantAhead(['bush']); if (bush && sim.bushReady(S, bush.key)) return { label: 'Pick berries', run: () => { const r = sim.pickBush(S, bush.key); if (r.ok) { sfx('pick'); pickedToast(r); } else ui.toast(r.msg); refreshHud(); } };
+  const bush = !map.indoor && plantAhead(['bush']); if (bush && sim.bushReady(S, bush.key)) return { label: 'Pick berries', run: () => { const r = sim.pickBush(S, bush.key); if (r.ok) { sfx('pick'); pickedToast(r); W.swapProp(bush.p, 'bush', { model: 'bush_bare' }); } else ui.toast(r.msg); refreshHud(); } };
   const b = nearestBeast(1.4); if (b) return { label: `Pet ${S.animals[b.i].name}`, run: () => { const r = sim.petAnimal(S, b.i); ui.toast(r.msg || `${S.animals[b.i].name} seems pleased.`); floatText(b.o.position.x, b.o.position.z, '♥'); } };
   if (map.id === 'hill') for (const f of S.forage || []) { const [x, y] = spotXY(f.spot); if (Math.hypot(x + 0.5 - me.x, y + 0.5 - me.y) < 1.2) return { label: `Pick the ${ITEMS[f.id].name.toLowerCase()}`, run: () => { const r = sim.pickForage(S, f.spot); if (r.ok) { sfx('pick'); pickedToast(r); drawForage(); } else ui.toast(r.msg); refreshHud(); } }; }
   const hd = map.doors.find((q) => q.kind === 'home' && q.x === tx && q.y === ty); if (hd) return homeProbe(hd.home);   // facing someone's front door
@@ -1165,7 +1166,7 @@ function floatText(x, y, text) { const e = document.createElement('span'); e.tex
 function bubble(o, text, life = 3.6) { for (const l of labels) if (l.follow === o) l.life = 0; const e = document.createElement('span'); e.className = 'bubble'; e.textContent = text; $('labels').appendChild(e); labels.push({ e, follow: o, x: o.position.x, y: o.position.z, h: 1.25, life, still: true }); }
 
 // ---------------------------------------------------------------- the frame
-let last = 0, promptT = 0, current = null;
+let last = 0, promptT = 0, current = null, dustT = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now;
@@ -1176,12 +1177,14 @@ function frame(now) {
     let ix = stick.x, iy = stick.y;
     if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1; if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1;
     if (keys.has('KeyW') || keys.has('ArrowUp')) iy -= 1; if (keys.has('KeyS') || keys.has('ArrowDown')) iy += 1;
-    const len = Math.hypot(ix, iy); me.moving = len > 0.15;
+    const len = Math.hypot(ix, iy); me.moving = len > 0.15; if (!me.moving) me.running = false;
     if (me.moving) {
       if (fishing) endFishing();
       ix /= Math.max(1, len); iy /= Math.max(1, len);
       const c = Math.cos(W.yaw), s = Math.sin(W.yaw), wx = ix * c + iy * s, wy = -ix * s + iy * c;
-      const tired = S.player.stamina < 15 ? 0.7 : 1, sp = (map.belt ? (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 6.2 : 4.4) : map.ruins ? (dashT > 0 ? 13 : 4.6) : keys.has('ShiftLeft') || keys.has('ShiftRight') ? 5.6 : 3.9) * tired * dt;
+      const run = !map.belt && !map.ruins && (keys.has('ShiftLeft') || keys.has('ShiftRight') || Math.hypot(stick.x, stick.y) > 0.93);   // touch: push the stick all the way me.running = run;
+      if (run && !map.indoor && (dustT -= dt) <= 0) { dustT = 0.09; W.puff(me.x - wx * 0.3, me.y - wy * 0.3, map.id === 'lower' ? 0x8a8478 : 0xd8c8a0, 3, 0.08); }   // dust kicked up behind her
+      const tired = S.player.stamina < 15 ? 0.7 : 1, sp = (map.belt ? (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 6.2 : 4.4) : map.ruins ? (dashT > 0 ? 13 : 4.6) : run ? 7.4 : 3.9) * tired * dt;   // a captain's sprint: nearly twice walking pace (owner 2026-11-22)
       me.dir = Math.abs(wx) > Math.abs(wy) ? (wx < 0 ? 2 : 3) : (wy < 0 ? 1 : 0);
       if (canStand(me.x + wx * sp, me.y)) me.x += wx * sp; if (canStand(me.x, me.y + wy * sp)) me.y += wy * sp;
       const tx = Math.floor(me.x), ty = Math.floor(me.y);
@@ -1197,6 +1200,7 @@ function frame(now) {
     if (map.ruins) ruinsTick(dt);
     if (fishing) fishTick(dt);
     botsTick(dt); moveNpcs(dt);
+    for (const g of forageBob) { const b = g.userData.bob; if (!g.parent) continue; b.t += dt; b.bb.position.y = 0.12 + Math.abs(Math.sin(b.t * 2.2)) * 0.12; const h = g.children[0] && g.children[0].userData.halo; if (h) h.material.opacity = 0.45 + Math.sin(b.t * 3) * 0.25; }
     for (const b of beasts) { b.wait -= dt; if (b.wait <= 0) { const pen = b.pen || map.pen; b.tx = pen[0] + 0.6 + Math.random() * (pen[2] - pen[0]); b.ty = pen[1] + 0.6 + Math.random() * (pen[3] - pen[1]); b.wait = 3 + Math.random() * 6; } const dx = b.tx - b.o.position.x, dy = b.ty - b.o.position.z, d = Math.hypot(dx, dy); if (d > 0.1) { b.o.position.x += dx / d * dt * 0.6; b.o.position.z += dy / d * dt * 0.6; if (!W.facers.includes(b.o.children[0])) b.o.rotation.y = Math.atan2(dx, dy); } }
     // prompt and cursor
     if ((promptT -= dt) <= 0) {
@@ -1283,7 +1287,7 @@ async function boot() {
   { const cv = W.renderer.domElement;   // the GPU dropped the 3D view (memory pressure, a GPU switch, a phone in the background): get it back
     cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); console.warn('[webgl] context lost'); try { ui.toast('The 3D view was interrupted. Restoring…', 3000); } catch {} });
     cv.addEventListener('webglcontextrestored', () => { console.warn('[webgl] context restored'); if (S && map) { const at = { map: map.id === 'ruins' ? 'ruins' : map.id, x: me.x, y: me.y, dir: me.dir }; go(at, { quick: true }); } }); }
-  W.isFelled = (key) => !!S && sim.treeFelled(S, key); W.wildFruitShown = (m, p) => !!S && sim.wildReady(S, m.id + ':' + p.index, p.fruit, !!m.wildShared); bindInput();
+  W.isFelled = (key) => !!S && sim.treeFelled(S, key); W.wildFruitShown = (m, p) => !!S && sim.wildReady(S, m.id + ':' + p.index, p.fruit, !!m.wildShared); W.bushShown = (m, p) => !!S && sim.bushReady(S, m.id + ':' + p.index); bindInput();
   initMap({ get: () => ({ S, map, me, npcs, W, people: whereNow }), ctx: () => (S ? ctx() : null), openWin: ui.openWindow, closeWin: ui.closeWin, canOpen: () => mode === 'play' && !busy && !ui.talking() && !ui.windowOpen(), toast: ui.toast });
   const tv = art.url('video/title'), tp = art.url('scenes/title');
   $('titleArt').innerHTML = (tp ? `<img src="${tp}" alt="">` : '') + (tv ? `<video src="${tv}" autoplay loop muted playsinline></video>` : '');

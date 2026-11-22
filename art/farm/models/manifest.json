@@ -3596,13 +3596,13 @@
  },
  "platinum": {
   "file": "platinum.glb",
-  "tris": 3500,
+  "tris": 5000,
   "size": [
-   0.962,
    1.0,
-   0.923
+   0.4327,
+   0.8683
   ],
-  "note": "item; warm white-grey rounded lumpy satin nugget"
+  "note": "item model, made from its icon (2026-11-22)"
  },
  "potato": {
   "file": "potato.glb",
@@ -4013,5 +4013,225 @@
    0.8767
   ],
   "note": "Pallas jet form; crimson-magenta/white with orange accents and cyan canopy, nose on +Z, wings along X"
+ },
+ "bush_bare": {
+  "file": "bush_bare.glb",
+  "tris": 5000,
+  "size": [
+   0.988,
+   0.9625,
+   1.0
+  ],
+  "note": "bush with its fruit picked (bare.py: fruit repainted leaf green)"
+ },
+ "fruit_tree_apple_bare": {
+  "file": "fruit_tree_apple_bare.glb",
+  "tris": 12000,
+  "size": [
+   0.909,
+   1.0,
+   0.7871
+  ],
+  "note": "fruit_tree_apple with its fruit picked (bare.py: fruit repainted leaf green)"
+ },
+ "fruit_tree_peach_bare": {
+  "file": "fruit_tree_peach_bare.glb",
+  "tris": 12000,
+  "size": [
+   0.8637,
+   1.0,
+   0.8383
+  ],
+  "note": "fruit_tree_peach with its fruit picked (bare.py: fruit repainted leaf green)"
+ },
+ "fruit_tree_cherry_bare": {
+  "file": "fruit_tree_cherry_bare.glb",
+  "tris": 12000,
+  "size": [
+   0.8313,
+   1.0,
+   0.8027
+  ],
+  "note": "fruit_tree_cherry with its fruit picked (bare.py: fruit repainted leaf green)"
+ },
+ "fruit_tree_persimmon_bare": {
+  "file": "fruit_tree_persimmon_bare.glb",
+  "tris": 12000,
+  "size": [
+   0.8857,
+   1.0,
+   0.891
+  ],
+  "note": "fruit_tree_persimmon with its fruit picked (bare.py: fruit repainted leaf green)"
+ },
+ "fish_admiral": {
+  "file": "fish_admiral.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.3366,
+   0.1394
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_cistern_sturgeon": {
+  "file": "fish_cistern_sturgeon.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.4449,
+   0.3582
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_cloudfin": {
+  "file": "fish_cloudfin.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.708,
+   0.3336
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_dawnscale": {
+  "file": "fish_dawnscale.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.709,
+   0.3399
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_deep_angler": {
+  "file": "fish_deep_angler.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.7377,
+   0.2944
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_earthlight_trout": {
+  "file": "fish_earthlight_trout.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.6714,
+   0.3345
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_ferryman": {
+  "file": "fish_ferryman.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.7168,
+   0.3513
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_halo_eel": {
+  "file": "fish_halo_eel.glb",
+  "tris": 6000,
+  "size": [
+   0.983,
+   0.1725,
+   1.0
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_lantern_cat": {
+  "file": "fish_lantern_cat.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.7095,
+   0.377
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_mochi": {
+  "file": "fish_mochi.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.8493,
+   0.6289
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_paneray": {
+  "file": "fish_paneray.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.9999,
+   0.2179
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_rainbarb": {
+  "file": "fish_rainbarb.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.7254,
+   0.3425
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_reedling": {
+  "file": "fish_reedling.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.4685,
+   0.2691
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_sailfin": {
+  "file": "fish_sailfin.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.9478,
+   0.3337
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_spokerun": {
+  "file": "fish_spokerun.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.5171,
+   0.1873
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "fish_stormgar": {
+  "file": "fish_stormgar.glb",
+  "tris": 6000,
+  "size": [
+   1.0,
+   0.213,
+   0.1781
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
+ },
+ "seed_loaf": {
+  "file": "seed_loaf.glb",
+  "tris": 5000,
+  "size": [
+   0.9941,
+   0.8236,
+   1.0
+  ],
+  "note": "item model, made from its icon (2026-11-22)"
  }
 }

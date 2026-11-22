@@ -248,17 +248,19 @@ export class Actor {
   face(x, y) { const dx = x - this.x, dy = y - this.y; this.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 2 : 3) : (dy < 0 ? 1 : 0); }
   update(dt, world) {
     this.group.position.set(this.x, 0, this.y);
-    this.phase += dt * (this.moving ? 9 : 1.6);
+    this.phase += dt * (this.moving ? (this.running ? 15 : 9) : 1.6);   // running: a quicker, longer stride (2026-11-22)
     const [dx, dz] = DIRV[this.dir], fa = Math.atan2(dx, dz);
     if (this.mode === 'figure' || this.mode === 'model') {
       let d = fa - this.body.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); this.body.rotation.y += d * Math.min(1, dt * 14);
-      const l = this.body.userData.limbs, s = this.moving ? Math.sin(this.phase) * 0.7 : 0;
+      const l = this.body.userData.limbs, s = this.moving ? Math.sin(this.phase) * (this.running ? 1.05 : 0.7) : 0;
       if (l) { l.L.rotation.x = s; l.R.rotation.x = -s; l.A.rotation.x = -s * 0.8; l.B.rotation.x = s * 0.8 - (this.swing || 0) * 2.2; if (l.head) { l.head.rotation.z = this.moving ? Math.sin(this.phase) * 0.05 : Math.sin(this.phase * 0.6) * 0.025; l.head.rotation.x = this.swing ? this.swing * 0.25 : 0; } }
       if (this.body.userData.blink) this.body.userData.blink((this.phase * 0.37) % 4.2 > 4.05 || (this.world.t * 0.9 + this.tall * 7) % 3.7 > 3.58);
-      this.body.position.y = this.moving ? Math.abs(Math.sin(this.phase)) * 0.05 : Math.sin(this.phase * 0.6) * 0.008;
+      this.body.position.y = this.moving ? Math.abs(Math.sin(this.phase)) * (this.running ? 0.09 : 0.05) : Math.sin(this.phase * 0.6) * 0.008;
+      this.lean = (this.lean || 0) + (((this.moving && this.running) ? 0.22 : 0) - (this.lean || 0)) * Math.min(1, dt * 10);   // a runner leans into it
+      if (this.inner) this.inner.rotation.x = this.lean; else if (l) this.body.rotation.x = this.lean;
       if (this.inner && !this.rigged) {                  // a model with no joints moves like a little toy: hop, waddle, lean
         const k = this.moving ? 1 : 0, w = Math.sin(this.phase);
-        this.inner.position.y = k * Math.abs(w) * 0.07; this.inner.rotation.z = k * w * 0.075; this.inner.rotation.x = k * 0.07 + (this.swing || 0) * 0.3;
+        this.inner.position.y = k * Math.abs(w) * 0.07; this.inner.rotation.z = k * w * 0.075; this.inner.rotation.x = k * 0.07 + (this.swing || 0) * 0.3 + (this.lean || 0);
         const sq = 1 + (k ? Math.cos(this.phase * 2) * 0.03 : Math.sin(this.phase) * 0.012); this.inner.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
       }
       if (this.swing) this.swing = Math.max(0, this.swing - dt * 5);

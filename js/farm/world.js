@@ -162,6 +162,7 @@ function ball(r, mat, x = 0, y = 0, z = 0, detail = 1) { const m = new THREE.Mes
 // Colony colours for the built stand-ins, and a painted panel (a sign, a screen, a board) as a texture.
 const WHITE = () => std({ color: 0xf2f0ea, roughness: 0.55, metalness: 0.1 }), TEAL = () => std({ color: 0x3fa7a3, roughness: 0.5, metalness: 0.2 }), SLATE = () => std({ color: 0x46525e, metalness: 0.4, roughness: 0.5 });
 const glow = (c) => new THREE.MeshBasicMaterial({ color: c });
+let softTex = null;
 const PANELS = new Map();
 function panelTex(key, w, h, paint) {
   if (PANELS.has(key)) return PANELS.get(key);
@@ -332,6 +333,12 @@ export class World {
       case 'chicken': { const w = std({ color: 0xf4f1ea }); g.add(ball(0.17, w, 0, 0.2, 0), ball(0.1, w, 0, 0.36, 0.13), ball(0.035, std({ color: 0xd0392b }), 0, 0.46, 0.13, 0)); const bk = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.08, 4), std({ color: 0xe2a22a })); bk.rotation.x = Math.PI / 2; bk.position.set(0, 0.36, 0.25); g.add(bk); break; }
       case 'cow': { const w = std({ color: 0xf2efe8 }), k = std({ color: 0x24211f }); g.add(box(0.6, 0.6, 1.2, w, 0, 0.45), box(0.4, 0.4, 0.45, w, 0, 0.75, 0.75), box(0.62, 0.3, 0.4, k, 0, 0.75, -0.1), box(0.3, 0.2, 0.2, std({ color: 0xe3b0a6 }), 0, 0.72, 1.0)); for (const [x, z] of [[-0.2, 0.45], [0.2, 0.45], [-0.2, -0.45], [0.2, -0.45]]) g.add(box(0.14, 0.45, 0.14, w, x, 0, z)); break; }
       case 'egg': g.add(ball(0.08, std({ color: 0xf5ecd9 }), 0, 0.08, 0, 1)); break;
+      case 'forage_glow': {                               // under a pickable forage item: a soft halo and a faint ring, so it reads among the flowers
+        if (!softTex) { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d'), gr = x.createRadialGradient(32, 32, 1, 32, 32, 31); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.4, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); softTex = new THREE.CanvasTexture(cv); }
+        const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex, color: o.gold ? 0xffd36a : 0xfff4c8, transparent: true, opacity: 0.7, depthWrite: false })); halo.scale.setScalar(o.gold ? 1.25 : 1.05); halo.position.y = 0.5; g.add(halo);
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.42, 24), new THREE.MeshBasicMaterial({ color: o.gold ? 0xffd36a : 0xfff0b0, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; g.add(ring);
+        g.userData.halo = halo; g.userData.ring = ring; break;
+      }
       case 'forage': g.add(ball(0.12, std({ color: o.color || 0x7fbf5a }), 0, 0.14, 0, 0), ball(0.09, std({ color: o.color || 0x7fbf5a }), 0.14, 0.1, 0.05, 0)); break;
       case 'float': g.add(ball(0.07, std({ color: 0xe23a2a }), 0, 0.02, 0, 1), ball(0.05, std({ color: 0xffffff }), 0, 0.08, 0, 1)); break;
       case 'storage_box': g.add(box(0.9, 0.55, 0.6, wood), box(0.94, 0.12, 0.64, dark, 0, 0.55), box(0.12, 0.08, 0.04, new THREE.MeshBasicMaterial({ color: 0x6fd3ff }), 0, 0.4, 0.31)); break;
@@ -907,7 +914,9 @@ export class World {
       if ((kind === 'tree' || kind === 'pine') && this.isFelled && this.isFelled(map.id + ':' + p.index)) kind = 'stump';
       this.colonyFx = { spin: this.spinners, glow: [] };
       const turn = kind === 'pipe_run' && p.d > p.w;            // a pipe running north-south is built east-west and turned
-      const o = this.makeProp(kind, turn ? { ...p, w: p.d, d: p.w } : p);
+      // a berry bush shows berries only while there are some to pick (owner 2026-11-22); an edge 'tree' drawn as a bush never has any
+      const bushModel = kind === 'bush' ? (p.kind === 'bush' && this.bushShown && this.bushShown(map, p) ? 'bush' : 'bush_bare') : null;
+      const o = this.makeProp(kind, turn ? { ...p, w: p.d, d: p.w } : bushModel ? { ...p, model: bushModel } : p);
       if (turn) o.userData.turn = true;
       if (COLONY_KINDS.has(kind) && !art.hasModel(kind) && kind !== 'maint_bot') built.push(o);
       const rr = p.rot && o.userData.is3d ? p.rot : 0;
@@ -986,6 +995,12 @@ export class World {
   // The belt's rocks, drawn instanced from the sim's grid (state.mine.cells), only those near Sato (see BeltRocks).
   stoneShade(o) { return stoneShade(o); }
   beltField(mine) { if (this.rocks) this.rocks.dispose(); this.rocks = new BeltRocks(this.root, mine); return this.rocks; }
+  // Redraw one map prop in place (a bush just picked bare): same spot, same turn.
+  swapProp(p, kind, o2) {
+    const old = p.obj; if (!old || !old.parent) return; const n = this.makeProp(kind, { ...p, ...o2 });
+    n.position.copy(old.position); n.rotation.copy(old.rotation); old.parent.add(n); old.parent.remove(old); p.obj = n;
+    const k = this.tallProps.indexOf(old); if (k >= 0) this.tallProps[k] = n;
+  }
   unplace(key) { const old = this.tileObjs.get(key); if (old) { this.dyn.remove(old); this.unface(old); this.tileObjs.delete(key); } }
 
   // ------------------------------------------------------------ effects
