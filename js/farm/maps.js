@@ -170,6 +170,10 @@ function village() {
   m.prop('lantern', 25, 11); m.prop('lantern', 38, 11); m.prop('lantern', 25, 21); m.prop('lantern', 38, 21);
   m.prop('bench', 34, 23, { w: 2 });
   m.prop('vent', 27, 23); m.prop('vent', 38, 23);
+  // 2026-11-22: the square was a bare stretch of cobbles: flower beds in its four corners, benches facing the memorial, planters by the lamps
+  m.prop('flower_bed', 26, 13, { w: 2 }); m.prop('flower_bed', 36, 13, { w: 2 }); m.prop('flower_bed', 26, 20, { w: 2 }); m.prop('flower_bed', 36, 20, { w: 2 });
+  m.prop('bench', 28, 15, { d: 2, rot: Math.PI / 2 }); m.prop('bench', 35, 15, { d: 2, rot: -Math.PI / 2 });
+  m.prop('plantpot', 25, 12); m.prop('plantpot', 38, 12); m.prop('plantpot', 25, 20); m.prop('plantpot', 38, 20);
   // signs
   m.prop('signpost', 29, 10, { act: 'sign', sign: 'village.square' });
   m.prop('signpost', 21, 7, { act: 'sign', sign: 'village.storefront' });
@@ -358,6 +362,9 @@ function central() {
   m.prop('signpost', 37, 31, { act: 'sign', sign: 'central.plaza' });
   for (const [x, y] of [[23, 22], [46, 22], [23, 29], [46, 29]]) m.prop('tree', x, y, { scale: 0.9, rot: x });
   for (const [x, y] of [[26, 26], [42, 26]]) m.prop('bench', x, y, { w: 2 });
+  // 2026-11-22: flower beds and planters, so the plaza is a garden square rather than an empty floor
+  for (const [x, y] of [[27, 22], [40, 22], [27, 29], [40, 29]]) m.prop('flower_bed', x, y, { w: 2 });
+  for (const [x, y] of [[25, 26], [44, 26], [30, 24], [39, 24]]) m.prop('plantpot', x, y);
   m.spot('central.plaza', 29.5, 27.5);
   // the Arrivals hall and its apron
   m.building('arrivals', 50, 21, 12, 5, { height: 5, to: { map: 'arrivals' }, label: 'Arrivals hall' });
