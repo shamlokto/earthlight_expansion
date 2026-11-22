@@ -538,12 +538,21 @@ function interiors() {
   m.prop('flower_vase', 10, 4, { solid: false, when: 'decor_vase' });
   // the back bedroom (2026-11-22): a door in the back-left corner, shut until Ruess builds the extension (flag house_back)
   m.prop('home_door', 0, 0, { solid: false, label: 'Back bedroom', tint: 0x9a6a44 }); m.doors.push({ x: 0, y: 0, to: { map: 'house_back' }, kind: 'house_back', lock: 'house_back' });
+  m.prop('cat_bed', 3, 1, { solid: false, when: 'pet_cat' });   // the cat's bed by the hearth (2026-11-22; flag pet_cat)
+  // the cellar (2026-11-22): a trapdoor by the east window, shut until Ruess digs it out (flag cellar); E only, not walked into
+  m.prop('cellar_hatch', 10, 6, { solid: false, label: 'Cellar trapdoor' }); m.doors.push({ x: 10, y: 6, to: { map: 'cellar' }, kind: 'cellar', lock: 'cellar', hatch: true });
   out.house = m;
   m = room('house_back', 9, 7, 'Back bedroom'); m.exitTile = [1, 6];
   m.prop('quilt_bed', 6, 0, { d: 2, tint: 0xc98a9a }); m.prop('wardrobe', 4, 0, {}); m.prop('lamp', 8, 0, {}); m.prop('dresser', 0, 0, {}); m.prop('rug', 4, 3, { solid: false, w: 2, d: 2 });
   m.prop('big_plant', 8, 5, {}); m.prop('side_table', 8, 2, { solid: false }); m.prop('armchair_big', 1, 3, { solid: false, rot: Math.PI / 2 }); m.prop('hanging_plant', 0, 4, { solid: false });
   m.prop('shelf', 2, 0, { model: 'bookshelf' }); m.prop('coat_rack', 0, 6, { solid: false, rot: Math.PI / 2 });
   out.house_back = m;
+  // the cellar under the farmhouse: stone, lamplight, oak casks (sim.caskInfo); the racks add six along the side walls
+  m = room('cellar', 10, 7, 'Cellar', 'o'); m.cellar = true;
+  [[1, 0], [2, 0], [3, 0], [6, 0], [7, 0], [8, 0]].forEach(([x, y], i) => m.prop('cask', x, y, { act: 'cask', cask: i }));
+  [[0, 2], [0, 3], [0, 4], [9, 2], [9, 3], [9, 4]].forEach(([x, y], i) => m.prop('cask', x, y, { act: 'cask', cask: 6 + i, solid: false, decorSolid: true, when: 'cellar_racks', rot: x ? -Math.PI / 2 : Math.PI / 2 }));
+  m.prop('wine_rack', 4, 0, { w: 2 }); m.prop('cheese_shelf', 0, 5, { rot: Math.PI / 2 }); m.prop('lantern', 9, 5, { solid: false }); m.prop('crate', 9, 0); m.prop('crate', 0, 0, { scale: 0.8 });
+  m.hasDecor = true; out.cellar = m;
 
   m = room('barn', 12, 9, 'Barn', 'h');
   m.prop('trough', 2, 0, { w: 8, act: 'feedcow' }); m.prop('haybale', 0, 6); m.prop('haybale', 11, 6); m.prop('haybale', 11, 5);

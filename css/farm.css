@@ -129,3 +129,6 @@ button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outl
 .fm-memp { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: #e9dcc0; display: grid; place-items: center; } .fm-memp img, .fm-memp svg { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; }
 .fm-mem.locked { cursor: default; background: #f1e8d6; } .fm-mem.locked .fm-memp > * { filter: brightness(0) opacity(.35); }
 @media (max-width: 700px) { .fm-mems { grid-template-columns: 1fr; } }
+
+/* cellar goods (2026-11-22): the plain good's icon with a star badge */
+.fm-aged { position: relative; } .fm-aged .fm-ico { width: 100%; height: 100%; } .fm-aged b { position: absolute; right: -2px; bottom: -3px; font: 700 11px var(--f-display); color: #ffd36a; text-shadow: 0 0 2px #3a2410, 0 1px 2px #3a2410; letter-spacing: -1px; } .fm-aged.t2 .fm-ico { filter: saturate(1.25) sepia(.25) brightness(.92); }

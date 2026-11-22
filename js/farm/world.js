@@ -96,7 +96,7 @@ const PROPS = {
   launch_pad: { h: 0.1 }, shuttle_pad: { h: 0.1 },
   // 2026-11-19: the open belt (sector markers, pickup pods, landmarks) and Sato's mining unit; built stand-ins
   sector_buoy: { model: 'jump_buoy', h: 1.7, fit: 'foot' }, sector_sign: { h: 2.6 }, pickup_pod: { h: 2.2 }, mining_bot: { model: 'mining_bot', h: 0.9, fit: 'foot' },
-  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, shuttle_gate: { h: 3.4 },
+  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, cellar_hatch: { h: 0.1 }, cat: { model: 'cat', h: 0.42, maxW: 0.62 }, cat_sleep: { model: 'cat', h: 0.34, maxW: 0.5 }, cat_bed: { model: 'cat_bed', h: 0.26, maxW: 0.8 }, cask: { model: 'cask', h: 0.95, maxW: 0.95 }, wine_rack: { model: 'wine_rack', h: 1.9, maxW: 1.9 }, cheese_shelf: { model: 'cheese_shelf', h: 1.6, maxW: 1.0 }, shuttle_gate: { h: 3.4 },
   hull_window: { h: 12 }, hull_wall: { h: 10 }, glass_roof: { h: 16 }, vending: { model: 'vending', h: 1.9, fit: 'foot' }, feed_sacks: { model: 'feed_sacks', h: 0.8, fit: 'foot' },
   crane: { model: 'dock_crane', h: 5.5, fit: 'foot' },
   bay_window: { h: 10 }, landing_pad: { h: 0.1 }, hazard_stripes: { h: 0.05 }, trader_ship: { model: 'cartel_ship', h: 5.2, fit: 'foot' }, shuttle: { model: 'shuttle', h: 3.8, fit: 'foot' },
@@ -260,8 +260,8 @@ export class World {
     this.sun.target.position.copy(f);
     const sunCol = col(0xfff4e0).lerp(col(0xffa070), Math.min(1, dusk) * 0.8).lerp(col(0x6f8fd8), 1 - day);
     this.sun.color.copy(sunCol); this.sun.intensity = indoor ? 0.45 : (0.12 + 1.6 * day) * (wet ? 0.45 : snow ? 0.75 : 1) * (ruins ? 0.7 : 1);
-    this.hemi.intensity = indoor ? 1.55 : (0.45 + 0.8 * day) * (wet ? 0.85 : 1);
-    this.hemi.color.set(indoor ? 0xffe6c4 : ruins ? 0xd9b878 : 0xd6ecff).lerp(col(0x34507e), indoor ? 0 : (1 - day) * 0.8);
+    this.hemi.intensity = indoor ? (map.cellar ? 0.9 : 1.55) : (0.45 + 0.8 * day) * (wet ? 0.85 : 1);
+    this.hemi.color.set(indoor ? (map.cellar ? 0xffc48a : 0xffe6c4) : ruins ? 0xd9b878 : 0xd6ecff).lerp(col(0x34507e), indoor ? 0 : (1 - day) * 0.8);
     this.hemi.groundColor.set(ruins ? 0x5a4a30 : 0x6f6a4a);
     const sk = this.sky, set = (k, v) => { sk[k].material.opacity = v; sk[k].visible = v > 0.01; };
     // the bluish haze inside the cylinder: pale by day, lavender at dusk, deep blue at night
@@ -475,6 +475,33 @@ export class World {
         g.add(box(w - 0.4, 0.2, d - 0.4, m, 0, 0, 0)); for (const x of [-0.8, 0.8]) g.add(box(0.2, 0.15, d - 0.2, y, x, 0.2, 0));
         for (const [x, z] of [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]]) g.add(box(0.25, 1.1, 0.25, m, x, 0.2, z));
         for (const c of g.children) { c.position.x += (w - 1) / 2; c.position.z += (d - 1) / 2; } break;
+      }
+      case 'cellar_hatch': {                             // a trapdoor in the farmhouse boards; once the cellar is dug, propped open on steps down
+        const wd = std({ color: 0x7a5434 }), ir = std({ color: 0x3a3632, metalness: 0.6 }), open = this.flags && this.flags.cellar;
+        g.add(box(0.96, 0.03, 0.96, std({ color: 0x5a3c24 }), 0, 0, 0));
+        if (!open) { g.add(box(0.86, 0.05, 0.86, wd, 0, 0.02, 0)); for (const z of [-0.25, 0.25]) g.add(box(0.8, 0.02, 0.06, ir, 0, 0.07, z)); g.add(ball(0.05, ir, 0.3, 0.09, 0, 0)); }
+        else { const hole = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.8), new THREE.MeshBasicMaterial({ color: 0x120c08 })); hole.rotation.x = -Math.PI / 2; hole.position.y = 0.035; g.add(hole);
+          for (let k = 0; k < 3; k++) g.add(box(0.7, 0.04, 0.16, wd, 0, 0.04 - k * 0.0, -0.22 + k * 0.2));
+          const lid = box(0.86, 0.05, 0.86, wd, 0, 0, 0); lid.rotation.x = -1.2; lid.position.set(0, 0.05, -0.43); g.add(lid); }
+        break;
+      }
+      case 'cat': case 'cat_sleep': {                    // a ginger cat in simple shapes, until the model lands
+        const fur = std({ color: 0xe08a3c }), wh = std({ color: 0xf6ead8 }), sl = kind === 'cat_sleep';
+        g.add(ball(sl ? 0.2 : 0.16, fur, 0, sl ? 0.12 : 0.18, sl ? 0 : -0.05)); if (!sl) g.add(ball(0.12, fur, 0, 0.36, 0.1), ball(0.07, wh, 0, 0.3, 0.17));
+        const ear = (x) => { const e = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.08, 4), fur); e.position.set(x, sl ? 0.26 : 0.48, sl ? 0.12 : 0.1); return e; }; g.add(ear(-0.06), ear(0.06));
+        const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.32, 6), fur); tail.position.set(0.12, sl ? 0.08 : 0.2, -0.2); tail.rotation.set(sl ? 1.4 : 0.5, 0, sl ? 0.9 : 0.3); g.add(tail);
+        break;
+      }
+      case 'cat_bed': {                                  // a round blue cushion bed
+        const c = std({ color: 0x5d82b8 }), in_ = std({ color: 0xe9e2d0 }), ring = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.09, 8, 20), c); ring.rotation.x = Math.PI / 2; ring.position.y = 0.1; g.add(ring);
+        const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.28, 0.08, 20), in_); pad.position.y = 0.04; g.add(pad); break;
+      }
+      case 'cask': {                                     // an oak cask on its side on a cradle, iron hoops, a brass tap (until the model lands)
+        const oak = std({ color: 0x8a5a32 }), ir = std({ color: 0x3a3632, metalness: 0.6 }), br = std({ color: 0xc89a3a, metalness: 0.7, roughness: 0.4 });
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.8, 16), oak); body.rotation.z = Math.PI / 2; body.position.y = 0.48; body.castShadow = true; g.add(body);
+        for (const x of [-0.3, 0, 0.3]) { const h = new THREE.Mesh(new THREE.CylinderGeometry(0.355, 0.355, 0.05, 16), ir); h.rotation.z = Math.PI / 2; h.position.set(x, 0.48, 0); g.add(h); }
+        g.add(box(0.1, 0.16, 0.6, oak, -0.28, 0, 0), box(0.1, 0.16, 0.6, oak, 0.28, 0, 0), box(0.06, 0.06, 0.12, br, 0, 0.36, 0.38));
+        break;
       }
       case 'refit_console': {                            // the refit gantry's console in Vashti's hangar: a slanted screen, a rack of parts
         const m = std({ color: 0x46525e, metalness: 0.5 }), y = std({ color: 0xe8b830 });
@@ -943,10 +970,11 @@ export class World {
       if (false) for (let i = 0; i < 70; i++) { const a = i * 2.399, d = Math.max(W, H) * 0.62 + (i % 7) * 4; const x = W / 2 + Math.cos(a) * d, z = H / 2 + Math.sin(a) * d * 0.9; if (x > -2 && x < W + 2 && z > -2 && z < H + 2) continue; if (z > H && Math.abs(x - W / 2) < 16) continue; const p = this.makeProp(i % 3 ? 'tree' : 'pine', { scale: 1 + (i % 5) * 0.12 }); p.position.set(x, 0, z); R.add(p); }
       else for (let i = 0; i < 26; i++) { const a = i * 2.399, d = map.city ? Math.max(W, H) * 0.62 + (i % 6) * 5 : 14 + (i % 6) * 5; const h = 3 + (i % 5) * 2.2; const t2 = box(2 + (i % 3), h, 2 + (i % 2), std({ map: art.tex(i % 2 ? 'concrete_ruin' : 'brick_ruin', { repeat: 0.25 }) })); t2.position.set(W / 2 + Math.cos(a) * d, h / 2, H / 2 + Math.sin(a) * d - 6); if (t2.position.z > H - 1) continue; t2.rotation.z = (i % 4 - 1.5) * 0.03; R.add(t2); }
     } else {                                             // room walls: back and sides, open to the camera
-      const wm = map.colonyRoom ? std({ color: map.colonyRoom === 'warm' ? 0xf4ecdc : 0xe9eef0, roughness: 0.7 }) : map.glass ? new THREE.MeshStandardMaterial({ color: 0xcfeaf0, transparent: true, opacity: 0.3, roughness: 0.1 }) : std({ map: art.tex(map.id === 'barn' || map.id === 'ranch' ? 'barn_red' : map.id === 'coop' || map.id === 'house' || map.id === 'workshop' ? 'plank_wall' : map.id === 'cafe' ? 'metal_hull' : 'plaster_wall', { repeat: 0.5 }), color: map.id === 'house' && this.flags && this.flags.house_paint ? (HOUSE_PAINT_TINT[this.flags.house_paint] || 0xffffff) : 0xffffff });
+      const wm = map.colonyRoom ? std({ color: map.colonyRoom === 'warm' ? 0xf4ecdc : 0xe9eef0, roughness: 0.7 }) : map.glass ? new THREE.MeshStandardMaterial({ color: 0xcfeaf0, transparent: true, opacity: 0.3, roughness: 0.1 }) : std({ map: art.tex(map.id === 'barn' || map.id === 'ranch' ? 'barn_red' : map.id === 'coop' || map.id === 'house' || map.id === 'workshop' ? 'plank_wall' : map.id === 'cafe' ? 'metal_hull' : map.cellar ? 'cliff_rock' : 'plaster_wall', { repeat: 0.5 }), color: map.id === 'house' && this.flags && this.flags.house_paint ? (HOUSE_PAINT_TINT[this.flags.house_paint] || 0xffffff) : 0xffffff });
       const hh = map.id === 'church' ? 3.9 : 2.9; R.add(box(W, hh, 0.2, wm, W / 2, 0, -0.1), box(0.2, hh, H, wm, -0.1, 0, H / 2), box(0.2, hh, H, wm, W + 0.1, 0, H / 2));
       if (map.colonyRoom) { const tm = TEAL(); R.add(box(W, 0.22, 0.24, tm, W / 2, 0, -0.08), box(0.24, 0.22, H, tm, -0.08, 0, H / 2), box(0.24, 0.22, H, tm, W + 0.08, 0, H / 2), box(W, 0.08, 0.24, tm, W / 2, hh - 0.08, -0.08)); }
-      if (!map.colonyRoom && !map.glass && !['barn', 'coop', 'fold', 'duckhouse', 'greenhouse', 'hangar', 'cafe', 'home_shelter', 'home_venn', 'home_wick', 'home_hana'].includes(map.id)) this.roomDressing(R, W, H, hh, map);   // not the metal rooms, nor the Undercroft's   // windows and a skirting board (2026-11-22)
+      if (map.cellar) for (const [lx, lz] of [[2.5, 2.5], [7.5, 2.5], [5, 5.5]]) { const L = new THREE.PointLight(0xffb060, 9, 7, 1.6); L.position.set(lx, 2.2, lz); R.add(L); }   // lamplight in the cellar
+      if (!map.colonyRoom && !map.glass && !map.cellar && !['barn', 'coop', 'fold', 'duckhouse', 'greenhouse', 'hangar', 'cafe', 'home_shelter', 'home_venn', 'home_wick', 'home_hana'].includes(map.id)) this.roomDressing(R, W, H, hh, map);   // not the metal rooms, nor the Undercroft's   // windows and a skirting board (2026-11-22)
       const mat = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.6), std({ color: 0x6f5a3a })); mat.rotation.x = -Math.PI / 2; mat.position.set(map.exitTile[0] + 0.5, 0.02, map.exitTile[1] + 0.6); R.add(mat);
       const lamp = new THREE.PointLight(0xffd9a0, 30, 30, 1.6); lamp.position.set(W / 2, 3.4, H / 2); R.add(lamp);
     }

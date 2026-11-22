@@ -699,6 +699,7 @@ function shelves(state, shopId) {
         apply: (n) => { for (let i = 0; i < n; i++) state.pending.animals.push(kind); return `Corran will bring ${n > 1 ? 'them' : kind === 'cow' ? 'her' : 'it'} round in the morning.`; } });
     }
     sell('feed', 10); sell('fodder', 20); once('milker', 1200); once('brush', 500);
+    if (!petOf(state)) out.push({ key: 'kitten', label: 'Adopt a kitten', desc: 'Corran\'s barn cat had a litter. A ginger kitten for the farmhouse: pet her each day, a fish in her bowl now and then, and she will look after you back.', price: 300, once: true, apply: () => adoptCat(state).msg });
   } else if (shopId === 'workshop') {
     for (const tool of UPGRADABLE) {
       const level = p.toolLevel[tool] + 1;
@@ -2089,6 +2090,7 @@ export function sleep(state, { collapsed = false } = {}) {
   state.mine = null;
   p.stamina = collapsed ? Math.floor(p.maxStamina / 2) : p.maxStamina;
   if (collapsed) notes.push('You wake up sore. Half your strength is back.');
+  petOvernight(state, notes, collapsed);
   state.stats.days++;
   return { ok: true, earned, shipped, notes, seasonChanged, newYear, robots };
 }
@@ -2247,6 +2249,10 @@ function laneShelves(state, shopId, sell, once, out) {
       apply: () => { state.flags.duckhouse = true; return 'Ruess fixes the duck house by the east pond. "The ramp is regulation width. For a duck."'; } });
     if (!state.flags.house_back) out.push({ key: 'house_back', label: 'Back bedroom extension', desc: 'Ruess knocks through the back-left corner of the farmhouse and builds a bedroom out the back: a bed, a wardrobe, shelves and room to breathe. Somewhere for two, one day.', price: 8000, lumber: 120, needs: '120 lumber', once: true,
       apply: () => { state.flags.house_back = true; return 'By evening there is a new room behind the farmhouse, smelling of sawdust. Ruess hangs the door himself. "It sticks. That is character."'; } });
+    if (!state.flags.cellar) out.push({ key: 'cellar', label: 'Farmhouse cellar', desc: 'Ruess digs out the crawlspace under the farmhouse into a stone cellar with six oak casks. A week in a cask ages cheese, honey or grape juice; three weeks makes it vintage.', price: 6000, lumber: 80, needs: '80 lumber', once: true,
+      apply: () => { state.flags.cellar = true; cellarOf(state); return 'Ruess hauls the last of the rubble out by lamplight and rolls six casks down the steps. "Cool, dark, quiet. Like me."'; } });
+    else if (!state.flags.cellar_racks) out.push({ key: 'cellar_racks', label: 'Cellar racks', desc: 'Six more casks on racks along the cellar walls: twelve in all.', price: 3000, lumber: 40, req: [['nickel_iron', 4]], needs: '40 lumber, 4 nickel-iron', once: true,
+      apply: () => { state.flags.cellar_racks = true; return 'Ruess bolts iron racks to the cellar walls and fills them with casks. "Patience, stacked."'; } });
     if (!state.flags.eastfield) out.push({ key: 'eastfield', label: 'Clear the East Terrace', desc: 'Ruess clears the old terrace east of the farm and runs the irrigation main out to it: a second field, 12 by 10.', price: 3000, lumber: 40, needs: '40 lumber', once: true,
       apply: () => { state.flags.eastfield = true; ensure(state); return 'By evening the East Terrace has water and a gate. "The rocks are yours. I only moved the big ones."'; } });
   } else if (shopId === 'bakery') {
@@ -2688,4 +2694,95 @@ export function useTelescope(state) {
   if (state.flags.scopeDay === absDay(state)) return fail('You have had your look at Earth tonight. It will still be there tomorrow.');
   state.flags.scopeDay = absDay(state); const before = state.player.stamina; state.player.stamina = Math.min(state.player.maxStamina, state.player.stamina + 10);
   return { ok: true, msg: `Earth hangs in the eyepiece, blue and white and very far away. You find the coast where the city is. (+${state.player.stamina - before} stamina)` };
+}
+
+// ---------------------------------------------------------------- the farmhouse cellar (2026-11-22)
+// Ruess digs a cellar under the farmhouse (flag cellar): a trapdoor by the window, six oak casks (twelve with the
+// extra racks, flag cellar_racks). A cask holds one cheese, goat cheese, honey or grape juice and the day it went in;
+// taken out after 7 days it is the aged good, after 21 the vintage one (data.CELLAR_GOODS). Nothing ticks overnight:
+// the age is read from the day.
+import { CELLAR_GOODS } from './data.js';
+export { CELLAR_GOODS };
+export const CASK_AGED = 7, CASK_VINTAGE = 21, CELLAR_CASKS = 6, CELLAR_MAX = 12;
+export const cellarCasks = (state) => (state.flags.cellar ? (state.flags.cellar_racks ? CELLAR_MAX : CELLAR_CASKS) : 0);
+function cellarOf(state) {
+  if (!Array.isArray(state.cellar)) state.cellar = [];
+  const c = state.cellar; c.length = Math.min(c.length, CELLAR_MAX);
+  for (let i = 0; i < CELLAR_MAX; i++) { const k = c[i]; if (!k || typeof k !== 'object' || !own(CELLAR_GOODS, k.id) || !int(k.day) || k.day < 0) c[i] = null; }
+  return c;
+}
+export function caskInfo(state, i) {
+  if (!int(i) || i < 0 || i >= cellarCasks(state)) return null;
+  const k = cellarOf(state)[i]; if (!k) return { empty: true };
+  const days = Math.max(0, absDay(state) - k.day), tier = days >= CASK_VINTAGE ? 2 : days >= CASK_AGED ? 1 : 0;
+  const out = tier ? (tier === 2 ? 'vintage_' : 'aged_') + k.id : k.id;
+  return { empty: false, id: k.id, days, tier, out, name: ITEMS[out].name, next: tier === 2 ? 0 : (tier ? CASK_VINTAGE : CASK_AGED) - days };
+}
+export const cellarGood = (id) => own(CELLAR_GOODS, id);
+export function caskPut(state, i, id) {
+  if (!state.flags.cellar) return fail('There is no cellar yet.');
+  const info = caskInfo(state, i); if (!info) return fail('There is no cask there.');
+  if (!info.empty) return fail(`That cask already holds ${ITEMS[info.id].name.toLowerCase()}.`);
+  if (!cellarGood(id)) return fail('Only cheese, honey and grape juice age in a cask.');
+  if (!countItem(state, id)) return fail(`You have no ${ITEMS[id].name.toLowerCase()}.`);
+  removeItem(state, id, 1); cellarOf(state)[i] = { id, day: absDay(state) };
+  return { ok: true, msg: `The ${ITEMS[id].name.toLowerCase()} goes into the cask. A week makes it ${ITEMS['aged_' + id].name.toLowerCase()}; three, ${ITEMS['vintage_' + id].name.toLowerCase()}.` };
+}
+export function caskTake(state, i) {
+  const info = caskInfo(state, i); if (!info) return fail('There is no cask there.');
+  if (info.empty) return fail('The cask is empty.');
+  const got = addItem(state, info.out, 1); if (!got.ok) return fail('Your rucksack is full.');
+  cellarOf(state)[i] = null; if (info.tier === 2) state.flags.cellar_vintage = true;
+  return { ok: true, id: info.out, tier: info.tier, msg: info.tier ? `You draw out the ${info.name.toLowerCase()}.` : `You take the ${info.name.toLowerCase()} back out. It had not aged yet.` };
+}
+
+// ---------------------------------------------------------------- the farm cat (2026-11-22)
+// Corran's barn cat had kittens: adopt one at the ranch (state.pet). Sato names her the first time she pets her.
+// Each day: pet her once (+6 love), and a fish in her bowl (+10, once a day). A day with neither costs 3 love.
+// Love 0..100: from 30 she leaves a little gift by the bed some mornings; from 60 she sleeps on the bed, and a night
+// Sato collapses she still wakes three-quarters rested. She lives in the farmhouse (bed beside the hearth) and the porch.
+export const PET_NAMES = ['Miso', 'Pepper', 'Tofu', 'Comet', 'Saffron', 'Biscuit'];
+export const PET_GIFTS = ['wild_mint', 'herb', 'berry', 'duck_feather', 'mushroom', 'pine_nut', 'fish_s'];
+export const petOf = (state) => (state.pet && typeof state.pet === 'object' && state.pet.kind === 'cat' ? state.pet : null);
+function petClean(pet) {
+  if (!int(pet.love) || pet.love < 0) pet.love = 0; pet.love = Math.min(100, pet.love);
+  for (const k of ['petDay', 'fedDay', 'adopted']) if (!int(pet[k])) pet[k] = -1;
+  if (pet.name != null && !PET_NAMES.includes(pet.name)) pet.name = null;
+  return pet;
+}
+export const petHearts = (state) => { const p = petOf(state); return p ? Math.floor(petClean(p).love / 20) : 0; };
+export function adoptCat(state) {
+  if (petOf(state)) return fail('You already have a cat. She would not hear of another.');
+  state.pet = { kind: 'cat', name: null, love: 10, petDay: -1, fedDay: -1, adopted: absDay(state) }; state.flags.pet_cat = true;
+  return { ok: true, msg: 'Corran lifts a ginger kitten out of the hay and into your arms. "She picked you. They do that." She will be waiting in the farmhouse.' };
+}
+export function nameCat(state, name) {
+  const p = petOf(state); if (!p) return fail('You have no cat.');
+  if (!PET_NAMES.includes(name)) return fail('That is not a name she answers to.');
+  p.name = name; return { ok: true, msg: `${name} it is. She blinks at you slowly, which in cat means yes.` };
+}
+export function petCat(state) {
+  const p = petOf(state); if (!p) return fail('You have no cat.'); petClean(p);
+  const today = absDay(state); if (p.petDay === today) return { ok: true, again: true, msg: `${p.name || 'The kitten'} has had her fuss for today. She tolerates one more scratch behind the ear.` };
+  p.petDay = today; const h0 = petHearts(state); p.love = Math.min(100, p.love + 6);
+  const name = p.name || 'The kitten', up = petHearts(state) > h0;
+  return { ok: true, love: p.love, up, msg: up ? `${name} purrs like a little engine and headbutts your hand. (${'♥'.repeat(petHearts(state))})` : p.love >= 60 ? `${name} rolls over and shows you her belly. It is a trap, and you fall for it.` : `${name} leans into your hand and purrs.` };
+}
+export function feedCat(state, id) {
+  const p = petOf(state); if (!p) return fail('You have no cat.'); petClean(p);
+  if (!ITEMS[id] || ITEMS[id].kind !== 'fish') return fail('Her bowl wants a fish.');
+  const today = absDay(state); if (p.fedDay === today) return fail(`${p.name || 'The kitten'} has eaten today. She will tell you when she is hungry. Loudly.`);
+  if (!countItem(state, id)) return fail('You have no fish.');
+  removeItem(state, id, 1); p.fedDay = today; p.love = Math.min(100, p.love + 10);
+  return { ok: true, love: p.love, msg: `${p.name || 'The kitten'} eats the ${ITEMS[id].name.toLowerCase()} with tremendous dignity, then washes her face.` };
+}
+function petOvernight(state, notes, collapsed) {
+  const p = petOf(state); if (!p) { if (state.pet != null) state.pet = null; return; } petClean(p);
+  const yday = absDay(state) - 1, name = p.name || 'The kitten';
+  if (p.petDay !== yday && p.fedDay !== yday && p.adopted !== yday) p.love = Math.max(0, p.love - 3);
+  if (collapsed && p.love >= 60) { state.player.stamina = Math.max(state.player.stamina, Math.floor(state.player.maxStamina * 0.75)); notes.push(`${name} curled up against you all night. You wake up warmer than you have any right to.`); }
+  if (p.love >= 30 && rnd(state) < 0.25 + p.love / 400) {
+    const id = PET_GIFTS[rint(state, PET_GIFTS.length)];
+    if (addItem(state, id, 1).ok) notes.push(`${name} left a ${ITEMS[id].name.toLowerCase()} by your bed. She looks very pleased with herself.`);
+  }
 }

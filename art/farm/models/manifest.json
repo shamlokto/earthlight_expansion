@@ -4393,5 +4393,55 @@
    0.7905
   ],
   "note": "farmhouse decor (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "cask": {
+  "file": "cask.glb",
+  "tris": 7000,
+  "size": [
+   0.7842,
+   0.6958,
+   1.0
+  ],
+  "note": "cellar cask (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "wine_rack": {
+  "file": "wine_rack.glb",
+  "tris": 7000,
+  "size": [
+   1.0,
+   0.9004,
+   0.5974
+  ],
+  "note": "cellar wine rack (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "cat": {
+  "file": "cat.glb",
+  "tris": 9000,
+  "size": [
+   0.7004,
+   0.8172,
+   1.0
+  ],
+  "note": "the farm cat (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "cat_bed": {
+  "file": "cat_bed.glb",
+  "tris": 7000,
+  "size": [
+   0.9981,
+   0.3527,
+   1.0
+  ],
+  "note": "the cat's bed (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "cheese_shelf": {
+  "file": "cheese_shelf.glb",
+  "tris": 7000,
+  "size": [
+   0.894,
+   1.0,
+   0.8209
+  ],
+  "note": "cellar cheese rack (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
  }
 }
