@@ -398,7 +398,7 @@ export function whereIs(npcId, ctx) {
   const fest = festivalOf(ctx);
   // Sato's partner lives at the farm: on the porch at dawn and in the evening (unless a festival is on).
   const atHome = ctx.partner === npcId && ((m >= H(6) && m < H(8)) || (m >= H(20) && m < H(22)));
-  if (atHome && !(fest && m >= fest.from - 60 && m < fest.to)) return { spot: m >= H(20) && ctx.weather !== 'storm' ? 'house.partner' : 'farm.porch' };   // evenings indoors by the lamp (2026-11-22)
+  if (atHome && !(fest && m >= fest.from - 60 && m < fest.to)) return { spot: m >= H(20) ? 'house.partner' : 'farm.porch' };   // evenings indoors by the lamp (2026-11-22)
   if (fest) {
     // Shops are shut all day; the village gathers from an hour before until the end.
     if (m >= fest.from - 60 && m < fest.to) spot = (FESTIVAL_SPOTS[fest.spot] || FESTIVAL_SPOTS['village.square'])[npcId] || fest.spot;
