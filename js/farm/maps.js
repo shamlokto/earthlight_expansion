@@ -498,6 +498,12 @@ function central() {
 
 // ---------------------------------------------------------------- indoors
 
+// Put a few small pieces in the front corners of a room, where nothing stands, no one stands, and not in the doorway.
+function dressRoom(m, kinds) {
+  const busy = (x, y) => m.props.some((p) => x >= Math.floor(p.x) && x < Math.floor(p.x) + p.w && y >= Math.floor(p.y) && y < Math.floor(p.y) + p.d) || Object.values(m.spots).some(([sx, sy]) => Math.floor(sx) === x && Math.floor(sy) === y) || Math.abs(x - m.exitTile[0]) <= 1;
+  const at = [[0, m.h - 2], [m.w - 1, m.h - 2], [0, m.h - 3], [m.w - 1, m.h - 3]];
+  let i = 0; for (const [x, y] of at) { if (i >= kinds.length) break; if (busy(x, y)) continue; m.prop(kinds[i++], x, y, { solid: false, rot: x === 0 ? Math.PI / 2 : -Math.PI / 2 }); }
+}
 function room(id, w, h, name, floor = 'b') {
   const m = new MapDef(id, w, h, floor, { name, indoor: true });
   m.exitTile = [Math.floor(w / 2), h - 1];
@@ -581,6 +587,8 @@ function interiors() {
   m.prop('case', 0, 2, { act: 'museum' }); m.prop('case', 0, 4, { act: 'museum' });
   m.prop('shelf', 1, 0, { w: 2 }); m.prop('shelf', 9, 0, { w: 2 });
   out.hall = m;
+  // 2026-11-22: a little life by the doors of the public rooms too (only where the floor is free)
+  for (const k of ['store', 'workshop', 'cafe', 'clinic', 'library', 'hall', 'ranch']) dressRoom(out[k], k === 'cafe' ? ['hanging_plant', 'coat_rack'] : ['hanging_plant', 'side_table']);
   return out;
 }
 
