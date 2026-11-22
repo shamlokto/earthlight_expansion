@@ -96,7 +96,7 @@ const PROPS = {
   launch_pad: { h: 0.1 }, shuttle_pad: { h: 0.1 },
   // 2026-11-19: the open belt (sector markers, pickup pods, landmarks) and Sato's mining unit; built stand-ins
   sector_buoy: { model: 'jump_buoy', h: 1.7, fit: 'foot' }, sector_sign: { h: 2.6 }, pickup_pod: { h: 2.2 }, mining_bot: { model: 'mining_bot', h: 0.9, fit: 'foot' },
-  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, cellar_hatch: { h: 0.1 }, hot_tub: { h: 0.9 }, cat: { model: 'cat', h: 0.62, maxW: 0.8 }, cat_sleep: { model: 'cat', h: 0.48, maxW: 0.62 }, cat_bed: { model: 'cat_bed', h: 0.3, maxW: 0.95 }, cask: { model: 'cask', h: 0.95, maxW: 0.95 }, wine_rack: { model: 'wine_rack', h: 1.9, maxW: 1.9 }, cheese_shelf: { model: 'cheese_shelf', h: 1.6, maxW: 1.0 }, shuttle_gate: { h: 3.4 },
+  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, cellar_hatch: { h: 0.1 }, yard_fence: { h: 1 }, yard_path: { h: 0.05 }, yard_lamp: { model: 'lantern', sprite: () => 'sprites/lantern', h: 2.0, face: true, lamp: 1.7 }, yard_planter: { h: 0.7 }, hot_tub: { h: 0.9 }, cat: { model: 'cat', h: 0.62, maxW: 0.8 }, cat_sleep: { model: 'cat', h: 0.48, maxW: 0.62 }, cat_bed: { model: 'cat_bed', h: 0.3, maxW: 0.95 }, cask: { model: 'cask', h: 0.95, maxW: 0.95 }, wine_rack: { model: 'wine_rack', h: 1.9, maxW: 1.9 }, cheese_shelf: { model: 'cheese_shelf', h: 1.6, maxW: 1.0 }, shuttle_gate: { h: 3.4 },
   hull_window: { h: 12 }, hull_wall: { h: 10 }, glass_roof: { h: 16 }, vending: { model: 'vending', h: 1.9, fit: 'foot' }, feed_sacks: { model: 'feed_sacks', h: 0.8, fit: 'foot' },
   crane: { model: 'dock_crane', h: 5.5, fit: 'foot' },
   bay_window: { h: 10 }, landing_pad: { h: 0.1 }, hazard_stripes: { h: 0.05 }, trader_ship: { model: 'cartel_ship', h: 5.2, fit: 'foot' }, shuttle: { model: 'shuttle', h: 3.8, fit: 'foot' },
@@ -475,6 +475,27 @@ export class World {
         g.add(box(w - 0.4, 0.2, d - 0.4, m, 0, 0, 0)); for (const x of [-0.8, 0.8]) g.add(box(0.2, 0.15, d - 0.2, y, x, 0.2, 0));
         for (const [x, z] of [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]]) g.add(box(0.25, 1.1, 0.25, m, x, 0.2, z));
         for (const c of g.children) { c.position.x += (w - 1) / 2; c.position.z += (d - 1) / 2; } break;
+      }
+      case 'yard_fence': {                               // a cedar post, with rails out to any fence section beside it (o.nb: N, E, S, W)
+        const wd = std({ color: 0x9a6a3e }), nb = o.nb || [false, false, false, false];
+        g.add(box(0.14, 0.95, 0.14, wd, 0, 0, 0), box(0.18, 0.05, 0.18, wd, 0, 0.95, 0));
+        const rails = (dx, dz) => { for (const y of [0.35, 0.72]) { const rl = box(Math.abs(dx) ? 0.5 : 0.07, 0.08, Math.abs(dz) ? 0.5 : 0.07, wd, dx * 0.25, y, dz * 0.25); g.add(rl); } };
+        if (nb[0]) rails(0, -1); if (nb[1]) rails(1, 0); if (nb[2]) rails(0, 1); if (nb[3]) rails(-1, 0);
+        if (!nb.some(Boolean)) rails(1, 0), rails(-1, 0);   // a lone section still looks like a fence
+        break;
+      }
+      case 'yard_planter': {                             // a cedar box of mixed flowers
+        const wd = std({ color: 0x9a6a3e }), soil = std({ color: 0x4a3424 });
+        g.add(box(0.8, 0.38, 0.8, wd, 0, 0, 0), box(0.72, 0.03, 0.72, soil, 0, 0.37, 0));
+        const cols = [0xe86a8a, 0xf2c94c, 0xffffff, 0xb07ad8, 0xf08a3c];
+        for (let i = 0; i < 9; i++) { const x = ((i % 3) - 1) * 0.22, z = (Math.floor(i / 3) - 1) * 0.22, h = 0.12 + (i % 2) * 0.08;
+          g.add(box(0.03, h, 0.03, std({ color: 0x4f8a3a }), x, 0.4, z), ball(0.065, std({ color: cols[i % 5] }), x, 0.42 + h, z, 0)); }
+        break;
+      }
+      case 'yard_path': {                                // four flat stepping stones
+        const st = std({ color: 0xb8b0a2, roughness: 0.95 });
+        for (const [x, z, r] of [[-0.22, -0.2, 0.2], [0.2, -0.15, 0.17], [-0.15, 0.22, 0.17], [0.23, 0.24, 0.19]]) { const s2 = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.05, 0.05, 9), st); s2.position.set(x, 0.025, z); s2.rotation.y = x * 7; s2.receiveShadow = true; g.add(s2); }
+        break;
       }
       case 'hot_tub': {                                  // a round cedar tub, iron hoops, steaming water, a step and a towel
         const cedar = std({ color: 0xa8683c }), ir = std({ color: 0x3a3632, metalness: 0.6 }), R = 0.85;
@@ -1082,7 +1103,9 @@ export class World {
   place(key, kind, x, y, o = {}) {
     this.unplace(key);
     const g = kind ? this.makeProp(kind, o) : new THREE.Group(); if (o.procKind) g.add(this.proc(o.procKind, o));
-    g.position.set(x, o.h0 || 0, y); this.tileObjs.set(key, g); this.dyn.add(g); return g;
+    g.position.set(x, o.h0 || 0, y); this.tileObjs.set(key, g); this.dyn.add(g);
+    if (g.userData.lamp && !this.lamps.includes(g.userData.lamp)) this.lamps.push(g.userData.lamp);   // a garden lamp set down lights at night too
+    return g;
   }
   // The belt's rocks, drawn instanced from the sim's grid (state.mine.cells), only those near Sato (see BeltRocks).
   stoneShade(o) { return stoneShade(o); }
@@ -1130,7 +1153,7 @@ export class World {
     n.position.copy(old.position); n.rotation.copy(old.rotation); old.parent.add(n); old.parent.remove(old); p.obj = n;
     const k = this.tallProps.indexOf(old); if (k >= 0) this.tallProps[k] = n;
   }
-  unplace(key) { const old = this.tileObjs.get(key); if (old) { this.dyn.remove(old); this.unface(old); this.tileObjs.delete(key); } }
+  unplace(key) { const old = this.tileObjs.get(key); if (old) { if (old.userData.lamp && this.lamps) { const k = this.lamps.indexOf(old.userData.lamp); if (k >= 0) this.lamps.splice(k, 1); } this.dyn.remove(old); this.unface(old); this.tileObjs.delete(key); } }
 
   // ------------------------------------------------------------ effects
   puff(x, y, color = 0xc9a877, n = 8, h = 0.2) {

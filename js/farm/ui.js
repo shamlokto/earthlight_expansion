@@ -66,7 +66,7 @@ const fishIcon = (id) => { const [b, f] = FISH_TINT[id] || ['#5f8fb0', '#a9cfe3'
   return `${legend ? '<circle cx="32" cy="32" r="28" fill="none" stroke="#e8b830" stroke-width="3" opacity=".8"/>' : ''}<path d="M44 32 58 20v24Z" fill="${f}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/><path d="M26 22c4-6 10-6 12 0Z" fill="${f}" stroke="${INK}" stroke-width="1.5"/><ellipse cx="28" cy="32" rx="20" ry="11" fill="${b}" stroke="${INK}" stroke-width="2"/><path d="M14 36c8 4 20 4 30-2" stroke="${f}" stroke-width="2.5" fill="none" opacity=".8"/><circle cx="17" cy="29" r="2.5" fill="#fff"/><circle cx="16.5" cy="29" r="1.2" fill="${INK}"/>`; };
 export function icon(id) {
   const it = ITEMS[id]; if (!it) return '';
-  if (it.iconOf && !art.url('icons/' + id)) return `<span class="fm-ico fm-aged t${it.tier}">${icon(it.iconOf)}<b>${it.tier > 1 ? '★★' : '★'}</b></span>`;   // a cellar good: the plain good with a star badge
+  if (it.iconOf && !art.url('icons/' + id)) return `<span class="fm-ico fm-aged t${it.tier || 0}">${icon(it.iconOf)}${it.tier ? `<b>${it.tier > 1 ? '★★' : '★'}</b>` : ''}</span>`;   // a cellar good: the plain good with a star badge
   const u = art.url('icons/' + id) || (it.kind === 'crop' ? art.url(`sprites/crop_${id}_2`) : null);
   if (u) return `<img class="fm-ico" src="${u}" alt="">`;
   if (it.kind === 'seed') { const c = it.crop, cu = c && (art.url('icons/' + c) || art.url(`sprites/crop_${c}_2`)), bag = art.url('icons/seedbag'); return `<span class="fm-ico fm-seed">${bag ? `<img src="${bag}" alt="">` : S(DRAWN.seedbag)}${cu ? `<img class="fm-mini" src="${cu}" alt="">` : ''}</span>`; }

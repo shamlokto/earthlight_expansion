@@ -62,7 +62,7 @@ function canStand(x, y) {
   return true;
 }
 // Chests, chargers and fruit trees Sato has set down on this map.
-const placedHere = () => (S && map && !map.indoor && !map.ruins ? [...(S.chests || []), ...(S.panels || []), ...(S.fruitTrees || []), ...(S.machines || [])].filter((o) => o.map === map.id) : []);
+const placedHere = () => (S && map && !map.indoor && !map.ruins ? [...(S.chests || []), ...(S.panels || []), ...(S.fruitTrees || []), ...(S.machines || []), ...(S.yard || []).filter((o) => !sim.YARD[o.kind].walk)].filter((o) => o.map === map.id) : []);   // stepping stones are walked over
 // Trees on the farm and the hill can be felled (they come back as stumps first); village trees are the village's.
 const felledAt = (pi) => { const p = map.props[pi]; return !!p && (p.kind === 'tree' || p.kind === 'pine') && sim.treeFelled(S, map.id + ':' + pi); };
 function plantAhead(kinds) {
@@ -301,13 +301,15 @@ const FORAGE_COLOR = { herb: 0x6fbf5a, berry: 0xc23a6a, mushroom: 0xb0825a, fros
 // ---------------------------------------------------------------- chests, chargers, fruit trees, robots (2026-11-18)
 function drawPlaced() {
   if (!map || !W) return;
-  for (const k of [...W.tileObjs.keys()]) if (/^(chest|charger|ftree|machine)\d/.test(k)) W.unplace(k);
+  for (const k of [...W.tileObjs.keys()]) if (/^(chest|charger|ftree|machine|yard)\d/.test(k)) W.unplace(k);
   if (map.indoor || map.ruins) return;
   W.unplace('mill'); for (let k = 0; k < 8; k++) W.unplace('hydro' + k);
   if (map.id === 'farm' && S.flags.feed_mill && map.millAt) { const [mx, my, mw, md] = map.millAt; W.place('mill', 'feed_mill', mx + mw / 2, my + md / 2, { rot: 0 }); }
   if (map.id === 'village') for (const h of S.hydro || []) { const t = map.props.find((p) => p.act === 'hydro' && p.tower === h.tower); if (!t) continue; const g = W.place('hydro' + h.tower, null, t.x + 0.5, t.y + 0.5, { h0: 2.15 }); g.add(W.proc('starglow')); g.children[0].scale.setScalar(0.6); g.children[0].children.forEach((q) => { if (q.material) q.material = q.material.clone(), q.material.color && q.material.color.set(0x7dffb0); }); if (h.crop) { const c = W.makeCrop(h.crop, h.tower); c.scale.setScalar(0.7); c.position.y = 0.05; g.add(c); } }
   paths.setBlockers(map.id, placedHere().map((o) => o.x + ',' + o.y));   // people walk round what Sato sets down
   S.chests.forEach((c, i) => { if (c.map === map.id) W.place('chest' + i, 'field_chest', c.x + 0.5, c.y + 0.5); });
+  { const ys = (S.yard || []).filter((y) => y.map === map.id), fence = (x, y) => ys.some((q) => q.kind === 'yard_fence' && q.x === x && q.y === y);   // fences join their neighbours
+    (S.yard || []).forEach((y, i) => { if (y.map !== map.id) return; W.place('yard' + i, y.kind, y.x + 0.5, y.y + 0.5, y.kind === 'yard_fence' ? { nb: [fence(y.x, y.y - 1), fence(y.x + 1, y.y), fence(y.x, y.y + 1), fence(y.x - 1, y.y)], rot: 0 } : { rot: 0 }); }); }
   (S.machines || []).forEach((m, i) => { if (m.map === map.id) W.place('machine' + i, m.kind, m.x + 0.5, m.y + 0.5, { ready: !!(m.out && m.n), busy: !!m.item, rot: 0 }); });
   S.panels.forEach((p, i) => { if (p.map === map.id) W.place('charger' + i, 'charger', p.x + 0.5, p.y + 0.5, { procKind: 'charge_lights', slots: p.slots }); });
   S.fruitTrees.forEach((t, i) => {
@@ -1162,7 +1164,7 @@ function use() {                                     // Space: the held tool or 
   const near = nearestNpc(1.5); if (near && it.kind !== 'tool' && it.kind !== 'seed') return giveTo(near);
   if (it.kind === 'placeable' || it.kind === 'sapling') return setDown(it, tx, ty);
   if (s.id === 'axe' && !map.indoor && !map.ruins) {
-    if (sim.chestAt(S, map.id, tx, ty) >= 0 || sim.panelAt(S, map.id, tx, ty) >= 0 || sim.machineAt(S, map.id, tx, ty) >= 0) { me.swing = 1; const r = sim.pickUpPlaced(S, map.id, tx, ty); ui.toast(r.msg); if (r.ok) { sfx('chop'); drawPlaced(); } return refreshHud(); }
+    if (sim.yardAt(S, map.id, tx, ty) >= 0 || sim.chestAt(S, map.id, tx, ty) >= 0 || sim.panelAt(S, map.id, tx, ty) >= 0 || sim.machineAt(S, map.id, tx, ty) >= 0) { me.swing = 1; const r = sim.pickUpPlaced(S, map.id, tx, ty); ui.toast(r.msg); if (r.ok) { sfx('chop'); drawPlaced(); } return refreshHud(); }
     const fi = sim.fruitTreeAt(S, map.id, tx, ty); if (fi >= 0) { me.swing = 1; const r = sim.removeTree(S, fi); ui.toast(r.msg); if (r.ok) { sfx('chop'); W.puff(tx + 0.5, ty + 0.5, 0x6fbf5a, 10, 0.6); drawPlaced(); } return refreshHud(); }
   }
   if (it.kind === 'food' || it.maxUp || (it.stamina && it.kind !== 'tool')) { if (it.kind === 'food' || it.maxUp) ui.toast(`Press R to eat the ${it.name.toLowerCase()} (or eat it from the rucksack).`); return; }   // no eating by accident on the use key

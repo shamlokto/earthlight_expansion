@@ -525,7 +525,7 @@ function interiors() {
   m.prop('bed', 1, 0, { d: 2, act: 'bed' }); m.prop('tv', 3, 0, { act: 'radio' }); m.prop('wardrobe', 4, 0, {});
   m.prop('storage_box', 0, 4, { act: 'storage' }); m.prop('calendar_board', 5, 0, { act: 'calendar' });
   m.prop('kitchen', 8, 0, { w: 2, act: 'kitchen' }); m.prop('fridge', 10, 0, { act: 'fridge' }); m.prop('shelf', 11, 2, { d: 1 });
-  m.prop('table', 8, 4, { w: 2 }); m.prop('chair', 8, 5, { solid: false }); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 }); m.prop('lamp', 6, 0, {});
+  m.prop('table', 8, 4, { w: 2 }); m.prop('chair', 8, 5, { solid: false }); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 }); m.prop('lamp', 6, 0, { unless: 'kitchen_oven' }); m.prop('oven', 6, 0, { solid: false, decorSolid: true, when: 'kitchen_oven' });   // the stone oven takes the lamp's corner (2026-11-22)
   m.spot('house.partner', 6.5, 2.4);   // where Sato's partner spends the evening (story.whereIs)
   // decor from the Works (2026-11-19, flags decor_<id>): drawn only once made
   m.prop('decor_lantern', 9, 4, { solid: false, when: 'decor_lantern' }); m.prop('decor_clock', 7, 0, { solid: false, when: 'decor_clock' });
