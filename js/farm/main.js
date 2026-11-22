@@ -623,7 +623,7 @@ function spawnBolt(x, y, dx, dy, from) {
 let slashCd = 0;
 function pallasSlash() {
   const [dx, dy] = DIRV[me.dir]; let hit = 0;
-  for (const mon of [...monsters]) { const ex = mon.x - me.x, ey = mon.y - me.y, d = Math.hypot(ex, ey); if (d < 1.9 && (ex * dx + ey * dy) / (d || 1) > -0.1) { hurtMonster(mon, 2, me.x, me.y); hit++; } }
+  for (const mon of [...monsters]) { const ex = mon.x - me.x, ey = mon.y - me.y, d = Math.hypot(ex, ey); if (d < 1.9 + 0.25 * sim.pallasLevel(S, 'sabre') && (ex * dx + ey * dy) / (d || 1) > -0.1) { hurtMonster(mon, sim.pallasStat(S, 'sabre'), me.x, me.y); hit++; } }
   slashCd = 0.42; fireCd = 0.3; me.swing = 1.4; sfx('chop');
   const arc = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.55, 24, 1, -1.2, 2.4), new THREE.MeshBasicMaterial({ color: 0x8ff4ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
   arc.rotation.x = -Math.PI / 2; arc.rotation.z = Math.atan2(-dy, dx); arc.position.set(me.x, 1.1, me.y); W.scene.add(arc); bolts.push({ m: arc, x: me.x, y: me.y, vx: 0, vy: 0, from: 'fx', life: 0.18 });
@@ -649,7 +649,7 @@ function satoHit(fromX, fromY, mon) {
   const d = Math.hypot(me.x - fromX, me.y - fromY) || 1; for (let k = 0; k < 6; k++) { const nx = me.x + (me.x - fromX) / d * 0.12, ny = me.y + (me.y - fromY) / d * 0.12; if (canStand(nx, ny)) { me.x = nx; me.y = ny; } }
   refreshHud(); return true;
 }
-function pallasDash() { if (dashCd > 0) return; dashCd = 0.9; dashT = 0.2; W.puff(me.x, me.y, 0x9fd8ee, 10, 0.3); sfx('zap'); }
+function pallasDash() { if (dashCd > 0) return; dashCd = sim.pallasStat(S, 'thrusters'); dashT = 0.2; W.puff(me.x, me.y, 0x9fd8ee, 10, 0.3); sfx('zap'); }
 let debris = [], hazT = 0, hazWarned = false;
 function ruinsTick(dt) {
   if (map.belt) return beltTick(dt);
@@ -678,14 +678,14 @@ function ruinsTick(dt) {
   }
   if (hydra) {                                                              // the Hydra: a short-range auto-turret
     hydra.cd -= dt;
-    let best = null, bd = 6.5; for (const mon of monsters) { const d = Math.hypot(hydra.x - mon.x, hydra.y - mon.y); if (d < bd) { bd = d; best = mon; } }
-    if (best) { hydra.o.rotation.y = Math.atan2(best.x - hydra.x, best.y - hydra.y); if (hydra.cd <= 0) { hydra.cd = 0.55; spawnBolt(hydra.x, hydra.y, best.x - hydra.x, best.y - hydra.y, 'hydra'); } }
+    let best = null, bd = 6.5 + 1.5 * sim.pallasLevel(S, 'hydra'); for (const mon of monsters) { const d = Math.hypot(hydra.x - mon.x, hydra.y - mon.y); if (d < bd) { bd = d; best = mon; } }
+    if (best) { hydra.o.rotation.y = Math.atan2(best.x - hydra.x, best.y - hydra.y); if (hydra.cd <= 0) { hydra.cd = sim.pallasStat(S, 'hydra'); spawnBolt(hydra.x, hydra.y, best.x - hydra.x, best.y - hydra.y, 'hydra'); } }
   }
   for (let i = bolts.length - 1; i >= 0; i--) {
     const b = bolts[i]; if (b.from === 'fx') { b.life -= dt; b.m.material.opacity = Math.max(0, b.life * 5); if (b.life <= 0) { W.scene.remove(b.m); bolts.splice(i, 1); } continue; }
     b.life -= dt; b.x += b.vx * dt; b.y += b.vy * dt; b.m.position.x = b.x; b.m.position.z = b.y;
     let dead = b.life <= 0 || map.solid(b.x, b.y);
-    if (!dead && b.from !== 'enemy') for (const mon of monsters) if (Math.hypot(mon.x - b.x, mon.y - b.y) < (mon.big ? 0.65 : 0.5)) { hurtMonster(mon, 1, b.x - b.vx * 0.05, b.y - b.vy * 0.05); dead = true; break; }
+    if (!dead && b.from !== 'enemy') for (const mon of monsters) if (Math.hypot(mon.x - b.x, mon.y - b.y) < (mon.big ? 0.65 : 0.5)) { hurtMonster(mon, b.from === 'pallas' ? sim.pallasStat(S, 'coil') : 1, b.x - b.vx * 0.05, b.y - b.vy * 0.05); dead = true; break; }
     if (!dead && b.from === 'enemy' && Math.hypot(me.x - b.x, me.y - b.y) < 0.55) { satoHit(b.x - b.vx, b.y - b.vy, b.mon); dead = true; }
     if (dead) { W.scene.remove(b.m); if (b.life > 0) W.puff(b.x, b.y, b.from === 'enemy' ? 0xff6a5a : 0xfff2b8, 4, 0.6); bolts.splice(i, 1); }
   }
@@ -813,8 +813,8 @@ function emptied(o) { if (!o) return; const go = () => o.traverse((q) => { if (q
 let scanCd = 0;
 function cityScan() {
   const now = performance.now(); if (now < scanCd) return ui.toast(`The scanner is recharging (${Math.ceil((scanCd - now) / 1000)} s).`, 1200);
-  scanCd = now + 8000; const m = S.mine; let n = 0; sfx('zap');
-  for (const s of m.spots) { if (s.open) continue; const x = s.i % m.w + 1.5, y = Math.floor(s.i / m.w) + (m.cells[s.i] === 4 ? 2.5 : 1.5); if (Math.hypot(x - me.x, y - me.y) > 16) continue; n++; const gold = s.kind === 'safe' || s.kind === 'vault'; for (let k = 0; k < 3; k++) setTimeout(() => W.puff(x, y, gold ? 0xffd36a : 0x8ff4ff, 6, 1.6), k * 380); }
+  scanCd = now + 8000 - 2000 * sim.pallasLevel(S, 'scanner'); const m = S.mine, range = sim.pallasStat(S, 'scanner'); let n = 0; sfx('zap');
+  for (const s of m.spots) { if (s.open) continue; const x = s.i % m.w + 1.5, y = Math.floor(s.i / m.w) + (m.cells[s.i] === 4 ? 2.5 : 1.5); if (Math.hypot(x - me.x, y - me.y) > range) continue; n++; const gold = s.kind === 'safe' || s.kind === 'vault'; for (let k = 0; k < 3; k++) setTimeout(() => W.puff(x, y, gold ? 0xffd36a : 0x8ff4ff, 6, 1.6), k * 380); }
   ui.toast(n ? `Scan: ${n} thing${n > 1 ? 's' : ''} worth searching nearby. Follow the sparkles.` : 'Scan: nothing worth searching within range.', 2600);
 }
 function citySearch(x, y) {
@@ -943,7 +943,7 @@ function probe() {                                   // → { label, run } for E
     if (p.act === 'pump') return pumpProbe(p);
     if (p.act === 'bed' && p.bed != null) return bedProbe(p);   // a catacomb growing bed (the farmhouse bed has no bed number: it is for sleeping)
     if (p.act === 'terminal') return { label: S.lower && S.lower.logs && S.lower.logs[p.log] != null ? `${p.label} (log recovered)` : p.kind === 'crypt_wall' ? 'Read the scratches on the wall' : `Recover the log from the ${p.label.toLowerCase()}`, run: () => act(p) };
-    const L = { telescope: 'Look through the telescope', aquarium: 'Look at the fish tank', piano: 'Play the piano', lift: 'Ride the spoke lift', restore: 'Use the restoration terminal', vault: sim.vaultReady(S).ok ? 'Open the round door' : 'Look at the sealed round door', works: S.flags.ld_works ? 'Use the Works press' : 'Look at the sleeping press', recycle: 'Use the recycling bin', arena: sim.hubCupDay(S) && !S.flags['hubcup_y' + S.cal.year] ? 'Take your five throws in the Hub Cup' : 'Look at the zero-g drum', vents: S.flags.ld_vents ? `Soak in the vent bath (${S.flags.ld_reactor ? 'free' : sim.VENT_PRICE + ' cr'})` : 'Look at the cold bath', reactor: `Work at the reactor console (${sim.reactorDone(S)}/${sim.REACTOR_STEPS.length})`, launch: 'Suit up at the launch cradle: fly out to the belt', shuttle: `Board Maris's shuttle to the Old World (${sim.shuttleFare(S) ? sim.shuttleFare(S) + ' cr' : 'free'})`, liftdown: 'Ride the spoke lift (Eden Central, the Lower deck)', liftup: 'Ride the spoke lift (Willowfall, the Lower deck)', gallery: 'Sit and look out of the great window', house: 'Try the door', silo: 'Open the silo', solaryard: 'Use the solar yard terminal', stargaze: 'Stargaze in the dome', onsen: 'Soak in the onsen', bin: sim.basketHeld(S) ? `Tip the basket into the bin (${sim.basketTotal(S)})` : 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Watch the colony forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', feedfold: 'Fill the fold troughs', feedduck: 'Fill the duck feeder', duckeggs: 'Look in the nest box', lift: 'Ride the orbital elevator', candles: 'Light a memorial candle', museum: 'Look at the Memory Room', books: 'Read a book', storage: 'Open the storage box', fridge: 'Open the fridge', kitchen: 'Cook something', calendar: 'Read the noticeboard' }[p.act];
+    const L = { telescope: 'Look through the telescope', aquarium: 'Look at the fish tank', piano: 'Play the piano', lift: 'Ride the spoke lift', restore: 'Use the restoration terminal', vault: sim.vaultReady(S).ok ? 'Open the round door' : 'Look at the sealed round door', works: S.flags.ld_works ? 'Use the Works press' : 'Look at the sleeping press', recycle: 'Use the recycling bin', arena: sim.hubCupDay(S) && !S.flags['hubcup_y' + S.cal.year] ? 'Take your five throws in the Hub Cup' : 'Look at the zero-g drum', vents: S.flags.ld_vents ? `Soak in the vent bath (${S.flags.ld_reactor ? 'free' : sim.VENT_PRICE + ' cr'})` : 'Look at the cold bath', reactor: `Work at the reactor console (${sim.reactorDone(S)}/${sim.REACTOR_STEPS.length})`, launch: 'Suit up at the launch cradle: fly out to the belt', refit: 'Use the Pallas refit gantry', shuttle: `Board Maris's shuttle to the Old World (${sim.shuttleFare(S) ? sim.shuttleFare(S) + ' cr' : 'free'})`, liftdown: 'Ride the spoke lift (Eden Central, the Lower deck)', liftup: 'Ride the spoke lift (Willowfall, the Lower deck)', gallery: 'Sit and look out of the great window', house: 'Try the door', silo: 'Open the silo', solaryard: 'Use the solar yard terminal', stargaze: 'Stargaze in the dome', onsen: 'Soak in the onsen', bin: sim.basketHeld(S) ? `Tip the basket into the bin (${sim.basketTotal(S)})` : 'Put the held item in the shipping bin', well: 'Fill the watering can', sign: 'Read', bed: 'Go to bed', radio: 'Watch the colony forecast', feedcow: 'Fill the troughs', feedhen: 'Fill the feeder', eggs: 'Collect the eggs', feedfold: 'Fill the fold troughs', feedduck: 'Fill the duck feeder', duckeggs: 'Look in the nest box', lift: 'Ride the orbital elevator', candles: 'Light a memorial candle', museum: 'Look at the Memory Room', books: 'Read a book', storage: 'Open the storage box', fridge: 'Open the fridge', kitchen: 'Cook something', calendar: 'Read the noticeboard' }[p.act];
     return { label: L, run: () => act(p) };
   }
   const fa = fieldAt(tx, ty) || fieldAt(Math.floor(me.x), Math.floor(me.y));
@@ -1042,6 +1042,7 @@ async function act(p) {
     case 'fridge': if (!S.flags.kitchen) ui.say([{ who: 'narrator', text: 'An old cold-locker from a ship, standing in the corner unplugged. Prof. Ruess could connect it with a kitchen refit.' }]); else ui.boxWindow(S, 'fridge', refreshHud, 'The fridge'); break;
     case 'kitchen': if (!S.flags.kitchen) ui.say([{ who: 'narrator', text: 'A cold stove and a dry sink. Prof. Ruess at the Workshop can refit the kitchen.' }]); else ui.kitchenWindow(S, (r) => { if (r && r.ok) sfx('good'); refreshHud(); }); break;
     case 'calendar': { const f = story.FESTIVALS.filter((x) => x.season === S.cal.season && x.day >= S.cal.day); const bd = Object.values(NPCS).filter((n) => n.id !== 'sato' && n.birthday && n.birthday.season === S.cal.season && n.birthday.day >= S.cal.day && S.npc[n.id] && S.npc[n.id].met); ui.say([{ who: 'narrator', text: `The noticeboard. ${f.length ? 'Coming up: ' + f.map((x) => `${x.name} on day ${x.day}`).join(', ') + '.' : 'No more festivals this season.'} ${bd.length ? 'Birthdays: ' + bd.map((n) => `${n.short || n.name} on day ${n.birthday.day}`).join(', ') + '.' : ''}` }]); break; }
+    case 'refit': { mode = 'talk'; if (!S.flags.sawRefit) { sim.setFlag(S, 'sawRefit'); await ui.say([{ who: 'vashti', text: 'That bench runs the gantry over your Pallas. Bring me belt ore and I will make it tougher, faster, sharper. One line at a time.' }]); } mode = 'play'; await ui.shop(S, 'pallas', 'vashti', refreshHud); refreshHud(); break; }
     case 'telescope': { const r = sim.useTelescope(S); ui.toast(r.msg, 4200); if (r.ok) sfx('good'); refreshHud(); break; }
     case 'aquarium': { const caught = Object.entries(S.fishLog || {}).filter(([, n]) => n > 0).sort((a, b) => (ITEMS[b[0]].sell || 0) - (ITEMS[a[0]].sell || 0));
       ui.toast(caught.length ? `The tank: ${caught.slice(0, 6).map(([id]) => ITEMS[id].name).join(', ')}${caught.length > 6 ? ` and ${caught.length - 6} more` : ''}. ${caught.length} kinds caught in all.` : 'The tank is clean, lit and empty. Catch something worth showing off.', 4600); break; }

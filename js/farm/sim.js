@@ -97,6 +97,7 @@ export const SHOPS = {
   grandmarket: { id: 'grandmarket', name: 'Grand Market (Main deck)', keeper: null },
   undercroft: { id: 'undercroft', name: 'Venn\'s workbench (Lower deck)', keeper: 'venn' },
   works: { id: 'works', name: 'The Works · fabrication and recycling', keeper: 'venn' },
+  pallas: { id: 'pallas', name: 'The Pallas · refit gantry', keeper: 'vashti' },
 };
 export const GOALS = [
   { id: 'clear', title: 'Clear some ground', hint: 'Cut a weed with the sickle, or break a rock with the hammer.', reward: 50 },
@@ -673,6 +674,7 @@ function shelves(state, shopId) {
   const once = (id, price) => { if (!countItem(state, id)) sell(id, price, { once: true }); };
   if (LANE_SHOPS.has(shopId)) { laneShelves(state, shopId, sell, once, out); decorStock(state, shopId, out); return out; }
   if (shopId === 'works') { worksShelves(state, sell, out); return out; }
+  if (shopId === 'pallas') { pallasShelves(state, out); return out; }
   if (shopId === 'store') {
     for (const c of Object.values(CROPS)) if (c.seasons.length === 1 && c.seasons[0] === state.cal.season && !c.shop) sell(`seed_${c.id}`, c.bag);
     sell('seed_grass', 500); sell('bread', 60); once('rod', 600);
@@ -1021,7 +1023,46 @@ function cityOf(state) {
   if (!int(s.city.best) || s.city.best < 0) s.city.best = 0;
   return s.city;
 }
-export const hullMax = (state) => (state.flags.filters ? HULL_FILTERS : HULL_MAX);
+// ---------------------------------------------------------------- the Pallas refit gantry (2026-11-22)
+// In Vashti's hangar the parked Pallas has a refit gantry: E on it. Each line has two marks (one for treads);
+// mark 2 needs mark 1. Parts are belt ore and a fee for Vashti's crew. PALLAS_MODS[k].stat[level] is what the
+// line is worth at that level; pallasStat(state, k) reads it. Plating adds to the hull on top of the filters.
+export const PALLAS_MODS = {
+  plating: { label: 'Hull plating', stat: [0, 30, 60], unit: 'hull', what: (v) => `+${v} hull`,
+    marks: [{ price: 1500, req: [['alloy', 4], ['nickel_iron', 4]] }, { price: 3500, req: [['alloy', 6], ['titanium', 4]] }],
+    line: ['Vashti\'s crew rivets alloy plate over the Pallas\'s shoulders. "It will dent. That is the point."', 'Titanium-backed plate goes on, layer over layer. The Pallas sounds heavier when it walks, and it is.'] },
+  coil: { label: 'Blaster coil', stat: [1, 1.5, 2], unit: 'bolt damage', what: (v) => `${v}× bolt damage`,
+    marks: [{ price: 1800, req: [['copper', 5], ['silica', 3]] }, { price: 4200, req: [['copper', 4], ['platinum', 2], ['crystal', 1]] }],
+    line: ['A wound copper coil seats behind the blaster. The bolts come out brighter.', 'A platinum-wound coil with a crystal focus. Vashti test-fires it into the hangar\'s back wall and whistles.'] },
+  sabre: { label: 'Sabre emitter', stat: [2, 3, 4], unit: 'sabre damage', what: (v) => `sabre hits for ${v}`, more: 'a longer reach',
+    marks: [{ price: 1600, req: [['titanium', 3], ['crystal', 1]] }, { price: 3800, req: [['titanium', 3], ['crystal', 2], ['platinum', 1]] }],
+    line: ['A new emitter in the beam sabre\'s hilt. The blade hums a note lower.', 'A crystal-stacked emitter. The sabre comes out longer, and it cuts like it means it.'] },
+  scanner: { label: 'Long-range scanner', stat: [16, 24, 32], unit: 'scan range', what: (v) => `scans ${v} tiles`, more: 'recharges sooner',
+    marks: [{ price: 1200, req: [['silica', 4], ['copper', 2]] }, { price: 3000, req: [['silica', 4], ['crystal', 1], ['star_metal', 1]] }],
+    line: ['A wider dish on the Pallas\'s crown. The scan reaches further and recharges sooner.', 'A star-metal antenna. "Old salvagers would have sold their mothers for that," says Vashti.'] },
+  thrusters: { label: 'Boost thrusters', stat: [0.9, 0.6, 0.4], unit: 'boost recharge', what: (v) => `boost every ${v} s`,
+    marks: [{ price: 1400, req: [['nickel_iron', 6], ['copper', 3]] }, { price: 3200, req: [['titanium', 4], ['platinum', 1]] }],
+    line: ['Twin nozzles at the Pallas\'s heels. The boost comes round quicker.', 'Titanium vanes in the boost thrusters. The Pallas skips across a street like a stone on a pond.'] },
+  hydra: { label: 'Hydra turret', stat: [0.55, 0.4, 0.3], unit: 'Hydra fire', what: (v) => `fires every ${v} s`, more: 'reaches further',
+    marks: [{ price: 1500, req: [['alloy', 3], ['copper', 3]] }, { price: 3400, req: [['alloy', 4], ['crystal', 1], ['platinum', 1]] }],
+    line: ['A second barrel on the Hydra. It talks twice as much.', 'A crystal sight on the Hydra. It picks things off from further out, and faster.'] },
+  treads: { label: 'Sealed treads', stat: [3, 1], unit: 'pool damage', what: (v) => `toxic pools cost ${v} hull`,
+    marks: [{ price: 2200, req: [['titanium', 3], ['silica', 3]] }],
+    line: ['Vashti seals the Pallas\'s feet in a glassy belt-silica coat. "Wade in. It will sting less."'] },
+};
+export const pallasLevel = (state, k) => { const l = state.flags.pal && state.flags.pal[k]; return int(l) && l > 0 && PALLAS_MODS[k] ? Math.min(l, PALLAS_MODS[k].marks.length) : 0; };
+export const pallasStat = (state, k) => PALLAS_MODS[k].stat[pallasLevel(state, k)];
+export const hullMax = (state) => (state.flags.filters ? HULL_FILTERS : HULL_MAX) + pallasStat(state, 'plating');
+function pallasShelves(state, out) {
+  for (const [k, mod] of Object.entries(PALLAS_MODS)) {
+    const l = pallasLevel(state, k), mk = mod.marks[l]; if (!mk) continue;
+    const name = mod.marks.length > 1 ? `${mod.label} Mk ${['I', 'II'][l]}` : mod.label;
+    out.push({ key: 'pal_' + k, label: name, desc: `${mod.what(mod.stat[l + 1])}${mod.more ? ', ' + mod.more : ''}. Now: ${l ? mod.what(mod.stat[l]) : 'stock'}.`, price: mk.price, req: mk.req, once: true,
+      needs: mk.req.map(([id, n]) => `${n} ${lower(id)}`).join(', '),
+      apply: () => { if (!state.flags.pal || typeof state.flags.pal !== 'object') state.flags.pal = {}; state.flags.pal[k] = l + 1; return mod.line[l]; } });
+  }
+  if (!out.length) out.push({ key: 'pal_polish', label: 'Polish and service', desc: 'Every line on the gantry is fitted. Vashti\'s crew will still wax the Pallas till it shines.', price: 60, once: true, apply: () => 'The crew waxes the Pallas. You can see yourself in its shoulder plates.' });
+}
 export function enterCity(state) {
   const c = cityOf(state); c.trips++;
   const seed = hash32(state.seed || 1, 911, c.trips) % 1000000007, L = cityLayout(seed), hm = hullMax(state);
@@ -1094,7 +1135,7 @@ function cityHit(state, m, kind, zone) {
 export function cityHazard(state, x, y) {
   const m = inCity(state); if (!m) return { ok: true, drained: 0, hazard: 0, hull: 0, out: false };
   const i = int(x) && int(y) && x >= 0 && y >= 0 && x < m.w && y < m.h ? y * m.w + x : -1, pool = i >= 0 && m.cells[i] === 6, gas = i >= 0 && m.haz[i];
-  const d = pool ? 3 : gas && !state.flags.filters ? 1 : 0; m.hull = Math.max(0, m.hull - d);
+  const d = pool ? pallasStat(state, 'treads') : gas && !state.flags.filters ? 1 : 0; m.hull = Math.max(0, m.hull - d);
   return { ok: true, drained: d, hazard: pool ? 2 : gas ? 1 : 0, filtered: !!(gas && state.flags.filters && !pool), hull: m.hull, out: m.hull <= 0 };
 }
 // Home: 'pad' (board the shuttle, standing by it: 20 minutes up) or 'tow' (the hull gave out: an hour, 20 stamina, the tow fee).

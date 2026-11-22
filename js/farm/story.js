@@ -4441,3 +4441,9 @@ HELP.push({
   title: 'Your farmhouse',
   body: "The village's makers sell furniture for the farmhouse: Tika (rocking chair, dresser, telescope, porch lanterns), Noor (a big plant, a vase, a front garden), Pia (a double bed, an armchair), Lark (a kitchen shelf), Seln (a fish tank, and a trophy once you land a legendary), Ruess (a stone fireplace) and Vesna (a little grand piano). Each is in its place the next time you go home.\n\nThe telescope gives +10 stamina once a night after seven. Pia repaints the walls and Tika refinishes the floor, as often as you like.\n\nRuess can build a back bedroom (8,000 cr and 120 lumber): a door in the back-left corner.",
 });
+
+// ------------------------------------------------------------------ the Pallas refit gantry (2026-11-22)
+HELP.push({
+  title: 'Refitting the Pallas',
+  body: "In Vashti's hangar (up the orbital elevator), the bench by the wall runs a refit gantry over the parked Pallas. Vashti's crew fits seven lines, each for a fee and belt ore: hull plating (+30, then +60 hull, on top of Ruess's air filters), the blaster coil (bolts hit 1.5×, then 2×; mark II punches through a rust-crawler's shell), the sabre emitter (3, then 4 damage, a longer reach), the long-range scanner (24, then 32 tiles, recharging faster), boost thrusters (Shift comes round in 0.6, then 0.4 s), the Hydra turret (faster and further) and sealed treads (toxic pools cost 1 hull, not 3). Mark II of a line needs mark I.",
+});

@@ -908,7 +908,7 @@ function script(s, days = 12) {
   }
 }
 
-const bad = refusals.filter((m) => typeof m !== 'string' || m.length < 8 || !/[.!?]$/.test(m) || /undefined|NaN|null|\[object/.test(m));
+const bad = refusals.filter((m) => typeof m !== 'string' || m.length < 8 || !/[.!?]["”]?$/.test(m) || /undefined|NaN|null|\[object/.test(m));
 check(!bad.length, `refusal messages readable: ${JSON.stringify([...new Set(bad)].slice(0, 5))}`);
 console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} different, e.g.:`, [...new Set(refusals)].slice(0, 6).join(' | '));
 // ---------------------------------------------------------------- storage box, fridge, kitchen (2026-11-18)
@@ -1547,6 +1547,27 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   g.cal.minute = 1200; g.player.stamina = 50; const t1 = sim.useTelescope(g); check(t1.ok && g.player.stamina === 60, 'the telescope: +10 stamina at night');
   check(!sim.useTelescope(g).ok && g.player.stamina === 60, 'once a night');
   const L = loadState(saveState(g)); check(L && L.flags.decor_dresser && L.flags.house_paint === 'sage' && L.flags.house_back, 'furniture, paint and the back bedroom survive a save');
+}
+// ---------------------------------------------------------------- the Pallas refit gantry (2026-11-22)
+{
+  const g = richer(422), keys = () => shopStock(g, 'pallas').map((e) => e.key);
+  check(sim.SHOPS.pallas.keeper === 'vashti' && keys().length === Object.keys(sim.PALLAS_MODS).length, 'the gantry offers every line at mark I');
+  for (const k of Object.keys(sim.PALLAS_MODS)) check(sim.pallasLevel(g, k) === 0 && sim.pallasStat(g, k) === sim.PALLAS_MODS[k].stat[0], `${k} starts stock`);
+  const h0 = sim.hullMax(g), cu = countItem(g, 'copper');
+  let r = buy(g, 'pallas', 'pal_plating'); check(r.ok && sim.pallasLevel(g, 'plating') === 1 && sim.hullMax(g) === h0 + 30, 'plating mark I adds 30 hull');
+  check(shopStock(g, 'pallas').find((e) => e.key === 'pal_plating').label.endsWith('Mk II'), 'then mark II is on offer');
+  r = buy(g, 'pallas', 'pal_coil'); check(r.ok && sim.pallasStat(g, 'coil') === 1.5 && countItem(g, 'copper') === cu - 5, 'the coil costs its copper and hits harder');
+  g.flags.filters = true; check(sim.hullMax(g) === sim.HULL_FILTERS + 30, 'plating stacks on the filters'); g.flags.filters = false;
+  check(sim.enterCity(g).hullMax === sim.hullMax(g), 'the city trip starts with the plated hull');
+  const pool = g.mine.cells.indexOf(6);
+  if (pool >= 0) { r = sim.cityHazard(g, pool % g.mine.w, Math.floor(pool / g.mine.w)); check(r.drained === 3, 'a pool eats 3 hull on stock feet'); g.flags.pal.treads = 1; r = sim.cityHazard(g, pool % g.mine.w, Math.floor(pool / g.mine.w)); check(r.drained === 1, 'sealed treads: 1'); }
+  sim.leaveMine(g);
+  const p = richer(423); p.player.money = 0; check(!buy(p, 'pallas', 'pal_scanner').ok && !sim.pallasLevel(p, 'scanner'), 'no credits, no scanner');
+  const q = richer(424); q.flags.pal = {}; for (const k of Object.keys(sim.PALLAS_MODS)) q.flags.pal[k] = 9;
+  check(shopStock(q, 'pallas').map((e) => e.key).join() === 'pal_polish', 'all fitted: only a polish left');
+  for (const k of Object.keys(sim.PALLAS_MODS)) check(sim.pallasStat(q, k) === sim.PALLAS_MODS[k].stat.at(-1), `${k} caps at its last mark`);
+  q.flags.pal = 'junk'; check(sim.pallasLevel(q, 'coil') === 0 && sim.hullMax(q) === sim.HULL_MAX, 'a junk refit record reads as stock');
+  const L = loadState(saveState(g)); check(L && sim.pallasLevel(L, 'plating') === 1 && sim.pallasLevel(L, 'coil') === 1, 'the refits survive a save');
 }
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);
