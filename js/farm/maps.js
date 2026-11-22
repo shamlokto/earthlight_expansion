@@ -102,6 +102,10 @@ function farm() {
   m.fill(27, 23, 35, 29, 's').fill(28, 24, 34, 28, 'w');
   m.building('house', 4, 3, 5, 4, { height: 3.2, to: { map: 'house' }, label: 'Farmhouse' });
   m.prop('house_annex', 1, 3, { w: 3, d: 3, solid: false, decorSolid: true, when: 'house_back' }); m.hasDecor = true;   // the back bedroom, seen from outside (2026-11-22)
+  // outside the farmhouse (2026-11-22, sim.HOME_DECOR): Noor's front garden either side of the door path, Tika's porch lanterns and a bench
+  const yard = (kind, x, y, flag, o = {}) => m.prop(kind, x, y, { solid: false, decorSolid: true, when: flag, ...o });
+  yard('flower_bed', 4, 7, 'decor_garden', { w: 2 }); yard('flower_bed', 7, 7, 'decor_garden', { w: 2 });
+  yard('lantern', 3, 7, 'decor_porch'); yard('lantern', 9, 7, 'decor_porch'); yard('bench', 1, 9, 'decor_porch', { w: 2 });
   m.building('coop', 14, 3, 4, 3, { height: 2.2, to: { map: 'coop' }, label: 'Hen coop' });
   m.building('barn', 21, 2, 7, 5, { height: 4.2, to: { map: 'barn' }, label: 'Barn' });
   m.building('silo', 29, 4, 2, 2, { height: 5, label: 'Silo' });
