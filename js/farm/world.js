@@ -1164,7 +1164,7 @@ export class World {
     if (this.rocks) this.rocks.update(px, py);
     if (this.earthSky) this.earthSky.position.copy(c.position).addScaledVector(EARTH_DIR, 1500);   // always as far away, low over the lane's east side
     for (const f of this.facers) f.rotation.y = this.yaw;
-    for (const m of this.waterMats || []) if (m.userData.u) { m.userData.u.uTime.value = this.t; m.userData.u.uSpark.value = 0.25 + 0.75 * (1 - (this.night || 0)); } else m.map.offset.set(this.t * 0.015, this.t * 0.01);
+    for (const m of this.waterMats || []) if (m.userData.u) { m.userData.u.uTime.value = this.t; m.userData.u.uSpark.value = this.map && (this.map.under || this.map.indoor) ? 0.1 : 0.25 + 0.75 * (1 - (this.night || 0));   // no sun to glint underground } else m.map.offset.set(this.t * 0.015, this.t * 0.01);
     for (const l of this.lamps || []) l.intensity = (this.night || 0) * 14;
     if (this.flies) { const k = (this.season === 1 || this.season === 0) && (this.minuteNow || 0) >= 1170 ? Math.max(0, (this.night || 0) - 0.35) * 1.6 : 0; /* evenings only, not the dawn */ this.flies.material.opacity = Math.min(1, k); this.flies.visible = k > 0.01;
       if (this.flies.visible) { const p = this.flies.geometry.attributes.position, b = this.flies.geometry.userData.base, ph = this.flies.geometry.userData.ph; for (let i = 0; i < p.count; i++) { p.setX(i, b[i * 3] + Math.sin(this.t * 0.6 + ph[i]) * 0.8); p.setY(i, b[i * 3 + 1] + Math.sin(this.t * 1.1 + ph[i] * 2) * 0.3); p.setZ(i, b[i * 3 + 2] + Math.cos(this.t * 0.5 + ph[i]) * 0.8); } p.needsUpdate = true; } }
