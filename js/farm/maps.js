@@ -101,6 +101,7 @@ function farm() {
   m.fill(6, 7, 6, 7, 'p').fill(15, 6, 15, 7, 'p').fill(24, 7, 24, 7, 'p').fill(37, 6, 37, 7, 'p');
   m.fill(27, 23, 35, 29, 's').fill(28, 24, 34, 28, 'w');
   m.building('house', 4, 3, 5, 4, { height: 3.2, to: { map: 'house' }, label: 'Farmhouse' });
+  m.prop('mailbox', 13, 7, { act: 'letters', label: 'Your mailbox', tint: '#c0392b' });   // friends' letters (2026-11-22, sim.readMail)
   m.prop('hot_tub', 10, 3, { w: 2, d: 2, solid: false, decorSolid: true, when: 'hot_tub', act: 'hottub', label: 'Hot tub' });   // Ruess's cedar tub (2026-11-22)
   m.prop('house_annex', 1, 3, { w: 3, d: 3, solid: false, decorSolid: true, when: 'house_back' }); m.hasDecor = true;   // the back bedroom, seen from outside (2026-11-22)
   // outside the farmhouse (2026-11-22, sim.HOME_DECOR): Noor's front garden either side of the door path, Tika's porch lanterns and a bench

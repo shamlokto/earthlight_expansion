@@ -2091,6 +2091,7 @@ export function sleep(state, { collapsed = false } = {}) {
   p.stamina = collapsed ? Math.floor(p.maxStamina / 2) : p.maxStamina;
   if (collapsed) notes.push('You wake up sore. Half your strength is back.');
   petOvernight(state, notes, collapsed);
+  mailOvernight(state, notes);
   state.stats.days++;
   return { ok: true, earned, shipped, notes, seasonChanged, newYear, robots };
 }
@@ -2799,4 +2800,35 @@ export function useHotTub(state) {
   state.flags.tubDay = absDay(state); const p = state.player, before = p.stamina; p.stamina = Math.min(p.maxStamina, p.stamina + 40);
   const who = state.flags.partner;
   return { ok: true, partner: who || null, gained: p.stamina - before, msg: `${who ? 'You sink into the hot water, and a moment later so does your partner, with a contented groan.' : 'You sink into the hot water up to your chin. Somewhere above the sun-line, the stars come out.'} (+${p.stamina - before} stamina)` };
+}
+
+// ---------------------------------------------------------------- the farm mailbox (2026-11-22)
+// Friends write. Most nights there is a chance (a fifth) that one villager Sato has 3+ hearts with sends a letter
+// (story.LETTERS[npc][n] has the words, LETTERS_PER entries each) with a small present from them (LETTER_GIFTS).
+// On Sato's birthday everyone with 4+ hearts sends a card. Letters wait in the mailbox by the farm path (state.mail,
+// at most MAIL_MAX unread); reading one takes its present into the rucksack (it stays if the rucksack is full).
+import { SATO_BIRTHDAY as BDAY } from './data.js';
+export const LETTERS_PER = 2, MAIL_MAX = 8, MAIL_HEARTS = 3;
+export const LETTER_GIFTS = { general: 'tea', ruess: 'battery', marrow: 'honeycomb', seln: 'seed_turnip', corran: 'milk_m', oduya: 'soup', maris: 'chestnut', vashti: 'copper', moraine: 'old_coin', kestrel: 'mint_tea', mori: 'tonic', yui: 'tea', calloway: 'berry_jam', fenn: 'bread', venn: 'lamp_kit', thorne: 'mushroom_soup', moth: 'wild_violet', wick: 'fish_m', pia: 'elderflower', lark: 'sun_bun', noor: 'seed_sunflower', tika: 'copper', vesna: 'record', hana: 'shiitake' };
+export function mailOf(state) {
+  if (!Array.isArray(state.mail)) state.mail = [];
+  state.mail = state.mail.filter((m) => m && typeof m === 'object' && own(LETTER_GIFTS, m.from) && (m.card || (int(m.n) && m.n >= 0 && m.n < LETTERS_PER)) && (m.item == null || own(ITEMS, m.item))).slice(0, MAIL_MAX);
+  return state.mail;
+}
+export const mailWaiting = (state) => mailOf(state).length;
+function mailOvernight(state, notes) {
+  const box = mailOf(state), before = box.length;
+  if (state.cal.season === BDAY.season && state.cal.day === BDAY.day)
+    for (const id of NPC_IDS) if (own(LETTER_GIFTS, id) && hearts(state, id) >= 4 && box.length < MAIL_MAX) box.push({ from: id, card: true, item: LETTER_GIFTS[id] });
+  if (box.length < MAIL_MAX && rnd(state) < 0.2) {
+    const friends = NPC_IDS.filter((id) => own(LETTER_GIFTS, id) && hearts(state, id) >= MAIL_HEARTS && !box.some((m) => m.from === id));
+    if (friends.length) { const id = friends[rint(state, friends.length)]; box.push({ from: id, n: rint(state, LETTERS_PER), item: rnd(state) < 0.6 ? LETTER_GIFTS[id] : null }); }
+  }
+  if (box.length > before) notes.push(box.length - before > 1 ? `There are ${box.length - before} new letters in your mailbox.` : 'There is a letter in your mailbox.');
+}
+export function readMail(state) {
+  const box = mailOf(state); if (!box.length) return fail('The mailbox is empty. A spider has moved in, but she is not writing to you.');
+  const m = box[0];
+  if (m.item) { const r = addItem(state, m.item, 1); if (!r.ok) return { ok: true, letter: m, kept: true, msg: 'Your rucksack is full: the present stays in the mailbox with the letter.' }; }
+  box.shift(); return { ok: true, letter: m, gained: m.item ? [{ id: m.item, n: 1 }] : [] };
 }
