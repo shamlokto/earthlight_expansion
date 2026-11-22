@@ -101,6 +101,7 @@ function farm() {
   m.fill(6, 7, 6, 7, 'p').fill(15, 6, 15, 7, 'p').fill(24, 7, 24, 7, 'p').fill(37, 6, 37, 7, 'p');
   m.fill(27, 23, 35, 29, 's').fill(28, 24, 34, 28, 'w');
   m.building('house', 4, 3, 5, 4, { height: 3.2, to: { map: 'house' }, label: 'Farmhouse' });
+  m.prop('house_annex', 1, 3, { w: 3, d: 3, solid: false, decorSolid: true, when: 'house_back' }); m.hasDecor = true;   // the back bedroom, seen from outside (2026-11-22)
   m.building('coop', 14, 3, 4, 3, { height: 2.2, to: { map: 'coop' }, label: 'Hen coop' });
   m.building('barn', 21, 2, 7, 5, { height: 4.2, to: { map: 'barn' }, label: 'Barn' });
   m.building('silo', 29, 4, 2, 2, { height: 5, label: 'Silo' });
@@ -170,6 +171,10 @@ function village() {
   m.prop('lantern', 25, 11); m.prop('lantern', 38, 11); m.prop('lantern', 25, 21); m.prop('lantern', 38, 21);
   m.prop('bench', 34, 23, { w: 2 });
   m.prop('vent', 27, 23); m.prop('vent', 38, 23);
+  // 2026-11-22: the square was a bare stretch of cobbles: flower beds in its four corners, benches facing the memorial, planters by the lamps
+  m.prop('flower_bed', 26, 13, { w: 2 }); m.prop('flower_bed', 36, 13, { w: 2 }); m.prop('flower_bed', 26, 20, { w: 2 }); m.prop('flower_bed', 36, 20, { w: 2 });
+  m.prop('bench', 28, 15, { d: 2, rot: Math.PI / 2 }); m.prop('bench', 35, 15, { d: 2, rot: -Math.PI / 2 });
+  m.prop('plantpot', 25, 12); m.prop('plantpot', 38, 12); m.prop('plantpot', 25, 20); m.prop('plantpot', 38, 20);
   // signs
   m.prop('signpost', 29, 10, { act: 'sign', sign: 'village.square' });
   m.prop('signpost', 21, 7, { act: 'sign', sign: 'village.storefront' });
@@ -358,6 +363,9 @@ function central() {
   m.prop('signpost', 37, 31, { act: 'sign', sign: 'central.plaza' });
   for (const [x, y] of [[23, 22], [46, 22], [23, 29], [46, 29]]) m.prop('tree', x, y, { scale: 0.9, rot: x });
   for (const [x, y] of [[26, 26], [42, 26]]) m.prop('bench', x, y, { w: 2 });
+  // 2026-11-22: flower beds and planters, so the plaza is a garden square rather than an empty floor
+  for (const [x, y] of [[27, 22], [40, 22], [27, 29], [40, 29]]) m.prop('flower_bed', x, y, { w: 2 });
+  for (const [x, y] of [[25, 26], [44, 26], [30, 24], [39, 24]]) m.prop('plantpot', x, y);
   m.spot('central.plaza', 29.5, 27.5);
   // the Arrivals hall and its apron
   m.building('arrivals', 50, 21, 12, 5, { height: 5, to: { map: 'arrivals' }, label: 'Arrivals hall' });
@@ -491,6 +499,12 @@ function central() {
 
 // ---------------------------------------------------------------- indoors
 
+// Put a few small pieces in the front corners of a room, where nothing stands, no one stands, and not in the doorway.
+function dressRoom(m, kinds) {
+  const busy = (x, y) => m.props.some((p) => x >= Math.floor(p.x) && x < Math.floor(p.x) + p.w && y >= Math.floor(p.y) && y < Math.floor(p.y) + p.d) || Object.values(m.spots).some(([sx, sy]) => Math.floor(sx) === x && Math.floor(sy) === y) || Math.abs(x - m.exitTile[0]) <= 1;
+  const at = [[0, m.h - 2], [m.w - 1, m.h - 2], [0, m.h - 3], [m.w - 1, m.h - 3]];
+  let i = 0; for (const [x, y] of at) { if (i >= kinds.length) break; if (busy(x, y)) continue; m.prop(kinds[i++], x, y, { solid: false, rot: x === 0 ? Math.PI / 2 : -Math.PI / 2 }); }
+}
 function room(id, w, h, name, floor = 'b') {
   const m = new MapDef(id, w, h, floor, { name, indoor: true });
   m.exitTile = [Math.floor(w / 2), h - 1];
@@ -515,7 +529,14 @@ function interiors() {
   m.prop('fish_trophy', 11, 4, { solid: false, when: 'decor_trophy', rot: -Math.PI / 2 }); m.prop('telescope', 11, 6, { solid: false, decorSolid: true, when: 'decor_telescope', act: 'telescope', rot: -Math.PI / 2 });
   m.prop('rocking_chair', 5, 3, { solid: false, when: 'decor_rocker', rot: Math.PI }); m.prop('armchair_big', 2, 3, { solid: false, when: 'decor_armchair', rot: Math.PI / 2 });
   m.prop('flower_vase', 10, 4, { solid: false, when: 'decor_vase' });
+  // the back bedroom (2026-11-22): a door in the back-left corner, shut until Ruess builds the extension (flag house_back)
+  m.prop('home_door', 0, 0, { solid: false, label: 'Back bedroom', tint: 0x9a6a44 }); m.doors.push({ x: 0, y: 0, to: { map: 'house_back' }, kind: 'house_back', lock: 'house_back' });
   out.house = m;
+  m = room('house_back', 9, 7, 'Back bedroom'); m.exitTile = [1, 6];
+  m.prop('quilt_bed', 6, 0, { d: 2, tint: 0xc98a9a }); m.prop('wardrobe', 4, 0, {}); m.prop('lamp', 8, 0, {}); m.prop('dresser', 0, 0, {}); m.prop('rug', 4, 3, { solid: false, w: 2, d: 2 });
+  m.prop('big_plant', 8, 5, {}); m.prop('side_table', 8, 2, { solid: false }); m.prop('armchair_big', 1, 3, { solid: false, rot: Math.PI / 2 }); m.prop('hanging_plant', 0, 4, { solid: false });
+  m.prop('shelf', 2, 0, { model: 'bookshelf' }); m.prop('coat_rack', 0, 6, { solid: false, rot: Math.PI / 2 });
+  out.house_back = m;
 
   m = room('barn', 12, 9, 'Barn', 'h');
   m.prop('trough', 2, 0, { w: 8, act: 'feedcow' }); m.prop('haybale', 0, 6); m.prop('haybale', 11, 6); m.prop('haybale', 11, 5);
@@ -567,6 +588,8 @@ function interiors() {
   m.prop('case', 0, 2, { act: 'museum' }); m.prop('case', 0, 4, { act: 'museum' });
   m.prop('shelf', 1, 0, { w: 2 }); m.prop('shelf', 9, 0, { w: 2 });
   out.hall = m;
+  // 2026-11-22: a little life by the doors of the public rooms too (only where the floor is free)
+  for (const k of ['store', 'workshop', 'cafe', 'clinic', 'library', 'hall', 'ranch']) dressRoom(out[k], k === 'cafe' ? ['hanging_plant', 'coat_rack'] : ['hanging_plant', 'side_table']);
   return out;
 }
 

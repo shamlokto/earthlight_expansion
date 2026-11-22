@@ -113,7 +113,7 @@ const PROPS = {
   // home decor (2026-11-22; Hunyuan3D-2 from HunyuanDiT concept pictures)
   double_bed: { model: 'double_bed', h: 1.0, maxW: 1.45 }, fireplace: { model: 'fireplace', h: 1.6, maxW: 1.1 }, piano: { model: 'piano', h: 1.35, fit: 'foot' }, dresser: { model: 'dresser', h: 1.7, fit: 'foot' },
   wall_shelf_jars: { model: 'wall_shelf_jars', h: 1.3, fit: 'foot' }, big_plant: { model: 'big_plant', h: 1.6, maxW: 1 }, aquarium: { model: 'aquarium', h: 1.25, fit: 'foot' }, fish_trophy: { model: 'fish_trophy', h: 0.6, maxW: 0.9, hover: 2.4 },
-  telescope: { model: 'telescope', h: 1.35, maxW: 1 }, rocking_chair: { model: 'rocking_chair', h: 1.1, fit: 'foot' }, armchair_big: { model: 'armchair_big', h: 1.05, fit: 'foot' }, flower_vase: { model: 'flower_vase', h: 0.8, maxW: 0.7 }, coat_rack: { model: 'coat_rack', h: 1.7, maxW: 0.9 }, hanging_plant: { model: 'hanging_plant', h: 1.0, maxW: 0.8, hover: 2.4 }, side_table: { model: 'side_table', h: 0.9, maxW: 0.8 }, kitchen_dresser: { model: 'kitchen_dresser', h: 1.1, fit: 'foot' }, decor_clock: { h: 2.2 }, decor_model: { h: 1.1 }, decor_shelf: { h: 1.6 },
+  telescope: { model: 'telescope', h: 1.35, maxW: 1 }, rocking_chair: { model: 'rocking_chair', h: 1.1, fit: 'foot' }, armchair_big: { model: 'armchair_big', h: 1.05, fit: 'foot' }, flower_vase: { model: 'flower_vase', h: 0.8, maxW: 0.7 }, house_annex: { model: 'farmhouse', h: 2.4, fit: 'foot' }, coat_rack: { model: 'coat_rack', h: 1.7, maxW: 0.9 }, hanging_plant: { model: 'hanging_plant', h: 1.0, maxW: 0.8, hover: 2.4 }, side_table: { model: 'side_table', h: 0.9, maxW: 0.8 }, kitchen_dresser: { model: 'kitchen_dresser', h: 1.1, fit: 'foot' }, decor_clock: { h: 2.2 }, decor_model: { h: 1.1 }, decor_shelf: { h: 1.6 },
   work_barrier: { h: 0.9 }, bulkhead: { h: 2.6 }, tarp: { h: 2.4 }, crypt_wall: { h: 2.2 }, stove: { h: 1.6 }, shrooms: { h: 0.3 },
 };
 const BUILDING = {
@@ -167,6 +167,7 @@ function ball(r, mat, x = 0, y = 0, z = 0, detail = 1) { const m = new THREE.Mes
 const WHITE = () => std({ color: 0xf2f0ea, roughness: 0.55, metalness: 0.1 }), TEAL = () => std({ color: 0x3fa7a3, roughness: 0.5, metalness: 0.2 }), SLATE = () => std({ color: 0x46525e, metalness: 0.4, roughness: 0.5 });
 const glow = (c) => new THREE.MeshBasicMaterial({ color: c });
 let softTex = null;
+const HOUSE_PAINT_TINT = { cream: 0xffffff, sage: 0xc9dcc0, rose: 0xf0c8c4, sky: 0xc4d8ee, butter: 0xf6e6b0, lilac: 0xdcd0ec }, HOUSE_FLOOR_TINT = { honey: 0xffffff, walnut: 0x9a7a62, ash: 0xf4ece0, cherry: 0xd89a84 };   // sim.HOUSE_PAINT / HOUSE_FLOOR
 let rugT = null;
 function rugTex() {                                       // a woven rag rug: border stripes, a diamond, soft fibre noise
   if (rugT) return rugT; const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
@@ -213,6 +214,7 @@ export class World {
     this.cursor = new THREE.Mesh(new THREE.RingGeometry(0.36, 0.47, 4, 1, Math.PI / 4), new THREE.MeshBasicMaterial({ color: 0xfff2b8, transparent: true, opacity: 0.85, depthWrite: false }));
     this.cursor.rotation.x = -Math.PI / 2; this.cursor.renderOrder = 5; this.scene.add(this.cursor);
     this.weather = this.makeWeather();
+    this.drift = this.makeDrift();   // seasonal petals, leaves and flakes on fine days (2026-11-22)
     this.season = 0; this.t = 0; this.tileObjs = new Map(); this.actors = new Map();
     window.addEventListener('resize', () => this.resize()); this.resize();
   }
@@ -233,6 +235,14 @@ export class World {
     for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - 0.5) * 40; pos[i * 3 + 1] = Math.random() * 18; pos[i * 3 + 2] = (Math.random() - 0.5) * 40; }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const p = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xcfe6ff, size: 0.09, transparent: true, opacity: 0.7, depthWrite: false }));
+    p.visible = false; p.frustumCulled = false; this.scene.add(p); return p;
+  }
+  makeDrift() {
+    const n = 260, pos = new Float32Array(n * 3), ph = new Float32Array(n);
+    for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - 0.5) * 34; pos[i * 3 + 1] = Math.random() * 9; pos[i * 3 + 2] = (Math.random() - 0.5) * 34; ph[i] = Math.random() * 6.28; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.userData.ph = ph;
+    const cv = document.createElement('canvas'); cv.width = cv.height = 32; const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.beginPath(); x.ellipse(16, 16, 13, 7, 0.6, 0, 7); x.fill();
+    const p = new THREE.Points(g, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(cv), color: 0xffc0d4, size: 0.2, transparent: true, opacity: 0.85, depthWrite: false, alphaTest: 0.05 }));
     p.visible = false; p.frustumCulled = false; this.scene.add(p); return p;
   }
   // minute 360..1440; sets the sun, the sky layers and the tint of every picture sprite.
@@ -271,6 +281,8 @@ export class World {
     if (ruins) this.spriteTint.multiply(col(0xf0dcb0));
     for (const m of this.spriteMats) m.color.copy(this.spriteTint);
     this.weather.visible = !indoor && !ruins && !(map && map.covered) && (wet || snow);   // nothing falls under Eden Central's roof
+    { const se = this.season, fine = !wet && !snow && weather !== 'storm', colonyOut = !indoor && !ruins && !(map && (map.covered || map.under || map.belt)), dayish = h > 6.5 && h < 19.5;
+      this.drift.visible = colonyOut && fine && dayish && se !== 1; this.drift.material.color.set([0xffc6d9, 0xffffff, 0xe0883a, 0xf4f8ff][se]); this.drift.material.size = se === 3 ? 0.22 : 0.42; this.driftSpeed = se === 3 ? 0.45 : 0.6; }
     this.weather.material.size = snow ? 0.16 : 0.07; this.weather.material.color.set(snow ? 0xffffff : 0xa9c6e6);
     this.weatherSpeed = snow ? 2.2 : 19;
     this.night = 1 - day;
@@ -899,7 +911,7 @@ export class World {
       }
       const cp = c === 'c' && !map.indoor && art.has('textures/colony_path');   // colony art, when the pack has it
       const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : cp ? 'colony_path' : GROUND_TEX[c] || 'soil_dry';
-      const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : c === 'd' ? 0.015 : 0, false, c === 'c' ? 0.34 : c === 'k' || c === 'b' || c === 'd' ? 0.5 : 0.25), std({ map: art.tex(slot, { repeat: 1 }), color: c === 'f' ? 0xb48a66 : c === 'c' ? 0xd8d2c8 : 0xffffff })); m.receiveShadow = true; R.add(m);
+      const m = new THREE.Mesh(tiles(cells, c === 'k' ? 0.06 : c === 'd' ? 0.015 : 0, false, c === 'c' ? 0.34 : c === 'k' || c === 'b' || c === 'd' ? 0.5 : 0.25), std({ map: art.tex(slot, { repeat: 1 }), color: c === 'f' ? 0xb48a66 : c === 'c' ? 0xd8d2c8 : map.id === 'house' && c === 'b' && this.flags && this.flags.house_floor ? (HOUSE_FLOOR_TINT[this.flags.house_floor] || 0xffffff) : 0xffffff })); m.receiveShadow = true; R.add(m);
     }
     this.colony.setCentre(H / 2); this.spinners = []; this.beacons = []; this.cars = []; this.bots = null; this.pools = null; this.rocks = null; this.earthSky = null;
     if (!map.indoor && !map.ruins && !map.under) R.add(buildSurroundings(map, this.season));   // terraces rising into the cylinder's curve
@@ -912,7 +924,7 @@ export class World {
       if (false) for (let i = 0; i < 70; i++) { const a = i * 2.399, d = Math.max(W, H) * 0.62 + (i % 7) * 4; const x = W / 2 + Math.cos(a) * d, z = H / 2 + Math.sin(a) * d * 0.9; if (x > -2 && x < W + 2 && z > -2 && z < H + 2) continue; if (z > H && Math.abs(x - W / 2) < 16) continue; const p = this.makeProp(i % 3 ? 'tree' : 'pine', { scale: 1 + (i % 5) * 0.12 }); p.position.set(x, 0, z); R.add(p); }
       else for (let i = 0; i < 26; i++) { const a = i * 2.399, d = map.city ? Math.max(W, H) * 0.62 + (i % 6) * 5 : 14 + (i % 6) * 5; const h = 3 + (i % 5) * 2.2; const t2 = box(2 + (i % 3), h, 2 + (i % 2), std({ map: art.tex(i % 2 ? 'concrete_ruin' : 'brick_ruin', { repeat: 0.25 }) })); t2.position.set(W / 2 + Math.cos(a) * d, h / 2, H / 2 + Math.sin(a) * d - 6); if (t2.position.z > H - 1) continue; t2.rotation.z = (i % 4 - 1.5) * 0.03; R.add(t2); }
     } else {                                             // room walls: back and sides, open to the camera
-      const wm = map.colonyRoom ? std({ color: map.colonyRoom === 'warm' ? 0xf4ecdc : 0xe9eef0, roughness: 0.7 }) : map.glass ? new THREE.MeshStandardMaterial({ color: 0xcfeaf0, transparent: true, opacity: 0.3, roughness: 0.1 }) : std({ map: art.tex(map.id === 'barn' || map.id === 'ranch' ? 'barn_red' : map.id === 'coop' || map.id === 'house' || map.id === 'workshop' ? 'plank_wall' : map.id === 'cafe' ? 'metal_hull' : 'plaster_wall', { repeat: 0.5 }) });
+      const wm = map.colonyRoom ? std({ color: map.colonyRoom === 'warm' ? 0xf4ecdc : 0xe9eef0, roughness: 0.7 }) : map.glass ? new THREE.MeshStandardMaterial({ color: 0xcfeaf0, transparent: true, opacity: 0.3, roughness: 0.1 }) : std({ map: art.tex(map.id === 'barn' || map.id === 'ranch' ? 'barn_red' : map.id === 'coop' || map.id === 'house' || map.id === 'workshop' ? 'plank_wall' : map.id === 'cafe' ? 'metal_hull' : 'plaster_wall', { repeat: 0.5 }), color: map.id === 'house' && this.flags && this.flags.house_paint ? (HOUSE_PAINT_TINT[this.flags.house_paint] || 0xffffff) : 0xffffff });
       const hh = map.id === 'church' ? 3.9 : 2.9; R.add(box(W, hh, 0.2, wm, W / 2, 0, -0.1), box(0.2, hh, H, wm, -0.1, 0, H / 2), box(0.2, hh, H, wm, W + 0.1, 0, H / 2));
       if (map.colonyRoom) { const tm = TEAL(); R.add(box(W, 0.22, 0.24, tm, W / 2, 0, -0.08), box(0.24, 0.22, H, tm, -0.08, 0, H / 2), box(0.24, 0.22, H, tm, W + 0.08, 0, H / 2), box(W, 0.08, 0.24, tm, W / 2, hh - 0.08, -0.08)); }
       if (!map.colonyRoom && !map.glass && !['barn', 'coop', 'fold', 'duckhouse', 'greenhouse'].includes(map.id)) this.roomDressing(R, W, H, hh, map);   // windows and a skirting board (2026-11-22)
@@ -1105,6 +1117,11 @@ export class World {
       fade(b.o, hide, 0.22);
     }
     for (const [k, o] of this.tileObjs) if (o.userData.hover || (o.children[0] && o.children[0].userData.hover)) o.position.y = Math.sin(this.t * 2 + k.length) * 0.08;
+    if (this.drift && this.drift.visible) {                // drifting petals / leaves / flakes: slow fall, a lazy sideways sway
+      const p = this.drift.geometry.attributes.position, ph = this.drift.geometry.userData.ph; this.drift.position.set(px, 0, py);
+      for (let i = 0; i < p.count; i++) { let y = p.getY(i) - this.driftSpeed * dt; if (y < 0) y += 9; p.setY(i, y); p.setX(i, p.getX(i) + Math.sin(this.t * 1.3 + ph[i]) * 0.6 * dt + 0.25 * dt); if (p.getX(i) > 17) p.setX(i, -17); }
+      p.needsUpdate = true;
+    }
     if (this.weather.visible) {
       const p = this.weather.geometry.attributes.position; this.weather.position.set(px, 0, py);
       for (let i = 0; i < p.count; i++) { let y = p.getY(i) - this.weatherSpeed * dt; if (y < 0) y += 18; p.setY(i, y); }

@@ -2204,6 +2204,8 @@ function laneShelves(state, shopId, sell, once, out) {
       apply: () => { state.flags.fold = true; return 'Ruess re-roofs the old fold and hangs a new gate. "Goats. Heaven help you. They eat bolts."'; } });
     if (!state.flags.duckhouse) out.push({ key: 'duckhouse', label: 'Duck house', desc: 'A little house with a ramp down to the east pond: room for six ducks, which Corran sells.', price: 2000, lumber: 30, needs: '30 lumber', once: true,
       apply: () => { state.flags.duckhouse = true; return 'Ruess fixes the duck house by the east pond. "The ramp is regulation width. For a duck."'; } });
+    if (!state.flags.house_back) out.push({ key: 'house_back', label: 'Back bedroom extension', desc: 'Ruess knocks through the back-left corner of the farmhouse and builds a bedroom out the back: a bed, a wardrobe, shelves and room to breathe. Somewhere for two, one day.', price: 8000, lumber: 120, needs: '120 lumber', once: true,
+      apply: () => { state.flags.house_back = true; return 'By evening there is a new room behind the farmhouse, smelling of sawdust. Ruess hangs the door himself. "It sticks. That is character."'; } });
     if (!state.flags.eastfield) out.push({ key: 'eastfield', label: 'Clear the East Terrace', desc: 'Ruess clears the old terrace east of the farm and runs the irrigation main out to it: a second field, 12 by 10.', price: 3000, lumber: 40, needs: '40 lumber', once: true,
       apply: () => { state.flags.eastfield = true; ensure(state); return 'By evening the East Terrace has water and a gate. "The rocks are yours. I only moved the big ones."'; } });
   } else if (shopId === 'bakery') {
@@ -2621,12 +2623,20 @@ export const HOME_DECOR = [
 ];
 const LEGENDS = ['fish_king', 'fish_mochi', 'fish_ferryman', 'fish_admiral', 'abyss_koi'];
 export const legendCaught = (state) => LEGENDS.filter((id) => (state.fishLog || {})[id]);
+// Wall paint (Pia) and floor finish (Tika) for the farmhouse: change them whenever you like (flags house_paint, house_floor).
+export const HOUSE_PAINT = { cream: ['Cream (as it was)', 0xffffff], sage: ['Sage green', 0xc9dcc0], rose: ['Dusty rose', 0xf0c8c4], sky: ['Sky blue', 0xc4d8ee], butter: ['Butter yellow', 0xf6e6b0], lilac: ['Lilac', 0xdcd0ec] };
+export const HOUSE_FLOOR = { honey: ['Honey (as it was)', 0xffffff], walnut: ['Dark walnut', 0x9a7a62], ash: ['Pale ash', 0xf4ece0], cherry: ['Cherry red', 0xd89a84] };
 function decorStock(state, shopId, out) {
+
+  const finish = (key, table, flag, shop, price, who) => { if (shopId !== shop) return; const ks = Object.keys(table), cur = state.flags[flag] || ks[0], next = ks[(ks.indexOf(cur) + 1) % ks.length];
+    out.push({ key: `${key}_${next}`, label: `${key === 'paint' ? 'Repaint the farmhouse walls' : 'Refinish the farmhouse floor'}: ${table[next][0].replace(' (as it was)', '')}`, desc: `Now: ${table[cur][0].replace(' (as it was)', '').toLowerCase()}. ${who} does it by tomorrow; buy again for the next colour (${ks.map((k) => table[k][0].replace(' (as it was)', '').toLowerCase()).join(', ')}).`, price, once: true,
+      apply: () => { state.flags[flag] = next; return `${who} ${key === 'paint' ? 'rolls on the first coat' : 'sands and oils the boards'}. "${key === 'paint' ? 'It is a different room. Same roof.' : 'Mind the wet patch by the door.'}"`; } }); };
   for (const [flag, shop, label, desc, price, lumber, done, x = {}] of HOME_DECOR) {
     if (shop !== shopId || state.flags[flag] || (x.needLegend && !legendCaught(state).length)) continue;   // the trophy waits for a legendary catch
     out.push({ key: flag, label: `${label} (for the farmhouse)`, desc, price, ...(lumber ? { lumber, needs: `${lumber} lumber` } : {}), once: true,
       apply: () => { state.flags[flag] = true; return done; } });
   }
+  finish('paint', HOUSE_PAINT, 'house_paint', 'tailor', 600, 'Pia'); finish('floor', HOUSE_FLOOR, 'house_floor', 'garage', 900, 'Tika');
 }
 // The telescope: a look at Earth through the farmhouse window, once a night (after 19:00), +10 stamina.
 export function useTelescope(state) {
