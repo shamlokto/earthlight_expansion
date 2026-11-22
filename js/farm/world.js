@@ -953,7 +953,8 @@ export class World {
         // the surface sits just above the colony's surrounding ground sheet (y -0.07), which runs under the whole map
         const wm = new THREE.MeshStandardMaterial({ map: art.tex('water', { repeat: 1 }).clone(), color: map.under ? 0x4a8a9a : 0xb8dce6, transparent: true, opacity: 0.94, roughness: 0.12, metalness: 0.1 });
         wm.map.wrapS = wm.map.wrapT = THREE.RepeatWrapping; wm.map.needsUpdate = true; wm.map.userData.ownWater = true; this.waterMats.push(wm);
-        const m = new THREE.Mesh(tiles(cells, -0.04), wm); m.receiveShadow = true; R.add(m); continue;
+        liveWater(wm);   // flowing rivers, rippling lakes, foam at the banks, sparkle (2026-11-22)
+        const m = new THREE.Mesh(waterTiles(cells, -0.04, map), wm); m.receiveShadow = true; R.add(m); continue;
       }
       const cp = c === 'c' && !map.indoor && art.has('textures/colony_path');   // colony art, when the pack has it
       const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : cp ? 'colony_path' : GROUND_TEX[c] || 'soil_dry';
@@ -1163,7 +1164,7 @@ export class World {
     if (this.rocks) this.rocks.update(px, py);
     if (this.earthSky) this.earthSky.position.copy(c.position).addScaledVector(EARTH_DIR, 1500);   // always as far away, low over the lane's east side
     for (const f of this.facers) f.rotation.y = this.yaw;
-    for (const m of this.waterMats || []) m.map.offset.set(this.t * 0.015, this.t * 0.01);
+    for (const m of this.waterMats || []) if (m.userData.u) { m.userData.u.uTime.value = this.t; m.userData.u.uSpark.value = 0.25 + 0.75 * (1 - (this.night || 0)); } else m.map.offset.set(this.t * 0.015, this.t * 0.01);
     for (const l of this.lamps || []) l.intensity = (this.night || 0) * 14;
     if (this.flies) { const k = (this.season === 1 || this.season === 0) && (this.minuteNow || 0) >= 1170 ? Math.max(0, (this.night || 0) - 0.35) * 1.6 : 0; /* evenings only, not the dawn */ this.flies.material.opacity = Math.min(1, k); this.flies.visible = k > 0.01;
       if (this.flies.visible) { const p = this.flies.geometry.attributes.position, b = this.flies.geometry.userData.base, ph = this.flies.geometry.userData.ph; for (let i = 0; i < p.count; i++) { p.setX(i, b[i * 3] + Math.sin(this.t * 0.6 + ph[i]) * 0.8); p.setY(i, b[i * 3 + 1] + Math.sin(this.t * 1.1 + ph[i] * 2) * 0.3); p.setZ(i, b[i * 3 + 2] + Math.cos(this.t * 0.5 + ph[i]) * 0.8); } p.needsUpdate = true; } }
@@ -1225,6 +1226,73 @@ function tiles(cells, y, block = false, S = 0.25) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
   return g;
+}
+// ---------------------------------------------------------------- living water (2026-11-22)
+// The river and the lakes are one surface per map, built here cell by cell with two extra attributes per corner:
+// aflow, the way the water runs there (tiles/second, in texture space), and ashore, 1 where the corner touches a bank.
+// Flow: for each water cell, the principal axis of the water within 3 tiles of it. A long thin run (a river or a
+// channel) flows along that axis, all of a component's cells pointing the same way as its own overall axis (south or
+// east first); a round body (a lake, a pond) barely drifts. Corners average the cells round them, so nothing seams.
+function waterTiles(cells, y, map) {
+  const W = map.w, H = map.h, wet = new Uint8Array(W * H);
+  for (let i = 0; i < cells.length; i += 2) wet[cells[i + 1] * W + cells[i]] = 1;
+  const isW = (x, z) => x < 0 || z < 0 || x >= W || z >= H || wet[z * W + x] === 1;   // off the map counts as water: no foam at the edge
+  const comp = new Int32Array(W * H).fill(-1), axes = [];
+  for (let i = 0; i < cells.length; i += 2) {                     // components and their overall axis
+    const s0 = cells[i + 1] * W + cells[i]; if (comp[s0] >= 0) continue;
+    const id = axes.length, st = [s0]; comp[s0] = id; let n = 0, sx = 0, sz = 0, sxx = 0, szz = 0, sxz = 0;
+    while (st.length) { const c = st.pop(), x = c % W, z = (c / W) | 0; n++; sx += x; sz += z; sxx += x * x; szz += z * z; sxz += x * z;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, nz = z + dz; if (nx < 0 || nz < 0 || nx >= W || nz >= H) continue; const k = nz * W + nx; if (wet[k] && comp[k] < 0) { comp[k] = id; st.push(k); } } }
+    const mx = sx / n, mz = sz / n, a = sxx / n - mx * mx, b = sxz / n - mx * mz, d = szz / n - mz * mz, th = 0.5 * Math.atan2(2 * b, a - d);
+    let ax = Math.cos(th), az = Math.sin(th); if (az < -0.01 || (Math.abs(az) <= 0.01 && ax < 0)) { ax = -ax; az = -az; } axes.push([ax, az]);
+  }
+  const flow = new Float32Array(W * H * 2);
+  for (let i = 0; i < cells.length; i += 2) {                     // each cell's local flow
+    const x = cells[i], z = cells[i + 1], id = comp[z * W + x]; let n = 0, sx = 0, sz = 0, sxx = 0, szz = 0, sxz = 0;
+    for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) { const nx = x + dx, nz = z + dz; if (nx < 0 || nz < 0 || nx >= W || nz >= H || comp[nz * W + nx] !== id) continue; n++; sx += dx; sz += dz; sxx += dx * dx; szz += dz * dz; sxz += dx * dz; }
+    const mx = sx / n, mz = sz / n, a = sxx / n - mx * mx, b = sxz / n - mx * mz, d = szz / n - mz * mz, th = 0.5 * Math.atan2(2 * b, a - d);
+    const tr = a + d, det = a * d - b * b, disc = Math.sqrt(Math.max(0, tr * tr / 4 - det)), l1 = tr / 2 + disc, l2 = Math.max(0.05, tr / 2 - disc);
+    let fx = Math.cos(th), fz = Math.sin(th); const [gx, gz] = axes[id]; if (fx * gx + fz * gz < 0) { fx = -fx; fz = -fz; }
+    const sp = 0.03 + 0.32 * Math.min(1, Math.max(0, (l1 / l2 - 1.6) / 3));   // a long run flows, a round pool barely drifts
+    flow[(z * W + x) * 2] = fx * sp; flow[(z * W + x) * 2 + 1] = fz * sp;
+  }
+  const corner = (vx, vz) => { let fx = 0, fz = 0, n = 0, dry = 0;
+    for (const [cx, cz] of [[vx - 1, vz - 1], [vx, vz - 1], [vx - 1, vz], [vx, vz]]) { if (!isW(cx, cz)) { dry = 1; continue; } if (cx < 0 || cz < 0 || cx >= W || cz >= H) continue; const k = (cz * W + cx) * 2; fx += flow[k]; fz += flow[k + 1]; n++; }
+    return [n ? fx / n : 0, n ? fz / n : 0, dry]; };
+  const pos = [], uv = [], nor = [], fl = [], sh = [], idx = [], S = 0.25;
+  for (let i = 0; i < cells.length; i += 2) {
+    const x = cells[i], z = cells[i + 1], k = pos.length / 3;
+    for (const [px, pz] of [[x, z], [x, z + 1], [x + 1, z + 1], [x + 1, z]]) { const [fx, fz, dry] = corner(px, pz); pos.push(px, y, pz); nor.push(0, 1, 0); uv.push(px * S, -pz * S); fl.push(fx * S, -fz * S); sh.push(dry); }
+    idx.push(k, k + 1, k + 2, k, k + 2, k + 3);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute('aflow', new THREE.Float32BufferAttribute(fl, 2)); g.setAttribute('ashore', new THREE.Float32BufferAttribute(sh, 1)); g.setIndex(idx);
+  return g;
+}
+// The water material's shader: the texture slides along aflow in two phases that cross-fade (so it never stretches),
+// over a second, finer layer drifting across it; foam breathes along the banks; sun glints twinkle; the surface swells.
+function liveWater(wm) {
+  const u = { uTime: { value: 0 }, uSpark: { value: 1 } }; wm.userData.u = u;
+  wm.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, u);
+    sh.vertexShader = 'attribute vec2 aflow;\nattribute float ashore;\nuniform float uTime;\nvarying vec2 vFlow;\nvarying float vShore;\nvarying vec2 vWp;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+      '#include <begin_vertex>\nvFlow = aflow; vShore = ashore; vWp = position.xz;\ntransformed.y += (sin(position.x * 1.9 + uTime * 1.4) + cos(position.z * 1.6 + uTime * 1.1)) * 0.012 * (1.0 - ashore);');
+    sh.fragmentShader = 'uniform float uTime;\nuniform float uSpark;\nvarying vec2 vFlow;\nvarying float vShore;\nvarying vec2 vWp;\n' + sh.fragmentShader.replace('#include <map_fragment>', `
+      float ph0 = fract(uTime * 0.18), ph1 = fract(uTime * 0.18 + 0.5), wB = abs(ph0 - 0.5) * 2.0;
+      vec2 drift = vec2(uTime * 0.012, uTime * 0.008);
+      vec4 tA = texture2D(map, vMapUv - vFlow * ph0 * 5.5 + drift), tB = texture2D(map, vMapUv - vFlow * ph1 * 5.5 + drift + vec2(0.37, 0.21));
+      vec4 tC = texture2D(map, vMapUv * 1.9 - vFlow * 2.0 * ph0 - drift * 1.4 + vec2(0.11, 0.53));
+      vec4 tex = mix(mix(tA, tB, wB), tC, 0.35);
+      diffuseColor *= tex;
+      float lap = 0.66 + 0.1 * sin(uTime * 1.5 + vWp.x * 1.3 + vWp.y * 1.1);   // the water's edge laps in and out
+      float foam = smoothstep(lap, lap + 0.1, vShore) + 0.45 * smoothstep(lap - 0.24, lap - 0.16, vShore) * (1.0 - smoothstep(lap - 0.12, lap - 0.06, vShore));
+      foam *= 0.45 + 0.8 * tC.g;
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.94, 0.98, 1.0), clamp(foam, 0.0, 1.0) * 0.6);`).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      float gl = max(0.0, sin(vWp.x * 9.1 + uTime * 2.3) * sin(vWp.y * 7.7 - uTime * 1.9)) * max(0.0, sin(vWp.x * 3.3 - vWp.y * 4.1 + uTime * 0.9));
+      totalEmissiveRadiance += vec3(1.0, 0.97, 0.86) * pow(gl, 18.0) * 1.4 * uSpark * (1.0 - vShore);`);
+  };
+  wm.customProgramCacheKey = () => 'livewater1';
 }
 // A gable roof: ridge along x, sitting on y = 0, with end triangles.
 function gable(w, d, h) {

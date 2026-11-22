@@ -538,6 +538,7 @@ function interiors() {
   m.prop('flower_vase', 10, 4, { solid: false, when: 'decor_vase' });
   // the back bedroom (2026-11-22): a door in the back-left corner, shut until Ruess builds the extension (flag house_back)
   m.prop('home_door', 0, 0, { solid: false, label: 'Back bedroom', tint: 0x9a6a44 }); m.doors.push({ x: 0, y: 0, to: { map: 'house_back' }, kind: 'house_back', lock: 'house_back' });
+  m.prop('wall_frames', 1, 0, { w: 1, tint: '#7a4f2a', solid: false, pics: 'sato' }); m.prop('wall_frames', 8, 0, { w: 2, tint: '#7a4f2a', solid: false, pics: 'sato' });   // Sato's own pictures: Earth, her Pallas, the farm (2026-11-22)
   m.prop('cat_bed', 3, 1, { solid: false, when: 'pet_cat' });   // the cat's bed by the hearth (2026-11-22; flag pet_cat)
   // the cellar (2026-11-22): a trapdoor by the east window, shut until Ruess digs it out (flag cellar); E only, not walked into
   m.prop('cellar_hatch', 10, 6, { solid: false, label: 'Cellar trapdoor' }); m.doors.push({ x: 10, y: 6, to: { map: 'cellar' }, kind: 'cellar', lock: 'cellar', hatch: true });
@@ -825,7 +826,7 @@ function homeRooms(all) {
   const back = (key, map, x, label) => { all[map].prop('home_door', x, 0, { act: 'home', home: key, tint: C[key] }); out['home_' + key].backTo = { map, x: x + 0.5, y: 1.6, dir: 0 }; HOMES[key] = { key, room: 'home_' + key, map, x, y: 1, label, back: true }; };
   const hatch = (key, map, x, y, label) => { all[map].prop('home_door', x, y, { act: 'home', home: key, solid: false, label, tint: C[key] }); door(key, map, x, y, label); };
   const tag = (map, bx, by, label, rename) => { const b = all[map].buildings.find((q) => q.x === bx && q.y === by); if (rename) b.label = label; else b.homeLabel = label; };
-  const bed = (m, x, y, tint) => m.prop('quilt_bed', x, y, { d: 2, tint }), frames = (m, x, w, tint) => m.prop('wall_frames', x, 0, { w, tint, solid: false });
+  const bed = (m, x, y, tint) => m.prop('quilt_bed', x, y, { d: 2, tint }), frames = (m, x, w, tint) => m.prop('wall_frames', x, 0, { w, tint, solid: false, pics: m.home === 'shelter' ? 'thornes' : m.home });   // pics: the owner's own pictures (art/farm/pictures)
   // Market Lane's cottages, across the Mill Bridge
   mk('lark', "Lark's cottage", 9, 7, 'b', [['lark', 6.5, 4.5]], (m, c) => { bed(m, 0, 0, c); m.prop('oven', 2, 0, { w: 2 }); m.prop('kitchen', 4, 0, { w: 2 }); m.prop('shelf', 7, 0, { w: 2 }); m.prop('flour_sacks', 8, 3); m.prop('tea_table', 5, 3, { tint: c }); m.prop('chair', 4, 3, { solid: false }); m.prop('rug', 2, 3, { solid: false, w: 2, d: 2 }); m.prop('plantpot', 8, 5); frames(m, 2, 3, '#e9b35a'); });
   mk('vesna', "Vesna's flat", 9, 7, 'b', [['vesna', 5.5, 3.5]], (m, c) => { m.prop('record_shelf', 0, 0, { w: 2 }); bed(m, 8, 0, c); m.prop('speaker', 0, 3); m.prop('speaker', 0, 5); m.prop('sofa', 2, 5, { w: 2 }); m.prop('mic_stand', 6, 3, { solid: false }); m.prop('rug', 3, 3, { solid: false, w: 2, d: 2 }); m.prop('lamp', 7, 0); m.prop('tea_table', 6, 5, { tint: '#e05c8a' }); frames(m, 2, 3, '#e05c8a'); });
@@ -855,6 +856,7 @@ function homeRooms(all) {
   mk('venn', "Venn's cabin", 8, 6, 'd', [['venn', 4.5, 2.5]], (m, c) => { m.prop('bunk', 0, 0, { d: 2, tint: c }); m.prop('terminal', 2, 0); m.prop('stove', 5, 0); m.prop('crate', 6, 0); m.prop('workbench', 7, 2, { d: 2 }); m.prop('tea_table', 3, 3, { tint: '#9a7a52' }); m.prop('lamp', 2, 3); });
   mk('wick', "Wick's hut", 8, 6, 'o', [['wick', 3.5, 3.5]], (m, c) => { bed(m, 0, 0, c); m.prop('fish_tank', 2, 0, { w: 2 }); m.prop('radio', 4, 0); m.prop('tea_table', 5, 2, { tint: '#c8ccd0' }); m.prop('armchair', 6, 2, { tint: c }); m.prop('crate', 7, 4); frames(m, 4, 2, '#4a8a9a'); });
   mk('hana', "Hana's loft", 8, 6, 'd', [['hana', 2.5, 2.5]], (m, c) => { m.prop('tool_wall', 0, 0, { w: 2 }); m.prop('crate', 2, 0); m.prop('crate', 0, 4, { scale: 0.85 }); m.prop('lamp', 6, 0); m.prop('bunk', 7, 0, { d: 2, tint: c }); m.prop('shrooms', 5, 4, { solid: false }); m.prop('tea_table', 4, 2, { tint: '#e0403a' }); frames(m, 3, 3, c); });
+  for (const [key, x, w] of [['mori', 5, 2], ['yui', 5, 2], ['venn', 3, 2]]) out['home_' + key].prop('wall_frames', x, 0, { w, tint: C[key], solid: false, pics: key });   // the three homes that had no pictures (2026-11-22)
   // and their doors
   for (const [key, x, label] of [['lark', 66, "Lark's cottage"], ['vesna', 72, "Vesna's flat"], ['pia', 81, "Pia's cottage"], ['tika', 86, "Tika's place"], ['noor', 92, "Noor's cottage"]]) { door(key, 'village', x, 46, label); tag('village', x - 2, 42, label, true); }
   for (const [key, bx, label] of [['marrow', 4, "Marrow's cottage"], ['mori', 11, "Dr. Mori's house"], ['yui', 18, "Yui's cottage"], ['oduya', 25, "Oduya's cottage"]]) { door(key, 'village', bx + 2, 46, label); tag('village', bx, 42, label, true); }
