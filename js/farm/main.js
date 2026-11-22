@@ -1188,7 +1188,7 @@ function frame(now) {
       if (fishing) endFishing();
       ix /= Math.max(1, len); iy /= Math.max(1, len);
       const c = Math.cos(W.yaw), s = Math.sin(W.yaw), wx = ix * c + iy * s, wy = -ix * s + iy * c;
-      const run = !map.belt && !map.ruins && (keys.has('ShiftLeft') || keys.has('ShiftRight') || Math.hypot(stick.x, stick.y) > 0.93);   // touch: push the stick all the way me.running = run;
+      const run = !map.belt && !map.ruins && (keys.has('ShiftLeft') || keys.has('ShiftRight') || Math.hypot(stick.x, stick.y) > 0.93); me.running = run;   // touch: push the stick all the way
       if (run && !map.indoor && (dustT -= dt) <= 0) { dustT = 0.09; W.puff(me.x - wx * 0.3, me.y - wy * 0.3, map.id === 'lower' ? 0x8a8478 : 0xd8c8a0, 3, 0.08); }   // dust kicked up behind her
       const tired = S.player.stamina < 15 ? 0.7 : 1, sp = (map.belt ? (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 6.2 : 4.4) : map.ruins ? (dashT > 0 ? 13 : 4.6) : run ? 7.4 : 3.9) * tired * dt;   // a captain's sprint: nearly twice walking pace (owner 2026-11-22)
       me.dir = Math.abs(wx) > Math.abs(wy) ? (wx < 0 ? 2 : 3) : (wy < 0 ? 1 : 0);

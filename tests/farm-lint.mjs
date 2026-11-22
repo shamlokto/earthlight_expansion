@@ -9,7 +9,9 @@ for (const f of readdirSync(dir).filter((x) => x.endsWith('.js'))) {
     const k = s.indexOf('//'); if (k < 0) return; n++;
     const tail = s.slice(k + 2);
     // a statement after the comment: `; word(` or `; word =` or `} word(`, as code reads, not prose
-    if (/[;}]\s*(?:await\s+)?[A-Za-z_$][\w$.]*\s*(?:\(|=[^=])[^)]*[;)]\s*(?:[;}]|$)/.test(tail) && /\w\(/.test(tail) && /;/.test(tail)) { bad++; console.log(`FAIL ${f}:${i + 1}: code after a // comment: ${line.trim().slice(0, 160)}`); }
+    const stmt = (/[;}]\s*(?:await\s+)?[A-Za-z_$][\w$.]*\s*(?:\(|=[^=])[^)]*[;)]\s*(?:[;}]|$)/.test(tail) && /\w\(/.test(tail) && /;/.test(tail))
+      || /\b[a-zA-Z_$][\w$]*\.[\w$.]+\s*=\s*[\w$.]+;\s*$/.test(tail);   // or a trailing `obj.prop = value;` (how me.running was lost)
+    if (stmt) { bad++; console.log(`FAIL ${f}:${i + 1}: code after a // comment: ${line.trim().slice(0, 160)}`); }
   });
 }
 console.log(bad ? `farm-lint: ${bad} suspicious lines (of ${n} with comments)` : `farm-lint: all ${n} commented lines clean`);
