@@ -497,7 +497,7 @@ for (const id of LOVERS) {
     const ctx = { season: 1, day: dayFor(1, wd), weekday: wd, minute: m, weather, festival: null, year: 1 };
     const home = (m >= 360 && m < 480) || (m >= 1200 && m < 1320);
     const mine = where(id, { ...ctx, partner: id }), usual = where(id, ctx), other = where(id, { ...ctx, partner: 'nobody' });
-    if (home) check(mine === (m >= 1200 && weather !== 'storm' ? 'house.partner' : 'farm.porch'), `${id} as partner is home at ${m} (the porch at dawn, indoors in the evening)`);
+    if (home) check(mine === (m >= 1200 ? 'house.partner' : 'farm.porch'), `${id} as partner is home at ${m} (the porch at dawn, indoors in the evening)`);
     else check(mine === usual || (usual === HOME(id) && mine === 'farm.porch'), `${id} as partner keeps the usual day at ${m} (free time at the farm, not the old home)`);
     check(other === usual, `${id}: somebody else's partner changes nothing`);
   }
