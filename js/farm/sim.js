@@ -620,11 +620,12 @@ function planRecipe(state, r) {
 }
 export function recipeBook(state) {
   const groupOf = (id) => (RECIPE_GROUPS.find(([, ids]) => ids.includes(id)) || ['Other'])[0];
-  return RECIPES.map((r) => { const p = state.flags.kitchen ? planRecipe(state, r) : null; return { id: r.id, name: r.name, desc: ITEMS[r.id].desc, group: groupOf(r.id), can: !!p, uses: p ? p.map((x) => ITEMS[x].name) : null, cooked: (state.cooked && state.cooked[r.id]) || 0, needs: r.needs.map((slot) => (slot.length === 1 ? ITEMS[slot[0]].name : slot === VEG ? 'any vegetable' : slot === ANY_FISH ? 'any fish' : slot === FISH_IDS ? 'any everyday fish' : slot === MILK ? 'any milk' : slot === FRUITS ? 'any fruit' : slot.map((x) => ITEMS[x].name).join(' or '))) }; });
+  return RECIPES.map((r) => { const p = state.flags.kitchen && (!r.oven || state.flags.kitchen_oven) ? planRecipe(state, r) : null; return { id: r.id, name: r.name, desc: ITEMS[r.id].desc, group: groupOf(r.id), can: !!p, uses: p ? p.map((x) => ITEMS[x].name) : null, cooked: (state.cooked && state.cooked[r.id]) || 0, needs: (r.oven && !state.flags.kitchen_oven ? ['the stone oven (Ruess)'] : []).concat(r.needs.map((slot) => (slot.label ? slot.label : slot.length === 1 ? ITEMS[slot[0]].name : slot === VEG ? 'any vegetable' : slot === ANY_FISH ? 'any fish' : slot === FISH_IDS ? 'any everyday fish' : slot === MILK ? 'any milk' : slot === FRUITS ? 'any fruit' : slot.map((x) => ITEMS[x].name).join(' or ')))) }; });
 }
 export function cook(state, recipeId) {
   if (!state.flags.kitchen) return fail('The kitchen needs a refit first. Ruess can do it.');
   const r = RECIPES.find((x) => x.id === recipeId); if (!r) return fail('There is no such recipe.');
+  if (r.oven && !state.flags.kitchen_oven) return fail(`${r.name} wants the stone oven. Ruess can build one.`);
   const picks = planRecipe(state, r); if (!picks) return fail(`You do not have the ingredients for ${r.name.toLowerCase()}.`);
   const keep = JSON.stringify([state.player.inv, boxes(state).fridge]);   // the dish may need a slot an ingredient frees
   for (const id of picks) {
@@ -2250,6 +2251,8 @@ function laneShelves(state, shopId, sell, once, out) {
       apply: () => { state.flags.duckhouse = true; return 'Ruess fixes the duck house by the east pond. "The ramp is regulation width. For a duck."'; } });
     if (!state.flags.house_back) out.push({ key: 'house_back', label: 'Back bedroom extension', desc: 'Ruess knocks through the back-left corner of the farmhouse and builds a bedroom out the back: a bed, a wardrobe, shelves and room to breathe. Somewhere for two, one day.', price: 8000, lumber: 120, needs: '120 lumber', once: true,
       apply: () => { state.flags.house_back = true; return 'By evening there is a new room behind the farmhouse, smelling of sawdust. Ruess hangs the door himself. "It sticks. That is character."'; } });
+    if (state.flags.kitchen && !state.flags.kitchen_oven) out.push({ key: 'kitchen_oven', label: 'Stone oven and spice rack', desc: 'A brick oven beside the farmhouse kitchen and a rack of spices: pies, roasts, and dishes made with the cellar\'s aged cheese, honey and wine.', price: 3000, lumber: 30, req: [['silica', 3], ['nickel_iron', 3]], needs: '30 lumber, 3 silica, 3 nickel-iron', once: true,
+      apply: () => { state.flags.kitchen_oven = true; return 'Ruess fires the new oven for the first time and burns a test loaf black. "Calibrated," he says.'; } });
     if (!state.flags.hot_tub) out.push({ key: 'hot_tub', label: 'Cedar hot tub', desc: 'A round cedar tub beside the farmhouse, heated off the solar line all day. One long soak each evening from five: +40 stamina.', price: 3500, lumber: 50, req: [['copper', 2]], needs: '50 lumber, 2 copper ore', once: true,
       apply: () => { state.flags.hot_tub = true; return 'Ruess hoops the last stave and fills the tub. "Cedar. It smells like a forest that has given up worrying."'; } });
     if (!state.flags.cellar) out.push({ key: 'cellar', label: 'Farmhouse cellar', desc: 'Ruess digs out the crawlspace under the farmhouse into a stone cellar with six oak casks. A week in a cask ages cheese, honey or grape juice; three weeks makes it vintage.', price: 6000, lumber: 80, needs: '80 lumber', once: true,
@@ -2832,3 +2835,17 @@ export function readMail(state) {
   if (m.item) { const r = addItem(state, m.item, 1); if (!r.ok) return { ok: true, letter: m, kept: true, msg: 'Your rucksack is full: the present stays in the mailbox with the letter.' }; }
   box.shift(); return { ok: true, letter: m, gained: m.item ? [{ id: m.item, n: 1 }] : [] };
 }
+
+// ---------------------------------------------------------------- the stone oven's dishes (2026-11-22)
+const AGED_CHEESES = Object.assign(['aged_cheese', 'aged_goat_cheese', 'vintage_cheese', 'vintage_goat_cheese'], { label: 'any aged cheese' });
+const AGED_WINES = Object.assign(['aged_grape_juice', 'vintage_grape_juice'], { label: 'grape wine' });
+const AGED_HONEYS = Object.assign(['aged_honey', 'vintage_honey'], { label: 'cellar honey' });
+export const OVEN_RECIPES = [
+  { id: 'cellar_platter', name: 'Cellar platter', oven: true, needs: [AGED_CHEESES, AGED_WINES, FRUITS] },
+  { id: 'cheese_fondue', name: 'Wine and cheese fondue', oven: true, needs: [AGED_CHEESES, AGED_WINES, LOAVES] },
+  { id: 'honey_glazed_fish', name: 'Honey-glazed fish', oven: true, needs: [ANY_FISH, AGED_HONEYS] },
+  { id: 'pumpkin_pie', name: 'Pumpkin pie', oven: true, needs: [['pumpkin'], EGGS, MILK] },
+  { id: 'roast_vegetables', name: 'Oven-roast vegetables', oven: true, needs: [VEG, VEG, ['herb', 'wild_mint']] },
+];
+RECIPES.push(...OVEN_RECIPES);
+RECIPE_GROUPS.push(['From the stone oven', OVEN_RECIPES.map((r) => r.id)]);

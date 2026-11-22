@@ -1635,5 +1635,16 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   g.mail.push({ from: 'nobody', n: 0 }, 'junk', { from: 'lark', n: 9 }); check(sim.mailWaiting(g) === sim.MAIL_MAX, 'junk mail is binned');
   const L = loadState(saveState(g)); check(L && sim.mailWaiting(L) === sim.MAIL_MAX, 'the mail survives a save');
 }
+// ---------------------------------------------------------------- the stone oven (2026-11-22)
+{
+  const g = rich(471); addItem(g, 'silica', 3); addItem(g, 'nickel_iron', 3); const keys = () => shopStock(g, 'workshop').map((e) => e.key);
+  check(!keys().includes('kitchen_oven'), 'no oven before the kitchen'); g.flags.kitchen = true; check(keys().includes('kitchen_oven'), 'then Ruess offers one');
+  addItem(g, 'aged_cheese', 1); addItem(g, 'aged_grape_juice', 1); addItem(g, 'apple', 1);
+  let b = sim.recipeBook(g).find((r) => r.id === 'cellar_platter'); check(!b.can && b.needs[0].includes('oven') && b.needs.includes('any aged cheese') && !sim.cook(g, 'cellar_platter').ok, 'the platter wants the oven');
+  check(buy(g, 'workshop', 'kitchen_oven').ok && g.flags.kitchen_oven && !keys().includes('kitchen_oven'), 'the stone oven is built');
+  b = sim.recipeBook(g).find((r) => r.id === 'cellar_platter'); const r = sim.cook(g, 'cellar_platter');
+  check(b.can && r.ok && countItem(g, 'cellar_platter') === 1 && !countItem(g, 'aged_cheese') && !countItem(g, 'aged_grape_juice'), 'a cellar platter from aged cheese and wine');
+  check(sim.OVEN_RECIPES.every((q) => ITEMS[q.id] && ITEMS[q.id].kind === 'food'), 'every oven dish is food');
+}
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);
