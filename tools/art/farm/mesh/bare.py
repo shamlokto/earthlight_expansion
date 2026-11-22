@@ -15,10 +15,12 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'
 FRUIT = {
     'bush': [(0.94, 1.0), (0.0, 0.05)],
     'fruit_tree_apple': [(0.94, 1.0), (0.0, 0.06)],
-    'fruit_tree_peach': [(0.94, 1.0), (0.0, 0.11)],
+    'fruit_tree_peach': [(0.9, 1.0), (0.0, 0.14)],
     'fruit_tree_cherry': [(0.94, 1.0), (0.0, 0.04)],
     'fruit_tree_persimmon': [(0.0, 0.12)],
 }
+
+SAT = {'fruit_tree_peach': 0.22}   # peaches are pale: a lower saturation threshold catches their highlights
 
 def read_glb(path):
     b = open(path, 'rb').read()
@@ -57,7 +59,7 @@ def bare(name):
     h, sat, val = hsv[..., 0], hsv[..., 1], hsv[..., 2]
     fruit = np.zeros(h.shape, bool)
     for lo, hi in FRUIT[name]: fruit |= (h >= lo) & (h <= hi)
-    fruit &= (sat > 0.42) & (val > 0.22)
+    fruit &= (sat > SAT.get(name, 0.42)) & (val > 0.22)
     leaf = (h > 0.17) & (h < 0.45) & (sat > 0.25)
     if not leaf.any(): raise SystemExit(f'{name}: no leaf colour found')
     # cherry and peach blossoms are pink: keep low-saturation pinks (blossom) but not the deep fruit reds
