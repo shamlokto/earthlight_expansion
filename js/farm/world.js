@@ -966,7 +966,8 @@ export class World {
       const lampL = o.userData.lamp || (o.children[0] && o.children[0].userData.lamp); if (lampL) this.lamps.push(lampL);
     }
     this.colonyFx = null;
-    if (map.id === 'farm') this.farmNight(R, map);   // the farmhouse's porch lamp and lit windows, fireflies over the field (2026-11-22)
+    if (map.id === 'farm') this.farmNight(R, map);
+    if (map.city) this.roadMarks(R, map);              // faded lane lines on the city's streets (2026-11-22)   // the farmhouse's porch lamp and lit windows, fireflies over the field (2026-11-22)
     for (const s of this.spinners) s.o.userData.moving = true;
     if (built.length) mergeStatic(built, R);                   // the built colony props: one mesh per material
     if (pools.length) { this.pools = lightPools(pools); R.add(this.pools); }
@@ -1042,6 +1043,18 @@ export class World {
       g.position.set(x + n * 0.02, 1.75, z); R.add(g);
     }
     R.add(box(W, 0.14, 0.04, frame, W / 2, 0, 0.01), box(0.04, 0.14, H, frame, 0.01, 0, H / 2), box(0.04, 0.14, H, frame, W - 0.01, 0, H / 2));   // skirting
+  }
+  roadMarks(R, map) {
+    const W = map.w, H = map.h, st = (x, y) => x >= 0 && y >= 0 && x < W && y < H && map.g[y * W + x] === 'm' && !map.block[y * W + x];
+    const mat = new THREE.MeshBasicMaterial({ color: 0xe8dca0, transparent: true, opacity: 0.45, depthWrite: false }), geo = new THREE.PlaneGeometry(0.42, 0.07);
+    const marks = [];
+    // a street two tiles wide gets a dashed line down the middle; runs of at least 4 tiles
+    for (let y = 0; y < H - 1; y++) for (let x = 0; x < W; x++) if (st(x, y) && st(x, y + 1) && !st(x, y - 1) && !st(x, y + 2) && st(x - 1, y) && st(x + 1, y) && (x % 2 === 0)) marks.push([x + 0.5, y + 1, 0]);
+    for (let x = 0; x < W - 1; x++) for (let y = 0; y < H; y++) if (st(x, y) && st(x + 1, y) && !st(x - 1, y) && !st(x + 2, y) && st(x, y - 1) && st(x, y + 1) && (y % 2 === 0)) marks.push([x + 1, y + 0.5, 1]);
+    if (!marks.length) return;
+    const im = new THREE.InstancedMesh(geo, mat, marks.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1), v = new THREE.Vector3();
+    marks.forEach(([x, z, turn], i) => { e.set(-Math.PI / 2, 0, turn ? Math.PI / 2 : 0); q.setFromEuler(e); m4.compose(v.set(x, 0.025, z), q, one); im.setMatrixAt(i, m4); });
+    im.renderOrder = 1; R.add(im);
   }
   farmNight(R, map) {
     const b = map.buildings.find((q) => q.kind === 'house'); if (!b) return;
