@@ -95,7 +95,10 @@ export function model(name) {
 // Every file the art pack lists (pictures, music in both formats, models), for the offline download (2026-11-23)
 export function allUrls() {
   const out = new Set([BASE + 'manifest.json', BASE + 'models/manifest.json']);
-  for (const f of Object.values(files)) { if (f.file) out.add(BASE + f.file); if (f.ogg) out.add(BASE + f.ogg); }
-  for (const m of Object.values(models)) if (m && m.file) out.add(BASE + 'models/' + m.file);
+  let ogg = false; try { ogg = !!document.createElement('audio').canPlayType('audio/ogg; codecs="vorbis"'); } catch {}   // only the music format this browser will play (the same rule as sfx.js)
+  for (const f of Object.values(files)) { if (f.ogg && /\.(mp3|m4a)$/.test(f.file || '')) out.add(BASE + (ogg ? f.ogg : f.file)); else { if (f.file) out.add(BASE + f.file); if (f.ogg) out.add(BASE + f.ogg); } }
+  for (const m of Object.values(models)) if (m && m.file && !/\bitem\b/i.test(m.note || '')) out.add(BASE + 'models/' + m.file);
   return [...out];
 }
+// The item models only feed the journal's 3D item viewer: saved last, after the game itself is ready offline
+export function extraUrls() { return Object.values(models).filter((m) => m && m.file && /\bitem\b/i.test(m.note || '')).map((m) => BASE + 'models/' + m.file); }

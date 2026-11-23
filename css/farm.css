@@ -139,3 +139,6 @@ button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outl
 
 /* the boss bar (2026-11-23) */
 #bossBar { position: fixed; left: 50%; bottom: calc(var(--barH, 64px) + 120px); transform: translateX(-50%); width: min(460px, 70vw); z-index: 30; pointer-events: none; text-align: center; font: 700 13px var(--f-display); color: #fff3d6; text-shadow: 0 1px 3px #000; letter-spacing: 2px; } #bossBar div { height: 10px; margin-top: 4px; border-radius: 6px; background: rgba(20, 16, 12, .7); border: 1px solid rgba(255, 220, 160, .5); overflow: hidden; } #bossBar i { display: block; height: 100%; background: linear-gradient(90deg, #ff6a3a, #ffd36a); }
+
+/* the offline download's progress bar (2026-11-23) */
+#dlBar { margin: 10px 0 4px; max-width: 420px; } #dlBar div { height: 12px; border-radius: 7px; background: rgba(20, 16, 12, .6); border: 1px solid rgba(255, 230, 180, .45); overflow: hidden; } #dlBar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #c8891a, #ffd36a); transition: width .15s; } #dlBar i.done { background: linear-gradient(90deg, #4f9a5a, #7dffb0); } #dlBar span { display: block; margin-top: 4px; font: 600 12px var(--f-display); color: #fff3d6; text-shadow: 0 1px 2px #000; }

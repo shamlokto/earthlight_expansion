@@ -111,10 +111,19 @@ async function saveForOffline() {
   try { const css = await (await fetch('css/farm-fonts.css')).text(); for (const m of css.matchAll(/url\(\.\.\/(fonts\/farm\/[^)]+)\)/g)) urls.add(m[1]); } catch {}   // every font face, even ones not shown yet
   for (const e of performance.getEntriesByType('resource')) { try { const u = new URL(e.name); if (u.origin === location.origin) urls.add(u.pathname.replace(/^\//, '').replace(location.pathname.replace(/[^/]*$/, '').replace(/^\//, ''), '')); } catch {} }
   try { const idx = await (await fetch('art/farm/people/portraits/index.json')).json(); const walk = (v) => { if (typeof v === 'string' && /\.(webp|png|jpg)$/.test(v)) urls.add('art/farm/people/portraits/' + v); else if (v && typeof v === 'object') Object.values(v).forEach(walk); }; walk(idx); urls.add('art/farm/people/portraits/index.json'); } catch {}
-  const list = [...urls].filter(Boolean); let done = 0, bad = 0;
-  const next = async () => { while (list.length) { const u = list.pop(); try { const r = await fetch(u); if (!r.ok) bad++; else await r.arrayBuffer(); } catch { bad++; } done++; if (done % 10 === 0 || !list.length) out.textContent = `Saving for offline play… ${done} files${bad ? ` (${bad} missing)` : ''}`; } };
-  await Promise.all([next(), next(), next(), next(), next(), next()]);
-  out.textContent = `Ready to play offline: ${done - bad} files kept on this device.`; btn.textContent = 'Saved for offline ✓'; btn.disabled = false;
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}   // ask the browser to keep it, not evict it under pressure
+  const extras = art.extraUrls().filter((u) => !urls.has(u)), all = [...urls].filter(Boolean), total = all.length + extras.length; let done = 0, bad = 0, bytes = 0, kept = 0;
+  const big = (u) => /\.(glb|mp4|webm|ogg|mp3)$/.test(u), list = [...all.filter(big), ...all.filter((u) => !big(u))];   // popped from the end: small files first, then models and music
+  let bar = $('dlBar'); if (!bar) { bar = document.createElement('div'); bar.id = 'dlBar'; bar.innerHTML = '<div><i></i></div><span></span>'; btn.closest('.fm-trow').after(bar); }   // the download's progress bar (2026-11-23)
+  bar.hidden = false; const fill = bar.querySelector('i'), lab = bar.querySelector('span');
+  const show = () => { const k = total ? done / total : 1; fill.style.width = (k * 100).toFixed(1) + '%'; lab.textContent = `${Math.floor(k * 100)}% · ${done} / ${total} files · ${(bytes / 1048576).toFixed(1)} MB${kept ? ` · ${kept} already saved` : ''}${bad ? ` · ${bad} missing` : ''}`; };
+  show(); out.textContent = 'Saving the game to this device…';
+  const next = async () => { while (list.length) { const u = list.pop(); try { const abs = new URL(u, location.href); abs.search = ''; if (await caches.match(abs.href)) { kept++; done++; show(); continue; }   // already saved: a stopped download picks up where it left off
+    const r = await fetch(u); if (!r.ok) bad++; else { const n = (await r.arrayBuffer()).byteLength; bytes += n; } } catch { bad++; } done++; show(); } };   // n first: a += await would lose the other downloads' sums
+  await Promise.all(Array.from({ length: 12 }, next));
+  out.textContent = `Ready to play offline. Saving the journal's 3D item models too…`; btn.textContent = 'Saved for offline ✓'; btn.disabled = false;
+  list.push(...extras); await Promise.all(Array.from({ length: 8 }, next));   // extras last: the game already plays offline
+  out.textContent = `Ready to play offline: ${done - bad} files (${(bytes / 1048576).toFixed(0)} MB) kept on this device.`; fill.style.width = '100%'; fill.classList.add('done'); btn.textContent = 'Saved for offline ✓'; btn.disabled = false;
 }
 // Something threw mid-transition: never leave the player on a black screen with the controls locked.
 let recovering = false;
