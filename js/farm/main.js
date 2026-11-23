@@ -121,7 +121,7 @@ window.addEventListener('unhandledrejection', (ev) => recover(ev.reason, 'promis
 let mailFlag = false;   // the mailbox's red flag is up while letters wait (2026-11-22)
 function mailFlagCheck() { const up = !!(map && map.id === 'farm' && sim.mailWaiting(S)); if (up === mailFlag && (!up || W.tileObjs.get('mailflag'))) return; mailFlag = up; if (up) W.place('mailflag', 'mail_flag', 13.5, 7.5); else W.unplace('mailflag'); }
 // refreshHud also refills the beta game's credits (they never run out)
-function refreshHud() { if (S && S.flags.beta) S.player.money = sim.BETA_MONEY; mailFlagCheck(); { const on = !!(map && map.city); for (const id of ['tWpn', 'tJet', 'tDrg']) { const b = $(id); if (b) b.hidden = !on || (id === 'tDrg' && !sim.pallasLevel(S, 'dragon')); } } const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: jet ? `Jet · Space bombs ×${sim.pallasStat(S, 'bombs')} · T land · Shift boost` : `Pallas · ${WEAPON_NAME[weapon]} (V) · F Hydra${sim.pallasLevel(S, 'dragon') ? ' · G Dragon' : ''} · T jet · R scan` } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
+function refreshHud() { if (S && S.flags.beta) S.player.money = sim.BETA_MONEY; mailFlagCheck(); { const on = !!(map && map.city); for (const id of ['tWpn', 'tJet', 'tDrg']) { const b = $(id); if (b) b.hidden = !on || (id === 'tDrg' && !sim.pallasLevel(S, 'dragon')); } } const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: jet ? `Jet · Space Earthlight bombs ×${sim.pallasStat(S, 'bombs')} · T land · Shift boost` : `Pallas · ${WEAPON_NAME[weapon]} (V) · F Hydra${sim.pallasLevel(S, 'dragon') ? ' · G Dragon' : ''} · T jet · R scan` } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
 // ---------------------------------------------------------------- people
@@ -652,7 +652,8 @@ function popMonster(mon) {
   const i = S.mine ? S.mine.monsters.indexOf(mon.ref) : -1; const r = i >= 0 ? sim.defeatMonster(S, i) : { gained: [] };
   W.puff(mon.x, mon.y, 0xffb347, 18, 0.5); W.puff(mon.x, mon.y, 0x7dffb0, 8, 0.8); W.shake = Math.max(W.shake || 0, 0.12);
   const k = W.facers.indexOf(mon.barG); if (k >= 0) W.facers.splice(k, 1);
-  if (map.city && (mon.big || Math.random() < 0.12)) dropOrb(mon.x, mon.y);   // a repair orb now and then (always from a boss)
+  if (map.city && (mon.big || Math.random() < 0.12)) dropOrb(mon.x, mon.y);
+  if (map.city) { const now = performance.now(); combo = now - comboAt < 2500 ? combo + 1 : 1; comboAt = now; if (combo >= 3) { floatText(me.x, me.y - 0.6, `${combo}× streak!`); if (combo % 5 === 0) sfx('good'); } }   // a kill streak   // a repair orb now and then (always from a boss)
   dying.push({ o: mon.o, t: 0, s0: mon.o.scale.x, tele: mon.tele }); mon.barG.visible = false; W.tileObjs.delete('mon' + (mon.ref.id ?? '')); monsters.splice(monsters.indexOf(mon), 1);   // it spins, shrinks and is gone (weaponsTick) sfx('pop'); floatText(mon.x, mon.y, pick(mon.kind === 'glow_slime' || mon.kind === 'smog_wraith' ? ['fizzle!', 'pff…', 'blorp'] : mon.kind === 'spore_brute' ? ['it flees!', 'stomp… stomp… gone'] : ['pop!', 'poof', 'shoo!', 'it flees!']));
   ui.gainedToast(r.gained); if (r.credits) floatText(mon.x, mon.y + 0.3, `+${r.credits} cr`); if (Math.random() < 0.35) ui.toast(pick(story.RUINS.monster));
   for (const ref of r.spawned || []) { const q = cityMonsterObj(ref); q.state = 'chase'; floatText(q.x, q.y, 'split!'); }
@@ -721,7 +722,7 @@ function pallasDash() { if (dashCd > 0) return; dashCd = sim.pallasStat(S, 'thru
 // V cycles the arm weapon (blaster, beam laser, seeker missiles); G sets down the Dragon battery (long range, slow,
 // heavy shells that cannot land closer than 2 tiles); T folds the Pallas into its jet: twice as fast, over towers,
 // gas and pools, out of reach of claws, and Space drops bombs. Explosions, beams and missiles live in `shots`.
-let hitStop = 0, weapon = 'blaster', laserHold = 0, laserBeam = null, laserNum = 0, missileCd = 0, bombCd = 0, dragon = null, dragonCd = 0, jet = null, jetCd = 0, packT = 40, shots = [], dying = [];
+let combo = 0, comboAt = 0, hitStop = 0, weapon = 'blaster', laserHold = 0, laserBeam = null, laserNum = 0, missileCd = 0, bombCd = 0, dragon = null, dragonCd = 0, jet = null, jetCd = 0, packT = 40, shots = [], dying = [];
 const WEAPON_NAME = { blaster: 'Blaster', laser: 'Beam laser', missiles: 'Seeker missiles' };
 function weaponsOwned() { return ['blaster', ...(sim.pallasLevel(S, 'laser') ? ['laser'] : []), ...(sim.pallasLevel(S, 'missiles') ? ['missiles'] : [])]; }
 function cycleWeapon() {
@@ -785,13 +786,20 @@ function fireMissiles() {
   }
   me.swing = 1; me.kick = 1.6;
 }
-// bombs from the jet: they fall from under the wing and burst where they land
+// Earthlight bombs from the jet (owner 2026-11-23: in Earthlight the 'bomb' is a big ship-attack missile): each drops from the
+// belly, lights, and streaks for the heaviest creature ahead (a boss first), turning slowly; a big burst where it strikes.
 function dropBombs() {
-  if (bombCd > 0) return; bombCd = 0.85; const n = sim.pallasStat(S, 'bombs'), [dx, dy] = jet ? [Math.sin(jet.yaw), Math.cos(jet.yaw)] : DIRV[me.dir]; sfx('drop');
+  if (bombCd > 0) return; bombCd = 1.3; const n = sim.pallasStat(S, 'bombs'), yaw = jet ? jet.yaw : [0, Math.PI, -Math.PI / 2, Math.PI / 2][me.dir], dx = Math.sin(yaw), dy = Math.cos(yaw); sfx('drop');
+  const pool = monsters.map((m2) => { const ex = m2.x - me.x, ey = m2.y - me.y, d = Math.hypot(ex, ey); return { m2, d, ahead: d ? (ex * dx + ey * dy) / d : 0 }; }).filter((q) => q.d < 15 && q.ahead > -0.2)
+    .sort((a, b) => (b.m2.big ? 100 : 0) + b.m2.hp * 3 - b.d - ((a.m2.big ? 100 : 0) + a.m2.hp * 3 - a.d));
   for (let k = 0; k < n; k++) {
-    const b = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), new THREE.MeshStandardMaterial({ color: 0x2b3138, metalness: 0.5, roughness: 0.4 }));
-    const x = me.x + dx * (0.6 + k * 0.9), y = me.y + dy * (0.6 + k * 0.9); b.position.set(me.x, 2.0, me.y); W.scene.add(b);
-    shots.push({ kind: 'bomb', m: b, x0: me.x, y0: me.y, x, y, t: -k * 0.12, life: 0.5 });
+    const g = new THREE.Group(), white = new THREE.MeshStandardMaterial({ color: 0xe9eef3, roughness: 0.35, metalness: 0.2 }), body = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.9, 10), white), nose = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.3, 10), new THREE.MeshStandardMaterial({ color: 0x3a6ab8 })), fl = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffb347 }));
+    body.rotation.x = nose.rotation.x = Math.PI / 2; nose.position.z = 0.6; fl.position.z = -0.52; fl.visible = false; g.add(body, nose, fl);
+    for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) { const fin = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.18, 0.2), white); fin.position.set(Math.sin(a) * 0.12, Math.cos(a) * 0.12, -0.36); fin.rotation.z = -a; g.add(fin); }
+    const side = (k - (n - 1) / 2) * 0.5, sx = me.x - dy * side, sy = me.y + dx * side; g.position.set(sx, 1.8, sy); W.scene.add(g);
+    const tg = pool.length ? pool[k % pool.length].m2 : null;
+    if (tg) { const lk = new THREE.Mesh(new THREE.RingGeometry(0.7, 0.8, 4), new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide })); lk.rotation.x = -Math.PI / 2; W.scene.add(lk); shots.push({ kind: 'lock', m: lk, target: tg, t: 0, life: 3 }); }
+    shots.push({ kind: 'missile', heavy: true, m: g, fl, x: sx, y: sy, h: 1.8, vx: dx * 2, vy: dy * 2, target: tg, t: -k * 0.15, life: 3.6, trail: 0, fx: me.x + dx * 9, fy: me.y + dy * 9 });
   }
 }
 // the Dragon battery: G sets it in front; it lobs a heavy shell every 2.2 s at a creature 2-12 tiles off
@@ -810,7 +818,7 @@ function toggleJet() {
     const sx = me.x, sy = me.y; jet = null; if (!canStand(sx, sy)) { jet = jetObj(); return ui.toast('Find open ground to land on.', 1600); }
     W.unplace('pjet'); me.group.visible = true; W.puff(me.x, me.y, 0xfff2b8, 16, 0.4); W.puff(me.x, me.y, 0x9fd8ee, 10, 0.2); sfx('zap'); ui.toast('The Pallas unfolds and lands.', 1200); refreshHud(); return;
   }
-  jet = jetObj(); W.puff(me.x, me.y, 0xfff2b8, 18, 0.6); sfx('zap'); W.shake = 0.1; ui.toast('Jet form: Space drops bombs, T lands. Searching needs your feet on the ground.', 2600); refreshHud();
+  jet = jetObj(); W.puff(me.x, me.y, 0xfff2b8, 18, 0.6); sfx('zap'); W.shake = 0.1; ui.toast('Jet form: Space fires Earthlight bombs, T lands. Searching needs your feet on the ground.', 2600); refreshHud();
 }
 function jetObj() { const o = W.place('pjet', 'pallas_jet', me.x, me.y, { scale: 1.4 }); me.group.visible = false; return { o, yaw: [0, Math.PI, -Math.PI / 2, Math.PI / 2][me.dir] ?? 0, bank: 0, t: 0, h: 2.2 }; }
 // a red warning on the ground while a creature winds up: where the lunge will go, or the titan's slam ring
@@ -861,13 +869,16 @@ function weaponsTick(dt) {
     else if (q.kind === 'lock') { if (!q.target || !monsters.includes(q.target)) done = true; else { q.m.position.set(q.target.x, 0.07, q.target.y); q.m.rotation.z += dt * 4; q.m.scale.setScalar(q.target.big ? 1.8 : 1); } }
     else if (q.kind === 'orb') { q.m.position.y = 0.5 + Math.sin(q.t * 4) * 0.12; q.m.rotation.y += dt * 2; if (Math.hypot(me.x - q.x, me.y - q.y) < 0.9) { const rr = sim.repairHull(S, 15); if (rr.ok) { floatText(q.x, q.y, `+${rr.mended} hull`); sfx('good'); W.puff(q.x, q.y, 0x7dffb0, 10, 0.6); hullBar(true); } done = true; } else if (q.t > q.life - 3) q.m.visible = Math.floor(q.t * 8) % 2 === 0; }
     else if (q.kind === 'missile') {
+      if (q.heavy && q.t < 0.35) { q.h = 1.8 - Math.max(0, q.t) * 2.2; q.m.position.set(q.x, q.h, q.y); q.m.rotation.y = Math.atan2(q.vx, q.vy); if (q.t >= 0.3 && !q.fl.visible) { q.fl.visible = true; W.puff(q.x, q.y, 0xfff2b8, 6, q.h); sfx('zap'); } continue; }   // drop from the belly, then light
       if (q.target && !monsters.includes(q.target)) q.target = monsters.reduce((b, m2) => (Math.hypot(m2.x - q.x, m2.y - q.y) < (b ? Math.hypot(b.x - q.x, b.y - q.y) : 9) ? m2 : b), null);
-      const sp = Math.min(11, 4 + q.t * 9);
-      if (q.target && q.t > 0.12) { const ax = q.target.x - q.x, ay = q.target.y - q.y, al = Math.hypot(ax, ay) || 1, vl = Math.hypot(q.vx, q.vy) || 1, turn = Math.min(1, dt * 6); q.vx = q.vx / vl * (1 - turn) + ax / al * turn; q.vy = q.vy / vl * (1 - turn) + ay / al * turn; }
+      const sp = q.heavy ? Math.min(14, 3 + q.t * 14) : Math.min(11, 4 + q.t * 9);
+      if (q.target && q.t > 0.12) { const ax = q.target.x - q.x, ay = q.target.y - q.y, al = Math.hypot(ax, ay) || 1, vl = Math.hypot(q.vx, q.vy) || 1, turn = Math.min(1, dt * (q.heavy ? 3 : 6)); q.vx = q.vx / vl * (1 - turn) + ax / al * turn; q.vy = q.vy / vl * (1 - turn) + ay / al * turn; }
       const vl = Math.hypot(q.vx, q.vy) || 1; q.vx = q.vx / vl * sp; q.vy = q.vy / vl * sp; q.x += q.vx * dt; q.y += q.vy * dt; q.h += ((q.target ? 0.8 : 1.2) - q.h) * Math.min(1, dt * 3);
       q.m.position.set(q.x, q.h, q.y); q.m.rotation.y = Math.atan2(q.vx, q.vy); if ((q.trail -= dt) <= 0) { q.trail = 0.04; W.puff(q.x - q.vx * 0.03, q.y - q.vy * 0.03, 0xd8d0c4, 1, q.h); }
       const hitMon = monsters.find((m2) => Math.hypot(m2.x - q.x, m2.y - q.y) < (m2.big ? 0.8 : 0.5));
-      if (hitMon || map.solid(q.x, q.y)) done = true; if (done) boom(q.x, q.y, 1.3, 3 + sim.pallasLevel(S, 'missiles'), 0xffa040);
+      if (q.heavy && !q.target && Math.hypot(q.fx - q.x, q.fy - q.y) < 0.6) done = true;   // no target: it strikes where it was aimed
+      if (hitMon || (!q.heavy && map.solid(q.x, q.y))) done = true;
+      if (done && q.heavy) { boom(q.x, q.y, 2.2 + 0.3 * sim.pallasLevel(S, 'bombs'), 6 + 2 * sim.pallasLevel(S, 'bombs'), 0xffd36a); W.shake = 0.4; } else if (done) boom(q.x, q.y, 1.3, 3 + sim.pallasLevel(S, 'missiles'), 0xffa040);
     } else if (q.kind === 'bomb' || q.kind === 'shell') {
       const k = Math.max(0, q.t) / q.life, x = q.x0 + (q.x - q.x0) * k, y = q.y0 + (q.y - q.y0) * k, h = q.kind === 'bomb' ? 2.0 * (1 - k * k) : 0.9 + Math.sin(k * Math.PI) * 3.2 - k * 0.8;
       q.m.position.set(x, Math.max(0.1, h), y); if (q.t < 0) q.m.visible = false; else q.m.visible = true;
@@ -894,7 +905,7 @@ function ruinsTick(dt) {
     let sp = 0, tx = 0, ty = 0;
     if (mon.titan) titanThink(mon, dt, d, ex, ey);                         // the scrap titan: slams and thrown scrap
     else if (mon.kind === 'drone' || mon.ranged) {                         // drones keep their distance and lob slow orbs
-      if (d < 7) { const want = d < 3 ? -1 : d > 4.5 ? 1 : 0; tx = ex / d * want + Math.cos(mon.wob) * 0.6; ty = ey / d * want + Math.sin(mon.wob * 1.3) * 0.6; sp = 1.3; mon.shotT -= dt; if (mon.shotT <= 0) { mon.shotT = 2.4 + Math.random(); spawnBolt(mon.x, mon.y, ex, ey, 'enemy'); floatText(mon.x, mon.y, '!'); } }
+      if (d < 7) { const want = d < 3 ? -1 : d > 4.5 ? 1 : 0; tx = ex / d * want + Math.cos(mon.wob) * 0.6; ty = ey / d * want + Math.sin(mon.wob * 1.3) * 0.6; sp = 1.3; mon.shotT -= dt; if (mon.shotT <= 0) { mon.shotT = 2.4 + Math.random(); spawnBolt(mon.x, mon.y, ex, ey, 'enemy'); W.puff(mon.x, mon.y, 0xff6a5a, 4, mon.ranged ? 1.0 : 0.6); floatText(mon.x, mon.y, '!'); } }
       else { tx = Math.cos(mon.wob * 0.5); ty = Math.sin(mon.wob * 0.6); sp = 0.4; }
     } else if (mon.drain) {                                                // smog-wraiths drift up close and drink the Pallas's charge
       if (d < (mon.sight || 7)) { const want = d > 1.1 ? 1 : 0; tx = ex / d * want + Math.cos(mon.wob * 2) * 0.3; ty = ey / d * want + Math.sin(mon.wob * 2.3) * 0.3; sp = mon.spd || 1.1; mon.shotT -= dt; if (d < 1.7 && mon.shotT <= 0) { mon.shotT = 1.3; const r = sim.monsterHit(S, mon.kind, mon.ref.zone); floatText(me.x, me.y, '−charge'); sfx('geiger'); hullBar(true); refreshHud(); if (r.out) cityTow(); } }
@@ -905,8 +916,8 @@ function ruinsTick(dt) {
     else if (mon.state === 'lunge') { tx = mon.lx; ty = mon.ly; sp = mon.leaper ? 9.5 : mon.big ? 5 : 6.5; if (d < (mon.big ? 1.2 : 0.8)) { satoHit(mon.x, mon.y, mon); mon.state = 'rest'; mon.t = 0.9; } else if (mon.t <= 0) { mon.state = 'rest'; mon.t = mon.leaper ? 1.1 : 0.8; } }
     else if (mon.t <= 0) mon.state = 'chase';                              // rest or stun
     if (sp) { const nx = mon.x + tx * sp * dt, ny = mon.y + ty * sp * dt; if (!blocked(nx, mon.y) && !inCamp(nx, mon.y)) mon.x = nx; if (!blocked(mon.x, ny) && !inCamp(mon.x, ny)) mon.y = ny; if (mon.o.userData.is3d && (tx || ty)) mon.o.rotation.y = Math.atan2(tx, ty); }
-    mon.squash = Math.max(0, mon.squash - dt * 5); const q = 1 + Math.sin(mon.squash * 9) * mon.squash * 0.25;
-    mon.o.scale.set(q, 1 / q, q);
+    mon.squash = Math.max(0, mon.squash - dt * 5); const q = 1 + Math.sin(mon.squash * 9) * mon.squash * 0.25, crouch = mon.state === 'windup' ? 0.88 : mon.state === 'slam' ? 1.12 + Math.sin(performance.now() / 60) * 0.03 : mon.state === 'lunge' ? 1.1 : 1;   // crouch to spring, stretch to bite, rear up to slam
+    mon.o.scale.set(q / Math.sqrt(crouch), crouch / q, q * (mon.state === 'lunge' ? 1.25 : 1));
     mon.o.position.set(mon.x, mon.drain ? 0.25 + Math.sin(mon.wob * 2.2) * 0.12 : mon.ranged ? 1.0 + Math.sin(mon.wob * 2.6) * 0.15 : mon.leaper && mon.state === 'lunge' ? Math.sin(Math.max(0, 0.45 - mon.t) / 0.45 * Math.PI) * 0.9 : mon.state === 'windup' ? Math.abs(Math.sin(mon.t * 40)) * 0.06 : 0, mon.y);   // smog-wraiths and drones hover; stalkers leap
     telegraph(mon);
   }
