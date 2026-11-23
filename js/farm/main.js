@@ -104,6 +104,18 @@ async function goInner(to, { quick = false } = {}) {
   if (map.home && !S.flags['seen_' + map.id] && mode === 'play') { const id = residents(map.home)[0], t = id && story.HOME_LINES[id] && story.HOME_LINES[id].in; if (t) { sim.setFlag(S, 'seen_' + map.id); mode = 'talk'; await ui.say([{ who: 'narrator', text: t }]); mode = 'play'; } }   // the first look round someone's home
   await checkEvents();
 }
+async function saveForOffline() {
+  const out = $('loadInfo'), btn = $('bOffline'); if (!('serviceWorker' in navigator) || location.protocol === 'file:') { out.textContent = 'This browser cannot keep the game for offline play.'; return; }
+  btn.disabled = true; await navigator.serviceWorker.ready.catch(() => {});
+  const urls = new Set([...art.allUrls(), 'farm.html', 'farm.webmanifest', 'css/farm.css', 'css/farm-fonts.css']);
+  try { const css = await (await fetch('css/farm-fonts.css')).text(); for (const m of css.matchAll(/url\(\.\.\/(fonts\/farm\/[^)]+)\)/g)) urls.add(m[1]); } catch {}   // every font face, even ones not shown yet
+  for (const e of performance.getEntriesByType('resource')) { try { const u = new URL(e.name); if (u.origin === location.origin) urls.add(u.pathname.replace(/^\//, '').replace(location.pathname.replace(/[^/]*$/, '').replace(/^\//, ''), '')); } catch {} }
+  try { const idx = await (await fetch('art/farm/people/portraits/index.json')).json(); const walk = (v) => { if (typeof v === 'string' && /\.(webp|png|jpg)$/.test(v)) urls.add('art/farm/people/portraits/' + v); else if (v && typeof v === 'object') Object.values(v).forEach(walk); }; walk(idx); urls.add('art/farm/people/portraits/index.json'); } catch {}
+  const list = [...urls].filter(Boolean); let done = 0, bad = 0;
+  const next = async () => { while (list.length) { const u = list.pop(); try { const r = await fetch(u); if (!r.ok) bad++; else await r.arrayBuffer(); } catch { bad++; } done++; if (done % 10 === 0 || !list.length) out.textContent = `Saving for offline play… ${done} files${bad ? ` (${bad} missing)` : ''}`; } };
+  await Promise.all([next(), next(), next(), next(), next(), next()]);
+  out.textContent = `Ready to play offline: ${done - bad} files kept on this device.`; btn.textContent = 'Saved for offline'; btn.disabled = false;
+}
 // Something threw mid-transition: never leave the player on a black screen with the controls locked.
 let recovering = false;
 function recover(e, where) {
@@ -1569,6 +1581,9 @@ async function boot() {
   $('loadInfo').textContent = info.images || info.models ? '' : 'Running on built-in stand-in graphics (no art pack found).';
   $('bNew').onclick = async () => { if (old && !confirm('Start a new farm? Your saved farm will be replaced.')) return; sfx('good'); begin(sim.newGame(), true); };
   $('bContinue').onclick = () => { sfx('good'); begin(old, false); };
+  // Offline play (2026-11-23): the service worker keeps what the game has loaded; this button fetches everything else.
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('farm-sw.js').catch(() => {});
+  $('bOffline').onclick = () => saveForOffline();
   $('bBeta').onclick = () => { const b = loadSaved(BETA_KEY); sfx('good'); begin(b && b.flags.beta ? b : sim.betaGame(), !(b && b.flags.beta)); };   // the beta test game: everything unlocked, its own save
   $('bHelp').onclick = () => { S = S || sim.newGame(); mode = 'play'; ui.menu(S, { close: () => { if ($('title').hidden === false) { mode = 'title'; } } }, 'help'); };
   $('fImport').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; const st = sim.loadState(await f.text()); if (!st) return ($('loadInfo').textContent = 'That file is not a Sato’s Harvest save.'); begin(st, false); };

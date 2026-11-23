@@ -91,3 +91,11 @@ export function model(name) {
   }
   return modelCache.get(name).then((s) => (s ? s.clone(true) : null));
 }
+
+// Every file the art pack lists (pictures, music in both formats, models), for the offline download (2026-11-23)
+export function allUrls() {
+  const out = new Set([BASE + 'manifest.json', BASE + 'models/manifest.json']);
+  for (const f of Object.values(files)) { if (f.file) out.add(BASE + f.file); if (f.ogg) out.add(BASE + f.ogg); }
+  for (const m of Object.values(models)) if (m && m.file) out.add(BASE + 'models/' + m.file);
+  return [...out];
+}

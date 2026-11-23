@@ -994,3 +994,10 @@ picture gets `ui.icon()`'s drawn fish in the species' colours, with a gold ring 
 * **Feel:** red telegraphs before every lunge and slam, damage numbers, hit shudders, creatures spin and shrink away, explosion rings and scorch marks, muzzle flashes, lock-on rings, screen shake, repair orbs (+15 hull) from beaten creatures (always from a boss), and a boss bar while a titan or brute is after you. Touch: Wpn, Jet and Drg buttons in the Old World.
 * **Beta test game** (title screen, `sim.betaGame`, `flags.beta`): its own save (`earthlight-farm-beta-v1`), credits refilled to 9,999,999, every tool at Iridium, the 30-slot rucksack, Ruess's buildings done, cellar, tub and oven, every Pallas refit at its last mark, the mining unit.
 * **No spring petals:** the seasonal drift no longer rains sakura (owner, 2026-11-23); autumn leaves and winter flakes stay.
+
+## 21. Playable without internet (owner, 2026-11-23: "next task will be having the game playable without internet. Turn autumn leaves and snow flakes off")
+
+* **No outside requests:** the three fonts (Chakra Petch, IBM Plex Sans, Spectral; SIL OFL, `fonts/farm/OFL.txt`) are served from `fonts/farm` through `css/farm-fonts.css` instead of Google Fonts. three.js was already vendored.
+* **`farm-sw.js`** (a service worker, registered from the title screen; it answers only for the farm game's own paths): code (`farm.html`, js, css, json) is network-first, so updates still arrive when online, with the cached copy offline; art (pictures, models, music, fonts) is cache-first.
+* **Play offline** (title button): fetches every file the game can use (both art manifests, models, music in mp3 and ogg, the portrait busts, every font face, every loaded module) so the whole game plays with no connection. Tested: download, go offline, reload, start a new farm: everything draws, no errors. `farm.webmanifest` lets a phone or desktop install it like an app.
+* **The seasonal drift is off** altogether (petals, leaves and flakes); snow still falls as the weather on snow days.
