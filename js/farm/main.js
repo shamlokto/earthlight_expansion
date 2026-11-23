@@ -652,7 +652,8 @@ function popMonster(mon) {
   const i = S.mine ? S.mine.monsters.indexOf(mon.ref) : -1; const r = i >= 0 ? sim.defeatMonster(S, i) : { gained: [] };
   W.puff(mon.x, mon.y, 0xffb347, 18, 0.5); W.puff(mon.x, mon.y, 0x7dffb0, 8, 0.8); W.shake = Math.max(W.shake || 0, 0.12);
   const k = W.facers.indexOf(mon.barG); if (k >= 0) W.facers.splice(k, 1);
-  if (map.city && (mon.big || Math.random() < 0.12)) dropOrb(mon.x, mon.y);   // a repair orb now and then (always from a boss)
+  if (map.city && (mon.big || Math.random() < 0.12)) dropOrb(mon.x, mon.y);
+  if (map.city) { const now = performance.now(); combo = now - comboAt < 2500 ? combo + 1 : 1; comboAt = now; if (combo >= 3) { floatText(me.x, me.y - 0.6, `${combo}× streak!`); if (combo % 5 === 0) sfx('good'); } }   // a kill streak   // a repair orb now and then (always from a boss)
   dying.push({ o: mon.o, t: 0, s0: mon.o.scale.x, tele: mon.tele }); mon.barG.visible = false; W.tileObjs.delete('mon' + (mon.ref.id ?? '')); monsters.splice(monsters.indexOf(mon), 1);   // it spins, shrinks and is gone (weaponsTick) sfx('pop'); floatText(mon.x, mon.y, pick(mon.kind === 'glow_slime' || mon.kind === 'smog_wraith' ? ['fizzle!', 'pff…', 'blorp'] : mon.kind === 'spore_brute' ? ['it flees!', 'stomp… stomp… gone'] : ['pop!', 'poof', 'shoo!', 'it flees!']));
   ui.gainedToast(r.gained); if (r.credits) floatText(mon.x, mon.y + 0.3, `+${r.credits} cr`); if (Math.random() < 0.35) ui.toast(pick(story.RUINS.monster));
   for (const ref of r.spawned || []) { const q = cityMonsterObj(ref); q.state = 'chase'; floatText(q.x, q.y, 'split!'); }
@@ -721,7 +722,7 @@ function pallasDash() { if (dashCd > 0) return; dashCd = sim.pallasStat(S, 'thru
 // V cycles the arm weapon (blaster, beam laser, seeker missiles); G sets down the Dragon battery (long range, slow,
 // heavy shells that cannot land closer than 2 tiles); T folds the Pallas into its jet: twice as fast, over towers,
 // gas and pools, out of reach of claws, and Space drops bombs. Explosions, beams and missiles live in `shots`.
-let hitStop = 0, weapon = 'blaster', laserHold = 0, laserBeam = null, laserNum = 0, missileCd = 0, bombCd = 0, dragon = null, dragonCd = 0, jet = null, jetCd = 0, packT = 40, shots = [], dying = [];
+let combo = 0, comboAt = 0, hitStop = 0, weapon = 'blaster', laserHold = 0, laserBeam = null, laserNum = 0, missileCd = 0, bombCd = 0, dragon = null, dragonCd = 0, jet = null, jetCd = 0, packT = 40, shots = [], dying = [];
 const WEAPON_NAME = { blaster: 'Blaster', laser: 'Beam laser', missiles: 'Seeker missiles' };
 function weaponsOwned() { return ['blaster', ...(sim.pallasLevel(S, 'laser') ? ['laser'] : []), ...(sim.pallasLevel(S, 'missiles') ? ['missiles'] : [])]; }
 function cycleWeapon() {
@@ -894,7 +895,7 @@ function ruinsTick(dt) {
     let sp = 0, tx = 0, ty = 0;
     if (mon.titan) titanThink(mon, dt, d, ex, ey);                         // the scrap titan: slams and thrown scrap
     else if (mon.kind === 'drone' || mon.ranged) {                         // drones keep their distance and lob slow orbs
-      if (d < 7) { const want = d < 3 ? -1 : d > 4.5 ? 1 : 0; tx = ex / d * want + Math.cos(mon.wob) * 0.6; ty = ey / d * want + Math.sin(mon.wob * 1.3) * 0.6; sp = 1.3; mon.shotT -= dt; if (mon.shotT <= 0) { mon.shotT = 2.4 + Math.random(); spawnBolt(mon.x, mon.y, ex, ey, 'enemy'); floatText(mon.x, mon.y, '!'); } }
+      if (d < 7) { const want = d < 3 ? -1 : d > 4.5 ? 1 : 0; tx = ex / d * want + Math.cos(mon.wob) * 0.6; ty = ey / d * want + Math.sin(mon.wob * 1.3) * 0.6; sp = 1.3; mon.shotT -= dt; if (mon.shotT <= 0) { mon.shotT = 2.4 + Math.random(); spawnBolt(mon.x, mon.y, ex, ey, 'enemy'); W.puff(mon.x, mon.y, 0xff6a5a, 4, mon.ranged ? 1.0 : 0.6); floatText(mon.x, mon.y, '!'); } }
       else { tx = Math.cos(mon.wob * 0.5); ty = Math.sin(mon.wob * 0.6); sp = 0.4; }
     } else if (mon.drain) {                                                // smog-wraiths drift up close and drink the Pallas's charge
       if (d < (mon.sight || 7)) { const want = d > 1.1 ? 1 : 0; tx = ex / d * want + Math.cos(mon.wob * 2) * 0.3; ty = ey / d * want + Math.sin(mon.wob * 2.3) * 0.3; sp = mon.spd || 1.1; mon.shotT -= dt; if (d < 1.7 && mon.shotT <= 0) { mon.shotT = 1.3; const r = sim.monsterHit(S, mon.kind, mon.ref.zone); floatText(me.x, me.y, '−charge'); sfx('geiger'); hullBar(true); refreshHud(); if (r.out) cityTow(); } }
@@ -905,8 +906,8 @@ function ruinsTick(dt) {
     else if (mon.state === 'lunge') { tx = mon.lx; ty = mon.ly; sp = mon.leaper ? 9.5 : mon.big ? 5 : 6.5; if (d < (mon.big ? 1.2 : 0.8)) { satoHit(mon.x, mon.y, mon); mon.state = 'rest'; mon.t = 0.9; } else if (mon.t <= 0) { mon.state = 'rest'; mon.t = mon.leaper ? 1.1 : 0.8; } }
     else if (mon.t <= 0) mon.state = 'chase';                              // rest or stun
     if (sp) { const nx = mon.x + tx * sp * dt, ny = mon.y + ty * sp * dt; if (!blocked(nx, mon.y) && !inCamp(nx, mon.y)) mon.x = nx; if (!blocked(mon.x, ny) && !inCamp(mon.x, ny)) mon.y = ny; if (mon.o.userData.is3d && (tx || ty)) mon.o.rotation.y = Math.atan2(tx, ty); }
-    mon.squash = Math.max(0, mon.squash - dt * 5); const q = 1 + Math.sin(mon.squash * 9) * mon.squash * 0.25;
-    mon.o.scale.set(q, 1 / q, q);
+    mon.squash = Math.max(0, mon.squash - dt * 5); const q = 1 + Math.sin(mon.squash * 9) * mon.squash * 0.25, crouch = mon.state === 'windup' ? 0.88 : mon.state === 'slam' ? 1.12 + Math.sin(performance.now() / 60) * 0.03 : mon.state === 'lunge' ? 1.1 : 1;   // crouch to spring, stretch to bite, rear up to slam
+    mon.o.scale.set(q / Math.sqrt(crouch), crouch / q, q * (mon.state === 'lunge' ? 1.25 : 1));
     mon.o.position.set(mon.x, mon.drain ? 0.25 + Math.sin(mon.wob * 2.2) * 0.12 : mon.ranged ? 1.0 + Math.sin(mon.wob * 2.6) * 0.15 : mon.leaper && mon.state === 'lunge' ? Math.sin(Math.max(0, 0.45 - mon.t) / 0.45 * Math.PI) * 0.9 : mon.state === 'windup' ? Math.abs(Math.sin(mon.t * 40)) * 0.06 : 0, mon.y);   // smog-wraiths and drones hover; stalkers leap
     telegraph(mon);
   }
