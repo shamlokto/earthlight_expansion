@@ -114,7 +114,7 @@ async function saveForOffline() {
   const list = [...urls].filter(Boolean); let done = 0, bad = 0;
   const next = async () => { while (list.length) { const u = list.pop(); try { const r = await fetch(u); if (!r.ok) bad++; else await r.arrayBuffer(); } catch { bad++; } done++; if (done % 10 === 0 || !list.length) out.textContent = `Saving for offline play… ${done} files${bad ? ` (${bad} missing)` : ''}`; } };
   await Promise.all([next(), next(), next(), next(), next(), next()]);
-  out.textContent = `Ready to play offline: ${done - bad} files kept on this device.`; btn.textContent = 'Saved for offline'; btn.disabled = false;
+  out.textContent = `Ready to play offline: ${done - bad} files kept on this device.`; btn.textContent = 'Saved for offline ✓'; btn.disabled = false;
 }
 // Something threw mid-transition: never leave the player on a black screen with the controls locked.
 let recovering = false;
