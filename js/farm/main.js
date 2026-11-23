@@ -710,7 +710,7 @@ function placeHydra() {
 function satoHit(fromX, fromY, mon, ranged = false) {
   if (hurtT > 0 || dashT > 0 || cityTowing) return false;
   if (jet && !ranged) return false;   // up in the jet, nothing on the ground can reach her
-  hurtT = 1.4; const r = mon && mon.ref && map.city ? sim.monsterHit(S, mon.kind, mon.ref.zone) : sim.monsterHit(S); if (!map.city || Math.random() < 0.3) ui.toast(r.msg); hullBar(map.city); if (r.out) { cityTow(); return true; } W.shake = 0.2; sfx('bad');
+  hurtT = 1.4; const r = mon && mon.ref && map.city ? sim.monsterHit(S, mon.kind, mon.ref.zone, ranged && mon.titan ? 0.35 : 1) : sim.monsterHit(S); if (!map.city || Math.random() < 0.3) ui.toast(r.msg); hullBar(map.city); if (r.out) { cityTow(); return true; } W.shake = 0.2; sfx('bad');
   const d = Math.hypot(me.x - fromX, me.y - fromY) || 1; for (let k = 0; k < 6; k++) { const nx = me.x + (me.x - fromX) / d * 0.12, ny = me.y + (me.y - fromY) / d * 0.12; if (canStand(nx, ny)) { me.x = nx; me.y = ny; } }
   refreshHud(); return true;
 }
