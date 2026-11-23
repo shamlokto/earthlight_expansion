@@ -252,10 +252,12 @@ export class Actor {
     const [dx, dz] = DIRV[this.dir], fa = Math.atan2(dx, dz);
     if (this.mode === 'figure' || this.mode === 'model') {
       let d = fa - this.body.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); this.body.rotation.y += d * Math.min(1, dt * 14);
+      if (this.spin > 0) { this.spin -= dt; this.body.rotation.y = fa + (1 - Math.max(0, this.spin) / 0.32) * Math.PI * 2; }   // a spin attack (2026-11-23)
       const l = this.body.userData.limbs, s = this.moving ? Math.sin(this.phase) * (this.running ? 1.05 : 0.7) : 0;
       if (l) { l.L.rotation.x = s; l.R.rotation.x = -s; l.A.rotation.x = -s * 0.8; l.B.rotation.x = s * 0.8 - (this.swing || 0) * 2.2; if (l.head) { l.head.rotation.z = this.moving ? Math.sin(this.phase) * 0.05 : Math.sin(this.phase * 0.6) * 0.025; l.head.rotation.x = this.swing ? this.swing * 0.25 : 0; } }
       if (this.body.userData.blink) this.body.userData.blink((this.phase * 0.37) % 4.2 > 4.05 || (this.world.t * 0.9 + this.tall * 7) % 3.7 > 3.58);
       this.body.position.y = this.moving ? Math.abs(Math.sin(this.phase)) * (this.running ? 0.09 : 0.05) : Math.sin(this.phase * 0.6) * 0.008;
+      if (this.kick) { this.kick = Math.max(0, this.kick - dt * 6); this.body.position.x = -dx * this.kick * 0.14; this.body.position.z = -dz * this.kick * 0.14; } else if (this.body.position.x || this.body.position.z) this.body.position.x = this.body.position.z = 0;   // recoil from a shot
       this.lean = (this.lean || 0) + (((this.moving && this.running) ? 0.22 : 0) - (this.lean || 0)) * Math.min(1, dt * 10);   // a runner leans into it
       if (this.inner) this.inner.rotation.x = this.lean; else if (l) this.body.rotation.x = this.lean;
       if (this.inner && !this.rigged) {                  // a model with no joints moves like a little toy: hop, waddle, lean

@@ -689,6 +689,7 @@ function pallasSlash() {
   const arc = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.55, 24, 1, -1.2, 2.4), new THREE.MeshBasicMaterial({ color: 0x8ff4ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
   arc.rotation.x = -Math.PI / 2; arc.rotation.z = Math.atan2(-dy, dx); arc.position.set(me.x, 1.1, me.y); W.scene.add(arc); bolts.push({ m: arc, x: me.x, y: me.y, vx: 0, vy: 0, from: 'fx', life: 0.18 });
   if (hit) { hitStop = Math.max(hitStop, 0.06); W.shake = Math.max(W.shake || 0, 0.08); }
+  if (hit > 1) me.spin = 0.32;
   if (hit > 1) floatText(me.x, me.y, 'double!');
 }
 function pallasFire() {
@@ -700,7 +701,7 @@ function pallasFire() {
   let [dx, dy] = DIRV[me.dir], best = null, bs = 0.5;                       // gentle aim: the nearest creature in a wide cone ahead
   for (const mon of monsters) { const ex = mon.x - me.x, ey = mon.y - me.y, d = Math.hypot(ex, ey); if (d > 9 || !d) continue; const c = (ex * dx + ey * dy) / d, sc = c - d * 0.03; if (c > 0.55 && sc > bs) { bs = sc; best = mon; } }
   if (best) { dx = best.x - me.x; dy = best.y - me.y; me.face(best.x, best.y); }
-  spawnBolt(me.x + dx * 0.1, me.y + dy * 0.1, dx, dy, 'pallas'); me.swing = 1; sfx('zap');
+  spawnBolt(me.x + dx * 0.1, me.y + dy * 0.1, dx, dy, 'pallas'); me.swing = 1; me.kick = 1; sfx('zap');
 }
 function placeHydra() {
   if (hydraCd > 0) return ui.toast('The Hydra is still unfolding.', 900);
@@ -782,7 +783,7 @@ function fireMissiles() {
     const tg = targets[k % Math.max(1, targets.length)]; if (tg && k < targets.length) { const lk = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.52, 4), new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide })); lk.rotation.x = -Math.PI / 2; W.scene.add(lk); shots.push({ kind: 'lock', m: lk, target: tg, t: 0, life: 3 }); }   // a lock-on mark
     shots.push({ kind: 'missile', m: g, x: sx, y: sy, h: 1.7, vx: (dx - dy * side * 0.8) * 4, vy: (dy + dx * side * 0.8) * 4, target: targets[k % Math.max(1, targets.length)] || null, t: 0, life: 3.2, trail: 0 });
   }
-  me.swing = 1;
+  me.swing = 1; me.kick = 1.6;
 }
 // bombs from the jet: they fall from under the wing and burst where they land
 function dropBombs() {
