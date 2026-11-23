@@ -370,7 +370,7 @@ function catTick(dt) {
   if (!cat) return; const o = cat.o; cat.purr -= dt;
   if (cat.plan.sleep) { o.rotation.y = 0.7; o.scale.set(1.05, 0.8 * (1 + Math.sin(performance.now() / 700) * 0.025), 1.05); return; }   // hunkered down, breathing slowly
   cat.wait -= dt;
-  if (cat.wait <= 0) { const a = Math.random() * Math.PI * 2, d = Math.random() * cat.plan.r, nx = cat.plan.x + Math.cos(a) * d, ny = cat.plan.y + Math.sin(a) * d; if (canStand(nx, ny)) { cat.tx = nx; cat.ty = ny; } cat.wait = 3 + Math.random() * 6; }
+  if (cat.wait <= 0) { const a = Math.random() * Math.PI * 2, d = Math.random() * cat.plan.r, toMe = Math.random() < 0.3 && Math.hypot(me.x - cat.x, me.y - cat.y) < 6, nx = toMe ? me.x + Math.cos(a) * 0.8 : cat.plan.x + Math.cos(a) * d, ny = toMe ? me.y + Math.sin(a) * 0.8 : cat.plan.y + Math.sin(a) * d; if (canStand(nx, ny)) { cat.tx = nx; cat.ty = ny; } cat.wait = 3 + Math.random() * 6; }   // now and then she comes over to Sato
   if (cat.purr > 0) { o.rotation.y = Math.atan2(me.x - cat.x, me.y - cat.y); o.position.y = Math.abs(Math.sin(performance.now() / 160)) * 0.02; return; }
   const dx = cat.tx - cat.x, dy = cat.ty - cat.y, d = Math.hypot(dx, dy);
   if (d > 0.08) { const st = Math.min(d, dt * 1.1), nx = cat.x + dx / d * st, ny = cat.y + dy / d * st; if (canStand(nx, ny)) { cat.x = nx; cat.y = ny; } else { cat.tx = cat.x; cat.ty = cat.y; } o.position.x = cat.x; o.position.z = cat.y; o.rotation.y = Math.atan2(dx, dy); o.position.y = Math.abs(Math.sin(performance.now() / 110)) * 0.03; }

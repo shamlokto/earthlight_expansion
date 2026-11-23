@@ -973,7 +973,7 @@ export class World {
     this.map = map; this.state = state; this.season = state.cal.season; this.flags = state.flags || {};
     freeGeometry(this.root); for (const m of this.waterMats || []) if (m.map && m.map.userData.ownWater) m.map.dispose(); this.root.clear(); this.facers.length = 0; this.spriteMats.length = 0; this.anims.length = 0; this.tileObjs.clear();
     for (const a of this.actors.values()) a.dispose && a.dispose(); this.actors.clear();
-    this.lamps = []; this.waterMats = []; this.tallProps = []; this.steam = []; this.windowGlass = null; this.flies = null;
+    this.lamps = []; this.waterCells = null; for (const q of this.ripples || []) this.scene.remove(q.m); this.ripples = []; this.waterMats = []; this.tallProps = []; this.steam = []; this.windowGlass = null; this.flies = null;
     const R = this.root, W = map.w, H = map.h;
     // ground, one merged mesh per kind
     const byKind = {};
@@ -996,7 +996,7 @@ export class World {
         const wm = new THREE.MeshStandardMaterial({ map: art.tex('water', { repeat: 1 }).clone(), color: map.under ? 0x4a8a9a : 0xb8dce6, transparent: true, opacity: 0.94, roughness: 0.12, metalness: 0.1 });
         wm.map.wrapS = wm.map.wrapT = THREE.RepeatWrapping; wm.map.needsUpdate = true; wm.map.userData.ownWater = true; this.waterMats.push(wm);
         liveWater(wm);   // flowing rivers, rippling lakes, foam at the banks, sparkle (2026-11-22)
-        const m = new THREE.Mesh(waterTiles(cells, -0.04, map), wm); m.receiveShadow = true; R.add(m); continue;
+        const m = new THREE.Mesh(waterTiles(cells, -0.04, map), wm); m.receiveShadow = true; R.add(m); this.waterCells = cells; continue;
       }
       const cp = c === 'c' && !map.indoor && art.has('textures/colony_path');   // colony art, when the pack has it
       const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : cp ? 'colony_path' : GROUND_TEX[c] || 'soil_dry';
@@ -1185,6 +1185,22 @@ export class World {
   project(x, y, h = 0) { const v = new THREE.Vector3(x, h, y).project(this.camera), c = this.renderer.domElement; return { x: (v.x * 0.5 + 0.5) * c.clientWidth, y: (-v.y * 0.5 + 0.5) * c.clientHeight, behind: v.z > 1 }; }
 
   // ------------------------------------------------------------ frame
+  // Rings spreading on the water near Sato (2026-11-22): now and then a fish rising, a drip, a breath of wind; in the rain, everywhere.
+  rippleTick(dt, px, py) {
+    const rs = this.ripples || (this.ripples = []);
+    for (let i = rs.length - 1; i >= 0; i--) { const q = rs[i]; q.t += dt; const k = q.t / q.life; q.m.scale.setScalar(0.3 + k * q.size); q.m.material.opacity = 0.55 * (1 - k); if (k >= 1) { this.scene.remove(q.m); q.m.geometry.dispose(); rs.splice(i, 1); } }
+    const cells = this.waterCells; if (!cells || !cells.length) return;
+    const rain = this.weather && this.weather.visible && this.weatherSpeed > 5;
+    this.rippleT = (this.rippleT || 0) - dt; if (this.rippleT > 0 || rs.length > 40) return; this.rippleT = rain ? 0.05 : 0.6 + Math.random() * 1.4;
+    for (let tries = 0; tries < 10; tries++) {
+      const i = Math.floor(Math.random() * cells.length / 2) * 2, x = cells[i] + Math.random(), z = cells[i + 1] + Math.random();
+      if (Math.hypot(x - px, z - py) > 14) continue;
+      const m = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.42, 28), new THREE.MeshBasicMaterial({ color: 0xeaf6ff, transparent: true, opacity: 0.55, depthWrite: false }));
+      m.rotation.x = -Math.PI / 2; m.position.set(x, -0.015, z); this.scene.add(m); rs.push({ m, t: 0, life: rain ? 0.9 : 1.8 + Math.random(), size: rain ? 0.9 : 1.6 + Math.random() * 1.4 });
+      if (!rain && !(this.map && this.map.under) && Math.random() < 0.18) this.puff(x, z, 0xdff3ff, 5, 0.25);   // a fish jumped
+      break;
+    }
+  }
   update(dt, px, py) {
     this.t += dt;
     const indoor = this.map && this.map.indoor, el = this.renderer.domElement, narrow = el.clientWidth < el.clientHeight * 0.75;
@@ -1206,6 +1222,7 @@ export class World {
     for (const g of this.steam || []) for (const m of g.children) { const k = ((this.t * 0.25 + m.userData.seed) % 1); m.position.set(m.userData.x + Math.sin(this.t + m.userData.seed) * 0.15, 0.3 + k * 1.7, m.userData.z); m.scale.setScalar(0.7 + k * 1.6); m.material.opacity = 0.42 * Math.sin(k * Math.PI); }
     if (this.bots) this.bots.update(dt, this.t);
     if (this.rocks) this.rocks.update(px, py);
+    this.rippleTick(dt, px, py);
     if (this.earthSky) this.earthSky.position.copy(c.position).addScaledVector(EARTH_DIR, 1500);   // always as far away, low over the lane's east side
     for (const f of this.facers) f.rotation.y = this.yaw;
     for (const m of this.waterMats || []) if (m.userData.u) { m.userData.u.uTime.value = this.t; m.userData.u.uSpark.value = this.map && (this.map.under || this.map.indoor) ? 0.1 : 0.25 + 0.75 * (1 - (this.night || 0)); } else m.map.offset.set(this.t * 0.015, this.t * 0.01);   // no sun to glint underground
