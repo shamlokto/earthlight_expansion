@@ -1150,8 +1150,8 @@ function cityDefeat(state, m, index) {
   return res;
 }
 // A hit on the Pallas from a creature (kind, zone), or the drain of a smog-wraith: the hull takes it.
-function cityHit(state, m, kind, zone) {
-  const d = cityMonster(kind, zone).dmg; m.hull = Math.max(0, m.hull - d);
+function cityHit(state, m, kind, zone, scale = 1) {
+  const d = Math.max(1, Math.round(cityMonster(kind, zone).dmg * (scale > 0 && scale <= 1 ? scale : 1))); m.hull = Math.max(0, m.hull - d);   // scale: a titan's thrown scrap hurts less than its fists
   return { ok: true, dmg: d, hull: m.hull, out: m.hull <= 0, msg: m.hull <= 0 ? 'The Pallas sags: hull gone. Maris is sending the tow.' : CITY_MONSTERS[kind] && CITY_MONSTERS[kind].drain ? 'The smog-wraith drinks the Pallas\'s charge.' : `Something clipped the Pallas. Hull ${Math.ceil(m.hull)}/${m.hullMax}.` };
 }
 // The ground under her (the UI ticks it about once a second): a toxic pool eats 3 hull, gas 1 (none with filters).
@@ -1230,8 +1230,8 @@ export function defeatMonster(state, index) {
   return { ok: true, gained: [] };
 }
 // A creature's hit: on the Pallas's hull in the city (kind, zone); elsewhere a little stamina.
-export function monsterHit(state, kind = 'rad_hound', zone = 0) {
-  const m = inCity(state); if (m) return cityHit(state, m, kind, zone);
+export function monsterHit(state, kind = 'rad_hound', zone = 0, scale = 1) {
+  const m = inCity(state); if (m) return cityHit(state, m, kind, zone, scale);
   state.player.stamina = Math.max(Math.min(1, state.player.stamina), state.player.stamina - 5);
   return { ok: true, msg: 'Something clipped the Pallas. You lost a little stamina.' };
 }
@@ -2915,3 +2915,6 @@ export function betaGame({ seed } = {}) {
   s.player.money = BETA_MONEY; s.stock.lumber = 9999; ensure(s);
   return s;
 }
+
+// A repair orb from a beaten creature (the UI drops one now and then): mends the Pallas's hull by n, up to its maximum.
+export function repairHull(state, n = 15) { const m = inCity(state); if (!m || !(n > 0)) return { ok: false, hull: m ? m.hull : 0 }; const before = m.hull; m.hull = Math.min(m.hullMax, m.hull + n); return { ok: true, mended: m.hull - before, hull: m.hull }; }

@@ -14,7 +14,8 @@ for (const f of readdirSync(dir).filter((x) => x.endsWith('.js'))) {
     // a statement after the comment: `; word(` or `; word =` or `} word(`, as code reads, not prose
     const stmt = (/[;}]\s*(?:await\s+)?[A-Za-z_$][\w$.]*\s*(?:\(|=[^=])[^)]*[;)]\s*(?:[;}]|$)/.test(tail) && /\w\(/.test(tail) && /;/.test(tail))
       || /\b[a-zA-Z_$][\w$]*\.[\w$.]+\s*=\s*[\w$.]+;\s*$/.test(tail)
-      || /\}\s*else\b/.test(tail);   // or the rest of an if/else (how the water's glints hid the else, 2026-11-22)   // or a trailing `obj.prop = value;` (how me.running was lost)
+      || /\}\s*else\b/.test(tail)
+      || /\b[a-zA-Z_$][\w$]*(?:\.[\w$]+)*\s*=\s*[A-Za-z_$][\w$.]*\(.*\);\s*$/.test(tail);   // or `x.y = call(...);` (how the hull stopped taking hits, 2026-11-23)   // or the rest of an if/else (how the water's glints hid the else, 2026-11-22)   // or a trailing `obj.prop = value;` (how me.running was lost)
     if (stmt) { bad++; console.log(`FAIL ${f}:${i + 1}: code after a // comment: ${line.trim().slice(0, 160)}`); }
   });
 }
