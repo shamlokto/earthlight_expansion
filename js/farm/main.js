@@ -743,6 +743,7 @@ function cycleWeapon() {
 }
 function combatReset() {
   for (const q of shots) W.scene.remove(q.m); shots = []; for (const q of dying) W.dyn.remove(q.o); dying = [];
+  if (shifting && shifting.fold) { try { shifting.fold.restore(); } catch {} } shifting = null;
   if (laserBeam) { W.scene.remove(laserBeam); laserBeam = null; } if (jet) { W.unplace('pjet'); jet = null; } if (me && me.group) me.group.visible = true;
   dragon = null; laserHold = 0; packT = 35 + Math.random() * 20; if (W) W.wantZoom = 0; { const e = $('bossBar'); if (e) e.hidden = true; }
 }
@@ -823,14 +824,33 @@ function placeDragon() {
   dragon = { x, y, o: W.place('dragon', 'dragon_battery', x, y), cd: 1.2 }; tintWhiteBlue(dragon.o);
   for (const [rad, col] of [[2, 0xff6a5a], [12, 0x7df4ff]]) { const rg = new THREE.Mesh(new THREE.RingGeometry(rad - 0.06, rad + 0.06, 64), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide })); rg.rotation.x = -Math.PI / 2; rg.position.set(x, 0.06, y); W.scene.add(rg); shots.push({ kind: 'fade', m: rg, t: 0, life: 2.2 }); } W.puff(x, y, 0xc9c2b0, 12, 0.3); W.shake = 0.12; sfx('drop'); ui.toast('Dragon battery set. Stand back.', 1200);   // its reach, for a moment
 }
-// T: fold into the jet or land again
+// T: fold into the jet or land again. The shapeshift is animated (2026-11-23): the Pallas crouches and folds (legs up, arms
+// back, wings out), flashes, and the jet lifts off its spot; landing, the jet settles, flashes, and the Pallas unfolds.
+let shifting = null;
 function toggleJet() {
-  if (!map.city || !S.mine || cityTowing) return; if (jetCd > 0) return; jetCd = 0.8;
+  if (!map.city || !S.mine || cityTowing || shifting) return; if (jetCd > 0) return; jetCd = 1.2;
   if (jet) {
-    const sx = me.x, sy = me.y; jet = null; if (!canStand(sx, sy)) { jet = jetObj(); return ui.toast('Find open ground to land on.', 1600); }
-    W.unplace('pjet'); me.group.visible = true; W.puff(me.x, me.y, 0xfff2b8, 16, 0.4); W.puff(me.x, me.y, 0x9fd8ee, 10, 0.2); sfx('zap'); ui.toast('The Pallas unfolds and lands.', 1200); refreshHud(); return;
+    const sx = me.x, sy = me.y, j0 = jet; jet = null; const ok = canStand(sx, sy); jet = j0; if (!ok) return ui.toast('Find open ground to land on.', 1600);
+    shifting = { kind: 'down', t: 0, h0: jet.h }; sfx('zap'); return;
   }
-  jet = jetObj(); W.puff(me.x, me.y, 0xfff2b8, 18, 0.6); sfx('zap'); W.shake = 0.1; ui.toast('Jet form: Space fires Earthlight bombs, T lands. Searching needs your feet on the ground.', 2600); refreshHud();
+  try { shifting = { kind: 'up', t: 0, fold: pallasFold(me) }; } catch { shifting = null; jet = jetObj(); }
+  sfx('zap'); ui.toast('Jet form: Space fires Earthlight bombs, T lands. Searching needs your feet on the ground.', 2600); refreshHud();
+}
+function shiftTick(dt) {
+  const q = shifting; if (!q) return; q.t += dt;
+  if (q.kind === 'up') {
+    const k = q.t / 0.6; try { q.fold.pose(Math.min(1, k * 1.15), Math.max(0, (k - 0.55) / 0.45)); } catch {}
+    if (k > 0.3 && Math.random() < 0.3) W.puff(me.x + (Math.random() - 0.5) * 0.8, me.y, 0xdfe6ea, 1, 0.3);
+    if (k >= 1) { try { q.fold.restore(); } catch {} W.puff(me.x, me.y, 0xffffff, 18, 1.0); W.puff(me.x, me.y, 0x8ff4ff, 10, 1.1); W.shake = 0.12; jet = jetObj(); jet.h = 0.9; jet.rising = true; shifting = null; refreshHud(); }
+  } else if (q.kind === 'down') {
+    const k = Math.min(1, q.t / 0.35); if (jet) jet.h = q.h0 + (0.7 - q.h0) * k;
+    if (k >= 1) { W.unplace('pjet'); jet = null; W.puff(me.x, me.y, 0xffffff, 16, 0.6); W.puff(me.x, me.y, 0x9fd8ee, 10, 0.2); W.shake = 0.1; me.group.visible = true;
+      try { const fold = pallasFold(me); fold.pose(1, 1); shifting = { kind: 'unfold', t: 0, fold }; } catch { shifting = null; }
+      ui.toast('The Pallas unfolds and lands.', 1200); refreshHud(); }
+  } else if (q.kind === 'unfold') {
+    const k = 1 - q.t / 0.5; try { q.fold.pose(Math.max(0, k), Math.max(0, k * 1.4 - 0.4)); } catch {}
+    if (k <= 0) { try { q.fold.restore(); } catch {} shifting = null; }
+  }
 }
 function jetObj() { const o = W.place('pjet', 'pallas_jet', me.x, me.y, { scale: 1.4 }); me.group.visible = false; return { o, yaw: [0, Math.PI, -Math.PI / 2, Math.PI / 2][me.dir] ?? 0, bank: 0, t: 0, h: 2.2 }; }
 // a red warning on the ground while a creature winds up: where the lunge will go, or the titan's slam ring
@@ -856,13 +876,14 @@ function titanThink(mon, dt, d, ex, ey) {
 }
 function weaponsTick(dt) {
   missileCd -= dt; bombCd -= dt; dragonCd -= dt; jetCd -= dt;
-  laserTick(dt);
+  laserTick(dt); shiftTick(dt);
+  if (jet && jet.rising) { jet.h = Math.min(2.2, jet.h + dt * 4); if (jet.h >= 2.2) jet.rising = false; }
   W.wantZoom = jet ? 0.45 : 0;
   bossBar();
   if (jet) {                                                               // the jet hangs over Sato's spot, turning and banking as she flies
     jet.t += dt; const moving = me.moving, want = moving ? [0, Math.PI, -Math.PI / 2, Math.PI / 2][me.dir] : jet.yaw;
     let dyaw = ((want - jet.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI; jet.yaw += dyaw * Math.min(1, dt * 6); jet.bank += (Math.max(-0.6, Math.min(0.6, -dyaw * 1.5)) - jet.bank) * Math.min(1, dt * 5);
-    const o = jet.o; o.position.set(me.x, jet.h + Math.sin(jet.t * 2.2) * 0.12, me.y); o.rotation.set(0, jet.yaw + (art.hasModel('pallas_jet') ? Math.PI : 0), jet.bank, 'YXZ');
+    const o = jet.o; o.position.set(me.x, jet.h + (jet.rising || shifting ? 0 : Math.sin(jet.t * 2.2) * 0.12), me.y); o.rotation.set(0, jet.yaw + (art.hasModel('pallas_jet') ? Math.PI : 0), jet.bank, 'YXZ');
     if (moving && Math.random() < 0.5) W.puff(me.x - Math.sin(jet.yaw) * 0.9, me.y - Math.cos(jet.yaw) * 0.9, 0x9fd8ee, 1, jet.h - 0.2);
   }
   if (dragon) {
@@ -988,6 +1009,7 @@ function cityMonsterObj(ref) {
   hpBar(mon); if (ref.titan) mon.barG.position.y = 2.9; else if (ref.boss) mon.barG.position.y = 2.0; else if (ref.ranged) mon.barG.position.y = 2.0; else if (ref.float) mon.barG.position.y = 1.55; monsters.push(mon); return mon;
 }
 function drawCity() {
+  for (const k of ['pallas_jet', 'dragon_battery']) if (art.hasModel(k)) art.model(k).catch(() => {});   // warm the jet and the Dragon so the first transform has no gap
   const m = S.mine; combatReset(); monsters = []; bolts = []; dashT = 0; debris = []; cityPlaced = new Set(); cityAt = [1e9, 1e9]; cityZoneNow = -1; hullWarned = 0; cityTowing = false;
   for (const ref of m.monsters) cityMonsterObj(ref);
   drawCamps(); cityStream(true); hullBar(true);
