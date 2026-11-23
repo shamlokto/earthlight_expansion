@@ -136,3 +136,6 @@ button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outl
 /* the Old World's extra touch buttons (2026-11-23): weapon, jet, Dragon */
 .fm-tsm { position: absolute; right: 108px; width: 52px; height: 52px; border-radius: 50%; border: 2px solid rgba(250, 243, 226, .7); background: rgba(58, 106, 184, .75); color: #fff; font: 700 12px var(--f-display); }
 #tWpn { bottom: calc(var(--barH, 64px) + 40px); } #tJet { bottom: calc(var(--barH, 64px) + 100px); } #tDrg { bottom: calc(var(--barH, 64px) + 160px); }
+
+/* the boss bar (2026-11-23) */
+#bossBar { position: fixed; left: 50%; bottom: calc(var(--barH, 64px) + 120px); transform: translateX(-50%); width: min(460px, 70vw); z-index: 30; pointer-events: none; text-align: center; font: 700 13px var(--f-display); color: #fff3d6; text-shadow: 0 1px 3px #000; letter-spacing: 2px; } #bossBar div { height: 10px; margin-top: 4px; border-radius: 6px; background: rgba(20, 16, 12, .7); border: 1px solid rgba(255, 220, 160, .5); overflow: hidden; } #bossBar i { display: block; height: 100%; background: linear-gradient(90deg, #ff6a3a, #ffd36a); }

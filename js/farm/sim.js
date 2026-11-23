@@ -2915,3 +2915,6 @@ export function betaGame({ seed } = {}) {
   s.player.money = BETA_MONEY; s.stock.lumber = 9999; ensure(s);
   return s;
 }
+
+// A repair orb from a beaten creature (the UI drops one now and then): mends the Pallas's hull by n, up to its maximum.
+export function repairHull(state, n = 15) { const m = inCity(state); if (!m || !(n > 0)) return { ok: false, hull: m ? m.hull : 0 }; const before = m.hull; m.hull = Math.min(m.hullMax, m.hull + n); return { ok: true, mended: m.hull - before, hull: m.hull }; }

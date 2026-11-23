@@ -1206,7 +1206,8 @@ export class World {
   update(dt, px, py) {
     this.t += dt;
     const indoor = this.map && this.map.indoor, el = this.renderer.domElement, narrow = el.clientWidth < el.clientHeight * 0.75;
-    const d = indoor ? Math.min(this.dist, 10.5) * (narrow ? 1.1 : 1) : this.dist;   // a phone held upright sees a room from further back (2026-11-22)
+    this.zoomOut = (this.zoomOut || 0) + ((this.wantZoom || 0) - (this.zoomOut || 0)) * 0.06;   // the jet pulls the camera back (2026-11-23)
+    const d = indoor ? Math.min(this.dist, 10.5) * (narrow ? 1.1 : 1) : this.dist * (1 + this.zoomOut);   // a phone held upright sees a room from further back (2026-11-22)
     { const want = indoor && narrow ? 56 : 38; if (Math.abs(this.camera.fov - want) > 0.3) { this.camera.fov = want; this.camera.updateProjectionMatrix(); } }   // and wide enough to see the whole room
     this.focus.lerp(new THREE.Vector3(px, 0.8, py), Math.min(1, dt * 7));
     const cp = Math.cos(this.pitch), c = this.camera;

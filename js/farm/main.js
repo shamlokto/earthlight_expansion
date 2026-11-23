@@ -652,6 +652,7 @@ function popMonster(mon) {
   const i = S.mine ? S.mine.monsters.indexOf(mon.ref) : -1; const r = i >= 0 ? sim.defeatMonster(S, i) : { gained: [] };
   W.puff(mon.x, mon.y, 0xffb347, 18, 0.5); W.puff(mon.x, mon.y, 0x7dffb0, 8, 0.8); W.shake = Math.max(W.shake || 0, 0.12);
   const k = W.facers.indexOf(mon.barG); if (k >= 0) W.facers.splice(k, 1);
+  if (map.city && (mon.big || Math.random() < 0.12)) dropOrb(mon.x, mon.y);   // a repair orb now and then (always from a boss)
   dying.push({ o: mon.o, t: 0, s0: mon.o.scale.x, tele: mon.tele }); mon.barG.visible = false; W.tileObjs.delete('mon' + (mon.ref.id ?? '')); monsters.splice(monsters.indexOf(mon), 1);   // it spins, shrinks and is gone (weaponsTick) sfx('pop'); floatText(mon.x, mon.y, pick(mon.kind === 'glow_slime' || mon.kind === 'smog_wraith' ? ['fizzle!', 'pff…', 'blorp'] : mon.kind === 'spore_brute' ? ['it flees!', 'stomp… stomp… gone'] : ['pop!', 'poof', 'shoo!', 'it flees!']));
   ui.gainedToast(r.gained); if (r.credits) floatText(mon.x, mon.y + 0.3, `+${r.credits} cr`); if (Math.random() < 0.35) ui.toast(pick(story.RUINS.monster));
   for (const ref of r.spawned || []) { const q = cityMonsterObj(ref); q.state = 'chase'; floatText(q.x, q.y, 'split!'); }
@@ -671,6 +672,7 @@ function hurtMonster(mon, dmg, fromX, fromY, soft = false) {
   if (mon.hp <= 0) popMonster(mon);
 }
 function spawnBolt(x, y, dx, dy, from) {
+  if (from === 'pallas' || from === 'hydra') W.puff(x + dx / (Math.hypot(dx, dy) || 1) * 0.4, y + dy / (Math.hypot(dx, dy) || 1) * 0.4, 0xfff2b8, 3, from === 'pallas' ? 1.5 : 0.6);   // a muzzle flash
   const l = Math.hypot(dx, dy) || 1, color = from === 'pallas' ? 0x7dffb0 : from === 'hydra' ? 0xffb347 : 0xff6a5a;
   const m = new THREE.Mesh(new THREE.SphereGeometry(from === 'enemy' ? 0.13 : 0.09, 8, 6), new THREE.MeshBasicMaterial({ color }));
   m.add(new THREE.Mesh(new THREE.SphereGeometry(from === 'enemy' ? 0.26 : 0.2, 8, 6), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false })));
@@ -727,13 +729,25 @@ function cycleWeapon() {
 function combatReset() {
   for (const q of shots) W.scene.remove(q.m); shots = []; for (const q of dying) W.dyn.remove(q.o); dying = [];
   if (laserBeam) { W.scene.remove(laserBeam); laserBeam = null; } if (jet) { W.unplace('pjet'); jet = null; } if (me && me.group) me.group.visible = true;
-  dragon = null; laserHold = 0; packT = 35 + Math.random() * 20;
+  dragon = null; laserHold = 0; packT = 35 + Math.random() * 20; if (W) W.wantZoom = 0; { const e = $('bossBar'); if (e) e.hidden = true; }
+}
+function dropOrb(x, y) {
+  const g = new THREE.Group(), core = new THREE.Mesh(new THREE.OctahedronGeometry(0.16), new THREE.MeshBasicMaterial({ color: 0x7dffb0 })), halo = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), new THREE.MeshBasicMaterial({ color: 0x7dffb0, transparent: true, opacity: 0.25, depthWrite: false }));
+  g.add(core, halo); g.position.set(x, 0.5, y); W.scene.add(g); shots.push({ kind: 'orb', m: g, x, y, t: 0, life: 20 });
+}
+// the boss bar: a wide health bar at the top of the screen while a titan or brute is close and angry
+function bossBar() {
+  let e = $('bossBar'); const b = monsters.find((m2) => m2.big && m2.state !== 'wander' && Math.hypot(m2.x - me.x, m2.y - me.y) < 14);
+  if (!b) { if (e) e.hidden = true; return; }
+  if (!e) { e = document.createElement('div'); e.id = 'bossBar'; e.innerHTML = '<b></b><div><i></i></div>'; document.body.appendChild(e); }
+  e.hidden = false; e.firstChild.textContent = sim.CITY_MONSTERS[b.kind] ? sim.CITY_MONSTERS[b.kind].name.toUpperCase() : 'BOSS'; e.lastChild.firstChild.style.width = Math.max(0, Math.round(b.hp / b.max * 100)) + '%';
 }
 function dmgNumber(mon, dmg) { const v = Math.round(dmg * 10) / 10; if (v > 0) floatText(mon.x + (Math.random() - 0.5) * 0.4, mon.y - 0.2, `-${v}`); }
 function boom(x, y, rad, dmg, color = 0xffa040, from = 'pallas') {
   W.puff(x, y, color, 16, 0.5); W.puff(x, y, 0x5a5048, 10, 1.1); W.puff(x, y, 0xfff2b8, 6, 0.3); W.shake = Math.max(W.shake || 0, 0.16 + rad * 0.04); sfx('smash');
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.42, 32), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.08, y); W.scene.add(ring); shots.push({ kind: 'ring', m: ring, t: 0, life: 0.35, rad });
+  if (rad > 0.5) { const sc = new THREE.Mesh(new THREE.CircleGeometry(rad * 0.55, 18), new THREE.MeshBasicMaterial({ color: 0x1a1612, transparent: true, opacity: 0.5, depthWrite: false })); sc.rotation.x = -Math.PI / 2; sc.position.set(x, 0.03, y); W.scene.add(sc); shots.push({ kind: 'scorch', m: sc, t: 0, life: 9 }); }   // a scorch mark that fades
   for (const mon of [...monsters]) { const d = Math.hypot(mon.x - x, mon.y - y); if (d < rad + (mon.big ? 0.5 : 0.2)) hurtMonster(mon, dmg * (d < rad * 0.5 ? 1 : 0.6), x, y); }
 }
 // the beam laser: while Space is held, a beam from the arm to the first creature (or wall) along the aim, 8 tiles
@@ -761,6 +775,7 @@ function fireMissiles() {
     const g = new THREE.Group(), body = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.36, 6), new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.4 })), nose = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.12, 6), new THREE.MeshStandardMaterial({ color: 0xc8342c })), fl = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 5), new THREE.MeshBasicMaterial({ color: 0xffb347 }));
     body.rotation.x = nose.rotation.x = Math.PI / 2; nose.position.z = 0.24; fl.position.z = -0.22; g.add(body, nose, fl);
     const side = k % 2 ? 1 : -1, sx = me.x - dy * 0.35 * side, sy = me.y + dx * 0.35 * side; g.position.set(sx, 1.7, sy); W.scene.add(g);
+    const tg = targets[k % Math.max(1, targets.length)]; if (tg && k < targets.length) { const lk = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.52, 4), new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide })); lk.rotation.x = -Math.PI / 2; W.scene.add(lk); shots.push({ kind: 'lock', m: lk, target: tg, t: 0, life: 3 }); }   // a lock-on mark
     shots.push({ kind: 'missile', m: g, x: sx, y: sy, h: 1.7, vx: (dx - dy * side * 0.8) * 4, vy: (dy + dx * side * 0.8) * 4, target: targets[k % Math.max(1, targets.length)] || null, t: 0, life: 3.2, trail: 0 });
   }
   me.swing = 1;
@@ -816,6 +831,8 @@ function titanThink(mon, dt, d, ex, ey) {
 function weaponsTick(dt) {
   missileCd -= dt; bombCd -= dt; dragonCd -= dt; jetCd -= dt;
   laserTick(dt);
+  W.wantZoom = jet ? 0.45 : 0;
+  bossBar();
   if (jet) {                                                               // the jet hangs over Sato's spot, turning and banking as she flies
     jet.t += dt; const moving = me.moving, want = moving ? [0, Math.PI, -Math.PI / 2, Math.PI / 2][me.dir] : jet.yaw;
     let dyaw = ((want - jet.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI; jet.yaw += dyaw * Math.min(1, dt * 6); jet.bank += (Math.max(-0.6, Math.min(0.6, -dyaw * 1.5)) - jet.bank) * Math.min(1, dt * 5);
@@ -833,6 +850,9 @@ function weaponsTick(dt) {
   for (let i = shots.length - 1; i >= 0; i--) {
     const q = shots[i]; q.t += dt; let done = q.t >= q.life;
     if (q.kind === 'ring') { const k = q.t / q.life; q.m.scale.setScalar(1 + k * q.rad * 3.2); q.m.material.opacity = 0.9 * (1 - k); }
+    else if (q.kind === 'scorch') q.m.material.opacity = 0.5 * Math.min(1, (q.life - q.t) / 3);
+    else if (q.kind === 'lock') { if (!q.target || !monsters.includes(q.target)) done = true; else { q.m.position.set(q.target.x, 0.07, q.target.y); q.m.rotation.z += dt * 4; q.m.scale.setScalar(q.target.big ? 1.8 : 1); } }
+    else if (q.kind === 'orb') { q.m.position.y = 0.5 + Math.sin(q.t * 4) * 0.12; q.m.rotation.y += dt * 2; if (Math.hypot(me.x - q.x, me.y - q.y) < 0.9) { const rr = sim.repairHull(S, 15); if (rr.ok) { floatText(q.x, q.y, `+${rr.mended} hull`); sfx('good'); W.puff(q.x, q.y, 0x7dffb0, 10, 0.6); hullBar(true); } done = true; } else if (q.t > q.life - 3) q.m.visible = Math.floor(q.t * 8) % 2 === 0; }
     else if (q.kind === 'missile') {
       if (q.target && !monsters.includes(q.target)) q.target = monsters.reduce((b, m2) => (Math.hypot(m2.x - q.x, m2.y - q.y) < (b ? Math.hypot(b.x - q.x, b.y - q.y) : 9) ? m2 : b), null);
       const sp = Math.min(11, 4 + q.t * 9);
