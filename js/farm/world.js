@@ -282,7 +282,7 @@ export class World {
     for (const m of this.spriteMats) m.color.copy(this.spriteTint);
     this.weather.visible = !indoor && !ruins && !(map && map.covered) && (wet || snow);   // nothing falls under Eden Central's roof
     { const se = this.season, fine = !wet && !snow && weather !== 'storm', colonyOut = !indoor && !ruins && !(map && (map.covered || map.under || map.belt)), dayish = h > 6.5 && h < 19.5;
-      this.drift.visible = colonyOut && fine && dayish && se !== 1 && se !== 0;   // no spring petals: the owner found the sakura annoying (2026-11-23)
+      this.drift.visible = false;   // off: no petals, leaves or flakes drifting down (owner 2026-11-23); snow falls only as the weather, on snow days
       this.drift.material.color.set([0xffc6d9, 0xffffff, 0xe0883a, 0xf4f8ff][se]); this.drift.material.size = se === 3 ? 0.22 : 0.42; this.driftSpeed = se === 3 ? 0.45 : 0.6; }
     this.weather.material.size = snow ? 0.16 : 0.07; this.weather.material.color.set(snow ? 0xffffff : 0xa9c6e6);
     this.weatherSpeed = snow ? 2.2 : 19;

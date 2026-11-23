@@ -1,0 +1,9 @@
+{
+  "name": "Sato's Harvest",
+  "short_name": "Sato's Harvest",
+  "start_url": "farm.html",
+  "display": "standalone",
+  "background_color": "#1e1a16",
+  "theme_color": "#3a6ab8",
+  "description": "A cozy farming game in the Earthlight colony. Plays offline once saved."
+}
