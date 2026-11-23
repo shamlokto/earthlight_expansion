@@ -688,6 +688,7 @@ function pallasSlash() {
   slashCd = 0.42; fireCd = 0.3; me.swing = 1.4; sfx('chop');
   const arc = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.55, 24, 1, -1.2, 2.4), new THREE.MeshBasicMaterial({ color: 0x8ff4ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
   arc.rotation.x = -Math.PI / 2; arc.rotation.z = Math.atan2(-dy, dx); arc.position.set(me.x, 1.1, me.y); W.scene.add(arc); bolts.push({ m: arc, x: me.x, y: me.y, vx: 0, vy: 0, from: 'fx', life: 0.18 });
+  if (hit) { hitStop = Math.max(hitStop, 0.06); W.shake = Math.max(W.shake || 0, 0.08); }
   if (hit > 1) floatText(me.x, me.y, 'double!');
 }
 function pallasFire() {
@@ -719,7 +720,7 @@ function pallasDash() { if (dashCd > 0) return; dashCd = sim.pallasStat(S, 'thru
 // V cycles the arm weapon (blaster, beam laser, seeker missiles); G sets down the Dragon battery (long range, slow,
 // heavy shells that cannot land closer than 2 tiles); T folds the Pallas into its jet: twice as fast, over towers,
 // gas and pools, out of reach of claws, and Space drops bombs. Explosions, beams and missiles live in `shots`.
-let weapon = 'blaster', laserHold = 0, laserBeam = null, laserNum = 0, missileCd = 0, bombCd = 0, dragon = null, dragonCd = 0, jet = null, jetCd = 0, packT = 40, shots = [], dying = [];
+let hitStop = 0, weapon = 'blaster', laserHold = 0, laserBeam = null, laserNum = 0, missileCd = 0, bombCd = 0, dragon = null, dragonCd = 0, jet = null, jetCd = 0, packT = 40, shots = [], dying = [];
 const WEAPON_NAME = { blaster: 'Blaster', laser: 'Beam laser', missiles: 'Seeker missiles' };
 function weaponsOwned() { return ['blaster', ...(sim.pallasLevel(S, 'laser') ? ['laser'] : []), ...(sim.pallasLevel(S, 'missiles') ? ['missiles'] : [])]; }
 function cycleWeapon() {
@@ -731,6 +732,8 @@ function combatReset() {
   if (laserBeam) { W.scene.remove(laserBeam); laserBeam = null; } if (jet) { W.unplace('pjet'); jet = null; } if (me && me.group) me.group.visible = true;
   dragon = null; laserHold = 0; packT = 35 + Math.random() * 20; if (W) W.wantZoom = 0; { const e = $('bossBar'); if (e) e.hidden = true; }
 }
+// The Dragon battery in the expansion's colours: its model's paint pulled toward white and blue (again when the model loads late)
+function tintWhiteBlue(o) { const go = () => o.traverse((q) => { if (q.isMesh && q.material && q.material.color && !q.userData.wb) { q.material = q.material.clone(); q.material.color.lerp(new THREE.Color(0xcfe0ff), 0.55); q.userData.wb = true; } }); go(); setTimeout(go, 700); setTimeout(go, 2000); }
 function dropOrb(x, y) {
   const g = new THREE.Group(), core = new THREE.Mesh(new THREE.OctahedronGeometry(0.16), new THREE.MeshBasicMaterial({ color: 0x7dffb0 })), halo = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), new THREE.MeshBasicMaterial({ color: 0x7dffb0, transparent: true, opacity: 0.25, depthWrite: false }));
   g.add(core, halo); g.position.set(x, 0.5, y); W.scene.add(g); shots.push({ kind: 'orb', m: g, x, y, t: 0, life: 20 });
@@ -744,6 +747,7 @@ function bossBar() {
 }
 function dmgNumber(mon, dmg) { const v = Math.round(dmg * 10) / 10; if (v > 0) floatText(mon.x + (Math.random() - 0.5) * 0.4, mon.y - 0.2, `-${v}`); }
 function boom(x, y, rad, dmg, color = 0xffa040, from = 'pallas') {
+  if (dmg >= 4) hitStop = Math.max(hitStop, 0.07);
   W.puff(x, y, color, 16, 0.5); W.puff(x, y, 0x5a5048, 10, 1.1); W.puff(x, y, 0xfff2b8, 6, 0.3); W.shake = Math.max(W.shake || 0, 0.16 + rad * 0.04); sfx('smash');
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.42, 32), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.08, y); W.scene.add(ring); shots.push({ kind: 'ring', m: ring, t: 0, life: 0.35, rad });
@@ -795,7 +799,8 @@ function placeDragon() {
   if (dragonCd > 0) return ui.toast('The Dragon is still folding up.', 900);
   dragonCd = 4; if (dragon) W.unplace('dragon');
   const [dx, dy] = DIRV[me.dir]; let x = me.x + dx * 1.1, y = me.y + dy * 1.1; if (blocked(x, y)) { x = me.x; y = me.y; }
-  dragon = { x, y, o: W.place('dragon', 'dragon_battery', x, y), cd: 1.2 }; W.puff(x, y, 0xc9c2b0, 12, 0.3); W.shake = 0.12; sfx('drop'); ui.toast('Dragon battery set. Stand back.', 1200);
+  dragon = { x, y, o: W.place('dragon', 'dragon_battery', x, y), cd: 1.2 }; tintWhiteBlue(dragon.o);
+  for (const [rad, col] of [[2, 0xff6a5a], [12, 0x7df4ff]]) { const rg = new THREE.Mesh(new THREE.RingGeometry(rad - 0.06, rad + 0.06, 64), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide })); rg.rotation.x = -Math.PI / 2; rg.position.set(x, 0.06, y); W.scene.add(rg); shots.push({ kind: 'fade', m: rg, t: 0, life: 2.2 }); } W.puff(x, y, 0xc9c2b0, 12, 0.3); W.shake = 0.12; sfx('drop'); ui.toast('Dragon battery set. Stand back.', 1200);   // its reach, for a moment
 }
 // T: fold into the jet or land again
 function toggleJet() {
@@ -851,6 +856,7 @@ function weaponsTick(dt) {
     const q = shots[i]; q.t += dt; let done = q.t >= q.life;
     if (q.kind === 'ring') { const k = q.t / q.life; q.m.scale.setScalar(1 + k * q.rad * 3.2); q.m.material.opacity = 0.9 * (1 - k); }
     else if (q.kind === 'scorch') q.m.material.opacity = 0.5 * Math.min(1, (q.life - q.t) / 3);
+    else if (q.kind === 'fade') q.m.material.opacity = 0.7 * (1 - q.t / q.life);
     else if (q.kind === 'lock') { if (!q.target || !monsters.includes(q.target)) done = true; else { q.m.position.set(q.target.x, 0.07, q.target.y); q.m.rotation.z += dt * 4; q.m.scale.setScalar(q.target.big ? 1.8 : 1); } }
     else if (q.kind === 'orb') { q.m.position.y = 0.5 + Math.sin(q.t * 4) * 0.12; q.m.rotation.y += dt * 2; if (Math.hypot(me.x - q.x, me.y - q.y) < 0.9) { const rr = sim.repairHull(S, 15); if (rr.ok) { floatText(q.x, q.y, `+${rr.mended} hull`); sfx('good'); W.puff(q.x, q.y, 0x7dffb0, 10, 0.6); hullBar(true); } done = true; } else if (q.t > q.life - 3) q.m.visible = Math.floor(q.t * 8) % 2 === 0; }
     else if (q.kind === 'missile') {
@@ -876,6 +882,7 @@ function weaponsTick(dt) {
 let debris = [], hazT = 0, hazWarned = false;
 function ruinsTick(dt) {
   if (map.belt) return beltTick(dt);
+  if (hitStop > 0) { hitStop -= dt; dt *= 0.12; }   // a beat of hit-stop after a heavy blow
   if (map.city) { if (!S.mine || S.mine.mode !== 'city' || cityTowing) return; cityTick(dt); }
   hurtT -= dt; fireCd -= dt; slashCd -= dt; hydraCd -= dt; dashCd -= dt; dashT -= dt;
   if (me.group) me.group.visible = !jet && !(hurtT > 0 && Math.floor(hurtT * 12) % 2);
