@@ -4443,5 +4443,45 @@
    0.8209
   ],
   "note": "cellar cheese rack (HunyuanDiT concept, Hunyuan3D-2, 2026-11-22)"
+ },
+ "ash_stalker": {
+  "file": "ash_stalker.glb",
+  "tris": 9000,
+  "size": [
+   0.6933,
+   0.6531,
+   1.0
+  ],
+  "note": "Old World creature (HunyuanDiT concept, Hunyuan3D-2, 2026-11-23)"
+ },
+ "dragon_battery": {
+  "file": "dragon_battery.glb",
+  "tris": 7000,
+  "size": [
+   0.6998,
+   0.8171,
+   1.0
+  ],
+  "note": "the Dragon battery (HunyuanDiT concept, Hunyuan3D-2, 2026-11-23)"
+ },
+ "scrap_drone": {
+  "file": "scrap_drone.glb",
+  "tris": 7000,
+  "size": [
+   0.9542,
+   0.3835,
+   1.0
+  ],
+  "note": "Old World creature (HunyuanDiT concept, Hunyuan3D-2, 2026-11-23)"
+ },
+ "scrap_titan": {
+  "file": "scrap_titan.glb",
+  "tris": 8433,
+  "size": [
+   0.882,
+   1.0,
+   0.6585
+  ],
+  "note": "Old World boss (HunyuanDiT concept, Hunyuan3D-2, floor sheet removed, 2026-11-23)"
  }
 }

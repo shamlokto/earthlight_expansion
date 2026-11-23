@@ -1656,5 +1656,21 @@ console.log(`\n${refusals.length} refusals seen, ${new Set(refusals).size} diffe
   buy(g, 'store', 'yard_path'); sel('yard_path'); check(sim.placeItem(g, 'farm', 32, 31).ok && sim.YARD[g.yard.at(-1).kind].walk, 'stepping stones are walked over');
   const L = loadState(saveState(g)); check(L && L.yard.length === 2, 'the yard survives a save');
 }
+// ---------------------------------------------------------------- Old World fighting (2026-11-23)
+{
+  check(sim.CITY_W >= 128 && sim.CITY_H >= 96, 'a bigger city');
+  const L = sim.cityLayout(77); const kinds = new Set(L.monsters.map((m) => m.kind));
+  check(kinds.has('scrap_drone') && kinds.has('ash_stalker') && kinds.has('scrap_titan'), `new creatures in the streets (${[...kinds].join(', ')})`);
+  check(sim.cityMonster('scrap_titan', 2).hp >= 80 && sim.cityMonster('ash_stalker', 0).leaper && sim.cityMonster('scrap_drone', 0).ranged, 'the titan is tough, stalkers leap, drones shoot');
+  const g = rich(491); sim.enterCity(g); const m = g.mine, n0 = m.monsters.length;
+  check(!sim.cityPack(g, sim.CITY_PAD[0], sim.CITY_PAD[1] - 2).ok, 'no packs in the suburbs');
+  let pk = { ok: false }; for (let y = 50; y > 2 && !pk.ok; y -= 4) pk = sim.cityPack(g, sim.CITY_PAD[0], y);
+  check(pk.ok && pk.spawned.length >= 2 && m.monsters.length === n0 + pk.spawned.length && pk.spawned.every((q) => !sim.citySolid(m.cells[q.y * m.w + q.x])), 'a pack comes in out past the suburbs, on open ground');
+  const i = m.monsters.indexOf(pk.spawned[0]); const r = sim.defeatMonster(g, i); check(r.ok && m.monsters.length === n0 + pk.spawned.length - 1, 'and can be beaten');
+  for (const k of ['laser', 'missiles', 'dragon', 'bombs']) check(shopStock(richer(492), 'pallas').some((e) => e.key === 'pal_' + k), `the gantry fits the ${k}`);
+  const b = sim.betaGame(); check(b.flags.beta && b.player.money === sim.BETA_MONEY && Object.values(b.player.toolLevel).every((l) => l === 3) && Object.entries(sim.PALLAS_MODS).every(([k, md]) => sim.pallasLevel(b, k) === md.marks.length), 'the beta game: credits, iridium tools, a fully refitted Pallas');
+  check(b.flags.cellar && b.flags.hot_tub && b.flags.kitchen_oven && b.flags.greenhouse && b.miner && countItem(b, 'rod'), 'and the farm built up');
+  const B = loadState(saveState(b)); check(B && B.flags.beta, 'the beta game saves as a beta game');
+}
 console.log(failures ? `\n${failures} of ${checks} checks FAILED` : `\nall ${checks} checks passed`);
 process.exit(failures ? 1 : 0);

@@ -19,7 +19,8 @@ import { Actor, DIRV } from './actors.js';
 import * as ui from './ui.js';
 import { sfx, music, musicPlaying, setMood, startMusic, musicVolume, setMusicVolume } from './sfx.js';
 
-const SAVE_KEY = 'earthlight-farm-save-v1';
+const SAVE_KEY = 'earthlight-farm-save-v1', BETA_KEY = 'earthlight-farm-beta-v1';   // the beta test game saves apart (2026-11-23)
+const saveKey = () => (S && S.flags && S.flags.beta ? BETA_KEY : SAVE_KEY);
 const $ = (id) => document.getElementById(id);
 const MIN_SECONDS = 0.6;                 // one game minute
 let S = null, W = null, map = null, me = null, mode = 'title', busy = false;
@@ -36,8 +37,8 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 // ---------------------------------------------------------------- save
 function save(atCamp = false) { const away = map.id === 'ruins', bt = away && map.belt, cm = away && !bt && S.mine && S.mine.mode === 'city' ? S.mine : null, camp = atCamp && cm && cm.saveCamp != null ? cm.camps[cm.saveCamp] : null; if (cm && !camp) cm.saveCamp = null;   // a trip is kept only in a camp save
-  S.player.map = camp ? 'ruins' : away ? (bt ? 'hangar' : 'central') : map.id; S.player.x = camp ? camp.x + 1.5 : away ? (bt ? 8 : 7.5) : me.x; S.player.y = camp ? camp.y + 2.5 : away ? (bt ? 7.6 : 16.5) : me.y; S.player.dir = me.dir; try { localStorage.setItem(SAVE_KEY, sim.saveState(S)); } catch { ui.toast('Could not save in this browser.'); } }
-function loadSaved() { try { const t = localStorage.getItem(SAVE_KEY); return t ? sim.loadState(t) : null; } catch { return null; } }
+  S.player.map = camp ? 'ruins' : away ? (bt ? 'hangar' : 'central') : map.id; S.player.x = camp ? camp.x + 1.5 : away ? (bt ? 8 : 7.5) : me.x; S.player.y = camp ? camp.y + 2.5 : away ? (bt ? 7.6 : 16.5) : me.y; S.player.dir = me.dir; try { localStorage.setItem(saveKey(), sim.saveState(S)); } catch { ui.toast('Could not save in this browser.'); } }
+function loadSaved(key = SAVE_KEY) { try { const t = localStorage.getItem(key); return t ? sim.loadState(t) : null; } catch { return null; } }
 
 // ---------------------------------------------------------------- context
 const festivalToday = () => story.FESTIVALS.find((f) => f.season === S.cal.season && f.day === S.cal.day && (!f.flag || S.flags[f.flag])) || null;   // the Hub Cup waits for its arena
@@ -53,6 +54,7 @@ function dynSolid(tx, ty) {
 }
 const blocked = (x, y) => map.solid(x, y) || dynSolid(Math.floor(x), Math.floor(y));
 function canStand(x, y) {
+  if (jet && map && map.city) return x > 1.3 && y > 1.3 && x < map.w - 1.3 && y < map.h - 1.3;   // the jet flies over everything
   const r = 0.26;
   if (blocked(x - r, y - r) || blocked(x + r, y - r) || blocked(x - r, y + r) || blocked(x + r, y + r)) return false;
   for (const n of npcs.values()) { if (n.walking) continue; const d = Math.hypot(n.actor.x - x, n.actor.y - y); if (d < 0.55 && d < Math.hypot(n.actor.x - me.x, n.actor.y - me.y)) return false; }   // walkers pass by; never trapped inside someone
@@ -118,7 +120,8 @@ window.addEventListener('error', (ev) => recover(ev.error || ev.message, 'error'
 window.addEventListener('unhandledrejection', (ev) => recover(ev.reason, 'promise'));
 let mailFlag = false;   // the mailbox's red flag is up while letters wait (2026-11-22)
 function mailFlagCheck() { const up = !!(map && map.id === 'farm' && sim.mailWaiting(S)); if (up === mailFlag && (!up || W.tileObjs.get('mailflag'))) return; mailFlag = up; if (up) W.place('mailflag', 'mail_flag', 13.5, 7.5); else W.unplace('mailflag'); }
-function refreshHud() { mailFlagCheck(); const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: 'Pallas · Space fires · F Hydra · R scan' } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
+// refreshHud also refills the beta game's credits (they never run out)
+function refreshHud() { if (S && S.flags.beta) S.player.money = sim.BETA_MONEY; mailFlagCheck(); { const on = !!(map && map.city); for (const id of ['tWpn', 'tJet', 'tDrg']) { const b = $(id); if (b) b.hidden = !on || (id === 'tDrg' && !sim.pallasLevel(S, 'dragon')); } } const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: jet ? `Jet · Space bombs ×${sim.pallasStat(S, 'bombs')} · T land · Shift boost` : `Pallas · ${WEAPON_NAME[weapon]} (V) · F Hydra${sim.pallasLevel(S, 'dragon') ? ' · G Dragon' : ''} · T jet · R scan` } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
 // ---------------------------------------------------------------- people
@@ -378,7 +381,8 @@ function catTick(dt) {
 }
 function catProbe() {
   if (!cat) return null; const cx = cat.x - me.x, cy = cat.y - me.y, cd = Math.hypot(cx, cy), [fx, fy] = DIRV[me.dir];
-  if (cd > 1.3 || (cd > 0.5 && (cx * fx + cy * fy) / cd < 0.35)) return null;   // only when Sato faces her, so she never steals E from the kitchen
+  if (cd > 1.3 || (cx * fx + cy * fy) / (cd || 1) < 0.35) return null;
+  { const [tx, ty] = target(), tp = propAt(tx, ty); if (tp && tp.act && !(Math.floor(cat.x) === tx && Math.floor(cat.y) === ty)) return null; }   // a bed, the TV, the kitchen win over her   // only when Sato faces her, so she never steals E from the kitchen
   const p = sim.petOf(S), held = sim.selected(S), nm = p.name || 'the kitten';
   if (held && ITEMS[held.id].kind === 'fish' && p.fedDay !== sim.absDay(S)) return { label: `Give ${nm} the ${ITEMS[held.id].name.toLowerCase()}`, run: () => { const r = sim.feedCat(S, held.id); ui.toast(r.msg, 3600); if (r.ok) { sfx('good'); cat.purr = 2.5; floatText(cat.x, cat.y, '♥'); } refreshHud(); } };
   return { label: cat.plan.sleep ? `Stroke ${nm} (asleep)` : `Pet ${nm}`, run: async () => {
@@ -419,6 +423,7 @@ function groundWhy(tx, ty, kinds) {
   if (map.indoor || map.ruins) return 'Set it down outdoors.';
   if (fieldAt(tx, ty) || pastureAt(tx, ty)) return 'Not on the field. Find a patch of grass.';
   if (!kinds.includes(map.at(tx, ty))) return kinds.length === 1 ? 'Saplings need open grass.' : 'There is no room there.';
+  if (map.props.some((p) => p.when && tx >= Math.floor(p.x) && tx < Math.floor(p.x) + p.w && ty >= Math.floor(p.y) && ty < Math.floor(p.y) + p.d)) return 'That spot is kept for something Ruess may build.';
   if (map.solid(tx, ty) || dynSolid(tx, ty) || propAt(tx, ty) || map.postNear(tx + 0.5, ty + 0.5, 0.45) || placedHere().some((o) => Math.hypot(o.x - tx, o.y - ty) < 1)) return 'Something is in the way.';
   if (map.doors.some((d) => Math.abs(d.x - tx) <= 1 && Math.abs(d.y - ty) <= 1) || map.exits.some((e) => tx >= e.x0 - 1 && tx <= e.x1 + 1 && ty >= e.y0 - 1 && ty <= e.y1 + 1)) return 'Keep the way clear.';
   if (map.id === 'hill' && FORAGE_SPOTS.some(([x, y]) => x === tx && y === ty)) return 'Something wild grows there.';
@@ -647,17 +652,20 @@ function popMonster(mon) {
   const i = S.mine ? S.mine.monsters.indexOf(mon.ref) : -1; const r = i >= 0 ? sim.defeatMonster(S, i) : { gained: [] };
   W.puff(mon.x, mon.y, 0xffb347, 18, 0.5); W.puff(mon.x, mon.y, 0x7dffb0, 8, 0.8); W.shake = Math.max(W.shake || 0, 0.12);
   const k = W.facers.indexOf(mon.barG); if (k >= 0) W.facers.splice(k, 1);
-  W.dyn.remove(mon.o); W.unface(mon.o); W.tileObjs.delete('mon' + (mon.ref.id ?? '')); monsters.splice(monsters.indexOf(mon), 1); sfx('pop'); floatText(mon.x, mon.y, pick(mon.kind === 'glow_slime' || mon.kind === 'smog_wraith' ? ['fizzle!', 'pff…', 'blorp'] : mon.kind === 'spore_brute' ? ['it flees!', 'stomp… stomp… gone'] : ['pop!', 'poof', 'shoo!', 'it flees!']));
+  dying.push({ o: mon.o, t: 0, s0: mon.o.scale.x, tele: mon.tele }); mon.barG.visible = false; W.tileObjs.delete('mon' + (mon.ref.id ?? '')); monsters.splice(monsters.indexOf(mon), 1);   // it spins, shrinks and is gone (weaponsTick) sfx('pop'); floatText(mon.x, mon.y, pick(mon.kind === 'glow_slime' || mon.kind === 'smog_wraith' ? ['fizzle!', 'pff…', 'blorp'] : mon.kind === 'spore_brute' ? ['it flees!', 'stomp… stomp… gone'] : ['pop!', 'poof', 'shoo!', 'it flees!']));
   ui.gainedToast(r.gained); if (r.credits) floatText(mon.x, mon.y + 0.3, `+${r.credits} cr`); if (Math.random() < 0.35) ui.toast(pick(story.RUINS.monster));
   for (const ref of r.spawned || []) { const q = cityMonsterObj(ref); q.state = 'chase'; floatText(q.x, q.y, 'split!'); }
   refreshHud();
 }
-function hurtMonster(mon, dmg, fromX, fromY) {
-  if (mon.armour && dmg < 2) { dmg *= 0.5; floatText(mon.x, mon.y, 'clank'); }   // a rust-crawler's shell: bolts glance off, the sabre bites
-  mon.hp -= dmg; mon.squash = 1;
-  const d = Math.hypot(mon.x - fromX, mon.y - fromY) || 1, kx = (mon.x - fromX) / d * 0.5, ky = (mon.y - fromY) / d * 0.5;
+function hurtMonster(mon, dmg, fromX, fromY, soft = false) {
+  if (!monsters.includes(mon)) return;
+  if (mon.armour && dmg < 2) { dmg *= 0.5; if (!soft) floatText(mon.x, mon.y, 'clank'); }   // a rust-crawler's shell: bolts glance off, the sabre bites
+  mon.hp -= dmg; mon.squash = soft ? Math.max(mon.squash, 0.35) : 1; mon.hurtT = 0.12;
+  if (soft) { mon.dmgAcc = (mon.dmgAcc || 0) + dmg; if (mon.hp > 0 && mon.dmgAcc < 1.5) { mon.barG.visible = true; mon.bar.scale.x = Math.max(0.001, mon.hp / mon.max); return; } }
+  dmgNumber(mon, soft ? mon.dmgAcc : dmg); mon.dmgAcc = 0;
+  const d = Math.hypot(mon.x - fromX, mon.y - fromY) || 1, push = soft ? 0.05 : mon.big ? 0.15 : 0.5, kx = (mon.x - fromX) / d * push, ky = (mon.y - fromY) / d * push;
   if (!blocked(mon.x + kx, mon.y)) mon.x += kx; if (!blocked(mon.x, mon.y + ky)) mon.y += ky;
-  if (mon.state === 'windup' || mon.state === 'lunge') { mon.state = 'stun'; mon.t = 0.6; }
+  if (!soft && !mon.titan && (mon.state === 'windup' || mon.state === 'lunge')) { mon.state = 'stun'; mon.t = 0.6; }
   mon.barG.visible = true; mon.bar.scale.x = Math.max(0.001, mon.hp / mon.max);
   W.puff(mon.x, mon.y, 0xfff2b8, 6, 0.45); sfx('zap');
   if (mon.hp <= 0) popMonster(mon);
@@ -681,6 +689,9 @@ function pallasSlash() {
   if (hit > 1) floatText(me.x, me.y, 'double!');
 }
 function pallasFire() {
+  if (map.city && jet) return dropBombs();
+  if (map.city && weapon === 'laser' && sim.pallasLevel(S, 'laser')) { laserHold = 0.35; return; }
+  if (map.city && weapon === 'missiles' && sim.pallasLevel(S, 'missiles')) return fireMissiles();
   if (slashCd <= 0) { const [dx, dy] = DIRV[me.dir]; if (monsters.some((m) => { const ex = m.x - me.x, ey = m.y - me.y, d = Math.hypot(ex, ey); return d < 1.7 && (ex * dx + ey * dy) / (d || 1) > 0.2; })) return pallasSlash(); }
   if (fireCd > 0) return; fireCd = 0.26;
   let [dx, dy] = DIRV[me.dir], best = null, bs = 0.5;                       // gentle aim: the nearest creature in a wide cone ahead
@@ -694,39 +705,184 @@ function placeHydra() {
   const [dx, dy] = DIRV[me.dir]; let x = me.x + dx * 0.9, y = me.y + dy * 0.9; if (blocked(x, y)) { x = me.x; y = me.y; }
   hydra = { x, y, o: W.place('hydra', 'hydra', x, y), cd: 0.6 }; W.puff(x, y, 0xc9c2b0, 8, 0.2); sfx('drop'); ui.toast('Hydra set.', 900);
 }
-function satoHit(fromX, fromY, mon) {
+function satoHit(fromX, fromY, mon, ranged = false) {
   if (hurtT > 0 || dashT > 0 || cityTowing) return false;
+  if (jet && !ranged) return false;   // up in the jet, nothing on the ground can reach her
   hurtT = 1.4; const r = mon && mon.ref && map.city ? sim.monsterHit(S, mon.kind, mon.ref.zone) : sim.monsterHit(S); if (!map.city || Math.random() < 0.3) ui.toast(r.msg); hullBar(map.city); if (r.out) { cityTow(); return true; } W.shake = 0.2; sfx('bad');
   const d = Math.hypot(me.x - fromX, me.y - fromY) || 1; for (let k = 0; k < 6; k++) { const nx = me.x + (me.x - fromX) / d * 0.12, ny = me.y + (me.y - fromY) / d * 0.12; if (canStand(nx, ny)) { me.x = nx; me.y = ny; } }
   refreshHud(); return true;
 }
 function pallasDash() { if (dashCd > 0) return; dashCd = sim.pallasStat(S, 'thrusters'); dashT = 0.2; W.puff(me.x, me.y, 0x9fd8ee, 10, 0.3); sfx('zap'); }
+// ---------------------------------------------------------------- Old World weapons (2026-11-23, sim.PALLAS_MODS)
+// V cycles the arm weapon (blaster, beam laser, seeker missiles); G sets down the Dragon battery (long range, slow,
+// heavy shells that cannot land closer than 2 tiles); T folds the Pallas into its jet: twice as fast, over towers,
+// gas and pools, out of reach of claws, and Space drops bombs. Explosions, beams and missiles live in `shots`.
+let weapon = 'blaster', laserHold = 0, laserBeam = null, laserNum = 0, missileCd = 0, bombCd = 0, dragon = null, dragonCd = 0, jet = null, jetCd = 0, packT = 40, shots = [], dying = [];
+const WEAPON_NAME = { blaster: 'Blaster', laser: 'Beam laser', missiles: 'Seeker missiles' };
+function weaponsOwned() { return ['blaster', ...(sim.pallasLevel(S, 'laser') ? ['laser'] : []), ...(sim.pallasLevel(S, 'missiles') ? ['missiles'] : [])]; }
+function cycleWeapon() {
+  const own = weaponsOwned(); if (own.length < 2) return ui.toast('Only the blaster is fitted. Vashti\'s refit gantry fits a beam laser and seeker missiles.', 3200);
+  weapon = own[(own.indexOf(weapon) + 1) % own.length]; sfx('pick'); ui.toast(`Arm weapon: ${WEAPON_NAME[weapon]}`, 1400); refreshHud();
+}
+function combatReset() {
+  for (const q of shots) W.scene.remove(q.m); shots = []; for (const q of dying) W.dyn.remove(q.o); dying = [];
+  if (laserBeam) { W.scene.remove(laserBeam); laserBeam = null; } if (jet) { W.unplace('pjet'); jet = null; } if (me && me.group) me.group.visible = true;
+  dragon = null; laserHold = 0; packT = 35 + Math.random() * 20;
+}
+function dmgNumber(mon, dmg) { const v = Math.round(dmg * 10) / 10; if (v > 0) floatText(mon.x + (Math.random() - 0.5) * 0.4, mon.y - 0.2, `-${v}`); }
+function boom(x, y, rad, dmg, color = 0xffa040, from = 'pallas') {
+  W.puff(x, y, color, 16, 0.5); W.puff(x, y, 0x5a5048, 10, 1.1); W.puff(x, y, 0xfff2b8, 6, 0.3); W.shake = Math.max(W.shake || 0, 0.16 + rad * 0.04); sfx('smash');
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.42, 32), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
+  ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.08, y); W.scene.add(ring); shots.push({ kind: 'ring', m: ring, t: 0, life: 0.35, rad });
+  for (const mon of [...monsters]) { const d = Math.hypot(mon.x - x, mon.y - y); if (d < rad + (mon.big ? 0.5 : 0.2)) hurtMonster(mon, dmg * (d < rad * 0.5 ? 1 : 0.6), x, y); }
+}
+// the beam laser: while Space is held, a beam from the arm to the first creature (or wall) along the aim, 8 tiles
+function laserTick(dt) {
+  if (keys.has('Space')) laserHold = Math.max(laserHold, 0.1);
+  laserHold -= dt; const on = laserHold > 0 && weapon === 'laser' && !jet && sim.pallasLevel(S, 'laser');
+  if (!on) { if (laserBeam) { W.scene.remove(laserBeam); laserBeam = null; } return; }
+  let [dx, dy] = DIRV[me.dir], best = null, bs = 0.5;
+  for (const mon of monsters) { const ex = mon.x - me.x, ey = mon.y - me.y, d = Math.hypot(ex, ey); if (d > 8 || !d) continue; const c = (ex * dx + ey * dy) / d; if (c > 0.6 && c - d * 0.03 > bs) { bs = c - d * 0.03; best = mon; } }
+  if (best) { dx = best.x - me.x; dy = best.y - me.y; me.face(best.x, best.y); } const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+  let len = 8, hit = null;
+  for (let k = 0.3; k < 8; k += 0.15) { const x = me.x + dx * k, y = me.y + dy * k; if (map.solid(x, y)) { len = k; break; } const m2 = monsters.find((q) => Math.hypot(q.x - x, q.y - y) < (q.big ? 0.75 : 0.5)); if (m2) { len = k; hit = m2; break; } }
+  if (!laserBeam) { laserBeam = new THREE.Group(); const core = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1, 6), new THREE.MeshBasicMaterial({ color: 0xffffff })); const glow = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 1, 8), new THREE.MeshBasicMaterial({ color: 0x7df4ff, transparent: true, opacity: 0.45, depthWrite: false })); laserBeam.add(core, glow); W.scene.add(laserBeam); }
+  laserBeam.position.set(me.x + dx * len / 2, 1.45, me.y + dy * len / 2); laserBeam.scale.set(1 + Math.random() * 0.4, len, 1 + Math.random() * 0.4); laserBeam.rotation.set(Math.PI / 2, 0, -Math.atan2(dx, dy)); laserBeam.rotation.order = 'YXZ'; laserBeam.rotation.set(Math.PI / 2, Math.atan2(dx, dy), 0);
+  me.swing = Math.max(me.swing || 0, 0.4);
+  if ((laserNum -= dt) <= 0) { laserNum = 0.07; W.puff(me.x + dx * len, me.y + dy * len, hit ? 0xfff2b8 : 0x9ff4ff, 2, 0.9); }
+  if (hit) hurtMonster(hit, sim.pallasStat(S, 'laser') * dt, me.x, me.y, true);
+}
+// seeker missiles: a volley from the shoulder pods; each picks its own creature and turns after it
+function fireMissiles() {
+  if (missileCd > 0) return; missileCd = 1.15; const n = sim.pallasStat(S, 'missiles'); sfx('zap');
+  const targets = monsters.map((m2) => [m2, Math.hypot(m2.x - me.x, m2.y - me.y)]).filter(([, d]) => d < 13).sort((a, b) => a[1] - b[1]).map(([m2]) => m2);
+  const [dx, dy] = DIRV[me.dir];
+  for (let k = 0; k < n; k++) {
+    const g = new THREE.Group(), body = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.36, 6), new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.4 })), nose = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.12, 6), new THREE.MeshStandardMaterial({ color: 0xc8342c })), fl = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 5), new THREE.MeshBasicMaterial({ color: 0xffb347 }));
+    body.rotation.x = nose.rotation.x = Math.PI / 2; nose.position.z = 0.24; fl.position.z = -0.22; g.add(body, nose, fl);
+    const side = k % 2 ? 1 : -1, sx = me.x - dy * 0.35 * side, sy = me.y + dx * 0.35 * side; g.position.set(sx, 1.7, sy); W.scene.add(g);
+    shots.push({ kind: 'missile', m: g, x: sx, y: sy, h: 1.7, vx: (dx - dy * side * 0.8) * 4, vy: (dy + dx * side * 0.8) * 4, target: targets[k % Math.max(1, targets.length)] || null, t: 0, life: 3.2, trail: 0 });
+  }
+  me.swing = 1;
+}
+// bombs from the jet: they fall from under the wing and burst where they land
+function dropBombs() {
+  if (bombCd > 0) return; bombCd = 0.85; const n = sim.pallasStat(S, 'bombs'), [dx, dy] = jet ? [Math.sin(jet.yaw), Math.cos(jet.yaw)] : DIRV[me.dir]; sfx('drop');
+  for (let k = 0; k < n; k++) {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), new THREE.MeshStandardMaterial({ color: 0x2b3138, metalness: 0.5, roughness: 0.4 }));
+    const x = me.x + dx * (0.6 + k * 0.9), y = me.y + dy * (0.6 + k * 0.9); b.position.set(me.x, 2.0, me.y); W.scene.add(b);
+    shots.push({ kind: 'bomb', m: b, x0: me.x, y0: me.y, x, y, t: -k * 0.12, life: 0.5 });
+  }
+}
+// the Dragon battery: G sets it in front; it lobs a heavy shell every 2.2 s at a creature 2-12 tiles off
+function placeDragon() {
+  if (!sim.pallasLevel(S, 'dragon')) return ui.toast('No Dragon battery yet. Vashti\'s refit gantry can send one up.', 3000);
+  if (dragonCd > 0) return ui.toast('The Dragon is still folding up.', 900);
+  dragonCd = 4; if (dragon) W.unplace('dragon');
+  const [dx, dy] = DIRV[me.dir]; let x = me.x + dx * 1.1, y = me.y + dy * 1.1; if (blocked(x, y)) { x = me.x; y = me.y; }
+  dragon = { x, y, o: W.place('dragon', 'dragon_battery', x, y), cd: 1.2 }; W.puff(x, y, 0xc9c2b0, 12, 0.3); W.shake = 0.12; sfx('drop'); ui.toast('Dragon battery set. Stand back.', 1200);
+}
+// T: fold into the jet or land again
+function toggleJet() {
+  if (!map.city || !S.mine || cityTowing) return; if (jetCd > 0) return; jetCd = 0.8;
+  if (jet) {
+    const sx = me.x, sy = me.y; jet = null; if (!canStand(sx, sy)) { jet = jetObj(); return ui.toast('Find open ground to land on.', 1600); }
+    W.unplace('pjet'); me.group.visible = true; W.puff(me.x, me.y, 0xfff2b8, 16, 0.4); W.puff(me.x, me.y, 0x9fd8ee, 10, 0.2); sfx('zap'); ui.toast('The Pallas unfolds and lands.', 1200); refreshHud(); return;
+  }
+  jet = jetObj(); W.puff(me.x, me.y, 0xfff2b8, 18, 0.6); sfx('zap'); W.shake = 0.1; ui.toast('Jet form: Space drops bombs, T lands. Searching needs your feet on the ground.', 2600); refreshHud();
+}
+function jetObj() { const o = W.place('pjet', 'pallas_jet', me.x, me.y, { scale: 1.4 }); me.group.visible = false; return { o, yaw: [0, Math.PI, -Math.PI / 2, Math.PI / 2][me.dir] ?? 0, bank: 0, t: 0, h: 2.2 }; }
+// a red warning on the ground while a creature winds up: where the lunge will go, or the titan's slam ring
+function telegraph(mon) {
+  const on = mon.state === 'windup' || mon.state === 'slam';
+  if (!on) { if (mon.tele) mon.tele.visible = false; return; }
+  if (!mon.tele) { const geo = mon.titan ? new THREE.RingGeometry(0.1, 1, 40) : new THREE.PlaneGeometry(0.5, 1); geo.rotateX(-Math.PI / 2); if (!mon.titan) geo.translate(0, 0, 0.5); mon.tele = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide })); W.scene.add(mon.tele); }
+  const k = mon.titan ? 1 - Math.max(0, mon.t) / 1.1 : 1 - Math.max(0, mon.t) / (mon.leaper ? 0.6 : mon.big ? 0.8 : 0.5);
+  mon.tele.visible = true; mon.tele.position.set(mon.x, 0.06, mon.y); mon.tele.material.opacity = 0.25 + 0.35 * k;
+  if (mon.titan) mon.tele.scale.setScalar(2.6 * (0.4 + 0.6 * k)); else { mon.tele.rotation.y = Math.atan2(mon.lx, mon.ly); mon.tele.scale.set(1, 1, mon.leaper ? 4.2 : mon.big ? 2 : 1.6); }
+}
+// the scrap titan: closes in slowly; up close it raises both fists and slams (a red ring: get out of it); at range it hurls scrap
+function titanThink(mon, dt, d, ex, ey) {
+  mon.shotT -= dt;
+  if (mon.state === 'slam') { if (mon.t <= 0) { mon.state = 'rest'; mon.t = 1.2; boom(mon.x, mon.y, 0.01, 0, 0xc8b090, 'titan'); W.shake = 0.35; if (d < 2.6 && !jet) satoHit(mon.x, mon.y, mon); } return; }
+  if (mon.state === 'rest' || mon.state === 'stun') { if (mon.t <= 0) mon.state = 'chase'; return; }
+  if (d > (mon.sight || 9) + 4) { mon.state = 'wander'; return; } if (d < (mon.sight || 9)) mon.state = 'chase';
+  if (mon.state !== 'chase') return;
+  if (d < 3 && !jet) { mon.state = 'slam'; mon.t = 1.1; floatText(mon.x, mon.y, 'SLAM!'); return; }
+  if (d < 10 && mon.shotT <= 0) { mon.shotT = 3.2; for (const a of [-0.25, 0, 0.25]) { const c = Math.cos(a), s2 = Math.sin(a); spawnBolt(mon.x, mon.y, ex * c - ey * s2, ex * s2 + ey * c, 'enemy'); bolts.at(-1).mon = mon; } }
+  const sp = mon.spd || 0.6, nx = mon.x + ex / d * sp * dt, ny = mon.y + ey / d * sp * dt; if (!blocked(nx, mon.y) && !inCamp(nx, mon.y)) mon.x = nx; if (!blocked(mon.x, ny) && !inCamp(mon.x, ny)) mon.y = ny;
+  if (mon.o.userData.is3d) mon.o.rotation.y = Math.atan2(ex, ey);
+}
+function weaponsTick(dt) {
+  missileCd -= dt; bombCd -= dt; dragonCd -= dt; jetCd -= dt;
+  laserTick(dt);
+  if (jet) {                                                               // the jet hangs over Sato's spot, turning and banking as she flies
+    jet.t += dt; const moving = me.moving, want = moving ? [0, Math.PI, -Math.PI / 2, Math.PI / 2][me.dir] : jet.yaw;
+    let dyaw = ((want - jet.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI; jet.yaw += dyaw * Math.min(1, dt * 6); jet.bank += (Math.max(-0.6, Math.min(0.6, -dyaw * 1.5)) - jet.bank) * Math.min(1, dt * 5);
+    const o = jet.o; o.position.set(me.x, jet.h + Math.sin(jet.t * 2.2) * 0.12, me.y); o.rotation.set(0, jet.yaw + (art.hasModel('pallas_jet') ? Math.PI : 0), jet.bank, 'YXZ');
+    if (moving && Math.random() < 0.5) W.puff(me.x - Math.sin(jet.yaw) * 0.9, me.y - Math.cos(jet.yaw) * 0.9, 0x9fd8ee, 1, jet.h - 0.2);
+  }
+  if (dragon) {
+    dragon.cd -= dt; let best = null, bd = 0;
+    for (const mon of monsters) { const d = Math.hypot(mon.x - dragon.x, mon.y - dragon.y); if (d >= 2 && d <= 12) { const score = (mon.big ? 30 : 0) + mon.hp * 2 - d; if (!best || score > bd) { best = mon; bd = score; } } }
+    if (best) { dragon.o.rotation.y = Math.atan2(best.x - dragon.x, best.y - dragon.y);
+      if (dragon.cd <= 0) { dragon.cd = 2.2; const sh = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd36a })); sh.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff8a3a, transparent: true, opacity: 0.4, depthWrite: false })));
+        W.scene.add(sh); const tx = best.x + (best.x - (best.px ?? best.x)) * 8, ty = best.y + (best.y - (best.py ?? best.y)) * 8; shots.push({ kind: 'shell', m: sh, x0: dragon.x, y0: dragon.y, x: tx, y: ty, t: 0, life: 0.9 }); W.puff(dragon.x, dragon.y, 0xfff2b8, 8, 1.1); W.shake = Math.max(W.shake || 0, 0.08); sfx('smash'); } }
+  }
+  for (const mon of monsters) { mon.px = mon.x; mon.py = mon.y; }
+  for (let i = shots.length - 1; i >= 0; i--) {
+    const q = shots[i]; q.t += dt; let done = q.t >= q.life;
+    if (q.kind === 'ring') { const k = q.t / q.life; q.m.scale.setScalar(1 + k * q.rad * 3.2); q.m.material.opacity = 0.9 * (1 - k); }
+    else if (q.kind === 'missile') {
+      if (q.target && !monsters.includes(q.target)) q.target = monsters.reduce((b, m2) => (Math.hypot(m2.x - q.x, m2.y - q.y) < (b ? Math.hypot(b.x - q.x, b.y - q.y) : 9) ? m2 : b), null);
+      const sp = Math.min(11, 4 + q.t * 9);
+      if (q.target && q.t > 0.12) { const ax = q.target.x - q.x, ay = q.target.y - q.y, al = Math.hypot(ax, ay) || 1, vl = Math.hypot(q.vx, q.vy) || 1, turn = Math.min(1, dt * 6); q.vx = q.vx / vl * (1 - turn) + ax / al * turn; q.vy = q.vy / vl * (1 - turn) + ay / al * turn; }
+      const vl = Math.hypot(q.vx, q.vy) || 1; q.vx = q.vx / vl * sp; q.vy = q.vy / vl * sp; q.x += q.vx * dt; q.y += q.vy * dt; q.h += ((q.target ? 0.8 : 1.2) - q.h) * Math.min(1, dt * 3);
+      q.m.position.set(q.x, q.h, q.y); q.m.rotation.y = Math.atan2(q.vx, q.vy); if ((q.trail -= dt) <= 0) { q.trail = 0.04; W.puff(q.x - q.vx * 0.03, q.y - q.vy * 0.03, 0xd8d0c4, 1, q.h); }
+      const hitMon = monsters.find((m2) => Math.hypot(m2.x - q.x, m2.y - q.y) < (m2.big ? 0.8 : 0.5));
+      if (hitMon || map.solid(q.x, q.y)) done = true; if (done) boom(q.x, q.y, 1.3, 3 + sim.pallasLevel(S, 'missiles'), 0xffa040);
+    } else if (q.kind === 'bomb' || q.kind === 'shell') {
+      const k = Math.max(0, q.t) / q.life, x = q.x0 + (q.x - q.x0) * k, y = q.y0 + (q.y - q.y0) * k, h = q.kind === 'bomb' ? 2.0 * (1 - k * k) : 0.9 + Math.sin(k * Math.PI) * 3.2 - k * 0.8;
+      q.m.position.set(x, Math.max(0.1, h), y); if (q.t < 0) q.m.visible = false; else q.m.visible = true;
+      if (done) q.kind === 'bomb' ? boom(q.x, q.y, 1.4 + 0.3 * sim.pallasLevel(S, 'bombs'), 4 + sim.pallasLevel(S, 'bombs'), 0xff8a3a) : boom(q.x, q.y, 1.8, sim.pallasStat(S, 'dragon'), 0xffd36a);
+    }
+    if (done) { W.scene.remove(q.m); shots.splice(i, 1); }
+  }
+  for (let i = dying.length - 1; i >= 0; i--) { const q = dying[i]; q.t += dt; const k = q.t / 0.35; q.o.rotation.y += dt * 14; q.o.scale.setScalar(q.s0 * Math.max(0.01, 1 - k)); q.o.position.y += dt * 1.5; if (q.tele) q.tele.visible = false; if (k >= 1) { W.dyn.remove(q.o); W.unface(q.o); if (q.tele) W.scene.remove(q.tele); dying.splice(i, 1); } }
+  for (const mon of monsters) if (mon.hurtT > 0) { mon.hurtT -= dt; mon.o.position.x += (Math.random() - 0.5) * 0.06; }   // a shudder when hit
+  // reinforcements out past the suburbs
+  if (!jet || true) { packT -= dt; if (packT <= 0) { packT = 35 + Math.random() * 25; if (!inCamp(me.x, me.y)) { const r = sim.cityPack(S, me.x - 1, me.y - 1); if (r.ok) { for (const ref of r.spawned) { const q = cityMonsterObj(ref); q.state = 'chase'; } ui.toast(r.kind === 'ash_stalker' ? 'Ash stalkers, coming low and fast between the cars.' : 'A swarm of scrap drones lifts off a rooftop.', 2600); sfx('bad'); } } } }
+}
 let debris = [], hazT = 0, hazWarned = false;
 function ruinsTick(dt) {
   if (map.belt) return beltTick(dt);
   if (map.city) { if (!S.mine || S.mine.mode !== 'city' || cityTowing) return; cityTick(dt); }
   hurtT -= dt; fireCd -= dt; slashCd -= dt; hydraCd -= dt; dashCd -= dt; dashT -= dt;
-  if (me.group) me.group.visible = !(hurtT > 0 && Math.floor(hurtT * 12) % 2);
+  if (me.group) me.group.visible = !jet && !(hurtT > 0 && Math.floor(hurtT * 12) % 2);
+  if (jet && jet.o) jet.o.visible = !(hurtT > 0 && Math.floor(hurtT * 12) % 2);
   for (const mon of [...monsters]) {
     const ex = me.x - mon.x, ey = me.y - mon.y, d = Math.hypot(ex, ey) || 0.01; if (map.city && d > 26) { mon.wob += dt; const hx = mon.home[0] - mon.x, hy = mon.home[1] - mon.y, far = hx * hx + hy * hy > 9, nx = mon.x + (far ? Math.sign(hx) : Math.cos(mon.wob * 0.4)) * 0.3 * dt, ny = mon.y + (far ? Math.sign(hy) : Math.sin(mon.wob * 0.5)) * 0.3 * dt; if (!blocked(nx, ny) && !inCamp(nx, ny)) { mon.x = nx; mon.y = ny; } mon.state = 'wander'; mon.o.position.set(mon.x, mon.drain ? 0.25 + Math.sin(mon.wob * 2.2) * 0.12 : 0, mon.y); continue; }   // far away: a slow idle amble near home
     mon.wob += dt; mon.t -= dt;
     let sp = 0, tx = 0, ty = 0;
-    if (mon.kind === 'drone') {                                            // drones keep their distance and lob slow orbs
+    if (mon.titan) titanThink(mon, dt, d, ex, ey);                         // the scrap titan: slams and thrown scrap
+    else if (mon.kind === 'drone' || mon.ranged) {                         // drones keep their distance and lob slow orbs
       if (d < 7) { const want = d < 3 ? -1 : d > 4.5 ? 1 : 0; tx = ex / d * want + Math.cos(mon.wob) * 0.6; ty = ey / d * want + Math.sin(mon.wob * 1.3) * 0.6; sp = 1.3; mon.shotT -= dt; if (mon.shotT <= 0) { mon.shotT = 2.4 + Math.random(); spawnBolt(mon.x, mon.y, ex, ey, 'enemy'); floatText(mon.x, mon.y, '!'); } }
       else { tx = Math.cos(mon.wob * 0.5); ty = Math.sin(mon.wob * 0.6); sp = 0.4; }
     } else if (mon.drain) {                                                // smog-wraiths drift up close and drink the Pallas's charge
       if (d < (mon.sight || 7)) { const want = d > 1.1 ? 1 : 0; tx = ex / d * want + Math.cos(mon.wob * 2) * 0.3; ty = ey / d * want + Math.sin(mon.wob * 2.3) * 0.3; sp = mon.spd || 1.1; mon.shotT -= dt; if (d < 1.7 && mon.shotT <= 0) { mon.shotT = 1.3; const r = sim.monsterHit(S, mon.kind, mon.ref.zone); floatText(me.x, me.y, '−charge'); sfx('geiger'); hullBar(true); refreshHud(); if (r.out) cityTow(); } }
       else { tx = Math.cos(mon.wob * 0.5); ty = Math.sin(mon.wob * 0.6); sp = 0.4; }
     } else if (mon.state === 'wander') { const hx = mon.home ? mon.home[0] - mon.x : 0, hy = mon.home ? mon.home[1] - mon.y : 0, far = Math.hypot(hx, hy) > 5; tx = far ? hx : Math.cos(mon.wob * 0.7); ty = far ? hy : Math.sin(mon.wob * 0.9); if (far) { const l = Math.hypot(tx, ty); tx /= l; ty /= l; } sp = 0.45; if (d < (mon.sight || 6)) { mon.state = 'chase'; floatText(mon.x, mon.y, '!'); } }
-    else if (mon.state === 'chase') { tx = ex / d; ty = ey / d; sp = mon.spd || (mon.big ? 1.0 : 1.45); if (d < (mon.big ? 2.0 : 1.7)) { mon.state = 'windup'; mon.t = mon.big ? 0.8 : 0.5; mon.lx = ex / d; mon.ly = ey / d; } if (d > (mon.sight || 6) + 3) mon.state = 'wander'; }
-    else if (mon.state === 'windup') { if (mon.t <= 0) { mon.state = 'lunge'; mon.t = 0.28; } }
-    else if (mon.state === 'lunge') { tx = mon.lx; ty = mon.ly; sp = mon.big ? 5 : 6.5; if (d < (mon.big ? 1.2 : 0.8)) { satoHit(mon.x, mon.y, mon); mon.state = 'rest'; mon.t = 0.9; } else if (mon.t <= 0) { mon.state = 'rest'; mon.t = 0.8; } }
+    else if (mon.state === 'chase') { tx = ex / d; ty = ey / d; sp = mon.spd || (mon.big ? 1.0 : 1.45); if (d < (mon.leaper ? 4.2 : mon.big ? 2.0 : 1.7) && !(jet && !mon.ranged)) { mon.state = 'windup'; mon.t = mon.leaper ? 0.6 : mon.big ? 0.8 : 0.5; mon.lx = ex / d; mon.ly = ey / d; } if (d > (mon.sight || 6) + 3) mon.state = 'wander'; }
+    else if (mon.state === 'windup') { if (mon.t <= 0) { mon.state = 'lunge'; mon.t = mon.leaper ? 0.45 : 0.28; } }
+    else if (mon.state === 'lunge') { tx = mon.lx; ty = mon.ly; sp = mon.leaper ? 9.5 : mon.big ? 5 : 6.5; if (d < (mon.big ? 1.2 : 0.8)) { satoHit(mon.x, mon.y, mon); mon.state = 'rest'; mon.t = 0.9; } else if (mon.t <= 0) { mon.state = 'rest'; mon.t = mon.leaper ? 1.1 : 0.8; } }
     else if (mon.t <= 0) mon.state = 'chase';                              // rest or stun
     if (sp) { const nx = mon.x + tx * sp * dt, ny = mon.y + ty * sp * dt; if (!blocked(nx, mon.y) && !inCamp(nx, mon.y)) mon.x = nx; if (!blocked(mon.x, ny) && !inCamp(mon.x, ny)) mon.y = ny; if (mon.o.userData.is3d && (tx || ty)) mon.o.rotation.y = Math.atan2(tx, ty); }
     mon.squash = Math.max(0, mon.squash - dt * 5); const q = 1 + Math.sin(mon.squash * 9) * mon.squash * 0.25;
     mon.o.scale.set(q, 1 / q, q);
-    mon.o.position.set(mon.x, mon.drain ? 0.25 + Math.sin(mon.wob * 2.2) * 0.12 : mon.state === 'windup' ? Math.abs(Math.sin(mon.t * 40)) * 0.06 : 0, mon.y);   // smog-wraiths hover and bob
+    mon.o.position.set(mon.x, mon.drain ? 0.25 + Math.sin(mon.wob * 2.2) * 0.12 : mon.ranged ? 1.0 + Math.sin(mon.wob * 2.6) * 0.15 : mon.leaper && mon.state === 'lunge' ? Math.sin(Math.max(0, 0.45 - mon.t) / 0.45 * Math.PI) * 0.9 : mon.state === 'windup' ? Math.abs(Math.sin(mon.t * 40)) * 0.06 : 0, mon.y);   // smog-wraiths and drones hover; stalkers leap
+    telegraph(mon);
   }
+  if (map.city) weaponsTick(dt);
   if (hydra) {                                                              // the Hydra: a short-range auto-turret
     hydra.cd -= dt;
     let best = null, bd = 6.5 + 1.5 * sim.pallasLevel(S, 'hydra'); for (const mon of monsters) { const d = Math.hypot(hydra.x - mon.x, hydra.y - mon.y); if (d < bd) { bd = d; best = mon; } }
@@ -737,7 +893,7 @@ function ruinsTick(dt) {
     b.life -= dt; b.x += b.vx * dt; b.y += b.vy * dt; b.m.position.x = b.x; b.m.position.z = b.y;
     let dead = b.life <= 0 || map.solid(b.x, b.y);
     if (!dead && b.from !== 'enemy') for (const mon of monsters) if (Math.hypot(mon.x - b.x, mon.y - b.y) < (mon.big ? 0.65 : 0.5)) { hurtMonster(mon, b.from === 'pallas' ? sim.pallasStat(S, 'coil') : 1, b.x - b.vx * 0.05, b.y - b.vy * 0.05); dead = true; break; }
-    if (!dead && b.from === 'enemy' && Math.hypot(me.x - b.x, me.y - b.y) < 0.55) { satoHit(b.x - b.vx, b.y - b.vy, b.mon); dead = true; }
+    if (!dead && b.from === 'enemy' && Math.hypot(me.x - b.x, me.y - b.y) < (jet ? 0.8 : 0.55)) { satoHit(b.x - b.vx, b.y - b.vy, b.mon, true); dead = true; }
     if (dead) { W.scene.remove(b.m); if (b.life > 0) W.puff(b.x, b.y, b.from === 'enemy' ? 0xff6a5a : 0xfff2b8, 4, 0.6); bolts.splice(i, 1); }
   }
 }
@@ -777,11 +933,11 @@ function cityStream(force) {
 }
 function cityMonsterObj(ref) {
   const o = W.place('mon' + ref.id, ref.kind, ref.x + 1.5, ref.y + 1.5, { small: !!ref.small, scale: ref.small ? 0.6 : 1 });
-  const mon = { ref, o, kind: ref.kind, big: ref.boss, x: ref.x + 1.5, y: ref.y + 1.5, hp: ref.hp, max: ref.hp, wob: Math.random() * 6, state: 'wander', t: Math.random() * 2, squash: 0, shotT: 1, spd: ref.speed * (ref.small ? 1.3 : 1), sight: ref.sight, drain: ref.drain, armour: ref.armour, home: [ref.x + 1.5, ref.y + 1.5] };
-  hpBar(mon); if (ref.boss) mon.barG.position.y = 2.0; else if (ref.float) mon.barG.position.y = 1.55; monsters.push(mon); return mon;
+  const mon = { ref, o, kind: ref.kind, big: ref.boss, x: ref.x + 1.5, y: ref.y + 1.5, hp: ref.hp, max: ref.hp, wob: Math.random() * 6, state: 'wander', t: Math.random() * 2, squash: 0, shotT: 1, spd: ref.speed * (ref.small ? 1.3 : 1), sight: ref.sight, drain: ref.drain, armour: ref.armour, ranged: ref.ranged, leaper: ref.leaper, titan: ref.titan, home: [ref.x + 1.5, ref.y + 1.5] };
+  hpBar(mon); if (ref.titan) mon.barG.position.y = 2.9; else if (ref.boss) mon.barG.position.y = 2.0; else if (ref.ranged) mon.barG.position.y = 2.0; else if (ref.float) mon.barG.position.y = 1.55; monsters.push(mon); return mon;
 }
 function drawCity() {
-  const m = S.mine; monsters = []; bolts = []; dashT = 0; debris = []; cityPlaced = new Set(); cityAt = [1e9, 1e9]; cityZoneNow = -1; hullWarned = 0; cityTowing = false;
+  const m = S.mine; combatReset(); monsters = []; bolts = []; dashT = 0; debris = []; cityPlaced = new Set(); cityAt = [1e9, 1e9]; cityZoneNow = -1; hullWarned = 0; cityTowing = false;
   for (const ref of m.monsters) cityMonsterObj(ref);
   drawCamps(); cityStream(true); hullBar(true);
 }
@@ -792,7 +948,8 @@ function cityTick(dt) {
   if (r.ok && (r.changed || cityZoneNow < 0)) { if (cityZoneNow >= 0) { ui.toast(r.first ? story.RUINS.zoneFirst[r.zone] : story.RUINS.zone[r.zone], r.first ? 4600 : 2600); if (r.first) sfx('good'); } cityZoneNow = r.zone; refreshHud(); }
   hazTick -= dt;
   if (hazTick <= 0) {
-    hazTick = 1; const h = sim.cityHazard(S, Math.floor(me.x) - 1, Math.floor(me.y) - 1);
+    hazTick = 1; if (jet) return;   // above the gas and the pools
+    const h = sim.cityHazard(S, Math.floor(me.x) - 1, Math.floor(me.y) - 1);
     if (h.drained) { sfx('geiger'); floatText(me.x, me.y, h.hazard === 2 ? 'sizzle' : '−hull'); if (!hazWarned) { hazWarned = true; ui.toast(story.SHUTTLE.haze, 4200); } }
     if (h.drained || h.filtered) hullBar(true);
     if (h.out) return cityTow();
@@ -807,6 +964,7 @@ async function cityTow() {
   await go({ map: 'central', x: 7.5, y: 16.5, dir: 0 });
 }
 function cityProbe(tx, ty) {
+  if (jet) return null;
   const m = S.mine, cx = tx - 1, cy = ty - 1;
   sim.cityMove(S, me.x - 1, me.y - 1); const ck = sim.campNear(S);
   if (ck >= 0) return m.camps[ck].built ? { label: 'Use the camp (sleep, save, fly home)', run: useCamp } : { label: `Build a camp here (${sim.CAMP_COST.scrap} scrap, ${sim.CAMP_COST.credits} cr)`, run: makeCamp };
@@ -1258,7 +1416,7 @@ function frame(now) {
       const c = Math.cos(W.yaw), s = Math.sin(W.yaw), wx = ix * c + iy * s, wy = -ix * s + iy * c;
       const run = !map.belt && !map.ruins && (keys.has('ShiftLeft') || keys.has('ShiftRight') || Math.hypot(stick.x, stick.y) > 0.93); me.running = run;   // touch: push the stick all the way
       if (run && !map.indoor && (dustT -= dt) <= 0) { dustT = 0.09; W.puff(me.x - wx * 0.3, me.y - wy * 0.3, map.id === 'lower' ? 0x8a8478 : 0xd8c8a0, 3, 0.08); }   // dust kicked up behind her
-      const tired = S.player.stamina < 15 ? 0.7 : 1, sp = (map.belt ? (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 6.2 : 4.4) : map.ruins ? (dashT > 0 ? 13 : 4.6) : run ? 7.4 : 3.9) * tired * dt;   // a captain's sprint: nearly twice walking pace (owner 2026-11-22)
+      const tired = S.player.stamina < 15 ? 0.7 : 1, sp = (map.belt ? (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 6.2 : 4.4) : map.ruins ? (jet ? (dashT > 0 ? 16 : 10.5) : dashT > 0 ? 13 : 4.6) : run ? 7.4 : 3.9) * tired * dt;   // a captain's sprint: nearly twice walking pace (owner 2026-11-22)
       me.dir = Math.abs(wx) > Math.abs(wy) ? (wx < 0 ? 2 : 3) : (wy < 0 ? 1 : 0);
       if (canStand(me.x + wx * sp, me.y)) me.x += wx * sp; if (canStand(me.x, me.y + wy * sp)) me.y += wy * sp;
       const tx = Math.floor(me.x), ty = Math.floor(me.y);
@@ -1316,12 +1474,13 @@ function bindInput() {
     if (e.code === 'KeyM') { if (mapOpen()) ui.closeWin(); else toggleMap(); return; }
     if (e.code === 'KeyP') return toggleJournal();   // the Farm journal (M: the town map; music: the menu's button)
     if (e.code === 'KeyE' || e.code === 'Enter') return pressE();
-    if (e.code === 'Space') { e.preventDefault(); return pressUse(); }
+    if (e.code === 'Space') { e.preventDefault(); keys.add('Space'); return pressUse(); }   // held Space keeps the beam laser on
     if (ui.windowOpen() || ui.talking()) return;
     keys.add(e.code);
     if (/^Digit\d$/.test(e.code)) selectSlot(e.code === 'Digit0' ? 9 : +e.code.slice(5) - 1);
     if (e.code === 'KeyR') { const s = sim.selected(S); if (map && map.city && S.mine && mode === 'play' && !(s && (ITEMS[s.id].stamina || ITEMS[s.id].maxUp))) cityScan(); else if (s && (ITEMS[s.id].stamina || ITEMS[s.id].maxUp)) { const r = sim.eat(S, S.player.sel); if (r.celebrate) { sfx('good'); ui.celebrate(r.msg); floatText(me.x, me.y, '★'); } else ui.toast(r.msg || 'That was good.'); if (r.ok) sfx('pick'); refreshHud(); } }
     if (map && map.belt && e.code === 'KeyF') minerToggle(); else if (map && map.ruins && e.code === 'KeyF') placeHydra();
+    if (map && map.city && S.mine && mode === 'play' && !ui.talking() && !ui.windowOpen()) { if (e.code === 'KeyV') cycleWeapon(); else if (e.code === 'KeyG') placeDragon(); else if (e.code === 'KeyT') toggleJet(); }
     if (map && map.earth && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) pallasDash();
     if (e.code === 'KeyQ') W.yaw -= Math.PI / 4; if (e.code === 'KeyC') W.yaw += Math.PI / 4;
   });
@@ -1342,6 +1501,7 @@ function bindInput() {
     const mv = (e) => { const r = st.getBoundingClientRect(), x = (e.clientX - r.left - 60) / 50, y = (e.clientY - r.top - 60) / 50, l = Math.max(1, Math.hypot(x, y)); stick.x = x / l; stick.y = y / l; knob.style.transform = `translate(${stick.x * 34}px, ${stick.y * 34}px)`; };
     st.addEventListener('pointerdown', (e) => { st.setPointerCapture(e.pointerId); mv(e); }); st.addEventListener('pointermove', (e) => { if (e.buttons || e.pressure) mv(e); });
     const up = () => { stick.x = stick.y = 0; knob.style.transform = ''; }; st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
+    for (const [id, fn] of [['tWpn', () => cycleWeapon()], ['tJet', () => toggleJet()], ['tDrg', () => placeDragon()]]) $(id).addEventListener('pointerdown', (e) => { e.preventDefault(); if (map && map.city && S.mine && mode === 'play' && !ui.talking() && !ui.windowOpen()) fn(); });   // the Old World's extra buttons
     $('tUse').addEventListener('pointerdown', (e) => { e.preventDefault(); pressUse(); }); $('tAct').addEventListener('pointerdown', (e) => { e.preventDefault(); if (map && map.ruins && mode === 'play' && !ui.talking() && !probe()) { if (map.belt) minerToggle(); else placeHydra(); } else pressE(); });
   }
 }
@@ -1370,6 +1530,7 @@ async function boot() {
   $('loadInfo').textContent = info.images || info.models ? '' : 'Running on built-in stand-in graphics (no art pack found).';
   $('bNew').onclick = async () => { if (old && !confirm('Start a new farm? Your saved farm will be replaced.')) return; sfx('good'); begin(sim.newGame(), true); };
   $('bContinue').onclick = () => { sfx('good'); begin(old, false); };
+  $('bBeta').onclick = () => { const b = loadSaved(BETA_KEY); sfx('good'); begin(b && b.flags.beta ? b : sim.betaGame(), !(b && b.flags.beta)); };   // the beta test game: everything unlocked, its own save
   $('bHelp').onclick = () => { S = S || sim.newGame(); mode = 'play'; ui.menu(S, { close: () => { if ($('title').hidden === false) { mode = 'title'; } } }, 'help'); };
   $('fImport').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; const st = sim.loadState(await f.text()); if (!st) return ($('loadInfo').textContent = 'That file is not a Sato’s Harvest save.'); begin(st, false); };
   // The title theme starts with the first click or key press on the title screen (browsers block autoplay).
@@ -1377,6 +1538,6 @@ async function boot() {
   const firstGesture = () => { removeEventListener('pointerdown', firstGesture, true); removeEventListener('keydown', firstGesture, true); if (mode === 'title') startMusic(); };
   addEventListener('pointerdown', firstGesture, true); addEventListener('keydown', firstGesture, true);
   requestAnimationFrame(frame);
-  window.__farm = { replayMemory,  get plan() { return plan; }, whereNow, paths, get npcs() { return npcs; }, get S() { return S; }, get W() { return W; }, get me() { return me; }, get map() { return map; }, go, sim, night, get mode() { return mode; }, ui, drawPlaced, get cat() { return cat; }, get bots() { return bots; }, probe: () => probe(), use: () => use(), toggleJournal, talkBot };
+  window.__farm = { replayMemory,  get plan() { return plan; }, whereNow, paths, get npcs() { return npcs; }, get S() { return S; }, get W() { return W; }, get me() { return me; }, get map() { return map; }, go, sim, night, get mode() { return mode; }, ui, drawPlaced, get cat() { return cat; }, get combat() { return { weapon, laserBeam: !!laserBeam, laserHold, jet: jet ? { p: jet.o.position.toArray().map((v) => +v.toFixed(2)), vis: jet.o.visible, par: !!jet.o.parent, kids: jet.o.children.length, me: [+me.x.toFixed(2), +me.y.toFixed(2)] } : null, dragon: !!dragon, shots: shots.length }; }, get bots() { return bots; }, probe: () => probe(), use: () => use(), toggleJournal, talkBot };
 }
 boot();

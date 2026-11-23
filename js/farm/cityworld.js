@@ -29,11 +29,13 @@ export const CITY_PROPS = {
   rust_crawler: { model: 'rust_crawler', h: 0.6, turn: true },
   smog_wraith: { model: 'smog_wraith', h: 1.0, hover: 0.9, turn: true },   // the model's tail touches y = 0: lifted 0.45 here, and main.js bobs it
   spore_brute: { model: 'spore_brute', h: 1.6, turn: true },
+  scrap_drone: { model: 'scrap_drone', h: 0.55, maxW: 0.9, turn: true }, ash_stalker: { model: 'ash_stalker', h: 0.7, maxW: 1.3, turn: true },
+  scrap_titan: { model: 'scrap_titan', h: 2.6, maxW: 2.0, turn: true }, dragon_battery: { model: 'dragon_battery', h: 1.3, maxW: 1.5, turn: true },   // 2026-11-23
   searched_mark: { h: 0.2 },
   spot_glint: { h: 0.4, hover: 0.5 },   // the sparkle over a treasure spot not yet searched (gold for safes and the vault)
   camp_spot: { h: 0.4 }, camp: { model: 'camp', h: 1.3, maxW: 2.2, fire: [0.2, 0.6, 0.5] }, pallas_jet: { model: 'pallas_jet', h: 1.0, maxW: 2.2 },   // the art pack's camp and jet when they land; else built here   // safe spots, a built camp, the Pallas's flight form (procedural)
 };
-export const CITY_MONSTER_KINDS = new Set(['rad_hound', 'glow_slime', 'rust_crawler', 'smog_wraith', 'spore_brute']);
+export const CITY_MONSTER_KINDS = new Set(['rad_hound', 'glow_slime', 'rust_crawler', 'smog_wraith', 'spore_brute', 'scrap_drone', 'ash_stalker', 'scrap_titan']);
 
 let concreteTex = null, glintTex = null;
 function concrete() {                                   // a soft grey-beige concrete with stains, made once
@@ -167,6 +169,35 @@ export function cityProp(kind, o = {}) {
       g.add(ball(0.34, smog(0x9a88b0, 0.7), 0, 0.95, 0), ball(0.24, smog(0x7a6a90, 0.55), 0.18, 0.75, -0.08), ball(0.2, smog(0xb0a0c8, 0.5), -0.16, 0.7, 0.05), ball(0.14, smog(0x8a7aa0, 0.4), 0.02, 0.5, -0.1));
       for (const x of [-0.1, 0.1]) g.add(ball(0.045, glow(0xd890ff), x, 1.0, 0.3));
       g.userData.wraith = true; break;
+    }
+    case 'scrap_drone': {                                // four rotors on rusty arms, one red lens
+      const rust = std({ color: 0xa0603a, metalness: 0.4, roughness: 0.6 }), dark = std({ color: 0x3a3632, metalness: 0.5 });
+      g.add(ball(0.2, rust, 0, 0.25, 0, 1.2, 0.7, 1.2), ball(0.06, glow(0xff3a2a), 0, 0.22, 0.2));
+      for (const [x, z] of [[-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3]]) { g.add(box(0.36, 0.04, 0.05, dark, x / 2, 0.28, z / 2)); g.children.at(-1).rotation.y = Math.atan2(x, z); g.add(cyl(0.16, 0.16, 0.02, std({ color: 0x9aa4ad, transparent: true, opacity: 0.5 }), x, 0.32, z, 10)); }
+      break;
+    }
+    case 'ash_stalker': {                                // a low six-legged lizard, ash-grey, orange spines
+      const ash = std({ color: 0x7a7470 }), spine = glow(0xff8a3a), eye = glow(0xffd36a);
+      g.add(ball(0.22, ash, 0, 0.26, 0, 0.9, 0.6, 1.8), ball(0.13, ash, 0, 0.28, 0.42, 1, 0.8, 1.3));
+      for (let i = 0; i < 5; i++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.16, 5), spine); sp.position.set(0, 0.42, -0.28 + i * 0.13); g.add(sp); }
+      for (const x of [-0.05, 0.05]) g.add(ball(0.025, eye, x, 0.33, 0.55));
+      for (let i = 0; i < 6; i++) { const l = cyl(0.025, 0.02, 0.26, ash, 0, 0, 0, 4); l.rotation.z = (i < 3 ? 1 : -1) * 1.1; l.position.set(i < 3 ? 0.2 : -0.2, 0.1, (i % 3 - 1) * 0.25); g.add(l); }
+      const tail = cyl(0.05, 0.015, 0.5, ash, 0, 0.18, -0.55, 6); tail.rotation.x = -1.3; g.add(tail); break;
+    }
+    case 'scrap_titan': {                                // a hulking golem of car panels round a green core
+      const rust = std({ color: 0x8a5a3a, metalness: 0.4, roughness: 0.7 }), pan = std({ color: 0x5a7a8a, metalness: 0.3 }), core = glow(0x7dffb0);
+      g.add(box(1.1, 1.0, 0.7, rust, 0, 0.9, 0), box(0.9, 0.5, 0.6, pan, 0, 1.9, 0), ball(0.18, core, 0, 1.4, 0.36));
+      for (const x of [-0.75, 0.75]) g.add(box(0.35, 1.1, 0.35, rust, x, 0.6, 0), box(0.45, 0.4, 0.45, pan, x, 0.35, 0));
+      for (const x of [-0.3, 0.3]) g.add(box(0.35, 0.9, 0.4, rust, x, 0, 0));
+      for (const x of [-0.18, 0.18]) g.add(ball(0.06, glow(0xc8ff6a), x, 2.05, 0.31));
+      break;
+    }
+    case 'dragon_battery': {                             // the Dragon: a squat white-and-blue battery, twin long barrels
+      const wh = std({ color: 0xe9eef3 }), bl = std({ color: 0x3a6ab8 }), gd = std({ color: 0xd8b04a, metalness: 0.6 });
+      g.add(cyl(0.55, 0.65, 0.35, bl, 0, 0, 0, 10), box(0.8, 0.45, 0.7, wh, 0, 0.35, 0), box(0.82, 0.06, 0.72, gd, 0, 0.8, 0));
+      for (const x of [-0.12, 0.12]) { const b = cyl(0.06, 0.06, 1.0, wh, x, 0, 0, 8); b.rotation.x = Math.PI / 2 - 0.35; b.position.set(x, 0.75, 0.5); g.add(b); }
+      for (const [x, z] of [[-0.5, -0.4], [0.5, -0.4], [-0.5, 0.4], [0.5, 0.4]]) g.add(box(0.12, 0.3, 0.12, bl, x, 0, z));
+      break;
     }
     case 'spore_brute': {                                // the mini-boss: a chunky mossy mushroom golem
       const moss = std({ color: 0x6a8a4a }), cap = std({ color: 0xc8553d }), dot = glow(0xffe08a), eye = glow(0xc8ff6a);

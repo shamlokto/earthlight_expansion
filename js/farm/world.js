@@ -96,7 +96,7 @@ const PROPS = {
   launch_pad: { h: 0.1 }, shuttle_pad: { h: 0.1 },
   // 2026-11-19: the open belt (sector markers, pickup pods, landmarks) and Sato's mining unit; built stand-ins
   sector_buoy: { model: 'jump_buoy', h: 1.7, fit: 'foot' }, sector_sign: { h: 2.6 }, pickup_pod: { h: 2.2 }, mining_bot: { model: 'mining_bot', h: 0.9, fit: 'foot' },
-  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, cellar_hatch: { h: 0.1 }, cellar_doors: { h: 0.6 }, mail_flag: { h: 0.5 }, yard_fence: { h: 1 }, yard_path: { h: 0.05 }, yard_lamp: { model: 'lantern', sprite: () => 'sprites/lantern', h: 2.0, face: true, lamp: 1.7 }, yard_planter: { h: 0.7 }, hot_tub: { h: 0.9 }, cat: { model: 'cat', h: 0.62, maxW: 0.8 }, cat_sleep: { model: 'cat', h: 0.48, maxW: 0.62 }, cat_bed: { model: 'cat_bed', h: 0.3, maxW: 0.95 }, cask: { model: 'cask', h: 0.95, maxW: 0.95 }, wine_rack: { model: 'wine_rack', h: 1.9, maxW: 1.9 }, cheese_shelf: { model: 'cheese_shelf', h: 1.6, maxW: 1.0 }, shuttle_gate: { h: 3.4 },
+  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, cellar_hatch: { h: 0.1 }, falls_mist: { h: 0.1 }, cellar_doors: { h: 0.6 }, mail_flag: { h: 0.5 }, yard_fence: { h: 1 }, yard_path: { h: 0.05 }, yard_lamp: { model: 'lantern', sprite: () => 'sprites/lantern', h: 2.0, face: true, lamp: 1.7 }, yard_planter: { h: 0.7 }, hot_tub: { h: 0.9 }, cat: { model: 'cat', h: 0.62, maxW: 0.8 }, cat_sleep: { model: 'cat', h: 0.48, maxW: 0.62 }, cat_bed: { model: 'cat_bed', h: 0.3, maxW: 0.95 }, cask: { model: 'cask', h: 0.95, maxW: 0.95 }, wine_rack: { model: 'wine_rack', h: 1.9, maxW: 1.9 }, cheese_shelf: { model: 'cheese_shelf', h: 1.6, maxW: 1.0 }, shuttle_gate: { h: 3.4 },
   hull_window: { h: 12 }, hull_wall: { h: 10 }, glass_roof: { h: 16 }, vending: { model: 'vending', h: 1.9, fit: 'foot' }, feed_sacks: { model: 'feed_sacks', h: 0.8, fit: 'foot' },
   crane: { model: 'dock_crane', h: 5.5, fit: 'foot' },
   bay_window: { h: 10 }, landing_pad: { h: 0.1 }, hazard_stripes: { h: 0.05 }, trader_ship: { model: 'cartel_ship', h: 5.2, fit: 'foot' }, shuttle: { model: 'shuttle', h: 3.8, fit: 'foot' },
@@ -490,6 +490,7 @@ export class World {
         for (const z of [-0.22, 0.22]) { const d = box(0.85, 0.05, 0.42, wd, -0.02, 0, z); d.rotation.z = 0.45; d.position.y = 0.32; g.add(d); const h = box(0.06, 0.06, 0.06, ir, 0.28, 0, z * 0.4); h.position.y = 0.19; g.add(h); }
         break;
       }
+      case 'falls_mist': break;                         // only spray (makeProp adds it)
       case 'mail_flag': {                                // the mailbox's little red flag, raised
         const rd = std({ color: 0xd8342c, emissive: 0x501010, emissiveIntensity: 0.4 }), mt = std({ color: 0x555b60, metalness: 0.6 });
         g.add(box(0.04, 0.5, 0.04, mt, 0.3, 0.95, 0), box(0.2, 0.13, 0.02, rd, 0.4, 1.32, 0)); break;
@@ -805,6 +806,7 @@ export class World {
     } else fallback();
     if (def.hover && !(mname && art.hasModel(mname))) holder.userData.hover = def.hover;
     if (kind === 'onsen_pool') holder.add(this.steamCloud(fw, fd));
+    if (kind === 'falls_mist') { const sc = this.steamCloud(2.2, 1.2); sc.position.set(0.5, 0, 0); holder.add(sc); }
     if (kind === 'hot_tub') { const sc = this.steamCloud(1.4, 1.4); sc.position.set(0.5, 0.5, 0.5); holder.add(sc); }
     return holder;
   }
@@ -1315,7 +1317,8 @@ function waterTiles(cells, y, map) {
     const tr = a + d, det = a * d - b * b, disc = Math.sqrt(Math.max(0, tr * tr / 4 - det)), l1 = tr / 2 + disc, l2 = Math.max(0.05, tr / 2 - disc);
     let fx = Math.cos(th), fz = Math.sin(th); const [gx, gz] = axes[id]; if (fx * gx + fz * gz < 0) { fx = -fx; fz = -fz; }
     const sp = 0.03 + 0.32 * Math.min(1, Math.max(0, (l1 / l2 - 1.6) / 3));   // a long run flows, a round pool barely drifts
-    flow[(z * W + x) * 2] = fx * sp; flow[(z * W + x) * 2 + 1] = fz * sp;
+    const rush = map.rapids && map.rapids.includes(x + ',' + z) ? 3.2 : 1;   // the falls' white water runs fast
+    flow[(z * W + x) * 2] = fx * sp * rush; flow[(z * W + x) * 2 + 1] = fz * sp * rush;
   }
   const corner = (vx, vz) => { let fx = 0, fz = 0, n = 0, dry = 0;
     for (const [cx, cz] of [[vx - 1, vz - 1], [vx, vz - 1], [vx - 1, vz], [vx, vz]]) { if (!isW(cx, cz)) { dry = 1; continue; } if (cx < 0 || cz < 0 || cx >= W || cz >= H) continue; const k = (cz * W + cx) * 2; fx += flow[k]; fz += flow[k + 1]; n++; }
@@ -1323,7 +1326,8 @@ function waterTiles(cells, y, map) {
   const pos = [], uv = [], nor = [], fl = [], sh = [], idx = [], S = 0.25;
   for (let i = 0; i < cells.length; i += 2) {
     const x = cells[i], z = cells[i + 1], k = pos.length / 3;
-    for (const [px, pz] of [[x, z], [x, z + 1], [x + 1, z + 1], [x + 1, z]]) { const [fx, fz, dry] = corner(px, pz); pos.push(px, y, pz); nor.push(0, 1, 0); uv.push(px * S, -pz * S); fl.push(fx * S, -fz * S); sh.push(dry); }
+    const white = map.rapids && map.rapids.includes(x + ',' + z) ? 0.85 : 0;
+    for (const [px, pz] of [[x, z], [x, z + 1], [x + 1, z + 1], [x + 1, z]]) { const [fx, fz, dry0] = corner(px, pz), dry = Math.max(dry0, white); pos.push(px, y, pz); nor.push(0, 1, 0); uv.push(px * S, -pz * S); fl.push(fx * S, -fz * S); sh.push(dry); }
     idx.push(k, k + 1, k + 2, k, k + 2, k + 3);
   }
   const g = new THREE.BufferGeometry();
@@ -1351,7 +1355,7 @@ function liveWater(wm) {
       foam *= 0.45 + 0.8 * tC.g;
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.94, 0.98, 1.0), clamp(foam, 0.0, 1.0) * 0.6);`).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
       float gl = max(0.0, sin(vWp.x * 9.1 + uTime * 2.3) * sin(vWp.y * 7.7 - uTime * 1.9)) * max(0.0, sin(vWp.x * 3.3 - vWp.y * 4.1 + uTime * 0.9));
-      totalEmissiveRadiance += vec3(1.0, 0.97, 0.86) * pow(gl, 18.0) * 1.4 * uSpark * (1.0 - vShore);`);
+      totalEmissiveRadiance += vec3(1.0, 0.97, 0.86) * pow(gl, 26.0) * 1.1 * uSpark * (1.0 - vShore);`);
   };
   wm.customProgramCacheKey = () => 'livewater1';
 }
