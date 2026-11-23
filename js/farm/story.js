@@ -4450,7 +4450,7 @@ HELP.push({
 // ------------------------------------------------------------------ the Pallas refit gantry (2026-11-22)
 HELP.push({
   title: 'Refitting the Pallas',
-  body: "In Vashti's hangar (up the orbital elevator), the bench by the wall runs a refit gantry over the parked Pallas. Vashti's crew fits seven lines, each for a fee and belt ore: hull plating (+30, then +60 hull, on top of Ruess's air filters), the blaster coil (bolts hit 1.5×, then 2×; mark II punches through a rust-crawler's shell), the sabre emitter (3, then 4 damage, a longer reach), the long-range scanner (24, then 32 tiles, recharging faster), boost thrusters (Shift comes round in 0.6, then 0.4 s), the Hydra turret (faster and further) and sealed treads (toxic pools cost 1 hull, not 3). Mark II of a line needs mark I.",
+  body: "In Vashti's hangar, the console by the wall runs a refit gantry over the parked Pallas. For credits and belt ore her crew fits hull plating, the blaster coil, the sabre, the scanner, boost thrusters, the Hydra, sealed treads, and weapons: a beam laser, seeker missiles, the Dragon battery and a bomb bay. Mark II needs mark I.\n\nIn the Old World: V cycles blaster, laser (hold Space) and missiles. F sets the Hydra (fast, short range), G the Dragon (heavy shells, 2 to 12 tiles). T folds the Pallas into its jet: twice as fast, over towers and gas, out of reach of claws; Space drops bombs. Watch the red marks: a creature is about to lunge.",
 });
 
 // ------------------------------------------------------------------ the cellar and the cat (2026-11-22)

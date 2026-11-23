@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { allMaps, ruinsMap, doorTarget, outsideOf, findSpot, FORAGE_SPOTS, CENTRAL_HOUSES } from '../js/farm/maps.js';
 import * as story from '../js/farm/story.js';
-import { newGame, enterMine, cityZone, FORAGE_SPOT_COUNT } from '../js/farm/sim.js';
+import { newGame, enterMine, cityZone, FORAGE_SPOT_COUNT, CITY_PAD } from '../js/farm/sim.js';
 
 let failures = 0, checks = 0;
 const check = (cond, what) => { checks++; if (!cond) { failures++; console.log('FAIL', what); } };
@@ -65,7 +65,7 @@ for (const seed of [1, 2, 3, 5, 8, 13, 21, 34]) {
   check(mine.monsters.filter((r) => r.zone === 2).length > mine.monsters.filter((r) => r.zone === 0).length, `city ${seed}: more creatures in the core than the suburbs`);
   // safe spots (camps): 2-4, spread by zone, one near the pad, on reachable cleared ground, no creature starts near one
   const camps = mine.camps || [];
-  check(camps.length >= 2 && camps.length <= 4 && camps.some((c) => c.zone === 0 && Math.hypot(c.x - 48, c.y - 67) < 25) && new Set(camps.map((c) => c.zone)).size === camps.length, `city ${seed}: ${camps.length} safe spots, one per zone, one near the pad`);
+  check(camps.length >= 2 && camps.length <= 4 && camps.some((c) => c.zone === 0 && Math.hypot(c.x - CITY_PAD[0], c.y - CITY_PAD[1]) < 34) && new Set(camps.map((c) => c.zone)).size === camps.length, `city ${seed}: ${camps.length} safe spots, one per zone, one near the pad`);
   check(camps.every((c) => reachCell(c.y * W + c.x) && !mine.haz[c.y * W + c.x] && mine.cells[c.y * W + c.x] === 0), `city ${seed}: every safe spot is reachable cleared ground with no gas`);
   check(mine.monsters.every((r) => camps.every((c) => Math.hypot(r.x - c.x, r.y - c.y) >= 3)), `city ${seed}: no creature starts inside a safe spot`);
   check(m.at(Math.floor(m.start[0]), Math.floor(m.start[1])) === 'm' && m.g.includes('t') && m.g.includes('n') && m.props.filter((p) => p.kind === 'ruin_tower').length >= 30, `city ${seed}: streets, toxic pools, overgrowth and towers`);

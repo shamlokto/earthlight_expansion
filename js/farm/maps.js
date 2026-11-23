@@ -284,7 +284,7 @@ function hill() {
   m.fill(36, 30, 47, 31, 'r').fill(38, 30, 39, 31, 'w');                     // the falls drop over this ledge
   m.fill(33, 32, 49, 39, 's').fill(34, 33, 48, 38, 'w');                    // the falls pool
   m.prop('falls_mist', 38, 33, { w: 2, solid: false });   // spray where the white water meets the pool
-  m.rapids = ['38,29', '39,29', '38,30', '39,30', '38,31', '39,31', '38,32', '39,32'];   // white water through the ledge (world.waterTiles, 2026-11-22)
+  m.rapids = ['37,29', '38,29', '38,30', '39,30', '38,31', '39,31'];   // white water through the ledge (world.waterTiles, 2026-11-22)
   m.fill(28, 9, 52, 10, 'p').fill(51, 10, 52, 27, 'p').fill(30, 26, 51, 27, 'p').fill(40, 26, 41, 31, 'p').fill(30, 11, 31, 27, 'p');
   m.fill(30, 23, 31, 24, 'k').fill(37, 26, 38, 27, 'k');                                             // footbridge over Hillstream
   m.fill(42, 31, 43, 31, 'p').fill(50, 32, 51, 33, 'o');                      // steps down the ledge beside the falls; the bench rock

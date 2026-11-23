@@ -221,7 +221,7 @@ export function loadState(text) {
 export function ensure(s) {
   const arr = (o, k) => { if (!Array.isArray(o[k])) o[k] = []; };
   const obj = (o, k) => { if (!o[k] || typeof o[k] !== 'object' || Array.isArray(o[k])) o[k] = {}; };
-  arr(s.player, 'basket'); arr(s, 'yard'); arr(s, 'chests'); arr(s, 'panels'); arr(s, 'robots'); arr(s, 'fruitTrees');
+  arr(s.player, 'basket'); arr(s, 'yard'); s.yard = s.yard.filter((o) => o && typeof o === 'object' && own(YARD, o.kind) && int(o.x) && int(o.y) && typeof o.map === 'string'); arr(s, 'chests'); arr(s, 'panels'); arr(s, 'robots'); arr(s, 'fruitTrees');
   obj(s, 'cooked'); obj(s, 'foraged'); obj(s, 'flags'); obj(s, 'museum'); obj(s, 'fishLog');
   arr(s, 'mill'); arr(s, 'hydro'); obj(s, 'solarYard'); arr(s.solarYard, 'slots'); obj(s, 'stats'); obj(s, 'visits');   // homes visited, by day (§15)
   obj(s, 'memories'); syncMemories(s, false);   // scenes seen (Memories); an old save's are found from its flags, date unknown
@@ -855,14 +855,15 @@ export function setFlag(state, key, value = true) {
 // Cells: 0 street, 1 open lot, 2 tower (solid), 3 car, 4 bus, 5 rubble pile, 6 toxic pool (walkable; it hurts),
 // 7 overgrowth, 8 billboard, 9 the landing pad, 10 locker, 11 safe, 12 shop counter, 13 the sealed vault, 14 debris (solid).
 export const CAMP_R = 3, CAMP_COST = { scrap: 3, credits: 100 };   // safe spots: creatures keep out of CAMP_R; building a camp costs this
-export const CITY_W = 96, CITY_H = 72, CITY_PAD = [48, 67], HULL_MAX = 100, HULL_FILTERS = 130, TOW_FEE = 150, TOW_MINUTES = 60;
+export const CITY_W = 128, CITY_H = 96, CITY_PAD = [64, 91],   // a third bigger every way (2026-11-23)
+  CITY_GROW = 4 / 3, HULL_MAX = 100, HULL_FILTERS = 130, TOW_FEE = 150, TOW_MINUTES = 60;
 export const CITY_CELL = { street: 0, lot: 1, tower: 2, car: 3, bus: 4, rubble: 5, pool: 6, green: 7, sign: 8, pad: 9, locker: 10, safe: 11, counter: 12, vault: 13, debris: 14 };
 export const CITY_SOLID = new Set([2, 3, 4, 5, 8, 10, 11, 12, 13, 14]);
 export const citySolid = (c) => CITY_SOLID.has(c);
 export const CITY_ZONES = ['The suburbs', 'Downtown', 'The core'];
 const SPOT_OF = { 5: 'rubble', 3: 'car', 4: 'bus', 10: 'locker', 11: 'safe', 12: 'counter', 13: 'vault' };
 // The zone of a cell: by distance from the pad (stretched north-south, so the core is the far north of the city).
-export function cityZone(x, y) { const d = Math.hypot(x - CITY_PAD[0], (y - CITY_PAD[1]) * 1.2); return d < 30 ? 0 : d < 58 ? 1 : 2; }
+export function cityZone(x, y) { const d = Math.hypot(x - CITY_PAD[0], (y - CITY_PAD[1]) * 1.2); return d < 40 ? 0 : d < 77 ? 1 : 2; }
 // The creatures: base stats in the suburbs; cityMonster scales them by zone (hp +50%, damage +35% a zone).
 export const CITY_MONSTERS = {
   rad_hound: { name: 'rad-hound', hp: 2, dmg: 4, speed: 2.4, sight: 7, credits: [2, 6], drops: { scrap: 0.15, battery: 0.03 } },
@@ -870,12 +871,16 @@ export const CITY_MONSTERS = {
   rust_crawler: { name: 'rust-crawler', hp: 5, dmg: 7, speed: 1.3, sight: 6, armour: true, credits: [3, 9], drops: { scrap: 0.35, alloy: 0.06, copper: 0.06 } },
   smog_wraith: { name: 'smog-wraith', hp: 3, dmg: 3, speed: 1.1, sight: 7, drain: true, float: true, credits: [4, 10], drops: { comet_ice: 0.12, crystal: 0.05 } },
   spore_brute: { name: 'spore-brute', hp: 16, dmg: 12, speed: 0.75, sight: 6, boss: true, credits: [40, 80], drops: { seedtin: 0.5, crystal: 0.5, alloy: 1 } },
+  // 2026-11-23: livelier streets
+  scrap_drone: { name: 'scrap drone', hp: 3, dmg: 5, speed: 1.6, sight: 9, ranged: true, float: true, credits: [3, 8], drops: { scrap: 0.4, copper: 0.1, battery: 0.05 } },
+  ash_stalker: { name: 'ash stalker', hp: 4, dmg: 6, speed: 2.6, sight: 9, leaper: true, credits: [4, 10], drops: { scrap: 0.2, titanium: 0.06, crystal: 0.03 } },
+  scrap_titan: { name: 'scrap titan', hp: 40, dmg: 16, speed: 0.6, sight: 9, boss: true, titan: true, credits: [90, 160], drops: { alloy: 1, platinum: 0.6, star_metal: 0.25, crystal: 0.6 } },
 };
-export const CITY_MIX = [{ rad_hound: 6, glow_slime: 4, rust_crawler: 1 }, { rad_hound: 3, glow_slime: 3, rust_crawler: 3, smog_wraith: 2 }, { rad_hound: 2, glow_slime: 2, rust_crawler: 3, smog_wraith: 3 }];
-export const CITY_MONSTER_COUNT = [10, 16, 18];
+export const CITY_MIX = [{ rad_hound: 6, glow_slime: 4, rust_crawler: 1, scrap_drone: 2 }, { rad_hound: 3, glow_slime: 3, rust_crawler: 3, smog_wraith: 2, scrap_drone: 3, ash_stalker: 3 }, { rad_hound: 2, glow_slime: 2, rust_crawler: 3, smog_wraith: 3, scrap_drone: 3, ash_stalker: 4 }];
+export const CITY_MONSTER_COUNT = [16, 26, 30];
 export function cityMonster(kind, zone) {
   const b = own(CITY_MONSTERS, kind) ? CITY_MONSTERS[kind] : CITY_MONSTERS.rad_hound, z = clamp(int(zone) ? zone : 0, 0, 2);
-  return { kind: own(CITY_MONSTERS, kind) ? kind : 'rad_hound', zone: z, hp: Math.round(b.hp * (1 + 0.5 * z)), dmg: Math.round(b.dmg * (1 + 0.35 * z)), speed: b.speed, sight: b.sight, boss: !!b.boss, armour: !!b.armour, drain: !!b.drain, float: !!b.float };
+  return { kind: own(CITY_MONSTERS, kind) ? kind : 'rad_hound', zone: z, hp: Math.round(b.hp * (1 + 0.5 * z)), dmg: Math.round(b.dmg * (1 + 0.35 * z)), speed: b.speed, sight: b.sight, boss: !!b.boss, armour: !!b.armour, drain: !!b.drain, float: !!b.float, ranged: !!b.ranged, leaper: !!b.leaper, titan: !!b.titan };
 }
 const CITY_LAYOUTS = new Map();
 // The city for a seed: { w, h, cells, haz (1 = gas), towers: [{ x, y, w, d, h, zone }], spots: [{ i, kind }],
@@ -928,7 +933,7 @@ export function cityLayout(seed) {
     }
   }
   // overgrowth: weeds and vines take back the streets, most of all in the suburbs
-  for (let n = 70; n > 0; n--) {
+  for (let n = 124; n > 0; n--) {
     const cx = 2 + r() * (w - 4), cy = 2 + r() * (h - 4), z = cityZone(cx, cy); if (r() < z * 0.3) continue;
     const rad = 1 + r() * 2.5; for (let y = Math.floor(cy - rad); y <= cy + rad; y++) for (let x = Math.floor(cx - rad); x <= cx + rad; x++) if (inb(x, y) && (cells[at(x, y)] === 0 || cells[at(x, y)] === 1) && Math.hypot(x - cx, y - cy) < rad && r() < 0.75) cells[at(x, y)] = 7;
   }
@@ -965,7 +970,7 @@ export function cityLayout(seed) {
   if (vt) { const b = beside(vt); const [vx, vy] = b[ri(b.length)]; set(vx, vy, 13); vault = at(vx, vy); }
   // safe spots (camps): a cleared plaza near the pad, a rooftop downtown, a shielded bunker in the core. Cleared ground
   // (radius 2), no gas within 3; creatures never come within CAMP_R (main.js) and none start within 4.
-  const camps = [], want = [[12, 22], [34, 50], [60, 99]], KIND = ['plaza', 'rooftop', 'bunker'];
+  const camps = [], want = [[16, 30], [45, 66], [80, 130]], KIND = ['plaza', 'rooftop', 'bunker'];
   for (let z = 0; z < 3; z++) {
     let best = -1, bs = -1;
     for (let g = 0; g < 600; g++) {
@@ -1016,6 +1021,8 @@ export function cityLayout(seed) {
     if (best >= 0) monsters.push({ x: best % w, y: Math.floor(best / w), kind: 'spore_brute', zone: 2, guard: true });
   }
   if (r() < 0.5 && free[2].length) { const i = free[2][ri(free[2].length)]; monsters.push({ x: i % w, y: Math.floor(i / w), kind: 'spore_brute', zone: 2 }); }
+  if (free[2].length) { const i = free[2][ri(free[2].length)]; monsters.push({ x: i % w, y: Math.floor(i / w), kind: 'scrap_titan', zone: 2 }); }   // the core's scrap titan (2026-11-23)
+  if (free[1].length && r() < 0.6) { const i = free[1][ri(free[1].length)]; monsters.push({ x: i % w, y: Math.floor(i / w), kind: 'spore_brute', zone: 1 }); }
   const out = { w, h, cells, haz, towers, spots, monsters, vault, camps, pad: CITY_PAD.slice() }; CITY_LAYOUTS.set(seed, out); return out;
 }
 // The lasting part: how many trips (each trip's city comes from the save's seed and the trip number) and the best zone reached.
@@ -1052,6 +1059,19 @@ export const PALLAS_MODS = {
   treads: { label: 'Sealed treads', stat: [3, 1], unit: 'pool damage', what: (v) => `toxic pools cost ${v} hull`,
     marks: [{ price: 2200, req: [['titanium', 3], ['silica', 3]] }],
     line: ['Vashti seals the Pallas\'s feet in a glassy belt-silica coat. "Wade in. It will sting less."'] },
+  // 2026-11-23: weapons for the Old World (Q cycles the blaster, laser and missiles; G sets the Dragon; T folds into the jet, Space drops bombs)
+  laser: { label: 'Beam laser', stat: [0, 5, 8], unit: 'laser', what: (v) => (v ? `a beam laser, ${v} damage a second` : 'no laser'), more: 'hold Space to burn',
+    marks: [{ price: 2600, req: [['crystal', 2], ['copper', 3]] }, { price: 5200, req: [['crystal', 2], ['platinum', 2]] }],
+    line: ['A crystal-focused beam emitter on the Pallas\'s left arm. Vashti burns her initials into a crate to test it.', 'A platinum lens. The beam goes white, and the crate is not a crate any more.'] },
+  missiles: { label: 'Seeker missiles', stat: [0, 2, 4], unit: 'missiles', what: (v) => (v ? `${v} seeker missiles a volley` : 'no missiles'), more: 'they chase what they are fired at',
+    marks: [{ price: 2800, req: [['titanium', 3], ['copper', 3]] }, { price: 5600, req: [['titanium', 3], ['platinum', 2], ['alloy', 3]] }],
+    line: ['A shoulder pod of little seeker missiles. "They find things," Vashti says. "Mostly the right things."', 'A second pod, and smarter seekers. They curve round corners now.'] },
+  dragon: { label: 'Dragon battery', stat: [0, 6, 10], unit: 'Dragon shell', what: (v) => (v ? `a Dragon battery, ${v} damage a shell` : 'no Dragon'), more: 'G sets it down; long range, slow and heavy',
+    marks: [{ price: 3600, req: [['alloy', 5], ['titanium', 3]] }, { price: 6400, req: [['alloy', 4], ['crystal', 2], ['star_metal', 1]] }],
+    line: ['Ruess sends up a Dragon battery from the old war stock, guns stripped down for vermin. "Set it down and stand back."', 'Star-metal liners in the Dragon\'s twin barrels. Its shells land like weather.'] },
+  bombs: { label: 'Bomb bay', stat: [1, 2, 3], unit: 'bombs', what: (v) => `${v} bomb${v > 1 ? 's' : ''} a run from the jet`, more: 'T folds the Pallas into its jet',
+    marks: [{ price: 2000, req: [['nickel_iron', 5], ['silica', 2]] }, { price: 4200, req: [['titanium', 3], ['crystal', 1]] }],
+    line: ['A belly bay for the jet form: two charges a run.', 'A wider bay and a better fuse: three charges, bigger bangs.'] },
 };
 export const pallasLevel = (state, k) => { const l = state.flags.pal && state.flags.pal[k]; return int(l) && l > 0 && PALLAS_MODS[k] ? Math.min(l, PALLAS_MODS[k].marks.length) : 0; };
 export const pallasStat = (state, k) => PALLAS_MODS[k].stat[pallasLevel(state, k)];
@@ -1122,7 +1142,7 @@ export function searchSpot(state, x, y) {
 // A creature flees or fizzles: credits (by zone) and maybe materials. A big glow-slime splits into two small ones.
 function cityDefeat(state, m, index) {
   const q = m.monsters[index], b = CITY_MONSTERS[q.kind]; m.monsters.splice(index, 1); state.stats.monsters++;
-  const credits = q.small ? 1 + rint(state, 3) : Math.round((b.credits[0] + rnd(state) * (b.credits[1] - b.credits[0])) * (1 + 0.5 * q.zone) * 0.6);
+  const credits = q.small ? 1 + rint(state, 3) : Math.round((b.credits[0] + rnd(state) * (b.credits[1] - b.credits[0])) * (1 + 0.5 * q.zone) * 0.5);
   const drops = q.small ? [] : Object.entries(b.drops).filter(([, p]) => rnd(state) < p).map(([id]) => [id, 1]);
   const res = take(state, drops, { ok: true, gained: [], credits, kind: q.kind, spawned: [] });
   state.player.money += credits; m.credits += credits;
@@ -1583,7 +1603,7 @@ export function placeItem(state, map, x, y) {
   const s = selected(state);
   if (!s || !own(PLACE_MAPS, s.id)) return fail('Hold a field chest or a solar charger to set it down.');
   if (!int(x) || !int(y) || x < 0 || y < 0 || x > 99 || y > 99) return fail('There is no room there.');
-  if (!PLACE_MAPS[s.id].includes(map)) return fail(s.id === 'solar_panel' ? 'The charger goes on your farm.' : 'Field chests go on the farm or the hill.');
+  if (!PLACE_MAPS[s.id].includes(map)) return fail(s.id === 'solar_panel' ? 'The charger goes on your farm.' : YARD[s.id] ? 'That is for your own farm.' : 'Field chests go on the farm or the hill.');
   if (occupied(state, map, x, y)) return fail('Something is already standing there.');
   if (MACHINES[s.id]) return placeMachine(state, s.id, map, x, y);
   if (YARD[s.id]) { const id = s.id; takeFromSlot(state, state.player.sel, 1); state.yard.push({ map, x, y, kind: id }); return { ok: true, msg: `${ITEMS[id].name} set down. The axe takes it back up.`, kind: 'yard', index: state.yard.length - 1 }; }
@@ -2857,3 +2877,41 @@ export const OVEN_RECIPES = [
 ];
 RECIPES.push(...OVEN_RECIPES);
 RECIPE_GROUPS.push(['From the stone oven', OVEN_RECIPES.map((r) => r.id)]);
+
+// ---------------------------------------------------------------- reinforcements (2026-11-23)
+// Out past the suburbs the city does not stay quiet: now and then a pack (ash stalkers, or scrap drones) closes in on
+// the Pallas from 9-13 tiles away. The UI asks (cityPack) and draws what comes back. At most CITY_PACK_CAP live creatures.
+export const CITY_PACK_CAP = 110;
+export function cityPack(state, x, y) {
+  const m = inCity(state); if (!m) return { ok: false, spawned: [] };
+  const z = cityZone(Math.floor(x), Math.floor(y)); if (z < 1 || m.monsters.length >= CITY_PACK_CAP) return { ok: false, spawned: [] };
+  const kind = rnd(state) < 0.55 ? 'ash_stalker' : 'scrap_drone', n = 2 + rint(state, 2) + (z === 2 ? 1 : 0), spawned = [];
+  for (let k = 0; k < n * 6 && spawned.length < n; k++) {
+    const a = rnd(state) * Math.PI * 2, d = 9 + rnd(state) * 4, px = Math.floor(x + Math.cos(a) * d), py = Math.floor(y + Math.sin(a) * d);
+    if (px < 1 || py < 1 || px >= m.w - 1 || py >= m.h - 1 || citySolid(m.cells[py * m.w + px]) || m.cells[py * m.w + px] === 6) continue;
+    const q = { id: m.nextId++, x: px, y: py, ...cityMonster(kind, z) }; m.monsters.push(q); spawned.push(q);
+  }
+  return { ok: spawned.length > 0, kind, spawned };
+}
+
+// ---------------------------------------------------------------- the beta test game (owner 2026-11-23)
+// A separate game for trying everything: credits topped up to BETA_MONEY (the UI refills them), every tool at Iridium,
+// the biggest rucksack, all of Ruess's farm work done, the cellar, tub and oven, and the Pallas refitted to the last mark
+// (every weapon), filters, big tank, splitter and the mining unit. flags.beta marks it; it saves under its own key.
+export const BETA_MONEY = 9999999;
+export function betaGame({ seed } = {}) {
+  const s = newGame({ seed }); s.flags.beta = true; s.player.money = BETA_MONEY; s.stock.lumber = 9999;
+  for (const t of UPGRADABLE) s.player.toolLevel[t] = 3;
+  const top = RUCKSACK_TIERS.at(-1)[0]; while (s.player.inv.length < top) s.player.inv.push(null); s.player.slots = top;
+  for (const k of ['workshop', 'workshop', 'workshop']) for (const e of shelves(s, k)) {   // Ruess's buildings and refits, through their own apply()
+    if (!e.once || !e.apply || /^up_[a-z]+$/.test(e.key) && UPGRADABLE.includes(e.key.slice(3)) || e.key === 'robot' || e.key === 'miner' || e.key === 'wind_battery' || e.key === 'smelt_alloy') continue;
+    s.player.money = BETA_MONEY; for (const [id, n] of e.req || []) addItem(s, id, n); s.stock.lumber = 9999; buy(s, k, e.key);
+  }
+  s.flags.pal = {}; for (const [k, m] of Object.entries(PALLAS_MODS)) s.flags.pal[k] = m.marks.length;
+  Object.assign(s.flags, { filters: true, tank: true, drill: true, basket: true });
+  s.miner = { name: 'Gravel', charge: 100 };
+  for (const id of ['rod', 'milker', 'brush', 'clippers', 'basket']) if (!countItem(s, id)) addItem(s, id, 1);
+  for (const id of ['battery_full']) addItem(s, id, 10);
+  s.player.money = BETA_MONEY; s.stock.lumber = 9999; ensure(s);
+  return s;
+}
