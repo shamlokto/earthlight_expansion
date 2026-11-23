@@ -984,3 +984,4 @@ picture gets `ui.icon()`'s drawn fish in the species' colours, with a gold ring 
 * `tests/farm-lint.mjs` also parses every farm module, so a brace swallowed by a comment fails the build.
 * **Stone oven** (`flags.kitchen_oven`, after the kitchen refit; `sim.OVEN_RECIPES`): Ruess builds a brick oven and spice rack in the lamp's corner of the farmhouse. Five oven dishes, three using the cellar's goods: cellar platter, wine and cheese fondue, honey-glazed fish, pumpkin pie, oven-roast vegetables.
 * **Things for the yard** (`sim.YARD`, `state.yard`): Seln sells fence sections (they join their neighbours), stepping stones (walked over), garden lamps (lit at night) and flower planters, set down anywhere free on the farm; the axe takes them back up.
+* **More water life:** rings spread on the water near Sato now and then (a fish rising, with a splash), and everywhere at once in the rain.

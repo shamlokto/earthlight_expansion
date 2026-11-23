@@ -96,7 +96,7 @@ const PROPS = {
   launch_pad: { h: 0.1 }, shuttle_pad: { h: 0.1 },
   // 2026-11-19: the open belt (sector markers, pickup pods, landmarks) and Sato's mining unit; built stand-ins
   sector_buoy: { model: 'jump_buoy', h: 1.7, fit: 'foot' }, sector_sign: { h: 2.6 }, pickup_pod: { h: 2.2 }, mining_bot: { model: 'mining_bot', h: 0.9, fit: 'foot' },
-  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, cellar_hatch: { h: 0.1 }, yard_fence: { h: 1 }, yard_path: { h: 0.05 }, yard_lamp: { model: 'lantern', sprite: () => 'sprites/lantern', h: 2.0, face: true, lamp: 1.7 }, yard_planter: { h: 0.7 }, hot_tub: { h: 0.9 }, cat: { model: 'cat', h: 0.62, maxW: 0.8 }, cat_sleep: { model: 'cat', h: 0.48, maxW: 0.62 }, cat_bed: { model: 'cat_bed', h: 0.3, maxW: 0.95 }, cask: { model: 'cask', h: 0.95, maxW: 0.95 }, wine_rack: { model: 'wine_rack', h: 1.9, maxW: 1.9 }, cheese_shelf: { model: 'cheese_shelf', h: 1.6, maxW: 1.0 }, shuttle_gate: { h: 3.4 },
+  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, cellar_hatch: { h: 0.1 }, cellar_doors: { h: 0.6 }, mail_flag: { h: 0.5 }, yard_fence: { h: 1 }, yard_path: { h: 0.05 }, yard_lamp: { model: 'lantern', sprite: () => 'sprites/lantern', h: 2.0, face: true, lamp: 1.7 }, yard_planter: { h: 0.7 }, hot_tub: { h: 0.9 }, cat: { model: 'cat', h: 0.62, maxW: 0.8 }, cat_sleep: { model: 'cat', h: 0.48, maxW: 0.62 }, cat_bed: { model: 'cat_bed', h: 0.3, maxW: 0.95 }, cask: { model: 'cask', h: 0.95, maxW: 0.95 }, wine_rack: { model: 'wine_rack', h: 1.9, maxW: 1.9 }, cheese_shelf: { model: 'cheese_shelf', h: 1.6, maxW: 1.0 }, shuttle_gate: { h: 3.4 },
   hull_window: { h: 12 }, hull_wall: { h: 10 }, glass_roof: { h: 16 }, vending: { model: 'vending', h: 1.9, fit: 'foot' }, feed_sacks: { model: 'feed_sacks', h: 0.8, fit: 'foot' },
   crane: { model: 'dock_crane', h: 5.5, fit: 'foot' },
   bay_window: { h: 10 }, landing_pad: { h: 0.1 }, hazard_stripes: { h: 0.05 }, trader_ship: { model: 'cartel_ship', h: 5.2, fit: 'foot' }, shuttle: { model: 'shuttle', h: 3.8, fit: 'foot' },
@@ -483,6 +483,16 @@ export class World {
         if (nb[0]) rails(0, -1); if (nb[1]) rails(1, 0); if (nb[2]) rails(0, 1); if (nb[3]) rails(-1, 0);
         if (!nb.some(Boolean)) rails(1, 0), rails(-1, 0);   // a lone section still looks like a fence
         break;
+      }
+      case 'cellar_doors': {                             // two slanted plank doors on a stone curb, leaning on the house wall
+        const wd = std({ color: 0x7a5434 }), ir = std({ color: 0x3a3632, metalness: 0.6 }), st = std({ color: 0x9a958c });
+        g.add(box(0.95, 0.12, 0.95, st, 0, 0, 0));
+        for (const z of [-0.22, 0.22]) { const d = box(0.85, 0.05, 0.42, wd, -0.02, 0, z); d.rotation.z = 0.45; d.position.y = 0.32; g.add(d); const h = box(0.06, 0.06, 0.06, ir, 0.28, 0, z * 0.4); h.position.y = 0.19; g.add(h); }
+        break;
+      }
+      case 'mail_flag': {                                // the mailbox's little red flag, raised
+        const rd = std({ color: 0xd8342c, emissive: 0x501010, emissiveIntensity: 0.4 }), mt = std({ color: 0x555b60, metalness: 0.6 });
+        g.add(box(0.04, 0.5, 0.04, mt, 0.3, 0.95, 0), box(0.2, 0.13, 0.02, rd, 0.4, 1.32, 0)); break;
       }
       case 'yard_planter': {                             // a cedar box of mixed flowers
         const wd = std({ color: 0x9a6a3e }), soil = std({ color: 0x4a3424 });
@@ -963,7 +973,7 @@ export class World {
     this.map = map; this.state = state; this.season = state.cal.season; this.flags = state.flags || {};
     freeGeometry(this.root); for (const m of this.waterMats || []) if (m.map && m.map.userData.ownWater) m.map.dispose(); this.root.clear(); this.facers.length = 0; this.spriteMats.length = 0; this.anims.length = 0; this.tileObjs.clear();
     for (const a of this.actors.values()) a.dispose && a.dispose(); this.actors.clear();
-    this.lamps = []; this.waterMats = []; this.tallProps = []; this.steam = []; this.windowGlass = null; this.flies = null;
+    this.lamps = []; this.waterCells = null; for (const q of this.ripples || []) this.scene.remove(q.m); this.ripples = []; this.waterMats = []; this.tallProps = []; this.steam = []; this.windowGlass = null; this.flies = null;
     const R = this.root, W = map.w, H = map.h;
     // ground, one merged mesh per kind
     const byKind = {};
@@ -986,7 +996,7 @@ export class World {
         const wm = new THREE.MeshStandardMaterial({ map: art.tex('water', { repeat: 1 }).clone(), color: map.under ? 0x4a8a9a : 0xb8dce6, transparent: true, opacity: 0.94, roughness: 0.12, metalness: 0.1 });
         wm.map.wrapS = wm.map.wrapT = THREE.RepeatWrapping; wm.map.needsUpdate = true; wm.map.userData.ownWater = true; this.waterMats.push(wm);
         liveWater(wm);   // flowing rivers, rippling lakes, foam at the banks, sparkle (2026-11-22)
-        const m = new THREE.Mesh(waterTiles(cells, -0.04, map), wm); m.receiveShadow = true; R.add(m); continue;
+        const m = new THREE.Mesh(waterTiles(cells, -0.04, map), wm); m.receiveShadow = true; R.add(m); this.waterCells = cells; continue;
       }
       const cp = c === 'c' && !map.indoor && art.has('textures/colony_path');   // colony art, when the pack has it
       const slot = c === 'g' ? 'grass_' + SEASON_KEY[this.season] : cp ? 'colony_path' : GROUND_TEX[c] || 'soil_dry';
@@ -1175,6 +1185,22 @@ export class World {
   project(x, y, h = 0) { const v = new THREE.Vector3(x, h, y).project(this.camera), c = this.renderer.domElement; return { x: (v.x * 0.5 + 0.5) * c.clientWidth, y: (-v.y * 0.5 + 0.5) * c.clientHeight, behind: v.z > 1 }; }
 
   // ------------------------------------------------------------ frame
+  // Rings spreading on the water near Sato (2026-11-22): now and then a fish rising, a drip, a breath of wind; in the rain, everywhere.
+  rippleTick(dt, px, py) {
+    const rs = this.ripples || (this.ripples = []);
+    for (let i = rs.length - 1; i >= 0; i--) { const q = rs[i]; q.t += dt; const k = q.t / q.life; q.m.scale.setScalar(0.3 + k * q.size); q.m.material.opacity = 0.55 * (1 - k); if (k >= 1) { this.scene.remove(q.m); q.m.geometry.dispose(); rs.splice(i, 1); } }
+    const cells = this.waterCells; if (!cells || !cells.length) return;
+    const rain = this.weather && this.weather.visible && this.weatherSpeed > 5;
+    this.rippleT = (this.rippleT || 0) - dt; if (this.rippleT > 0 || rs.length > 40) return; this.rippleT = rain ? 0.05 : 0.6 + Math.random() * 1.4;
+    for (let tries = 0; tries < 10; tries++) {
+      const i = Math.floor(Math.random() * cells.length / 2) * 2, x = cells[i] + Math.random(), z = cells[i + 1] + Math.random();
+      if (Math.hypot(x - px, z - py) > 14) continue;
+      const m = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.42, 28), new THREE.MeshBasicMaterial({ color: 0xeaf6ff, transparent: true, opacity: 0.55, depthWrite: false }));
+      m.rotation.x = -Math.PI / 2; m.position.set(x, -0.015, z); this.scene.add(m); rs.push({ m, t: 0, life: rain ? 0.9 : 1.8 + Math.random(), size: rain ? 0.9 : 1.6 + Math.random() * 1.4 });
+      if (!rain && !(this.map && this.map.under) && Math.random() < 0.18) this.puff(x, z, 0xdff3ff, 5, 0.25);   // a fish jumped
+      break;
+    }
+  }
   update(dt, px, py) {
     this.t += dt;
     const indoor = this.map && this.map.indoor, el = this.renderer.domElement, narrow = el.clientWidth < el.clientHeight * 0.75;
@@ -1196,6 +1222,7 @@ export class World {
     for (const g of this.steam || []) for (const m of g.children) { const k = ((this.t * 0.25 + m.userData.seed) % 1); m.position.set(m.userData.x + Math.sin(this.t + m.userData.seed) * 0.15, 0.3 + k * 1.7, m.userData.z); m.scale.setScalar(0.7 + k * 1.6); m.material.opacity = 0.42 * Math.sin(k * Math.PI); }
     if (this.bots) this.bots.update(dt, this.t);
     if (this.rocks) this.rocks.update(px, py);
+    this.rippleTick(dt, px, py);
     if (this.earthSky) this.earthSky.position.copy(c.position).addScaledVector(EARTH_DIR, 1500);   // always as far away, low over the lane's east side
     for (const f of this.facers) f.rotation.y = this.yaw;
     for (const m of this.waterMats || []) if (m.userData.u) { m.userData.u.uTime.value = this.t; m.userData.u.uSpark.value = this.map && (this.map.under || this.map.indoor) ? 0.1 : 0.25 + 0.75 * (1 - (this.night || 0)); } else m.map.offset.set(this.t * 0.015, this.t * 0.01);   // no sun to glint underground
