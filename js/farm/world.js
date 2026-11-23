@@ -96,7 +96,7 @@ const PROPS = {
   launch_pad: { h: 0.1 }, shuttle_pad: { h: 0.1 },
   // 2026-11-19: the open belt (sector markers, pickup pods, landmarks) and Sato's mining unit; built stand-ins
   sector_buoy: { model: 'jump_buoy', h: 1.7, fit: 'foot' }, sector_sign: { h: 2.6 }, pickup_pod: { h: 2.2 }, mining_bot: { model: 'mining_bot', h: 0.9, fit: 'foot' },
-  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, cellar_hatch: { h: 0.1 }, yard_fence: { h: 1 }, yard_path: { h: 0.05 }, yard_lamp: { model: 'lantern', sprite: () => 'sprites/lantern', h: 2.0, face: true, lamp: 1.7 }, yard_planter: { h: 0.7 }, hot_tub: { h: 0.9 }, cat: { model: 'cat', h: 0.62, maxW: 0.8 }, cat_sleep: { model: 'cat', h: 0.48, maxW: 0.62 }, cat_bed: { model: 'cat_bed', h: 0.3, maxW: 0.95 }, cask: { model: 'cask', h: 0.95, maxW: 0.95 }, wine_rack: { model: 'wine_rack', h: 1.9, maxW: 1.9 }, cheese_shelf: { model: 'cheese_shelf', h: 1.6, maxW: 1.0 }, shuttle_gate: { h: 3.4 },
+  derelict: { h: 2.6 }, comet: { h: 3 }, wreck: { h: 3 }, far_marker: { h: 6 }, haze: { h: 0.6 }, hangar_mouth: { h: 6 }, launch_cradle: { model: 'launch_cradle', h: 1.2, fit: 'foot' }, refit_console: { h: 1.5 }, refit_gantry: { h: 4.6 }, cellar_hatch: { h: 0.1 }, cellar_doors: { h: 0.6 }, mail_flag: { h: 0.5 }, yard_fence: { h: 1 }, yard_path: { h: 0.05 }, yard_lamp: { model: 'lantern', sprite: () => 'sprites/lantern', h: 2.0, face: true, lamp: 1.7 }, yard_planter: { h: 0.7 }, hot_tub: { h: 0.9 }, cat: { model: 'cat', h: 0.62, maxW: 0.8 }, cat_sleep: { model: 'cat', h: 0.48, maxW: 0.62 }, cat_bed: { model: 'cat_bed', h: 0.3, maxW: 0.95 }, cask: { model: 'cask', h: 0.95, maxW: 0.95 }, wine_rack: { model: 'wine_rack', h: 1.9, maxW: 1.9 }, cheese_shelf: { model: 'cheese_shelf', h: 1.6, maxW: 1.0 }, shuttle_gate: { h: 3.4 },
   hull_window: { h: 12 }, hull_wall: { h: 10 }, glass_roof: { h: 16 }, vending: { model: 'vending', h: 1.9, fit: 'foot' }, feed_sacks: { model: 'feed_sacks', h: 0.8, fit: 'foot' },
   crane: { model: 'dock_crane', h: 5.5, fit: 'foot' },
   bay_window: { h: 10 }, landing_pad: { h: 0.1 }, hazard_stripes: { h: 0.05 }, trader_ship: { model: 'cartel_ship', h: 5.2, fit: 'foot' }, shuttle: { model: 'shuttle', h: 3.8, fit: 'foot' },
@@ -483,6 +483,16 @@ export class World {
         if (nb[0]) rails(0, -1); if (nb[1]) rails(1, 0); if (nb[2]) rails(0, 1); if (nb[3]) rails(-1, 0);
         if (!nb.some(Boolean)) rails(1, 0), rails(-1, 0);   // a lone section still looks like a fence
         break;
+      }
+      case 'cellar_doors': {                             // two slanted plank doors on a stone curb, leaning on the house wall
+        const wd = std({ color: 0x7a5434 }), ir = std({ color: 0x3a3632, metalness: 0.6 }), st = std({ color: 0x9a958c });
+        g.add(box(0.95, 0.12, 0.95, st, 0, 0, 0));
+        for (const z of [-0.22, 0.22]) { const d = box(0.85, 0.05, 0.42, wd, -0.02, 0, z); d.rotation.z = 0.45; d.position.y = 0.32; g.add(d); const h = box(0.06, 0.06, 0.06, ir, 0.28, 0, z * 0.4); h.position.y = 0.19; g.add(h); }
+        break;
+      }
+      case 'mail_flag': {                                // the mailbox's little red flag, raised
+        const rd = std({ color: 0xd8342c, emissive: 0x501010, emissiveIntensity: 0.4 }), mt = std({ color: 0x555b60, metalness: 0.6 });
+        g.add(box(0.04, 0.5, 0.04, mt, 0.3, 0.95, 0), box(0.2, 0.13, 0.02, rd, 0.4, 1.32, 0)); break;
       }
       case 'yard_planter': {                             // a cedar box of mixed flowers
         const wd = std({ color: 0x9a6a3e }), soil = std({ color: 0x4a3424 });

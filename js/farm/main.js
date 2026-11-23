@@ -116,7 +116,9 @@ function recover(e, where) {
 }
 window.addEventListener('error', (ev) => recover(ev.error || ev.message, 'error'));
 window.addEventListener('unhandledrejection', (ev) => recover(ev.reason, 'promise'));
-function refreshHud() { const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: 'Pallas · Space fires · F Hydra · R scan' } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
+let mailFlag = false;   // the mailbox's red flag is up while letters wait (2026-11-22)
+function mailFlagCheck() { const up = !!(map && map.id === 'farm' && sim.mailWaiting(S)); if (up === mailFlag && (!up || W.tileObjs.get('mailflag'))) return; mailFlag = up; if (up) W.place('mailflag', 'mail_flag', 13.5, 7.5); else W.unplace('mailflag'); }
+function refreshHud() { mailFlagCheck(); const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: 'Pallas · Space fires · F Hydra · R scan' } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
 // ---------------------------------------------------------------- people
@@ -366,7 +368,7 @@ function spawnCat() {
 function catTick(dt) {
   catCheck -= dt; if (catCheck <= 0) { catCheck = 4; const s = map && catPlan(), c = cat && cat.plan, here = s && s.map === map.id; if (!!here !== !!c || (here && (!!s.sleep !== !!c.sleep || s.x !== c.x))) spawnCat(); }
   if (!cat) return; const o = cat.o; cat.purr -= dt;
-  if (cat.plan.sleep) { o.scale.setScalar(1 + Math.sin(performance.now() / 700) * 0.015); return; }   // breathing
+  if (cat.plan.sleep) { o.rotation.y = 0.7; o.scale.set(1.05, 0.8 * (1 + Math.sin(performance.now() / 700) * 0.025), 1.05); return; }   // hunkered down, breathing slowly
   cat.wait -= dt;
   if (cat.wait <= 0) { const a = Math.random() * Math.PI * 2, d = Math.random() * cat.plan.r, nx = cat.plan.x + Math.cos(a) * d, ny = cat.plan.y + Math.sin(a) * d; if (canStand(nx, ny)) { cat.tx = nx; cat.ty = ny; } cat.wait = 3 + Math.random() * 6; }
   if (cat.purr > 0) { o.rotation.y = Math.atan2(me.x - cat.x, me.y - cat.y); o.position.y = Math.abs(Math.sin(performance.now() / 160)) * 0.02; return; }
@@ -375,7 +377,8 @@ function catTick(dt) {
   else o.position.y = 0;
 }
 function catProbe() {
-  if (!cat || Math.hypot(cat.x - me.x, cat.y - me.y) > 1.3) return null;
+  if (!cat) return null; const cx = cat.x - me.x, cy = cat.y - me.y, cd = Math.hypot(cx, cy), [fx, fy] = DIRV[me.dir];
+  if (cd > 1.3 || (cd > 0.5 && (cx * fx + cy * fy) / cd < 0.35)) return null;   // only when Sato faces her, so she never steals E from the kitchen
   const p = sim.petOf(S), held = sim.selected(S), nm = p.name || 'the kitten';
   if (held && ITEMS[held.id].kind === 'fish' && p.fedDay !== sim.absDay(S)) return { label: `Give ${nm} the ${ITEMS[held.id].name.toLowerCase()}`, run: () => { const r = sim.feedCat(S, held.id); ui.toast(r.msg, 3600); if (r.ok) { sfx('good'); cat.purr = 2.5; floatText(cat.x, cat.y, '♥'); } refreshHud(); } };
   return { label: cat.plan.sleep ? `Stroke ${nm} (asleep)` : `Pet ${nm}`, run: async () => {
