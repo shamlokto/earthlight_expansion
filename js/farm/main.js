@@ -892,7 +892,7 @@ function weaponsTick(dt) {
   if (jet) {                                                               // the jet hangs over Sato's spot, turning and banking as she flies
     jet.t += dt; const moving = me.moving, want = moving ? [0, Math.PI, -Math.PI / 2, Math.PI / 2][me.dir] : jet.yaw;
     let dyaw = ((want - jet.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI; jet.yaw += dyaw * Math.min(1, dt * 6); jet.bank += (Math.max(-0.6, Math.min(0.6, -dyaw * 1.5)) - jet.bank) * Math.min(1, dt * 5);
-    const o = jet.o; o.position.set(me.x, jet.h + (jet.rising || shifting ? 0 : Math.sin(jet.t * 2.2) * 0.12), me.y); o.rotation.set(0, jet.yaw + (art.hasModel('pallas_jet') ? Math.PI : 0), jet.bank, 'YXZ');
+    const o = jet.o; o.position.set(me.x, jet.h + (jet.rising || shifting ? 0 : Math.sin(jet.t * 2.2) * 0.12), me.y); o.rotation.set(0, jet.yaw + (art.hasModel('pallas_jet') ? 0 : Math.PI), jet.bank, 'YXZ');   // heading 0 is +Z: the model's nose is +Z already; the built stand-in's nose is -Z (it flew tail-first before, 2026-11-24)
     if (moving && Math.random() < 0.5) W.puff(me.x - Math.sin(jet.yaw) * 0.9, me.y - Math.cos(jet.yaw) * 0.9, 0x9fd8ee, 1, jet.h - 0.2);
   }
   if (dragon) {
