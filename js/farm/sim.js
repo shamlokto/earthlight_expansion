@@ -1070,7 +1070,7 @@ export const PALLAS_MODS = {
     marks: [{ price: 3600, req: [['alloy', 5], ['titanium', 3]] }, { price: 6400, req: [['alloy', 4], ['crystal', 2], ['star_metal', 1]] }],
     line: ['Ruess sends up a Dragon battery from the old war stock, guns stripped down for vermin. "Set it down and stand back."', 'Star-metal liners in the Dragon\'s twin barrels. Its shells land like weather.'] },
   // 2026-11-24 (the owner's kid asked for something bigger; a conventional high-explosive bomb, not a nuclear one): B from the jet
-  hammer: { label: 'Sky Hammer missile', stat: [0, 1], unit: 'Sky Hammer', what: (v) => (v ? 'the Sky Hammer: a huge high-explosive missile, B to fire' : 'no Sky Hammer'), more: 'a very wide blast, 10 s to reload',
+  hammer: { label: 'Sky Hammer missile', stat: [0, 1], unit: 'Sky Hammer', what: (v) => (v ? 'the Sky Hammer: a huge high-explosive missile, B from the jet' : 'no Sky Hammer'), more: 'a very wide blast, 10 s to reload',
     marks: [{ price: 2400, req: [['alloy', 3], ['crystal', 1]] }],
     line: ['Vashti bolts a fat crimson missile with yellow bands under the Pallas\'s shoulder. "High explosive. Old ship-breaker. Point it at something big."'] },
   bombs: { label: 'Earthlight bombs', stat: [1, 2, 3], unit: 'bombs', what: (v) => `${v} Earthlight bomb${v > 1 ? 's' : ''} a run from the jet`, more: 'heavy ship-attack missiles; T folds the Pallas into its jet',
