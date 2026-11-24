@@ -142,7 +142,7 @@ window.addEventListener('unhandledrejection', (ev) => recover(ev.reason, 'promis
 let mailFlag = false;   // the mailbox's red flag is up while letters wait (2026-11-22)
 function mailFlagCheck() { const up = !!(map && map.id === 'farm' && sim.mailWaiting(S)); if (up === mailFlag && (!up || W.tileObjs.get('mailflag'))) return; mailFlag = up; if (up) W.place('mailflag', 'mail_flag', 13.5, 7.5); else W.unplace('mailflag'); }
 // refreshHud also refills the beta game's credits (they never run out)
-function refreshHud() { if (S && S.flags.beta) S.player.money = sim.BETA_MONEY; mailFlagCheck(); { const on = !!(map && map.city); for (const id of ['tWpn', 'tJet', 'tDrg']) { const b = $(id); if (b) b.hidden = !on || (id === 'tDrg' && !sim.pallasLevel(S, 'dragon')); } } const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: jet ? `Jet · Space Earthlight bombs ×${sim.pallasStat(S, 'bombs')} · T land · Shift boost` : `Pallas · ${WEAPON_NAME[weapon]} (V) · F Hydra${sim.pallasLevel(S, 'dragon') ? ' · G Dragon' : ''} · T jet · R scan` } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
+function refreshHud() { if (S && S.flags.beta) S.player.money = sim.BETA_MONEY; mailFlagCheck(); { const on = !!(map && map.city); for (const id of ['tWpn', 'tJet', 'tDrg', 'tHam']) { const b = $(id); if (b) b.hidden = !on || (id === 'tDrg' && !sim.pallasLevel(S, 'dragon')) || (id === 'tHam' && (!jet || !sim.pallasLevel(S, 'hammer'))); } } const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: jet ? `Jet · Space Earthlight bombs ×${sim.pallasStat(S, 'bombs')}${sim.pallasLevel(S, 'hammer') ? ` · B Sky Hammer${hammerCd > 0 ? ` (${Math.ceil(hammerCd)} s)` : ''}` : ''} · T land · Shift boost` : `Pallas · ${WEAPON_NAME[weapon]} (V) · F Hydra${sim.pallasLevel(S, 'dragon') ? ' · G Dragon' : ''} · T jet · R scan` } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
 // ---------------------------------------------------------------- people
@@ -743,7 +743,7 @@ function pallasDash() { if (dashCd > 0) return; dashCd = sim.pallasStat(S, 'thru
 // V cycles the arm weapon (blaster, beam laser, seeker missiles); G sets down the Dragon battery (long range, slow,
 // heavy shells that cannot land closer than 2 tiles); T folds the Pallas into its jet: twice as fast, over towers,
 // gas and pools, out of reach of claws, and Space drops bombs. Explosions, beams and missiles live in `shots`.
-let combo = 0, comboAt = 0, hitStop = 0, weapon = 'blaster', laserHold = 0, laserBeam = null, laserNum = 0, missileCd = 0, bombCd = 0, dragon = null, dragonCd = 0, jet = null, jetCd = 0, packT = 40, shots = [], dying = [];
+let hammerCd = 0, combo = 0, comboAt = 0, hitStop = 0, weapon = 'blaster', laserHold = 0, laserBeam = null, laserNum = 0, missileCd = 0, bombCd = 0, dragon = null, dragonCd = 0, jet = null, jetCd = 0, packT = 40, shots = [], dying = [];
 const WEAPON_NAME = { blaster: 'Blaster', laser: 'Beam laser', missiles: 'Seeker missiles' };
 function weaponsOwned() { return ['blaster', ...(sim.pallasLevel(S, 'laser') ? ['laser'] : []), ...(sim.pallasLevel(S, 'missiles') ? ['missiles'] : [])]; }
 function cycleWeapon() {
@@ -752,7 +752,7 @@ function cycleWeapon() {
 }
 function combatReset() {
   for (const q of shots) W.scene.remove(q.m); shots = []; for (const q of dying) W.dyn.remove(q.o); dying = [];
-  if (shifting && shifting.fold) { try { shifting.fold.restore(); } catch {} } shifting = null;
+  if (shifting && shifting.fold) { try { shifting.fold.restore(); } catch {} } shifting = null; for (const q of shots) if (q.ring) W.scene.remove(q.ring); hammerCd = 0;
   if (laserBeam) { W.scene.remove(laserBeam); laserBeam = null; } if (jet) { W.unplace('pjet'); jet = null; } if (me && me.group) me.group.visible = true;
   dragon = null; laserHold = 0; packT = 35 + Math.random() * 20; if (W) W.wantZoom = 0; { const e = $('bossBar'); if (e) e.hidden = true; }
 }
@@ -810,6 +810,30 @@ function fireMissiles() {
 }
 // Earthlight bombs from the jet (owner 2026-11-23: in Earthlight the 'bomb' is a big ship-attack missile): each drops from the
 // belly, lights, and streaks for the heaviest creature ahead (a boss first), turning slowly; a big burst where it strikes.
+// The Sky Hammer (2026-11-24): one huge high-explosive bomb from the jet. It falls on a drogue chute under a red ring that
+// marks the blast, then a white flash, a wide shockwave and a big scorch: 30 damage at the heart, falling off to the edge
+// of a 5.5-tile radius. Only from the air (so Sato is well clear), one every 20 s.
+function dropHammer() {
+  if (!sim.pallasLevel(S, 'hammer')) return ui.toast('No Sky Hammer fitted. Vashti\'s refit gantry has one.', 2600);
+  if (!jet) return ui.toast('The Sky Hammer drops from the jet: T to fold into it first.', 2200);
+  if (hammerCd > 0) return ui.toast(`The Sky Hammer is reloading (${Math.ceil(hammerCd)} s).`, 1200);
+  hammerCd = 20; const dx = Math.sin(jet.yaw), dy = Math.cos(jet.yaw), x = me.x + dx * 3, y = me.y + dy * 3; sfx('drop');
+  const g = new THREE.Group(), steel = new THREE.MeshStandardMaterial({ color: 0x4a5560, metalness: 0.5, roughness: 0.4 }), band = new THREE.MeshStandardMaterial({ color: 0xe8b830 });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.6, 6, 12), steel); g.add(body); for (const yy of [-0.15, 0.15]) { const b2 = new THREE.Mesh(new THREE.CylinderGeometry(0.235, 0.235, 0.06, 14), band); b2.position.y = yy; g.add(b2); }
+  const chute = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xd8342c, side: THREE.DoubleSide })); chute.position.y = 1.1; g.add(chute);
+  g.position.set(me.x, 2.0, me.y); W.scene.add(g);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(5.3, 5.5, 64), new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.07, y); W.scene.add(ring);
+  shots.push({ kind: 'hammer', m: g, ring, x0: me.x, y0: me.y, x, y, t: 0, life: 1.6 }); ui.toast('Sky Hammer away!', 1200); refreshHud();
+}
+function hammerBlast(x, y) {
+  const R = 5.5; hitStop = 0.12; W.shake = 0.8; sfx('smash'); setTimeout(() => sfx('smash'), 90);
+  let fl = $('heFlash'); if (!fl) { fl = document.createElement('div'); fl.id = 'heFlash'; document.body.appendChild(fl); } fl.classList.remove('on'); void fl.offsetWidth; fl.classList.add('on');   // a white flash
+  for (let k = 0; k < 3; k++) setTimeout(() => { W.puff(x, y, 0xfff2b8, 24, 0.6 + k * 0.5); W.puff(x, y, 0xff8a3a, 20, 0.4 + k * 0.3); W.puff(x, y, 0x4a4038, 18, 1.4 + k * 0.6); }, k * 90);
+  for (let k = 0; k < 2; k++) { const w2 = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.7, 48), new THREE.MeshBasicMaterial({ color: k ? 0xfff2b8 : 0xff8a3a, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false })); w2.rotation.x = -Math.PI / 2; w2.position.set(x, 0.1 + k * 0.05, y); W.scene.add(w2); shots.push({ kind: 'ring', m: w2, t: -k * 0.12, life: 0.7, rad: R * 0.95 }); }
+  const sc = new THREE.Mesh(new THREE.CircleGeometry(R * 0.7, 32), new THREE.MeshBasicMaterial({ color: 0x15110e, transparent: true, opacity: 0.6, depthWrite: false })); sc.rotation.x = -Math.PI / 2; sc.position.set(x, 0.035, y); W.scene.add(sc); shots.push({ kind: 'scorch', m: sc, t: 0, life: 14 });
+  for (const mon of [...monsters]) { const d = Math.hypot(mon.x - x, mon.y - y); if (d < R + (mon.big ? 0.6 : 0.2)) hurtMonster(mon, 30 * Math.max(0.35, 1 - d / R), x, y); }
+  floatText(x, y, 'BOOM!');
+}
 function dropBombs() {
   if (bombCd > 0) return; bombCd = 1.3; const n = sim.pallasStat(S, 'bombs'), yaw = jet ? jet.yaw : [0, Math.PI, -Math.PI / 2, Math.PI / 2][me.dir], dx = Math.sin(yaw), dy = Math.cos(yaw); sfx('drop');
   const pool = monsters.map((m2) => { const ex = m2.x - me.x, ey = m2.y - me.y, d = Math.hypot(ex, ey); return { m2, d, ahead: d ? (ex * dx + ey * dy) / d : 0 }; }).filter((q) => q.d < 15 && q.ahead > -0.2)
@@ -884,7 +908,7 @@ function titanThink(mon, dt, d, ex, ey) {
   if (mon.o.userData.is3d) mon.o.rotation.y = Math.atan2(ex, ey);
 }
 function weaponsTick(dt) {
-  missileCd -= dt; bombCd -= dt; dragonCd -= dt; jetCd -= dt;
+  missileCd -= dt; bombCd -= dt; hammerCd -= dt; dragonCd -= dt; jetCd -= dt;
   laserTick(dt); shiftTick(dt);
   if (jet && jet.rising) { jet.h = Math.min(2.2, jet.h + dt * 4); if (jet.h >= 2.2) jet.rising = false; }
   W.wantZoom = jet ? 0.45 : 0;
@@ -921,6 +945,9 @@ function weaponsTick(dt) {
       if (q.heavy && !q.target && Math.hypot(q.fx - q.x, q.fy - q.y) < 0.6) done = true;   // no target: it strikes where it was aimed
       if (hitMon || (!q.heavy && map.solid(q.x, q.y))) done = true;
       if (done && q.heavy) { boom(q.x, q.y, 2.2 + 0.3 * sim.pallasLevel(S, 'bombs'), 6 + 2 * sim.pallasLevel(S, 'bombs'), 0xffd36a); W.shake = 0.4; } else if (done) boom(q.x, q.y, 1.3, 3 + sim.pallasLevel(S, 'missiles'), 0xffa040);
+    } else if (q.kind === 'hammer') {
+      const k = Math.min(1, q.t / q.life), e = k * k; q.m.position.set(q.x0 + (q.x - q.x0) * k, 2.0 * (1 - e) + 0.2, q.y0 + (q.y - q.y0) * k); q.m.rotation.y += dt * 2; q.m.rotation.z = Math.sin(q.t * 6) * 0.15;
+      q.ring.material.opacity = 0.35 + 0.35 * Math.abs(Math.sin(q.t * 9)); if (done) { W.scene.remove(q.ring); hammerBlast(q.x, q.y); }
     } else if (q.kind === 'bomb' || q.kind === 'shell') {
       const k = Math.max(0, q.t) / q.life, x = q.x0 + (q.x - q.x0) * k, y = q.y0 + (q.y - q.y0) * k, h = q.kind === 'bomb' ? 2.0 * (1 - k * k) : 0.9 + Math.sin(k * Math.PI) * 3.2 - k * 0.8;
       q.m.position.set(x, Math.max(0.1, h), y); if (q.t < 0) q.m.visible = false; else q.m.visible = true;
@@ -1562,7 +1589,7 @@ function bindInput() {
     if (/^Digit\d$/.test(e.code)) selectSlot(e.code === 'Digit0' ? 9 : +e.code.slice(5) - 1);
     if (e.code === 'KeyR') { const s = sim.selected(S); if (map && map.city && S.mine && mode === 'play' && !(s && (ITEMS[s.id].stamina || ITEMS[s.id].maxUp))) cityScan(); else if (s && (ITEMS[s.id].stamina || ITEMS[s.id].maxUp)) { const r = sim.eat(S, S.player.sel); if (r.celebrate) { sfx('good'); ui.celebrate(r.msg); floatText(me.x, me.y, '★'); } else ui.toast(r.msg || 'That was good.'); if (r.ok) sfx('pick'); refreshHud(); } }
     if (map && map.belt && e.code === 'KeyF') minerToggle(); else if (map && map.ruins && e.code === 'KeyF') placeHydra();
-    if (map && map.city && S.mine && mode === 'play' && !ui.talking() && !ui.windowOpen()) { if (e.code === 'KeyV') cycleWeapon(); else if (e.code === 'KeyG') placeDragon(); else if (e.code === 'KeyT') toggleJet(); }
+    if (map && map.city && S.mine && mode === 'play' && !ui.talking() && !ui.windowOpen()) { if (e.code === 'KeyV') cycleWeapon(); else if (e.code === 'KeyG') placeDragon(); else if (e.code === 'KeyT') toggleJet(); else if (e.code === 'KeyB') dropHammer(); }
     if (map && map.earth && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) pallasDash();
     if (e.code === 'KeyQ') W.yaw -= Math.PI / 4; if (e.code === 'KeyC') W.yaw += Math.PI / 4;
   });
@@ -1583,7 +1610,7 @@ function bindInput() {
     const mv = (e) => { const r = st.getBoundingClientRect(), x = (e.clientX - r.left - 60) / 50, y = (e.clientY - r.top - 60) / 50, l = Math.max(1, Math.hypot(x, y)); stick.x = x / l; stick.y = y / l; knob.style.transform = `translate(${stick.x * 34}px, ${stick.y * 34}px)`; };
     st.addEventListener('pointerdown', (e) => { st.setPointerCapture(e.pointerId); mv(e); }); st.addEventListener('pointermove', (e) => { if (e.buttons || e.pressure) mv(e); });
     const up = () => { stick.x = stick.y = 0; knob.style.transform = ''; }; st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
-    for (const [id, fn] of [['tWpn', () => cycleWeapon()], ['tJet', () => toggleJet()], ['tDrg', () => placeDragon()]]) $(id).addEventListener('pointerdown', (e) => { e.preventDefault(); if (map && map.city && S.mine && mode === 'play' && !ui.talking() && !ui.windowOpen()) fn(); });   // the Old World's extra buttons
+    for (const [id, fn] of [['tWpn', () => cycleWeapon()], ['tJet', () => toggleJet()], ['tDrg', () => placeDragon()], ['tHam', () => dropHammer()]]) $(id).addEventListener('pointerdown', (e) => { e.preventDefault(); if (map && map.city && S.mine && mode === 'play' && !ui.talking() && !ui.windowOpen()) fn(); });   // the Old World's extra buttons
     $('tUse').addEventListener('pointerdown', (e) => { e.preventDefault(); pressUse(); }); $('tAct').addEventListener('pointerdown', (e) => { e.preventDefault(); if (map && map.ruins && mode === 'play' && !ui.talking() && !probe()) { if (map.belt) minerToggle(); else placeHydra(); } else pressE(); });
   }
 }
