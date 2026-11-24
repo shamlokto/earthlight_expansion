@@ -1069,6 +1069,10 @@ export const PALLAS_MODS = {
   dragon: { label: 'Dragon battery', stat: [0, 6, 10], unit: 'Dragon shell', what: (v) => (v ? `a Dragon battery, ${v} damage a shell` : 'no Dragon'), more: 'G sets it down; long range, slow and heavy',
     marks: [{ price: 3600, req: [['alloy', 5], ['titanium', 3]] }, { price: 6400, req: [['alloy', 4], ['crystal', 2], ['star_metal', 1]] }],
     line: ['Ruess sends up a Dragon battery from the old war stock, guns stripped down for vermin. "Set it down and stand back."', 'Star-metal liners in the Dragon\'s twin barrels. Its shells land like weather.'] },
+  // 2026-11-24 (the owner's kid asked for something bigger; a conventional high-explosive bomb, not a nuclear one): B from the jet
+  hammer: { label: 'Sky Hammer bomb', stat: [0, 1], unit: 'Sky Hammer', what: (v) => (v ? 'one Sky Hammer: a huge high-explosive bomb, B from the jet' : 'no Sky Hammer'), more: 'a very wide blast, 20 s to reload',
+    marks: [{ price: 6500, req: [['alloy', 6], ['crystal', 2], ['star_metal', 1]] }],
+    line: ['Vashti wheels out something the size of a water heater. "High explosive. Old ship-breaking charge. Drop it, then fly away quickly."'] },
   bombs: { label: 'Earthlight bombs', stat: [1, 2, 3], unit: 'bombs', what: (v) => `${v} Earthlight bomb${v > 1 ? 's' : ''} a run from the jet`, more: 'heavy ship-attack missiles; T folds the Pallas into its jet',
     marks: [{ price: 2000, req: [['nickel_iron', 5], ['silica', 2]] }, { price: 4200, req: [['titanium', 3], ['crystal', 1]] }],
     line: ['A belly rack for the jet form: two Earthlight bombs, the old ship-killers, cut down for the ruins.', 'A wider rack and a hotter warhead: three bombs, bigger bursts.'] },
