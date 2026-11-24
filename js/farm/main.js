@@ -142,7 +142,7 @@ window.addEventListener('unhandledrejection', (ev) => recover(ev.reason, 'promis
 let mailFlag = false;   // the mailbox's red flag is up while letters wait (2026-11-22)
 function mailFlagCheck() { const up = !!(map && map.id === 'farm' && sim.mailWaiting(S)); if (up === mailFlag && (!up || W.tileObjs.get('mailflag'))) return; mailFlag = up; if (up) W.place('mailflag', 'mail_flag', 13.5, 7.5); else W.unplace('mailflag'); }
 // refreshHud also refills the beta game's credits (they never run out)
-function refreshHud() { if (S && S.flags.beta) S.player.money = sim.BETA_MONEY; mailFlagCheck(); { const on = !!(map && map.city); for (const id of ['tWpn', 'tJet', 'tDrg', 'tHam']) { const b = $(id); if (b) b.hidden = !on || (id === 'tDrg' && !sim.pallasLevel(S, 'dragon')) || (id === 'tHam' && (!jet || !sim.pallasLevel(S, 'hammer'))); } } const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: jet ? `Jet · Space Earthlight bombs ×${sim.pallasStat(S, 'bombs')}${sim.pallasLevel(S, 'hammer') ? ` · B Sky Hammer${hammerCd > 0 ? ` (${Math.ceil(hammerCd)} s)` : ''}` : ''} · T land · Shift boost` : `Pallas · ${WEAPON_NAME[weapon]} (V) · F Hydra${sim.pallasLevel(S, 'dragon') ? ' · G Dragon' : ''} · T jet · R scan` } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
+function refreshHud() { if (S && S.flags.beta) S.player.money = sim.BETA_MONEY; mailFlagCheck(); { const on = !!(map && map.city); for (const id of ['tWpn', 'tJet', 'tDrg', 'tHam']) { const b = $(id); if (b) b.hidden = !on || (id === 'tDrg' && !sim.pallasLevel(S, 'dragon')) || (id === 'tHam' && !sim.pallasLevel(S, 'hammer')); } } const q = S.flags.quest, bm = map && map.belt && S.mine; const cm = map && map.city && S.mine && S.mine.mode === 'city' ? S.mine : null; ui.hud(S, { place: !map ? '' : bm ? `${map.name} · air ${Math.ceil(S.mine.air)}/${S.mine.airMax}` : cm ? `${sim.CITY_ZONES[cm.zone]} · hull ${Math.ceil(cm.hull)}/${cm.hullMax} · found ${cm.credits} cr` : map.name, ...(cm ? { trip: story.RUINS.goal(cm), held: jet ? `Jet · Space Earthlight bombs ×${sim.pallasStat(S, 'bombs')}${sim.pallasLevel(S, 'hammer') ? ` · B Sky Hammer${hammerCd > 0 ? ` (${Math.ceil(hammerCd)} s)` : ''}` : ''} · T land · Shift boost` : `Pallas · ${WEAPON_NAME[weapon]} (V) · F Hydra${sim.pallasLevel(S, 'dragon') ? ' · G Dragon' : ''}${sim.pallasLevel(S, 'hammer') ? ` · B Sky Hammer${hammerCd > 0 ? ` (${Math.ceil(hammerCd)} s)` : ''}` : ''} · T jet · R scan` } : {}), quest: q && NPCS[q.npc] && ITEMS[q.item] ? { who: NPCS[q.npc].short || NPCS[q.npc].name, text: `${q.n} × ${ITEMS[q.item].name}  (you have ${sim.countItem(S, q.item)})` } : null }); hullBar(!!cm); const s = sim.selected(S); if (me && (!map.ruins || map.belt)) me.setTool(s && ITEMS[s.id].kind === 'tool' ? s.id : null); }
 function refreshChanged(fieldId, changed) { const fd = S.fields[fieldId]; for (const c of changed || []) W.refreshTile(fieldId, c.y * fd.w + c.x); }
 
 // ---------------------------------------------------------------- people
@@ -810,20 +810,25 @@ function fireMissiles() {
 }
 // Earthlight bombs from the jet (owner 2026-11-23: in Earthlight the 'bomb' is a big ship-attack missile): each drops from the
 // belly, lights, and streaks for the heaviest creature ahead (a boss first), turning slowly; a big burst where it strikes.
-// The Sky Hammer (2026-11-24): one huge high-explosive bomb from the jet. It falls on a drogue chute under a red ring that
-// marks the blast, then a white flash, a wide shockwave and a big scorch: 30 damage at the heart, falling off to the edge
-// of a 5.5-tile radius. Only from the air (so Sato is well clear), one every 20 s.
+// The Sky Hammer (2026-11-24): one huge high-explosive missile, crimson with yellow hazard bands and a red flame. It leaves
+// the shoulder (or the jet's belly), lights, and streaks for the biggest creature ahead (a boss first) or straight on 10 tiles;
+// then a white flash, two shockwaves and a wide scorch: 30 damage at the heart, about a third at the 5.5-tile edge. On foot
+// or from the jet (the blast never touches Sato), one every 10 s.
 function dropHammer() {
   if (!sim.pallasLevel(S, 'hammer')) return ui.toast('No Sky Hammer fitted. Vashti\'s refit gantry has one.', 2600);
-  if (!jet) return ui.toast('The Sky Hammer drops from the jet: T to fold into it first.', 2200);
   if (hammerCd > 0) return ui.toast(`The Sky Hammer is reloading (${Math.ceil(hammerCd)} s).`, 1200);
-  hammerCd = 20; const dx = Math.sin(jet.yaw), dy = Math.cos(jet.yaw), x = me.x + dx * 3, y = me.y + dy * 3; sfx('drop');
-  const g = new THREE.Group(), steel = new THREE.MeshStandardMaterial({ color: 0x4a5560, metalness: 0.5, roughness: 0.4 }), band = new THREE.MeshStandardMaterial({ color: 0xe8b830 });
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.6, 6, 12), steel); g.add(body); for (const yy of [-0.15, 0.15]) { const b2 = new THREE.Mesh(new THREE.CylinderGeometry(0.235, 0.235, 0.06, 14), band); b2.position.y = yy; g.add(b2); }
-  const chute = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xd8342c, side: THREE.DoubleSide })); chute.position.y = 1.1; g.add(chute);
-  g.position.set(me.x, 2.0, me.y); W.scene.add(g);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(5.3, 5.5, 64), new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.07, y); W.scene.add(ring);
-  shots.push({ kind: 'hammer', m: g, ring, x0: me.x, y0: me.y, x, y, t: 0, life: 1.6 }); ui.toast('Sky Hammer away!', 1200); refreshHud();
+  hammerCd = 10; const yaw = jet ? jet.yaw : [0, Math.PI, -Math.PI / 2, Math.PI / 2][me.dir], dx = Math.sin(yaw), dy = Math.cos(yaw); sfx('zap');
+  const tg = monsters.map((m2) => { const ex = m2.x - me.x, ey = m2.y - me.y, d = Math.hypot(ex, ey); return { m2, d, ahead: d ? (ex * dx + ey * dy) / d : 0 }; }).filter((q) => q.d < 16 && q.ahead > 0)
+    .sort((a, b) => (b.m2.big ? 100 : 0) + b.m2.hp * 3 - b.d - ((a.m2.big ? 100 : 0) + a.m2.hp * 3 - a.d))[0];
+  const g = new THREE.Group(), red = new THREE.MeshStandardMaterial({ color: 0xb8182a, roughness: 0.35, metalness: 0.3 }), yel = new THREE.MeshStandardMaterial({ color: 0xf2c418 }), blk = new THREE.MeshStandardMaterial({ color: 0x1e1c1a });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 1.3, 12), red), nose = new THREE.Mesh(new THREE.ConeGeometry(0.17, 0.42, 12), blk), fl = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff3a1a }));
+  body.rotation.x = nose.rotation.x = Math.PI / 2; nose.position.z = 0.86; fl.position.z = -0.75; fl.visible = false; g.add(body, nose, fl);
+  for (const z of [-0.35, 0, 0.35]) { const b2 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 12), z ? yel : blk); b2.rotation.x = Math.PI / 2; b2.position.z = z; g.add(b2); }
+  for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) { const fin = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.3, 0.32), yel); fin.position.set(Math.sin(a) * 0.18, Math.cos(a) * 0.18, -0.5); fin.rotation.z = -a; g.add(fin); }
+  const h0 = jet ? jet.h - 0.3 : 1.9; g.position.set(me.x, h0, me.y); W.scene.add(g);
+  if (tg) { const lk = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.15, 6), new THREE.MeshBasicMaterial({ color: 0xff3a1a, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide })); lk.rotation.x = -Math.PI / 2; W.scene.add(lk); shots.push({ kind: 'lock', m: lk, target: tg.m2, t: 0, life: 4 }); }
+  shots.push({ kind: 'missile', heavy: true, hammer: true, m: g, fl, x: me.x, y: me.y, h: h0, vx: dx * 2, vy: dy * 2, target: tg ? tg.m2 : null, t: 0, life: 4, trail: 0, fx: me.x + dx * 10, fy: me.y + dy * 10 });
+  me.kick = 2; ui.toast('Sky Hammer away!', 1200); refreshHud();
 }
 function hammerBlast(x, y) {
   const R = 5.5; hitStop = 0.12; W.shake = 0.8; sfx('smash'); setTimeout(() => sfx('smash'), 90);
@@ -935,19 +940,17 @@ function weaponsTick(dt) {
     else if (q.kind === 'lock') { if (!q.target || !monsters.includes(q.target)) done = true; else { q.m.position.set(q.target.x, 0.07, q.target.y); q.m.rotation.z += dt * 4; q.m.scale.setScalar(q.target.big ? 1.8 : 1); } }
     else if (q.kind === 'orb') { q.m.position.y = 0.5 + Math.sin(q.t * 4) * 0.12; q.m.rotation.y += dt * 2; if (Math.hypot(me.x - q.x, me.y - q.y) < 0.9) { const rr = sim.repairHull(S, 15); if (rr.ok) { floatText(q.x, q.y, `+${rr.mended} hull`); sfx('good'); W.puff(q.x, q.y, 0x7dffb0, 10, 0.6); hullBar(true); } done = true; } else if (q.t > q.life - 3) q.m.visible = Math.floor(q.t * 8) % 2 === 0; }
     else if (q.kind === 'missile') {
-      if (q.heavy && q.t < 0.35) { q.h = 1.8 - Math.max(0, q.t) * 2.2; q.m.position.set(q.x, q.h, q.y); q.m.rotation.y = Math.atan2(q.vx, q.vy); if (q.t >= 0.3 && !q.fl.visible) { q.fl.visible = true; W.puff(q.x, q.y, 0xfff2b8, 6, q.h); sfx('zap'); } continue; }   // drop from the belly, then light
+      if (q.heavy && q.t < 0.35) { q.h0 ??= q.h; q.h = q.h0 - Math.max(0, q.t) * 2.2; q.m.position.set(q.x, q.h, q.y); q.m.rotation.y = Math.atan2(q.vx, q.vy); if (q.t >= 0.3 && !q.fl.visible) { q.fl.visible = true; W.puff(q.x, q.y, q.hammer ? 0xff6a3a : 0xfff2b8, q.hammer ? 12 : 6, q.h); sfx('zap'); } continue; }   // drop from the belly, then light
       if (q.target && !monsters.includes(q.target)) q.target = monsters.reduce((b, m2) => (Math.hypot(m2.x - q.x, m2.y - q.y) < (b ? Math.hypot(b.x - q.x, b.y - q.y) : 9) ? m2 : b), null);
       const sp = q.heavy ? Math.min(14, 3 + q.t * 14) : Math.min(11, 4 + q.t * 9);
       if (q.target && q.t > 0.12) { const ax = q.target.x - q.x, ay = q.target.y - q.y, al = Math.hypot(ax, ay) || 1, vl = Math.hypot(q.vx, q.vy) || 1, turn = Math.min(1, dt * (q.heavy ? 3 : 6)); q.vx = q.vx / vl * (1 - turn) + ax / al * turn; q.vy = q.vy / vl * (1 - turn) + ay / al * turn; }
       const vl = Math.hypot(q.vx, q.vy) || 1; q.vx = q.vx / vl * sp; q.vy = q.vy / vl * sp; q.x += q.vx * dt; q.y += q.vy * dt; q.h += ((q.target ? 0.8 : 1.2) - q.h) * Math.min(1, dt * 3);
-      q.m.position.set(q.x, q.h, q.y); q.m.rotation.y = Math.atan2(q.vx, q.vy); if ((q.trail -= dt) <= 0) { q.trail = 0.04; W.puff(q.x - q.vx * 0.03, q.y - q.vy * 0.03, 0xd8d0c4, 1, q.h); }
+      q.m.position.set(q.x, q.h, q.y); q.m.rotation.y = Math.atan2(q.vx, q.vy); if ((q.trail -= dt) <= 0) { q.trail = q.hammer ? 0.025 : 0.04; W.puff(q.x - q.vx * 0.03, q.y - q.vy * 0.03, q.hammer ? 0xff8a3a : 0xd8d0c4, q.hammer ? 2 : 1, q.h); }
       const hitMon = monsters.find((m2) => Math.hypot(m2.x - q.x, m2.y - q.y) < (m2.big ? 0.8 : 0.5));
       if (q.heavy && !q.target && Math.hypot(q.fx - q.x, q.fy - q.y) < 0.6) done = true;   // no target: it strikes where it was aimed
       if (hitMon || (!q.heavy && map.solid(q.x, q.y))) done = true;
-      if (done && q.heavy) { boom(q.x, q.y, 2.2 + 0.3 * sim.pallasLevel(S, 'bombs'), 6 + 2 * sim.pallasLevel(S, 'bombs'), 0xffd36a); W.shake = 0.4; } else if (done) boom(q.x, q.y, 1.3, 3 + sim.pallasLevel(S, 'missiles'), 0xffa040);
-    } else if (q.kind === 'hammer') {
-      const k = Math.min(1, q.t / q.life), e = k * k; q.m.position.set(q.x0 + (q.x - q.x0) * k, 2.0 * (1 - e) + 0.2, q.y0 + (q.y - q.y0) * k); q.m.rotation.y += dt * 2; q.m.rotation.z = Math.sin(q.t * 6) * 0.15;
-      q.ring.material.opacity = 0.35 + 0.35 * Math.abs(Math.sin(q.t * 9)); if (done) { W.scene.remove(q.ring); hammerBlast(q.x, q.y); }
+      if (done && q.hammer) hammerBlast(q.x, q.y);
+      else if (done && q.heavy) { boom(q.x, q.y, 2.2 + 0.3 * sim.pallasLevel(S, 'bombs'), 6 + 2 * sim.pallasLevel(S, 'bombs'), 0xffd36a); W.shake = 0.4; } else if (done) boom(q.x, q.y, 1.3, 3 + sim.pallasLevel(S, 'missiles'), 0xffa040);
     } else if (q.kind === 'bomb' || q.kind === 'shell') {
       const k = Math.max(0, q.t) / q.life, x = q.x0 + (q.x - q.x0) * k, y = q.y0 + (q.y - q.y0) * k, h = q.kind === 'bomb' ? 2.0 * (1 - k * k) : 0.9 + Math.sin(k * Math.PI) * 3.2 - k * 0.8;
       q.m.position.set(x, Math.max(0.1, h), y); if (q.t < 0) q.m.visible = false; else q.m.visible = true;
