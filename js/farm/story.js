@@ -4450,7 +4450,7 @@ HELP.push({
 // ------------------------------------------------------------------ the Pallas refit gantry (2026-11-22)
 HELP.push({
   title: 'Refitting the Pallas',
-  body: "In Vashti's hangar, the console by the wall runs a refit gantry over the parked Pallas. For credits and belt ore her crew fits hull plating, the blaster coil, the sabre, the scanner, boost thrusters, the Hydra, sealed treads, and weapons: a beam laser, seeker missiles, the Dragon battery and Earthlight bombs. Mark II needs mark I.\n\nIn the Old World: V cycles blaster, laser (hold Space) and missiles. F sets the Hydra (fast, short range), G the Dragon (heavy shells, 2 to 12 tiles). T folds the Pallas into its jet: twice as fast, over towers and gas, safe from claws; Space fires Earthlight bombs; B drops the Sky Hammer, a huge high-explosive bomb. Red marks: a lunge is coming.",
+  body: "In Vashti's hangar, the console by the wall runs a refit gantry over the parked Pallas. For credits and belt ore her crew fits hull plating, the blaster coil, the sabre, the scanner, boost thrusters, the Hydra, sealed treads, and weapons: a beam laser, seeker missiles, the Dragon battery and Earthlight bombs. Mark II needs mark I.\n\nIn the Old World: V cycles blaster, laser (hold Space) and missiles. F sets the Hydra (fast, short range), G the Dragon (heavy shells, 2 to 12 tiles). T folds the Pallas into its jet: twice as fast, over towers and gas, safe from claws; Space fires Earthlight bombs; B fires the Sky Hammer, a huge high-explosive missile. Red marks: a lunge is coming.",
 });
 
 // ------------------------------------------------------------------ the cellar and the cat (2026-11-22)
