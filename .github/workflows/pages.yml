@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read      # deploy-pages looks the uploaded artifact up through the Actions API (2026-11-25: it found 0 without this)
   pages: write
   id-token: write
 concurrency:
@@ -24,5 +25,6 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+      - run: sleep 20   # give the artifact a moment to be listed before deploying
       - id: deployment
         uses: actions/deploy-pages@v4
