@@ -1644,8 +1644,11 @@ async function boot() {
   $('bNew').onclick = async () => { if (old && !confirm('Start a new farm? Your saved farm will be replaced.')) return; sfx('good'); begin(sim.newGame(), true); };
   $('bContinue').onclick = () => { sfx('good'); begin(old, false); };
   // Offline play (2026-11-23): the service worker keeps what the game has loaded; this button fetches everything else.
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('farm-sw.js').catch(() => {});
-  $('bOffline').onclick = () => saveForOffline();
+  if ('serviceWorker' in navigator && location.protocol !== 'file:' && !window.FARM_OFFLINE) navigator.serviceWorker.register('farm-sw.js').catch(() => {});   // (the offline copy needs no worker)
+  if (window.FARM_OFFLINE) {   // the offline copy (tools/farm-offline): no download button, no links to the site's other games
+    $('bOffline').hidden = true; for (const a of document.querySelectorAll('nav.fm-trow a')) a.hidden = true;
+    $('loadInfo').textContent = 'Offline copy · saves stay in this browser · export a save to take your farm online.';
+  }
   $('bBeta').onclick = () => { const b = loadSaved(BETA_KEY); sfx('good'); begin(b && b.flags.beta ? b : sim.betaGame(), !(b && b.flags.beta)); };   // the beta test game: everything unlocked, its own save
   $('bHelp').onclick = () => { S = S || sim.newGame(); mode = 'play'; ui.menu(S, { close: () => { if ($('title').hidden === false) { mode = 'title'; } } }, 'help'); };
   $('fImport').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; const st = sim.loadState(await f.text()); if (!st) return ($('loadInfo').textContent = 'That file is not a Sato’s Harvest save.'); begin(st, false); };
