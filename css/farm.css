@@ -146,3 +146,6 @@ button { font: inherit; color: inherit; cursor: pointer; } :focus-visible { outl
 /* the Sky Hammer (2026-11-24): its touch button and the white flash */
 #tHam { bottom: calc(var(--barH, 64px) + 392px); background: rgba(200, 52, 44, .8); }
 #heFlash { position: fixed; inset: 0; background: #fff8e6; opacity: 0; pointer-events: none; z-index: 40; } #heFlash.on { animation: heFlash .45s ease-out; } @keyframes heFlash { 0% { opacity: .85; } 100% { opacity: 0; } }
+
+/* the title's zip download link, styled like its buttons (2026-11-25) */
+.fm-dl { display: inline-flex; align-items: center; text-decoration: none; } .fm-dl[hidden] { display: none; }

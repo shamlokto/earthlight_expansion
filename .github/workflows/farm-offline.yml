@@ -1,0 +1,30 @@
+# Builds the offline copy of Sato's Harvest (tools/farm-offline/build-zip.sh) and attaches it to the "farm-offline" release,
+# so the title screen's "Download the game (.zip)" link always gets the latest version (2026-11-25).
+name: Farm offline zip
+on:
+  push:
+    branches: [main]
+    paths: ['farm.html', 'farm-wiki.html', 'css/farm*.css', 'fonts/**', 'js/farm/**', 'js/vendor/three/**', 'js/expansion/portraits.js', 'js/expansion/villain.js', 'art/farm/**', 'tools/farm-offline/**', '.github/workflows/farm-offline.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: farm-offline
+  cancel-in-progress: true
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tools/farm-offline/build-zip.sh . dist/sato-harvest-offline.zip
+      - name: Publish to the farm-offline release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="Sato's Harvest, the whole game for playing with no internet. Unzip, then double-click the launcher for your computer (see README.txt). Built from ${GITHUB_SHA::7} on $(date -u +%Y-%m-%d)."
+          if gh release view farm-offline >/dev/null 2>&1; then
+            gh release edit farm-offline --title "Sato's Harvest — offline copy" --notes "$NOTES"
+          else
+            gh release create farm-offline --title "Sato's Harvest — offline copy" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
+          gh release upload farm-offline dist/sato-harvest-offline.zip --clobber
